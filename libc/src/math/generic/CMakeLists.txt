@@ -1448,21 +1448,7 @@ add_entrypoint_object(
   HDRS
     ../exp2.h
   DEPENDS
-    .common_constants
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.optional
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.exp_utils
-    libc.src.errno.errno
+    libc.src.__support.math.exp2
 )
 
 add_header_library(
@@ -1613,7 +1599,6 @@ add_entrypoint_object(
   HDRS
     ../expm1.h
   DEPENDS
-    .common_constants
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -1624,6 +1609,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.triple_double
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
     libc.src.errno.errno
 )
 
@@ -1634,7 +1620,6 @@ add_entrypoint_object(
   HDRS
     ../expm1f.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -1643,6 +1628,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
     libc.src.errno.errno
 )
 
@@ -1673,7 +1659,6 @@ add_entrypoint_object(
   HDRS
     ../powf.h
   DEPENDS
-    .common_constants
     .exp2f_impl
     libc.src.__support.math.exp10f
     libc.src.__support.CPP.bit
@@ -1685,6 +1670,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.FPUtil.triple_double
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
     libc.src.errno.errno
 )
 
@@ -1695,7 +1681,6 @@ add_entrypoint_object(
   HDRS
     ../pow.h
   DEPENDS
-    .common_constants
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.bit
@@ -1707,6 +1692,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2043,26 +2029,14 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
 )
 
-add_object_library(
-  common_constants
-  HDRS
-    common_constants.h
-  SRCS
-    common_constants.cpp
-  DEPENDS
-    libc.src.__support.math.exp_constants
-    libc.src.__support.math.acosh_float_constants
-    libc.src.__support.number_pair
-)
-
 add_header_library(
   log_range_reduction
   HDRS
     log_range_reduction.h
   DEPENDS
-    .common_constants
-    libc.src.__support.uint128
     libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.math.common_constants
+    libc.src.__support.uint128
 )
 
 add_entrypoint_object(
@@ -2072,7 +2046,6 @@ add_entrypoint_object(
   HDRS
     ../log10.h
   DEPENDS
-    .common_constants
     .log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
@@ -2082,6 +2055,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2091,12 +2065,12 @@ add_entrypoint_object(
   HDRS
     ../log10f.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2126,7 +2100,6 @@ add_entrypoint_object(
   HDRS
     ../log1p.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -2135,6 +2108,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2144,13 +2118,13 @@ add_entrypoint_object(
   HDRS
     ../log1pf.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2160,7 +2134,6 @@ add_entrypoint_object(
   HDRS
     ../log2.h
   DEPENDS
-    .common_constants
     .log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
@@ -2170,6 +2143,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2179,13 +2153,13 @@ add_entrypoint_object(
   HDRS
     ../log2f.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2215,7 +2189,6 @@ add_entrypoint_object(
   HDRS
     ../log.h
   DEPENDS
-    .common_constants
     .log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
@@ -2225,6 +2198,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
@@ -2234,7 +2208,6 @@ add_entrypoint_object(
   HDRS
     ../logf.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -2242,6 +2215,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math.common_constants
 )
 
 add_entrypoint_object(
