@@ -108,7 +108,6 @@ Instrumentation/AddressSanitizer/AMDGPU/global_metadata_addrspacecasts.ll
 Instrumentation/AddressSanitizer/AMDGPU/instrument-stack.ll
 Instrumentation/AddressSanitizer/AMDGPU/no_redzones_in_lds_globals.ll
 Instrumentation/AddressSanitizer/AMDGPU/no_redzones_in_scratch_globals.ll
-Instrumentation/AddressSanitizer/RISCV/asan-rvv-intrinsics.ll
 Instrumentation/AddressSanitizer/asan_address_space_attr.ll
 Instrumentation/AddressSanitizer/asan-detect-invalid-pointer-pair.ll
 Instrumentation/AddressSanitizer/asan-disable-sanitizer-instrumentation.ll
@@ -194,6 +193,7 @@ Instrumentation/AddressSanitizer/odr-check-ignore.ll
 Instrumentation/AddressSanitizer/program-addrspace.ll
 Instrumentation/AddressSanitizer/ps4.ll
 Instrumentation/AddressSanitizer/remove-memory-effects.ll
+Instrumentation/AddressSanitizer/RISCV/asan-rvv-intrinsics.ll
 Instrumentation/AddressSanitizer/scale-offset.ll
 Instrumentation/AddressSanitizer/skip-coro.ll
 Instrumentation/AddressSanitizer/stack_dynamic_alloca.ll
@@ -781,8 +781,8 @@ Transforms/GlobalOpt/shrink-global-to-bool-check-debug.ll
 Transforms/GlobalOpt/shrink-global-to-bool-opaque-ptrs.ll
 Transforms/GVN/debugloc-load-select.ll
 Transforms/GVN/load-through-select-dbg.ll
-Transforms/GVN/masked-load-store-no-mem-dep.ll
 Transforms/GVN/masked-load-store.ll
+Transforms/GVN/masked-load-store-no-mem-dep.ll
 Transforms/GVN/opaque-ptr.ll
 Transforms/GVN/pr69301.ll
 Transforms/GVN/pre-invalid-prof-metadata.ll
@@ -1297,9 +1297,9 @@ Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PartiallyInlineLibCalls/X86/good-prototype.ll
 Transforms/PGOProfile/chr-dead-pred.ll
 Transforms/PGOProfile/chr-dup-threshold.ll
+Transforms/PGOProfile/chr-lifetimes.ll
 Transforms/PGOProfile/chr.ll
 Transforms/PGOProfile/chr-poison.ll
-Transforms/PGOProfile/chr-lifetimes.ll
 Transforms/PGOProfile/comdat.ll
 Transforms/PGOProfile/cspgo_profile_summary.ll
 Transforms/PGOProfile/memop_profile_funclet_wasm.ll
@@ -1432,10 +1432,10 @@ Transforms/SimplifyCFG/switch-dup-bbs.ll
 Transforms/SimplifyCFG/switch_mask.ll
 Transforms/SimplifyCFG/switch_msan.ll
 Transforms/SimplifyCFG/switch-on-const-select.ll
-Transforms/SimplifyCFG/switch-transformations-no-lut.ll
 Transforms/SimplifyCFG/switchToSelect-domtree-preservation-edgecase.ll
 Transforms/SimplifyCFG/switch-to-select-multiple-edge-per-block-phi.ll
 Transforms/SimplifyCFG/switch-to-select-two-case.ll
+Transforms/SimplifyCFG/switch-transformations-no-lut.ll
 Transforms/SimplifyCFG/wc-widen-block.ll
 Transforms/SimplifyCFG/X86/disable-lookup-table.ll
 Transforms/SimplifyCFG/X86/hoist-loads-stores-with-cf.ll
@@ -1530,8 +1530,8 @@ Transforms/SROA/select-load.ll
 Transforms/SROA/slice-width.ll
 Transforms/SROA/std-clamp.ll
 Transforms/SROA/vector-conversion.ll
-Transforms/SROA/vector-promotion.ll
 Transforms/SROA/vector-promotion-cannot-tree-structure-merge.ll
+Transforms/SROA/vector-promotion.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/StructurizeCFG/AMDGPU/uniform-regions.ll
 Transforms/StructurizeCFG/hoist-zerocost.ll
