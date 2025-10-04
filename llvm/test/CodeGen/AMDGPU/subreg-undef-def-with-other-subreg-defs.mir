@@ -28,9 +28,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_1]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def [[V_MOV_B32_e32_]], 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_]](tied-def 3)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_]]
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub0, 2031626 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub1
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def [[V_MOV_B32_e32_]], 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_]](tied-def 3)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_]]
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub0, 1835018 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub1
   ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]].sub1
   ; CHECK-NEXT:   $sgpr10 = S_MOV_B32 -1
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -41,9 +41,9 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %2
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def undef %0.sub0, 2031626 /* regdef:VGPR_32 */, def %0.sub1
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %2
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def undef %0.sub0, 1835018 /* regdef:VGPR_32 */, def %0.sub1
     S_NOP 0, implicit %0.sub1
     $sgpr10 = S_MOV_B32 -1
     S_BRANCH %bb.1
@@ -69,9 +69,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_1]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def [[V_MOV_B32_e32_]], 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_]](tied-def 3)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_]]
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub1, 2031626 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub0
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def [[V_MOV_B32_e32_]], 2147483657 /* reguse tiedto:$0 */, [[V_MOV_B32_e32_]](tied-def 3)
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[DS_READ_B32_gfx9_]]
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub1, 1835018 /* regdef:VGPR_32 */, def undef [[V_MOV_B32_e32_]].sub0
   ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]].sub1
   ; CHECK-NEXT:   $sgpr10 = S_MOV_B32 -1
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -82,9 +82,9 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %2
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def %0.sub1, 2031626 /* regdef:VGPR_32 */, def undef %0.sub0
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %2
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def %0.sub1, 1835018 /* regdef:VGPR_32 */, def undef %0.sub0
     S_NOP 0, implicit %0.sub1
     $sgpr10 = S_MOV_B32 -1
     S_BRANCH %bb.1

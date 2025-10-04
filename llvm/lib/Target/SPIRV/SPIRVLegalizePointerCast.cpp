@@ -195,9 +195,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     if (DstType->getElementType() != SrcType->getElementType()) {
       // Support bitcast between vectors of different sizes only if
       // the total bitwidth is the same.
-      auto dstBitWidth =
+      [[maybe_unused]] auto dstBitWidth =
           DstType->getElementType()->getScalarSizeInBits() * dstNumElements;
-      auto srcBitWidth =
+      [[maybe_unused]] auto srcBitWidth =
           SrcType->getElementType()->getScalarSizeInBits() * srcNumElements;
       assert(dstBitWidth == srcBitWidth &&
              "Unsupported bitcast between vectors of different sizes.");

@@ -73,7 +73,7 @@ body: |
 # (1) %0.sub0 + %0.sub0 and (2) %0.sub1 + %0.sub1
 # Check that renaming (2) does not inadvertently rename (1).
 # CHECK-LABEL: name: test2
-# CHECK: INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def undef %0.sub0, 2031626 /* regdef:VGPR_32 */, def dead %1.sub1, 2147483657 /* reguse tiedto:$0 */, undef %0.sub0(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %1.sub1(tied-def 5)
+# CHECK: INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def undef %0.sub0, 1835018 /* regdef:VGPR_32 */, def dead %1.sub1, 2147483657 /* reguse tiedto:$0 */, undef %0.sub0(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %1.sub1(tied-def 5)
 name: test2
 body: |
   bb.0:
@@ -81,7 +81,7 @@ body: |
 
   bb.1:
     undef %0.sub1:vreg_64 = V_ALIGNBIT_B32_e64 %0.sub0:vreg_64, %0.sub0:vreg_64, 16, implicit $exec
-    INLINEASM &"", 1 /* sideeffect attdialect */, 2031626 /* regdef:VGPR_32 */, def undef %0.sub0:vreg_64, 2031626 /* regdef:VGPR_32 */, def %0.sub1:vreg_64, 2147483657 /* reguse tiedto:$0 */, undef %0.sub0:vreg_64(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %0.sub1:vreg_64(tied-def 5)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1835018 /* regdef:VGPR_32 */, def undef %0.sub0:vreg_64, 1835018 /* regdef:VGPR_32 */, def %0.sub1:vreg_64, 2147483657 /* reguse tiedto:$0 */, undef %0.sub0:vreg_64(tied-def 3), 2147549193 /* reguse tiedto:$1 */, %0.sub1:vreg_64(tied-def 5)
     S_BRANCH %bb.1
 
 ...

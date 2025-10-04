@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// -----
+
+!u64i = !cir.int<u, 64>
+// expected-error @below {{expected 'target_address_space'}}
+cir.func @address_space1(%p : !cir.ptr<!u64i, foobar>) {
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+// expected-error@below {{expected '('}}
+cir.func @address_space2(%p : !cir.ptr<!u64i, target_address_space>) {
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+// expected-error@+2 {{expected integer value}}
+// expected-error@below {{expected integer address space value}}
+cir.func @address_space3(%p : !cir.ptr<!u64i, target_address_space()>) {
+  cir.return
+}
+
