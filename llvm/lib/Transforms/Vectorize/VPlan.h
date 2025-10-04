@@ -1064,8 +1064,11 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
-    /// Extracts all lanes from its (non-scalable) vector operand.
-    UnpackVector,
+    /// Extracts all lanes from its (non-scalable) vector operand. This is an
+    /// abstract VPInstruction whose single defined VPValue represents VF
+    /// scalars extracted from a vector, to be replaced by VF ExtractElement
+    /// VPInstructions?
+    Unpack,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.

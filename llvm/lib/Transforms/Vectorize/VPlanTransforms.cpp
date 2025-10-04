@@ -3747,7 +3747,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   BTC->replaceAllUsesWith(TCMO);
 }
 
-void VPlanTransforms::materializeBuildAndUnpackVectors(VPlan &Plan) {
+void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -3811,20 +3811,22 @@ void VPlanTransforms::materializeBuildAndUnpackVectors(VPlan &Plan) {
               cast<VPRecipeBase>(U)->getParent()->getParent();
           return ParentRegion && ParentRegion != LoopRegion;
         };
-
+        // At the moment, we only create unpacks for scalar users outside
+        // replicate regions. Recipes inside replicate regions still manually
+        // extract the required lanes. TODO: Remove once replicate regions are
+        // unrolled explicitly.
         if (none_of(Def->users(), [Def, &IsInsideReplicateRegion](VPUser *U) {
               return !IsInsideReplicateRegion(U) && U->usesScalars(Def);
             }))
           continue;
 
-        auto *UnpackVector =
-            new VPInstruction(VPInstruction::UnpackVector, {Def});
+        auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
         if (R.isPhi())
-          UnpackVector->insertBefore(*VPBB, VPBB->getFirstNonPhi());
+          Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
-          UnpackVector->insertAfter(&R);
+          Unpack->insertAfter(&R);
         Def->replaceUsesWithIf(
-            UnpackVector, [Def, &IsInsideReplicateRegion](VPUser &U, unsigned) {
+            Unpack, [Def, &IsInsideReplicateRegion](VPUser &U, unsigned) {
               return !IsInsideReplicateRegion(&U) && U.usesScalars(Def);
             });
       }

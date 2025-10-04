@@ -514,7 +514,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
-  case VPInstruction::UnpackVector:
+  case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1241,7 +1241,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::VScale:
-  case VPInstruction::UnpackVector:
+  case VPInstruction::Unpack:
     return false;
   default:
     return true;
@@ -1408,8 +1408,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
     break;
-  case VPInstruction::UnpackVector:
-    O << "unpack-into-scalars";
+  case VPInstruction::Unpack:
+    O << "unpack";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());

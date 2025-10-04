@@ -328,7 +328,7 @@ struct VPlanTransforms {
   /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
   /// values into single vectors and UnpackVector to extract scalars from a
   /// vector as needed.
-  static void materializeBuildAndUnpackVectors(VPlan &Plan);
+  static void materializePacksAndUnpacks(VPlan &Plan);
 
   /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
   static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
