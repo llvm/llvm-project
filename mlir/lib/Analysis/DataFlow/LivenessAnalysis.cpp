@@ -165,6 +165,28 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
           blocks.push_back(&block);
       }
     }
+
+    // In the block of the successor block argument of RegionBranchOpInterface,
+    // there may be arguments of RegionBranchOpInterface, such as the IV of
+    // scf.forOp. Explicitly set this argument to live.
+    auto regionBranchOp = cast<RegionBranchOpInterface>(op);
+    for (size_t i = 0, e = op->getNumRegions(); i < e; ++i) {
+      SmallVector<RegionSuccessor> successors;
+      regionBranchOp.getSuccessorRegions(op->getRegion(i), successors);
+      for (RegionSuccessor successor : successors) {
+        if (successor.isParent())
+          continue;
+        auto arguments = successor.getSuccessor()->getArguments();
+        ValueRange regionInputs = successor.getSuccessorInputs();
+        for (auto argument : arguments) {
+          if (llvm::find(regionInputs, argument) == regionInputs.end()) {
+            (void)getLatticeElement(argument)->markLive();
+            LDBG() << "Marking RegionBranchOp's success argument live: "
+                   << argument;
+          }
+        }
+      }
+    }
   } else if (isa<BranchOpInterface>(op)) {
     // We cannot track all successor blocks of the branch operation(More
     // specifically, it's the successor's successor). Additionally, different
@@ -309,6 +331,7 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
              << " has no liveness info (unreachable), mark dead";
       solver.getOrCreateState<Liveness>(result.value());
     }
+
     for (auto &region : op->getRegions()) {
       for (auto &block : region) {
         for (auto blockArg : llvm::enumerate(block.getArguments())) {
