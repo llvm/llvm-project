@@ -344,6 +344,19 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
