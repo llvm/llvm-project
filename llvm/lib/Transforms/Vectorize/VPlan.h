@@ -1064,6 +1064,11 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
+    /// Extracts all lanes from its (non-scalable) vector operand. This is an
+    /// abstract VPInstruction whose single defined VPValue represents VF
+    /// scalars extracted from a vector, to be replaced by VF ExtractElement
+    /// VPInstructions?
+    Unpack,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -2716,6 +2721,15 @@ public:
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
+  }
+
+  static inline bool classof(const VPValue *VPV) {
+    const VPRecipeBase *R = VPV->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
   }
 
   /// Generate the reduction in the loop.

@@ -1223,6 +1223,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  uint64_t Idx;
+  if (match(&R, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(BuildVector->getOperand(Idx));
+    return;
+  }
+
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
     if (Phi->getNumOperands() == 1)
       Phi->replaceAllUsesWith(Phi->getOperand(0));
@@ -3740,7 +3747,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   BTC->replaceAllUsesWith(TCMO);
 }
 
-void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
+void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -3787,6 +3794,42 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
                            VPUser &U, unsigned) {
             return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
           });
+    }
+  }
+
+  // Create explicit VPInstructions to convert vectors to scalars.
+  for (VPBasicBlock *VPBB : VPBBsInsideLoopRegion) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe>(&R))
+        continue;
+      for (VPValue *Def : R.definedValues()) {
+        if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
+          continue;
+
+        auto IsInsideReplicateRegion = [LoopRegion](VPUser *U) {
+          VPRegionBlock *ParentRegion =
+              cast<VPRecipeBase>(U)->getParent()->getParent();
+          return ParentRegion && ParentRegion != LoopRegion;
+        };
+        // At the moment, we only create unpacks for scalar users outside
+        // replicate regions. Recipes inside replicate regions still manually
+        // extract the required lanes. TODO: Remove once replicate regions are
+        // unrolled explicitly.
+        if (none_of(Def->users(), [Def, &IsInsideReplicateRegion](VPUser *U) {
+              return !IsInsideReplicateRegion(U) && U->usesScalars(Def);
+            }))
+          continue;
+
+        auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
+        if (R.isPhi())
+          Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
+        else
+          Unpack->insertAfter(&R);
+        Def->replaceUsesWithIf(
+            Unpack, [Def, &IsInsideReplicateRegion](VPUser &U, unsigned) {
+              return !IsInsideReplicateRegion(&U) && U.usesScalars(Def);
+            });
+      }
     }
   }
 }
