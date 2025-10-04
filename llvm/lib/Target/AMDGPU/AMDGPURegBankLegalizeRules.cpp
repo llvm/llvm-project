@@ -617,6 +617,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS64, S64}, {{Sgpr64}, {Sgpr64}}})
       .Any({{DivS64, S64}, {{Vgpr64}, {Vgpr64}, SplitTo32SExtInReg}});
 
+  addRulesForGOpcs({G_ASSERT_ZEXT, G_ASSERT_SEXT}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Imm}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Imm}});
+
+  addRulesForGOpcs({G_ASSERT_ALIGN})
+      .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {SgprPtr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {VgprPtr64}}})
+      .Any({{UniPtr128}, {{SgprPtr128}, {SgprPtr128}}})
+      .Any({{DivPtr128}, {{VgprPtr128}, {VgprPtr128}}});
+
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
   bool usesTrue16 = ST->useRealTrue16Insts();
