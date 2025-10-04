@@ -9513,6 +9513,8 @@ __m128i test_mm256_cvtepi64_epi16(__m256i __A) {
   return _mm256_cvtepi64_epi16(__A); 
 }
 
+TEST_CONSTEXPR(match_v8hi(_mm256_cvtepi64_epi16((__m256i)(__v4di){1 ,2, 3, 4}),1, 2, 3, 4, 0, 0, 0, 0));
+
 __m128i test_mm256_mask_cvtepi64_epi16(__m128i __O, __mmask8 __M, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_cvtepi64_epi16
   // CHECK: @llvm.x86.avx512.mask.pmov.qw.256
