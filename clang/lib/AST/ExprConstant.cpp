@@ -11778,6 +11778,52 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_pavgw512:
     return EvaluateBinOpExpr(llvm::APIntOps::avgCeilU);
 
+  case clang::X86::BI__builtin_ia32_pmaddubsw128:
+  case clang::X86::BI__builtin_ia32_pmaddubsw256:
+  case clang::X86::BI__builtin_ia32_pmaddubsw512:
+  case clang::X86::BI__builtin_ia32_pmaddwd128:
+  case clang::X86::BI__builtin_ia32_pmaddwd256:
+  case clang::X86::BI__builtin_ia32_pmaddwd512: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
+      APInt U_LHS0 = SourceLHS.getVectorElt(EltNum).getInt();
+      APInt U_LHS1 = SourceLHS.getVectorElt(EltNum + 1).getInt();
+      APSInt LHS0 = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt LHS1 = SourceLHS.getVectorElt(EltNum + 1).getInt();
+      APSInt RHS0 = SourceRHS.getVectorElt(EltNum).getInt();
+      APSInt RHS1 = SourceRHS.getVectorElt(EltNum + 1).getInt();
+      unsigned BitWidth = LHS0.getBitWidth();
+
+      switch (E->getBuiltinCallee()) {
+      case clang::X86::BI__builtin_ia32_pmaddubsw128:
+      case clang::X86::BI__builtin_ia32_pmaddubsw256:
+      case clang::X86::BI__builtin_ia32_pmaddubsw512:
+        ResultElements.push_back(APValue(
+            APSInt(APInt(U_LHS0.zext(BitWidth)) *
+                   RHS0.sext(BitWidth).sadd_sat(APInt(U_LHS1.zext(BitWidth)) *
+                                                RHS1.sext(BitWidth)))));
+        break;
+      case clang::X86::BI__builtin_ia32_pmaddwd128:
+      case clang::X86::BI__builtin_ia32_pmaddwd256:
+      case clang::X86::BI__builtin_ia32_pmaddwd512:
+        ResultElements.push_back(
+            APValue(APSInt(LHS0.sext(BitWidth) * RHS0.sext(BitWidth) +
+                           LHS1.sext(BitWidth) * RHS1.sext(BitWidth))));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
