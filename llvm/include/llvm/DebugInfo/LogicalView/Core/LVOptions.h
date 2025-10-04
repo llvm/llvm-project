@@ -167,7 +167,8 @@ enum class LVReportKind {
   Children, // --report=children
   List,     // --report=list
   Parents,  // --report=parents
-  View      // --report=view
+  View,     // --report=view
+  Debugger  // --report=debugger
 };
 using LVReportKindSet = std::set<LVReportKind>;
 
@@ -408,6 +409,7 @@ public:
   REPORT_OPTION(Children);
   REPORT_OPTION(List);
   REPORT_OPTION(Parents);
+  REPORT_OPTION(Debugger);
   REPORT_OPTION(View);
   BOOL_FUNCTION(Report, AnyView);
   BOOL_FUNCTION(Report, Execute);

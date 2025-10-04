@@ -157,6 +157,7 @@ public:
   void printRaw(raw_ostream &OS, bool Full = true) const;
   virtual void printRawExtra(raw_ostream &OS, bool Full = true) const {}
 
+  virtual void printLocations(raw_ostream &OS) const {}
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
@@ -177,6 +178,7 @@ public:
                  uint64_t LocDescOffset) override;
   void addObject(LVSmall Opcode, ArrayRef<LVUnsigned> Operands) override;
 
+  void printLocations(raw_ostream &OS) const override;
   void printRawExtra(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
