@@ -74,10 +74,9 @@ MlirOperation
 mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter) {
   mlir::RewriterBase *base = unwrap(rewriter);
   mlir::Block *block = base->getInsertionBlock();
-  auto it = base->getInsertionPoint();
-  if (it == block->end()) {
+  PyInsertionPoint it = base->getInsertionPoint();
+  if (it == block->end())
     return {nullptr};
-  }
 
   return wrap(std::addressof(*it));
 }
