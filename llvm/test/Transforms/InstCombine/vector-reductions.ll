@@ -467,15 +467,90 @@ define i2 @constant_multiplied_7xi2(i2 %0) {
   ret i2 %4
 }
 
-define i32 @negative_scalable_vector(i32 %0) {
-; CHECK-LABEL: @negative_scalable_vector(
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <vscale x 4 x i32> [[TMP2]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP3]])
+define i32 @reduce_add_splat_to_mul_vscale_4xi32(i32 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_4xi32(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[DOTTR]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP0:%.*]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %2 = insertelement <vscale x 4 x i32> poison, i32 %0, i64 0
   %3 = shufflevector <vscale x 4 x i32> %2, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %4 = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %3)
   ret i32 %4
+}
+
+define i64 @reduce_add_splat_to_mul_vscale_4xi64(i64 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_4xi64(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
+;
+  %2 = insertelement <vscale x 4 x i64> poison, i64 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i64> %2, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+  %4 = tail call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> %3)
+  ret i64 %4
+}
+
+define i2 @reduce_add_splat_to_mul_vscale_4xi2(i2 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_4xi2(
+; CHECK-NEXT:    ret i2 0
+;
+  %2 = insertelement <vscale x 4 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i2> %2, <vscale x 4 x i2> poison, <vscale x 4 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.nxv4i2(<vscale x 4 x i2> %3)
+  ret i2 %4
+}
+
+define i1 @reduce_add_splat_to_mul_vscale_8xi1(i1 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_8xi1(
+; CHECK-NEXT:    ret i1 false
+;
+  %2 = insertelement <vscale x 4 x i1> poison, i1 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i1> %2, <vscale x 4 x i1> poison, <vscale x 8 x i32> zeroinitializer
+  %4 = tail call i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1> %3)
+  ret i1 %4
+}
+
+define i2 @reduce_add_splat_to_mul_vscale_5xi2(i2 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_5xi2(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i2 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i2 [[TMP4]]
+;
+  %2 = insertelement <vscale x 4 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i2> %2, <vscale x 4 x i2> poison, <vscale x 5 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.nxv5i2(<vscale x 5 x i2> %3)
+  ret i2 %4
+}
+
+define i2 @reduce_add_splat_to_mul_vscale_6xi2(i2 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_6xi2(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP2]] to i2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i2 [[DOTTR]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i2 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i2 [[TMP4]]
+;
+  %2 = insertelement <vscale x 4 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i2> %2, <vscale x 4 x i2> poison, <vscale x 6 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.nxv6i2(<vscale x 6 x i2> %3)
+  ret i2 %4
+}
+
+define i2 @reduce_add_splat_to_mul_vscale_7xi2(i2 %0) {
+; CHECK-LABEL: @reduce_add_splat_to_mul_vscale_7xi2(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i2 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i2 0, [[TMP4]]
+; CHECK-NEXT:    ret i2 [[TMP5]]
+;
+  %2 = insertelement <vscale x 4 x i2> poison, i2 %0, i64 0
+  %3 = shufflevector <vscale x 4 x i2> %2, <vscale x 4 x i2> poison, <vscale x 7 x i32> zeroinitializer
+  %4 = tail call i2 @llvm.vector.reduce.add.nxv7i2(<vscale x 7 x i2> %3)
+  ret i2 %4
 }
