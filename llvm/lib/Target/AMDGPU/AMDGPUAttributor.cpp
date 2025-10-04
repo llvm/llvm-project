@@ -131,10 +131,8 @@ static bool isDSAddress(const Constant *C) {
   return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS;
 }
 
-/// Returns true if the function requires the implicit argument be passed
-/// regardless of the function contents.
-static bool funcRequiresHostcallPtr(const Function &F) {
-  // Sanitizers require the hostcall buffer passed in the implicit arguments.
+/// Returns true if sanitizer attributes are present on a function.
+static bool hasSanitizerAttributes(const Function &F) {
   return F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeThread) ||
          F.hasFnAttribute(Attribute::SanitizeMemory) ||
@@ -469,15 +467,21 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
 
     // If the function requires the implicit arg pointer due to sanitizers,
     // assume it's needed even if explicitly marked as not requiring it.
-    const bool NeedsHostcall = funcRequiresHostcallPtr(*F);
-    if (NeedsHostcall) {
+    // Flat scratch initialization is needed because `asan_malloc_impl`
+    // calls introduced later in pipeline will have flat scratch accesses.
+    // FIXME: FLAT_SCRATCH_INIT will not be required here if device-libs
+    // implementation for `asan_malloc_impl` is updated.
+    const bool HasSanitizerAttrs = hasSanitizerAttributes(*F);
+    if (HasSanitizerAttrs) {
       removeAssumedBits(IMPLICIT_ARG_PTR);
       removeAssumedBits(HOSTCALL_PTR);
+      removeAssumedBits(FLAT_SCRATCH_INIT);
     }
 
     for (auto Attr : ImplicitAttrs) {
-      if (NeedsHostcall &&
-          (Attr.first == IMPLICIT_ARG_PTR || Attr.first == HOSTCALL_PTR))
+      if (HasSanitizerAttrs &&
+          (Attr.first == IMPLICIT_ARG_PTR || Attr.first == HOSTCALL_PTR ||
+           Attr.first == FLAT_SCRATCH_INIT))
         continue;
 
       if (F->hasFnAttribute(Attr.second))
