@@ -33,7 +33,8 @@ constexpr void test() {
   {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator);
     // cpp17_input_iterator
-    using M  = std::flat_multiset<int, std::less<int>, KeyContainer<int>>;
+    using M = std::flat_multiset<int, std::less<int>, KeyContainer<int>>;
+
     int ar[] = {1, 2, 2, 4, 5};
     auto m = M(std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 5));
     auto expected = M{1, 2, 2, 4, 5};
