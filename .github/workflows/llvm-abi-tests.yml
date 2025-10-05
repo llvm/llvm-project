@@ -1,4 +1,4 @@
-name: LLVM Tests
+name: LLVM ABI Tests
 
 permissions:
   contents: read

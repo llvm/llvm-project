@@ -389,6 +389,7 @@ public:
   /// @name Feature Constructors
   /// @{
 
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
   [[deprecated("Use overload accepting Triple instead")]]
   MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI, StringRef TheTriple,
                              const MCTargetOptions &Options) const {
@@ -440,6 +441,7 @@ public:
     return MCInstrAnalysisCtorFn(Info);
   }
 
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
   [[deprecated("Use overload accepting Triple instead")]]
   MCRegisterInfo *createMCRegInfo(StringRef TT) const {
     if (!MCRegInfoCtorFn)
@@ -454,6 +456,7 @@ public:
     return MCRegInfoCtorFn(TT);
   }
 
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
   [[deprecated("Use overload accepting Triple instead")]]
   MCSubtargetInfo *createMCSubtargetInfo(StringRef TheTriple, StringRef CPU,
                                          StringRef Features) const {
@@ -493,16 +496,6 @@ public:
     if (!TargetMachineCtorFn)
       return nullptr;
     return TargetMachineCtorFn(*this, TT, CPU, Features, Options, RM, CM, OL,
-                               JIT);
-  }
-
-  [[deprecated("Use overload accepting Triple instead")]]
-  TargetMachine *createTargetMachine(
-      StringRef TT, StringRef CPU, StringRef Features,
-      const TargetOptions &Options, std::optional<Reloc::Model> RM,
-      std::optional<CodeModel::Model> CM = std::nullopt,
-      CodeGenOptLevel OL = CodeGenOptLevel::Default, bool JIT = false) const {
-    return createTargetMachine(Triple(TT), CPU, Features, Options, RM, CM, OL,
                                JIT);
   }
 
@@ -599,6 +592,7 @@ public:
     return nullptr;
   }
 
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
   [[deprecated("Use overload accepting Triple instead")]]
   MCRelocationInfo *createMCRelocationInfo(StringRef TT, MCContext &Ctx) const {
     return createMCRelocationInfo(Triple(TT), Ctx);
@@ -616,6 +610,7 @@ public:
     return Fn(TT, Ctx);
   }
 
+  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
   [[deprecated("Use overload accepting Triple instead")]]
   MCSymbolizer *
   createMCSymbolizer(StringRef TT, LLVMOpInfoCallback GetOpInfo,

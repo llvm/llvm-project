@@ -114,3 +114,31 @@ TEST(TypeSwitchTest, CasesOptional) {
   EXPECT_EQ(std::nullopt, translate(DerivedC()));
   EXPECT_EQ(-1, translate(DerivedD()));
 }
+
+TEST(TypeSwitchTest, DefaultUnreachableWithValue) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, int>(&value)
+        .Case([](DerivedA *) { return 0; })
+        .DefaultUnreachable("Unhandled type");
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
+#endif
+}
+
+TEST(TypeSwitchTest, DefaultUnreachableWithVoid) {
+  auto translate = [](auto value) {
+    int result = -1;
+    TypeSwitch<Base *>(&value)
+        .Case([&result](DerivedA *) { result = 0; })
+        .DefaultUnreachable("Unhandled type");
+    return result;
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
+#endif
+}

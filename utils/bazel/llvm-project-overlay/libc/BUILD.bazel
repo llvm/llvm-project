@@ -2157,24 +2157,13 @@ libc_function(
 ########################### math support library ###############################
 
 libc_support_library(
-    name = "common_constants",
-    srcs = ["src/math/generic/common_constants.cpp"],
-    hdrs = ["src/math/generic/common_constants.h"],
-    deps = [
-        ":__support_math_acosh_float_constants",
-        ":__support_math_exp_constants",
-        ":__support_number_pair",
-    ],
-)
-
-libc_support_library(
     name = "log_range_reduction",
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_dyadic_float",
+        ":__support_math_common_constants",
         ":__support_uint128",
-        ":common_constants",
     ],
 )
 
@@ -2189,8 +2178,8 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
+        ":__support_math_common_constants",
         ":__support_math_exp10f_utils",
-        ":common_constants",
     ],
 )
 
@@ -2558,6 +2547,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_common_constants",
+    hdrs = ["src/__support/math/common_constants.h"],
+    deps = [
+        ":__support_math_acosh_float_constants",
+        ":__support_math_exp_constants",
+        ":__support_number_pair",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_cos",
     hdrs = ["src/__support/math/cos.h"],
     deps = [
@@ -2632,8 +2631,8 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
+        ":__support_math_common_constants",
         ":__support_sincosf_utils",
-        ":common_constants",
     ],
 )
 
@@ -2874,6 +2873,24 @@ libc_support_library(
         ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_math_exp_constants",
+        ":__support_math_exp_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_exp2",
+    hdrs = ["src/__support/math/exp2.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_triple_double",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
         ":__support_math_exp_utils",
     ],
 )
@@ -3652,17 +3669,7 @@ libc_math_function(
 libc_math_function(
     name = "exp2",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_fputil_triple_double",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-        ":__support_math_exp_utils",
-        ":common_constants",
+        ":__support_math_exp2",
     ],
 )
 
@@ -3706,7 +3713,7 @@ libc_math_function(
         ":__support_fputil_triple_double",
         ":__support_integer_literals",
         ":__support_macros_optimization",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -3720,7 +3727,7 @@ libc_math_function(
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4233,7 +4240,7 @@ libc_math_function(
         ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
         ":log_range_reduction",
     ],
 )
@@ -4246,7 +4253,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4268,7 +4275,7 @@ libc_math_function(
         ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
         ":log_range_reduction",
     ],
 )
@@ -4281,7 +4288,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4303,7 +4310,7 @@ libc_math_function(
         ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4315,7 +4322,7 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4330,7 +4337,7 @@ libc_math_function(
         ":__support_integer_literals",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":common_constants",
+        ":__support_math_common_constants",
         ":log_range_reduction",
     ],
 )
@@ -4342,7 +4349,7 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_macros_optimization",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4488,7 +4495,7 @@ libc_math_function(
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_fputil_sqrt",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4503,7 +4510,7 @@ libc_math_function(
         ":__support_fputil_triple_double",
         ":__support_macros_optimization",
         ":__support_math_exp10f",
-        ":common_constants",
+        ":__support_math_common_constants",
         ":exp2f_impl",
     ],
 )
@@ -4664,7 +4671,7 @@ libc_math_function(
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":__support_math_sinhfcoshf_utils",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4771,7 +4778,7 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_exp10f_utils",
-        ":common_constants",
+        ":__support_math_common_constants",
     ],
 )
 

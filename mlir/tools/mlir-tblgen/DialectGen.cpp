@@ -242,7 +242,7 @@ static const char *const discardableAttrHelperDecl = R"(
 static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
   // Emit all nested namespaces.
   {
-    NamespaceEmitter nsEmitter(os, dialect);
+    DialectNamespaceEmitter nsEmitter(os, dialect);
 
     // Emit the start of the decl.
     std::string cppName = dialect.getCppClassName();
@@ -358,7 +358,7 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
        << "::" << cppClassName << ")\n";
 
   // Emit all nested namespaces.
-  NamespaceEmitter nsEmitter(os, dialect);
+  DialectNamespaceEmitter nsEmitter(os, dialect);
 
   /// Build the list of dependent dialects.
   std::string dependentDialectRegistrations;

@@ -14,7 +14,6 @@ define void @foo(i32 noundef %limit, ptr %out, ptr %y) {
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    and x12, x10, #0xfffffff0
 ; CHECK-NEXT:    add x13, x1, #32
-; CHECK-NEXT:    add x14, x2, #16
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: // %for.cond1.for.cond.cleanup3_crit_edge.us
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
@@ -27,52 +26,52 @@ define void @foo(i32 noundef %limit, ptr %out, ptr %y) {
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1
 ; CHECK-NEXT:    // Child Loop BB0_6 Depth 2
 ; CHECK-NEXT:    // Child Loop BB0_9 Depth 2
-; CHECK-NEXT:    ldrsh w15, [x2, x9, lsl #1]
+; CHECK-NEXT:    ldrsh w14, [x2, x9, lsl #1]
 ; CHECK-NEXT:    cmp w0, #16
 ; CHECK-NEXT:    b.hs .LBB0_5
 ; CHECK-NEXT:  // %bb.4: // in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    mov x18, xzr
+; CHECK-NEXT:    mov x17, xzr
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_5: // %vector.ph
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    dup v0.8h, w15
-; CHECK-NEXT:    mov x16, x14
-; CHECK-NEXT:    mov x17, x13
-; CHECK-NEXT:    mov x18, x12
+; CHECK-NEXT:    dup v0.8h, w14
+; CHECK-NEXT:    add x15, x2, #16
+; CHECK-NEXT:    mov x16, x13
+; CHECK-NEXT:    and x17, x10, #0xfffffff0
 ; CHECK-NEXT:  .LBB0_6: // %vector.body
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldp q1, q4, [x16, #-16]
-; CHECK-NEXT:    subs x18, x18, #16
-; CHECK-NEXT:    ldp q3, q2, [x17, #-32]
-; CHECK-NEXT:    add x16, x16, #32
-; CHECK-NEXT:    ldp q6, q5, [x17]
+; CHECK-NEXT:    ldp q1, q4, [x15, #-16]
+; CHECK-NEXT:    subs x17, x17, #16
+; CHECK-NEXT:    ldp q3, q2, [x16, #-32]
+; CHECK-NEXT:    add x15, x15, #32
+; CHECK-NEXT:    ldp q6, q5, [x16]
 ; CHECK-NEXT:    smlal2 v2.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    smlal v3.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    smlal2 v5.4s, v0.8h, v4.8h
 ; CHECK-NEXT:    smlal v6.4s, v0.4h, v4.4h
-; CHECK-NEXT:    stp q3, q2, [x17, #-32]
-; CHECK-NEXT:    stp q6, q5, [x17], #64
+; CHECK-NEXT:    stp q3, q2, [x16, #-32]
+; CHECK-NEXT:    stp q6, q5, [x16], #64
 ; CHECK-NEXT:    b.ne .LBB0_6
 ; CHECK-NEXT:  // %bb.7: // %middle.block
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    cmp x12, x10
-; CHECK-NEXT:    mov x18, x12
+; CHECK-NEXT:    and x17, x10, #0xfffffff0
 ; CHECK-NEXT:    b.eq .LBB0_2
 ; CHECK-NEXT:  .LBB0_8: // %for.body4.us.preheader
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    add x16, x18, x8
-; CHECK-NEXT:    add x17, x2, x18, lsl #1
-; CHECK-NEXT:    sub x18, x10, x18
-; CHECK-NEXT:    add x16, x1, x16, lsl #2
+; CHECK-NEXT:    add x15, x17, x8
+; CHECK-NEXT:    add x16, x2, x17, lsl #1
+; CHECK-NEXT:    sub x17, x10, x17
+; CHECK-NEXT:    add x15, x1, x15, lsl #2
 ; CHECK-NEXT:  .LBB0_9: // %for.body4.us
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrsh w3, [x17], #2
-; CHECK-NEXT:    ldr w4, [x16]
-; CHECK-NEXT:    subs x18, x18, #1
-; CHECK-NEXT:    madd w3, w3, w15, w4
-; CHECK-NEXT:    str w3, [x16], #4
+; CHECK-NEXT:    ldrsh w18, [x16], #2
+; CHECK-NEXT:    ldr w3, [x15]
+; CHECK-NEXT:    subs x17, x17, #1
+; CHECK-NEXT:    madd w18, w18, w14, w3
+; CHECK-NEXT:    str w18, [x15], #4
 ; CHECK-NEXT:    b.ne .LBB0_9
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_10: // %for.cond.cleanup

@@ -47,28 +47,28 @@ TEST(BindTest, LambdaCapture) {
 }
 
 TEST(BindTest, MinimalMoves) {
-  OpCounter::reset();
+  OpCounter<>::reset();
   {
-    auto B = bind_front([](OpCounter &O, int) {}, OpCounter());
+    auto B = bind_front([](OpCounter<> &O, int) {}, OpCounter<>());
     B(0);
   }
-  EXPECT_EQ(OpCounter::defaultConstructions(), 1U);
-  EXPECT_EQ(OpCounter::copies(), 0U);
-  EXPECT_EQ(OpCounter::moves(), 1U);
-  EXPECT_EQ(OpCounter::destructions(), 2U);
+  EXPECT_EQ(OpCounter<>::defaultConstructions(), 1U);
+  EXPECT_EQ(OpCounter<>::copies(), 0U);
+  EXPECT_EQ(OpCounter<>::moves(), 1U);
+  EXPECT_EQ(OpCounter<>::destructions(), 2U);
 }
 
 TEST(BindTest, MinimalCopies) {
-  OpCounter::reset();
+  OpCounter<>::reset();
   {
-    OpCounter O;
-    auto B = bind_front([](OpCounter &O, int) {}, O);
+    OpCounter<> O;
+    auto B = bind_front([](OpCounter<> &O, int) {}, O);
     B(0);
   }
-  EXPECT_EQ(OpCounter::defaultConstructions(), 1U);
-  EXPECT_EQ(OpCounter::copies(), 1U);
-  EXPECT_EQ(OpCounter::moves(), 0U);
-  EXPECT_EQ(OpCounter::destructions(), 2U);
+  EXPECT_EQ(OpCounter<>::defaultConstructions(), 1U);
+  EXPECT_EQ(OpCounter<>::copies(), 1U);
+  EXPECT_EQ(OpCounter<>::moves(), 0U);
+  EXPECT_EQ(OpCounter<>::destructions(), 2U);
 }
 
 TEST(BindTest, ForwardUnboundArgs) {

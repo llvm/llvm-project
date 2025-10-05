@@ -1224,12 +1224,9 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
 }
 
 // TODO: Migrate to range merge of amdgpu-agpr-alloc.
-// FIXME: Why is this using Attribute::NoUnwind?
-struct AAAMDGPUNoAGPR
-    : public IRAttribute<Attribute::NoUnwind,
-                         StateWrapper<BooleanState, AbstractAttribute>,
-                         AAAMDGPUNoAGPR> {
-  AAAMDGPUNoAGPR(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUNoAGPR(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   static AAAMDGPUNoAGPR &createForPosition(const IRPosition &IRP,
                                            Attributor &A) {

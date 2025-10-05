@@ -70,6 +70,17 @@ MlirBlock mlirRewriterBaseGetBlock(MlirRewriterBase rewriter) {
   return wrap(unwrap(rewriter)->getBlock());
 }
 
+MlirOperation
+mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter) {
+  mlir::RewriterBase *base = unwrap(rewriter);
+  mlir::Block *block = base->getInsertionBlock();
+  mlir::Block::iterator it = base->getInsertionPoint();
+  if (it == block->end())
+    return {nullptr};
+
+  return wrap(std::addressof(*it));
+}
+
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 //===----------------------------------------------------------------------===//
@@ -315,6 +326,10 @@ inline mlir::PatternRewriter *unwrap(MlirPatternRewriter rewriter) {
 
 inline MlirPatternRewriter wrap(mlir::PatternRewriter *rewriter) {
   return {rewriter};
+}
+
+MlirRewriterBase mlirPatternRewriterAsBase(MlirPatternRewriter rewriter) {
+  return wrap(static_cast<mlir::RewriterBase *>(unwrap(rewriter)));
 }
 
 //===----------------------------------------------------------------------===//
