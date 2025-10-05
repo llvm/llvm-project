@@ -33,6 +33,7 @@ add_lldb_library(lldbTarget
   QueueItem.cpp
   QueueList.cpp
   RegisterContext.cpp
+  RegisterContextMemory.cpp
   RegisterContextUnwind.cpp
   RegisterFlags.cpp
   RegisterNumber.cpp

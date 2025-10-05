@@ -440,6 +440,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ThreadSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ThreadPlanSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }

@@ -39,6 +39,7 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -1323,4 +1324,37 @@ SBValue SBThread::GetSiginfo() {
   if (!thread_sp)
     return SBValue();
   return thread_sp->GetSiginfoValue();
+}
+
+void SBThread::RegisterFrameProvider(const char *class_name,
+                                     SBStructuredData &dict) {
+  LLDB_INSTRUMENT_VA(this, class_name, dict);
+
+  ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
+  if (!thread_sp)
+    return;
+
+  if (!dict.IsValid() || !dict.m_impl_up)
+    return;
+
+  StructuredData::ObjectSP obj_sp = dict.m_impl_up->GetObjectSP();
+
+  if (!obj_sp)
+    return;
+
+  StructuredData::DictionarySP dict_sp =
+      std::make_shared<StructuredData::Dictionary>(obj_sp);
+  if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return;
+
+  ScriptedMetadata metadata(class_name, dict_sp);
+  thread_sp->SetScriptedFrameProvider(metadata);
+}
+
+void SBThread::ClearScriptedFrameProvider() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
+  if (thread_sp)
+    thread_sp->ClearScriptedFrameProvider();
 }

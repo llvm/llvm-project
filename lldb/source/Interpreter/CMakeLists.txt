@@ -53,6 +53,8 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   OptionGroupWatchpoint.cpp
   Options.cpp
   Property.cpp
+  ScriptedFrame.cpp
+  ScriptedFrameProvider.cpp
   ScriptInterpreter.cpp
 
   ADDITIONAL_HEADER_DIRS
