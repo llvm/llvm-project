@@ -810,6 +810,26 @@ public:
   /// Whether the intrinsic is signed or unsigned.
   bool isSigned() const { return isSigned(getIntrinsicID()); };
 
+  /// Whether the intrinsic is a smin or umin.
+  static bool isMin(Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::umin:
+    case Intrinsic::smin:
+      return true;
+    case Intrinsic::umax:
+    case Intrinsic::smax:
+      return false;
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Whether the intrinsic is a smin or a umin.
+  bool isMin() const { return isMin(getIntrinsicID()); }
+
+  /// Whether the intrinsic is a smax or a umax.
+  bool isMax() const { return !isMin(getIntrinsicID()); }
+
   /// Min/max intrinsics are monotonic, they operate on a fixed-bitwidth values,
   /// so there is a certain threshold value, upon reaching which,
   /// their value can no longer change. Return said threshold.

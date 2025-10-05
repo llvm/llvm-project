@@ -35,8 +35,8 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
       getContext().getLangOpts().ElideConstructors && d.isNRVOVariable();
 
   CIRGenFunction::AutoVarEmission emission(d);
-  emission.IsEscapingByRef = d.isEscapingByref();
-  if (emission.IsEscapingByRef)
+  emission.isEscapingByRef = d.isEscapingByref();
+  if (emission.isEscapingByRef)
     cgm.errorNYI(d.getSourceRange(),
                  "emitAutoVarDecl: decl escaping by reference");
 
@@ -78,7 +78,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
             alignment);
   }
 
-  emission.Addr = address;
+  emission.addr = address;
   setAddrOfLocalVar(&d, address);
 
   return emission;
@@ -101,13 +101,13 @@ bool CIRGenFunction::isTrivialInitializer(const Expr *init) {
 
 void CIRGenFunction::emitAutoVarInit(
     const CIRGenFunction::AutoVarEmission &emission) {
-  assert(emission.Variable && "emission was not valid!");
+  assert(emission.variable && "emission was not valid!");
 
   // If this was emitted as a global constant, we're done.
   if (emission.wasEmittedAsGlobal())
     return;
 
-  const VarDecl &d = *emission.Variable;
+  const VarDecl &d = *emission.variable;
 
   QualType type = d.getType();
 
@@ -124,7 +124,7 @@ void CIRGenFunction::emitAutoVarInit(
     return;
   }
 
-  const Address addr = emission.Addr;
+  const Address addr = emission.addr;
 
   // Check whether this is a byref variable that's potentially
   // captured and moved by its own initializer.  If so, we'll need to
@@ -153,7 +153,7 @@ void CIRGenFunction::emitAutoVarInit(
   }
 
   mlir::Attribute constant;
-  if (emission.IsConstantAggregate ||
+  if (emission.isConstantAggregate ||
       d.mightBeUsableInConstantExpressions(getContext())) {
     // FIXME: Differently from LLVM we try not to emit / lower too much
     // here for CIR since we are interested in seeing the ctor in some
@@ -196,7 +196,7 @@ void CIRGenFunction::emitAutoVarInit(
   // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
   auto typedConstant = mlir::dyn_cast<mlir::TypedAttr>(constant);
   assert(typedConstant && "expected typed attribute");
-  if (!emission.IsConstantAggregate) {
+  if (!emission.isConstantAggregate) {
     // For simple scalar/complex initialization, store the value directly.
     LValue lv = makeAddrLValue(addr, type);
     assert(init && "expected initializer");
@@ -209,7 +209,7 @@ void CIRGenFunction::emitAutoVarInit(
 
 void CIRGenFunction::emitAutoVarCleanups(
     const CIRGenFunction::AutoVarEmission &emission) {
-  const VarDecl &d = *emission.Variable;
+  const VarDecl &d = *emission.variable;
 
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = d.needsDestruction(getContext()))
@@ -821,7 +821,7 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   // original stack object, not the possibly forwarded object.
   Address addr = emission.getObjectAddress(*this);
 
-  const VarDecl *var = emission.Variable;
+  const VarDecl *var = emission.variable;
   QualType type = var->getType();
 
   CleanupKind cleanupKind = NormalAndEHCleanup;
@@ -834,7 +834,7 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   case QualType::DK_cxx_destructor:
     // If there's an NRVO flag on the emission, we need a different
     // cleanup.
-    if (emission.NRVOFlag) {
+    if (emission.nrvoFlag) {
       cgm.errorNYI(var->getSourceRange(), "emitAutoVarTypeCleanup: NRVO");
       return;
     }

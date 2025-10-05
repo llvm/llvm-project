@@ -582,6 +582,22 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
   ret i32 %result.0
 }
 
+define { float, i32 } @pr160981() {
+; X64-LABEL: pr160981:
+; X64:       # %bb.0:
+; X64-NEXT:    movss {{.*#+}} xmm0 = [9.9999988E-1,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    movl $-126, %eax
+; X64-NEXT:    retq
+;
+; WIN32-LABEL: pr160981:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    flds __real@3f7ffffe
+; WIN32-NEXT:    movl $-126, %eax
+; WIN32-NEXT:    retl
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float bitcast (i32 8388607 to float))
+  ret { float, i32 } %ret
+}
+
 ; FIXME: Widen vector result
 ; define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)

@@ -54,12 +54,17 @@ Potentially Breaking Changes
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Renamed :program:`clang-tidy`'s option name of check
-  :doc:`bugprone-easily-swappable-parameters
-  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
-  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
-  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
-  correcting a spelling mistake.
+- Renamed a few :program:`clang-tidy` check options, as they
+  were misspelled:
+
+  - `NamePrefixSuffixSilenceDissimilarityTreshold` to
+    `NamePrefixSuffixSilenceDissimilarityThreshold` in
+    :doc:`bugprone-easily-swappable-parameters
+    <clang-tidy/checks/bugprone/easily-swappable-parameters>`
+
+  - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
+    :doc:`bugprone-signed-char-misuse
+    <clang-tidy/checks/bugprone/signed-char-misuse>`
 
 Improvements to clangd
 ----------------------
@@ -253,6 +258,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
 
+- Improved :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` with new
+  `IgnoredEnums` option to ignore specified enums during analysis.
+
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
   false positive from analysis of a conditional expression in C.
@@ -328,6 +337,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
+
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
+  on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
+  binary.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
