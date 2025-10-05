@@ -8729,7 +8729,7 @@ def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
   HelpText<"Incorporate CUDA device-side binary into host object file.">,
   MarshallingInfoString<CodeGenOpts<"CudaGpuBinaryFileName">>;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
-  HelpText<"Deprecated; Allow variadic functions in CUDA device code.">,
+  HelpText<"Deprecated; Allow variadic functions in CUDA device code.">, Flags<[HelpHidden]>,
   MarshallingInfoFlag<LangOpts<"CUDAAllowVariadicFunctions">>;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,
   HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">,
