@@ -544,8 +544,11 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
                                          Swapped ? OOp : C, "", &SI);
-    if (isa<FPMathOperator>(&SI))
+    if (isa<FPMathOperator>(&SI)) {
       cast<Instruction>(NewSel)->setFastMathFlags(FMF);
+      if (!TVI->hasNoInfs() && !FMF.noNaNs())
+        cast<Instruction>(NewSel)->setHasNoInfs(false);
+    }
     NewSel->takeName(TVI);
     BinaryOperator *BO =
         BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);

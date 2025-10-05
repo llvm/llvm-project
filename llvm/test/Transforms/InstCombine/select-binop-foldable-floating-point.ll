@@ -36,7 +36,7 @@ define float @select_fpclass_fadd_ninf1(i1 %cond, float nofpclass(nan) %A, float
 
 define float @select_fpclass_fadd_ninf2(i1 %cond, float nofpclass(nan) %A, float %B) {
 ; CHECK-LABEL: @select_fpclass_fadd_ninf2(
-; CHECK-NEXT:    [[C:%.*]] = select ninf i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
 ; CHECK-NEXT:    [[D:%.*]] = fadd float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
