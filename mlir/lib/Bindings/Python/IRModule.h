@@ -634,8 +634,8 @@ public:
   }
 
   /// Gets the backing operation.
-  operator MlirOperation() const { return get(); }
-  MlirOperation get() const {
+  operator MlirOperation() { return get(); }
+  MlirOperation get() {
     checkValid();
     return operation;
   }
@@ -653,7 +653,7 @@ public:
     assert(attached && "operation already detached");
     attached = false;
   }
-  void checkValid() const;
+  void checkValid();
 
   /// Gets the owning block or raises an exception if the operation has no
   /// owning block.
@@ -687,7 +687,10 @@ public:
   void erase();
 
   /// Invalidate the operation.
-  void setInvalid() { valid = false; }
+  void setInvalid() {
+    nanobind::ft_lock_guard lock(validFlagMutex);
+    valid = false;
+  }
 
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
@@ -713,6 +716,9 @@ private:
 
   friend class PyOperationBase;
   friend class PySymbolTable;
+
+  // FT mutex to protect checkValid() method
+  nanobind::ft_mutex validFlagMutex;
 };
 
 /// A PyOpView is equivalent to the C++ "Op" wrappers: these are the basis for
