@@ -775,6 +775,7 @@ VPRegionBlock *VPRegionBlock::clone() {
 
   if (CanIVInfo.CanIV) {
     NewRegion->CanIVInfo.CanIV = new VPRegionValue();
+    NewRegion->CanIVInfo.Ty = CanIVInfo.Ty;
     NewRegion->CanIVInfo.HasNUW = CanIVInfo.HasNUW;
     NewRegion->CanIVInfo.DL = CanIVInfo.DL;
   }
@@ -901,11 +902,11 @@ void VPRegionBlock::dissolveToCFGLoop() {
                          Instruction::Add, {CanIV, &Plan.getVFxUF()},
                          {CanIVInfo.HasNUW, false}, CanIVInfo.DL, "index.next");
     }
-    Type *CanIVTy = VPTypeAnalysis(Plan).inferScalarType(CanIV);
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
             .createScalarPhi(
-                {Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, 0)), CanIVInc},
+                {Plan.getOrAddLiveIn(ConstantInt::get(CanIVInfo.Ty, 0)),
+                 CanIVInc},
                 CanIVInfo.DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
@@ -1555,9 +1556,9 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
   for (const VPBlockBase *VPB : RPOT) {
-    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB))
       assignNames(VPBB);
-    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
+    else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
       assignName(CanIV);
   }
 }

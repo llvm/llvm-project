@@ -2341,11 +2341,9 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   if (getStepValue()->getDefiningRecipe())
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
-  auto *CanIV = getParent()->getParent()->getCanonicalIV();
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
-         getScalarType() ==
-             VPTypeAnalysis(*getParent()->getPlan()).inferScalarType(CanIV);
+         getScalarType() == getParent()->getParent()->getCanonicalIVType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

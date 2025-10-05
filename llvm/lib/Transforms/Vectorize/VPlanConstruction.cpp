@@ -395,7 +395,7 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
-  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPB->getPredecessors()[1]);
+  auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
@@ -409,9 +409,10 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPPhi *ScalarCanIV = nullptr;
   if (PreheaderVPBB->getSinglePredecessor() == Plan.getEntry())
     ScalarCanIV = cast<VPPhi>(&*cast<VPBasicBlock>(HeaderVPB)->begin());
-  auto *R =
-      Plan.createVPRegionBlock(ScalarCanIV ? ScalarCanIV->getDebugLoc()
-                                           : DebugLoc::getCompilerGenerated());
+  auto *R = Plan.createVPRegionBlock(
+      ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType(),
+      ScalarCanIV ? ScalarCanIV->getDebugLoc()
+                  : DebugLoc::getCompilerGenerated());
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
@@ -447,7 +448,10 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   }
 
   VPBuilder Builder(LatchVPBB);
-  auto CanonicalIVIncrement = Builder.createOverflowingOp(
+  // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
+  // Initially the induction increment is guaranteed to not wrap, but that may
+  // change later, e.g. when tail-folding, when the flags need to be dropped.
+  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
       Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
       "index.next");
   // Add the BranchOnCount VPInstruction to the latch.

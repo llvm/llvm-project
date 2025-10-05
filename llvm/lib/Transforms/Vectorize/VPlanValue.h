@@ -169,7 +169,9 @@ public:
   const VPRecipeBase *getDefiningRecipe() const;
 
   /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
+  bool hasDefiningRecipe() const {
+    return SubclassID != VPRegionValueSC && getDefiningRecipe();
+  }
 
   /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
   bool isLiveIn() const {
@@ -196,8 +198,7 @@ public:
 };
 
 /// VPValues defined by a VPRegionBlock, like the canonical IV.
-class VPRegionValue : public VPValue {
-public:
+struct VPRegionValue : public VPValue {
   VPRegionValue() : VPValue(VPValue::VPRegionValueSC) {}
 
   ~VPRegionValue() override = default;

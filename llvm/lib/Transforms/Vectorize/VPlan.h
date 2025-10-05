@@ -3900,11 +3900,12 @@ public:
 /// Track information about the canonical IV value of a region.
 struct VPCanonicalIVInfo {
   VPRegionValue *CanIV = nullptr;
+  Type *Ty = nullptr;
   bool HasNUW = true;
   DebugLoc DL = DebugLoc::getUnknown();
 
-  VPCanonicalIVInfo(VPRegionValue *CanIV, bool HasNUW, DebugLoc DL)
-      : CanIV(CanIV), HasNUW(HasNUW), DL(DL) {}
+  VPCanonicalIVInfo(VPRegionValue *CanIV, Type *Ty, bool HasNUW, DebugLoc DL)
+      : CanIV(CanIV), Ty(Ty), HasNUW(HasNUW), DL(DL) {}
 
   VPCanonicalIVInfo() {}
 
@@ -3958,9 +3959,9 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
     Exiting->setParent(this);
   }
 
-  VPRegionBlock(DebugLoc DL, const std::string &Name = "")
+  VPRegionBlock(Type *CanIVTy, DebugLoc DL, const std::string &Name = "")
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
-        CanIVInfo(new VPRegionValue(), true, DL) {}
+        CanIVInfo(new VPRegionValue(), CanIVTy, true, DL) {}
 
 public:
   ~VPRegionBlock() override {}
@@ -4035,6 +4036,9 @@ public:
   /// replicating regions.
   VPValue *getCanonicalIV() { return CanIVInfo.CanIV; }
   const VPValue *getCanonicalIV() const { return CanIVInfo.CanIV; }
+
+  Type *getCanonicalIVType() { return CanIVInfo.Ty; }
+  const Type *getCanonicalIVType() const { return CanIVInfo.Ty; }
 
   VPCanonicalIVInfo &getCanonicalIVInfo() { return CanIVInfo; }
 };
@@ -4390,9 +4394,9 @@ public:
   /// Create a new loop VPRegionBlock with \p StartV and \p Name, and entry and
   /// exiting blocks set to nullptr. The returned block is owned by the VPlan
   /// and deleted once the VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(DebugLoc DL,
+  VPRegionBlock *createVPRegionBlock(Type *CanIVTy, DebugLoc DL,
                                      const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(DL, Name);
+    auto *VPB = new VPRegionBlock(CanIVTy, DL, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

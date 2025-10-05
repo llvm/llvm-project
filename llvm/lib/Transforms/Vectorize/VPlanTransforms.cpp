@@ -1710,9 +1710,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
       HeaderR.getVPSingleValue()->replaceAllUsesWith(Phi->getIncomingValue(0));
       HeaderR.eraseFromParent();
     }
-    Plan.getCanonicalIV()->replaceAllUsesWith(
-        Plan.getOrAddLiveIn(ConstantInt::getNullValue(
-            VPTypeAnalysis(Plan).inferScalarType(Plan.getCanonicalIV()))));
+    VectorRegion->getCanonicalIV()->replaceAllUsesWith(Plan.getOrAddLiveIn(
+        ConstantInt::getNullValue(VectorRegion->getCanonicalIVType())));
 
     VPBlockBase *Preheader = VectorRegion->getSinglePredecessor();
     VPBlockBase *Exit = VectorRegion->getSingleSuccessor();
@@ -2319,16 +2318,15 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
     VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
-  VPValue *CanonicalIV = Plan.getCanonicalIV();
-  VPValue *StartV = Plan.getOrAddLiveIn(Constant::getNullValue(
-      VPTypeAnalysis(Plan).inferScalarType(CanonicalIV)));
+  auto &CanIVInfo = Plan.getCanonicalIVInfo();
+  VPValue *CanonicalIV = CanIVInfo.CanIV;
+  VPValue *StartV = Plan.getOrAddLiveIn(Constant::getNullValue(CanIVInfo.Ty));
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(EB->getTerminator()->getOperand(0));
   // TODO: Check if dropping the flags is needed if
   // !DataAndControlFlowWithoutRuntimeCheck.
   CanonicalIVIncrement->dropPoisonGeneratingFlags();
-  auto &CanIVInfo = Plan.getCanonicalIVInfo();
   CanIVInfo.HasNUW = false;
   DebugLoc DL = CanIVInfo.DL;
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
@@ -2360,8 +2358,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
-  VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
-      ConstantInt::get(VPTypeAnalysis(Plan).inferScalarType(CanonicalIV), 1));
+  VPValue *ALMMultiplier =
+      Plan.getOrAddLiveIn(ConstantInt::get(CanIVInfo.Ty, 1));
   auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                         {EntryIncrement, TC, ALMMultiplier}, DL,
                                         "active.lane.mask.entry");
@@ -2458,8 +2456,8 @@ void VPlanTransforms::addActiveLaneMask(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
-    VPValue *ALMMultiplier = Plan.getOrAddLiveIn(ConstantInt::get(
-        VPTypeAnalysis(Plan).inferScalarType(Plan.getCanonicalIV()), 1));
+    VPValue *ALMMultiplier =
+        Plan.getOrAddLiveIn(ConstantInt::get(Plan.getCanonicalIVInfo().Ty, 1));
     LaneMask =
         B.createNaryOp(VPInstruction::ActiveLaneMask,
                        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
@@ -2730,7 +2728,7 @@ void VPlanTransforms::addExplicitVectorLength(
 
   auto *CanonicalIV = Plan.getCanonicalIV();
   auto &CanIVInfo = Plan.getCanonicalIVInfo();
-  auto *CanIVTy = VPTypeAnalysis(Plan).inferScalarType(CanonicalIV);
+  auto *CanIVTy = CanIVInfo.Ty;
   VPValue *StartV = Plan.getOrAddLiveIn(ConstantInt::getNullValue(CanIVTy));
   auto *CanonicalIVIncrement = cast<VPInstruction>(Plan.getVectorLoopRegion()
                                                        ->getExitingBasicBlock()
@@ -4174,8 +4172,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  auto *CanIV = Plan.getCanonicalIV();
-  Type *CanIVTy = TypeInfo.inferScalarType(CanIV);
+  Type *CanIVTy = Plan.getCanonicalIVInfo().Ty;
   auto *Inc = cast<VPInstruction>(
       VectorLoop->getExitingBasicBlock()->getTerminator()->getOperand(0));
   VPBuilder PHBuilder(Plan.getVectorPreheader());

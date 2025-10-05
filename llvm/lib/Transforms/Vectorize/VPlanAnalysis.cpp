@@ -494,9 +494,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
-  if (auto *CanIV = LoopRegion->getCanonicalIV())
-    if (CanIV->getNumUsers() != 0)
-      OpenIntervals.insert(CanIV);
+  VPValue *CanIV = LoopRegion->getCanonicalIV();
+  if (CanIV->getNumUsers() != 0)
+    OpenIntervals.insert(CanIV);
 
   // We scan the instructions linearly and record each time that a new interval
   // starts, by placing it in a set. If we find this value in TransposEnds then
