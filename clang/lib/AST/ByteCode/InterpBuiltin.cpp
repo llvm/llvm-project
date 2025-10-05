@@ -3135,7 +3135,7 @@ static bool interp__builtin_x86_compare_scalar(InterpState &S, CodePtr OpPC,
   pushInteger(S, result ? 1 : 0, S.getASTContext().IntTy);
   return true;
 }
-  
+
 static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
                                     const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 2);
