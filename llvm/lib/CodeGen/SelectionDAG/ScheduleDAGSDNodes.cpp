@@ -566,7 +566,7 @@ void ScheduleDAGSDNodes::RegDefIter::InitNodeNumDefs() {
     NodeNumDefs = 0;
     return;
   }
-  unsigned NRegDefs = SchedDAG->TII->get(Node->getMachineOpcode()).getNumDefs();
+  uint32_t NRegDefs = SchedDAG->TII->get(Node->getMachineOpcode()).getNumDefs();
   // Some instructions define regs that are not represented in the selection DAG
   // (e.g. unused flags). See tMOVi8. Make sure we don't access past NumValues.
   NodeNumDefs = std::min(Node->getNumValues(), NRegDefs);
