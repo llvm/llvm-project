@@ -51620,6 +51620,7 @@ static SDValue combineBMILogicOp(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+
 /// Fold AND(Y, XOR(X, NEG(X))) -> ANDN(Y, BLSMSK(X)) if BMI is available.
 static SDValue combineAndXorSubWithBMI(SDNode *And, const SDLoc &DL,
                                        SelectionDAG &DAG,
