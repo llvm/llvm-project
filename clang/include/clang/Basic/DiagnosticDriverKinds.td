@@ -773,6 +773,9 @@ def err_cc1_unbounded_vscale_min : Error<
 
 def err_drv_using_omit_rtti_component_without_no_rtti : Error<
   "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
+def warn_drv_exception_without_rtti : Warning<
+  "using exceptions without RTTI is not recommended">,
+  InGroup<DiagGroup<"exception-without-rtti">>;
 
 def err_drv_ssp_missing_offset_argument : Error<
   "'%0' is used without '-mstack-protector-guard-offset', and there is no default">;
