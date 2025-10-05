@@ -25,7 +25,6 @@
 
 #include "test_macros.h"
 #include "../helpers.h"
-#include "check_assertion.h"
 
 template <class F>
 void test_swap_exception_guarantee([[maybe_unused]] F&& swap_function) {
