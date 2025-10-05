@@ -2975,7 +2975,6 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-
 static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
                                                  const CallExpr *Call,
                                                  unsigned ID) {
@@ -2998,8 +2997,8 @@ static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
         Dst.elem<T>(I) = Concat.elem<T>(I + Shift);
       else
         Dst.elem<T>(I) = T();
-      }
-    });
+    }
+  });
 
   Dst.initializeAllElements();
 
