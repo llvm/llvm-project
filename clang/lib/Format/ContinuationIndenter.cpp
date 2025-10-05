@@ -925,7 +925,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                         TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
+       (Previous.is(BK_BracedInit) &&
+        (!Style.Cpp11BracedListStyle || !Previous.Previous ||
+         Previous.Previous->isNotOneOf(tok::identifier, tok::l_paren))) ||
+       Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
