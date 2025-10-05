@@ -786,13 +786,18 @@ Error opts::symbols::verify(lldb_private::Module &Module) {
       return make_string_error("Can't get a line entry of a compile unit.");
 
     for (uint32_t i = 1; i < count; i++) {
-      lldb::addr_t curr_end =
-          le.range.GetBaseAddress().GetFileAddress() + le.range.GetByteSize();
+      lldb::addr_t curr_end = LLDB_INVALID_ADDRESS;
+      if (le.HasValidRange()) {
+        const lldb_private::AddressRange &range = le.GetRange();
+        curr_end =
+            range.GetBaseAddress().GetFileAddress() + range.GetByteSize();
+      }
 
       if (!lt->GetLineEntryAtIndex(i, le))
         return make_string_error("Can't get a line entry of a compile unit");
 
-      if (curr_end > le.range.GetBaseAddress().GetFileAddress())
+      if (le.HasValidRange() &&
+          curr_end > le.GetRange().GetBaseAddress().GetFileAddress())
         return make_string_error(
             "Line table of a compile unit is inconsistent.");
     }

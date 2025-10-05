@@ -1632,8 +1632,8 @@ static void DumpSymbolContextList(
       strm.EOL();
 
     Address addr;
-    if (sc.line_entry.IsValid())
-      addr = sc.line_entry.range.GetBaseAddress();
+    if (sc.line_entry.IsValid() && sc.line_entry.HasValidRange())
+      addr = sc.line_entry.GetRange().GetBaseAddress();
     else if (sc.block && sc.block->GetContainingInlinedBlock())
       sc.block->GetContainingInlinedBlock()->GetStartAddress(addr);
     else
