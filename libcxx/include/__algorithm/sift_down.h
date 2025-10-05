@@ -38,7 +38,7 @@ __sift_down(_RandomAccessIterator __first,
   // right-child of __start is at 2 * __start + 2
   difference_type __child = __start;
 
-  if (__len < 2 || (__len - 2) / 2 < __child)
+  if (__len < 2)
     return;
 
   __child = 2 * __child + 1;
@@ -62,7 +62,7 @@ __sift_down(_RandomAccessIterator __first,
     __first[__start] = _Ops::__iter_move(__first + __child);
     __start          = __child;
 
-    if ((__len - 2) / 2 < __child)
+    if (__len / 2 - 1 < __child)
       break;
 
     // recompute the child based off of the updated parent
@@ -85,31 +85,32 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator __floy
     _RandomAccessIterator __first,
     _Compare&& __comp,
     typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
-  using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
-  _LIBCPP_ASSERT_INTERNAL(__len >= 2, "shouldn't be called unless __len >= 2");
+  _LIBCPP_ASSERT_INTERNAL(__len > 1, "shouldn't be called unless __len > 1");
 
-  _RandomAccessIterator __hole    = __first;
-  _RandomAccessIterator __child_i = __first;
-  difference_type __child         = 0;
+  using _Ops = _IterOps<_AlgPolicy>;
 
-  while (true) {
-    __child_i += difference_type(__child + 1);
-    __child = 2 * __child + 1;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
 
-    if ((__child + 1) < __len && __comp(*__child_i, *(__child_i + difference_type(1)))) {
+  difference_type __child      = 1;
+  _RandomAccessIterator __hole = __first, __child_i = __first;
+
+  do {
+    __child_i += __child;
+    __child *= 2;
+
+    if (__child < __len && __comp(*__child_i, *(__child_i + difference_type(1)))) {
       // right-child exists and is greater than left-child
       ++__child_i;
       ++__child;
     }
 
     // swap __hole with its largest child
-    *__hole = _IterOps<_AlgPolicy>::__iter_move(__child_i);
+    *__hole = _Ops::__iter_move(__child_i);
     __hole  = __child_i;
 
     // if __hole is now a leaf, we're done
-    if (__child > (__len - 2) / 2)
-      return __hole;
-  }
+  } while (__child <= __len / 2);
+  return __hole;
 }
 
 _LIBCPP_END_NAMESPACE_STD
