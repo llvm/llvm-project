@@ -671,7 +671,7 @@ private:
       ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
     } else {
       _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-          ranges::is_sorted(__keys_ | ranges::views::drop(__old_size)), "Key container is not sorted");
+          ranges::is_sorted(__keys_ | ranges::views::drop(__old_size), __compare_), "Key container is not sorted");
     }
     ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
     __on_failure.__complete();
