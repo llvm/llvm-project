@@ -23,8 +23,8 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-export CC=cl
-export CXX=cl
+export CC=clang-cl
+export CXX=clang-cl
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
