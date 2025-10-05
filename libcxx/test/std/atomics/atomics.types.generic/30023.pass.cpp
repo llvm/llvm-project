@@ -9,6 +9,8 @@
 // https://github.com/llvm/llvm-project/issues/30023
 // compare exchange does not work with types of which the size is not a power of 2
 
+// XFAIL: clang-20, clang-21, apple-clang-15, apple-clang-16, apple-clang-17
+
 #include <atomic>
 #include <cstring>
 #include <cassert>
@@ -55,11 +57,13 @@ void test() {
   assert(expected.b);
 }
 
-int main() {
+int main(int, char**) {
   test<1>();
   test<2>();
   test<3>();
   test<4>();
   test<5>();
   test<6>();
+
+  return 0;
 }
