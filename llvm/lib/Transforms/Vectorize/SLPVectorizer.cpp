@@ -16129,10 +16129,11 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
 
   LLVM_DEBUG(dbgs() << "SLP: Recalculate costs after tree trimming.\n");
   Cost = 0;
-  for (const auto &P : NodesCosts){
+  for (const auto &P : NodesCosts) {
     Cost += P.second;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << P.second << " for bundle "
-                      << shortBundleName(P.first->Scalars, P.first->Idx) << ".\n"
+                      << shortBundleName(P.first->Scalars, P.first->Idx)
+                      << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
   }
   return Cost;
@@ -17897,7 +17898,7 @@ Value *BoUpSLP::gather(
       ArrayRef<TreeEntry *> Entries = getTreeEntries(V);
       const auto *It = find_if(Entries, [&](const TreeEntry *E) {
         return !TransformedToGatherNodes.contains(E) &&
-           !DeletedNodes.contains(E);
+               !DeletedNodes.contains(E);
       });
       if (It != Entries.end()) {
         // Find which lane we need to extract.
