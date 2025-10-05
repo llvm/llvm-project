@@ -4681,22 +4681,27 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   } else if (E->getType().getAddressSpace() == LangAS::hlsl_constant) {
     // This is an array inside of a cbuffer.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
-    // ...
-    CharUnits RowAlignedSize = getContext()
-                                   .getTypeSizeInChars(E->getType())
-                                   .alignTo(CharUnits::fromQuantity(16));
+    SmallVector<llvm::Value *, 2> Indices;
+    Indices.push_back(EmitIdxAfterBase(/*Promote*/true));
 
-    llvm::Value *RowAlignedSizeVal =
-        llvm::ConstantInt::get(Idx->getType(), RowAlignedSize.getQuantity());
-    llvm::Value *ScaledIdx = Builder.CreateMul(Idx, RowAlignedSizeVal);
+    CharUnits ElementSize = getContext().getTypeSizeInChars(E->getType());
+    CharUnits RowAlignedSize = ElementSize.alignTo(CharUnits::fromQuantity(16));
+
+    llvm::Type *EltTyToIndex = Addr.getElementType();
+    if (RowAlignedSize > ElementSize) {
+      llvm::Type *Padding = CGM.getTargetCodeGenInfo().getHLSLPadding(
+          CGM, RowAlignedSize - ElementSize);
+      EltTyToIndex = llvm::StructType::get(
+          getLLVMContext(), {EltTyToIndex, Padding}, /*isPacked=*/true);
+      Indices.push_back(llvm::ConstantInt::get(Indices[0]->getType(), 0));
+}
 
     CharUnits EltAlign =
-      getArrayElementAlign(Addr.getAlignment(), Idx, RowAlignedSize);
+      getArrayElementAlign(Addr.getAlignment(), Indices[0], RowAlignedSize);
     llvm::Value *EltPtr =
-        emitArraySubscriptGEP(*this, Int8Ty, Addr.emitRawPointer(*this),
-                              ScaledIdx, false, SignedIndices, E->getExprLoc());
+        emitArraySubscriptGEP(*this, EltTyToIndex, Addr.emitRawPointer(*this),
+                              Indices, false, SignedIndices, E->getExprLoc());
     Addr = Address(EltPtr, Addr.getElementType(), EltAlign);
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed the
