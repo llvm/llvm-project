@@ -428,7 +428,8 @@ if (ExpectedSizeInBytes == Size) {
   Address OldTmp = CGF.CreateTempAlloca(OldType, Ptr.getAlignment(), "old.tmp");
 
   // Store Old into this temporary
-  CGF.Builder.CreateStore(Old, OldTmp);
+  auto *I = CGF.Builder.CreateStore(Old, OldTmp);
+  CGF.addInstToCurrentSourceAtom(I, Old);
 
   // Perform memcpy for first ExpectedSizeInBytes bytes
   CGF.Builder.CreateMemCpy(
