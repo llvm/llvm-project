@@ -1132,8 +1132,10 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
 #if SANITIZER_ANDROID
   {
-    // In Bionic, pthread_detach calls pthread_join, so the thread has already
-    // been consumed by the pthread_detach interceptor.
+    // In Bionic, if the target thread has already exited when pthread_detach is
+    // called, pthread_detach will call pthread_join internally to clean it up.
+    // In that case, the thread has already been consumed by the pthread_detach
+    // interceptor.
     Tid tid = ctx->thread_registry.FindThread(
         [](ThreadContextBase* tctx, void* arg) {
           return tctx->user_id == (uptr)arg;
