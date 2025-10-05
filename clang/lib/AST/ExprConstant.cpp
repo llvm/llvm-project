@@ -12350,6 +12350,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       Elems.push_back(ElemNum == Index ? ElemAV : VecVal.getVectorElt(ElemNum));
 
     return Success(APValue(Elems.data(), NumElems), E);
+  }
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift: {
     assert(E->getNumArgs() == 2);
