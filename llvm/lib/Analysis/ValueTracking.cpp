@@ -39,6 +39,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -9474,6 +9475,69 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   return std::nullopt;
 }
 
+/// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
+/// is true.  Return false if LHS implies RHS is false. Otherwise, return
+/// std::nullopt if we can't infer anything.
+static std::optional<bool>
+isImpliedCondFCmps(FCmpInst::Predicate LPred, const Value *L0, const Value *L1,
+                   FCmpInst::Predicate RPred, const Value *R0, const Value *R1,
+                   const DataLayout &DL, bool LHSIsTrue) {
+  // The rest of the logic assumes the LHS condition is true.  If that's not the
+  // case, invert the predicate to make it so.
+  if (!LHSIsTrue)
+    LPred = FCmpInst::getInversePredicate(LPred);
+
+  // We can have non-canonical operands, so try to normalize any common operand
+  // to L0/R0.
+  if (L0 == R1) {
+    std::swap(R0, R1);
+    RPred = FCmpInst::getSwappedPredicate(RPred);
+  }
+  if (R0 == L1) {
+    std::swap(L0, L1);
+    LPred = FCmpInst::getSwappedPredicate(LPred);
+  }
+  if (L1 == R1) {
+    // If we have L0 == R0 and L1 == R1, then make L1/R1 the constants.
+    if (L0 != R0 || match(L0, m_ImmConstant())) {
+      std::swap(L0, L1);
+      LPred = ICmpInst::getSwappedCmpPredicate(LPred);
+      std::swap(R0, R1);
+      RPred = ICmpInst::getSwappedCmpPredicate(RPred);
+    }
+  }
+
+  // Can we infer anything when the two compares have matching operands?
+  if (L0 == R0 && L1 == R1) {
+    if ((LPred & RPred) == LPred)
+      return true;
+    if ((LPred & ~RPred) == LPred)
+      return false;
+  }
+
+  // See if we can infer anything if operand-0 matches and we have at least one
+  // constant.
+  const APFloat *L1C, *R1C;
+  if (L0 == R0 && match(L1, m_APFloat(L1C)) && match(R1, m_APFloat(R1C))) {
+    if (std::optional<ConstantFPRange> DomCR =
+            ConstantFPRange::makeExactFCmpRegion(LPred, *L1C)) {
+      if (std::optional<ConstantFPRange> ImpliedCR =
+              ConstantFPRange::makeExactFCmpRegion(RPred, *R1C)) {
+        if (ImpliedCR->contains(*DomCR))
+          return true;
+      }
+      if (std::optional<ConstantFPRange> ImpliedCR =
+              ConstantFPRange::makeExactFCmpRegion(
+                  FCmpInst::getInversePredicate(RPred), *R1C)) {
+        if (ImpliedCR->contains(*DomCR))
+          return false;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
 /// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
 /// false.  Otherwise, return std::nullopt if we can't infer anything.  We
 /// expect the RHS to be an icmp and the LHS to be an 'and', 'or', or a 'select'
@@ -9529,15 +9593,24 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
     LHSIsTrue = !LHSIsTrue;
 
   // Both LHS and RHS are icmps.
-  if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
-    return isImpliedCondICmps(LHSCmp->getCmpPredicate(), LHSCmp->getOperand(0),
-                              LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
-                              DL, LHSIsTrue);
-  const Value *V;
-  if (match(LHS, m_NUWTrunc(m_Value(V))))
-    return isImpliedCondICmps(CmpInst::ICMP_NE, V,
-                              ConstantInt::get(V->getType(), 0), RHSPred,
-                              RHSOp0, RHSOp1, DL, LHSIsTrue);
+  if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
+    if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+      return isImpliedCondICmps(LHSCmp->getCmpPredicate(),
+                                LHSCmp->getOperand(0), LHSCmp->getOperand(1),
+                                RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
+    const Value *V;
+    if (match(LHS, m_NUWTrunc(m_Value(V))))
+      return isImpliedCondICmps(CmpInst::ICMP_NE, V,
+                                ConstantInt::get(V->getType(), 0), RHSPred,
+                                RHSOp0, RHSOp1, DL, LHSIsTrue);
+  } else {
+    assert(RHSOp0->getType()->isFPOrFPVectorTy() &&
+           "Expected floating point type only!");
+    if (const auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
+      return isImpliedCondFCmps(LHSCmp->getPredicate(), LHSCmp->getOperand(0),
+                                LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
+                                DL, LHSIsTrue);
+  }
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
@@ -9570,6 +9643,13 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
     if (auto Implied = isImpliedCondition(
             LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
+            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+      return InvertRHS ? !*Implied : *Implied;
+    return std::nullopt;
+  }
+  if (const FCmpInst *RHSCmp = dyn_cast<FCmpInst>(RHS)) {
+    if (auto Implied = isImpliedCondition(
+            LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
