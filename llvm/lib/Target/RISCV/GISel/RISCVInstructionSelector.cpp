@@ -868,13 +868,11 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       return false;
 
 #ifndef NDEBUG
-    const RegisterBank &PtrRB =
-        *RBI.getRegBank(PtrReg, *MRI, TRI);
+    const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, *MRI, TRI);
     // Check that the pointer register is valid.
     assert(PtrRB.getID() == RISCV::GPRBRegBankID &&
            "Load/Store pointer operand isn't a GPR");
-    assert(PtrTy.isPointer() &&
-           "Load/Store pointer operand isn't a pointer");
+    assert(PtrTy.isPointer() && "Load/Store pointer operand isn't a pointer");
 #endif
 
     // Can only handle AddressSpace 0.
@@ -886,13 +884,12 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
     if (isStrongerThanMonotonic(Order)) {
       assert(MemSizeInBytes <= 8 && "Unexpected mem size!");
-      static constexpr unsigned LoadOpcodes[] = {
-        RISCV::LB_AQ, RISCV::LH_AQ, RISCV::LW_AQ, RISCV::LD_AQ
-      };
-      static constexpr unsigned StoreOpcodes[] = {
-        RISCV::SB_RL, RISCV::SH_RL, RISCV::SW_RL, RISCV::SD_RL
-      };
-      ArrayRef<unsigned> Opcodes = isa<GLoad>(LdSt) ? LoadOpcodes : StoreOpcodes;
+      static constexpr unsigned LoadOpcodes[] = {RISCV::LB_AQ, RISCV::LH_AQ,
+                                                 RISCV::LW_AQ, RISCV::LD_AQ};
+      static constexpr unsigned StoreOpcodes[] = {RISCV::SB_RL, RISCV::SH_RL,
+                                                  RISCV::SW_RL, RISCV::SD_RL};
+      ArrayRef<unsigned> Opcodes =
+          isa<GLoad>(LdSt) ? LoadOpcodes : StoreOpcodes;
       MI.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
       return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
     }
