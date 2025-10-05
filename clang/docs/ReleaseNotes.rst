@@ -123,6 +123,9 @@ AST Dumping Potentially Breaking Changes
 
     ``__atomic_test_and_set(p, 0)``
 
+- Pretty-printing of templates with inherited (i.e. specified in a previous
+  redeclaration) default arguments has been fixed.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
