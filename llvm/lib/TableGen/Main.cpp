@@ -37,6 +37,52 @@
 #include <utility>
 using namespace llvm;
 
+class stringvec_ostream : public raw_ostream {
+  std::vector<std::string> V;
+
+  size_t Pos = 0;
+  uint64_t current_pos() const override { return Pos; }
+
+  void write_impl(const char *Ptr, size_t Size) override {
+    Pos += Size;
+
+    size_t ThisSize = std::min(Size, V.back().capacity() - V.back().size());
+    V.back().append(Ptr, ThisSize);
+    Ptr += ThisSize;
+    Size -= ThisSize;
+
+    if (Size != 0) {
+      size_t NewCapacity = std::max(Size, V.back().capacity() * 2);
+      V.emplace_back();
+      V.back().reserve(NewCapacity);
+      V.back().append(Ptr, Size);
+    }
+  }
+
+public:
+  stringvec_ostream() : V(1) { SetUnbuffered(); }
+
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const stringvec_ostream &RHS) {
+    for (const std::string &S : RHS.V)
+      OS << S;
+    return OS;
+  }
+
+  bool operator==(StringRef RHS) {
+    if (Pos != RHS.size())
+      return false;
+
+    size_t Offset = 0;
+    for (const std::string &S : V) {
+      if (S != RHS.slice(Offset, Offset + S.size()))
+        return false;
+      Offset += S.size();
+    }
+    return true;
+  }
+};
+
 static cl::opt<std::string>
 OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"),
                cl::init("-"));
@@ -142,8 +188,7 @@ int llvm::TableGenMain(const char *argv0,
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
-  std::string OutString;
-  raw_string_ostream Out(OutString);
+  stringvec_ostream Out;
   unsigned status = 0;
   // ApplyCallback will return true if it did not apply any callback. In that
   // case, attempt to apply the MainFn.
@@ -170,7 +215,7 @@ int llvm::TableGenMain(const char *argv0,
     // aren't any.
     if (auto ExistingOrErr =
             MemoryBuffer::getFile(OutputFilename, /*IsText=*/true))
-      if (std::move(ExistingOrErr.get())->getBuffer() == OutString)
+      if (Out == std::move(ExistingOrErr.get())->getBuffer())
         WriteFile = false;
   }
   if (WriteFile) {
@@ -179,7 +224,7 @@ int llvm::TableGenMain(const char *argv0,
     if (EC)
       return reportError(argv0, "error opening " + OutputFilename + ": " +
                                     EC.message() + "\n");
-    OutFile.os() << OutString;
+    OutFile.os() << Out;
     if (ErrorsPrinted == 0)
       OutFile.keep();
   }
