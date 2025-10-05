@@ -473,6 +473,20 @@ using iter_value_t =
                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
 
+template <class _Iter>
+using __iter_value_t _LIBCPP_NODEBUG = iter_value_t<_Iter>;
+
+template <class _Iter>
+using __iter_difference_t _LIBCPP_NODEBUG = iter_difference_t<_Iter>;
+
+#else
+
+template <class _Iter>
+using __iter_value_t _LIBCPP_NODEBUG = __iter_value_type<_Iter>;
+
+template <class _Iter>
+using __iter_difference_t _LIBCPP_NODEBUG = __iter_diff_t<_Iter>;
+
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
