@@ -23,6 +23,8 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
+which clang-cl
+
 export CC=clang-cl
 export CXX=clang-cl
 export LD=link
