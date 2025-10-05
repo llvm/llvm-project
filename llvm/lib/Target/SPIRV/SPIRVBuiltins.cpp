@@ -1131,24 +1131,6 @@ static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   }
 }
 
-// Helper function for building Intel's predicated load/store instructions.
-static bool buildPredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
-                                          unsigned Opcode,
-                                          MachineIRBuilder &MIRBuilder,
-                                          SPIRVGlobalRegistry *GR) {
-  // Generate SPIRV instruction accordingly.
-  if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
-
-  auto MIB = MIRBuilder.buildInstr(Opcode)
-                 .addDef(Call->ReturnRegister)
-                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
-    MIB.addUse(Call->Arguments[i]);
-
-  return true;
-}
-
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -2444,7 +2426,19 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
   unsigned Opcode =
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
 
-  return buildPredicatedLoadStoreInst(Call, Opcode, MIRBuilder, GR);
+  bool IsSet = Opcode != SPIRV::OpPredicatedStoreINTEL;
+  unsigned ArgSz = Call->Arguments.size();
+  unsigned LiteralIdx = 0;
+  if(ArgSz > 3) {
+    LiteralIdx = 3;
+  }
+  SmallVector<uint32_t, 1> ImmArgs;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  if (LiteralIdx > 0)
+      ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                            IsSet ? TypeReg : Register(0), ImmArgs);
 }
 
 static bool buildNDRange(const SPIRV::IncomingCall *Call,

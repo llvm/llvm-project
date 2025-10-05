@@ -989,7 +989,7 @@ def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$blo
                   "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
 
 // SPV_INTEL_predicated_io
-def OpPredicatedLoadINTEL: Op<6528, (outs ID:$res), (ins ID:$ptr, ID:$predicate, ID:$default_value),
-                  "$res = OpPredicatedLoadINTEL $ptr $predicate $default_value">;
-def OpPredicatedStoreINTEL: Op<6529, (outs), (ins ID:$ptr, ID:$object, ID:$predicate),
+def OpPredicatedLoadINTEL: Op<6528, (outs ID:$res), (ins TYPE:$resType, ID:$ptr, ID:$predicate, ID:$default_value, variable_ops),
+                  "$res = OpPredicatedLoadINTEL $resType $ptr $predicate $default_value">;
+def OpPredicatedStoreINTEL: Op<6529, (outs), (ins ID:$ptr, ID:$object, ID:$predicate, variable_ops),
                   "OpPredicatedStoreINTEL $ptr $object $predicate">;

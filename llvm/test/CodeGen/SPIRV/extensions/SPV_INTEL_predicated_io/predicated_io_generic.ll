@@ -9,7 +9,6 @@
 ; CHECK-DAG: Extension "SPV_INTEL_predicated_io"
 
 ; CHECK-DAG: %[[Int32Ty:[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstant %[[Int32Ty]] 0
 ; CHECK-DAG: %[[VoidTy:[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: %[[IntPtrTy:[0-9]+]] = OpTypePointer CrossWorkgroup %[[Int32Ty]]
 ; CHECK-DAG: %[[BoolTy:[0-9]+]] = OpTypeBool
@@ -18,10 +17,10 @@
 ; CHECK: %[[DefaultVal:]] = FunctionParameter %[[Int32Ty]]
 ; CHECK: %[[StoreObj:]] = FunctionParameter %[[Int32Ty]]
 ; CHECK: %[[Predicate:]] = FunctionParameter %[[BoolTy]]
-; CHECK: PredicatedLoadINTEL %[[Int32Ty]] %[[Result1:]] %[[LoadPtr]] %[[Predicate]] %[[DefaultVal]]
-; CHECK: PredicatedLoadINTEL %[[Int32Ty]] %[[Result2:]] %[[LoadPtr]] %[[Predicate]] %[[DefaultVal]] %[[Const0]]
+; CHECK: PredicatedLoadINTEL %[[Int32Ty]] %[[LoadPtr]] %[[Predicate]] %[[DefaultVal]]
+; CHECK: PredicatedLoadINTEL %[[Int32Ty]] %[[LoadPtr]] %[[Predicate]] %[[DefaultVal]] 0
 ; CHECK: PredicatedStoreINTEL %[[StorePtr]] %[[StoreObj]] %[[Predicate]]
-; CHECK: PredicatedStoreINTEL %[[StorePtr]] %[[StoreObj]] %[[Predicate]] %[[Const0]]
+; CHECK: PredicatedStoreINTEL %[[StorePtr]] %[[StoreObj]] %[[Predicate]] 0
 
 define spir_func void @foo(ptr addrspace(1) %load_pointer, ptr addrspace(1) %store_pointer, i32  %default_value, i32 %store_object, i1 zeroext %predicate) {
 entry:
