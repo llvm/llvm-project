@@ -344,6 +344,8 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- Improved diagnostic location for templates declared inside local classes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
