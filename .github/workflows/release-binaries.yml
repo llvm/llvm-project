@@ -247,25 +247,19 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
-    - name: Shorten paths on windows
-      run: |
-       subst S: ${{ github.workspace }}
-       mkdir "S:\build"
-       subst B: S:\build
-
     - name: Configure
       id: build
-      shell: bash
       env:
         CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
         CMAKE: /c/Android/android-sdk/cmake/3.31.5/bin/cmake.exe
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        export PATH=C:\Strawberry\c\bin\:$PATH
-        $CMAKE -G Ninja -S /s/llvm/ -B /b \
+        #export PATH=C:\Strawberry\c\bin\:$PATH
+        subst S: ${{ github.workspace }}
+        cmake -G Ninja -S S:\ -B S:\build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake \
+            -C clang\cmake\caches\Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
             -DCMAKE_OBJECT_PATH_MAX=500 \
             -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 \
@@ -299,10 +293,8 @@ jobs:
     # ninja: error: mkdir(tools/clang/tools/extra/clang-tidy/misc/ConfusableTable/CMakeFiles/clang-tidy-confusable-chars-gen.dir/C_/actions-runner/llvm-project/llvm-project/llvm): No such file or directory
     - name: Build Windows
       if: runner.os == 'Windows'
-      shell: bash
       run: |
-        tail /b/build.ninja
-        ninja -v -C /b stage2-package
+        ninja -v -C "S:\build" stage2-package
     
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
