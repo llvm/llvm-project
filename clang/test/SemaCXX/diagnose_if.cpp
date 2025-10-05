@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++20
-// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++20 -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++14
+// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++20 -verify=expected,cxx20
+// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++14 -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++20 -verify=expected,cxx20 -fexperimental-new-constant-interpreter
 
 #define _diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
 
@@ -673,9 +675,12 @@ struct ConstructorTemplate {
   explicit ConstructorTemplate(T x)
       _diagnose_if(sizeof(T) == sizeof(char), "oh no", "error") {} // expected-note {{diagnose_if}}
 
-  template <class T> requires (sizeof(T) == 1) // expected-note {{evaluated to false}}
+  template <class T>
+#if __cplusplus >= 202002L
+  requires (sizeof(T) == 1) // cxx20-note {{evaluated to false}}
+#endif
   operator T() _diagnose_if(sizeof(T) == sizeof(char), "oh no", "error") { // expected-note {{diagnose_if}} \
-                                                                           // expected-note {{constraints not satisfied}}
+                                                                           // cxx20-note {{constraints not satisfied}}
     return T{};
   }
 };
@@ -683,7 +688,7 @@ struct ConstructorTemplate {
 void run() {
   ConstructorTemplate x('1'); // expected-error {{oh no}}
   char y = x; // expected-error {{oh no}}
-  int z = x; // expected-error {{no viable conversion}}
+  int z = x; // cxx20-error {{no viable conversion}}
 }
 
 }
