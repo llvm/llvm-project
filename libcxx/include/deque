@@ -235,6 +235,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/type_identity.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
 #  include <__utility/pair.h>
@@ -2135,22 +2136,17 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
     size_type __ds = (__nb + __back_capacity) * __block_size - __map_.empty();
     __split_buffer<pointer, __pointer_allocator&> __buf(
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__get_allocator());
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __nb > 0; --__nb) {
-        __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
-        // ASan: this is empty container, we have to poison whole block
-        __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard = std::__make_exception_guard([&] {
       __annotate_delete();
       for (__map_pointer __i = __buf.begin(); __i != __buf.end(); ++__i)
         __alloc_traits::deallocate(__a, *__i, __block_size);
-      throw;
+    });
+    for (; __nb > 0; --__nb) {
+      __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
+      // ASan: this is empty container, we have to poison whole block
+      __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     for (; __back_capacity > 0; --__back_capacity) {
       __buf.emplace_back(__map_.back());
       __map_.pop_back();
@@ -2254,22 +2250,17 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()),
         __map_.size() - __front_capacity,
         __map_.__get_allocator());
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __nb > 0; --__nb) {
-        __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
-        // ASan: this is an empty container, we have to poison the whole block
-        __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard = std::__make_exception_guard([&] {
       __annotate_delete();
       for (__map_pointer __i = __buf.begin(); __i != __buf.end(); ++__i)
         __alloc_traits::deallocate(__a, *__i, __block_size);
-      throw;
+    });
+    for (; __nb > 0; --__nb) {
+      __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
+      // ASan: this is an empty container, we have to poison the whole block
+      __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     for (; __front_capacity > 0; --__front_capacity) {
       __buf.emplace_back(__map_.front());
       __map_.pop_front();
