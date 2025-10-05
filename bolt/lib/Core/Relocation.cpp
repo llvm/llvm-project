@@ -140,6 +140,8 @@ static bool isSupportedPPC64(uint32_t Type) {
     return false;
   case ELF::R_PPC64_ADDR16:
   case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_TOC16_DS:
+  case ELF::R_PPC64_TOC16_LO_DS:
   case ELF::R_PPC64_ADDR16_HI:
   case ELF::R_PPC64_ADDR16_HA:
   case ELF::R_PPC64_ADDR32:
@@ -291,6 +293,8 @@ static size_t getSizeForTypePPC64(uint32_t Type) {
   case ELF::R_PPC64_TOC16_HA:
   case ELF::R_PPC64_DTPREL16:
   case ELF::R_PPC64_DTPREL16_LO:
+  case ELF::R_PPC64_TOC16_DS:
+  case ELF::R_PPC64_TOC16_LO_DS:
   case ELF::R_PPC64_DTPREL16_HI:
   case ELF::R_PPC64_DTPREL16_HA:
   case ELF::R_PPC64_GOT16:
