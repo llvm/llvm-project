@@ -247,6 +247,11 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
+    - name: Shorten paths on windows
+      run:
+       subst S: ${{ github.workspace }}
+       subst B: ${{ steps.setup-stage.outputs.build-prefix }}
+
     - name: Configure
       id: build
       shell: bash
@@ -257,9 +262,7 @@ jobs:
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         export PATH=C:\Strawberry\c\bin\:$PATH
-        subst S: ${{ github.workspace }}
-        subst B: ${{ steps.setup-stage.outputs.build-prefix }}/build
-        $CMAKE -G Ninja -S S:\llvm -B B:\ \
+        $CMAKE -G Ninja -S /s/llvm/ -B /b \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
