@@ -461,19 +461,17 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: non_splat_constant
   gpu.func @non_splat_constant() {
-    // CHECK-DAG: %[[CST:.*]] = arith.constant dense<0> : vector<1xindex>
+    // CHECK-DAG: %[[CST:.*]] = arith.constant dense<0> : vector<1x1xindex>
     // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
-    // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-    // CHECK-DAG: %[[IDY:.*]] = affine.apply #map4()[%[[SGID]]]
-    // CHECK-DAG: %[[IDX:.*]] = affine.apply #map5()[%[[SGID]]]
-    // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-    // CHECK-DAG: %[[REMU_Y:.*]] = index.remu %[[IDY]], %[[C32]]
-    // CHECK-DAG: %[[REMU_X:.*]] = index.remu %[[IDX]], %[[C1]]
-    // CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
-    // CHECK-DAG: %[[MUL:.*]] = arith.muli %[[REMU_Y]], %[[C16]] : index
-    // CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[MUL]] : index to vector<1xindex>
-    // CHECK-DAG: %[[ADD:.*]] = arith.addi %[[CST]], %[[BCAST]] : vector<1xindex>
+    // CHECK-DAG: affine.apply #map4()[%[[SGID]]]
+    // CHECK-DAG: affine.apply #map5()[%[[SGID]]]
+    // CHECK-DAG: %[[IDY:.*]] = index.remu %{{.*}}, %[[C32:.*]]
+    // CHECK-DAG: %[[IDX:.*]] = index.remu %{{.*}}, %[[C1:.*]]
+    // CHECK-DAG: %[[STRIDECOL:.*]] = arith.muli %[[IDY]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[STRIDEROW:.*]] = arith.muli %[[IDX]], %[[C0:.*]] : index
+    // CHECK-DAG: %[[ADDSTRIDES:.*]] = arith.addi %[[STRIDECOL]], %[[STRIDEROW]] : index
+    // CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[ADDSTRIDES]] : index to vector<1x1xindex>
+    // CHECK-DAG: arith.addi %[[CST]], %[[BCAST]] : vector<1x1xindex>
     %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>} dense<[[0], [16], [32], [48], [64], [80], [96], [112], [128], [144], [160], [176], [192], [208], [224], [240], [256], [272], [288], [304], [320], [336], [352], [368], [384], [400], [416], [432], [448], [464], [480], [496]]> : vector<32x1xindex>
     gpu.return
   }

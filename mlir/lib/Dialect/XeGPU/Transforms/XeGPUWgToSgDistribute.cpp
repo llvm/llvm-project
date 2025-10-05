@@ -773,48 +773,96 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         return rewriter.notifyMatchFailure(
             op, "Only 1D & 2D vector constant supported");
 
-      // allow 2D vector/distributions with one unit dim
-      auto hasTwoNonUnitDims = [](ArrayRef<int64_t> dims) {
-        return dims.size() == 2 && dims[0] != 1 && dims[1] != 1;
-      };
-      if (hasTwoNonUnitDims(wgShape) || hasTwoNonUnitDims(sgLayout))
-        return rewriter.notifyMatchFailure(
-            op, "2D vector/distribution only supported with 1 unit dim");
-
-      int64_t nonUnitDim = 0;
-      if (wgShape.size() == 2)
-        nonUnitDim = wgShape[0] != 1 ? 0 : 1;
-
       SmallVector<Attribute> values(vecAttr.getValues<Attribute>());
       int64_t stride = 0;
-      if (values.size() > 1) {
-        stride = cast<IntegerAttr>(values[1]).getInt() -
-                 cast<IntegerAttr>(values[0]).getInt();
-        for (size_t i = 2; i < values.size(); ++i) {
-          int64_t diff = cast<IntegerAttr>(values[i]).getInt() -
-                         cast<IntegerAttr>(values[i - 1]).getInt();
-          if (diff != stride)
-            return rewriter.notifyMatchFailure(
-                op, "Non-constant stride in non-splat constant op.");
+      int64_t rowStride = 0, colStride = 0;
+      if (wgShape.size() == 1) {
+        // 1D case: single stride
+        if (values.size() > 1) {
+          stride = cast<IntegerAttr>(values[1]).getInt() -
+                   cast<IntegerAttr>(values[0]).getInt();
+          for (size_t i = 2; i < values.size(); ++i) {
+            int64_t diff = cast<IntegerAttr>(values[i]).getInt() -
+                           cast<IntegerAttr>(values[i - 1]).getInt();
+            if (diff != stride)
+              return rewriter.notifyMatchFailure(
+                  op, "Non-constant stride in non-splat constant op.");
+          }
+        }
+      } else if (wgShape.size() == 2) {
+        // 2D case: row stride and column stride
+        int64_t rows = wgShape[0], cols = wgShape[1];
+        if (values.size() != static_cast<size_t>(rows * cols))
+          return rewriter.notifyMatchFailure(
+              op, "Mismatch between vector shape and constant values size.");
+        // Compute col stride (stride between elements in a column)
+        if (cols > 1) {
+          colStride = cast<IntegerAttr>(values[1]).getInt() -
+                      cast<IntegerAttr>(values[0]).getInt();
+          for (int64_t r = 0; r < rows; ++r) {
+            for (int64_t c = 1; c < cols; ++c) {
+              int64_t idx = r * cols + c;
+              int64_t prevIdx = r * cols + (c - 1);
+              int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
+                             cast<IntegerAttr>(values[prevIdx]).getInt();
+              if (diff != colStride)
+                return rewriter.notifyMatchFailure(
+                    op, "Non-constant column stride in 2D constant op.");
+            }
+          }
+        }
+        // Compute row stride (stride between elements in a row)
+        if (rows > 1) {
+          rowStride = cast<IntegerAttr>(values[cols]).getInt() -
+                      cast<IntegerAttr>(values[0]).getInt();
+          for (int64_t c = 0; c < cols; ++c) {
+            for (int64_t r = 1; r < rows; ++r) {
+              int64_t idx = r * cols + c;
+              int64_t prevIdx = (r - 1) * cols + c;
+              int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
+                             cast<IntegerAttr>(values[prevIdx]).getInt();
+              if (diff != rowStride)
+                return rewriter.notifyMatchFailure(
+                    op, "Non-constant row stride in 2D constant op.");
+            }
+          }
         }
       }
 
-      int sgData = 1;
+      // Determine the shape of the base tile for each subgroup.
+      SmallVector<int64_t> baseTileShape;
       if (sgShape.size() == 1) {
-        sgData = static_cast<int>(sgShape[0]);
+        baseTileShape.push_back(sgShape[0]);
       } else if (sgShape.size() == 2) {
-        sgData = static_cast<int>(sgShape[0] != 1 ? sgShape[0] : sgShape[1]);
+        baseTileShape = sgShape;
       } else {
         return rewriter.notifyMatchFailure(
             op, "Only 1D or 2D vector constant supported");
       }
 
-      // Create a constant for the base tile
+      // Compute the number of elements in the base tile.
+      int64_t baseTileElemCount = 1;
+      for (int64_t d : baseTileShape)
+        baseTileElemCount *= d;
+
+      // Create a constant for the base tile.
+      // For 2D case, extract the top-left sgShape[0] x sgShape[1] submatrix.
       SmallVector<Attribute> baseTileValues;
-      for (int i = 0; i < sgData; ++i)
-        baseTileValues.push_back(values[i]);
-      auto tileAttr = DenseElementsAttr::get(VectorType::get({sgData}, eltType),
-                                             baseTileValues);
+      if (baseTileShape.size() == 2) {
+        int64_t rows = baseTileShape[0], cols = baseTileShape[1];
+        int64_t wgRows = wgShape[0], wgCols = wgShape[1];
+        for (int64_t r = 0; r < rows; ++r) {
+          for (int64_t c = 0; c < cols; ++c) {
+            baseTileValues.push_back(values[r * wgCols + c]);
+          }
+        }
+      } else {
+        // 1D case
+        for (int64_t i = 0; i < baseTileElemCount; ++i)
+          baseTileValues.push_back(values[i]);
+      }
+      auto tileAttr = DenseElementsAttr::get(
+          VectorType::get(baseTileShape, eltType), baseTileValues);
       auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
 
       // Get subgroup id
@@ -826,13 +874,30 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         return failure();
 
       auto strideConst = rewriter.create<arith::ConstantIndexOp>(loc, stride);
+      auto strideConstRow =
+          rewriter.create<arith::ConstantIndexOp>(loc, rowStride);
+      auto strideConstCol =
+          rewriter.create<arith::ConstantIndexOp>(loc, colStride);
       SmallVector<Value> newConstOps;
       for (auto offsets : *sgOffsets) {
         // Multiply offset with stride, broadcast it and add to baseConstVec
-        Value mulOffset = rewriter.create<arith::MulIOp>(
-            loc, rewriter.getIndexType(), offsets[nonUnitDim], strideConst);
+        Value mulOffset;
+        if (baseTileShape.size() == 1) {
+          // 1D: offset[0] * strideConst
+          mulOffset = rewriter.create<arith::MulIOp>(
+              loc, rewriter.getIndexType(), offsets[0], strideConst);
+        } else if (baseTileShape.size() == 2) {
+          // 2D: offset[0]*strideConstRow + offset[1]*strideConstCol
+          Value rowMul = rewriter.create<arith::MulIOp>(
+              loc, rewriter.getIndexType(), offsets[0], strideConstRow);
+          Value colMul = rewriter.create<arith::MulIOp>(
+              loc, rewriter.getIndexType(), offsets[1], strideConstCol);
+          mulOffset = rewriter.create<arith::AddIOp>(
+              loc, rewriter.getIndexType(), rowMul, colMul);
+        }
+        // Broadcast to baseConstVec size
         auto bcastOffset = rewriter.create<vector::BroadcastOp>(
-            loc, VectorType::get({sgData}, rewriter.getIndexType()), mulOffset);
+            loc, baseConstVec.getType(), mulOffset);
         auto finalConst =
             arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
         setLayoutIfNeeded(baseConstVec);

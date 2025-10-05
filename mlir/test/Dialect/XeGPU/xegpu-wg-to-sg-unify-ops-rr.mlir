@@ -100,36 +100,26 @@ gpu.module @test_distribution {
   }
 
   gpu.func @non_splat_constant() {
-    // CHECK-DAG: %[[CST:.*]] = arith.constant dense<[0, 16]> : vector<2xindex>
-    // CHECK-DAG: %[[SG_ID:.*]] = gpu.subgroup_id : index
-    // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
-    // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-    // CHECK-DAG: %[[C1_0:.*]] = arith.constant 1 : index
-    // CHECK-DAG: %[[AFF1:.*]] = affine.apply #map4()[%[[SG_ID]]]
-    // CHECK-DAG: %[[AFF2:.*]] = affine.apply #map5()[%[[SG_ID]]]
-    // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-    // CHECK-DAG: %[[MUL:.*]] = index.mul %[[AFF1]], %[[C2]]
-    // CHECK-DAG: %[[C1_1:.*]] = arith.constant 1 : index
-    // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-    // CHECK-DAG: %[[C0_2:.*]] = arith.constant 0 : index
-    // CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
-    // CHECK-DAG: %[[REM:.*]] = index.remu %[[MUL]], %[[C32]]
-    // CHECK-DAG: %[[C1_3:.*]] = arith.constant 1 : index
-    // CHECK-DAG: %[[REM2:.*]] = index.remu %[[AFF2]], %[[C1_3]]
-    // CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
-    // CHECK-DAG: %[[C0_4:.*]] = arith.constant 0 : index
-    // CHECK-DAG: %[[ADD:.*]] = arith.addi %[[MUL]], %[[C16]] : index
-    // CHECK-DAG: %[[C32_5:.*]] = arith.constant 32 : index
-    // CHECK-DAG: %[[REM3:.*]] = index.remu %[[ADD]], %[[C32_5]]
-    // CHECK-DAG: %[[C1_6:.*]] = arith.constant 1 : index
-    // CHECK-DAG: %[[REM4:.*]] = index.remu %[[AFF2]], %[[C1_6]]
-    // CHECK-DAG: %[[C16_7:.*]] = arith.constant 16 : index
-    // CHECK-DAG: %[[MUL2:.*]] = arith.muli %[[REM]], %[[C16_7]] : index
-    // CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[MUL2]] : index to vector<2xindex>
-    // CHECK-DAG: %[[ADD2:.*]] = arith.addi %[[CST]], %[[BCAST]] : vector<2xindex>
-    // CHECK-DAG: %[[MUL3:.*]] = arith.muli %[[REM3]], %[[C16_7]] : index
-    // CHECK-DAG: %[[BCAST2:.*]] = vector.broadcast %[[MUL3]] : index to vector<2xindex>
-    // CHECK-DAG: %[[ADD3:.*]] = arith.addi %[[CST]], %[[BCAST2]] : vector<2xindex>
+    // CHECK-DAG: %[[BASECST:.*]] = arith.constant dense<{{.*}}> : vector<2x1xindex>
+    // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[MAP4:.*]] = affine.apply #map4()[%[[SGID]]]
+    // CHECK-DAG: %[[MAP5:.*]] = affine.apply #map5()[%[[SGID]]]
+    // CHECK-DAG: %[[MUL:.*]] = index.mul %[[MAP4]], %[[C2:.*]]
+    // CHECK-DAG: %[[REMU1:.*]] = index.remu %[[MUL]], %[[C32:.*]]
+    // CHECK-DAG: %[[REMU2:.*]] = index.remu %[[MAP5]], %[[C1:.*]]
+    // CHECK-DAG: %[[ADD16:.*]] = arith.addi %[[MUL]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[REMU3:.*]] = index.remu %[[ADD16]], %[[C32:.*]]
+    // CHECK-DAG: %[[REMU4:.*]] = index.remu %[[MAP5]], %[[C1:.*]]
+    // CHECK-DAG: %[[STRIDE1:.*]] = arith.muli %[[REMU1]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[STRIDE2:.*]] = arith.muli %[[REMU2]], %[[C0:.*]] : index
+    // CHECK-DAG: %[[ADDSTRIDES1:.*]] = arith.addi %[[STRIDE1]], %[[STRIDE2]] : index
+    // CHECK-DAG: %[[BCAST1:.*]] = vector.broadcast %[[ADDSTRIDES1]] : index to vector<2x1xindex>
+    // CHECK-DAG: %[[RESULT1:.*]] = arith.addi %[[BASECST]], %[[BCAST1]] : vector<2x1xindex>
+    // CHECK-DAG: %[[STRIDE3:.*]] = arith.muli %[[REMU3]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[STRIDE4:.*]] = arith.muli %[[REMU4]], %[[C0:.*]] : index
+    // CHECK-DAG: %[[ADDSTRIDES2:.*]] = arith.addi %[[STRIDE3]], %[[STRIDE4]] : index
+    // CHECK-DAG: %[[BCAST2:.*]] = vector.broadcast %[[ADDSTRIDES2]] : index to vector<2x1xindex>
+    // CHECK-DAG: %[[RESULT2:.*]] = arith.addi %[[BASECST]], %[[BCAST2]] : vector<2x1xindex>
     %cst_2 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 1], sg_data = [2, 1]>} dense<[[0], [16], [32], [48], [64], [80], [96], [112], [128], [144], [160], [176], [192], [208], [224], [240], [256], [272], [288], [304], [320], [336], [352], [368], [384], [400], [416], [432], [448], [464], [480], [496]]> : vector<32x1xindex>
     gpu.return
   }
