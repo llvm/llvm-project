@@ -2419,7 +2419,7 @@ static bool generatePipeInst(const SPIRV::IncomingCall *Call,
   return buildPipeInst(Call, Opcode, Scope, MIRBuilder, GR);
 }
 
-static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call, 
+static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
                                             MachineIRBuilder &MIRBuilder,
                                             SPIRVGlobalRegistry *GR) {
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
@@ -2429,14 +2429,14 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
   bool IsSet = Opcode != SPIRV::OpPredicatedStoreINTEL;
   unsigned ArgSz = Call->Arguments.size();
   unsigned LiteralIdx = 0;
-  if(ArgSz > 3) {
+  if (ArgSz > 3) {
     LiteralIdx = 3;
   }
 
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (LiteralIdx > 0)
-      ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
+    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
   return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                             IsSet ? TypeReg : Register(0), ImmArgs);

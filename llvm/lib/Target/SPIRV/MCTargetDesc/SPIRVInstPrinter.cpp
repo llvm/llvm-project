@@ -290,7 +290,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           if (NumOps > NumFixedOps) {
             OS << ' ';
             printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
-              MI, NumOps - 1, OS);
+                MI, NumOps - 1, OS);
             break;
           }
           break;
