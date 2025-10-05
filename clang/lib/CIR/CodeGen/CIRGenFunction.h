@@ -1090,6 +1090,11 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  void emitAnyExprToExn(const Expr *e, Address addr);
+
+  void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
+                              mlir::Operation *dominatingIP);
+
   void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
