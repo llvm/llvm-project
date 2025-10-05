@@ -1639,6 +1639,7 @@ struct CommonStmt {
   BOILERPLATE(CommonStmt);
   CommonStmt(std::optional<Name> &&, std::list<CommonBlockObject> &&,
       std::list<Block> &&);
+  CharBlock source;
   std::list<Block> blocks;
 };
 
@@ -4544,6 +4545,15 @@ struct OmpLinearClause {
   MODIFIER_BOILERPLATE(
       OmpLinearModifier, OmpStepSimpleModifier, OmpStepComplexModifier);
   std::tuple<OmpObjectList, MODIFIERS(), /*PostModified=*/bool> t;
+};
+
+// Ref: [6.0:207-208]
+//
+// loop-range-clause ->
+//    LOOPRANGE(first, count)                       // since 6.0
+struct OmpLoopRangeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLoopRangeClause);
+  std::tuple<ScalarIntConstantExpr, ScalarIntConstantExpr> t;
 };
 
 // Ref: [4.5:216-219], [5.0:315-324], [5.1:347-355], [5.2:150-158]
