@@ -143,7 +143,8 @@ public:
   getMemBufferCopy(StringRef InputData, const Twine &BufferName = "");
 
   /// Read all of stdin into a file buffer, and return it.
-  static ErrorOr<std::unique_ptr<MemoryBuffer>> getSTDIN();
+  static ErrorOr<std::unique_ptr<MemoryBuffer>>
+  getSTDIN(bool RequiresNullTerminator = true);
 
   /// Open the specified file as a MemoryBuffer, or open stdin if the Filename
   /// is "-".

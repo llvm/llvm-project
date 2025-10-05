@@ -175,7 +175,8 @@ int main(int argc, char **argv) {
 
   for (const auto &File : InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-        MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true);
+        MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true,
+                                     /*RequiresNullTerminator=*/false);
     if (std::error_code EC = Buffer.getError())
       errs() << File << ": " << EC.message() << '\n';
     else
