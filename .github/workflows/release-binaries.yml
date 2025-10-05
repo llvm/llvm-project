@@ -257,25 +257,25 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         #export PATH=C:\Strawberry\c\bin\:$PATH
         subst S: ${{ github.workspace }}
-        cmake -G Ninja -S S:\ -B S:\build \
-            ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang\cmake\caches\Release.cmake \
-            -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DCMAKE_OBJECT_PATH_MAX=500 \
-            -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 \
-            -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=1 \
-            -DCMAKE_CXX_RESPONSE_FILE_LINK_FLAG="@" \
-            -DCMAKE_NINJA_FORCE_RESPONSE_FILE=1 \
-            -DBOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 \
-            -DBOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=1 \
-            -DBOOTSTRAP_CMAKE_CXX_RESPONSE_FILE_LINK_FLAG="@" \
-            -DBOOTSTRAP_CMAKE_NINJA_FORCE_RESPONSE_FILE=1 \
-            -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 \
-            -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=1 \
-            -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_RESPONSE_FILE_LINK_FLAG="@" \
-            -DBOOTSTRAP_BOOTSTRAP_CMAKE_NINJA_FORCE_RESPONSE_FILE=1 \
-            -DBOOTSTRAP_CMAKE_OBJECT_PATH_MAX=500 \
-            -DBOOTSTRAP_BOOTSTRAP_CMAKE_OBJECT_PATH_MAX=500 \
+        cmake -G Ninja -S S:\llvm -B S:\build `
+            ${{ needs.prepare.outputs.target-cmake-flags }} `
+            -C clang\cmake\caches\Release.cmake `
+            -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 `
+            -DCMAKE_OBJECT_PATH_MAX=500 `
+            -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 `
+            -DCMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=1 `
+            -DCMAKE_CXX_RESPONSE_FILE_LINK_FLAG="@" `
+            -DCMAKE_NINJA_FORCE_RESPONSE_FILE=1 `
+            -DBOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 `
+            -DBOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=1 `
+            -DBOOTSTRAP_CMAKE_CXX_RESPONSE_FILE_LINK_FLAG="@" `
+            -DBOOTSTRAP_CMAKE_NINJA_FORCE_RESPONSE_FILE=1 `
+            -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_OBJECTS=1 `
+            -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_USE_RESPONSE_FILE_FOR_LIBRARIES=1 `
+            -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_RESPONSE_FILE_LINK_FLAG="@" `
+            -DBOOTSTRAP_BOOTSTRAP_CMAKE_NINJA_FORCE_RESPONSE_FILE=1 `
+            -DBOOTSTRAP_CMAKE_OBJECT_PATH_MAX=500 `
+            -DBOOTSTRAP_BOOTSTRAP_CMAKE_OBJECT_PATH_MAX=500 `
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build Unix
