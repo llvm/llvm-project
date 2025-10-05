@@ -190,10 +190,10 @@ More description documentation)",
 normal text<i>this is an italic text</i>
 <code>this is a code block</code>)",
           R"(\<b>this is a bold text\</b>
-normal text\<i>this is an italic text\</i>
+normal text\<i>this is an italic text\</i>  
 \<code>this is a code block\</code>)",
           R"(\<b>this is a bold text\</b>
-normal text\<i>this is an italic text\</i>
+normal text\<i>this is an italic text\</i>  
 \<code>this is a code block\</code>)",
           "<b>this is a bold text</b> normal text<i>this is an italic text</i> "
           "<code>this is a code block</code>",

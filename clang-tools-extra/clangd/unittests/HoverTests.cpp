@@ -4067,8 +4067,8 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
+longer doc  
+@param a this is a param  
 @return it returns something
 
 ---
@@ -4121,9 +4121,9 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@param b does not exist
+longer doc  
+@param a this is a param  
+@param b does not exist  
 @return it returns something
 
 ---
@@ -4266,19 +4266,19 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo.\nbar",
-                   "foo.\nbar",
-                   "foo.\nbar",
+                   "foo.  \nbar",
+                   "foo.  \nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo. \nbar",
-                   "foo. \nbar",
+                   "foo.   \nbar",
+                   "foo.   \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo\n\\*bar",
+                   "foo  \n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
@@ -4305,6 +4305,24 @@ TEST(Hover, ParseDocumentation) {
                    "\\`not\nparsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
+               },
+               {
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
                }};
 
   for (const auto &C : Cases) {
