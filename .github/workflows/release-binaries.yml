@@ -250,7 +250,8 @@ jobs:
     - name: Shorten paths on windows
       run: |
        subst S: ${{ github.workspace }}
-       subst B: ${{ steps.setup-stage.outputs.build-prefix }}
+       mkdir "S:\build"
+       subst B: S:\build
 
     - name: Configure
       id: build
