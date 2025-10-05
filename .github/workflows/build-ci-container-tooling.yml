@@ -22,7 +22,7 @@ on:
 jobs:
   build-ci-container-tooling:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-24.04
+    runs-on: depot-ubuntu-24.04-16
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
