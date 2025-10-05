@@ -1333,4 +1333,32 @@ static_assert(__cpp17_iterator<not_move_constructible>); \
 // expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
 }
 
+namespace case4 {
+
+template<bool b>
+concept bool_ = b;
+
+template<typename... Ts>
+concept unary = bool_<sizeof...(Ts) == 1>;
+
+static_assert(!unary<>);
+static_assert(unary<void>);
+
+}
+
+namespace case5 {
+
+template<int size>
+concept true1 = size == size;
+
+template<typename... Ts>
+concept true2 = true1<sizeof...(Ts)>;
+
+template<typename... Ts>
+concept true3 = true2<Ts...>;
+
+static_assert(true3<void>);
+
+}
+
 }
