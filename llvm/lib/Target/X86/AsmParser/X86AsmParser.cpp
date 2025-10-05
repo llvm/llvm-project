@@ -3580,7 +3580,6 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       if (Next == "lgdt") {
         if (is64BitMode()) {
           // Use the special lgdtq variant with OpSize16 flag.
-          // I think the CPU ignores the prefix anyway--but hey.
           Next = "lgdtq16";
         } else {
           Next = "lgdtw";
@@ -3606,9 +3605,9 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       getLexer().Lex();
       // data32 effectively changes the instruction suffix.
       // TODO Generalize.
-      if (Next == "callw")
+      if (Next == "call")
         Next = "calll";
-      if (Next == "ljmpw")
+      if (Next == "ljmp")
         Next = "ljmpl";
 
       Name = Next;
