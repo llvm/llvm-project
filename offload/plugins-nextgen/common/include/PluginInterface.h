@@ -1714,10 +1714,10 @@ public:
 
   /// Returns non-zero if the \p Image is compatible with the plugin. This
   /// function does not require the plugin to be initialized before use.
-  int32_t is_plugin_compatible(__tgt_device_image *Image);
+  int32_t isPluginCompatible(StringRef Image);
 
   /// Returns non-zero if the \p Image is compatible with the device.
-  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+  int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
   /// Returns non-zero if the plugin device has been initialized.
   int32_t is_device_initialized(int32_t DeviceId) const;

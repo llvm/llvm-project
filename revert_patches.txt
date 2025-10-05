@@ -2,12 +2,6 @@
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
-Revert "[SLP]Support LShr as base for copyable elements"
-breaks build rocPRIM
----
-needs more offload patches
-[Offload]  Implement 'olIsValidBinary' in offload
----
 needs post merge ingtegration
 [NFC][LLVM] Use ListSeparator in AsmWriter (#161422)
 [NFC][LLVM] Misc code cleanup in AsmWriter.cpp (#161522)
