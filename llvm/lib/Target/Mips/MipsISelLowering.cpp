@@ -3406,7 +3406,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Check if it's really possible to do a tail call. Restrict it to functions
   // that are part of this compilation unit.
   bool InternalLinkage = false;
-  if (IsTailCall) {
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  if (IsTailCall && !IsMustTail) {
     IsTailCall = isEligibleForTailCallOptimization(
         CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
     if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
@@ -3415,9 +3416,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                      G->getGlobal()->hasPrivateLinkage() ||
                      G->getGlobal()->hasHiddenVisibility() ||
                      G->getGlobal()->hasProtectedVisibility());
-     }
+    }
   }
-  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
+  if (!IsTailCall && IsMustTail)
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
