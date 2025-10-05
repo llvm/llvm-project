@@ -1328,10 +1328,23 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
         return false;
       }
 
-      // Some intrinsics may use AGPRs, but if we have a choice, we are not
-      // required to use AGPRs.
-      if (Callee->isIntrinsic())
+      switch (Callee->getIntrinsicID()) {
+      case Intrinsic::not_intrinsic:
+        break;
+      case Intrinsic::write_register:
+      case Intrinsic::read_register:
+      case Intrinsic::read_volatile_register: {
+        const MDString *RegName = cast<MDString>(
+            cast<MetadataAsValue>(CB.getArgOperand(0))->getMetadata());
+        auto [Kind, RegIdx, NumRegs] =
+            AMDGPU::parseAsmPhysRegName(RegName->getString());
+        return Kind != 'a';
+      }
+      default:
+        // Some intrinsics may use AGPRs, but if we have a choice, we are not
+        // required to use AGPRs.
         return true;
+      }
 
       // TODO: Handle callsite attributes
       const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoAGPR>(
