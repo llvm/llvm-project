@@ -19,32 +19,27 @@ using namespace bolt;
 namespace {
 
 TEST(PPCMCPlusBuilderTest, CreatePushRegisters) {
-  // Set up dummy input registers
-  MCInst Inst1, Inst2;
-  MCPhysReg Reg1 = PPC::R3; // Arbitary register
 
-  // Call the method under test
+  MCInst Inst1, Inst2;
+  MCPhysReg Reg1 = PPC::R3;
+
   PPCMCPlusBuilder::createPushRegisters(Inst1, Inst2, Reg1, /*Reg2=*/PPC::R4);
 
-  // Check Inst1 is STDU R1, R1, -16
-  EXPECT_EQ(Inst1.getOpcode(), PPC::STDU);
-  ASSERT_EQ(Inst1.getNumOperands(), 3u);
-  EXPECT_TRUE(Inst1.getOperand(0).isReg());
-  EXPECT_EQ(Inst1.getOperand(0).getReg(), PPC::R1);
-  EXPECT_TRUE(Inst1.getOperand(1).isReg());
-  EXPECT_EQ(Inst1.getOperand(1).getReg(), PPC::R1);
-  EXPECT_TRUE(Inst1.getOperand(2).isImm());
-  EXPECT_EQ(Inst1.getOperand(2).getImm(), -16);
+  // Check Inst is ORI R0, R0, 0
+  auto ExpectNop = [](const MCInst &Inst) {
+    EXPECT_EQ(Inst.getOpcode(), PPC::ORI);
+    ASSERT_EQ(Inst.getNumOperands(), 3u);
 
-  // Check Inst2 is STD Reg1, R1, 0
-  EXPECT_EQ(Inst2.getOpcode(), PPC::STD);
-  ASSERT_EQ(Inst2.getNumOperands(), 3u);
-  EXPECT_TRUE(Inst2.getOperand(0).isReg());
-  EXPECT_EQ(Inst2.getOperand(0).getReg(), Reg1);
-  EXPECT_TRUE(Inst2.getOperand(1).isReg());
-  EXPECT_EQ(Inst2.getOperand(1).getReg(), PPC::R1);
-  EXPECT_TRUE(Inst2.getOperand(2).isImm());
-  EXPECT_EQ(Inst2.getOperand(2).getImm(), 0);
+    ASSERT_TRUE(Inst.getOperand(0).isReg());
+    ASSERT_TRUE(Inst.getOperand(1).isReg());
+    ASSERT_TRUE(Inst.getOperand(2).isImm());
+
+    EXPECT_EQ(Inst.getOperand(0).getReg(), PPC::R0);
+    EXPECT_EQ(Inst.getOperand(1).getReg(), PPC::R0);
+    EXPECT_EQ(Inst.getOperand(2).getImm(), 0);
+  };
+  ExpectNop(Inst1);
+  ExpectNop(Inst2);
 }
 
 } // end anonymous namespace
