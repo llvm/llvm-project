@@ -535,7 +535,7 @@ void ModuloScheduleExpander::generateExistingPhis(
               ReuseStage -= LVNumStages;
             // Check if the Phi to reuse has been generated yet. If not, then
             // there is nothing to reuse.
-            if (VRMap[ReuseStage - np].count(LoopVal)) {
+            if (ReuseStage >= np && VRMap[ReuseStage - np].count(LoopVal)) {
               NewReg = VRMap[ReuseStage - np][LoopVal];
 
               rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, np, &*BBI,
