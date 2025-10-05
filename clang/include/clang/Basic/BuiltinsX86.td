@@ -94,14 +94,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     }
   }
 
-  let Features = "sse2" in {
-    def vec_ext_v2di : X86Builtin<"long long int(_Vector<2, long long int>, _Constant int)">;
-    def vec_ext_v4si : X86Builtin<"int(_Vector<4, int>, _Constant int)">;
-    def vec_ext_v4sf : X86Builtin<"float(_Vector<4, float>, _Constant int)">;
-    def vec_ext_v8hi : X86Builtin<"short(_Vector<8, short>, _Constant int)">;
-    def vec_set_v8hi : X86Builtin<"_Vector<8, short>(_Vector<8, short>, short, _Constant int)">;
-  }
-
   let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
     def pavgb128 : X86Builtin<"_Vector<16, unsigned char>(_Vector<16, unsigned char>, _Vector<16, unsigned char>)">;
     def pavgw128 : X86Builtin<"_Vector<8, unsigned short>(_Vector<8, unsigned short>, _Vector<8, unsigned short>)">;
