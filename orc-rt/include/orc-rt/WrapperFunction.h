@@ -111,7 +111,23 @@ struct WFHandlerTraitsImpl {
   static_assert(std::is_void_v<RetT>,
                 "Async wrapper function handler must return void");
   typedef ReturnT YieldType;
-  typedef std::tuple<ArgTs...> ArgTupleType;
+  typedef std::tuple<std::decay_t<ArgTs>...> ArgTupleType;
+
+  // Forwards arguments based on the parameter types of the handler.
+  template <typename FnT> class ForwardArgsAsRequested {
+  public:
+    ForwardArgsAsRequested(FnT &&Fn) : Fn(std::move(Fn)) {}
+    void operator()(ArgTs &...Args) { Fn(std::forward<ArgTs>(Args)...); }
+
+  private:
+    FnT Fn;
+  };
+
+  template <typename FnT>
+  static ForwardArgsAsRequested<std::decay_t<FnT>>
+  forwardArgsAsRequested(FnT &&Fn) {
+    return ForwardArgsAsRequested<std::decay_t<FnT>>(std::forward<FnT>(Fn));
+  }
 };
 
 template <typename C>
@@ -244,10 +260,11 @@ struct WrapperFunction {
 
     if (auto Args =
             S.arguments().template deserialize<ArgTuple>(std::move(ArgBytes)))
-      std::apply(bind_front(std::forward<Handler>(H),
-                            detail::StructuredYield<RetTupleType, Serializer>(
-                                Session, CallCtx, Return, std::move(S))),
-                 std::move(*Args));
+      std::apply(HandlerTraits::forwardArgsAsRequested(bind_front(
+                     std::forward<Handler>(H),
+                     detail::StructuredYield<RetTupleType, Serializer>(
+                         Session, CallCtx, Return, std::move(S)))),
+                 *Args);
     else
       Return(Session, CallCtx,
              WrapperFunctionBuffer::createOutOfBandError(

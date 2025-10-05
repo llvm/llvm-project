@@ -57,8 +57,8 @@ private:
   template <typename... Ts>
   using DeserializableTuple_t = typename DeserializableTuple<Ts...>::type;
 
-  template <typename T> static T fromSerializable(T &&Arg) noexcept {
-    return Arg;
+  template <typename T> static T &&fromSerializable(T &&Arg) noexcept {
+    return std::forward<T>(Arg);
   }
 
   static Error fromSerializable(SPSSerializableError Err) noexcept {
@@ -86,7 +86,10 @@ public:
                                 decltype(Args)>::deserialize(IB, Args))
       return std::nullopt;
     return std::apply(
-        [](auto &&...A) { return ArgTuple(fromSerializable(A)...); },
+        [](auto &&...A) {
+          return std::optional<ArgTuple>(std::in_place,
+                                         std::move(fromSerializable(A))...);
+        },
         std::move(Args));
   }
 };

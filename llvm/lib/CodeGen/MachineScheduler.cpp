@@ -56,7 +56,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -3350,16 +3349,14 @@ void GenericSchedulerBase::setPolicy(CandPolicy &Policy, bool IsPostRA,
   if (CurrZone.getZoneCritResIdx() == OtherCritIdx)
     return;
 
-  if (CurrZone.isResourceLimited()) {
-    LDBG() << "  " << CurrZone.Available.getName() << " ResourceLimited: "
+  LLVM_DEBUG(if (CurrZone.isResourceLimited()) {
+    dbgs() << "  " << CurrZone.Available.getName() << " ResourceLimited: "
            << SchedModel->getResourceName(CurrZone.getZoneCritResIdx()) << "\n";
-  }
-  if (OtherResLimited) {
-    LDBG() << "  RemainingLimit: " << SchedModel->getResourceName(OtherCritIdx)
-           << "\n";
-  }
-  if (!CurrZone.isResourceLimited() && !OtherResLimited)
-    LDBG() << "  Latency limited both directions.\n";
+  } if (OtherResLimited) dbgs()
+                 << "  RemainingLimit: "
+                 << SchedModel->getResourceName(OtherCritIdx) << "\n";
+             if (!CurrZone.isResourceLimited() && !OtherResLimited) dbgs()
+             << "  Latency limited both directions.\n");
 
   if (CurrZone.isResourceLimited() && !Policy.ReduceResIdx)
     Policy.ReduceResIdx = CurrZone.getZoneCritResIdx();
