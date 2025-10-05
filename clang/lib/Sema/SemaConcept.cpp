@@ -317,8 +317,11 @@ public:
   }
 
   bool TraverseDecl(Decl *D) {
-    if (auto *VD = dyn_cast<ValueDecl>(D))
+    if (auto *VD = dyn_cast<ValueDecl>(D)) {
+      if (auto *Var = dyn_cast<VarDecl>(VD))
+        TraverseStmt(Var->getInit());
       return TraverseType(VD->getType());
+    }
 
     return inherited::TraverseDecl(D);
   }
@@ -357,6 +360,10 @@ public:
 
   bool TraverseSizeOfPackExpr(SizeOfPackExpr *SOPE) {
     return TraverseDecl(SOPE->getPack());
+  }
+
+  bool VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
+    return inherited::TraverseStmt(E->getReplacement());
   }
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
