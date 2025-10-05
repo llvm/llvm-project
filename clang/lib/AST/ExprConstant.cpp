@@ -12356,7 +12356,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     APValue Concat;
     APSInt Imm;
-    if (!EvaluateAsRValue(Info, E->getArg(0), Concat) || 
+    if (!EvaluateAsRValue(Info, E->getArg(0), Concat) ||
         !EvaluateInteger(E->getArg(1), Imm, Info))
       return false;
 
@@ -12366,14 +12366,14 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue> ResultElements;
     for (unsigned I = 0; I < VecLen; ++I) {
       if (I + Shift < VecLen) {
-		    ResultElements.push_back(Concat.getVectorElt(I + Shift));
+        ResultElements.push_back(Concat.getVectorElt(I + Shift));
       } else {
         APSInt Zero(8, /*isUnsigned=*/true);
         Zero = 0;
         ResultElements.push_back(APValue(Zero));
       }
     }
-  
+
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
@@ -12383,16 +12383,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     assert(E->getNumArgs() == 3);
 
     APValue VecA, VecB;
-	  APSInt Imm;
-    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) || 
-        !EvaluateAsRValue(Info, E->getArg(1), VecB) || 
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
         !EvaluateInteger(E->getArg(2), Imm, Info))
       return false;
 
-
     if (!VecA.isVector() || !VecB.isVector())
       return false;
-    
+
     unsigned LenA = VecA.getVectorLength();
     unsigned LenB = VecB.getVectorLength();
     assert(LenA == LenB && (LenA % 16 == 0));
@@ -12402,15 +12401,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     for (unsigned I = 0; I < LenA; ++I) {
       if (I + Shift < LenA) {
         ResultElements.push_back(VecB.getVectorElt(I + Shift));
-      }else if (I + Shift < LenA + LenB) {
+      } else if (I + Shift < LenA + LenB) {
         ResultElements.push_back(VecA.getVectorElt(I + Shift - LenA));
-      }else {
+      } else {
         APSInt Zero(/*BitWidth=*/8, /*isUnsigned=*/true);
         Zero = 0;
         ResultElements.push_back(APValue(Zero));
       }
     }
-    
+
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   }

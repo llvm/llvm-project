@@ -2975,7 +2975,10 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned ID) {
+
+static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
   assert(Call->getNumArgs() == 2);
 
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
@@ -3005,6 +3008,7 @@ static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC, c
 
 static bool interp__builtin_x86_palignr(InterpState &S, CodePtr OpPC,
                                         const CallExpr *Call, unsigned ID) {
+  assert(Call->getNumArgs() == 3);
 
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
   uint64_t Shift = ImmAPS.getZExtValue();
@@ -3023,16 +3027,15 @@ static bool interp__builtin_x86_palignr(InterpState &S, CodePtr OpPC,
   unsigned LenA = VecA.getNumElems();
   unsigned LenB = VecB.getNumElems();
 
-  assert(LenA == LenB && (LenA %16 == 0));
+  assert(LenA == LenB && (LenA % 16 == 0));
 
   TYPE_SWITCH(ElemPT, {
     for (unsigned I = 0; I < LenA; ++I) {
       if (I + Shift < LenA) {
         Dst.elem<T>(I) = VecB.elem<T>(I + Shift);
-      }else if (I + Shift < LenA + LenB) {
-        Dst.elem<T>(I) = VecA.elem<T>(I + Shift -LenA);
-      }
-      else {
+      } else if (I + Shift < LenA + LenB) {
+        Dst.elem<T>(I) = VecA.elem<T>(I + Shift - LenA);
+      } else {
         Dst.elem<T>(I) = T();
       }
     }
