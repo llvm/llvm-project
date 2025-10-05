@@ -8905,7 +8905,7 @@ that may set ``errno``, allowing optimizations such as store-to-load forwarding
 across such routines.
 
 For example, the following is a valid metadata specifying the TBAA information
-for an integer access:
+for an integer access::
 
     !llvm.errno.tbaa = !{!0}
     !0 = !{!1, !1, i64 0}

@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CommonTestUtils.h"
+
 #include "orc-rt/SPSWrapperFunction.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -217,4 +219,81 @@ TEST(SPSWrapperFunctionUtilsTest, TestFunctionReturningExpectedFailureCase) {
       3);
 
   EXPECT_EQ(ErrMsg, "N is not a multiple of 2");
+}
+
+template <size_t N> struct SPSOpCounter {};
+
+namespace orc_rt {
+template <size_t N>
+class SPSSerializationTraits<SPSOpCounter<N>, OpCounter<N>> {
+public:
+  static size_t size(const OpCounter<N> &O) { return 0; }
+  static bool serialize(SPSOutputBuffer &OB, const OpCounter<N> &O) {
+    return true;
+  }
+  static bool deserialize(SPSInputBuffer &OB, OpCounter<N> &O) { return true; }
+};
+} // namespace orc_rt
+
+static void
+handle_with_reference_types_sps_wrapper(orc_rt_SessionRef Session,
+                                        void *CallCtx,
+                                        orc_rt_WrapperFunctionReturn Return,
+                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<void(
+      SPSOpCounter<0>, SPSOpCounter<1>, SPSOpCounter<2>,
+      SPSOpCounter<3>)>::handle(Session, CallCtx, Return, ArgBytes,
+                                [](move_only_function<void()> Return,
+                                   OpCounter<0>, OpCounter<1> &,
+                                   const OpCounter<2> &,
+                                   OpCounter<3> &&) { Return(); });
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestHandlerWithReferences) {
+  // Test that we can handle by-value, by-ref, by-const-ref, and by-rvalue-ref
+  // arguments, and that we generate the expected number of moves.
+  OpCounter<0>::reset();
+  OpCounter<1>::reset();
+  OpCounter<2>::reset();
+  OpCounter<3>::reset();
+
+  bool DidRun = false;
+  SPSWrapperFunction<void(SPSOpCounter<0>, SPSOpCounter<1>, SPSOpCounter<2>,
+                          SPSOpCounter<3>)>::
+      call(
+          DirectCaller(nullptr, handle_with_reference_types_sps_wrapper),
+          [&](Error R) {
+            cantFail(std::move(R));
+            DidRun = true;
+          },
+          OpCounter<0>(), OpCounter<1>(), OpCounter<2>(), OpCounter<3>());
+
+  EXPECT_TRUE(DidRun);
+
+  // We expect two default constructions for each parameter: one for the
+  // argument to call, and one for the object to deserialize into.
+  EXPECT_EQ(OpCounter<0>::defaultConstructions(), 2U);
+  EXPECT_EQ(OpCounter<1>::defaultConstructions(), 2U);
+  EXPECT_EQ(OpCounter<2>::defaultConstructions(), 2U);
+  EXPECT_EQ(OpCounter<3>::defaultConstructions(), 2U);
+
+  // Pass-by-value: we expect two moves (one for SPS transparent conversion,
+  // one to copy the value to the parameter), and no copies.
+  EXPECT_EQ(OpCounter<0>::moves(), 2U);
+  EXPECT_EQ(OpCounter<0>::copies(), 0U);
+
+  // Pass-by-lvalue-reference: we expect one move (for SPS transparent
+  // conversion), no copies.
+  EXPECT_EQ(OpCounter<1>::moves(), 1U);
+  EXPECT_EQ(OpCounter<1>::copies(), 0U);
+
+  // Pass-by-const-lvalue-reference: we expect one move (for SPS transparent
+  // conversion), no copies.
+  EXPECT_EQ(OpCounter<2>::moves(), 1U);
+  EXPECT_EQ(OpCounter<2>::copies(), 0U);
+
+  // Pass-by-rvalue-reference: we expect one move (for SPS transparent
+  // conversion), no copies.
+  EXPECT_EQ(OpCounter<3>::moves(), 1U);
+  EXPECT_EQ(OpCounter<3>::copies(), 0U);
 }
