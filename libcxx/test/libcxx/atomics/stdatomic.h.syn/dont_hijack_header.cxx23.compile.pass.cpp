@@ -21,6 +21,9 @@
 // doesn't work at all if we don't use the <stdatomic.h> provided by libc++ in C++23 and above.
 // XFAIL: (c++11 || c++14 || c++17 || c++20) && gcc
 
+// On Android, libc++'s <stdatomic.h> header always redirects to <atomic>, even before C++23.
+// XFAIL: android
+
 #include <atomic>
 #include <stdatomic.h>
 #include <type_traits>
