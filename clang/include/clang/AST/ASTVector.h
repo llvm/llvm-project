@@ -180,9 +180,21 @@ public:
   size_t capacity() const { return this->capacity_ptr() - Begin; }
 
   /// append - Add the specified range to the end of the SmallVector.
-  template<typename in_iter>
+  template <typename in_iter>
   void append(const ASTContext &C, in_iter in_start, in_iter in_end) {
-    size_type NumInputs = std::distance(in_start, in_end);
+    using size_type =
+        typename std::remove_reference_t<decltype(*this)>::size_type;
+    using iterator_category =
+        typename std::iterator_traits<in_iter>::iterator_category;
+
+    size_t NumInputs = 0;
+    constexpr bool is_random_access =
+        std::is_base_of_v<std::random_access_iterator_tag, iterator_category>;
+
+    if constexpr (is_random_access)
+      NumInputs = static_cast<size_type>(in_end - in_start);
+    else
+      NumInputs = static_cast<size_type>(std::distance(in_start, in_end));
 
     if (NumInputs == 0)
       return;
@@ -192,9 +204,11 @@ public:
       this->grow(C, this->size()+NumInputs);
 
     // Copy the new elements over.
-    // TODO: NEED To compile time dispatch on whether in_iter is a random access
-    // iterator to use the fast uninitialized_copy.
-    std::uninitialized_copy(in_start, in_end, this->end());
+    if constexpr (is_random_access)
+      std::uninitialized_copy_n(in_start, NumInputs, this->end());
+    else
+      std::uninitialized_copy(in_start, in_end, this->end());
+
     this->setEnd(this->end() + NumInputs);
   }
 
