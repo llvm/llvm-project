@@ -328,8 +328,10 @@ int llvm_test_dibuilder(void) {
   // Test that LLVMGetFirstDbgRecord and LLVMGetLastDbgRecord return NULL for
   // instructions without debug info.
   LLVMDbgRecordRef Phi1FirstDbgRecord = LLVMGetFirstDbgRecord(Phi1);
+  (void)Phi1FirstDbgRecord;
   assert(Phi1FirstDbgRecord == NULL);
   LLVMDbgRecordRef Phi1LastDbgRecord = LLVMGetLastDbgRecord(Phi1);
+  (void)Phi1LastDbgRecord;
   assert(Phi1LastDbgRecord == NULL);
 
   // Insert a non-phi before the `ret` but not before the debug records to
