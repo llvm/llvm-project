@@ -11,6 +11,9 @@ add_clang_tool(clang-offload-packager
   ${tablegen_deps}
   )
 
+setup_host_tool(clang-offload-packager CLANG_OFFLOAD_PACKAGER_EXE
+  clang-offload-packager_exe clang-offload-packager_target)
+
 clang_target_link_libraries(clang-offload-packager
   PRIVATE
   clangBasic
