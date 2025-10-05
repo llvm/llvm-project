@@ -1,0 +1,111 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>&#x0393;</mi>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>,</mo>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mrow>
+        <msup>
+          <mi>x</mi>
+          <mi>a</mi>
+        </msup>
+        <msup>
+          <mi>e</mi>
+          <mrow>
+            <mo>&#x2212;</mo>
+            <mi>x</mi>
+          </mrow>
+        </msup>
+      </mrow>
+      <mrow>
+        <mi>x</mi>
+        <mo>&#x2212;</mo>
+        <mi>a</mi>
+        <mo>+</mo>
+        <mn>1</mn>
+        <mo>+</mo>
+        <mfrac>
+          <mrow>
+            <msub>
+              <mi>a</mi>
+              <mi>k</mi>
+            </msub>
+          </mrow>
+          <mrow>
+            <msub>
+              <mi>b</mi>
+              <mi>k</mi>
+            </msub>
+            <mo>+</mo>
+            <mfrac>
+              <mrow>
+                <msub>
+                  <mi>a</mi>
+                  <mrow>
+                    <mi>k</mi>
+                    <mo>+</mo>
+                    <mn>1</mn>
+                  </mrow>
+                </msub>
+              </mrow>
+              <mrow>
+                <msub>
+                  <mi>b</mi>
+                  <mrow>
+                    <mi>k</mi>
+                    <mo>+</mo>
+                    <mn>1</mn>
+                  </mrow>
+                </msub>
+                <mo>+</mo>
+                <mo>&#x2026;</mo>
+              </mrow>
+            </mfrac>
+          </mrow>
+        </mfrac>
+      </mrow>
+    </mfrac>
+    <mspace width="1em"/>
+    <mo>;</mo>
+    <mspace width="1em"/>
+    <msub>
+      <mi>a</mi>
+      <mi>k</mi>
+    </msub>
+    <mo>=</mo>
+    <mi>k</mi>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>-</mo>
+        <mi>k</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>;</mo>
+    <mspace width="1em"/>
+    <msub>
+      <mi>b</mi>
+      <mi>k</mi>
+    </msub>
+    <mo>=</mo>
+    <mi>x</mi>
+    <mo>&#x2212;</mo>
+    <mi>a</mi>
+    <mo>+</mo>
+    <mn>2</mn>
+    <mi>k</mi>
+    <mo>+</mo>
+    <mn>1</mn>
+  </mrow>
+</math>
+
+

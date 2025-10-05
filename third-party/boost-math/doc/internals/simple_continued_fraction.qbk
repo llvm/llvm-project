@@ -1,0 +1,62 @@
+[/
+  Copyright Nick Thompson, 2020
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:simple_continued_fraction Simple Continued Fractions]
+
+    #include <boost/math/tools/simple_continued_fraction.hpp>
+    namespace boost::math::tools {
+
+    template<typename Real, typename Z = int64_t>
+    class simple_continued_fraction {
+    public:
+        simple_continued_fraction(Real x);
+        
+        Real khinchin_geometric_mean() const;
+        
+        Real khinchin_harmonic_mean() const;
+
+        template<typename T, typename Z_>
+        friend std::ostream& operator<<(std::ostream& out, simple_continued_fraction<T, Z>& scf);
+    };
+    }
+
+
+The `simple_continued_fraction` class provided by Boost affords the ability to convert a floating point number into a simple continued fraction.
+In addition, we can answer a few questions about the number in question using this representation.
+
+Here's a minimal working example:
+
+    using boost::math::constants::pi;
+    using boost::math::tools::simple_continued_fraction;
+    auto cfrac = simple_continued_fraction(pi<long double>());
+    std::cout << "π ≈ " << cfrac << "\n";
+    // Prints:
+    // π ≈ [3; 7, 15, 1, 292, 1, 1, 1, 2, 1, 3, 1, 14, 2, 1, 1, 2]
+
+The class computes partial denominators while simultaneously computing convergents with the modified Lentz's algorithm.
+Once a convergent is within a few ulps of the input value, the computation stops.
+
+Note that every floating point number is a rational number, and this exact rational can be exactly converted to a finite continued fraction.
+This is perfectly sensible behavior, but we do not do it here.
+This is because when examining known values like π, it creates a large number of incorrect partial denominators, even if every bit of the binary representation is correct.
+
+It may be the case the a few incorrect partial convergents is harmless, but we compute continued fractions because we would like to do something with them.
+One sensible thing to do it to ask whether the number is in some sense "random"; a question that can be partially answered by computing the Khinchin geometric mean
+
+[$../equations/khinchin_geometric.svg]
+
+and Khinchin harmonic mean
+
+[$../equations/khinchin_harmonic.svg]
+
+If these approach Khinchin's constant /K/[sub 0] and /K/[sub -1] as the number of partial denominators goes to infinity, then our number is "uninteresting" with respect to the characterization.
+These violations are washed out if too many incorrect partial denominators are included in the expansion.
+
+Note: The convergence of these means to the Khinchin limit is exceedingly slow; we've used 30,000 decimal digits of π and only found two digits of agreement with /K/[sub 0].
+However, clear violations of are obvious, such as the continued fraction expansion of √2, whose Khinchin geometric mean is precisely 2.
+
+[endsect]

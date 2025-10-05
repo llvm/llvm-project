@@ -1,0 +1,94 @@
+[/
+Copyright (c) 2021 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:bilinear_uniform Bilinear Uniform Interpolation]
+
+[heading Synopsis]
+
+``
+#include <boost/math/interpolators/bilinear_uniform.hpp>
+
+namespace boost::math::interpolators {
+
+template <class RandomAccessContainer>
+class bilinear_uniform
+{
+public:
+    using Real = typename RandomAccessContainer::value_type;
+
+    bilinear_uniform(RandomAccessContainer && fieldData, decltype(fieldData.size()) rows, decltype(fieldData.size()) cols, Real dx = 1, Real dy = 1, Real x0 = 0, Real y0 = 0)
+
+    Real operator()(Real x, Real y) const;
+};
+``
+
+
+[heading Bilinear Uniform Interpolation]
+
+The bilinear uniform interpolator takes a grid of data points specified by a linear index and interpolates between each segment using a bilinear function.
+Note that "bilinear" does not mean linear-it is the product of two linear functions.
+The interpolant is continuous and its evaluation is constant time.
+An example usage is as follows:
+
+    std::vector<double> v{0.1, 0.2, 0.3,
+                          0.4, 0.5, 0.5};
+    using boost::math::interpolators::bilinear_uniform;
+    int rows = 2;
+    int cols = 3;
+    double dx = 1;
+    double dy = 1;
+    auto bu = bilinear_uniform(std::move(v), rows, cols, dx, dy);
+    // evaluate at a point:
+    double z = bu(0.0, 0.0);
+
+Periodically, it is helpful to see what data the interpolator has.
+This can be achieved via
+
+    std::cout << ub << "\n";
+
+Note that the interpolator is pimpl'd, so that copying the class is cheap, and hence it can be shared between threads.
+(The call operator is threadsafe.)
+
+Note that the layout of the field data follows the convention found in laying out images: The first value is associated with (x0, y0), and the last value is associate with (x0 + (cols - 1)dx, y0 + (rows - 1)dy).
+This matches with how we think about laying out matrices in C order, but of course there is no canonical choice and conventions must be made.
+For example, it is traditional in image processing the associate the first field value with the center of the pixel (which would be called a cell-centered field in VTK).
+This interpolator is point-centered, in the sense that (x0,y0) is associated with value v[0], and (x0+dx, y0) associated with v[1].
+If you have cell-centered data at (0,0), then just pass (x0,y0) = (0.5, 0.5) to this interpolator.
+
+Note that this interpolator does not provide the option for a rotation.
+We regarded that as too expensive to handle in this class.
+Rotating the arguments must be performed by the user.
+
+
+[heading Complexity and Performance]
+
+The google/benchmark in `reporting/performance/bilinear_uniform_performance.cpp` demonstrates the cost of the call operator for this interpolator:
+
+```
+Run on (16 X 4300 MHz CPU s)
+CPU Caches:
+  L1 Data 32K (x8)
+  L1 Instruction 32K (x8)
+  L2 Unified 1024K (x8)
+  L3 Unified 11264K (x1)
+Load Average: 0.92, 0.64, 0.35
+--------------------------------------
+Benchmark                      Time
+--------------------------------------
+Bilinear<double>/64            13.6 ns
+Bilinear<double>/128           13.3 ns
+Bilinear<double>/256           13.9 ns
+Bilinear<double>/512           13.7 ns
+Bilinear<double>/1024          13.2 ns
+Bilinear<double>/2048          13.1 ns
+Bilinear<double>/4096          13.2 ns
+Bilinear<double>/8192          13.2 ns
+```
+
+
+[endsect]
+[/section:bilinear_uniform]

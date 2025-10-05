@@ -1,0 +1,41 @@
+﻿
+    <div>
+        
+        <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/negative_b.js"></script>
+        
+        <div id="49ba2424-47a3-454d-ba72-b46ded00693f" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+        <script type="text/javascript">
+            (function(){
+                window.PLOTLYENV={'BASE_URL': 'https://plot.ly'};
+
+                var gd = document.getElementById('49ba2424-47a3-454d-ba72-b46ded00693f')
+                var resizeDebounce = null;
+
+                function resizePlot() {
+                    var bb = gd.getBoundingClientRect();
+                    Plotly.relayout(gd, {
+                        width: bb.width,
+                        height: bb.height
+                    });
+                }
+
+                
+                window.addEventListener('resize', function() {
+                    if (resizeDebounce) {
+                        window.clearTimeout(resizeDebounce);
+                    }
+                    resizeDebounce = window.setTimeout(resizePlot, 100);
+                });
+                
+
+                
+                Plotly.plot(gd,  {
+                   data: negative_b.data,
+                   layout: negative_b.layout,
+                   frames: negative_b.frames,
+                    config: {"showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A"}
+                });
+                
+           }());
+        </script>
+    </div>

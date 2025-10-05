@@ -1,0 +1,77 @@
+[/
+  Copyright Nick Thompson, John Maddock, 2020
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:agm Arithmetic-Geometric Mean]
+
+[h4 Synopsis]
+
+    #include <boost/math/tools/agm.hpp>
+
+    namespace boost::math::tools {
+
+    template<typename Real>
+    Real agm(Real a0, Real g0);
+ 
+    } // namespaces
+
+
+The function `agm` produces the limiting value of the sequence
+
+[$../equations/agm_sequence.svg]
+
+
+A basic usage is
+
+    double G = boost::math::tools::agm(sqrt(2.0), 1.0);
+
+The AGM inequality
+
+[$../equations/agm_sequence.svg]
+
+shows that
+
+[$../equations/agm_bound.svg]
+
+We use this condition internally to measure convergence; however, there is no need to worry about putting arguments in the correct order since we extend `agm` to a symmetric function by definition.
+Both arguments must be non-negative, as the sequence becomes complex for negative arguments.
+(We have not implemented the complex-valued AGM sequence.)
+The function `agm` is "essentially" one-dimensional, as the scale invariance `agm(k*x, k*y) == k*agm(x,y)` always allows us to take one argument to be unity.
+The following ULP plot has been generated with the function `agm(x, Real(1))`:
+
+[$../graphs/agm_ulps_plot.svg]
+
+The graph above shows an ulps plot of the Boost implementation of  `agm(x, Real(1))`.
+An ~2 ULP bound is to be expected.
+
+A google benchmark for various types is available in `boost/libs/math/reporting/performance/test_agm.cpp`; some results on a consumer laptop are provided for convenience:
+
+```
+Run on (16 X 2300 MHz CPU s)
+CPU Caches:
+  L1 Data 32K (x8)
+  L1 Instruction 32K (x8)
+  L2 Unified 262K (x8)
+  L3 Unified 16777K (x1)
+Load Average: 2.02, 2.14, 2.00
+-------------------------------------------------------------------------------
+Benchmark                                     Time             CPU   Iterations
+-------------------------------------------------------------------------------
+AGM<float>                                 8.52 ns         8.51 ns     59654685
+AGM<double>                                13.5 ns         13.5 ns     51709746
+AGM<long double>                           30.6 ns         30.6 ns     18745247
+AGM<boost::multiprecision::float128>       2332 ns         2332 ns       299303
+```
+
+If any inputs are NaNs, the result is a NaN.
+If any inputs are +∞, the result is +∞, unless the other argument fails NaN or negative validation.
+
+[heading References]
+
+* Steven R. Finch. ['Mathematical Constants] Cambridge, 2003.
+
+
+[endsect]

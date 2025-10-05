@@ -1,0 +1,48 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi>H</mi>
+      <mrow>
+        <mi>n</mi>
+        <mo>+</mo>
+        <mn>1</mn>
+      </mrow>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mn>2</mn>
+    <mi>x</mi>
+    <msub>
+      <mi>H</mi>
+      <mi>n</mi>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>&#x2212;</mo>
+    <mn>2</mn>
+    <mi>n</mi>
+    <msub>
+      <mi>H</mi>
+      <mrow>
+        <mi>n</mi>
+        <mo>&#x2212;</mo>
+        <mn>1</mn>
+      </mrow>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+  </mrow>
+</math>
+
