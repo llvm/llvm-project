@@ -44,6 +44,35 @@ define <2 x i64> @sabdl2d(ptr %A, ptr %B) nounwind {
   ret <2 x i64> %tmp4
 }
 
+define void @commutable_sabdl(ptr %A, ptr %B, ptr %C) nounwind {
+; CHECK-SD-LABEL: commutable_sabdl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    sabdl.8h v0, v1, v0
+; CHECK-SD-NEXT:    str q0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: commutable_sabdl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    sabdl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str q0, [x2]
+; CHECK-GI-NEXT:    str q0, [x2]
+; CHECK-GI-NEXT:    ret
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = load <8 x i8>, ptr %B
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
+  %tmp4 = zext <8 x i8> %tmp3 to <8 x i16>
+  store <8 x i16> %tmp4, ptr %C
+  %tmp5 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp2, <8 x i8> %tmp1)
+  %tmp6 = zext <8 x i8> %tmp5 to <8 x i16>
+  %tmp7 = getelementptr i8, ptr %C, i64 16
+  store <8 x i16> %tmp6, ptr %C
+  ret void
+}
+
 define <8 x i16> @sabdl2_8h(ptr %A, ptr %B) nounwind {
 ; CHECK-SD-LABEL: sabdl2_8h:
 ; CHECK-SD:       // %bb.0:
@@ -153,6 +182,35 @@ define <2 x i64> @uabdl2d(ptr %A, ptr %B) nounwind {
   %tmp3 = call <2 x i32> @llvm.aarch64.neon.uabd.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp2)
   %tmp4 = zext <2 x i32> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
+}
+
+define void @commutable_uabdl(ptr %A, ptr %B, ptr %C) nounwind {
+; CHECK-SD-LABEL: commutable_uabdl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    uabdl.8h v0, v1, v0
+; CHECK-SD-NEXT:    str q0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: commutable_uabdl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    uabdl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str q0, [x2]
+; CHECK-GI-NEXT:    str q0, [x2]
+; CHECK-GI-NEXT:    ret
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = load <8 x i8>, ptr %B
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
+  %tmp4 = zext <8 x i8> %tmp3 to <8 x i16>
+  store <8 x i16> %tmp4, ptr %C
+  %tmp5 = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %tmp2, <8 x i8> %tmp1)
+  %tmp6 = zext <8 x i8> %tmp5 to <8 x i16>
+  %tmp7 = getelementptr i8, ptr %C, i64 16
+  store <8 x i16> %tmp6, ptr %C
+  ret void
 }
 
 define <8 x i16> @uabdl2_8h(ptr %A, ptr %B) nounwind {
@@ -1830,10 +1888,10 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-GI-NEXT:    subs x10, x11, x13
 ; CHECK-GI-NEXT:    sbc x11, x14, x15
 ; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    cset w12, lt
+; CHECK-GI-NEXT:    cset w12, mi
 ; CHECK-GI-NEXT:    csel w12, wzr, w12, eq
 ; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    cset w13, lt
+; CHECK-GI-NEXT:    cset w13, mi
 ; CHECK-GI-NEXT:    csel w13, wzr, w13, eq
 ; CHECK-GI-NEXT:    negs x14, x8
 ; CHECK-GI-NEXT:    ngc x15, x9
@@ -1856,21 +1914,13 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <8 x i16> @pr88784(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
-; CHECK-SD-LABEL: pr88784:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
-; CHECK-SD-NEXT:    cmlt.8h v1, v2, #0
-; CHECK-SD-NEXT:    ssra.8h v0, v2, #15
-; CHECK-SD-NEXT:    eor.16b v0, v1, v0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: pr88784:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
-; CHECK-GI-NEXT:    sshr.8h v1, v2, #15
-; CHECK-GI-NEXT:    ssra.8h v0, v2, #15
-; CHECK-GI-NEXT:    eor.16b v0, v1, v0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: pr88784:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usubl.8h v0, v0, v1
+; CHECK-NEXT:    cmlt.8h v1, v2, #0
+; CHECK-NEXT:    ssra.8h v0, v2, #15
+; CHECK-NEXT:    eor.16b v0, v1, v0
+; CHECK-NEXT:    ret
   %l4 = zext <8 x i8> %l0 to <8 x i16>
   %l5 = ashr <8 x i16> %l2, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %l6 = zext <8 x i8> %l1 to <8 x i16>
@@ -1889,7 +1939,7 @@ define <8 x i16> @pr88784_fixed(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
 ; CHECK-GI-LABEL: pr88784_fixed:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
-; CHECK-GI-NEXT:    sshr.8h v1, v0, #15
+; CHECK-GI-NEXT:    cmlt.8h v1, v0, #0
 ; CHECK-GI-NEXT:    ssra.8h v0, v0, #15
 ; CHECK-GI-NEXT:    eor.16b v0, v1, v0
 ; CHECK-GI-NEXT:    ret

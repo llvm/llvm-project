@@ -124,9 +124,8 @@ define i32 @v_saddsat_i32(i32 %lhs, i32 %rhs) {
 ; GFX6-NEXT:    v_add_i32_e64 v1, s[4:5], v0, v1
 ; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v1, v0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, v1, -v0, s[4:5]
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_saddsat_i32:
@@ -136,9 +135,8 @@ define i32 @v_saddsat_i32(i32 %lhs, i32 %rhs) {
 ; GFX8-NEXT:    v_add_u32_e64 v1, s[4:5], v0, v1
 ; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v1, v0
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX8-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v1, -v0, s[4:5]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_saddsat_i32:
@@ -383,16 +381,14 @@ define <2 x i32> @v_saddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; GFX6-NEXT:    v_add_i32_e64 v2, s[4:5], v0, v2
 ; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 31, v2
-; GFX6-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, v2, -v0, s[4:5]
 ; GFX6-NEXT:    v_add_i32_e64 v2, s[4:5], v1, v3
 ; GFX6-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v3
 ; GFX6-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v1
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v2
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX6-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, v2, -v1, s[4:5]
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_saddsat_v2i32:
@@ -402,16 +398,14 @@ define <2 x i32> @v_saddsat_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; GFX8-NEXT:    v_add_u32_e64 v2, s[4:5], v0, v2
 ; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v0
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 31, v2
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX8-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, v2, -v0, s[4:5]
 ; GFX8-NEXT:    v_add_u32_e64 v2, s[4:5], v1, v3
 ; GFX8-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v3
 ; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v2, v1
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v2
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX8-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, v2, -v1, s[4:5]
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_saddsat_v2i32:
@@ -442,8 +436,7 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
 ; GFX6-NEXT:    s_xor_b64 vcc, s[4:5], vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX6-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX6-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX6-NEXT:    v_cndmask_b32_e64 v1, v5, -v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_saddsat_i64:
@@ -456,8 +449,7 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
 ; GFX8-NEXT:    s_xor_b64 vcc, s[4:5], vcc
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX8-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, v5, -v1, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_saddsat_i64:
@@ -470,8 +462,7 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
 ; GFX9-NEXT:    s_xor_b64 vcc, s[4:5], vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, v5, -v1, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_saddsat_i64:
@@ -480,12 +471,11 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    v_cmp_gt_i64_e64 s4, 0, v[2:3]
-; GFX10-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; GFX10-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
+; GFX10-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
 ; GFX10-NEXT:    s_xor_b32 vcc_lo, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v5, -v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_saddsat_i64:
@@ -494,11 +484,11 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_i64_e64 s0, 0, v[2:3]
-; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; GFX11-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[4:5], v[0:1]
-; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v6
+; GFX11-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
 ; GFX11-NEXT:    s_xor_b32 vcc_lo, s0, vcc_lo
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v4, v6 :: v_dual_cndmask_b32 v1, v5, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, -v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.sadd.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result

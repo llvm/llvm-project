@@ -24,9 +24,9 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_simple
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_simple
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   store volatile i8 0, ptr %buf.sroa.0, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -43,9 +43,9 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_cmpxchg
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_cmpxchg
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   %0 = cmpxchg ptr %buf.sroa.0, i8 1, i8 2 monotonic monotonic, align 4
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -62,9 +62,9 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_atomicrwm
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_atomicrwm
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   %0 = atomicrmw add ptr %buf.sroa.0, i8 1 monotonic, align 4
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -82,9 +82,9 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_use
   %buf.sroa.0 = alloca i8, align 4
   call void @use(ptr nonnull %buf.sroa.0)
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   store volatile i8 0, ptr %buf.sroa.0, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -101,9 +101,9 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_in_range
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_in_range
   %buf.sroa.0 = alloca [10 x i8], align 4
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   store volatile i8 0, ptr %buf.sroa.0, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -121,9 +121,9 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_in_range2
   %buf.sroa.0 = alloca [10 x i8], align 4
   %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 9
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   store volatile i8 0, ptr %ptr, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -194,9 +194,9 @@ entry:
   ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_out_of_range
   %buf.sroa.0 = alloca [10 x i8], align 4
   %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 10
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   store volatile i8 0, ptr %ptr, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -213,9 +213,9 @@ entry:
   ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_out_of_range2
   %buf.sroa.0 = alloca [10 x i8], align 4
   %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 10
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   %0 = cmpxchg ptr %ptr, i8 1, i8 2 monotonic monotonic, align 4
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -268,11 +268,11 @@ entry:
   %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 9
   %buf.sroa.1 = alloca [10 x i8], align 4
   %ptr1 = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 9
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.1)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.1)
   call void @llvm.memmove.p0.p0.i32(ptr %ptr, ptr %ptr1, i32 1, i1 true)
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.1)
   ret i32 0
 }
 
@@ -289,31 +289,9 @@ entry:
   ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_out_of_range6
   %buf.sroa.0 = alloca [10 x i8], align 4
   %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 10
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   %0 = atomicrmw add ptr %ptr, i32 1 monotonic, align 4
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %buf.sroa.0)
-  ret i32 0
-}
-
-; Check an alloca with potentially out of range GEP to ensure it gets a tag and
-; check.
-define i32 @test_potentially_out_of_range(ptr %a) sanitize_hwaddress {
-entry:
-  ; CHECK-LABEL: @test_potentially_out_of_range
-  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
-  ; NOSAFETY: call {{.*}}__hwasan_store
-  ; SAFETY: call {{.*}}__hwasan_generate_tag
-  ; SAFETY: call {{.*}}__hwasan_store
-  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
-  ; NOSTACK-NOT: call {{.*}}__hwasan_store
-  ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_potentially_out_of_range
-  ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_potentially_out_of_range
-  %buf.sroa.0 = alloca [10 x i8], align 4
-  %off = call i32 @getoffset()
-  %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 0, i32 %off
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %ptr)
-  store volatile i8 0, ptr %ptr, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %ptr)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -333,26 +311,6 @@ entry:
   call void @llvm.memmove.p0.p0.i32(ptr %ptr, ptr %a, i32 1, i1 true)
   ret i32 0
 }
-; Check an alloca with potentially out of range GEP to ensure it gets a tag and
-; check.
-define i32 @test_unclear(ptr %a) sanitize_hwaddress {
-entry:
-  ; CHECK-LABEL: @test_unclear
-  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
-  ; NOSAFETY: call {{.*}}__hwasan_store
-  ; SAFETY: call {{.*}}__hwasan_generate_tag
-  ; SAFETY: call {{.*}}__hwasan_store
-  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
-  ; NOSTACK: call {{.*}}__hwasan_store
-  ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_unclear
-  ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_unclear
-  %buf.sroa.0 = alloca i8, align 4
-  %ptr = call ptr @getptr(ptr %buf.sroa.0)
-  call void @llvm.lifetime.start.p0(i64 10, ptr nonnull %ptr)
-  store volatile i8 0, ptr %ptr, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 10, ptr nonnull %ptr)
-  ret i32 0
-}
 
 define i32 @test_select(ptr %a) sanitize_hwaddress {
 entry:
@@ -367,11 +325,11 @@ entry:
   ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_select
   %x = call ptr @getptr(ptr %a)
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   %c = call i1 @cond()
   %ptr = select i1 %c, ptr %x, ptr %buf.sroa.0
   store volatile i8 0, ptr %ptr, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -388,10 +346,10 @@ entry:
   ; SAFETY-REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_retptr
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_retptr
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   %ptr = call ptr @retptr(ptr %buf.sroa.0)
   store volatile i8 0, ptr %ptr, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
@@ -408,17 +366,17 @@ entry:
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_lifetime_poison
   ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_lifetime_poison
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr poison)
+  call void @llvm.lifetime.start.p0(ptr poison)
   store volatile i8 0, ptr %buf.sroa.0, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 1, ptr poison)
+  call void @llvm.lifetime.end.p0(ptr poison)
   ret i32 0
 }
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare void @llvm.memset.p0.i32(ptr, i8, i32, i1)
 declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)

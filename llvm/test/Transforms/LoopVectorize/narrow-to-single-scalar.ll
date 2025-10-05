@@ -4,8 +4,8 @@
 define void @narrow_select_to_single_scalar(i1 %invar.cond, ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-LABEL: define void @narrow_select_to_single_scalar(
 ; CHECK-SAME: i1 [[INVAR_COND:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[INVAR_COND]], i16 0, i16 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[C]], i16 [[TMP0]]
@@ -25,12 +25,11 @@ define void @narrow_select_to_single_scalar(i1 %invar.cond, ptr noalias %A, ptr 
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 1024, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i16 [[IV]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load i16, ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    store i16 [[L_0]], ptr [[B]], align 1

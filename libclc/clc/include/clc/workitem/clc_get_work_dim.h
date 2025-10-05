@@ -11,6 +11,6 @@
 
 #include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DECL uint __clc_get_work_dim();
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL uint __clc_get_work_dim();
 
 #endif // __CLC_WORKITEM_CLC_GET_WORK_DIM_H__

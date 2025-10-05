@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- check_clang_tidy.py - ClangTidy Test Helper ------------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -45,6 +45,7 @@ Notes
 import argparse
 import os
 import pathlib
+import platform
 import re
 import subprocess
 import sys
@@ -135,8 +136,7 @@ class CheckRunner:
                 "-fblocks",
             ] + self.clang_extra_args
 
-        if extension in [".cpp", ".hpp", ".mm"]:
-            self.clang_extra_args.append("-std=" + self.std)
+        self.clang_extra_args.append("-std=" + self.std)
 
         # Tests should not rely on STL being available, and instead provide mock
         # implementations of relevant APIs.
@@ -146,7 +146,12 @@ class CheckRunner:
             self.clang_extra_args.append("-resource-dir=%s" % self.resource_dir)
 
     def read_input(self) -> None:
-        with open(self.input_file_name, "r", encoding="utf-8") as input_file:
+        # Use a "\\?\" prefix on Windows to handle long file paths transparently:
+        # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+        file_name = self.input_file_name
+        if platform.system() == "Windows":
+            file_name = "\\\\?\\" + os.path.abspath(file_name)
+        with open(file_name, "r", encoding="utf-8") as input_file:
             self.input_text = input_file.read()
 
     def get_prefixes(self) -> None:
@@ -204,6 +209,7 @@ class CheckRunner:
         args = (
             [
                 "clang-tidy",
+                "--experimental-custom-checks",
                 self.temp_file_name,
             ]
             + [
@@ -374,7 +380,7 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument(
         "-std",
         type=csv,
-        default=["c++11-or-later"],
+        default=None,
         help="Passed to clang. Special -or-later values are expanded.",
     )
     parser.add_argument(
@@ -382,7 +388,13 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
         action="store_true",
         help="allow partial line matches for fixes",
     )
-    return parser.parse_known_args()
+
+    args, extra_args = parser.parse_known_args()
+    if args.std is None:
+        _, extension = os.path.splitext(args.assume_filename or args.input_file_name)
+        args.std = ["c99-or-later" if extension in [".c", ".m"] else "c++11-or-later"]
+
+    return (args, extra_args)
 
 
 def main() -> None:

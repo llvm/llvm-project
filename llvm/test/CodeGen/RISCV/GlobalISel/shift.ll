@@ -105,3 +105,51 @@ define i16 @test_shl_i48_2(i48 %x, i48 %y) {
   %trunc = trunc i48 %shl to i16
   ret i16 %trunc
 }
+
+define i32 @test_fshl_i32(i32 %x, i32 %_, i32 %y) {
+; RV32-LABEL: test_fshl_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    not a3, a2
+; RV32-NEXT:    sll a0, a0, a2
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    srl a1, a1, a3
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_fshl_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    not a3, a2
+; RV64-NEXT:    sllw a0, a0, a2
+; RV64-NEXT:    srliw a1, a1, 1
+; RV64-NEXT:    srlw a1, a1, a3
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    ret
+  %fshl = call i32 @llvm.fshl.i32(i32 %x, i32 %_, i32 %y)
+  %shl = shl i32 %x, %y
+  %or = or i32 %fshl, %shl
+  ret i32 %or
+}
+
+define i32 @test_fshr_i32(i32 %_, i32 %x, i32 %y) {
+; RV32-LABEL: test_fshr_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    not a3, a2
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    sll a0, a0, a3
+; RV32-NEXT:    srl a1, a1, a2
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_fshr_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    not a3, a2
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    sllw a0, a0, a3
+; RV64-NEXT:    srlw a1, a1, a2
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    ret
+  %fshr = call i32 @llvm.fshr.i32(i32 %_, i32 %x, i32 %y)
+  %lshr = lshr i32 %x, %y
+  %or = or i32 %lshr, %fshr
+  ret i32 %or
+}

@@ -1193,7 +1193,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       //   USE kill %w1   ; need to clear kill flag when moving STRWui downwards
       //   STRW %w0
       Register Reg = getLdStRegOp(*I).getReg();
-      for (MachineInstr &MI : make_range(std::next(I), Paired))
+      for (MachineInstr &MI :
+           make_range(std::next(I->getIterator()), Paired->getIterator()))
         MI.clearRegisterKills(Reg, TRI);
     }
   }

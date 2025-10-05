@@ -17,8 +17,6 @@
 # to avoid breaking users at every release.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
-
-# block Lit from interpreting a RUN/XFAIL/etc inside the generation script
 # END.
 
 import sys
@@ -89,8 +87,6 @@ else:
 
 // TODO: Figure out why <stdatomic.h> doesn't work on FreeBSD
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
-
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
 
 // RUN: mkdir %t
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt

@@ -14,17 +14,27 @@ define void @test_pr58136(i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:    [[C_1_FR:%.*]] = freeze i1 [[C_1:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1_FR]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
+; CHECK-NEXT:    [[C_2_FR:%.*]] = freeze i1 [[C_2:%.*]]
+; CHECK-NEXT:    br i1 [[C_2_FR]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]], label [[ENTRY_SPLIT_US_SPLIT:%.*]]
+; CHECK:       entry.split.us.split.us:
 ; CHECK-NEXT:    br label [[LOOP_HEADER_US_US:%.*]]
-; CHECK:       loop.header.us:
-; CHECK-NEXT:    [[MUL1_US_US:%.*]] = phi i16 [ [[MUL_US_US:%.*]], [[LOOP_LATCH_US:%.*]] ], [ [[GLOB_PROMOTED]], [[ENTRY_SPLIT_US]] ]
+; CHECK:       loop.header.us.us:
+; CHECK-NEXT:    [[MUL1_US_US:%.*]] = phi i16 [ [[MUL_US_US:%.*]], [[LOOP_LATCH_US_US:%.*]] ], [ [[GLOB_PROMOTED]], [[ENTRY_SPLIT_US_SPLIT_US]] ]
 ; CHECK-NEXT:    [[CALL2_US_US:%.*]] = call i16 @foo()
-; CHECK-NEXT:    br label [[LOOP_LATCH_US_US:%.*]]
-; CHECK:       then.bb.us:
-; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[LOOP_LATCH_US]], label [[EXIT_SPLIT_US:%.*]]
-; CHECK:       loop.latch.us:
+; CHECK-NEXT:    br label [[THEN_BB_US_US:%.*]]
+; CHECK:       then.bb.us.us:
+; CHECK-NEXT:    br label [[LOOP_LATCH_US_US]]
+; CHECK:       loop.latch.us.us:
 ; CHECK-NEXT:    [[MUL_US_US]] = mul nsw i16 [[MUL1_US_US]], [[L_3]]
 ; CHECK-NEXT:    store i16 [[MUL_US_US]], ptr @glob, align 2
-; CHECK-NEXT:    br label [[LOOP_HEADER_US_US]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_HEADER_US_US]]
+; CHECK:       entry.split.us.split:
+; CHECK-NEXT:    br label [[LOOP_HEADER_US:%.*]]
+; CHECK:       loop.header.us:
+; CHECK-NEXT:    [[CALL2_US:%.*]] = call i16 @foo()
+; CHECK-NEXT:    br label [[THEN_BB_US:%.*]]
+; CHECK:       then.bb.us:
+; CHECK-NEXT:    br label [[EXIT_SPLIT_US:%.*]]
 ; CHECK:       exit.split.us:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       entry.split:
@@ -79,7 +89,7 @@ define void @test_pr58158(i1 %c.1) {
 ; CHECK:       outer.loopexit.us:
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE_US:%.*]]
 ; CHECK:       outer.backedge.us:
-; CHECK-NEXT:    br label [[OUTER_US]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br label [[OUTER_US]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:

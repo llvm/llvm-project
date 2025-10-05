@@ -128,9 +128,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES1]])
+  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES1]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES1]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES1]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES1]], i32 0, i32 0
   // B32: store i32 256, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES1]], i32 0, i32 0
@@ -153,9 +153,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES2]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES2]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES2]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES2]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES2]], i32 0, i32 0
   // B32: store i32 %{{.*}}, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES2]], i32 0, i32 0
@@ -181,9 +181,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // X86: [[AD:%arraydecay[0-9]*]] = getelementptr inbounds [1 x ptr], ptr %event_wait_list2, i{{32|64}} 0, i{{32|64}} 0
   // COMMON: [[WAIT_EVNT:%[0-9]+]] ={{.*}} addrspacecast ptr [[AD]] to ptr addrspace(4)
   // COMMON: [[EVNT:%[0-9]+]]  ={{.*}} addrspacecast ptr %clk_event to ptr addrspace(4)
-  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES3]])
+  // CHECK-LIFETIMES: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES3]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_events_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES3]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES3]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES3]], i32 0, i32 0
   // B32: store i32 256, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES3]], i32 0, i32 0
@@ -209,9 +209,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // X86: [[AD:%arraydecay[0-9]*]] = getelementptr inbounds [1 x ptr], ptr %event_wait_list2, i{{32|64}} 0, i{{32|64}} 0
   // COMMON: [[WAIT_EVNT:%[0-9]+]] ={{.*}} addrspacecast ptr [[AD]] to ptr addrspace(4)
   // COMMON: [[EVNT:%[0-9]+]]  ={{.*}} addrspacecast ptr %clk_event to ptr addrspace(4)
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES4]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES4]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_events_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES4]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES4]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES4]], i32 0, i32 0
   // B32: store i32 %{{.*}}, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES4]], i32 0, i32 0
@@ -234,9 +234,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES5]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES5]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES5]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES5]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES5]], i32 0, i32 0
   // B32: store i32 %{{.*}}, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES5]], i32 0, i32 0
@@ -258,9 +258,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %[[BLOCK_SIZES6]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES6]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %[[BLOCK_SIZES6]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES6]])
   // B32: %[[TMP:.*]] = getelementptr [3 x i32], ptr %[[BLOCK_SIZES6]], i32 0, i32 0
   // B32: store i32 1, ptr %[[TMP]], align 4
   // B32: %[[BLOCK_SIZES62:.*]] = getelementptr [3 x i32], ptr %[[BLOCK_SIZES6]], i32 0, i32 1
@@ -290,9 +290,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: [[DEF_Q:%[0-9]+]] = load target("spirv.Queue"), ptr %default_queue
   // X86: [[DEF_Q:%[0-9]+]] = load ptr, ptr %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, ptr %flags
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %[[BLOCK_SIZES7]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.start.p0(ptr nonnull %[[BLOCK_SIZES7]])
   // CHECK-LIFETIMES-LABEL: call {{(spir_func )?}}i32 @__enqueue_kernel_varargs(
-  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %[[BLOCK_SIZES7]])
+  // CHECK-LIFETIMES-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull %[[BLOCK_SIZES7]])
   // B32: %[[TMP:.*]] = getelementptr [1 x i32], ptr %[[BLOCK_SIZES7]], i32 0, i32 0
   // B32: store i32 0, ptr %[[TMP]], align 4
   // B64: %[[TMP:.*]] = getelementptr [1 x i64], ptr %[[BLOCK_SIZES7]], i32 0, i32 0

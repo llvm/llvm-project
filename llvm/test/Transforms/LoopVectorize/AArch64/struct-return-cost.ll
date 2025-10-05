@@ -31,10 +31,7 @@ define void @struct_return_widen(ptr noalias %in, ptr noalias writeonly %out_a, 
 ; CHECK:  [[VECTOR_BODY:.*:]]
 ; CHECK:    [[TMP2:%.*]] = call { <2 x half>, <2 x half> } @fixed_vec_foo(<2 x half> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[TMP3:%.*]] = call { <2 x half>, <2 x half> } @fixed_vec_foo(<2 x half> [[WIDE_LOAD1:%.*]])
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { half, half } @foo(half [[IN_VAL:%.*]]) #[[ATTR2:[0-9]+]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -82,12 +79,9 @@ define void @struct_return_replicate(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP3:%.*]]) #[[ATTR3:[0-9]+]]
-; CHECK:    [[TMP6:%.*]] = tail call { half, half } @foo(half [[TMP5:%.*]]) #[[ATTR3]]
+; CHECK:    [[TMP2:%.*]] = tail call { half, half } @foo(half [[TMP1:%.*]]) #[[ATTR2:[0-9]+]]
+; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP3:%.*]]) #[[ATTR2]]
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
-; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { half, half } @foo(half [[IN_VAL:%.*]]) #[[ATTR3]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -149,10 +143,9 @@ exit:
 define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) #2 {
 ; CHECK-LABEL: define void @struct_return_scalable(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK:  [[ENTRY:.*:]]
-; CHECK:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK:  [[VECTOR_PH1:.*:]]
 ; CHECK:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY:.*:]]
 ; CHECK:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
@@ -163,7 +156,7 @@ define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { half, half } @foo(half [[IN_VAL:%.*]]) #[[ATTR3]]
+; CHECK:    [[CALL:%.*]] = tail call { half, half } @foo(half [[IN_VAL:%.*]]) #[[ATTR2]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:

@@ -1,13 +1,13 @@
 ## Test the env command (passing tests).
 
 # RUN: %{lit} -a -v %{inputs}/shtest-env-positive \
-# RUN: | FileCheck -match-full-lines %s
+# RUN:   | FileCheck -match-full-lines %s
 #
 # END.
 
 ## Test the env command's successful executions.
 
-# CHECK: -- Testing: 9 tests{{.*}}
+# CHECK: -- Testing: 10 tests{{.*}}
 
 # CHECK: PASS: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: env FOO=1
@@ -39,6 +39,12 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
+# CHECK: PASS: shtest-env :: env-i.txt ({{[^)]*}})
+# CHECK: env -i | {{.*}}
+# CHECK: # executed command: env -i
+# CHECK-NOT: # error:
+# CHECK: --
+
 # CHECK: PASS: shtest-env :: env-no-subcommand.txt ({{[^)]*}})
 # CHECK: env | {{.*}}
 # CHECK: # executed command: env
@@ -65,6 +71,6 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
-# CHECK: Total Discovered Tests: 9
-# CHECK: Passed: 9 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Total Discovered Tests: 10
+# CHECK: Passed: 10 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}

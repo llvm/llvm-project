@@ -1,3 +1,6 @@
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 # Flang |version| (In-Progress) Release Notes
 
 > **warning**
@@ -31,6 +34,8 @@ page](https://llvm.org/releases/).
 ## Non-comprehensive list of changes in this release
 
 ## New Compiler Flags
+
+* -fexperimental-loop-fusion is now recognized by flang.
 
 ## Windows Support
 

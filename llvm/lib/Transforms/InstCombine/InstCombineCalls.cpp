@@ -64,6 +64,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -133,7 +134,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // wouldn't be constant), and this must be a noop.
   if (!isModSet(AA->getModRefInfoMask(MI->getDest()))) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -141,7 +142,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // (unless the transfer is volatile).
   if (hasUndefSource(MI) && !MI->isVolatile()) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -211,7 +212,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   }
 
   // Set the size of the copy to 0, it will be deleted on the next iteration.
-  MI->setLength(Constant::getNullValue(MemOpLength->getType()));
+  MI->setLength((uint64_t)0);
   return MI;
 }
 
@@ -229,7 +230,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // wouldn't be constant), and this must be a noop.
   if (!isModSet(AA->getModRefInfoMask(MI->getDest()))) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -238,7 +239,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // value. Change to PoisonValue once #52930 is resolved.
   if (isa<UndefValue>(MI->getValue())) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -267,19 +268,17 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
         MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
-    auto replaceOpForAssignmentMarkers = [FillC, FillVal](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
       if (llvm::is_contained(DbgAssign->location_ops(), FillC))
         DbgAssign->replaceVariableLocationOp(FillC, FillVal);
-    };
-    for_each(at::getAssignmentMarkers(S), replaceOpForAssignmentMarkers);
-    for_each(at::getDVRAssignmentMarkers(S), replaceOpForAssignmentMarkers);
+    }
 
     S->setAlignment(Alignment);
     if (MI->isAtomic())
       S->setOrdering(AtomicOrdering::Unordered);
 
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(LenC->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -319,18 +318,18 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
 // * Single constant active lane -> store
 // * Narrow width by halfs excluding zero/undef lanes
 Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
+  Value *StorePtr = II.getArgOperand(1);
+  Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
   if (!ConstMask)
     return nullptr;
 
   // If the mask is all zeros, this instruction does nothing.
-  if (ConstMask->isNullValue())
+  if (maskIsAllZeroOrUndef(ConstMask))
     return eraseInstFromFunction(II);
 
   // If the mask is all ones, this is a plain vector store of the 1st argument.
-  if (ConstMask->isAllOnesValue()) {
-    Value *StorePtr = II.getArgOperand(1);
-    Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+  if (maskIsAllOneOrUndef(ConstMask)) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
     S->copyMetadata(II);
@@ -390,7 +389,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
     return nullptr;
 
   // If the mask is all zeros, a scatter does nothing.
-  if (ConstMask->isNullValue())
+  if (maskIsAllZeroOrUndef(ConstMask))
     return eraseInstFromFunction(II);
 
   // Vector splat address -> scalar store
@@ -1418,9 +1417,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // At least 1 operand must be a shuffle with 1 use because we are creating 2
   // instructions.
-  if (none_of(II->args(), [](Value *V) {
-        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
-      }))
+  if (none_of(II->args(), match_fn(m_OneUse(m_Shuffle(m_Value(), m_Value())))))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
@@ -1530,6 +1527,51 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
     }
   }
   return nullptr;
+}
+
+/// Helper to match idempotent binary intrinsics, namely, intrinsics where
+/// `f(f(x, y), y) == f(x, y)` holds.
+static bool isIdempotentBinaryIntrinsic(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+  case Intrinsic::maximum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minnum:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Attempt to simplify value-accumulating recurrences of kind:
+///   %umax.acc = phi i8 [ %umax, %backedge ], [ %a, %entry ]
+///   %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+/// And let the idempotent binary intrinsic be hoisted, when the operands are
+/// known to be loop-invariant.
+static Value *foldIdempotentBinaryIntrinsicRecurrence(InstCombinerImpl &IC,
+                                                      IntrinsicInst *II) {
+  PHINode *PN;
+  Value *Init, *OtherOp;
+
+  // A binary intrinsic recurrence with loop-invariant operands is equivalent to
+  // `call @llvm.binary.intrinsic(Init, OtherOp)`.
+  auto IID = II->getIntrinsicID();
+  if (!isIdempotentBinaryIntrinsic(IID) ||
+      !matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp) ||
+      !IC.getDominatorTree().dominates(OtherOp, PN))
+    return nullptr;
+
+  auto *InvariantBinaryInst =
+      IC.Builder.CreateBinaryIntrinsic(IID, Init, OtherOp);
+  if (isa<FPMathOperator>(InvariantBinaryInst))
+    cast<Instruction>(InvariantBinaryInst)->copyFastMathFlags(II);
+  return InvariantBinaryInst;
 }
 
 static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
@@ -1708,9 +1750,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
-    if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(MI->getLength())) {
+    if (auto NumBytes = MI->getLengthInBytes()) {
       // memmove/cpy/set of zero bytes is a noop.
-      if (NumBytes->isNullValue())
+      if (NumBytes->isZero())
         return eraseInstFromFunction(CI);
 
       // For atomic unordered mem intrinsics if len is not a positive or
@@ -1913,7 +1955,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType())) {
+      if (Constant *NarrowC = getLosslessUnsignedTrunc(C, X->getType(), DL)) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
@@ -1963,7 +2005,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *C;
     if (match(I0, m_SExt(m_Value(X))) && match(I1, m_Constant(C)) &&
         I0->hasOneUse()) {
-      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType())) {
+      if (Constant *NarrowC = getLosslessSignedTrunc(C, X->getType(), DL)) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
@@ -2364,6 +2406,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+
+      // R = fshl(X, X, C2)
+      // fshl(R, R, C1) --> fshl(X, X, (C1 + C2) % bitsize)
+      Value *InnerOp;
+      const APInt *ShAmtInnerC, *ShAmtOuterC;
+      if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
+                            m_APInt(ShAmtInnerC))) &&
+          match(ShAmtC, m_APInt(ShAmtOuterC)) && Op0 == Op1) {
+        APInt Sum = *ShAmtOuterC + *ShAmtInnerC;
+        APInt Modulo = Sum.urem(APInt(Sum.getBitWidth(), BitWidth));
+        if (Modulo.isZero())
+          return replaceInstUsesWith(*II, InnerOp);
+        Constant *ModuloC = ConstantInt::get(Ty, Modulo);
+        return CallInst::Create(cast<IntrinsicInst>(Op0)->getCalledFunction(),
+                                {InnerOp, InnerOp, ModuloC});
+      }
     }
 
     // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
@@ -3342,12 +3400,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // TODO: apply range metadata for range check patterns?
     }
 
-    // Separate storage assumptions apply to the underlying allocations, not any
-    // particular pointer within them. When evaluating the hints for AA purposes
-    // we getUnderlyingObject them; by precomputing the answers here we can
-    // avoid having to do so repeatedly there.
     for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
       OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+
+      // Separate storage assumptions apply to the underlying allocations, not
+      // any particular pointer within them. When evaluating the hints for AA
+      // purposes we getUnderlyingObject them; by precomputing the answers here
+      // we can avoid having to do so repeatedly there.
       if (OBU.getTagName() == "separate_storage") {
         assert(OBU.Inputs.size() == 2);
         auto MaybeSimplifyHint = [&](const Use &U) {
@@ -3360,6 +3419,36 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(OBU.Inputs[0]);
         MaybeSimplifyHint(OBU.Inputs[1]);
+      }
+
+      // Try to remove redundant alignment assumptions.
+      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
+        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
+            *cast<AssumeInst>(II), II->arg_size() + Idx);
+        if (!RK || RK.AttrKind != Attribute::Alignment ||
+            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
+          continue;
+
+        // Remove align 1 bundles; they don't add any useful information.
+        if (RK.ArgValue == 1)
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+
+        // Don't try to remove align assumptions for pointers derived from
+        // arguments. We might lose information if the function gets inline and
+        // the align argument attribute disappears.
+        Value *UO = getUnderlyingObject(RK.WasOn);
+        if (!UO || isa<Argument>(UO))
+          continue;
+
+        // Compute known bits for the pointer, passing nullptr as context to
+        // avoid computeKnownBits using the assumption we are about to remove
+        // for reasoning.
+        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(),
+                               Value::MaxAlignmentExponent);
+        if ((1ULL << TZ) < RK.ArgValue)
+          continue;
+        return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
     }
 
@@ -3693,6 +3782,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             return replaceInstUsesWith(CI, Res);
           }
       }
+
+      // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
+      if (Value *Splat = getSplatValue(Arg)) {
+        ElementCount VecToReduceCount =
+            cast<VectorType>(Arg->getType())->getElementCount();
+        if (VecToReduceCount.isFixed()) {
+          unsigned VectorSize = VecToReduceCount.getFixedValue();
+          return BinaryOperator::CreateMul(
+              Splat, ConstantInt::get(Splat->getType(), VectorSize));
+        }
+      }
     }
     [[fallthrough]];
   }
@@ -3882,6 +3982,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::get_active_lane_mask: {
+    const APInt *Op0, *Op1;
+    if (match(II->getOperand(0), m_StrictlyPositive(Op0)) &&
+        match(II->getOperand(1), m_APInt(Op1))) {
+      Type *OpTy = II->getOperand(0)->getType();
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(
+                   II->getType(), Intrinsic::get_active_lane_mask,
+                   {Constant::getNullValue(OpTy),
+                    ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
+    }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
@@ -3911,6 +4024,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   if (Value *Reverse = foldReversedIntrinsicOperands(II))
     return replaceInstUsesWith(*II, Reverse);
+
+  if (Value *Res = foldIdempotentBinaryIntrinsicRecurrence(*this, II))
+    return replaceInstUsesWith(*II, Res);
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.

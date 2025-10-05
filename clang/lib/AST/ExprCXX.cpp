@@ -1319,7 +1319,7 @@ LambdaExpr *LambdaExpr::Create(const ASTContext &Context, CXXRecordDecl *Class,
                                bool ContainsUnexpandedParameterPack) {
   // Determine the type of the expression (i.e., the type of the
   // function object we're creating).
-  QualType T = Context.getTypeDeclType(Class);
+  CanQualType T = Context.getCanonicalTagType(Class);
 
   unsigned Size = totalSizeToAlloc<Stmt *>(CaptureInits.size() + 1);
   void *Mem = Context.Allocate(Size);
@@ -1687,10 +1687,9 @@ CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   // It can't be dependent: after all, we were actually able to do the
   // lookup.
   CXXRecordDecl *Record = nullptr;
-  auto *NNS = getQualifier();
-  if (NNS && NNS->getKind() != NestedNameSpecifier::Super) {
-    const Type *T = getQualifier()->getAsType();
-    assert(T && "qualifier in member expression does not name type");
+  if (NestedNameSpecifier Qualifier = getQualifier();
+      Qualifier.getKind() == NestedNameSpecifier::Kind::Type) {
+    const Type *T = getQualifier().getAsType();
     Record = T->getAsCXXRecordDecl();
     assert(Record && "qualifier in member expression does not name record");
   }
@@ -1726,8 +1725,8 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) SizeOfPackExpr(EmptyShell(), NumPartialArgs);
 }
 
-NamedDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
-  return cast<NamedDecl>(
+NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
+  return cast<NonTypeTemplateParmDecl>(
       getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
 }
 

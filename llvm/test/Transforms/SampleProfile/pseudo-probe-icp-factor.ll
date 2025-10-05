@@ -60,12 +60,12 @@ bb:
   %i3 = alloca i32, align 4
   store i32 0, ptr %i, align 4
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 1, i32 0, i64 -1), !dbg !62
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i1), !dbg !62
+  call void @llvm.lifetime.start.p0(ptr %i1), !dbg !62
   call void @llvm.dbg.declare(metadata ptr %i1, metadata !57, metadata !DIExpression()), !dbg !63
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i2), !dbg !64
+  call void @llvm.lifetime.start.p0(ptr %i2), !dbg !64
   call void @llvm.dbg.declare(metadata ptr %i2, metadata !59, metadata !DIExpression()), !dbg !65
   store i32 0, ptr %i2, align 4, !dbg !65, !tbaa !19
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i3), !dbg !66
+  call void @llvm.lifetime.start.p0(ptr %i3), !dbg !66
   call void @llvm.dbg.declare(metadata ptr %i3, metadata !60, metadata !DIExpression()), !dbg !67
   store i32 0, ptr %i3, align 4, !dbg !67, !tbaa !19
   br label %bb7, !dbg !66
@@ -78,7 +78,7 @@ bb7:                                              ; preds = %bb25, %bb
 
 bb10:                                             ; preds = %bb7
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 3, i32 0, i64 -1), !dbg !72
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i3), !dbg !72
+  call void @llvm.lifetime.end.p0(ptr %i3), !dbg !72
   br label %bb28
 
 bb12:                                             ; preds = %bb7
@@ -119,16 +119,16 @@ bb28:                                             ; preds = %bb10
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 9, i32 0, i64 -1), !dbg !92
   %i29 = load i32, ptr %i2, align 4, !dbg !92, !tbaa !19
   %i30 = call i32 (ptr, ...) @printf(ptr @.str, i32 %i29), !dbg !93
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i2), !dbg !95
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i1), !dbg !95
+  call void @llvm.lifetime.end.p0(ptr %i2), !dbg !95
+  call void @llvm.lifetime.end.p0(ptr %i1), !dbg !95
   ret i32 0, !dbg !96
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 declare dso_local i32 @printf(ptr, ...)
 

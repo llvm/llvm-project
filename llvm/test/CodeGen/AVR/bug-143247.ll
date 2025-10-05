@@ -8,18 +8,18 @@ define void @complex_sbi() {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r17
-; CHECK-NEXT:    ldi r24, 0
+; CHECK-NEXT:    ldi r24, 1
 ; CHECK-NEXT:    ldi r25, 0
 ; CHECK-NEXT:  .LBB0_1: ; %while.cond
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sbi 1, 7
-; CHECK-NEXT:    adiw r24, 1
 ; CHECK-NEXT:    movw r16, r24
 ; CHECK-NEXT:    andi r24, 15
 ; CHECK-NEXT:    andi r25, 0
 ; CHECK-NEXT:    adiw r24, 1
 ; CHECK-NEXT:    call nil
 ; CHECK-NEXT:    movw r24, r16
+; CHECK-NEXT:    adiw r24, 1
 ; CHECK-NEXT:    rjmp .LBB0_1
 entry:
   br label %while.cond

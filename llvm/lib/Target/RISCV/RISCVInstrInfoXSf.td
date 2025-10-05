@@ -74,6 +74,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = 1;
 }
 
 class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
@@ -98,6 +99,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = 1;
 }
 
 class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
@@ -768,7 +770,7 @@ multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
 
 multiclass VPatVFWMACC<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBFloatToFloatVectors,
+    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBF16ToFloatVectors,
                 vbfloat16m1_t>;
 
 defset list<VTypeInfoToWide> VFNRCLIPInfoPairs = {

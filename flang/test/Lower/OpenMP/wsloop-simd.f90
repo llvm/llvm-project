@@ -85,3 +85,20 @@ subroutine do_simd_private()
     tmp = tmp + 1
   end do
 end subroutine do_simd_private
+
+! CHECK-LABEL: func.func @_QPdo_simd_lastprivate_firstprivate(
+subroutine do_simd_lastprivate_firstprivate()
+  integer :: a
+  ! CHECK:      omp.wsloop
+  ! CHECK-SAME: private(@[[FIRSTPRIVATE_A_SYM:.*]] %{{.*}} -> %[[FIRSTPRIVATE_A:.*]] : !fir.ref<i32>)
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: private(@[[PRIVATE_A_SYM:.*]] %{{.*}} -> %[[PRIVATE_A:.*]], @[[PRIVATE_I_SYM:.*]] %{{.*}} -> %[[PRIVATE_I:.*]] : !fir.ref<i32>, !fir.ref<i32>)
+  !$omp do simd lastprivate(a) firstprivate(a)
+  do i = 1, 10
+    ! CHECK: %[[FIRSTPRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_A]]
+    ! CHECK: %[[PRIVATE_A_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_A]]
+    ! CHECK: %[[PRIVATE_I_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_I]]
+    a = a + 1
+  end do
+  !$omp end do simd
+end subroutine do_simd_lastprivate_firstprivate

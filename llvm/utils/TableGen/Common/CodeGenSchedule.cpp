@@ -134,7 +134,7 @@ struct InstRegexOp : public SetTheory::Operator {
 
       // The generic opcodes are unsorted, handle them manually.
       for (auto *Inst : Generics) {
-        StringRef InstName = Inst->TheDef->getName();
+        StringRef InstName = Inst->getName();
         if (InstName.starts_with(Prefix) &&
             (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))) {
           Elts.insert(Inst->TheDef);
@@ -147,11 +147,10 @@ struct InstRegexOp : public SetTheory::Operator {
       // sorted by name. Find the sub-ranges that start with our prefix.
       struct Comp {
         bool operator()(const CodeGenInstruction *LHS, StringRef RHS) {
-          return LHS->TheDef->getName() < RHS;
+          return LHS->getName() < RHS;
         }
         bool operator()(StringRef LHS, const CodeGenInstruction *RHS) {
-          return LHS < RHS->TheDef->getName() &&
-                 !RHS->TheDef->getName().starts_with(LHS);
+          return LHS < RHS->getName() && !RHS->getName().starts_with(LHS);
         }
       };
       auto Range1 =
@@ -162,7 +161,7 @@ struct InstRegexOp : public SetTheory::Operator {
       // For these ranges we know that instruction names start with the prefix.
       // Check if there's a regex that needs to be checked.
       const auto HandleNonGeneric = [&](const CodeGenInstruction *Inst) {
-        StringRef InstName = Inst->TheDef->getName();
+        StringRef InstName = Inst->getName();
         if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))) {
           Elts.insert(Inst->TheDef);
           NumMatches++;
@@ -862,12 +861,12 @@ void CodeGenSchedModels::collectSchedClasses() {
       dbgs()
       << "\n+++ ITINERARIES and/or MACHINE MODELS (collectSchedClasses) +++\n");
   for (const CodeGenInstruction *Inst : Target.getInstructions()) {
-    StringRef InstName = Inst->TheDef->getName();
+    StringRef InstName = Inst->getName();
     unsigned SCIdx = getSchedClassIdx(*Inst);
     if (!SCIdx) {
       LLVM_DEBUG({
         if (!Inst->hasNoSchedulingInfo)
-          dbgs() << "No machine model for " << Inst->TheDef->getName() << '\n';
+          dbgs() << "No machine model for " << Inst->getName() << '\n';
       });
       continue;
     }
@@ -916,7 +915,7 @@ void CodeGenSchedModels::collectSchedClasses() {
       if (!llvm::is_contained(ProcIndices, 0)) {
         for (const CodeGenProcModel &PM : ProcModels) {
           if (!llvm::is_contained(ProcIndices, PM.Index))
-            dbgs() << "No machine model for " << Inst->TheDef->getName()
+            dbgs() << "No machine model for " << Inst->getName()
                    << " on processor " << PM.ModelName << '\n';
         }
       }
@@ -1932,7 +1931,7 @@ void CodeGenSchedModels::checkCompleteness() {
         if (Inst->TheDef->isValueUnset("SchedRW")) {
           PrintError(Inst->TheDef->getLoc(),
                      "No schedule information for instruction '" +
-                         Inst->TheDef->getName() + "' in SchedMachineModel '" +
+                         Inst->getName() + "' in SchedMachineModel '" +
                          ProcModel.ModelDef->getName() + "'");
           Complete = false;
         }
@@ -1953,7 +1952,7 @@ void CodeGenSchedModels::checkCompleteness() {
       if (I == InstRWs.end()) {
         PrintError(Inst->TheDef->getLoc(), "'" + ProcModel.ModelName +
                                                "' lacks information for '" +
-                                               Inst->TheDef->getName() + "'");
+                                               Inst->getName() + "'");
         Complete = false;
       }
     }

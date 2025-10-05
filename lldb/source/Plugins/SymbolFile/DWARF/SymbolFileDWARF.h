@@ -277,16 +277,18 @@ public:
 
   void Dump(Stream &s) override;
 
-  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_colors) override;
 
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
 
-  // Gets a pair of loaded and total dwo file counts.
-  // For split-dwarf files, this reports the counts for successfully loaded DWO
-  // CUs and total DWO CUs. For non-split-dwarf files, this reports 0 for both.
-  std::pair<uint32_t, uint32_t> GetDwoFileCounts() override;
+  /// Gets statistics about dwo files associated with this symbol file.
+  /// For split-dwarf files, this reports the counts for successfully loaded DWO
+  /// CUs, total DWO CUs, and the number of DWO CUs with loading errors.
+  /// For non-split-dwarf files, this reports 0 for all.
+  DWOStats GetDwoStats() override;
 
   DWARFContext &GetDWARFContext() { return m_context; }
 
@@ -373,6 +375,15 @@ public:
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
 
+private:
+  /// Find the definition DIE for the specified \c label in this
+  /// SymbolFile.
+  ///
+  /// \returns A valid definition DIE on success.
+  llvm::Expected<DWARFDIE>
+  FindFunctionDefinition(const FunctionCallLabel &label,
+                         const DWARFDIE &declaration);
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
@@ -438,7 +449,7 @@ protected:
                                         DIEArray &&variable_dies);
 
   llvm::Expected<SymbolContext>
-  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
+  ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
