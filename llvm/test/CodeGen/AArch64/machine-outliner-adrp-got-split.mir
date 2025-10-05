@@ -1,0 +1,130 @@
+# RUN: llc -mtriple=aarch64---  -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+
+  @x = common global i32 0, align 4
+
+  define i32 @adrp_add() #0 {
+    ret i32 0
+  }
+
+  define i32 @adrp_ldr() #0 {
+    ret i32 0
+  }
+
+  define void @bar(i32 %a) #0 {
+    ret void
+  }
+
+  attributes #0 = { noinline noredzone }
+...
+---
+# This test ensures that we do not outline ADRP / ADD pair when it's referencing 
+# a GOT entry.
+#
+# CHECK-LABEL: name: adrp_add
+# CHECK-DAG: bb.0:
+# CHECK: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK: $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+
+# CHECK-DAG: bb.1
+# CHECK: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK: $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+
+# CHECK-DAG: bb.2
+# CHECK: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK: $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+name:            adrp_add
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+    $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+    $lr = ORRXri $xzr, 1
+  bb.2:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+    $lr = ORRXri $xzr, 1
+  bb.3:
+  liveins: $lr
+    RET undef $lr
+...
+---
+# This test ensures that we do not outline ADRP / LDR pair when it's referencing 
+# a GOT entry.
+#
+# CHECK-LABEL: name: adrp_ldr
+# CHECK-DAG: bb.0:
+# CHECK: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK: $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+
+# CHECK-DAG: bb.1
+# CHECK: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK: $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+
+# CHECK-DAG: bb.2
+# CHECK: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK: $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+name:            adrp_ldr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+    $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+    $lr = ORRXri $xzr, 1
+  bb.2:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+    $lr = ORRXri $xzr, 1
+  bb.3:
+  liveins: $lr
+    RET undef $lr
