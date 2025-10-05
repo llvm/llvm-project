@@ -325,6 +325,13 @@ int llvm_test_dibuilder(void) {
   LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
   LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
 
+  // Test that LLVMGetFirstDbgRecord and LLVMGetLastDbgRecord return NULL for
+  // instructions without debug info.
+  LLVMDbgRecordRef Phi1FirstDbgRecord = LLVMGetFirstDbgRecord(Phi1);
+  assert(Phi1FirstDbgRecord == NULL);
+  LLVMDbgRecordRef Phi1LastDbgRecord = LLVMGetLastDbgRecord(Phi1);
+  assert(Phi1LastDbgRecord == NULL);
+
   // Insert a non-phi before the `ret` but not before the debug records to
   // test that works as expected.
   LLVMPositionBuilder(Builder, FooVarBlock, Ret);
