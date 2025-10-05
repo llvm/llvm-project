@@ -99,6 +99,45 @@ def PrmtMode : Operand<i32> {
 // NVPTX Instruction Predicate Definitions
 //===----------------------------------------------------------------------===//
 
+// Helper predicate to compose multiple predicates.
+class AnyPred<list<Predicate> Preds>
+    : Predicate<"(" #
+                !interleave(!foreach(pred, Preds, pred.CondString),
+                            ") || (") #
+                ")">;
+
+// Checks PTX version and family-specific and architecture-specific SM versions.
+// For example, sm_100{f/a} and any future variants in the same family will match.
+class PTXWithFamilySMs<int PTXVersion, list<int> SMVersions> :
+  Predicate<"Subtarget->getPTXVersion() >= " # PTXVersion #
+            " && Subtarget->hasFamilySpecificFeatures()" #
+            " && (" #
+            !interleave(!foreach(sm, SMVersions,
+                        "(Subtarget->getSmFamilyVersion() == " # !div(sm, 10) #
+                        " && Subtarget->getSmVersion() >= " # sm # ")"),
+                        " || ") #
+            ")">;
+
+// Checks PTX version and architecture-specific SM versions.
+// For example, sm_100{a} will match.
+class PTXWithAccelSMs<int PTXVersion, list<int> SMVersions> :
+  Predicate<"Subtarget->getPTXVersion() >= " # PTXVersion #
+            " && Subtarget->hasArchAccelFeatures()" #
+            " && (" #
+            !interleave(!foreach(sm, SMVersions,
+                        "Subtarget->getSmVersion() == " # sm),
+                        " || ") #
+            ")">;
+
+// Helper predicate to call a subtarget method.
+class callSubtarget<string SubtargetMethod> : Predicate<"Subtarget->" # SubtargetMethod # "()">;
+
+// Composed predicate to check tcgen05.shift instructions support.
+def hasTcgen05ShiftSupport : AnyPred<[
+                                  PTXWithAccelSMs<90, [100, 110, 103]>,
+                                  PTXWithAccelSMs<88, [100, 101, 103]>,
+                                  PTXWithAccelSMs<86, [100, 101]>
+                                  ]>;
 
 def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
 def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
