@@ -93,7 +93,7 @@ define i1 @range_check_to_icmp_eq1(i32 range(i32 0, 4) %x) {
 ; CHECK-LABEL: define i1 @range_check_to_icmp_eq1(
 ; CHECK-SAME: i32 range(i32 0, 4) [[X:%.*]]) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i32 [[X]], -3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i32 [[X]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 3
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %off = add nsw i32 %x, -3
@@ -105,7 +105,7 @@ define i1 @range_check_to_icmp_eq2(i32 range(i32 -1, 2) %x) {
 ; CHECK-LABEL: define i1 @range_check_to_icmp_eq2(
 ; CHECK-SAME: i32 range(i32 -1, 2) [[X:%.*]]) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OFF]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %off = add nsw i32 %x, -1
