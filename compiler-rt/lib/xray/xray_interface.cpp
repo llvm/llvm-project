@@ -31,6 +31,10 @@
 #include "sanitizer_common/sanitizer_addrhashmap.h"
 #include "sanitizer_common/sanitizer_common.h"
 
+// TODO: For function map
+#include "sanitizer_common/sanitizer_symbolizer.h"
+
+
 #include "xray_defs.h"
 #include "xray_flags.h"
 
@@ -507,6 +511,44 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId, int32_t ObjId,
 
 } // namespace
 
+bool Symbolize(int32_t PackedId, AddressInfo* AI) {
+  auto Ids = UnpackId(PackedId);
+  auto ObjId = Ids.first;
+  auto FuncId = Ids.second;
+
+  XRaySledMap InstrMap;
+  {
+    SpinMutexLock Guard(&XRayInstrMapMutex);
+    if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                         atomic_load(&XRayNumObjects, memory_order_acquire)) {
+      Report("Unable to patch function: invalid sled map index: %d\n", ObjId);
+      return false;
+    }
+    InstrMap = XRayInstrMaps[ObjId];
+  }
+
+  const XRaySledEntry *Sled =
+      InstrMap.SledsIndex ? InstrMap.SledsIndex[FuncId - 1].fromPCRelative()
+                         : findFunctionSleds(FuncId, InstrMap).Begin;
+  auto Addr = Sled->function();
+
+  Symbolizer* Sym = Symbolizer::GetOrInit();
+//  Sym->RefreshModules(); // FIXME: Is this needed?
+  auto* SymStack = Sym->SymbolizePC(Addr);
+  if (!SymStack) {
+    return false;
+  }
+
+//  printf("Symbol Info: function %s from module %s in %s:%d\n", SymStack->info.function, SymStack->info.module, SymStack->info.file, SymStack->info.line);
+
+  // XRay does not support inlined function instrumentation.
+  // Therefore, we only look at the first function stack entry.
+  *AI = SymStack->info;
+
+  return true;
+}
+
+
 } // namespace __xray
 
 using namespace __xray;
@@ -566,6 +608,29 @@ uint16_t __xray_register_event_type(
     h->description_string_length = strnlen(event_type, 1024);
   }
   return h->type_id;
+}
+
+int __xray_symbolize(int32_t PackedId, XRaySymbolInfo* SymInfo) {
+  if (!SymInfo) {
+    return 0; // TODO Error msg?
+  }
+
+  AddressInfo ai;
+  bool Success = Symbolize(PackedId, &ai);
+  if (!Success) {
+    return false;
+  }
+
+  SymInfo->FuncId = PackedId;
+  SymInfo->Name = ai.function;
+  SymInfo->Module = ai.module;
+  SymInfo->File = ai.file;
+  SymInfo->Line = ai.line;
+
+  // TODO: AddressInfo owns its memory, so passing char pointers is okay for now.
+  //        Need to free at some point.
+
+  return true;
 }
 
 XRayPatchingStatus __xray_patch() XRAY_NEVER_INSTRUMENT {
