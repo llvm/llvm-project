@@ -503,24 +503,27 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
 /// Duplicate the atomic min/max operation in conventional IR for the builtin
 /// variants that return the new rather than the original value.
 static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
-                                         AtomicExpr::AtomicOp Op,
-                                         bool IsSigned,
-                                         llvm::Value *OldVal,
+                                         AtomicExpr::AtomicOp Op, bool IsInt,
+                                         bool IsSigned, llvm::Value *OldVal,
                                          llvm::Value *RHS) {
-  llvm::CmpInst::Predicate Pred;
+  llvm::CmpInst::Predicate ICmpPred;
+  llvm::FCmpInst::Predicate FCmpPred;
   switch (Op) {
   default:
     llvm_unreachable("Unexpected min/max operation");
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
-    Pred = IsSigned ? llvm::CmpInst::ICMP_SGT : llvm::CmpInst::ICMP_UGT;
+    ICmpPred = IsSigned ? llvm::CmpInst::ICMP_SGT : llvm::CmpInst::ICMP_UGT;
+    FCmpPred = llvm::FCmpInst::FCMP_UGT;
     break;
   case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
-    Pred = IsSigned ? llvm::CmpInst::ICMP_SLT : llvm::CmpInst::ICMP_ULT;
+    ICmpPred = IsSigned ? llvm::CmpInst::ICMP_SLT : llvm::CmpInst::ICMP_ULT;
+    FCmpPred = llvm::FCmpInst::FCMP_ULT;
     break;
   }
-  llvm::Value *Cmp = Builder.CreateICmp(Pred, OldVal, RHS, "tst");
+  llvm::Value *Cmp = IsInt ? Builder.CreateICmp(ICmpPred, OldVal, RHS, "tst")
+                           : Builder.CreateFCmp(FCmpPred, OldVal, RHS, "tst");
   return Builder.CreateSelect(Cmp, OldVal, RHS, "newval");
 }
 
@@ -760,9 +763,9 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   // determine the value which was written.
   llvm::Value *Result = RMWI;
   if (PostOpMinMax)
-    Result = EmitPostAtomicMinMax(CGF.Builder, E->getOp(),
-                                  E->getValueType()->isSignedIntegerType(),
-                                  RMWI, LoadVal1);
+    Result = EmitPostAtomicMinMax(
+        CGF.Builder, E->getOp(), E->getValueType()->isIntegerType(),
+        E->getValueType()->isSignedIntegerType(), RMWI, LoadVal1);
   else if (PostOp)
     Result = CGF.Builder.CreateBinOp((llvm::Instruction::BinaryOps)PostOp, RMWI,
                                      LoadVal1);

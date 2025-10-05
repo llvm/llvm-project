@@ -12,6 +12,7 @@ signed long long sll;
 unsigned long long ull;
 __int128 s128;
 unsigned  __int128 u128;
+float f;
 
 void test_op_ignore (void) // CHECK-LABEL: define{{.*}} void @test_op_ignore
 {
@@ -317,4 +318,20 @@ void test_atomic(void) {
   si = __atomic_fetch_min(&si, 5, __ATOMIC_SEQ_CST); // CHECK: atomicrmw min {{.*}} seq_cst, align 4
   ui = __atomic_fetch_max(&ui, 5, __ATOMIC_ACQUIRE); // CHECK: atomicrmw umax {{.*}} acquire, align 4
   si = __atomic_fetch_max(&si, 5, __ATOMIC_RELEASE); // CHECK: atomicrmw max {{.*}} release, align 4
+}
+
+void test_atomic_minmax_fp(void) {
+  f = __atomic_fetch_min(&f, 5.0f, __ATOMIC_RELAXED);
+  // CHECK: atomicrmw fmin {{.*}} monotonic, align 4
+
+  f = __atomic_fetch_max(&f, 5.0, __ATOMIC_RELAXED);
+  // CHECK: atomicrmw fmax {{.*}} monotonic, align 4
+
+  f = __atomic_min_fetch(&f, 5.0, __ATOMIC_RELAXED);
+  // CHECK:      atomicrmw fmin {{.*}} monotonic, align 4
+  // CHECK-NEXT: fcmp ult float {{.*}}, {{.*}}
+
+  f = __atomic_max_fetch(&f, 5.0, __ATOMIC_RELAXED);
+  // CHECK:      atomicrmw fmax {{.*}} monotonic, align 4
+  // CHECK-NEXT: fcmp ugt float {{.*}}, {{.*}}
 }
