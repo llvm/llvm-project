@@ -1,4 +1,4 @@
-//===-- Single-precision 2^x function -------------------------------------===//
+//===-- Shared exp2f function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/exp2f.h"
-#include "src/__support/common.h" // for LLVM_LIBC_FUNCTION
-#include "src/__support/macros/config.h"
+#ifndef LLVM_LIBC_SHARED_MATH_EXP2F_H
+#define LLVM_LIBC_SHARED_MATH_EXP2F_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/exp2f.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, exp2f, (float x)) { return math::exp2f(x); }
+using math::exp2f;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_EXP2F_H

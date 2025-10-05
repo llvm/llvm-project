@@ -1,4 +1,4 @@
-//===-- Single-precision 2^x function -------------------------------------===//
+//===-- Implementation header for exp2f -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXP2F_IMPL_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_EXP2F_IMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP2F_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP2F_H
 
+#include "exp10f_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -20,12 +21,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
-#include "src/__support/math/exp10f_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace generic {
 
-LIBC_INLINE float exp2f(float x) {
+namespace math {
+
+LIBC_INLINE static constexpr float exp2f(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
@@ -120,8 +121,8 @@ LIBC_INLINE float exp2f(float x) {
   // of 2^mid.
 
   // kf = (hi + mid) * 2^5 = round(x * 2^5)
-  float kf;
-  int k;
+  float kf = 0;
+  int k = 0;
 #ifdef LIBC_TARGET_CPU_HAS_NEAREST_INT
   kf = fputil::nearest_integer(x * 32.0f);
   k = static_cast<int>(kf);
@@ -161,7 +162,8 @@ LIBC_INLINE float exp2f(float x) {
   return static_cast<float>(fputil::multiply_add(p, dx_sq * mh, c1 * mh));
 }
 
-} // namespace generic
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_EXP2F_IMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP2F_H
