@@ -39,6 +39,7 @@ private:
   const bool WarnOnFloats;
   const bool WarnOnInts;
   const bool WarnOnChars;
+  const std::string IntegerReplacementStyle;
   utils::IncludeInserter IncludeInserter;
 };
 
