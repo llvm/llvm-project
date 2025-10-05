@@ -39,10 +39,10 @@ TEST(AsmParserTest, NonNullTerminatedInput) {
   LLVMContext Ctx;
   StringRef Source = "; Empty module \n\1\2";
   SMDiagnostic Error;
-  std::unique_ptr<Module> Mod;
-  EXPECT_DEATH(Mod = parseAssemblyString(Source.substr(0, Source.size() - 2),
-                                         Error, Ctx),
-               "Buffer is not null terminated!");
+  std::unique_ptr<Module> Mod =
+      parseAssemblyString(Source.substr(0, Source.size() - 2), Error, Ctx);
+  EXPECT_TRUE(Mod != nullptr);
+  EXPECT_TRUE(Error.getMessage().empty());
 }
 
 #endif

@@ -97,7 +97,7 @@ public:
   /// least the specified alignment.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFile(const Twine &Filename, bool IsText = false,
-          bool RequiresNullTerminator = true, bool IsVolatile = false,
+          bool RequiresNullTerminator = false, bool IsVolatile = false,
           std::optional<Align> Alignment = std::nullopt);
 
   /// Read all of the specified file into a MemoryBuffer as a stream
@@ -125,17 +125,17 @@ public:
   /// least the specified alignment.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getOpenFile(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
-              bool RequiresNullTerminator = true, bool IsVolatile = false,
+              bool RequiresNullTerminator = false, bool IsVolatile = false,
               std::optional<Align> Alignment = std::nullopt);
 
   /// Open the specified memory range as a MemoryBuffer. Note that InputData
   /// must be null terminated if RequiresNullTerminator is true.
   static std::unique_ptr<MemoryBuffer>
   getMemBuffer(StringRef InputData, StringRef BufferName = "",
-               bool RequiresNullTerminator = true);
+               bool RequiresNullTerminator = false);
 
   static std::unique_ptr<MemoryBuffer>
-  getMemBuffer(MemoryBufferRef Ref, bool RequiresNullTerminator = true);
+  getMemBuffer(MemoryBufferRef Ref, bool RequiresNullTerminator = false);
 
   /// Open the specified memory range as a MemoryBuffer, copying the contents
   /// and taking ownership of it. InputData does not have to be null terminated.
@@ -143,13 +143,14 @@ public:
   getMemBufferCopy(StringRef InputData, const Twine &BufferName = "");
 
   /// Read all of stdin into a file buffer, and return it.
-  static ErrorOr<std::unique_ptr<MemoryBuffer>> getSTDIN();
+  static ErrorOr<std::unique_ptr<MemoryBuffer>>
+  getSTDIN(bool RequiresNullTerminator = false);
 
   /// Open the specified file as a MemoryBuffer, or open stdin if the Filename
   /// is "-".
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFileOrSTDIN(const Twine &Filename, bool IsText = false,
-                 bool RequiresNullTerminator = true,
+                 bool RequiresNullTerminator = false,
                  std::optional<Align> Alignment = std::nullopt);
 
   /// Map a subrange of the specified file as a MemoryBuffer.

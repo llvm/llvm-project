@@ -175,19 +175,10 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
 }
 
 int LLLexer::getNextChar() {
-  char CurChar = *CurPtr++;
-  switch (CurChar) {
-  default: return (unsigned char)CurChar;
-  case 0:
-    // A nul character in the stream is either the end of the current buffer or
-    // a random nul in the file.  Disambiguate that here.
-    if (CurPtr-1 != CurBuf.end())
-      return 0;  // Just whitespace.
-
-    // Otherwise, return end of file.
-    --CurPtr;  // Another call to lex will return EOF again.
+  if (CurPtr == CurBuf.end())
     return EOF;
-  }
+
+  return *CurPtr++;
 }
 
 lltok::Kind LLLexer::LexToken() {
