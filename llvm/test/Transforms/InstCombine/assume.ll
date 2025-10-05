@@ -1056,9 +1056,9 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   ret i1 %q
 }
 
-; Test AMDGPU ballot pattern optimization  
+; Test AMDGPU ballot pattern optimization
 ; assume(ballot(cmp) == -1) means cmp is true on all active lanes
-; so dominated uses of cmp can be replaced with true
+; so uses of cmp can be replaced with true
 define void @assume_ballot_uniform(i32 %x) {
 ; CHECK-LABEL: @assume_ballot_uniform(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0

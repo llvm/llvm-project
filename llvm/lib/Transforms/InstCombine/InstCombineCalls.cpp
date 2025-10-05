@@ -3667,14 +3667,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // Basic assume equality optimization: assume(x == c) -> replace dominated uses of x with c
+    // Basic assume equality optimization: assume(x == c) -> replace uses of x
+    // with c
     if (auto *ICmp = dyn_cast<ICmpInst>(IIOperand)) {
       if (ICmp->getPredicate() == ICmpInst::ICMP_EQ) {
         Value *LHS = ICmp->getOperand(0);
         Value *RHS = ICmp->getOperand(1);
         Value *Variable = nullptr;
         Constant *ConstantVal = nullptr;
-        
+
         if (auto *C = dyn_cast<Constant>(RHS)) {
           Variable = LHS;
           ConstantVal = C;
@@ -3682,24 +3683,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           Variable = RHS;
           ConstantVal = C;
         }
-        
+
         if (Variable && ConstantVal && Variable->hasUseList()) {
-          SmallVector<Use *, 8> DominatedUses;
+          SmallVector<Use *, 8> Uses;
           for (Use &U : Variable->uses()) {
             if (auto *UseInst = dyn_cast<Instruction>(U.getUser())) {
-              if (UseInst != II && UseInst != ICmp &&
+              if (UseInst != ICmp &&
                   isValidAssumeForContext(II, UseInst, &DT)) {
-                DominatedUses.push_back(&U);
+                Uses.push_back(&U);
               }
             }
           }
-          
-          for (Use *U : DominatedUses) {
+
+          for (Use *U : Uses) {
             U->set(ConstantVal);
             Worklist.pushValue(U->getUser());
           }
-          
-          if (!DominatedUses.empty()) {
+
+          if (!Uses.empty()) {
             Worklist.pushValue(Variable);
           }
         }
@@ -3708,31 +3709,32 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // Optimize AMDGPU ballot patterns in assumes:
     // assume(ballot(cmp) == -1) means cmp is true on all active lanes
-    // We can replace uses of cmp with true in dominated contexts
+    // We can replace uses of cmp with true
     Value *BallotInst;
-    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(BallotInst), m_AllOnes()))) {
+    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(BallotInst),
+                                        m_AllOnes()))) {
       if (auto *IntrCall = dyn_cast<IntrinsicInst>(BallotInst)) {
         if (IntrCall->getIntrinsicID() == Intrinsic::amdgcn_ballot) {
           Value *BallotArg = IntrCall->getArgOperand(0);
           if (BallotArg->getType()->isIntegerTy(1) && BallotArg->hasUseList()) {
-            // Find dominated uses and replace with true
-            SmallVector<Use *, 8> DominatedUses;
+            // Find uses and replace with true
+            SmallVector<Use *, 8> Uses;
             for (Use &U : BallotArg->uses()) {
               if (auto *UseInst = dyn_cast<Instruction>(U.getUser())) {
-                if (UseInst != II && UseInst != IntrCall &&
+                if (UseInst != IntrCall &&
                     isValidAssumeForContext(II, UseInst, &DT)) {
-                  DominatedUses.push_back(&U);
+                  Uses.push_back(&U);
                 }
               }
             }
-            
-            // Replace dominated uses with true
-            for (Use *U : DominatedUses) {
+
+            // Replace uses with true
+            for (Use *U : Uses) {
               U->set(ConstantInt::getTrue(BallotArg->getType()));
               Worklist.pushValue(U->getUser());
             }
-            
-            if (!DominatedUses.empty()) {
+
+            if (!Uses.empty()) {
               Worklist.pushValue(BallotArg);
             }
           }
@@ -5308,5 +5310,3 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   Call.setCalledFunction(FTy, NestF);
   return &Call;
 }
-
-
