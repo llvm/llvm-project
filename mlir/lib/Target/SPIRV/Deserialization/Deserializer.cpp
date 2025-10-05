@@ -2452,8 +2452,15 @@ LogicalResult ControlFlowStructurizer::structurize() {
                  << "[cf] block " << block << " is a function entry block\n");
     }
 
-    for (auto &op : *block)
+    for (auto &op : *block) {
+      if (auto varOp = dyn_cast<spirv::VariableOp>(op)) {
+        if (varOp.getStorageClass() == spirv::StorageClass::Function) {
+          mapper.map(&op, &op);
+          continue;
+        }
+      }
       newBlock->push_back(op.clone(mapper));
+    }
   }
 
   // Go through all ops and remap the operands.
@@ -2619,6 +2626,11 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // region. We cannot handle such cases given that once a value is sinked into
   // the SelectionOp/LoopOp's region, there is no escape for it.
   for (auto *block : constructBlocks) {
+    block->walk([&](spirv::VariableOp varOp) {
+      if (varOp.getStorageClass() == spirv::StorageClass::Function) {
+        varOp->moveBefore(&body.front().front());
+      }
+    });
     for (Operation &op : *block)
       if (!op.use_empty())
         return op.emitOpError("failed control flow structurization: value has "
@@ -2724,6 +2736,12 @@ LogicalResult ControlFlowStructurizer::structurize() {
       LLVM_DEBUG(logger.startLine() << "[cf] erasing block " << block << "\n");
       block->erase();
     }
+  }
+
+  if (auto selectionOp = llvm::dyn_cast<spirv::SelectionOp>(op)) {
+    selectionOp.walk([&](spirv::VariableOp varOp) {
+      varOp->moveBefore(&op->getParentRegion()->front().front());
+    });
   }
 
   LLVM_DEBUG(logger.startLine()
