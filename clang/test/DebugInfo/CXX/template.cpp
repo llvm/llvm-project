@@ -95,14 +95,15 @@ TC
 <int,
 // CHECK: [[TCNARG2]] = !DITemplateValueParameter(type: [[INT]], value: i32 -3)
   -3,
-// CHECK: [[TCNARG3]] = !DITemplateValueParameter(name: "x", type: [[CINTPTR]], value: i8 0)
+// CHECK: [[TCNARG3]] = !DITemplateValueParameter(name: "x", type: [[CINTPTR]], value: ptr null)
   nullptr,
 
 // The interesting null pointer: -1 for member data pointers (since they are
 // just an offset in an object, they can be zero and non-null for the first
 // member)
 
-// CHECK: [[TCNARG4]] = !DITemplateValueParameter(name: "a", type: [[MEMINTPTR]], value: i64 -1)
+// CHECK: [[TCNARG4]] = !DITemplateValueParameter(name: "a", type: [[FOO_MEM:![0-9]*]], value: i64 -1)
+// CHECK: [[FOO_MEM]] = !DIDerivedType(tag: DW_TAG_typedef, name: "foo_mem", {{.*}}baseType: [[MEMINTPTR]])
   nullptr,
 //
 // In some future iteration we could possibly emit the value of a null member
@@ -110,9 +111,9 @@ TC
 // naturally from the LLVM CodeGen side once we decide how to handle non-null
 // member function pointers. For now, it's simpler just to emit the 'i8 0'.
 //
-// CHECK: [[TCNARG5]] = !DITemplateValueParameter(name: "b", type: [[MEMFUNPTR]], value: i8 0)
+// CHECK: [[TCNARG5]] = !DITemplateValueParameter(name: "b", type: [[MEMFUNPTR]], value: { i64, i64 } zeroinitializer)
   nullptr,
-// CHECK: [[TCNARG6]] = !DITemplateValueParameter(name: "f", type: [[FUNPTR]], value: i8 0)
+// CHECK: [[TCNARG6]] = !DITemplateValueParameter(name: "f", type: [[FUNPTR]], value: ptr null)
   nullptr
 // CHECK: [[TCNARG7]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_parameter_pack, name: "Is", value: [[EMPTY]])
   > tcn;
@@ -221,7 +222,7 @@ struct t1; // use this to ensure the type parameter doesn't shift due to other t
 template<typename T1, typename T2, typename T3, typename T4>
 void f1() { }
 template void f1<t1 () volatile, t1 () const volatile, t1 () &, t1 () &&>();
-// CHECK: !DISubprogram(name: "f1<RawFuncQual::t1 () volatile, RawFuncQual::t1 () const volatile, RawFuncQual::t1 () &, RawFuncQual::t1 () &&>", 
+// CHECK: !DISubprogram(name: "f1<RawFuncQual::t1 () volatile, RawFuncQual::t1 () const volatile, RawFuncQual::t1 () &, RawFuncQual::t1 () &&>",
 // CHECK-SAME: templateParams: ![[RAW_FUNC_QUAL_ARGS:[0-9]*]]
 
 // CHECK: ![[RAW_FUNC_QUAL_ARGS]] = !{![[RAW_FUNC_QUAL_T1:[0-9]*]], ![[RAW_FUNC_QUAL_T2:[0-9]*]], ![[RAW_FUNC_QUAL_T3:[0-9]*]], ![[RAW_FUNC_QUAL_T4:[0-9]*]]}
