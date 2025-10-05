@@ -15,162 +15,162 @@ enum class byte : unsigned char {};
 
 // Test character types that should trigger warnings when WarnOnChars is enabled
 char global_char = 'a';
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'char';
 
 signed char global_signed_char = 'b';
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'signed char';
 
 unsigned char global_unsigned_char = 'c';
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'unsigned char';
 
 // Function parameters
 void func_with_char_param(char param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: avoid using platform-dependent character type 'char';
 
 void func_with_signed_char_param(signed char param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:34: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:34: warning: avoid using platform-dependent character type 'signed char';
 
 void func_with_unsigned_char_param(unsigned char param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: avoid using platform-dependent character type 'unsigned char';
 
 // Function return types
 char func_returning_char() { return 'a'; }
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'char';
 
 signed char func_returning_signed_char() { return 'b'; }
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'signed char';
 
 unsigned char func_returning_unsigned_char() { return 'c'; }
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent character type 'unsigned char';
 
 // Struct fields
 struct TestStruct {
   char field_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
   
   signed char field_signed_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'signed char';
   
   unsigned char field_unsigned_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'unsigned char';
 };
 
 // Typedefs
 typedef char char_typedef;
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'char';
 
 typedef signed char signed_char_typedef;
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'signed char';
 
 typedef unsigned char unsigned_char_typedef;
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'unsigned char';
 
 // Type aliases (C++11)
 using char_alias = char;
-// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: avoid using platform-dependent character type 'char';
 
 using signed_char_alias = signed char;
-// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: avoid using platform-dependent character type 'signed char';
 
 using unsigned_char_alias = unsigned char;
-// CHECK-MESSAGES: :[[@LINE-1]]:29: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:29: warning: avoid using platform-dependent character type 'unsigned char';
 
 // Test const and reference parameters
 void func_const_char_ref_param(const char &param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: avoid using platform-dependent character type 'char';
 
 void func_const_signed_char_ref_param(const signed char &param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: avoid using platform-dependent character type 'signed char';
 
 void func_const_unsigned_char_ref_param(const unsigned char &param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: avoid using platform-dependent character type 'unsigned char';
 
 // Test template declarations
 template <typename T> struct TemplateStruct {
   typedef char char_type;
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: avoid using platform-dependent character type 'char';
   
   char template_field;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
   
   char create_char() { return char('x'); }
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
-  // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
+  // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: avoid using platform-dependent character type 'char';
 };
 
 // Test namespace usage
 namespace ns_chars {
   char ns_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
 }
 
 void test_comprehensive_cases() {
   // Test with spacing
   char  spaced_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
   
   signed   char   spaced_signed_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'signed char';
 
   // Test pointers
   char *char_ptr;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
   
   unsigned char *unsigned_char_ptr;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'unsigned char';
 
   // Test static declarations
   static char static_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid using platform-dependent character type 'char';
 
   // Test cv-qualifiers
   const char const_char = 'a';
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: avoid using platform-dependent character type 'char';
   
   volatile char volatile_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: avoid using platform-dependent character type 'char';
   
   const volatile char const_volatile_char = '\0';
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: avoid using platform-dependent character type 'char';
 
   // Test auto with initializer
   auto auto_char = char{'x'};
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: avoid using platform-dependent character type 'char';
 
   // Verify auto without initializer isn't flagged
   auto auto_nonexplicit_char = 'x';
   
   char brace_init_char{};
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
 
   // Test arrays
   char char_array[10];
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
   
   unsigned char unsigned_char_array[] = {'a', 'b', 'c'};
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'unsigned char';
 
   // Test multiple declarations
   char multi_char1, multi_char2, multi_char3;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
 }
 
 // Test class with character type members
 class CharacterClass {
 public:
   char &get_char_ref();
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
 
 private:
   char private_char;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
 };
 
 // Test template instantiation
 void test_template_instantiation() {
   TemplateStruct<int> template_instance;
   char template_test = template_instance.create_char();
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char';
 }
 
 // Test template specializations with char types
