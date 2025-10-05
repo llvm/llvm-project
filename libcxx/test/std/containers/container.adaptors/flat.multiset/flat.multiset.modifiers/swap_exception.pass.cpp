@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// `check_assertion.h` requires Unix headers and regex support.
-// REQUIRES: has-unix-headers
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: no-exceptions
 
