@@ -2817,6 +2817,46 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_movmsk_op(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  assert(Call->getNumArgs() == 1);
+
+  const Pointer &Source = S.Stk.pop<Pointer>();
+
+  unsigned SourceLen = Source.getNumElems();
+  const QualType ElemQT = getElemType(Source);
+  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
+
+  if (ElemQT->isIntegerType()) {
+    unsigned Byte = 8;
+    unsigned ResultLen = (LaneWidth * SourceLen) / Byte;
+    APInt Result(ResultLen, 0);
+    unsigned ResultIdx = 0;
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APInt Lane;
+      INT_TYPE_SWITCH_NO_BOOL(*ElemPT,
+                              { Lane = Source.elem<T>(I).toAPSInt(); });
+      for (unsigned J = 0; J != LaneWidth; J += Byte) {
+        Result.setBitVal(ResultIdx++, Lane[J + 7]);
+      }
+    }
+    pushInteger(S, Result.getZExtValue(), Call->getType());
+    return true;
+  }
+  if (ElemQT->isFloatingType()) {
+    APInt Result(SourceLen, 0);
+    using T = PrimConv<PT_Float>::T;
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APInt Lane = Source.elem<T>(I).getAPFloat().bitcastToAPInt();
+      Result.setBitVal(I, Lane[LaneWidth - 1]);
+    }
+    pushInteger(S, Result.getZExtValue(), Call->getType());
+    return true;
+  }
+  return false;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -3453,6 +3493,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+
+  case clang::X86::BI__builtin_ia32_movmskps:
+  case clang::X86::BI__builtin_ia32_movmskpd:
+  case clang::X86::BI__builtin_ia32_pmovmskb128:
+  case clang::X86::BI__builtin_ia32_pmovmskb256:
+  case clang::X86::BI__builtin_ia32_movmskps256:
+  case clang::X86::BI__builtin_ia32_movmskpd256: {
+    return interp__builtin_ia32_movmsk_op(S, OpPC, Call);
+  }
 
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
