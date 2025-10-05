@@ -281,11 +281,18 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   // to quadratic convergence. So,
   // E1 = (0.059)^2 = 0.0034
   long accum val = nrstep(d_scaled_val, initial_approx);
-  // E2 = 0.0000121
-  val = nrstep(d_scaled_val, val);
-  // E3 = 1.468e−10
-  val = nrstep(d_scaled_val, val);
-
+  auto isPowerOfTwo = [](int n) { return (n > 0) && ((n & (n - 1)) == 0); };
+  // Division with a power of 2 would generally be expected to be
+  // exact, we handle this by specially treating po2 cases and having
+  // extra iterations for them.
+  if (FXRep<XType>::FRACTION_LEN > 8 || isPowerOfTwo(cpp::abs(d))) {
+    // E2 = 0.0000121
+    val = nrstep(d_scaled_val, val);
+    if (FXRep<XType>::FRACTION_LEN > 16 || isPowerOfTwo(cpp::abs(d))) {
+      // E3 = 1.468e−10
+      val = nrstep(d_scaled_val, val);
+    }
+  }
   long accum res = n_scaled_val * val;
 
   if (result_is_negative) {
