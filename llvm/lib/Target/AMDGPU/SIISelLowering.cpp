@@ -17357,7 +17357,8 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // use between vgpr and agpr as agpr tuples tend to be big.
     if (!MI.getDesc().operands().empty()) {
       unsigned Opc = MI.getOpcode();
-      bool HasAGPRs = Info->mayNeedAGPRs();
+      bool HasAGPRs =
+          !Subtarget->hasGFX90AInsts() || Info->getMinNumAGPRs() != 0;
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       int16_t Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
       for (auto I :
