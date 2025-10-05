@@ -20,6 +20,7 @@ add_libc_test(
     libc.src.stdio.fread
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -68,6 +69,7 @@ add_libc_test(
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -88,6 +90,7 @@ add_libc_test(
     libc.src.stdio.fread_unlocked
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite_unlocked
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -98,7 +101,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
@@ -109,12 +112,17 @@ add_libc_test(
     libc.src.stdio.fread
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
+    libc.test.UnitTest.ErrnoCheckingTest
   LINK_LIBRARIES
     LibcMemoryHelpers
 )
 
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
@@ -262,7 +270,6 @@ add_libc_test(
      libc.src.stdio.vasprintf
      libc.src.string.memset
      libc.include.stdlib
-     libc.src.stdio.sprintf
  )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -354,6 +361,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  perror_test
+  HERMETIC_TEST_ONLY # writes to libc's stderr
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    perror_test.cpp
+  DEPENDS
+    libc.src.stdio.perror
+    libc.src.errno.errno
+)
+
+add_libc_test(
   fputs_test
   HERMETIC_TEST_ONLY # writes to libc's stdout and stderr
   SUITE
@@ -422,6 +441,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.sys.stat.mkdirat
       libc.src.unistd.access
       libc.src.unistd.close
+      libc.test.UnitTest.ErrnoCheckingTest
   )
 
   add_libc_test(
@@ -436,6 +456,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.stdio.rename
       libc.src.unistd.access
       libc.src.unistd.close
+      libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
 
@@ -452,6 +473,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.stdio.fgets
       libc.src.stdio.fputs
       libc.src.unistd.close
+      libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
 endif()
@@ -472,6 +494,8 @@ add_libc_test(
     libc.src.stdio.fopen
     libc.src.stdio.fwrite
     libc.src.stdio.getc
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -494,6 +518,8 @@ add_libc_test(
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.getc_unlocked
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -511,6 +537,8 @@ add_libc_test(
     libc.src.stdio.fgets
     libc.src.stdio.fopen
     libc.src.stdio.fwrite
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(

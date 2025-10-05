@@ -4,7 +4,7 @@
 // Test that we can show disassembly and source.
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/disassembly.lldbinit | FileCheck %s
 
 // Some context lines before the function.
@@ -18,9 +18,7 @@ int main(int argc, char **argv) {
 
 
 // CHECK:      (lldb) disassemble --flavor=intel -m -n main
-// CHECK:         12   int foo() { return 42; }
-// CHECK-NEXT:    13
-// CHECK-NEXT: ** 14   int main(int argc, char **argv) {
+// CHECK: ** 14   int main(int argc, char **argv) {
 // CHECK:      disassembly.cpp.tmp.exe`main:
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+0>:  sub    rsp, 0x38
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+4>:  mov    dword ptr [rsp + 0x34], 0x0

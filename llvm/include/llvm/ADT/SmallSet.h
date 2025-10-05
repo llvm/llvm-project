@@ -14,16 +14,15 @@
 #ifndef LLVM_ADT_SMALLSET_H
 #define LLVM_ADT_SMALLSET_H
 
+#include "llvm/ADT/ADL.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/type_traits.h"
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <set>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -37,7 +36,6 @@ class SmallSetIterator
 private:
   using SetIterTy = typename std::set<T, C>::const_iterator;
   using VecIterTy = typename SmallVector<T, N>::const_iterator;
-  using SelfTy = SmallSetIterator<T, N, C>;
 
   /// Iterators to the parts of the SmallSet containing the data. They are set
   /// depending on isSmall.
@@ -139,10 +137,6 @@ class SmallSet {
   SmallVector<T, N> Vector;
   std::set<T, C> Set;
 
-  using VIterator = typename SmallVector<T, N>::const_iterator;
-  using SIterator = typename std::set<T, C>::const_iterator;
-  using mutable_iterator = typename SmallVector<T, N>::iterator;
-
   // In small mode SmallPtrSet uses linear search for the elements, so it is
   // not a good idea to choose this value too high. You may consider using a
   // DenseSet<> instead if you expect many elements in the set.
@@ -155,46 +149,41 @@ public:
   using const_iterator = SmallSetIterator<T, N, C>;
 
   SmallSet() = default;
+  SmallSet(const SmallSet &) = default;
+  SmallSet(SmallSet &&) = default;
+
+  template <typename IterT> SmallSet(IterT Begin, IterT End) {
+    insert(Begin, End);
+  }
+
+  template <typename Range>
+  SmallSet(llvm::from_range_t, Range &&R)
+      : SmallSet(adl_begin(R), adl_end(R)) {}
+
+  SmallSet(std::initializer_list<T> L) { insert(L.begin(), L.end()); }
+
+  SmallSet &operator=(const SmallSet &) = default;
+  SmallSet &operator=(SmallSet &&) = default;
 
   [[nodiscard]] bool empty() const { return Vector.empty() && Set.empty(); }
 
-  size_type size() const {
+  [[nodiscard]] size_type size() const {
     return isSmall() ? Vector.size() : Set.size();
   }
 
   /// count - Return 1 if the element is in the set, 0 otherwise.
-  size_type count(const T &V) const {
-    if (isSmall()) {
-      // Since the collection is small, just do a linear search.
-      return vfind(V) == Vector.end() ? 0 : 1;
-    }
-    return Set.count(V);
+  [[nodiscard]] size_type count(const T &V) const {
+    return contains(V) ? 1 : 0;
   }
 
   /// insert - Insert an element into the set if it isn't already there.
   /// Returns a pair. The first value of it is an iterator to the inserted
   /// element or the existing element in the set. The second value is true
   /// if the element is inserted (it was not in the set before).
-  std::pair<const_iterator, bool> insert(const T &V) {
-    if (!isSmall()) {
-      auto [I, Inserted] = Set.insert(V);
-      return std::make_pair(const_iterator(I), Inserted);
-    }
+  std::pair<const_iterator, bool> insert(const T &V) { return insertImpl(V); }
 
-    VIterator I = vfind(V);
-    if (I != Vector.end())    // Don't reinsert if it already exists.
-      return std::make_pair(const_iterator(I), false);
-    if (Vector.size() < N) {
-      Vector.push_back(V);
-      return std::make_pair(const_iterator(std::prev(Vector.end())), true);
-    }
-
-    // Otherwise, grow from vector to set.
-    while (!Vector.empty()) {
-      Set.insert(Vector.back());
-      Vector.pop_back();
-    }
-    return std::make_pair(const_iterator(Set.insert(V).first), true);
+  std::pair<const_iterator, bool> insert(T &&V) {
+    return insertImpl(std::move(V));
   }
 
   template <typename IterT>
@@ -203,14 +192,18 @@ public:
       insert(*I);
   }
 
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
+  }
+
   bool erase(const T &V) {
     if (!isSmall())
       return Set.erase(V);
-    for (mutable_iterator I = Vector.begin(), E = Vector.end(); I != E; ++I)
-      if (*I == V) {
-        Vector.erase(I);
-        return true;
-      }
+    auto I = vfind(V);
+    if (I != Vector.end()) {
+      Vector.erase(I);
+      return true;
+    }
     return false;
   }
 
@@ -219,20 +212,20 @@ public:
     Set.clear();
   }
 
-  const_iterator begin() const {
+  [[nodiscard]] const_iterator begin() const {
     if (isSmall())
       return {Vector.begin()};
     return {Set.begin()};
   }
 
-  const_iterator end() const {
+  [[nodiscard]] const_iterator end() const {
     if (isSmall())
       return {Vector.end()};
     return {Set.end()};
   }
 
   /// Check if the SmallSet contains the given element.
-  bool contains(const T &V) const {
+  [[nodiscard]] bool contains(const T &V) const {
     if (isSmall())
       return vfind(V) != Vector.end();
     return Set.find(V) != Set.end();
@@ -241,8 +234,33 @@ public:
 private:
   bool isSmall() const { return Set.empty(); }
 
-  VIterator vfind(const T &V) const {
-    for (VIterator I = Vector.begin(), E = Vector.end(); I != E; ++I)
+  template <typename ArgType>
+  std::pair<const_iterator, bool> insertImpl(ArgType &&V) {
+    static_assert(std::is_convertible_v<ArgType, T>,
+                  "ArgType must be convertible to T!");
+    if (!isSmall()) {
+      auto [I, Inserted] = Set.insert(std::forward<ArgType>(V));
+      return {const_iterator(I), Inserted};
+    }
+
+    auto I = vfind(V);
+    if (I != Vector.end()) // Don't reinsert if it already exists.
+      return {const_iterator(I), false};
+    if (Vector.size() < N) {
+      Vector.push_back(std::forward<ArgType>(V));
+      return {const_iterator(std::prev(Vector.end())), true};
+    }
+    // Otherwise, grow from vector to set.
+    Set.insert(std::make_move_iterator(Vector.begin()),
+               std::make_move_iterator(Vector.end()));
+    Vector.clear();
+    return {const_iterator(Set.insert(std::forward<ArgType>(V)).first), true};
+  }
+
+  // Handwritten linear search. The use of std::find might hurt performance as
+  // its implementation may be optimized for larger containers.
+  typename SmallVector<T, N>::const_iterator vfind(const T &V) const {
+    for (auto I = Vector.begin(), E = Vector.end(); I != E; ++I)
       if (*I == V)
         return I;
     return Vector.end();
@@ -252,7 +270,7 @@ private:
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
+class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {};
 
 /// Equality comparison for SmallSet.
 ///
@@ -263,7 +281,8 @@ class SmallSet<PointeeType*, N> : public SmallPtrSet<PointeeType*, N> {};
 /// For large-set mode amortized complexity is linear, worst case is O(N^2) (if
 /// every hash collides).
 template <typename T, unsigned LN, unsigned RN, typename C>
-bool operator==(const SmallSet<T, LN, C> &LHS, const SmallSet<T, RN, C> &RHS) {
+[[nodiscard]] bool operator==(const SmallSet<T, LN, C> &LHS,
+                              const SmallSet<T, RN, C> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -275,7 +294,8 @@ bool operator==(const SmallSet<T, LN, C> &LHS, const SmallSet<T, RN, C> &RHS) {
 ///
 /// Equivalent to !(LHS == RHS). See operator== for performance notes.
 template <typename T, unsigned LN, unsigned RN, typename C>
-bool operator!=(const SmallSet<T, LN, C> &LHS, const SmallSet<T, RN, C> &RHS) {
+[[nodiscard]] bool operator!=(const SmallSet<T, LN, C> &LHS,
+                              const SmallSet<T, RN, C> &RHS) {
   return !(LHS == RHS);
 }
 

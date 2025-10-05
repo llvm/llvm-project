@@ -1,9 +1,22 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -verify %s \
+// RUN:   -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=core,debug.ExprInspection,unix.Malloc \
+// RUN:   -verify %s \
+// RUN:   -Wno-undefined-bool-conversion
+// unix.Malloc is necessary to model __builtin_alloca,
+// which could trigger an "unexpected region" bug in StackAddrEscapeChecker.
 
 typedef __INTPTR_TYPE__ intptr_t;
 
 template <typename T>
 void clang_analyzer_dump(T x);
+
+using size_t = decltype(sizeof(int));
+void * malloc(size_t size);
+void free(void*);
 
 const int& g() {
   int s;
@@ -77,6 +90,18 @@ int *mf() {
   return &x; // expected-warning{{Address of stack memory associated with local variable 's1' returned}} expected-warning {{address of stack memory associated with local variable 's1' returned}}
 }
 
+int *return_assign_expr_leak() {
+  int x = 1;
+  int *y;
+  return y = &x; // expected-warning{{Address of stack memory associated with local variable 'x' returned}}
+}
+
+// Additional diagnostic from -Wreturn-stack-address in the simple case?
+int *return_comma_separated_expressions_leak() {
+  int x = 1;
+  return (x=14), &x; // expected-warning{{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning{{address of stack memory associated with local variable 'x' returned}}
+}
+
 void *lf() {
     label:
     void *const &x = &&label; // expected-note {{binding reference variable 'x' here}}
@@ -93,7 +118,7 @@ struct TS {
 };
 
 int* f5() {
-  int& i = i; // expected-warning {{Assigned value is garbage or undefined}} expected-warning{{reference 'i' is not yet bound to a value when used within its own initialization}}
+  int& i = i; // expected-warning {{Assigned value is uninitialized}} expected-warning{{reference 'i' is not yet bound to a value when used within its own initialization}}
   return &i;
 }
 
@@ -139,6 +164,18 @@ namespace rdar13296133 {
   }
 } // namespace rdar13296133
 
+void* ret_cpp_static_cast(short x) {
+  return static_cast<void*>(&x); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory}}
+}
+
+int* ret_cpp_reinterpret_cast(double x) {
+  return reinterpret_cast<int*>(&x); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack me}}
+}
+
+int* ret_cpp_const_cast(const int x) {
+  return const_cast<int*>(&x);  // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory}}
+}
+
 void write_stack_address_to(char **q) {
   char local;
   *q = &local;
@@ -163,6 +200,11 @@ C make1() {
 
 void test_copy_elision() {
   C c1 = make1();
+}
+
+C&& return_bind_rvalue_reference_to_temporary() {
+  return C(); // expected-warning{{Address of stack memory associated with temporary object of type 'C' returned to caller}}
+  // expected-warning@-1{{returning reference to local temporary object}} -Wreturn-stack-address
 }
 
 namespace leaking_via_direct_pointer {
@@ -238,7 +280,7 @@ void* lambda_to_context_direct_pointer_uncalled() {
     int local = 42;
     p = &local; // no-warning: analyzed only as top-level, ignored explicitly by the checker
   };
-  return new MyFunction(&lambda);
+  return new MyFunction(&lambda); // expected-warning{{Address of stack memory associated with local variable 'lambda' returned to caller}}
 }
 
 void lambda_to_context_direct_pointer_lifetime_extended() {
@@ -327,6 +369,13 @@ void param_ptr_to_ptr_to_ptr_callee(void*** ppp) {
   **ppp = &local; // expected-warning{{local variable 'local' is still referred to by the caller variable 'pp'}}
 }
 
+void ***param_ptr_to_ptr_to_ptr_return(void ***ppp) {
+  int local = 0;
+  **ppp = &local;
+  return ppp;
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 'ppp' upon returning to the caller.  This will be a dangling reference}}
+}
+
 void param_ptr_to_ptr_to_ptr_caller(void** pp) {
   param_ptr_to_ptr_to_ptr_callee(&pp);
 }
@@ -397,16 +446,16 @@ void** returned_arr_of_ptr_top() {
   int* p = &local;
   void** arr = new void*[2];
   arr[1] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void** returned_arr_of_ptr_callee() {
   int local = 42;
   int* p = &local;
   void** arr = new void*[2];
   arr[1] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_arr_of_ptr_caller() {
   void** arr = returned_arr_of_ptr_callee();
@@ -453,16 +502,16 @@ void** returned_arr_of_ptr_top(int idx) {
   int* p = &local;
   void** arr = new void*[2];
   arr[idx] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void** returned_arr_of_ptr_callee(int idx) {
   int local = 42;
   int* p = &local;
   void** arr = new void*[2];
   arr[idx] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_arr_of_ptr_caller(int idx) {
   void** arr = returned_arr_of_ptr_callee(idx);
@@ -512,14 +561,25 @@ S returned_struct_with_ptr_top() {
   int local = 42;
   S s;
   s.p = &local;
-  return s;
-} // no-warning False Negative, requires traversing returned LazyCompoundVals
+  return s; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 S returned_struct_with_ptr_callee() {
   int local = 42;
   S s;
   s.p = &local;
-  return s; // expected-warning{{'local' is still referred to by the caller variable 's'}}
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}} expected-warning{{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 's' upon returning to the caller.  This will be a dangling reference}}
+}
+
+S leak_through_field_of_returned_object() {
+  int local = 14;
+  S s{&local};
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+
+S leak_through_compound_literal() {
+  int local = 0;
+  return (S) { &local }; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
 }
 
 void returned_struct_with_ptr_caller() {
@@ -541,6 +601,30 @@ void static_struct_with_ptr() {
   (void)s.p; // expected-warning{{'local' is still referred to by the static variable 's'}}
 }
 } // namespace leaking_via_struct_with_ptr
+
+namespace leaking_via_nested_structs_with_ptr {
+struct Inner {
+  int *ptr;
+};
+
+struct Outer {
+  Inner I;
+};
+
+struct Deriving : public Outer {};
+
+Outer leaks_through_nested_objects() {
+  int local = 0;
+  Outer O{&local};
+  return O; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+
+Deriving leaks_through_base_objects() {
+  int local = 0;
+  Deriving D{&local};
+  return D; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+} // namespace leaking_via_nested_structs_with_ptr
 
 namespace leaking_via_ref_to_struct_with_ptr {
 struct S {
@@ -600,15 +684,15 @@ S* returned_ptr_to_struct_with_ptr_top() {
   int local = 42;
   S* s = new S;
   s->p = &local;
-  return s;
-} // no-warning False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 S* returned_ptr_to_struct_with_ptr_callee() {
   int local = 42;
   S* s = new S;
   s->p = &local;
-  return s;
-} // no-warning False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_ptr_to_struct_with_ptr_caller() {
   S* s = returned_ptr_to_struct_with_ptr_callee();
@@ -663,15 +747,15 @@ S* returned_ptr_to_struct_with_ptr_top() {
   int local = 42;
   S* s = new S[2];
   s[1].p = &local;
-  return s;
-} // no-warning False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 S* returned_ptr_to_struct_with_ptr_callee() {
   int local = 42;
   S* s = new S[2];
   s[1].p = &local;
-  return s;
-} // no-warning  False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_ptr_to_struct_with_ptr_caller() {
   S* s = returned_ptr_to_struct_with_ptr_callee();
@@ -846,3 +930,200 @@ void top(char **p) {
   foo(); // no-warning FIXME: p binding is reclaimed before the function end
 }
 } // namespace early_reclaim_dead_limitation
+
+namespace alloca_region_pointer {
+void callee(char **pptr) {
+  char local;
+  *pptr = &local;
+} // no crash
+
+void top_alloca_no_crash_fn() {
+  char **pptr = (char**)__builtin_alloca(sizeof(char*));
+  callee(pptr);
+}
+
+void top_malloc_no_crash_fn() {
+  char **pptr = (char**)malloc(sizeof(char*));
+  callee(pptr);
+  free(pptr);
+}
+} // namespace alloca_region_pointer
+
+// These all warn with -Wreturn-stack-address also
+namespace return_address_of_true_positives {
+int* ret_local_addrOf() {
+  int x = 1;
+  return &*&x; // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_addrOf_paren() {
+  int x = 1;
+  return (&(*(&x))); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_addrOf_ptr_arith() {
+  int x = 1;
+  return &*(&x+1); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_addrOf_ptr_arith2() {
+  int x = 1;
+  return &*(&x+1); // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int* ret_local_field() {
+  struct { int x; } a;
+  return &a.x; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}} expected-warning {{address of stack memory associated with local variable 'a' returned}}
+}
+
+int& ret_local_field_ref() {
+  struct { int x; } a;
+  return a.x; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}} expected-warning {{reference to stack memory associated with local variable 'a' returned}}
+}
+} //namespace return_address_of_true_positives
+
+namespace return_from_child_block_scope {
+struct S {
+  int *p;
+};
+
+S return_child_stack_context() {
+  S s;
+  {
+    int a = 1;
+    s = (S){ &a };
+  }
+  return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+S return_child_stack_context_field() {
+  S s;
+  {
+    int a = 1;
+    s.p = &a;
+  }
+  return s; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+// The below are reproducers from Issue #123459
+template <typename V>
+struct T {
+    V* q{};
+    T() = default;
+    T(T&& rhs) { q = rhs.q; rhs.q = nullptr;}
+    T& operator=(T&& rhs) { q = rhs.q; rhs.q = nullptr;}
+    void push_back(const V& v) { if (q == nullptr) q = new V(v); }
+    ~T() { delete q; }
+};
+
+T<S> f() {
+    T<S> t;
+    {
+        int a = 1;
+        t.push_back({ &a });
+    }
+    return t; // expected-warning {{Address of stack memory associated with local variable 'a' returned to caller}}
+}
+
+} // namespace return_from_child_block_scope
+
+namespace true_negatives_return_expressions {
+struct Container { int *x; };
+
+int test2() {
+  int x = 14;
+  return x; // no-warning
+}
+
+void return_void() {
+  return void(); // no-warning
+}
+
+int return_assign_expr_safe() {
+  int y, x = 14;
+  return y = x; // no-warning
+}
+
+int return_comma_separated_expressions_safe() {
+  int x = 1;
+  int *y;
+  return (y=&x), (x=15); // no-warning
+}
+
+int return_comma_separated_expressions_container_safe() {
+  int x = 1;
+  Container Other;
+  return Other = Container{&x}, x = 14; // no-warning
+}
+
+int make_x();
+int return_symbol_safe() {
+  int x = make_x();
+  clang_analyzer_dump(x); // expected-warning-re {{conj_$2{int, {{.+}}}}}
+  return x; // no-warning
+}
+
+int *return_symbolic_region_safe(int **ptr) {
+  return *ptr; // no-warning
+}
+
+int *return_arg_ptr(int *arg) {
+  return arg; // no-warning
+}
+
+// This has a false positive with -Wreturn-stack-address, but CSA should not
+// warn on this
+int *return_conditional_never_false(int *arg) {
+  int x = 14;
+  return true ? arg : &x; // expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+// This has a false positive with -Wreturn-stack-address, but CSA should not
+// warn on this
+int *return_conditional_never_true(int *arg) {
+  int x = 14;
+  return false ? &x : arg; // expected-warning {{address of stack memory associated with local variable 'x' returned}}
+}
+
+int *return_conditional_path_split(int *arg, bool b) {
+  int x = 14;
+  return b ? arg : &x; // expected-warning {{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning {{address of stack memory associated with local variable 'x' returned}} -Wreturn-stack-address
+}
+
+// compare of two symbolic regions
+// maybe in some implementation, make_ptr returns interior pointers that are comparable
+int *make_ptr();
+bool return_symbolic_exxpression() {
+  int *a = make_ptr();
+  int *b = make_ptr();
+  return a < b; // no-warning
+}
+
+int *return_static() {
+  static int x = 0;
+  return &x; // no-warning
+}
+
+int* return_cpp_reinterpret_cast_no_warning(long x) {
+  return reinterpret_cast<int*>(x); // no-warning
+}
+}
+
+// TODO: The tail call expression tree must not hold a reference to an arg or stack local:
+// "The lifetimes of all local variables and function parameters end immediately before the 
+// [tail] call to the function. This means that it is undefined behaviour to pass a pointer or 
+// reference to a local variable to the called function, which is not the case without the 
+// attribute."
+// These only warn from -Wreturn-stack-address for now
+namespace with_attr_musttail {
+void TakesIntAndPtr(int, int *);
+void PassAddressOfLocal(int a, int *b) {
+  int c;
+  [[clang::musttail]] return TakesIntAndPtr(0, &c); // expected-warning {{address of stack memory associated with local variable 'c' pass\
+ed to musttail function}} False-negative on CSA
+}
+void PassAddressOfParam(int a, int *b) {
+  [[clang::musttail]] return TakesIntAndPtr(0, &a); // expected-warning {{address of stack memory associated with parameter 'a' passed to\
+ musttail function}} False-negative on CSA
+}
+} // namespace with_attr_musttail

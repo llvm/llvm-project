@@ -15,16 +15,16 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -99,8 +99,8 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
   DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
                      Ctx.isLittleEndian(), 0);
-  DWARFExpression(Data, U->getAddressByteSize(), U->getFormParams().Format)
-      .print(OS, DumpOpts, U);
+  DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
+  printDwarfExpression(&DE, OS, DumpOpts, U);
 }
 
 static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
@@ -319,8 +319,8 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
     if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
       Result = SpecUnit->getDIEForOffset(*Offset);
   } else if (std::optional<uint64_t> Sig = V.getAsSignatureReference()) {
-    if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-            U->getVersion(), *Sig, U->isDWOUnit()))
+    if (DWARFTypeUnit *TU =
+            U->getContext().getTypeUnitForHash(*Sig, U->isDWOUnit()))
       Result = TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
   }
   return Result;
@@ -329,12 +329,19 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
 DWARFDie DWARFDie::resolveTypeUnitReference() const {
   if (auto Attr = find(DW_AT_signature)) {
     if (std::optional<uint64_t> Sig = Attr->getAsReferenceUVal()) {
-      if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-              U->getVersion(), *Sig, U->isDWOUnit()))
+      if (DWARFTypeUnit *TU =
+              U->getContext().getTypeUnitForHash(*Sig, U->isDWOUnit()))
         return TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
     }
   }
   return *this;
+}
+
+DWARFDie DWARFDie::resolveReferencedType(dwarf::Attribute Attr) const {
+  return getAttributeValueAsReferencedDie(Attr).resolveTypeUnitReference();
+}
+DWARFDie DWARFDie::resolveReferencedType(const DWARFFormValue &V) const {
+  return getAttributeValueAsReferencedDie(V).resolveTypeUnitReference();
 }
 
 std::optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
@@ -405,6 +412,15 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
     if (R.LowPC <= Address && Address < R.HighPC)
       return true;
   return false;
+}
+
+std::optional<uint64_t> DWARFDie::getLanguage() const {
+  if (isValid()) {
+    if (std::optional<DWARFFormValue> LV =
+            U->getUnitDIE().find(dwarf::DW_AT_language))
+      return LV->getAsUnsignedConstant();
+  }
+  return std::nullopt;
 }
 
 Expected<DWARFLocationExpressionsVector>
@@ -777,12 +793,12 @@ bool DWARFAttribute::mayHaveLocationExpr(dwarf::Attribute Attr) {
 namespace llvm {
 
 void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS) {
-  DWARFTypePrinter(OS).appendQualifiedName(DIE);
+  DWARFTypePrinter<DWARFDie>(OS).appendQualifiedName(DIE);
 }
 
 void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
                              std::string *OriginalFullName) {
-  DWARFTypePrinter(OS).appendUnqualifiedName(DIE, OriginalFullName);
+  DWARFTypePrinter<DWARFDie>(OS).appendUnqualifiedName(DIE, OriginalFullName);
 }
 
 } // namespace llvm

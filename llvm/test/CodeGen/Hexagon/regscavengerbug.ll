@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s
+; RUN: llc -mtriple=hexagon -O3 < %s
 ; REQUIRES: asserts
 
 ; This used to assert in the register scavenger.

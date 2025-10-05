@@ -77,6 +77,7 @@ public:
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
     auto *dialect = dyn_cast<ROCDL::ROCDLDialect>(attribute.getNameDialect());
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     if (dialect->getKernelAttrHelper().getName() == attribute.getName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
@@ -198,7 +199,6 @@ public:
       if (!value)
         return op->emitOpError(Twine(attribute.getName()) +
                                " must be a dense i32 array attribute");
-      llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
       SmallVector<llvm::Metadata *, 3> metadata;
       llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
       for (int32_t i : value.asArrayRef()) {
@@ -210,6 +210,31 @@ public:
       llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
       llvmFunc->setMetadata("reqd_work_group_size", node);
     }
+
+    // Atomic and nontemporal metadata
+    if (dialect->getLastUseAttrHelper().getName() == attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.last.use", llvm::MDNode::get(llvmContext, {}));
+    }
+    if (dialect->getNoRemoteMemoryAttrHelper().getName() ==
+        attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.no.remote.memory",
+                       llvm::MDNode::get(llvmContext, {}));
+    }
+    if (dialect->getNoFineGrainedMemoryAttrHelper().getName() ==
+        attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.no.fine.grained.memory",
+                       llvm::MDNode::get(llvmContext, {}));
+    }
+    if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
+        attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.ignore.denormal.mode",
+                       llvm::MDNode::get(llvmContext, {}));
+    }
+
     return success();
   }
 };

@@ -219,6 +219,32 @@ static void StopStackDepotBackgroundThread() {
 static void StopStackDepotBackgroundThread() {}
 #endif
 
+void MemCpyAccessible(void *dest, const void *src, uptr n) {
+  if (TryMemCpy(dest, src, n))
+    return;
+
+  const uptr page_size = GetPageSize();
+  uptr b = reinterpret_cast<uptr>(src);
+  uptr b_up = RoundUpTo(b, page_size);
+
+  uptr e = reinterpret_cast<uptr>(src) + n;
+  uptr e_down = RoundDownTo(e, page_size);
+
+  auto copy_or_zero = [dest, src](uptr beg, uptr end) {
+    const uptr udest = reinterpret_cast<uptr>(dest);
+    const uptr usrc = reinterpret_cast<uptr>(src);
+    void *d = reinterpret_cast<void *>(udest + (beg - usrc));
+    const uptr size = end - beg;
+    if (!TryMemCpy(d, reinterpret_cast<void *>(beg), size))
+      internal_memset(d, 0, size);
+  };
+
+  copy_or_zero(b, b_up);
+  for (uptr p = b_up; p < e_down; p += page_size)
+    copy_or_zero(p, p + page_size);
+  copy_or_zero(e_down, e);
+}
+
 }  // namespace __sanitizer
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,

@@ -240,7 +240,6 @@ public:
   void VisitInjectedClassNameType(const InjectedClassNameType *ICNT);
   void VisitObjCInterfaceType(const ObjCInterfaceType *OIT);
   void VisitPackExpansionType(const PackExpansionType *PET);
-  void VisitElaboratedType(const ElaboratedType *ET);
   void VisitMacroQualifiedType(const MacroQualifiedType *MQT);
   void VisitMemberPointerType(const MemberPointerType *MPT);
 
@@ -281,8 +280,12 @@ public:
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
   void VisitBlockDecl(const BlockDecl *D);
 
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
+  void VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D);
+
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
+  void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *E);
   void VisitPredefinedExpr(const PredefinedExpr *PE);
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -330,6 +333,7 @@ public:
   void VisitStringLiteral(const StringLiteral *SL);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE);
 
+  void VisitLoopControlStmt(const LoopControlStmt *LS);
   void VisitIfStmt(const IfStmt *IS);
   void VisitSwitchStmt(const SwitchStmt *SS);
   void VisitCaseStmt(const CaseStmt *CS);
@@ -344,6 +348,7 @@ public:
   void VisitDeclarationTemplateArgument(const TemplateArgument &TA);
   void VisitNullPtrTemplateArgument(const TemplateArgument &TA);
   void VisitIntegralTemplateArgument(const TemplateArgument &TA);
+  void VisitStructuralValueTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);

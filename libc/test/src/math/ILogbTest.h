@@ -16,6 +16,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   template <typename T> struct ILogbFunc {

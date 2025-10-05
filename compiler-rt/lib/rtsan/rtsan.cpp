@@ -8,44 +8,92 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <rtsan/rtsan.h>
-#include <rtsan/rtsan_assertions.h>
-#include <rtsan/rtsan_diagnostics.h>
-#include <rtsan/rtsan_flags.h>
-#include <rtsan/rtsan_interceptors.h>
+#include "rtsan/rtsan.h"
+#include "rtsan/rtsan_assertions.h"
+#include "rtsan/rtsan_diagnostics.h"
+#include "rtsan/rtsan_flags.h"
+#include "rtsan/rtsan_interceptors.h"
+#include "rtsan/rtsan_stats.h"
+#include "rtsan/rtsan_suppressions.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
 
-static StaticSpinMutex rtsan_inited_mutex;
-static atomic_uint8_t rtsan_initialized = {0};
+namespace {
+enum class InitializationState : u8 {
+  Uninitialized,
+  Initializing,
+  Initialized,
+};
+} // namespace
 
-static void SetInitialized() {
-  atomic_store(&rtsan_initialized, 1, memory_order_release);
+static StaticSpinMutex rtsan_inited_mutex;
+static atomic_uint8_t rtsan_initialized = {
+    static_cast<u8>(InitializationState::Uninitialized)};
+
+static void SetInitializationState(InitializationState state) {
+  atomic_store(&rtsan_initialized, static_cast<u8>(state),
+               memory_order_release);
 }
 
-static auto PrintDiagnosticsAndDieAction(DiagnosticsInfo info) {
-  return [info]() {
-    __rtsan::PrintDiagnostics(info);
+static InitializationState GetInitializationState() {
+  return static_cast<InitializationState>(
+      atomic_load(&rtsan_initialized, memory_order_acquire));
+}
+
+static void OnViolation(const BufferedStackTrace &stack,
+                        const DiagnosticsInfo &info) {
+  IncrementTotalErrorCount();
+
+  // If in the future we interop with other sanitizers, we will
+  // need to make our own stackdepot
+  StackDepotHandle handle = StackDepotPut_WithHandle(stack);
+
+  const bool is_stack_novel = handle.use_count() == 0;
+  if (is_stack_novel || !flags().suppress_equal_stacks) {
+    IncrementUniqueErrorCount();
+
+    {
+      ScopedErrorReportLock l;
+      PrintDiagnostics(info);
+      stack.Print();
+      PrintErrorSummary(info, stack);
+    }
+
+    handle.inc_use_count_unsafe();
+  }
+
+  if (flags().halt_on_error) {
+    if (flags().print_stats_on_exit)
+      PrintStatisticsSummary();
     Die();
-  };
+  }
 }
 
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
-  CHECK(!__rtsan_is_initialized());
+  CHECK(GetInitializationState() == InitializationState::Uninitialized);
+  SetInitializationState(InitializationState::Initializing);
 
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
+
+  InitializePlatformEarly();
+
   InitializeInterceptors();
 
-  SetInitialized();
+  InitializeSuppressions();
+
+  if (flags().print_stats_on_exit)
+    Atexit(PrintStatisticsSummary);
+
+  SetInitializationState(InitializationState::Initialized);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized() {
@@ -62,41 +110,45 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_ensure_initialized() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized() {
-  return atomic_load(&rtsan_initialized, memory_order_acquire) == 1;
+  return GetInitializationState() == InitializationState::Initialized;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter() {
-  __rtsan::GetContextForThisThread().RealtimePush();
+  GetContextForThisThread().RealtimePush();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit() {
-  __rtsan::GetContextForThisThread().RealtimePop();
+  GetContextForThisThread().RealtimePop();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable() {
-  __rtsan::GetContextForThisThread().BypassPush();
+  GetContextForThisThread().BypassPush();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
-  __rtsan::GetContextForThisThread().BypassPop();
+  GetContextForThisThread().BypassPop();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_notify_intercepted_call(const char *func_name) {
+  // While initializing, we need all intercepted functions to behave normally
+  if (GetInitializationState() == InitializationState::Initializing)
+    return;
+
   __rtsan_ensure_initialized();
   GET_CALLER_PC_BP;
-  ExpectNotRealtime(
-      GetContextForThisThread(),
-      PrintDiagnosticsAndDieAction({InterceptedCallInfo{func_name}, pc, bp}));
+  ExpectNotRealtime(GetContextForThisThread(),
+                    {DiagnosticsInfoType::InterceptedCall, func_name, pc, bp},
+                    OnViolation);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
 __rtsan_notify_blocking_call(const char *func_name) {
   __rtsan_ensure_initialized();
   GET_CALLER_PC_BP;
-  ExpectNotRealtime(
-      GetContextForThisThread(),
-      PrintDiagnosticsAndDieAction({BlockingCallInfo{func_name}, pc, bp}));
+  ExpectNotRealtime(GetContextForThisThread(),
+                    {DiagnosticsInfoType::BlockingCall, func_name, pc, bp},
+                    OnViolation);
 }
 
 } // extern "C"

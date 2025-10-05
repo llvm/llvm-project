@@ -8,11 +8,11 @@ define void @test(i8 %0, i8 %1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr getelementptr (i8, ptr null, i32 8), align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> poison, <16 x i32> <i32 7, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[LUPTO132421:%.*]] = shufflevector <16 x i8> zeroinitializer, <16 x i8> [[TMP3]], <16 x i32> <i32 16, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[LUPTO132421]], i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i8> [[LUPTO132421]], <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 0, i32 7
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[TMP2]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP6]], <16 x i8> [[TMP7]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 17, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> [[TMP7]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 17, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i8> [[TMP8]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 7, i32 0, i32 9, i32 0, i32 0, i32 0, i32 0, i32 0, i32 15>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <16 x i8> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    ret void

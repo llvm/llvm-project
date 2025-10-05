@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 define i32 @f(i32) nounwind {
 ; CHECK-LABEL: f:

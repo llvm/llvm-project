@@ -31,10 +31,6 @@ using namespace llvm;
 
 namespace {
 
-static const char *const NameTable1[] = {
-    "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
-};
-
 class IntrinsicsTest : public ::testing::Test {
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -54,7 +50,7 @@ public:
   Instruction *makeIntrinsic(Intrinsic::ID ID) const {
     IRBuilder<> Builder(BB);
     SmallVector<Value *, 4> ProcessedArgs;
-    auto *Decl = Intrinsic::getDeclaration(M.get(), ID);
+    auto *Decl = Intrinsic::getOrInsertDeclaration(M.get(), ID);
     for (auto *Ty : Decl->getFunctionType()->params()) {
       auto *Val = Constant::getNullValue(Ty);
       ProcessedArgs.push_back(Val);
@@ -67,18 +63,47 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  int I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo");
-  EXPECT_EQ(0, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.f64");
-  EXPECT_EQ(0, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.b");
-  EXPECT_EQ(2, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.b.a");
-  EXPECT_EQ(3, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.c");
-  EXPECT_EQ(4, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.c.f64");
-  EXPECT_EQ(4, I);
+  using namespace Intrinsic;
+  EXPECT_EQ(Intrinsic::memcpy, lookupIntrinsicID("llvm.memcpy"));
+
+  // Partial, either between dots or not the last dot are not intrinsics.
+  EXPECT_EQ(not_intrinsic, lookupIntrinsicID("llvm.mem"));
+  EXPECT_EQ(not_intrinsic, lookupIntrinsicID("llvm.gc"));
+
+  // Look through intrinsic names with internal dots.
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline"));
+
+  // Check that overloaded names are mapped to the underlying ID.
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i8"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i32"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i64"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i1024"));
+}
+
+TEST(IntrinsicNameLookup, NonNullterminatedStringRef) {
+  using namespace Intrinsic;
+  // This reproduces an issue where lookupIntrinsicID() can access memory beyond
+  // the bounds of the passed in StringRef. For ASAN to catch this as an error,
+  // create a StringRef using heap allocated memory and make it not null
+  // terminated.
+
+  // ASAN will report a "AddressSanitizer: heap-buffer-overflow" error in
+  // `lookupLLVMIntrinsicByName` when LLVM is built with these options:
+  //  -DCMAKE_BUILD_TYPE=Debug
+  //  -DLLVM_USE_SANITIZER=Address
+  //  -DLLVM_OPTIMIZE_SANITIZED_BUILDS=OFF
+
+  // Make an intrinsic name "llvm.memcpy.inline" on the heap.
+  std::string Name = "llvm.memcpy.inline";
+  assert(Name.size() == 18);
+  // Create a StringRef backed by heap allocated memory such that OOB access
+  // in that StringRef can be flagged by asan. Here, the String `S` is of size
+  // 18, and backed by a heap allocated buffer `Data`, so access to S[18] will
+  // be flagged bby asan.
+  auto Data = std::make_unique<char[]>(Name.size());
+  std::strncpy(Data.get(), Name.data(), Name.size());
+  StringRef S(Data.get(), Name.size());
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID(S));
 }
 
 // Tests to verify getIntrinsicForClangBuiltin.
@@ -92,7 +117,6 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_amdgcn_workgroup_id_z", "amdgcn", amdgcn_workgroup_id_z},
       {"__builtin_arm_cdp", "arm", arm_cdp},
       {"__builtin_bpf_preserve_type_info", "bpf", bpf_preserve_type_info},
-      {"__builtin_hlsl_create_handle", "dx", dx_create_handle},
       {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
       {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
       {"__builtin_mips_bitrev", "mips", mips_bitrev},
@@ -165,4 +189,12 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   }
 }
 
+// Check that getFnAttributes for intrinsics that do not have any function
+// attributes correcty returns an empty set.
+TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
+  using namespace Intrinsic;
+  LLVMContext Context;
+  AttributeSet AS = getFnAttributes(Context, experimental_guard);
+  EXPECT_FALSE(AS.hasAttributes());
+}
 } // end namespace

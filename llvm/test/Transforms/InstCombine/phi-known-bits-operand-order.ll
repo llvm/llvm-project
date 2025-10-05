@@ -20,7 +20,7 @@ define void @phi_recurrence_start_first() {
 ; CHECK-NEXT:    br i1 [[COND_V2]], label [[FOR_COND11:%.*]], label [[FOR_COND26]]
 ; CHECK:       for.cond11:
 ; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[START]], [[IF_THEN]] ], [ [[STEP:%.*]], [[FOR_COND11]] ]
-; CHECK-NEXT:    [[CMP13:%.*]] = icmp ult i32 [[I_1]], 100
+; CHECK-NEXT:    [[CMP13:%.*]] = icmp samesign ult i32 [[I_1]], 100
 ; CHECK-NEXT:    [[STEP]] = add nuw nsw i32 [[I_1]], 1
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[FOR_COND11]], label [[WHILE_END]]
 ; CHECK:       for.cond26:
@@ -68,7 +68,7 @@ define void @phi_recurrence_step_first() {
 ; CHECK-NEXT:    br i1 [[COND_V2]], label [[FOR_COND11:%.*]], label [[FOR_COND26]]
 ; CHECK:       for.cond11:
 ; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[STEP:%.*]], [[FOR_COND11]] ], [ [[START]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[CMP13:%.*]] = icmp ult i32 [[I_1]], 100
+; CHECK-NEXT:    [[CMP13:%.*]] = icmp samesign ult i32 [[I_1]], 100
 ; CHECK-NEXT:    [[STEP]] = add nuw nsw i32 [[I_1]], 1
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[FOR_COND11]], label [[WHILE_END]]
 ; CHECK:       for.cond26:

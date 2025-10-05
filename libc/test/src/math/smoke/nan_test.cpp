@@ -8,7 +8,6 @@
 
 #include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/sanitizer.h"
 #include "src/math/nan.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -23,7 +22,7 @@ public:
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<double>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<double>(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanTest, NCharSeq) {
@@ -44,8 +43,8 @@ TEST_F(LlvmLibcNanTest, RandomString) {
   run_test("123 ", 0x7ff8000000000000);
 }
 
-#if !defined(LIBC_HAS_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST_F(LlvmLibcNanTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nan(nullptr); }, WITH_SIGNAL(SIGSEGV));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nan(nullptr); }, WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

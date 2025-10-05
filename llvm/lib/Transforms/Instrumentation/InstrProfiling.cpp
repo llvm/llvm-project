@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -41,12 +42,12 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
@@ -76,7 +77,7 @@ cl::opt<bool> DebugInfoCorrelate(
              "-profile-correlate=debug-info)"),
     cl::init(false));
 
-cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
@@ -181,23 +182,51 @@ static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
 
 static cl::opt<unsigned> SampledInstrPeriod(
     "sampled-instr-period",
-    cl::desc("Set the profile instrumentation sample period. For each sample "
-             "period, a fixed number of consecutive samples will be recorded. "
-             "The number is controlled by 'sampled-instr-burst-duration' flag. "
-             "The default sample period of 65535 is optimized for generating "
-             "efficient code that leverages unsigned integer wrapping in "
-             "overflow."),
-    cl::init(65535));
+    cl::desc("Set the profile instrumentation sample period. A sample period "
+             "of 0 is invalid. For each sample period, a fixed number of "
+             "consecutive samples will be recorded. The number is controlled "
+             "by 'sampled-instr-burst-duration' flag. The default sample "
+             "period of 65536 is optimized for generating efficient code that "
+             "leverages unsigned short integer wrapping in overflow, but this "
+             "is disabled under simple sampling (burst duration = 1)."),
+    cl::init(USHRT_MAX + 1));
 
 static cl::opt<unsigned> SampledInstrBurstDuration(
     "sampled-instr-burst-duration",
     cl::desc("Set the profile instrumentation burst duration, which can range "
-             "from 0 to one less than the value of 'sampled-instr-period'. "
+             "from 1 to the value of 'sampled-instr-period' (0 is invalid). "
              "This number of samples will be recorded for each "
-             "'sampled-instr-period' count update. Setting to 1 enables "
-             "simple sampling, in which case it is recommended to set "
+             "'sampled-instr-period' count update. Setting to 1 enables simple "
+             "sampling, in which case it is recommended to set "
              "'sampled-instr-period' to a prime number."),
     cl::init(200));
+
+struct SampledInstrumentationConfig {
+  unsigned BurstDuration;
+  unsigned Period;
+  bool UseShort;
+  bool IsSimpleSampling;
+  bool IsFastSampling;
+};
+
+static SampledInstrumentationConfig getSampledInstrumentationConfig() {
+  SampledInstrumentationConfig config;
+  config.BurstDuration = SampledInstrBurstDuration.getValue();
+  config.Period = SampledInstrPeriod.getValue();
+  if (config.BurstDuration > config.Period)
+    report_fatal_error(
+        "SampledBurstDuration must be less than or equal to SampledPeriod");
+  if (config.Period == 0 || config.BurstDuration == 0)
+    report_fatal_error(
+        "SampledPeriod and SampledBurstDuration must be greater than 0");
+  config.IsSimpleSampling = (config.BurstDuration == 1);
+  // If (BurstDuration == 1 && Period == 65536), generate the simple sampling
+  // style code.
+  config.IsFastSampling =
+      (!config.IsSimpleSampling && config.Period == USHRT_MAX + 1);
+  config.UseShort = (config.Period <= USHRT_MAX) || config.IsFastSampling;
+  return config;
+}
 
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
@@ -226,7 +255,7 @@ public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                bool IsCS)
-      : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
+      : M(M), Options(Options), TT(M.getTargetTriple()), IsCS(IsCS),
         GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
@@ -266,10 +295,6 @@ private:
   std::vector<GlobalVariable *> ReferencedVTables;
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
-
-  /// The instance of [[alwaysinline]] rmw_or(ptr, i8).
-  /// This is name-insensitive.
-  Function *RMWOrFunc = nullptr;
 
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
@@ -336,14 +361,6 @@ private:
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
                                        StringRef Name,
                                        GlobalValue::LinkageTypes Linkage);
-
-  /// Create [[alwaysinline]] rmw_or(ptr, i8).
-  /// This doesn't update `RMWOrFunc`.
-  Function *createRMWOrFunc();
-
-  /// Get the call to `rmw_or`.
-  /// Create the instance if it is unknown.
-  CallInst *getRMWOrCall(Value *Addr, Value *Val);
 
   /// Compute the address of the test vector bitmap that this profiling
   /// instruction acts on.
@@ -677,7 +694,7 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
 // (1) Full burst sampling: We transform:
 //   Increment_Instruction;
 // to:
-//   if (__llvm_profile_sampling__ < SampledInstrBurstDuration) {
+//   if (__llvm_profile_sampling__ <= SampledInstrBurstDuration - 1) {
 //     Increment_Instruction;
 //   }
 //   __llvm_profile_sampling__ += 1;
@@ -692,14 +709,14 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
 // "__llvm_profile_sampling__" variable is an unsigned type, meaning it will
 // wrap around to zero when overflows. In this case, the second check is
 // unnecessary, so we won't generate check2 when the SampledInstrPeriod is
-// set to 65535 (64K - 1). The code after:
-//   if (__llvm_profile_sampling__ < SampledInstrBurstDuration) {
+// set to 65536 (64K). The code after:
+//   if (__llvm_profile_sampling__ <= SampledInstrBurstDuration - 1) {
 //     Increment_Instruction;
 //   }
 //   __llvm_profile_sampling__ += 1;
 //
 // (3) Simple sampling:
-// When SampledInstrBurstDuration sets to 1, we do a simple sampling:
+// When SampledInstrBurstDuration is set to 1, we do a simple sampling:
 //   __llvm_profile_sampling__ += 1;
 //   if (__llvm_profile_sampling__ >= SampledInstrPeriod) {
 //     __llvm_profile_sampling__ = 0;
@@ -718,27 +735,16 @@ void InstrLowerer::doSampling(Instruction *I) {
   if (!isSamplingEnabled())
     return;
 
-  unsigned SampledBurstDuration = SampledInstrBurstDuration.getValue();
-  unsigned SampledPeriod = SampledInstrPeriod.getValue();
-  if (SampledBurstDuration >= SampledPeriod) {
-    report_fatal_error(
-        "SampledPeriod needs to be greater than SampledBurstDuration");
-  }
-  bool UseShort = (SampledPeriod <= USHRT_MAX);
-  bool IsSimpleSampling = (SampledBurstDuration == 1);
-  // If (SampledBurstDuration == 1 && SampledPeriod == 65535), generate
-  // the simple sampling style code.
-  bool IsFastSampling = (!IsSimpleSampling && SampledPeriod == 65535);
-
-  auto GetConstant = [UseShort](IRBuilder<> &Builder, uint32_t C) {
-    if (UseShort)
+  SampledInstrumentationConfig config = getSampledInstrumentationConfig();
+  auto GetConstant = [&config](IRBuilder<> &Builder, uint32_t C) {
+    if (config.UseShort)
       return Builder.getInt16(C);
     else
       return Builder.getInt32(C);
   };
 
   IntegerType *SamplingVarTy;
-  if (UseShort)
+  if (config.UseShort)
     SamplingVarTy = Type::getInt16Ty(M.getContext());
   else
     SamplingVarTy = Type::getInt32Ty(M.getContext());
@@ -753,46 +759,46 @@ void InstrLowerer::doSampling(Instruction *I) {
   MDNode *BranchWeight;
   IRBuilder<> CondBuilder(I);
   auto *LoadSamplingVar = CondBuilder.CreateLoad(SamplingVarTy, SamplingVar);
-  if (IsSimpleSampling) {
+  if (config.IsSimpleSampling) {
     // For the simple sampling, just create the load and increments.
     IRBuilder<> IncBuilder(I);
     NewSamplingVarVal =
         IncBuilder.CreateAdd(LoadSamplingVar, GetConstant(IncBuilder, 1));
     SamplingVarIncr = IncBuilder.CreateStore(NewSamplingVarVal, SamplingVar);
   } else {
-    // For the bust-sampling, create the conditonal update.
+    // For the burst-sampling, create the conditional update.
     auto *DurationCond = CondBuilder.CreateICmpULE(
-        LoadSamplingVar, GetConstant(CondBuilder, SampledBurstDuration));
+        LoadSamplingVar, GetConstant(CondBuilder, config.BurstDuration - 1));
     BranchWeight = MDB.createBranchWeights(
-        SampledBurstDuration, SampledPeriod + 1 - SampledBurstDuration);
+        config.BurstDuration, config.Period - config.BurstDuration);
     Instruction *ThenTerm = SplitBlockAndInsertIfThen(
         DurationCond, I, /* Unreachable */ false, BranchWeight);
     IRBuilder<> IncBuilder(I);
     NewSamplingVarVal =
         IncBuilder.CreateAdd(LoadSamplingVar, GetConstant(IncBuilder, 1));
     SamplingVarIncr = IncBuilder.CreateStore(NewSamplingVarVal, SamplingVar);
-    I->moveBefore(ThenTerm);
+    I->moveBefore(ThenTerm->getIterator());
   }
 
-  if (IsFastSampling)
+  if (config.IsFastSampling)
     return;
 
-  // Create the condtion for checking the period.
+  // Create the condition for checking the period.
   Instruction *ThenTerm, *ElseTerm;
   IRBuilder<> PeriodCondBuilder(SamplingVarIncr);
   auto *PeriodCond = PeriodCondBuilder.CreateICmpUGE(
-      NewSamplingVarVal, GetConstant(PeriodCondBuilder, SampledPeriod));
-  BranchWeight = MDB.createBranchWeights(1, SampledPeriod);
+      NewSamplingVarVal, GetConstant(PeriodCondBuilder, config.Period));
+  BranchWeight = MDB.createBranchWeights(1, config.Period - 1);
   SplitBlockAndInsertIfThenElse(PeriodCond, SamplingVarIncr, &ThenTerm,
                                 &ElseTerm, BranchWeight);
 
   // For the simple sampling, the counter update happens in sampling var reset.
-  if (IsSimpleSampling)
-    I->moveBefore(ThenTerm);
+  if (config.IsSimpleSampling)
+    I->moveBefore(ThenTerm->getIterator());
 
   IRBuilder<> ResetBuilder(ThenTerm);
   ResetBuilder.CreateStore(GetConstant(ResetBuilder, 0), SamplingVar);
-  SamplingVarIncr->moveBefore(ElseTerm);
+  SamplingVarIncr->moveBefore(ElseTerm->getIterator());
 }
 
 bool InstrLowerer::lowerIntrinsics(Function *F) {
@@ -914,15 +920,15 @@ static bool needsRuntimeHookUnconditionally(const Triple &TT) {
 /// Check if the module contains uses of any profiling intrinsics.
 static bool containsProfilingIntrinsics(Module &M) {
   auto containsIntrinsic = [&](int ID) {
-    if (auto *F = M.getFunction(Intrinsic::getName(ID)))
+    if (auto *F = Intrinsic::getDeclarationIfExists(&M, ID))
       return !F->use_empty();
     return false;
   };
-  return containsIntrinsic(llvm::Intrinsic::instrprof_cover) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_increment) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_increment_step) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_timestamp) ||
-         containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
+  return containsIntrinsic(Intrinsic::instrprof_cover) ||
+         containsIntrinsic(Intrinsic::instrprof_increment) ||
+         containsIntrinsic(Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(Intrinsic::instrprof_timestamp) ||
+         containsIntrinsic(Intrinsic::instrprof_value_profile);
 }
 
 bool InstrLowerer::lower() {
@@ -1137,68 +1143,6 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
-/// Create `void [[alwaysinline]] rmw_or(uint8_t *ArgAddr, uint8_t ArgVal)`
-/// "Basic" sequence is `*ArgAddr |= ArgVal`
-Function *InstrLowerer::createRMWOrFunc() {
-  auto &Ctx = M.getContext();
-  auto *Int8Ty = Type::getInt8Ty(Ctx);
-  Function *Fn = Function::Create(
-      FunctionType::get(Type::getVoidTy(Ctx),
-                        {PointerType::getUnqual(Ctx), Int8Ty}, false),
-      Function::LinkageTypes::PrivateLinkage, "rmw_or", M);
-  Fn->addFnAttr(Attribute::AlwaysInline);
-  auto *ArgAddr = Fn->getArg(0);
-  auto *ArgVal = Fn->getArg(1);
-  IRBuilder<> Builder(BasicBlock::Create(Ctx, "", Fn));
-
-  // Load profile bitmap byte.
-  //  %mcdc.bits = load i8, ptr %4, align 1
-  auto *Bitmap = Builder.CreateLoad(Int8Ty, ArgAddr, "mcdc.bits");
-
-  if (Options.Atomic || AtomicCounterUpdateAll) {
-    // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
-    // Note, just-loaded Bitmap might not be up-to-date. Use it just for
-    // early testing.
-    auto *Masked = Builder.CreateAnd(Bitmap, ArgVal);
-    auto *ShouldStore = Builder.CreateICmpNE(Masked, ArgVal);
-    auto *ThenTerm = BasicBlock::Create(Ctx, "", Fn);
-    auto *ElseTerm = BasicBlock::Create(Ctx, "", Fn);
-    // Assume updating will be rare.
-    auto *Unlikely = MDBuilder(Ctx).createUnlikelyBranchWeights();
-    Builder.CreateCondBr(ShouldStore, ThenTerm, ElseTerm, Unlikely);
-
-    IRBuilder<> ThenBuilder(ThenTerm);
-    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Or, ArgAddr, ArgVal,
-                                MaybeAlign(), AtomicOrdering::Monotonic);
-    ThenBuilder.CreateRetVoid();
-
-    IRBuilder<> ElseBuilder(ElseTerm);
-    ElseBuilder.CreateRetVoid();
-
-    return Fn;
-  }
-
-  // Perform logical OR of profile bitmap byte and shifted bit offset.
-  //  %8 = or i8 %mcdc.bits, %7
-  auto *Result = Builder.CreateOr(Bitmap, ArgVal);
-
-  // Store the updated profile bitmap byte.
-  //  store i8 %8, ptr %3, align 1
-  Builder.CreateStore(Result, ArgAddr);
-
-  // Terminator
-  Builder.CreateRetVoid();
-
-  return Fn;
-}
-
-CallInst *InstrLowerer::getRMWOrCall(Value *Addr, Value *Val) {
-  if (!RMWOrFunc)
-    RMWOrFunc = createRMWOrFunc();
-
-  return CallInst::Create(RMWOrFunc, {Addr, Val});
-}
-
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   if (!isRuntimeCounterRelocationEnabled())
@@ -1291,9 +1235,10 @@ void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 
 void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
+  auto &Ctx = M.getContext();
   IRBuilder<> Builder(Update);
-  auto *Int8Ty = Type::getInt8Ty(M.getContext());
-  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *Int8Ty = Type::getInt8Ty(Ctx);
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
@@ -1321,7 +1266,36 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   //  %7 = shl i8 1, %6
   auto *ShiftedVal = Builder.CreateShl(Builder.getInt8(0x1), BitToSet);
 
-  Builder.Insert(getRMWOrCall(BitmapByteAddr, ShiftedVal));
+  // Load profile bitmap byte.
+  //  %mcdc.bits = load i8, ptr %4, align 1
+  auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
+
+  if (Options.Atomic || AtomicCounterUpdateAll) {
+    // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
+    // Note, just-loaded Bitmap might not be up-to-date. Use it just for
+    // early testing.
+    auto *Masked = Builder.CreateAnd(Bitmap, ShiftedVal);
+    auto *ShouldStore = Builder.CreateICmpNE(Masked, ShiftedVal);
+
+    // Assume updating will be rare.
+    auto *Unlikely = MDBuilder(Ctx).createUnlikelyBranchWeights();
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(ShouldStore, Update, false, Unlikely);
+
+    // Execute if (unlikely(ShouldStore)).
+    Builder.SetInsertPoint(ThenBranch);
+    Builder.CreateAtomicRMW(AtomicRMWInst::Or, BitmapByteAddr, ShiftedVal,
+                            MaybeAlign(), AtomicOrdering::Monotonic);
+  } else {
+    // Perform logical OR of profile bitmap byte and shifted bit offset.
+    //  %8 = or i8 %mcdc.bits, %7
+    auto *Result = Builder.CreateOr(Bitmap, ShiftedVal);
+
+    // Store the updated profile bitmap byte.
+    //  store i8 %8, ptr %3, align 1
+    Builder.CreateStore(Result, BitmapByteAddr);
+  }
+
   Update->eraseFromParent();
 }
 
@@ -1450,9 +1424,10 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // compiler-rt uses linker support to get data/counters/name start/end for
-  // ELF, COFF, Mach-O and XCOFF.
+  // ELF, COFF, Mach-O, XCOFF, and Wasm.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
-      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF())
+      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF() ||
+      TT.isOSBinFormatWasm())
     return false;
 
   return true;
@@ -1521,13 +1496,11 @@ static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
 // FIXME: Introduce an internal alias like what's done for functions to reduce
 // the number of relocation entries.
 static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
-  auto *Int8PtrTy = PointerType::getUnqual(GV->getContext());
-
   // Store a nullptr in __profvt_ if a real address shouldn't be used.
   if (!shouldRecordVTableAddr(GV))
-    return ConstantPointerNull::get(Int8PtrTy);
+    return ConstantPointerNull::get(PointerType::getUnqual(GV->getContext()));
 
-  return ConstantExpr::getBitCast(GV, Int8PtrTy);
+  return GV;
 }
 
 void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
@@ -1966,8 +1939,6 @@ void InstrLowerer::emitVNodes() {
 }
 
 void InstrLowerer::emitNameData() {
-  std::string UncompressedData;
-
   if (ReferencedNames.empty())
     return;
 
@@ -1983,12 +1954,6 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
-
-  // Make names variable public if current target is a GPU
-  if (isGPUProfTarget(M)) {
-    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
-    NamesVar->setVisibility(GlobalValue::VisibilityTypes::ProtectedVisibility);
-  }
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
@@ -2181,7 +2146,7 @@ void createProfileSamplingVar(Module &M) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
   IntegerType *SamplingVarTy;
   Constant *ValueZero;
-  if (SampledInstrPeriod.getValue() <= USHRT_MAX) {
+  if (getSampledInstrumentationConfig().UseShort) {
     SamplingVarTy = Type::getInt16Ty(M.getContext());
     ValueZero = Constant::getIntegerValue(SamplingVarTy, APInt(16, 0));
   } else {

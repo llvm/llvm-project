@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 // The inline function is emitted in each module with the same comdat
-// CHECK: $_ZTS1A = comdat any
 // CHECK: $_ZTI1A = comdat any
+// CHECK: $_ZTS1A = comdat any
 // CHECK: $_ZTI1B.rtti_proxy = comdat any
 
 // The VTable is emitted everywhere used

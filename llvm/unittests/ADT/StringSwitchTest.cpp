@@ -205,3 +205,44 @@ TEST(StringSwitchTest, CasesLower) {
   EXPECT_EQ(OSType::Unknown, Translate("wind"));
   EXPECT_EQ(OSType::Unknown, Translate(""));
 }
+
+TEST(StringSwitchTest, CasesCopies) {
+  struct Copyable {
+    unsigned &NumCopies;
+    Copyable(unsigned &Value) : NumCopies(Value) {}
+    Copyable(const Copyable &Other) : NumCopies(Other.NumCopies) {
+      ++NumCopies;
+    }
+    Copyable &operator=(const Copyable &Other) {
+      ++NumCopies;
+      return *this;
+    }
+  };
+
+  // Check that evaluating multiple cases does not cause unnecessary copies.
+  unsigned NumCopies = 0;
+  llvm::StringSwitch<Copyable, void>("baz").Cases("foo", "bar", "baz", "qux",
+                                                  Copyable{NumCopies});
+  EXPECT_EQ(NumCopies, 1u);
+
+  NumCopies = 0;
+  llvm::StringSwitch<Copyable, void>("baz").CasesLower(
+      "Foo", "Bar", "Baz", "Qux", Copyable{NumCopies});
+  EXPECT_EQ(NumCopies, 1u);
+}
+
+TEST(StringSwitchTest, DefaultUnreachable) {
+  auto Translate = [](StringRef S) {
+    return llvm::StringSwitch<int>(S)
+        .Case("A", 0)
+        .Case("B", 1)
+        .DefaultUnreachable("Unhandled case");
+  };
+
+  EXPECT_EQ(0, Translate("A"));
+  EXPECT_EQ(1, Translate("B"));
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  EXPECT_DEATH((void)Translate("C"), "Unhandled case");
+#endif
+}

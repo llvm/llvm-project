@@ -96,10 +96,6 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
-extern cl::opt<bool> WriteNewDbgInfoFormat;
-
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
-
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -134,20 +130,6 @@ public:
         OS << " [debug line = ";
         printDebugLoc(DL,OS);
         OS << "]";
-      }
-      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DDI->getVariable()->getName() << "]";
-      }
-      else if (const DbgValueInst *DVI = dyn_cast<DbgValueInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DVI->getVariable()->getName() << "]";
       }
     }
   }
@@ -187,14 +169,6 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&DisCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
-  // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
-
-  LLVMContext Context;
-  Context.setDiagnosticHandler(
-      std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
-
   if (InputFilenames.size() < 1) {
     InputFilenames.push_back("-");
   } else if (InputFilenames.size() > 1 && !OutputFilename.empty()) {
@@ -203,7 +177,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  for (std::string InputFilename : InputFilenames) {
+  for (const auto &InputFilename : InputFilenames) {
+    // Use a fresh context for each input to avoid state
+    // cross-contamination across inputs (e.g. type name collisions).
+    LLVMContext Context;
+    Context.setDiagnosticHandler(
+        std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
+
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(InputFilename);
     if (std::error_code EC = BufferOrErr.getError()) {
@@ -274,9 +254,7 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
-          M->setIsNewDbgInfoFormat(WriteNewDbgInfoFormat);
-          if (WriteNewDbgInfoFormat)
-            M->removeDebugIntrinsicDeclarations();
+          M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         }
         if (Index)

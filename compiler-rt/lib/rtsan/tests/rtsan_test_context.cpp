@@ -15,6 +15,7 @@
 
 #include <gtest/gtest.h>
 
+using namespace __rtsan;
 using namespace ::testing;
 
 class TestRtsanContext : public Test {
@@ -23,18 +24,18 @@ protected:
 };
 
 TEST_F(TestRtsanContext, IsNotRealtimeAfterDefaultConstruction) {
-  __rtsan::Context context{};
+  Context context{};
   EXPECT_THAT(context.InRealtimeContext(), Eq(false));
 }
 
 TEST_F(TestRtsanContext, IsRealtimeAfterRealtimePush) {
-  __rtsan::Context context{};
+  Context context{};
   context.RealtimePush();
   EXPECT_THAT(context.InRealtimeContext(), Eq(true));
 }
 
 TEST_F(TestRtsanContext, IsNotRealtimeAfterRealtimePushAndPop) {
-  __rtsan::Context context{};
+  Context context{};
   context.RealtimePush();
   ASSERT_THAT(context.InRealtimeContext(), Eq(true));
   context.RealtimePop();
@@ -42,7 +43,7 @@ TEST_F(TestRtsanContext, IsNotRealtimeAfterRealtimePushAndPop) {
 }
 
 TEST_F(TestRtsanContext, RealtimeContextStateIsStatefullyTracked) {
-  __rtsan::Context context{};
+  Context context{};
   auto const ExpectRealtime = [&context](bool is_rt) {
     EXPECT_THAT(context.InRealtimeContext(), Eq(is_rt));
   };
@@ -64,18 +65,18 @@ TEST_F(TestRtsanContext, RealtimeContextStateIsStatefullyTracked) {
 }
 
 TEST_F(TestRtsanContext, IsNotBypassedAfterDefaultConstruction) {
-  __rtsan::Context context{};
+  Context context{};
   EXPECT_THAT(context.IsBypassed(), Eq(false));
 }
 
 TEST_F(TestRtsanContext, IsBypassedAfterBypassPush) {
-  __rtsan::Context context{};
+  Context context{};
   context.BypassPush();
   EXPECT_THAT(context.IsBypassed(), Eq(true));
 }
 
 TEST_F(TestRtsanContext, BypassedStateIsStatefullyTracked) {
-  __rtsan::Context context{};
+  Context context{};
   auto const ExpectBypassed = [&context](bool is_bypassed) {
     EXPECT_THAT(context.IsBypassed(), Eq(is_bypassed));
   };

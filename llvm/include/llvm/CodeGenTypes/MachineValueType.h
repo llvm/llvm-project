@@ -17,6 +17,7 @@
 #define LLVM_CODEGEN_MACHINEVALUETYPE_H
 
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -65,10 +66,10 @@ namespace llvm {
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
     /// Support for debugging, callable in GDB: VT.dump()
-    void dump() const;
+    LLVM_ABI void dump() const;
 
     /// Implement operator<<.
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
 
     /// Return true if this is a valid simple valuetype.
     bool isValid() const {
@@ -124,7 +125,7 @@ namespace llvm {
 
     /// Return true if this is a custom target type that has a scalable size.
     bool isScalableTargetExtVT() const {
-      return SimpleTy == MVT::aarch64svcount;
+      return SimpleTy == MVT::aarch64svcount || isRISCVVectorTuple();
     }
 
     /// Return true if the type is a scalable type.
@@ -177,6 +178,12 @@ namespace llvm {
       return (isFixedLengthVector() && getFixedSizeInBits() == 2048);
     }
 
+    /// Return true if this is a CHERI capability type.
+    bool isCheriCapability() const {
+      return (SimpleTy >= MVT::FIRST_CHERI_CAPABILITY_VALUETYPE) &&
+             (SimpleTy <= MVT::LAST_CHERI_CAPABILITY_VALUETYPE);
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
@@ -195,7 +202,7 @@ namespace llvm {
     /// bitwidth.
     MVT changeVectorElementTypeToInteger() const {
       MVT EltTy = getVectorElementType();
-      MVT IntTy = MVT::getIntegerVT(EltTy.getSizeInBits());
+      MVT IntTy = MVT::getIntegerVT(EltTy.getFixedSizeInBits());
       MVT VecTy = MVT::getVectorVT(IntTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Simple vector VT not representable by simple integer vector VT!");
@@ -217,7 +224,7 @@ namespace llvm {
     MVT changeTypeToInteger() {
       if (isVector())
         return changeVectorElementTypeToInteger();
-      return MVT::getIntegerVT(getSizeInBits());
+      return MVT::getIntegerVT(getFixedSizeInBits());
     }
 
     /// Return a VT for a vector type with the same element type but
@@ -293,7 +300,7 @@ namespace llvm {
 
     unsigned getVectorNumElements() const {
       if (isScalableVector())
-        llvm::reportInvalidSizeRequest(
+        llvm::reportFatalInternalError(
             "Possible incorrect use of MVT::getVectorNumElements() for "
             "scalable vector. Scalable flag may be dropped, use "
             "MVT::getVectorElementCount() instead");
@@ -308,7 +315,8 @@ namespace llvm {
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
+    TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td.    \
+                                                    */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -320,7 +328,7 @@ namespace llvm {
         llvm_unreachable("Value type is non-standard value, Other.");
       case iPTR:
         llvm_unreachable("Value type size is target-dependent. Ask TLI.");
-      case iPTRAny:
+      case pAny:
       case iAny:
       case fAny:
       case vAny:
@@ -508,11 +516,11 @@ namespace llvm {
     /// otherwise they are invalid.
     /// NB: This includes pointer types, which require a DataLayout to convert
     /// to a concrete value type.
-    static MVT getVT(Type *Ty, bool HandleUnknown = false);
+    LLVM_ABI static MVT getVT(Type *Ty, bool HandleUnknown = false);
 
     /// Returns an APFloat semantics tag appropriate for the value type. If this
     /// is a vector type, the element semantics are returned.
-    const fltSemantics &getFltSemantics() const;
+    LLVM_ABI const fltSemantics &getFltSemantics() const;
 
   public:
     /// SimpleValueType Iteration
@@ -572,6 +580,12 @@ namespace llvm {
     static auto fp_scalable_vector_valuetypes() {
       return enum_seq_inclusive(MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
                                 MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
+    }
+
+    static auto cheri_capability_valuetypes() {
+      return enum_seq_inclusive(MVT::FIRST_CHERI_CAPABILITY_VALUETYPE,
+                                MVT::LAST_CHERI_CAPABILITY_VALUETYPE,
                                 force_iteration_on_noniterable_enum);
     }
     /// @}

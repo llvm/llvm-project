@@ -4,10 +4,10 @@ Taint Analysis Configuration
 
 The Clang Static Analyzer uses taint analysis to detect injection vulnerability related issues in code.
 The backbone of taint analysis in the Clang SA is the ``TaintPropagation`` modeling checker.
-The reports are emitted via the :ref:`alpha-security-taint-GenericTaint` checker.
+The reports are emitted via the :ref:`optin-taint-GenericTaint` checker.
 The ``TaintPropagation`` checker has a default taint-related configuration.
 The built-in default settings are defined in code, and they are always in effect.
-The checker also provides a configuration interface for extending the default settings via the ``alpha.security.taint.TaintPropagation:Config`` checker config parameter
+The checker also provides a configuration interface for extending the default settings via the ``optin.taint.TaintPropagation:Config`` checker config parameter
 by providing a configuration file to the in `YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format.
 This documentation describes the syntax of the configuration file and gives the informal semantics of the configuration options.
 

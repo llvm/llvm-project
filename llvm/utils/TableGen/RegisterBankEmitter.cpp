@@ -19,6 +19,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 #define DEBUG_TYPE "register-bank-emitter"
@@ -178,7 +179,7 @@ static void visitRegisterBankClasses(
     const CodeGenRegBank &RegisterClassHierarchy,
     const CodeGenRegisterClass *RC, const Twine &Kind,
     std::function<void(const CodeGenRegisterClass *, StringRef)> VisitFn,
-    SmallPtrSetImpl<const CodeGenRegisterClass *> &VisitedRCs) {
+    DenseSet<const CodeGenRegisterClass *> &VisitedRCs) {
 
   // Make sure we only visit each class once to avoid infinite loops.
   if (!VisitedRCs.insert(RC).second)
@@ -369,8 +370,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   if (HasAmbigousOrMissingEntry) {
     OS << "    if (RegBankID != InvalidRegBankID)\n"
           "      return getRegBank(RegBankID);\n";
-  } else
+  } else {
     OS << "    return getRegBank(RegBankID);\n";
+  }
   OS << "  }\n"
         "  llvm_unreachable(llvm::Twine(\"Target needs to handle register "
         "class ID "
@@ -385,10 +387,11 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
 
-  Records.startTimer("Analyze records");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Analyze records");
   std::vector<RegisterBank> Banks;
   for (const auto &V : Records.getAllDerivedDefinitions("RegisterBank")) {
-    SmallPtrSet<const CodeGenRegisterClass *, 8> VisitedRCs;
+    DenseSet<const CodeGenRegisterClass *> VisitedRCs;
     RegisterBank Bank(*V, CGH.getNumModeIds());
 
     for (const CodeGenRegisterClass *RC :
@@ -407,7 +410,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   }
 
   // Warn about ambiguous MIR caused by register bank/class name clashes.
-  Records.startTimer("Warn ambiguous");
+  Timer.startTimer("Warn ambiguous");
   for (const auto &Class : RegisterClassHierarchy.getRegClasses()) {
     for (const auto &Bank : Banks) {
       if (Bank.getName().lower() == StringRef(Class.getName()).lower()) {
@@ -420,7 +423,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
     }
   }
 
-  Records.startTimer("Emit output");
+  Timer.startTimer("Emit output");
   emitSourceFileHeader("Register Bank Source Fragments", OS);
   OS << "#ifdef GET_REGBANK_DECLARATIONS\n"
      << "#undef GET_REGBANK_DECLARATIONS\n";

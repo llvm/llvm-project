@@ -10,7 +10,7 @@
   define i32 @va_start(ptr %a, ...) {
   entry:
     %ap = alloca %struct.__va_list, align 8
-    call void @llvm.lifetime.start.p0(i64 32, ptr %ap)
+    call void @llvm.lifetime.start.p0(ptr %ap)
     call void @llvm.va_start.p0(ptr %ap)
     %vr_offs_p = getelementptr inbounds i8, ptr %ap, i64 28
     %vr_offs = load i32, ptr %vr_offs_p, align 4

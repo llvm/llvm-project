@@ -823,6 +823,21 @@ TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
+TEST(DiagnosticTest, ClangTidyMacroToEnumCheck) {
+  Annotations Main(R"cpp(
+    #if 1
+    auto foo();
+    #endif
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  std::vector<TidyProvider> Providers;
+  Providers.push_back(
+      addTidyChecks("cppcoreguidelines-macro-to-enum,modernize-macro-to-enum"));
+  Providers.push_back(disableUnusableChecks());
+  TU.ClangTidyProvider = combine(std::move(Providers));
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
+}
+
 TEST(DiagnosticTest, ElseAfterReturnRange) {
   Annotations Main(R"cpp(
     int foo(int cond) {
@@ -1982,6 +1997,30 @@ TEST(Diagnostics, Tags) {
       ifTidyChecks(UnorderedElementsAre(
           AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
                 withTag(DiagnosticTag::Deprecated)))));
+}
+
+TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Werror"};
+  Annotations Test(R"cpp($typedef[[typedef int INT]]; // error-ok)cpp");
+  TU.Code = Test.code().str();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Make sure severity for clang-tidy finding isn't bumped to
+                // error due to Werror in compile flags.
+                diagSeverity(DiagnosticsEngine::Warning)))));
+
+  TU.ClangTidyProvider =
+      addTidyChecks("modernize-use-using", /*WarningsAsErrors=*/"modernize-*");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Unless bumped explicitly with WarnAsError.
+                diagSeverity(DiagnosticsEngine::Error)))));
 }
 
 TEST(Diagnostics, DeprecatedDiagsAreHints) {

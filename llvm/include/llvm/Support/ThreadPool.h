@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
@@ -46,7 +48,7 @@ class ThreadPoolTaskGroup;
 /// available threads are used up by tasks waiting for a task that has no thread
 /// left to run on (this includes waiting on the returned future). It should be
 /// generally safe to wait() for a group as long as groups do not form a cycle.
-class ThreadPoolInterface {
+class LLVM_ABI ThreadPoolInterface {
   /// The actual method to enqueue a task to be defined by the concrete
   /// implementation.
   virtual void asyncEnqueue(std::function<void()> Task,
@@ -121,7 +123,7 @@ private:
 ///
 /// The pool keeps a vector of threads alive, waiting on a condition variable
 /// for some work to become available.
-class StdThreadPool : public ThreadPoolInterface {
+class LLVM_ABI StdThreadPool : public ThreadPoolInterface {
 public:
   /// Construct a pool using the hardware strategy \p S for mapping hardware
   /// execution resources (threads, cores, CPUs)
@@ -147,10 +149,6 @@ public:
   /// Returns the maximum number of worker threads in the pool, not the current
   /// number of threads!
   unsigned getMaxConcurrency() const override { return MaxThreadCount; }
-
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return MaxThreadCount; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
@@ -183,6 +181,7 @@ private:
   void grow(int requested);
 
   void processTasks(ThreadPoolTaskGroup *WaitingForGroup);
+  void processTasksWithJobserver();
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;
@@ -211,11 +210,13 @@ private:
 
   /// Maximum number of threads to potentially grow this pool to.
   const unsigned MaxThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 #endif // LLVM_ENABLE_THREADS
 
 /// A non-threaded implementation.
-class SingleThreadExecutor : public ThreadPoolInterface {
+class LLVM_ABI SingleThreadExecutor : public ThreadPoolInterface {
 public:
   /// Construct a non-threaded pool, ignoring using the hardware strategy.
   SingleThreadExecutor(ThreadPoolStrategy ignored = {});
@@ -231,10 +232,6 @@ public:
 
   /// Returns always 1: there is no concurrency.
   unsigned getMaxConcurrency() const override { return 1; }
-
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return 1; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;

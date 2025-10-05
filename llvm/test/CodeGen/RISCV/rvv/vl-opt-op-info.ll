@@ -8,10 +8,10 @@ define <2 x i32> @vdot_lane_s32(<2 x i32> noundef %var_1, <8 x i8> noundef %var_
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v11, 0
 ; CHECK-NEXT:    vnsrl.wi v9, v11, 16
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
-; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vnsrl.wx v9, v10, a0
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -36,9 +36,8 @@ declare <vscale x 2 x i16> @llvm.riscv.vnsrl.nxv2i16.nxv2i32.nxv2i16(
 define <vscale x 2 x i16> @intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, iXLen %2, <vscale x 2 x i32> %3, <vscale x 2 x i32> %4, <vscale x 2 x i16> %z) nounwind {
 ; CHECK-LABEL: intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    vnsrl.wv v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
@@ -46,7 +45,7 @@ entry:
   %d = sext <vscale x 2 x i16> %b to <vscale x 2 x i32>
   %v1 = add <vscale x 2 x i32> %c, %d
   %x = call <vscale x 2 x i16> @llvm.riscv.vnsrl.nxv2i16.nxv2i32.nxv2i16(
-    <vscale x 2 x i16> undef,
+    <vscale x 2 x i16> poison,
     <vscale x 2 x i32> %v1,
     <vscale x 2 x i16> %z,
     iXLen %2)
@@ -63,10 +62,9 @@ declare <vscale x 2 x i16> @llvm.riscv.vnclip.nxv2i16.nxv2i32.nxv2i16(
 define <vscale x 2 x i16> @vnclip(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, iXLen %2, <vscale x 2 x i32> %3, <vscale x 2 x i32> %4, <vscale x 2 x i16> %z) nounwind {
 ; CHECK-LABEL: vnclip:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclip.wv v8, v10, v12
 ; CHECK-NEXT:    ret
 entry:
@@ -74,10 +72,11 @@ entry:
   %d = sext <vscale x 2 x i16> %b to <vscale x 2 x i32>
   %v1 = add <vscale x 2 x i32> %c, %d
   %x = call <vscale x 2 x i16> @llvm.riscv.vnclip.nxv2i16.nxv2i32.nxv2i16(
-    <vscale x 2 x i16> undef,
+    <vscale x 2 x i16> poison,
     <vscale x 2 x i32> %v1,
     <vscale x 2 x i16> %z,
     iXLen 0, iXLen %2)
 
   ret <vscale x 2 x i16> %x
 }
+

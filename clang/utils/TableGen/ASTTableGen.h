@@ -38,7 +38,7 @@
 #define AlwaysDependentClassName "AlwaysDependent"
 #define NeverCanonicalClassName "NeverCanonical"
 #define NeverCanonicalUnlessDependentClassName "NeverCanonicalUnlessDependent"
-#define LeafTypeClassName "LeafType"
+#define AlwaysCanonicalTypeClassName "AlwaysCanonical"
 
 // Cases of various non-ASTNode structured types like DeclarationName.
 #define TypeKindClassName "PropertyTypeKind"
@@ -319,7 +319,7 @@ public:
     return get()->getValueAsString(UnpackOptionalCodeFieldName);
   }
 
-  std::vector<llvm::Record*> getBufferElementTypes() const {
+  std::vector<const llvm::Record *> getBufferElementTypes() const {
     return get()->getValueAsListOfDefs(BufferElementTypesFieldName);
   }
 

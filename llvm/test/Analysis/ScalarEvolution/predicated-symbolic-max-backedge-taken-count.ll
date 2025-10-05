@@ -20,6 +20,9 @@ define void @test1(i64 %x, ptr %a, ptr %b) {
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 -2
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 umax %x))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
@@ -71,6 +74,9 @@ define void @test2(i64 %x, ptr %a) {
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 -2
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 umax %x))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>

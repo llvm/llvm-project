@@ -1,4 +1,4 @@
-//===--- ClangTidyModuleRegistry.h - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,5 +17,9 @@ namespace clang::tidy {
 using ClangTidyModuleRegistry = llvm::Registry<ClangTidyModule>;
 
 } // namespace clang::tidy
+
+namespace llvm {
+extern template class Registry<clang::tidy::ClangTidyModule>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULEREGISTRY_H

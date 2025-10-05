@@ -82,11 +82,13 @@ test0:
     i32.const   3
     end_block            # "switch" exit.
     if                   # void
+    i32.const   0
     if          i32
-    end_if
-    else
+    i32.const   0
     end_if
     drop
+    else
+    end_if
     block       void
     i32.const   2
     return
@@ -150,7 +152,6 @@ empty_funcref_table:
 .tabletype empty_exnref_table, exnref
 empty_exnref_table:
 
-# CHECK:           .text
 # CHECK:           .globaltype __stack_pointer, i32
 
 # CHECK-LABEL: empty_func:
@@ -222,11 +223,13 @@ empty_exnref_table:
 # CHECK-NEXT:      i32.const   3
 # CHECK-NEXT:      end_block           # label2:
 # CHECK-NEXT:      if
+# CHECK-NEXT:      i32.const   0
 # CHECK-NEXT:      if          i32
-# CHECK-NEXT:      end_if
-# CHECK-NEXT:      else
+# CHECK-NEXT:      i32.const   0
 # CHECK-NEXT:      end_if
 # CHECK-NEXT:      drop
+# CHECK-NEXT:      else
+# CHECK-NEXT:      end_if
 # CHECK-NEXT:      block
 # CHECK-NEXT:      i32.const   2
 # CHECK-NEXT:      return

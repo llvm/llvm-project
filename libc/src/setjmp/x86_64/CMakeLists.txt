@@ -5,16 +5,24 @@ add_entrypoint_object(
   HDRS
     ../setjmp_impl.h
   DEPENDS
+    libc.hdr.offsetof_macros
     libc.hdr.types.jmp_buf
-  COMPILE_OPTIONS
-    -O3
-    -fno-omit-frame-pointer
-    # TODO: Remove once one of these lands:
-    # https://github.com/llvm/llvm-project/pull/87837
-    # https://github.com/llvm/llvm-project/pull/88054
-    # https://github.com/llvm/llvm-project/pull/88157
-    -ftrivial-auto-var-init=uninitialized
 )
+if (TARGET libc.src.setjmp.sigsetjmp_epilogue)
+  add_entrypoint_object(
+    sigsetjmp
+    SRCS
+      sigsetjmp.cpp
+    HDRS
+      ../sigsetjmp.h
+    DEPENDS
+      libc.hdr.types.sigjmp_buf
+      libc.hdr.types.sigset_t
+      libc.hdr.offsetof_macros
+      libc.src.setjmp.sigsetjmp_epilogue
+      libc.src.setjmp.setjmp
+  )
+endif()
 
 add_entrypoint_object(
   longjmp
@@ -24,7 +32,4 @@ add_entrypoint_object(
     ../longjmp.h
   DEPENDS
     libc.hdr.types.jmp_buf
-  COMPILE_OPTIONS
-    -O3
-    -fomit-frame-pointer
 )

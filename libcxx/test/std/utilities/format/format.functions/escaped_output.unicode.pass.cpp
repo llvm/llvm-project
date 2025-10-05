@@ -337,7 +337,7 @@ void test_string() {
 
   // Ill-formed
   if constexpr (sizeof(CharT) == 1)
-    test_format(SV(R"("\x{80}")"), SV("{:?}"), SV("\x80"));
+    test_format(SV(R"("\x{80}")"), SV("{:?}"), "\x80");
 
   // *** P2713R1 examples ***
   test_format(SV(R"(["\u{301}"])"), SV("[{:?}]"), SV("\u0301"));

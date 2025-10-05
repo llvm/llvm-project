@@ -40,7 +40,7 @@ _Complex double test1(void) {
 }
 
 _Complex double test2(void) {
-  return 1.0if;    // expected-warning {{imaginary constants are a GNU extension}}
+  return 1.0if;    // expected-warning {{imaginary constants are a C2y extension}}
 }
 
 void test3(void) {
@@ -57,7 +57,7 @@ void test4(void) {
 
       var =+5;  // no warning when the subexpr of the unary op has no space before it.
       var =-5;
-  
+
 #define FIVE 5
       var=-FIVE;  // no warning with macros.
       var=-FIVE;
@@ -152,7 +152,7 @@ void test17(int x) {
   x = x % 0;  // expected-warning {{remainder by zero is undefined}}
   x /= 0;  // expected-warning {{division by zero is undefined}}
   x %= 0;  // expected-warning {{remainder by zero is undefined}}
-  
+
   x = sizeof(x/0);  // no warning.
 }
 
@@ -205,7 +205,7 @@ int test20(int x) {
                  // expected-note {{remove constant to silence this warning}}
 
   return x && sizeof(int) == 4;  // no warning, RHS is logical op.
-  
+
   // no warning, this is an idiom for "true" in old C style.
   return x && (signed char)1;
 

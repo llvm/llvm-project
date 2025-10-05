@@ -64,6 +64,12 @@ int s;
 #ifdef __BPF_FEATURE_ADDR_SPACE_CAST
 int t;
 #endif
+#ifdef __BPF_FEATURE_MAY_GOTO
+int u;
+#endif
+#ifdef __BPF_FEATURE_LOAD_ACQ_STORE_REL
+int v;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -97,6 +103,13 @@ int t;
 // CPU_V2: int t;
 // CPU_V3: int t;
 // CPU_V4: int t;
+
+// CPU_V1: int u;
+// CPU_V2: int u;
+// CPU_V3: int u;
+// CPU_V4: int u;
+
+// CPU_V4: int v;
 
 // CPU_GENERIC: int g;
 

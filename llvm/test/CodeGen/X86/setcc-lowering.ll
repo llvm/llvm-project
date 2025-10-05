@@ -11,7 +11,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) nounwind {
 ; AVX1-LABEL: pr25080:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
@@ -38,7 +38,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) nounwind {
 ; KNL-32-NEXT:    movb $15, %al
 ; KNL-32-NEXT:    kmovw %eax, %k1
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
-; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-32-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-32-NEXT:    retl
@@ -54,7 +54,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ; AVX1-LABEL: pr26232:
 ; AVX1:       # %bb.0: # %allocas
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB1_1: # %for_loop599
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    cmpq $65536, %rdi # imm = 0x10000
@@ -71,7 +71,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ;
 ; AVX2-LABEL: pr26232:
 ; AVX2:       # %bb.0: # %allocas
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB1_1: # %for_loop599
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    cmpq $65536, %rdi # imm = 0x10000
@@ -93,7 +93,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; KNL-32-NEXT:    .p2align 4, 0x90
+; KNL-32-NEXT:    .p2align 4
 ; KNL-32-NEXT:  .LBB1_1: # %for_loop599
 ; KNL-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; KNL-32-NEXT:    cmpl $65536, %ecx # imm = 0x10000

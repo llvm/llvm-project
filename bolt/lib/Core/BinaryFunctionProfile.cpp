@@ -70,7 +70,7 @@ void BinaryFunction::postProcessProfile() {
     return;
   }
 
-  if (!(getProfileFlags() & PF_LBR))
+  if (!(getProfileFlags() & PF_BRANCH))
     return;
 
   // If we have at least some branch data for the function indicate that it

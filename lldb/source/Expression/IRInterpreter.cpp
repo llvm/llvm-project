@@ -10,7 +10,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
@@ -22,6 +21,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -259,7 +259,9 @@ public:
       break;
     case Value::FunctionVal:
       if (const Function *constant_func = dyn_cast<Function>(constant)) {
-        lldb_private::ConstString name(constant_func->getName());
+        lldb_private::ConstString name(
+            llvm::GlobalValue::dropLLVMManglingEscape(
+                constant_func->getName()));
         bool missing_weak = false;
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)

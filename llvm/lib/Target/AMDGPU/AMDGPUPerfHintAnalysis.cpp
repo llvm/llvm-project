@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -118,15 +117,15 @@ private:
 
 static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
     const Instruction *Inst) {
-  if (auto LI = dyn_cast<LoadInst>(Inst))
+  if (const auto *LI = dyn_cast<LoadInst>(Inst))
     return {LI->getPointerOperand(), LI->getType()};
-  if (auto SI = dyn_cast<StoreInst>(Inst))
+  if (const auto *SI = dyn_cast<StoreInst>(Inst))
     return {SI->getPointerOperand(), SI->getValueOperand()->getType()};
-  if (auto AI = dyn_cast<AtomicCmpXchgInst>(Inst))
+  if (const auto *AI = dyn_cast<AtomicCmpXchgInst>(Inst))
     return {AI->getPointerOperand(), AI->getCompareOperand()->getType()};
-  if (auto AI = dyn_cast<AtomicRMWInst>(Inst))
+  if (const auto *AI = dyn_cast<AtomicRMWInst>(Inst))
     return {AI->getPointerOperand(), AI->getValOperand()->getType()};
-  if (auto MI = dyn_cast<AnyMemIntrinsic>(Inst))
+  if (const auto *MI = dyn_cast<AnyMemIntrinsic>(Inst))
     return {MI->getRawDest(), Type::getInt8Ty(MI->getContext())};
 
   return {nullptr, nullptr};
@@ -134,8 +133,8 @@ static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
 
 bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   LLVM_DEBUG(dbgs() << "[isIndirectAccess] " << *Inst << '\n');
-  SmallSet<const Value *, 32> WorkSet;
-  SmallSet<const Value *, 32> Visited;
+  SmallPtrSet<const Value *, 32> WorkSet;
+  SmallPtrSet<const Value *, 32> Visited;
   if (const Value *MO = getMemoryInstrPtrAndType(Inst).first) {
     if (isGlobalAddr(MO))
       WorkSet.insert(MO);
@@ -148,8 +147,8 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
       continue;
     LLVM_DEBUG(dbgs() << "  check: " << *V << '\n');
 
-    if (auto LD = dyn_cast<LoadInst>(V)) {
-      auto M = LD->getPointerOperand();
+    if (const auto *LD = dyn_cast<LoadInst>(V)) {
+      const auto *M = LD->getPointerOperand();
       if (isGlobalAddr(M)) {
         LLVM_DEBUG(dbgs() << "    is IA\n");
         return true;
@@ -157,32 +156,32 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
       continue;
     }
 
-    if (auto GEP = dyn_cast<GetElementPtrInst>(V)) {
-      auto P = GEP->getPointerOperand();
+    if (const auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+      const auto *P = GEP->getPointerOperand();
       WorkSet.insert(P);
       for (unsigned I = 1, E = GEP->getNumIndices() + 1; I != E; ++I)
         WorkSet.insert(GEP->getOperand(I));
       continue;
     }
 
-    if (auto U = dyn_cast<UnaryInstruction>(V)) {
+    if (const auto *U = dyn_cast<UnaryInstruction>(V)) {
       WorkSet.insert(U->getOperand(0));
       continue;
     }
 
-    if (auto BO = dyn_cast<BinaryOperator>(V)) {
+    if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
       WorkSet.insert(BO->getOperand(0));
       WorkSet.insert(BO->getOperand(1));
       continue;
     }
 
-    if (auto S = dyn_cast<SelectInst>(V)) {
+    if (const auto *S = dyn_cast<SelectInst>(V)) {
       WorkSet.insert(S->getFalseValue());
       WorkSet.insert(S->getTrueValue());
       continue;
     }
 
-    if (auto E = dyn_cast<ExtractElementInst>(V)) {
+    if (const auto *E = dyn_cast<ExtractElementInst>(V)) {
       WorkSet.insert(E->getVectorOperand());
       continue;
     }
@@ -331,7 +330,7 @@ bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
 }
 
 bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {
-  if (auto PT = dyn_cast<PointerType>(V->getType())) {
+  if (auto *PT = dyn_cast<PointerType>(V->getType())) {
     unsigned As = PT->getAddressSpace();
     // Flat likely points to global too.
     return As == AMDGPUAS::GLOBAL_ADDRESS || As == AMDGPUAS::FLAT_ADDRESS;
@@ -340,7 +339,7 @@ bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {
 }
 
 bool AMDGPUPerfHint::isLocalAddr(const Value *V) const {
-  if (auto PT = dyn_cast<PointerType>(V->getType()))
+  if (auto *PT = dyn_cast<PointerType>(V->getType()))
     return PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
   return false;
 }

@@ -1,5 +1,4 @@
-; RUN: opt -passes='module(sancov-module)' -sanitizer-coverage-trace-pc \
-; RUN: -sanitizer-coverage-level=3 %s -S -o - | FileCheck %s
+; RUN: opt -passes='module(sancov-module)' -sanitizer-coverage-trace-pc -sanitizer-coverage-level=3 %s -S -o - | FileCheck %s
 
 ; The edge between %entry and %for.inc.i is a critical edge.
 ; SanitizerCoveragePass must split this critical edge in order to track

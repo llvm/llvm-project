@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonInstrInfo.h"
-#include "Hexagon.h"
 #include "HexagonFrameLowering.h"
 #include "HexagonHazardRecognizer.h"
 #include "HexagonRegisterInfo.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -46,7 +45,6 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -119,9 +117,10 @@ const int Hexagon_ADDI_OFFSET_MIN = -32768;
 // Pin the vtable to this file.
 void HexagonInstrInfo::anchor() {}
 
-HexagonInstrInfo::HexagonInstrInfo(HexagonSubtarget &ST)
-  : HexagonGenInstrInfo(Hexagon::ADJCALLSTACKDOWN, Hexagon::ADJCALLSTACKUP),
-    Subtarget(ST) {}
+HexagonInstrInfo::HexagonInstrInfo(const HexagonSubtarget &ST)
+    : HexagonGenInstrInfo(ST, Hexagon::ADJCALLSTACKDOWN,
+                          Hexagon::ADJCALLSTACKUP),
+      Subtarget(ST) {}
 
 namespace llvm {
 namespace HexagonFUnits {
@@ -798,7 +797,11 @@ public:
     Loop->getOperand(1).setReg(NewLoopCount);
   }
 
-  void disposed() override { Loop->eraseFromParent(); }
+  void disposed(LiveIntervals *LIS) override {
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(*Loop);
+    Loop->eraseFromParent();
+  }
 };
 } // namespace
 
@@ -856,8 +859,8 @@ static void getLiveOutRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
 
 void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
@@ -962,7 +965,8 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1005,12 +1009,10 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator I,
-                                            Register DestReg, int FI,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void HexagonInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -2239,7 +2241,7 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
   return false;
 }
 
-// Returns true if the instruction is alread a .cur.
+// Returns true if the instruction is already a .cur.
 bool HexagonInstrInfo::isDotCurInst(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case Hexagon::V6_vL32b_cur_pi:
@@ -2802,6 +2804,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_cur_npred_ai:
   case Hexagon::V6_vL32b_nt_tmp_pred_ai:
   case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vS32Ub_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
   case Hexagon::V6_vgathermw_pseudo:
   case Hexagon::V6_vgathermhw_pseudo:
@@ -3294,11 +3297,11 @@ HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
                                    LocationSize &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
-      getAddrMode(MI) != HexagonII::BaseLongOffset &&
-      !isMemOp(MI) && !isPostIncrement(MI))
+      getAddrMode(MI) != HexagonII::BaseLongOffset && !isMemOp(MI) &&
+      !isPostIncrement(MI))
     return nullptr;
 
-  AccessSize = getMemAccessSize(MI);
+  AccessSize = LocationSize::precise(getMemAccessSize(MI));
 
   unsigned BasePos = 0, OffsetPos = 0;
   if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
@@ -3859,7 +3862,7 @@ int HexagonInstrInfo::getDotNewPredJumpOp(const MachineInstr &MI,
 int HexagonInstrInfo::getDotNewPredOp(const MachineInstr &MI,
       const MachineBranchProbabilityInfo *MBPI) const {
   switch (MI.getOpcode()) {
-  // Condtional Jumps
+  // Conditional Jumps
   case Hexagon::J2_jumpt:
   case Hexagon::J2_jumpf:
     return getDotNewPredJumpOp(MI, MBPI);
@@ -4324,7 +4327,7 @@ unsigned HexagonInstrInfo::getInstrTimingClassLatency(
 /// operand latency. But it may not be possible for instructions with variable
 /// number of defs / uses.
 ///
-/// This is a raw interface to the itinerary that may be directly overriden by
+/// This is a raw interface to the itinerary that may be directly overridden by
 /// a target. Use computeOperandLatency to get the best estimate of latency.
 std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
     const InstrItineraryData *ItinData, const MachineInstr &DefMI,

@@ -13,10 +13,10 @@
 #include <__assert>
 #include <__bit/bit_ceil.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
-#include <cstddef>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>
@@ -55,8 +55,8 @@ struct __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>
 
 template <class _Tp, int _Np>
 struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
-  using _SimdStorage = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
-  using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+  using _SimdStorage _LIBCPP_NODEBUG = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+  using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept {
     _SimdStorage __result;
@@ -87,11 +87,21 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
     for (size_t __i = 0; __i < _Np; __i++)
       __mem[__i] = static_cast<_Up>(__s.__data[__i]);
   }
+
+  static _LIBCPP_HIDE_FROM_ABI void __increment(_SimdStorage& __s) noexcept { __s.__data = __s.__data + 1; }
+
+  static _LIBCPP_HIDE_FROM_ABI void __decrement(_SimdStorage& __s) noexcept { __s.__data = __s.__data - 1; }
+
+  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __negate(_SimdStorage __s) noexcept { return {!__s.__data}; }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __bitwise_not(_SimdStorage __s) noexcept { return {~__s.__data}; }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __unary_minus(_SimdStorage __s) noexcept { return {-__s.__data}; }
 };
 
 template <class _Tp, int _Np>
 struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
-  using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+  using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
   static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept {
     _MaskStorage __result;

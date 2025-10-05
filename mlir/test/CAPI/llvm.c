@@ -270,7 +270,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
 
   MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
       ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault);
+      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault, bar);
 
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(compile_unit);
@@ -324,9 +324,16 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   mlirAttributeDump(di_imported_entity);
   // CHECK: #llvm.di_imported_entity<{{.*}}>
 
+  MlirAttribute di_annotation = mlirLLVMDIAnnotationAttrGet(
+      ctx, mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo")),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("bar")));
+
+  mlirAttributeDump(di_annotation);
+  // CHECK: #llvm.di_annotation<{{.*}}>
+
   MlirAttribute di_subprogram = mlirLLVMDISubprogramAttrGet(
       ctx, recId0, false, id, compile_unit, compile_unit, foo, bar, file, 1, 2,
-      0, subroutine_type, 1, &di_imported_entity);
+      0, subroutine_type, 1, &di_imported_entity, 1, &di_annotation);
   // CHECK: #llvm.di_subprogram<{{.*}}>
   mlirAttributeDump(di_subprogram);
 

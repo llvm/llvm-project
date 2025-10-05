@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
 namespace mlir {
@@ -285,10 +286,11 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
     // If the next operation has no blocking uses, everything is fine.
-    if (!userToBlockingUses.contains(user))
+    auto *it = userToBlockingUses.find(user);
+    if (it == userToBlockingUses.end())
       continue;
 
-    SmallPtrSet<OpOperand *, 4> &blockingUses = userToBlockingUses[user];
+    SmallPtrSet<OpOperand *, 4> &blockingUses = it->second;
 
     SmallVector<OpOperand *> newBlockingUses;
     // If the operation decides it cannot deal with removing the blocking uses,
@@ -407,7 +409,7 @@ void MemorySlotPromotionAnalyzer::computeMergePoints(
   SmallVector<Block *> mergePointsVec;
   idfCalculator.calculate(mergePointsVec);
 
-  mergePoints.insert(mergePointsVec.begin(), mergePointsVec.end());
+  mergePoints.insert_range(mergePointsVec);
 }
 
 bool MemorySlotPromotionAnalyzer::areMergePointsUsable(
@@ -631,8 +633,7 @@ MemorySlotPromoter::promoteSlot() {
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "[mem2reg] Promoted memory slot: " << slot.ptr
-                          << "\n");
+  LDBG() << "Promoted memory slot: " << slot.ptr;
 
   if (statistics.promotedAmount)
     (*statistics.promotedAmount)++;

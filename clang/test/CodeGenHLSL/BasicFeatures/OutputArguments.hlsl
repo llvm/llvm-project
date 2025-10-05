@@ -6,10 +6,10 @@
 // integer. It is converted to an integer on call and converted back after the
 // function.
 
-// CHECK: define void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void trunc_Param(inout int X) {}
 
-// ALL-LABEL: define noundef float {{.*}}case1
+// ALL-LABEL: define noundef nofpclass(nan inf) float {{.*}}case1
 // CHECK: [[F:%.*]] = alloca float
 // CHECK: [[ArgTmp:%.*]] = alloca i32
 // CHECK: [[FVal:%.*]] = load float, ptr {{.*}}
@@ -32,7 +32,7 @@ export float case1(float F) {
 // uninitialized in the function. If they are not initialized before the
 // function returns the value is undefined.
 
-// CHECK: define void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void undef(out int Z) { }
 
 // ALL-LABEL: define noundef i32 {{.*}}case2
@@ -54,7 +54,7 @@ export int case2() {
 // This test should verify that an out parameter value is written to as
 // expected.
 
-// CHECK: define void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void zero(out int Z) { Z = 0; }
 
 // ALL-LABEL: define noundef i32 {{.*}}case3
@@ -76,7 +76,7 @@ export int case3() {
 // Vector swizzles in HLSL produce lvalues, so they can be used as arguments to
 // inout parameters and the swizzle is reversed on writeback.
 
-// CHECK: define void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void funky(inout int3 X) {
   X.x += 1;
   X.y += 2;
@@ -116,7 +116,7 @@ export int3 case4() {
 
 // Case 5: Straightforward inout of a scalar value.
 
-// CHECK: define void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void increment(inout int I) {
   I += 1;
 }
@@ -144,7 +144,7 @@ struct S {
   float Y;
 };
 
-// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) {{%.*}})
+// CHECK: define hidden void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
 void init(out S s) {
   s.X = 3;
   s.Y = 4;
@@ -154,8 +154,8 @@ void init(out S s) {
 
 // CHECK: [[S:%.*]] = alloca %struct.S
 // CHECK: [[Tmp:%.*]] = alloca %struct.S
-// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 4 [[Tmp]], i32 8, i1 false)
+// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) [[Tmp]])
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 [[Tmp]], i32 8, i1 false)
 
 // OPT: ret i32 7
 export int case6() {
@@ -170,7 +170,7 @@ struct R {
   float Y;
 };
 
-// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) {{%.*}})
+// CHECK: define hidden void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
 void init(inout R s) {
   s.X = 3;
   s.Y = 4;
@@ -180,9 +180,9 @@ void init(inout R s) {
 
 // CHECK: [[S:%.*]] = alloca %struct.R
 // CHECK: [[Tmp:%.*]] = alloca %struct.R
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[S]], i32 8, i1 false)
-// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 4 [[Tmp]], i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[S]], i32 8, i1 false)
+// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) [[Tmp]])
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 [[Tmp]], i32 8, i1 false)
 
 // OPT: ret i32 7
 export int case7() {
@@ -194,10 +194,10 @@ export int case7() {
 
 // Case 8: Non-scalars with a cast expression.
 
-// CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
-// ALL-LABEL: define noundef <3 x float> {{.*}}case8
+// ALL-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}case8
 
 // CHECK: [[V:%.*]] = alloca <3 x float>
 // CHECK: [[Tmp:%.*]] = alloca <3 x i32>
@@ -260,10 +260,10 @@ void order_matters(inout int X, inout int Y) {
 // CHECK: store i32 [[VVal]], ptr [[Tmp0]]
 // CHECK: [[VVal:%.*]] = load i32, ptr [[V]]
 // CHECK: store i32 [[VVal]], ptr [[Tmp1]]
-// CHECK: call void {{.*}}order_matters{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp1]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp0]])
-// CHECK: [[Arg1Val:%.*]] = load i32, ptr [[Tmp1]]
+// CHECK: call void {{.*}}order_matters{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp0]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp1]])
+// CHECK: [[Arg1Val:%.*]] = load i32, ptr [[Tmp0]]
 // CHECK: store i32 [[Arg1Val]], ptr [[V]]
-// CHECK: [[Arg2Val:%.*]] = load i32, ptr [[Tmp0]]
+// CHECK: [[Arg2Val:%.*]] = load i32, ptr [[Tmp1]]
 // CHECK: store i32 [[Arg2Val]], ptr [[V]]
 
 // OPT: ret i32 2
@@ -289,17 +289,13 @@ void setFour(inout int I) {
 // CHECK: [[B:%.*]] = alloca %struct.B
 // CHECK: [[Tmp:%.*]] = alloca i32
 
-// CHECK: [[BFLoad:%.*]] = load i32, ptr [[B]]
-// CHECK: [[BFshl:%.*]] = shl i32 [[BFLoad]], 24
-// CHECK: [[BFashr:%.*]] = ashr i32 [[BFshl]], 24
-// CHECK: store i32 [[BFashr]], ptr [[Tmp]]
+// CHECK: [[BFLoad:%.*]] = load i8, ptr [[B]]
+// CHECK: [[BFcast:%.*]] = sext i8 [[BFLoad]] to i32
+// CHECK: store i32 [[BFcast]], ptr [[Tmp]]
 // CHECK: call void {{.*}}setFour{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp]])
 // CHECK: [[RetVal:%.*]] = load i32, ptr [[Tmp]]
-// CHECK: [[BFLoad:%.*]] = load i32, ptr [[B]]
-// CHECK: [[BFValue:%.*]] = and i32 [[RetVal]], 255
-// CHECK: [[ZerodField:%.*]] = and i32 [[BFLoad]], -256
-// CHECK: [[BFSet:%.*]] = or i32 [[ZerodField]], [[BFValue]]
-// CHECK: store i32 [[BFSet]], ptr [[B]]
+// CHECK: [[TruncVal:%.*]] = trunc i32 [[RetVal]] to i8
+// CHECK: store i8 [[TruncVal]], ptr [[B]]
 
 // OPT: ret i32 8
 export int case11() {

@@ -223,7 +223,7 @@ void DbgAssignIntrinsic::setAddress(Value *V) {
 void DbgAssignIntrinsic::setKillAddress() {
   if (isKillAddress())
     return;
-  setAddress(UndefValue::get(getAddress()->getType()));
+  setAddress(PoisonValue::get(getAddress()->getType()));
 }
 
 bool DbgAssignIntrinsic::isKillAddress() const {
@@ -236,53 +236,16 @@ void DbgAssignIntrinsic::setValue(Value *V) {
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
-int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                               StringRef Name) {
-  assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
-
-  // Do successive binary searches of the dotted name components. For
-  // "llvm.gc.experimental.statepoint.p1i8.p1i32", we will find the range of
-  // intrinsics starting with "llvm.gc", then "llvm.gc.experimental", then
-  // "llvm.gc.experimental.statepoint", and then we will stop as the range is
-  // size 1. During the search, we can skip the prefix that we already know is
-  // identical. By using strncmp we consider names with differing suffixes to
-  // be part of the equal range.
-  size_t CmpEnd = 4; // Skip the "llvm" component.
-  const char *const *Low = NameTable.begin();
-  const char *const *High = NameTable.end();
-  const char *const *LastLow = Low;
-  while (CmpEnd < Name.size() && High - Low > 0) {
-    size_t CmpStart = CmpEnd;
-    CmpEnd = Name.find('.', CmpStart + 1);
-    CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
-    auto Cmp = [CmpStart, CmpEnd](const char *LHS, const char *RHS) {
-      return strncmp(LHS + CmpStart, RHS + CmpStart, CmpEnd - CmpStart) < 0;
-    };
-    LastLow = Low;
-    std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
-  }
-  if (High - Low > 0)
-    LastLow = Low;
-
-  if (LastLow == NameTable.end())
-    return -1;
-  StringRef NameFound = *LastLow;
-  if (Name == NameFound ||
-      (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
-    return LastLow - NameTable.begin();
-  return -1;
-}
-
 ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("InstrProfValueProfileInst does not have counters!");
-  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  return cast<ConstantInt>(getArgOperand(2));
 }
 
 ConstantInt *InstrProfCntrInstBase::getIndex() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("Please use InstrProfValueProfileInst::getIndex()");
-  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+  return cast<ConstantInt>(getArgOperand(3));
 }
 
 void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
@@ -292,7 +255,7 @@ void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
 
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
-    return const_cast<Value *>(getArgOperand(4));
+    return getArgOperand(4);
   }
   const Module *M = getModule();
   LLVMContext &Context = M->getContext();
@@ -485,6 +448,7 @@ VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
   case Intrinsic::experimental_vp_strided_store:
     return 1;
   case Intrinsic::vp_load:
+  case Intrinsic::vp_load_ff:
   case Intrinsic::vp_gather:
   case Intrinsic::experimental_vp_strided_load:
     return 0;
@@ -666,9 +630,8 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   return false;
 }
 
-Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
-                                               Type *ReturnType,
-                                               ArrayRef<Value *> Params) {
+Function *VPIntrinsic::getOrInsertDeclarationForParams(
+    Module *M, Intrinsic::ID VPID, Type *ReturnType, ArrayRef<Value *> Params) {
   assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
   Function *VPFunc;
   switch (VPID) {
@@ -678,7 +641,7 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
       OverloadTy =
           Params[*VPReductionIntrinsic::getVectorParamPos(VPID)]->getType();
 
-    VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, OverloadTy);
     break;
   }
   case Intrinsic::vp_trunc:
@@ -695,43 +658,47 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   case Intrinsic::vp_lrint:
   case Intrinsic::vp_llrint:
   case Intrinsic::vp_cttz_elts:
-    VPFunc =
-        Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(
+        M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_is_fpclass:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[0]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[0]->getType()});
     break;
   case Intrinsic::vp_merge:
   case Intrinsic::vp_select:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[1]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[1]->getType()});
     break;
   case Intrinsic::vp_load:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
+  case Intrinsic::vp_load_ff:
+    VPFunc = Intrinsic::getOrInsertDeclaration(
+        M, VPID, {ReturnType->getStructElementType(0), Params[0]->getType()});
+    break;
   case Intrinsic::experimental_vp_strided_load:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::vp_gather:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_store:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_store:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID,
         {Params[0]->getType(), Params[1]->getType(), Params[2]->getType()});
     break;
   case Intrinsic::vp_scatter:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::experimental_vp_splat:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, ReturnType);
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, ReturnType);
     break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");
@@ -922,4 +889,32 @@ Value *GCRelocateInst::getDerivedPtr() const {
   if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
     return *(Opt->Inputs.begin() + getDerivedPtrIndex());
   return *(GCInst->arg_begin() + getDerivedPtrIndex());
+}
+
+ConvergenceControlInst *ConvergenceControlInst::CreateAnchor(BasicBlock &BB) {
+  Module *M = BB.getModule();
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M, llvm::Intrinsic::experimental_convergence_anchor);
+  auto *Call = CallInst::Create(Fn, "", BB.getFirstInsertionPt());
+  return cast<ConvergenceControlInst>(Call);
+}
+
+ConvergenceControlInst *ConvergenceControlInst::CreateEntry(BasicBlock &BB) {
+  Module *M = BB.getModule();
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M, llvm::Intrinsic::experimental_convergence_entry);
+  auto *Call = CallInst::Create(Fn, "", BB.getFirstInsertionPt());
+  return cast<ConvergenceControlInst>(Call);
+}
+
+ConvergenceControlInst *
+ConvergenceControlInst::CreateLoop(BasicBlock &BB,
+                                   ConvergenceControlInst *ParentToken) {
+  Module *M = BB.getModule();
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M, llvm::Intrinsic::experimental_convergence_loop);
+  llvm::Value *BundleArgs[] = {ParentToken};
+  llvm::OperandBundleDef OB("convergencectrl", BundleArgs);
+  auto *Call = CallInst::Create(Fn, {}, {OB}, "", BB.getFirstInsertionPt());
+  return cast<ConvergenceControlInst>(Call);
 }

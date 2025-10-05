@@ -343,37 +343,41 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_ext_i128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    subl %edx, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    sbbl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    sbbl %ecx, %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmovll (%esp), %edx # 4-byte Folded Reload
-; X86-NEXT:    cmovll %ebx, %esi
-; X86-NEXT:    cmovll %ebp, %ecx
-; X86-NEXT:    cmovll %eax, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movl 44(%ebp), %edx
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    sbbl %edx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 48(%ebp), %esi
+; X86-NEXT:    movl 32(%ebp), %edi
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    movl 52(%ebp), %ebx
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %eax
+; X86-NEXT:    subl 24(%ebp), %ecx
+; X86-NEXT:    sbbl 28(%ebp), %edx
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    sbbl 36(%ebp), %ebx
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    cmovll %edi, %esi
+; X86-NEXT:    cmovll %eax, %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ebx, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -404,37 +408,41 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_ext_i128_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    subl %edx, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    sbbl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    sbbl %ecx, %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmovll (%esp), %edx # 4-byte Folded Reload
-; X86-NEXT:    cmovll %ebx, %esi
-; X86-NEXT:    cmovll %ebp, %ecx
-; X86-NEXT:    cmovll %eax, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movl 44(%ebp), %edx
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    sbbl %edx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 48(%ebp), %esi
+; X86-NEXT:    movl 32(%ebp), %edi
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    movl 52(%ebp), %ebx
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %eax
+; X86-NEXT:    subl 24(%ebp), %ecx
+; X86-NEXT:    sbbl 28(%ebp), %edx
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    sbbl 36(%ebp), %ebx
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    cmovll %edi, %esi
+; X86-NEXT:    cmovll %eax, %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ebx, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -585,37 +593,41 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_minmax_i128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    subl %edx, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    sbbl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    sbbl %ecx, %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmovll (%esp), %edx # 4-byte Folded Reload
-; X86-NEXT:    cmovll %ebx, %esi
-; X86-NEXT:    cmovll %ebp, %ecx
-; X86-NEXT:    cmovll %eax, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movl 44(%ebp), %edx
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    sbbl %edx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 48(%ebp), %esi
+; X86-NEXT:    movl 32(%ebp), %edi
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    movl 52(%ebp), %ebx
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %eax
+; X86-NEXT:    subl 24(%ebp), %ecx
+; X86-NEXT:    sbbl 28(%ebp), %edx
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    sbbl 36(%ebp), %ebx
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    cmovll %edi, %esi
+; X86-NEXT:    cmovll %eax, %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ebx, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -768,37 +780,41 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_cmp_i128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    subl %edx, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    sbbl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    sbbl %ecx, %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmovll (%esp), %edx # 4-byte Folded Reload
-; X86-NEXT:    cmovll %ebx, %esi
-; X86-NEXT:    cmovll %ebp, %ecx
-; X86-NEXT:    cmovll %eax, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movl 44(%ebp), %edx
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    sbbl %edx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 48(%ebp), %esi
+; X86-NEXT:    movl 32(%ebp), %edi
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    movl 52(%ebp), %ebx
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %eax
+; X86-NEXT:    subl 24(%ebp), %ecx
+; X86-NEXT:    sbbl 28(%ebp), %edx
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    sbbl 36(%ebp), %ebx
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    cmovll %edi, %esi
+; X86-NEXT:    cmovll %eax, %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ebx, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -1027,35 +1043,38 @@ define i64 @abd_subnsw_i64_undef(i64 %a, i64 %b) nounwind {
 define i128 @abd_subnsw_i128(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_subnsw_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    xorl %ebx, %ecx
-; X86-NEXT:    xorl %ebx, %edx
-; X86-NEXT:    xorl %ebx, %esi
-; X86-NEXT:    xorl %ebx, %edi
-; X86-NEXT:    subl %ebx, %edi
-; X86-NEXT:    sbbl %ebx, %esi
-; X86-NEXT:    sbbl %ebx, %edx
-; X86-NEXT:    sbbl %ebx, %ecx
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    movl 36(%ebp), %ecx
+; X86-NEXT:    movl 24(%ebp), %edi
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl 40(%ebp), %edi
+; X86-NEXT:    sbbl 44(%ebp), %esi
+; X86-NEXT:    sbbl 48(%ebp), %edx
+; X86-NEXT:    sbbl 52(%ebp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    xorl %eax, %edi
+; X86-NEXT:    subl %eax, %edi
+; X86-NEXT:    sbbl %eax, %esi
+; X86-NEXT:    sbbl %eax, %edx
+; X86-NEXT:    sbbl %eax, %ecx
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: abd_subnsw_i128:
@@ -1079,35 +1098,38 @@ define i128 @abd_subnsw_i128(i128 %a, i128 %b) nounwind {
 define i128 @abd_subnsw_i128_undef(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_subnsw_i128_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    sarl $31, %ebx
-; X86-NEXT:    xorl %ebx, %ecx
-; X86-NEXT:    xorl %ebx, %edx
-; X86-NEXT:    xorl %ebx, %esi
-; X86-NEXT:    xorl %ebx, %edi
-; X86-NEXT:    subl %ebx, %edi
-; X86-NEXT:    sbbl %ebx, %esi
-; X86-NEXT:    sbbl %ebx, %edx
-; X86-NEXT:    sbbl %ebx, %ecx
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    movl 36(%ebp), %ecx
+; X86-NEXT:    movl 24(%ebp), %edi
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl 40(%ebp), %edi
+; X86-NEXT:    sbbl 44(%ebp), %esi
+; X86-NEXT:    sbbl 48(%ebp), %edx
+; X86-NEXT:    sbbl 52(%ebp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    xorl %eax, %edi
+; X86-NEXT:    subl %eax, %edi
+; X86-NEXT:    sbbl %eax, %esi
+; X86-NEXT:    sbbl %eax, %edx
+; X86-NEXT:    sbbl %eax, %ecx
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: abd_subnsw_i128_undef:
@@ -1161,24 +1183,23 @@ define i32 @abd_sub_i32(i32 %a, i32 %b) nounwind {
 define i8 @abd_select_i8(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_select_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb %cl, %al
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    cmovll %eax, %edx
-; X86-NEXT:    cmovll %ecx, %eax
-; X86-NEXT:    subb %dl, %al
+; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    cmovll %edx, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_select_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    cmovll %edi, %ecx
-; X64-NEXT:    cmovll %esi, %eax
-; X64-NEXT:    subb %cl, %al
+; X64-NEXT:    movsbl %sil, %eax
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    cmovll %edx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %cmp = icmp slt i8 %a, %b
@@ -1191,24 +1212,23 @@ define i8 @abd_select_i8(i8 %a, i8 %b) nounwind {
 define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_select_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpw %cx, %ax
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    cmovlel %eax, %edx
-; X86-NEXT:    cmovlel %ecx, %eax
-; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    cmovll %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_select_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    cmovlel %edi, %ecx
-; X64-NEXT:    cmovlel %esi, %eax
+; X64-NEXT:    movswl %si, %eax
+; X64-NEXT:    movswl %di, %ecx
+; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    subl %eax, %edx
 ; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    cmovll %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %cmp = icmp sle i16 %a, %b
@@ -1221,22 +1241,20 @@ define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
 define i32 @abd_select_i32(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: abd_select_i32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl %ecx, %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    cmovgl %edx, %eax
-; X86-NEXT:    cmovgl %ecx, %edx
-; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    cmovll %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_select_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    cmovgl %edi, %eax
-; X64-NEXT:    cmovgl %esi, %edi
-; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    subl %edi, %esi
+; X64-NEXT:    cmovgel %esi, %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %a, %b
   %ab = select i1 %cmp, i32 %a, i32 %b
@@ -1251,21 +1269,18 @@ define i64 @abd_select_i64(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl %esi, %ebx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sbbl %edi, %eax
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    cmovgel %ecx, %edx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    cmovgel %ebx, %eax
-; X86-NEXT:    cmovgel %edi, %ecx
-; X86-NEXT:    cmovgel %esi, %ebx
-; X86-NEXT:    subl %ebx, %eax
-; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    subl %eax, %edi
+; X86-NEXT:    movl %esi, %ebx
+; X86-NEXT:    sbbl %edx, %ebx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    cmovll %edi, %eax
+; X86-NEXT:    cmovll %ebx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -1273,11 +1288,10 @@ define i64 @abd_select_i64(i64 %a, i64 %b) nounwind {
 ;
 ; X64-LABEL: abd_select_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpq %rsi, %rdi
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    cmovgeq %rdi, %rax
-; X64-NEXT:    cmovgeq %rsi, %rdi
-; X64-NEXT:    subq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    subq %rsi, %rax
+; X64-NEXT:    subq %rdi, %rsi
+; X64-NEXT:    cmovgeq %rsi, %rax
 ; X64-NEXT:    retq
   %cmp = icmp sge i64 %a, %b
   %ab = select i1 %cmp, i64 %a, i64 %b
@@ -1290,47 +1304,41 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: abd_select_i128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movl 44(%ebp), %edx
+; X86-NEXT:    movl 24(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sbbl %ebp, %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    sbbl %edx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 48(%ebp), %esi
+; X86-NEXT:    movl 32(%ebp), %edi
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    movl 52(%ebp), %ebx
+; X86-NEXT:    movl 36(%ebp), %eax
 ; X86-NEXT:    sbbl %ebx, %eax
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    cmovll %edi, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    cmovll %ebx, %edi
-; X86-NEXT:    movl %ebp, %ebx
-; X86-NEXT:    cmovll %ecx, %ebx
-; X86-NEXT:    cmovll %ebp, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    cmovll %esi, %ebp
-; X86-NEXT:    cmovll %eax, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmovll %edx, %eax
-; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    sbbl %ebp, %esi
-; X86-NEXT:    sbbl %ebx, %ecx
-; X86-NEXT:    sbbl (%esp), %edi # 4-byte Folded Reload
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    subl 24(%ebp), %ecx
+; X86-NEXT:    sbbl 28(%ebp), %edx
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    sbbl 36(%ebp), %ebx
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    cmovll %edi, %esi
+; X86-NEXT:    cmovll %eax, %ebx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ebx, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -1340,18 +1348,14 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; X64-LABEL: abd_select_i128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    cmpq %rdx, %rdi
-; X64-NEXT:    movq %rsi, %rdi
-; X64-NEXT:    sbbq %rcx, %rdi
-; X64-NEXT:    movq %rcx, %rdi
-; X64-NEXT:    cmovlq %rsi, %rdi
-; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    cmovlq %rax, %r8
-; X64-NEXT:    cmovlq %rcx, %rsi
-; X64-NEXT:    cmovlq %rdx, %rax
-; X64-NEXT:    subq %r8, %rax
-; X64-NEXT:    sbbq %rdi, %rsi
-; X64-NEXT:    movq %rsi, %rdx
+; X64-NEXT:    subq %rdx, %rax
+; X64-NEXT:    movq %rsi, %r8
+; X64-NEXT:    sbbq %rcx, %r8
+; X64-NEXT:    subq %rdi, %rdx
+; X64-NEXT:    sbbq %rsi, %rcx
+; X64-NEXT:    cmovgeq %rdx, %rax
+; X64-NEXT:    cmovgeq %rcx, %r8
+; X64-NEXT:    movq %r8, %rdx
 ; X64-NEXT:    retq
   %cmp = icmp slt i128 %a, %b
   %ab = select i1 %cmp, i128 %a, i128 %b

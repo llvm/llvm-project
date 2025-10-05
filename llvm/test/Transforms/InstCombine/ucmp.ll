@@ -541,3 +541,17 @@ define i8 @ucmp_from_select_gt_and_lt(i32 %x, i32 %y) {
   %r = select i1 %gt, i8 1, i8 %lt
   ret i8 %r
 }
+
+; (x == y) ? 0 : (x u> y ? 1 : -1) into ucmp(x, y)
+define i8 @scmp_from_select_eq_and_gt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_eq_and_gt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %eq = icmp eq i32 %x, %y
+  %gt = icmp ugt i32 %x, %y
+  %sel1 = select i1 %gt, i8 1, i8 -1
+  %r = select i1 %eq, i8 0, i8 %sel1
+  ret i8 %r
+}

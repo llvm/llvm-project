@@ -17,9 +17,8 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MAM);
 
-  MachineFunctionProperties getRequiredProperties() {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

@@ -60,7 +60,6 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -76,7 +75,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <deque>
 
 #ifdef EXPENSIVE_CHECKS
@@ -110,7 +108,7 @@ static cl::opt<unsigned> MaxNumVisitiedPaths(
     "dfa-max-num-visited-paths",
     cl::desc(
         "Max number of blocks visited while enumerating paths around a switch"),
-    cl::Hidden, cl::init(2000));
+    cl::Hidden, cl::init(2500));
 
 static cl::opt<unsigned>
     MaxNumPaths("dfa-max-num-paths",
@@ -165,8 +163,7 @@ private:
       unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
-      for (const SelectInstToUnfold &NewSIToUnfold : NewSIsToUnfold)
-        Stack.push_back(NewSIToUnfold);
+      llvm::append_range(Stack, NewSIsToUnfold);
     }
   }
 
@@ -193,15 +190,15 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
-  BasicBlock *StartBlock = SI->getParent();
-  BasicBlock *EndBlock = SIUse->getParent();
+  assert(SI->hasOneUse());
+  // The select may come indirectly, instead of from where it is defined.
+  BasicBlock *StartBlock = SIUse->getIncomingBlock(*SI->use_begin());
   BranchInst *StartBlockTerm =
       dyn_cast<BranchInst>(StartBlock->getTerminator());
-
   assert(StartBlockTerm);
-  assert(SI->hasOneUse());
 
   if (StartBlockTerm->isUnconditional()) {
+    BasicBlock *EndBlock = StartBlock->getUniqueSuccessor();
     // Arbitrarily choose the 'false' side for a new input value to the PHI.
     BasicBlock *NewBlock = BasicBlock::Create(
         SI->getContext(), Twine(SI->getName(), ".si.unfold.false"),
@@ -223,32 +220,44 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
                                       NewBlock->getFirstInsertionPt());
     NewPhi->addIncoming(SIOp2, StartBlock);
 
+    // Update any other PHI nodes in EndBlock.
+    for (PHINode &Phi : EndBlock->phis()) {
+      if (SIUse == &Phi)
+        continue;
+      Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), NewBlock);
+    }
+
+    // Update the phi node of SI, which is its only use.
+    if (EndBlock == SIUse->getParent()) {
+      SIUse->addIncoming(NewPhi, NewBlock);
+      SIUse->replaceUsesOfWith(SI, SIOp1);
+    } else {
+      PHINode *EndPhi = PHINode::Create(SIUse->getType(), pred_size(EndBlock),
+                                        Twine(SI->getName(), ".si.unfold.phi"),
+                                        EndBlock->getFirstInsertionPt());
+      for (BasicBlock *Pred : predecessors(EndBlock)) {
+        if (Pred != StartBlock && Pred != NewBlock)
+          EndPhi->addIncoming(EndPhi, Pred);
+      }
+
+      EndPhi->addIncoming(SIOp1, StartBlock);
+      EndPhi->addIncoming(NewPhi, NewBlock);
+      SIUse->replaceUsesOfWith(SI, EndPhi);
+      SIUse = EndPhi;
+    }
+
     if (auto *OpSi = dyn_cast<SelectInst>(SIOp1))
       NewSIsToUnfold->push_back(SelectInstToUnfold(OpSi, SIUse));
     if (auto *OpSi = dyn_cast<SelectInst>(SIOp2))
       NewSIsToUnfold->push_back(SelectInstToUnfold(OpSi, NewPhi));
 
-    // Update the phi node of SI.
-    for (unsigned Idx = 0; Idx < SIUse->getNumIncomingValues(); ++Idx) {
-      if (SIUse->getIncomingBlock(Idx) == StartBlock)
-        SIUse->setIncomingValue(Idx, SIOp1);
-    }
-    SIUse->addIncoming(NewPhi, NewBlock);
-
-    // Update any other PHI nodes in EndBlock.
-    for (auto II = EndBlock->begin(); PHINode *Phi = dyn_cast<PHINode>(II);
-         ++II) {
-      if (Phi != SIUse)
-        Phi->addIncoming(Phi->getIncomingValueForBlock(StartBlock), NewBlock);
-    }
-
-    StartBlockTerm->eraseFromParent();
-
     // Insert the real conditional branch based on the original condition.
+    StartBlockTerm->eraseFromParent();
     BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
                        {DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
+    BasicBlock *EndBlock = SIUse->getParent();
     BasicBlock *NewBlockT = BasicBlock::Create(
         SI->getContext(), Twine(SI->getName(), ".si.unfold.true"),
         EndBlock->getParent(), EndBlock);
@@ -323,7 +332,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   }
 
   // Preserve loop info
-  if (Loop *L = LI->getLoopFor(SI->getParent())) {
+  if (Loop *L = LI->getLoopFor(StartBlock)) {
     for (BasicBlock *NewBB : *NewBBs)
       L->addBasicBlockToLoop(NewBB, *LI);
   }
@@ -389,7 +398,7 @@ struct ThreadingPath {
   void push_back(BasicBlock *BB) { Path.push_back(BB); }
   void push_front(BasicBlock *BB) { Path.push_front(BB); }
   void appendExcludingFirst(const PathType &OtherPath) {
-    Path.insert(Path.end(), OtherPath.begin() + 1, OtherPath.end());
+    llvm::append_range(Path, llvm::drop_begin(OtherPath));
   }
 
   void print(raw_ostream &OS) const {
@@ -437,7 +446,7 @@ private:
   /// Also, collect select instructions to unfold.
   bool isCandidate(const SwitchInst *SI) {
     std::deque<std::pair<Value *, BasicBlock *>> Q;
-    SmallSet<Value *, 16> SeenValues;
+    SmallPtrSet<Value *, 16> SeenValues;
     SelectInsts.clear();
 
     Value *SICond = SI->getCondition();
@@ -501,7 +510,7 @@ private:
 
   void addToQueue(Value *Val, BasicBlock *BB,
                   std::deque<std::pair<Value *, BasicBlock *>> &Q,
-                  SmallSet<Value *, 16> &SeenValues) {
+                  SmallPtrSet<Value *, 16> &SeenValues) {
     if (SeenValues.insert(Val).second)
       Q.push_back({Val, BB});
   }
@@ -512,7 +521,7 @@ private:
 
     Instruction *SIUse = dyn_cast<Instruction>(SI->user_back());
     // The use of the select inst should be either a phi or another select.
-    if (!SIUse && !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
+    if (!SIUse || !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
       return false;
 
     BasicBlock *SIBB = SI->getParent();
@@ -524,6 +533,8 @@ private:
       return false;
 
     // Only fold the select coming from directly where it is defined.
+    // TODO: We have dealt with the select coming indirectly now. This
+    // constraint can be relaxed.
     PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
     if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;
@@ -572,15 +583,17 @@ struct AllSwitchPaths {
     VisitedBlocks VB;
     // Get paths from the determinator BBs to SwitchPhiDefBB
     std::vector<ThreadingPath> PathsToPhiDef =
-        getPathsFromStateDefMap(StateDef, SwitchPhi, VB);
-    if (SwitchPhiDefBB == SwitchBlock) {
+        getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
+    if (SwitchPhiDefBB == SwitchBlock || PathsToPhiDef.empty()) {
       TPaths = std::move(PathsToPhiDef);
       return;
     }
 
+    assert(MaxNumPaths >= PathsToPhiDef.size() && !PathsToPhiDef.empty());
+    auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
     // Find and append paths from SwitchPhiDefBB to SwitchBlock.
     PathsType PathsToSwitchBB =
-        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1);
+        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1, PathsLimit);
     if (PathsToSwitchBB.empty())
       return;
 
@@ -601,13 +614,16 @@ private:
   typedef DenseMap<const BasicBlock *, const PHINode *> StateDefMap;
   std::vector<ThreadingPath> getPathsFromStateDefMap(StateDefMap &StateDef,
                                                      PHINode *Phi,
-                                                     VisitedBlocks &VB) {
+                                                     VisitedBlocks &VB,
+                                                     unsigned PathsLimit) {
     std::vector<ThreadingPath> Res;
     auto *PhiBB = Phi->getParent();
     VB.insert(PhiBB);
 
     VisitedBlocks UniqueBlocks;
     for (auto *IncomingBB : Phi->blocks()) {
+      if (Res.size() >= PathsLimit)
+        break;
       if (!UniqueBlocks.insert(IncomingBB).second)
         continue;
       if (!SwitchOuterLoop->contains(IncomingBB))
@@ -643,8 +659,9 @@ private:
 
       // Direct predecessor, just add to the path.
       if (IncomingPhiDefBB == IncomingBB) {
-        std::vector<ThreadingPath> PredPaths =
-            getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
+        assert(PathsLimit > Res.size());
+        std::vector<ThreadingPath> PredPaths = getPathsFromStateDefMap(
+            StateDef, IncomingPhi, VB, PathsLimit - Res.size());
         for (ThreadingPath &Path : PredPaths) {
           Path.push_back(PhiBB);
           Res.push_back(std::move(Path));
@@ -657,13 +674,17 @@ private:
         continue;
 
       PathsType IntermediatePaths;
-      IntermediatePaths =
-          paths(IncomingPhiDefBB, IncomingBB, VB, /* PathDepth = */ 1);
+      assert(PathsLimit > Res.size());
+      auto InterPathLimit = PathsLimit - Res.size();
+      IntermediatePaths = paths(IncomingPhiDefBB, IncomingBB, VB,
+                                /* PathDepth = */ 1, InterPathLimit);
       if (IntermediatePaths.empty())
         continue;
 
+      assert(InterPathLimit >= IntermediatePaths.size());
+      auto PredPathLimit = InterPathLimit / IntermediatePaths.size();
       std::vector<ThreadingPath> PredPaths =
-          getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
+          getPathsFromStateDefMap(StateDef, IncomingPhi, VB, PredPathLimit);
       for (const ThreadingPath &Path : PredPaths) {
         for (const PathType &IPath : IntermediatePaths) {
           ThreadingPath NewPath(Path);
@@ -678,7 +699,7 @@ private:
   }
 
   PathsType paths(BasicBlock *BB, BasicBlock *ToBB, VisitedBlocks &Visited,
-                  unsigned PathDepth) {
+                  unsigned PathDepth, unsigned PathsLimit) {
     PathsType Res;
 
     // Stop exploring paths after visiting MaxPathLength blocks
@@ -703,8 +724,10 @@ private:
 
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
-    SmallSet<BasicBlock *, 4> Successors;
+    SmallPtrSet<BasicBlock *, 4> Successors;
     for (BasicBlock *Succ : successors(BB)) {
+      if (Res.size() >= PathsLimit)
+        break;
       if (!Successors.insert(Succ).second)
         continue;
 
@@ -726,14 +749,12 @@ private:
       // coverage and compile time.
       if (LI->getLoopFor(Succ) != CurrLoop)
         continue;
-
-      PathsType SuccPaths = paths(Succ, ToBB, Visited, PathDepth + 1);
+      assert(PathsLimit > Res.size());
+      PathsType SuccPaths =
+          paths(Succ, ToBB, Visited, PathDepth + 1, PathsLimit - Res.size());
       for (PathType &Path : SuccPaths) {
         Path.push_front(BB);
         Res.push_back(Path);
-        if (Res.size() >= MaxNumPaths) {
-          return Res;
-        }
       }
     }
     // This block could now be visited again from a different predecessor. Note
@@ -743,18 +764,16 @@ private:
     return Res;
   }
 
-  /// Walk the use-def chain and collect all the state-defining instructions.
-  ///
-  /// Return an empty map if unpredictable values encountered inside the basic
-  /// blocks of \p LoopPaths.
+  /// Walk the use-def chain and collect all the state-defining blocks and the
+  /// PHI nodes in those blocks that define the state.
   StateDefMap getStateDefMap() const {
     StateDefMap Res;
-    Value *FirstDef = Switch->getOperand(0);
-    assert(isa<PHINode>(FirstDef) && "The first definition must be a phi.");
+    PHINode *FirstDef = dyn_cast<PHINode>(Switch->getOperand(0));
+    assert(FirstDef && "The first definition must be a phi.");
 
     SmallVector<PHINode *, 8> Stack;
-    Stack.push_back(dyn_cast<PHINode>(FirstDef));
-    SmallSet<Value *, 16> SeenValues;
+    Stack.push_back(FirstDef);
+    SmallPtrSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
       PHINode *CurPhi = Stack.pop_back_val();
@@ -763,18 +782,15 @@ private:
       SeenValues.insert(CurPhi);
 
       for (BasicBlock *IncomingBB : CurPhi->blocks()) {
-        Value *Incoming = CurPhi->getIncomingValueForBlock(IncomingBB);
-        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
-        if (Incoming == FirstDef || isa<ConstantInt>(Incoming) ||
-            SeenValues.contains(Incoming) || IsOutsideLoops) {
+        PHINode *IncomingPhi =
+            dyn_cast<PHINode>(CurPhi->getIncomingValueForBlock(IncomingBB));
+        if (!IncomingPhi)
           continue;
-        }
+        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
+        if (SeenValues.contains(IncomingPhi) || IsOutsideLoops)
+          continue;
 
-        // Any unpredictable value inside the loops means we must bail out.
-        if (!isa<PHINode>(Incoming))
-          return StateDefMap();
-
-        Stack.push_back(cast<PHINode>(Incoming));
+        Stack.push_back(IncomingPhi);
       }
     }
 
@@ -950,9 +966,8 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallSet<BasicBlock *, 16> BlocksToClean;
-    for (BasicBlock *BB : successors(SwitchBlock))
-      BlocksToClean.insert(BB);
+    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
+    BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
@@ -980,7 +995,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();

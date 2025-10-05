@@ -36,6 +36,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyMCInstLower {
   MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
   MCOperand lowerTypeIndexOperand(SmallVectorImpl<wasm::ValType> &&,
                                   SmallVectorImpl<wasm::ValType> &&) const;
+  MCOperand lowerEncodedFunctionSignature(const APInt &Sig) const;
 
 public:
   WebAssemblyMCInstLower(MCContext &ctx, WebAssemblyAsmPrinter &printer)

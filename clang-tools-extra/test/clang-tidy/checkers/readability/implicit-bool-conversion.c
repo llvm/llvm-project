@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c23
-// RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
+// RUN: %check_clang_tidy -std=c23-or-later --match-partial-fixes %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy -std=c23-or-later -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
-// RUN:     }}' -- -std=c23
+// RUN:     }}'
 
 #undef NULL
 #define NULL 0L
@@ -302,6 +302,15 @@ void implicitConversionToBoolFromUnaryMinusAndZeroLiterals() {
   functionTakingBool(-0.0);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'double' -> 'bool'
   // CHECK-FIXES: functionTakingBool((-0.0) != 0.0);
+}
+
+void ignoreImplicitCastToBoolForComparisonResult() {
+  bool boolFromComparison0 = 1 != 0;
+  bool boolFromComparison1 = 1 == 0;
+  bool boolFromComparison2 = 1 > 0;
+  bool boolFromComparison3 = 1 >= 0;
+  bool boolFromComparison4 = 1 < 0;
+  bool boolFromComparison5 = 1 <= 0;
 }
 
 void ignoreExplicitCastsToBool() {

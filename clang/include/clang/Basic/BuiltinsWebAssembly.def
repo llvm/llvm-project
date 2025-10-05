@@ -68,11 +68,6 @@ TARGET_BUILTIN(__builtin_wasm_trunc_saturate_u_i64_f64, "LLid", "nc", "nontrappi
 // SIMD builtins
 TARGET_BUILTIN(__builtin_wasm_swizzle_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_sub_sat_s_i8x16, "V16ScV16ScV16Sc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_sub_sat_u_i8x16, "V16UcV16UcV16Uc", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_sub_sat_s_i16x8, "V8sV8sV8s", "nc", "simd128")
-TARGET_BUILTIN(__builtin_wasm_sub_sat_u_i16x8, "V8UsV8UsV8Us", "nc", "simd128")
-
 TARGET_BUILTIN(__builtin_wasm_abs_i8x16, "V16ScV16Sc", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_abs_i16x8, "V8sV8s", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_abs_i32x4, "V4iV4i", "nc", "simd128")
@@ -197,11 +192,18 @@ TARGET_BUILTIN(__builtin_wasm_replace_lane_f16x8, "V8hV8hIif", "nc", "fp16")
 // in which case the argument spec (second argument) is unused.
 
 TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "i", "nct", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_ref_is_null_extern, "ii", "nct", "reference-types")
 
 // A funcref represented as a function pointer with the funcref attribute
 // attached to the type, therefore SemaChecking will check for the right
 // return type.
 TARGET_BUILTIN(__builtin_wasm_ref_null_func, "i", "nct", "reference-types")
+
+// Check if the runtime type of a function pointer matches its static type. Used
+// to avoid "function signature mismatch" traps. Takes a function pointer, uses
+// table.get to look up the pointer in __indirect_function_table and then
+// ref.test to test the type.
+TARGET_BUILTIN(__builtin_wasm_test_function_pointer_signature, "i.", "nct", "gc")
 
 // Table builtins
 TARGET_BUILTIN(__builtin_wasm_table_set,  "viii", "t", "reference-types")

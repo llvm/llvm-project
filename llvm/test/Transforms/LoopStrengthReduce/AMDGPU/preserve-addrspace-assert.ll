@@ -4,8 +4,6 @@
 ; Test for assert resulting from inconsistent isLegalAddressingMode
 ; answers when the address space was dropped from the query.
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 %0 = type { i32, double, i32, float }
 
 
@@ -48,7 +46,7 @@ bb1:                                              ; preds = %bb17, %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb1
-  br i1 undef, label %bb8, label %bb5
+  br i1 false, label %bb8, label %bb5
 
 bb5:                                              ; preds = %bb4
   unreachable
@@ -79,11 +77,11 @@ define void @lsr_crash_preserve_addrspace_unknown_type2(ptr addrspace(5) %array,
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[ADD:%.*]], %[[FOR_INC:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[ARRAY2]], i32 [[J]]
-; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i8, ptr addrspace(3) [[ARRAY2]], i32 [[J]]
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(5) [[ARRAY]], i32 [[J]]
 ; CHECK-NEXT:    [[N8:%.*]] = load i8, ptr addrspace(5) [[T]], align 4
-; CHECK-NEXT:    [[N7:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[T]], i32 42
+; CHECK-NEXT:    [[N7:%.*]] = getelementptr i8, ptr addrspace(5) [[T]], i32 42
 ; CHECK-NEXT:    [[N9:%.*]] = load i8, ptr addrspace(5) [[N7]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[J]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN17:.*]], label %[[FOR_INC]]

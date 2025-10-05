@@ -9,7 +9,11 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(SandboxVectorizerTests
   DependencyGraphTest.cpp
-  InstrIntervalTest.cpp
+  InstrMapsTest.cpp
+  IntervalTest.cpp
   LegalityTest.cpp
-  RegionTest.cpp
-  )
+  SandboxVectorizerTest.cpp
+  SchedulerTest.cpp
+  SeedCollectorTest.cpp	
+  VecUtilsTest.cpp
+)

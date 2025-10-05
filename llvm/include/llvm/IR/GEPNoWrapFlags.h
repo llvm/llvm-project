@@ -74,6 +74,26 @@ public:
     return GEPNoWrapFlags(Flags & ~NUWFlag);
   }
 
+  /// Given (gep (gep p, x), y), determine the nowrap flags for (gep p, x+y).
+  GEPNoWrapFlags intersectForOffsetAdd(GEPNoWrapFlags Other) const {
+    GEPNoWrapFlags Res = *this & Other;
+    // Without inbounds, we could only preserve nusw if we know that x + y does
+    // not wrap.
+    if (!Res.isInBounds() && Res.hasNoUnsignedSignedWrap())
+      Res = Res.withoutNoUnsignedSignedWrap();
+    return Res;
+  }
+
+  /// Given (gep (gep p, x), y), determine the nowrap flags for
+  /// (gep (gep, p, y), x).
+  GEPNoWrapFlags intersectForReassociate(GEPNoWrapFlags Other) const {
+    GEPNoWrapFlags Res = *this & Other;
+    // We can only preserve inbounds and nusw if nuw is also set.
+    if (!Res.hasNoUnsignedWrap())
+      return none();
+    return Res;
+  }
+
   bool operator==(GEPNoWrapFlags Other) const { return Flags == Other.Flags; }
   bool operator!=(GEPNoWrapFlags Other) const { return !(*this == Other); }
 

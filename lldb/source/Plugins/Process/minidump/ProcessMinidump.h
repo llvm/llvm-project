@@ -53,11 +53,12 @@ public:
 
   Status DoLoadCore() override;
 
-  DynamicLoader *GetDynamicLoader() override { return nullptr; }
+  DynamicLoader *GetDynamicLoader() override;
+
+  // Returns AUXV structure found in the core file
+  lldb_private::DataExtractor GetAuxvData() override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
   Status DoDestroy() override;
 
@@ -75,8 +76,8 @@ public:
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegions(
-      lldb_private::MemoryRegionInfos &region_list) override;
+  Status
+  GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
@@ -114,6 +115,7 @@ private:
   std::optional<MemoryRegionInfos> m_memory_regions;
 
   void BuildMemoryRegions();
+  bool IsLLDBMinidump();
 };
 
 } // namespace minidump

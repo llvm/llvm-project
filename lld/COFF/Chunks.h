@@ -59,7 +59,8 @@ public:
     SectionKind,
     SectionECKind,
     OtherKind,
-    ImportThunkKind
+    ImportThunkKind,
+    ECExportThunkKind
   };
   Kind kind() const { return chunkKind; }
 
@@ -185,6 +186,15 @@ public:
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() const { return ""; }
 
+  // Verify that chunk relocations are within their ranges.
+  virtual bool verifyRanges() { return true; };
+
+  // If needed, extend the chunk to ensure all relocations are within the
+  // allowed ranges. Return the additional space required for the extension.
+  virtual uint32_t extendRanges() { return 0; };
+
+  virtual Defined *getEntryThunk() const { return nullptr; };
+
   static bool classof(const Chunk *c) { return c->kind() >= OtherKind; }
 
 protected:
@@ -245,8 +255,7 @@ public:
   size_t getSize() const { return header->SizeOfRawData; }
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *buf) const;
-
-  MachineTypes getMachine() const { return file->getMachineType(); }
+  MachineTypes getMachine() const;
 
   // Defend against unsorted relocations. This may be overly conservative.
   void sortRelocations();
@@ -620,12 +629,15 @@ private:
 class ImportThunkChunkARM64EC : public ImportThunkChunk {
 public:
   explicit ImportThunkChunkARM64EC(ImportFile *file);
-  size_t getSize() const override { return sizeof(importThunkARM64EC); };
+  size_t getSize() const override;
   MachineTypes getMachine() const override { return ARM64EC; }
   void writeTo(uint8_t *buf) const override;
+  bool verifyRanges() override;
+  uint32_t extendRanges() override;
 
-  Defined *exitThunk;
+  Defined *exitThunk = nullptr;
   Defined *sym = nullptr;
+  bool extended = false;
 
 private:
   ImportFile *file;
@@ -663,6 +675,26 @@ public:
 
 private:
   MachineTypes machine;
+};
+
+// A chunk used to guarantee the same address for a function in both views of
+// a hybrid image. Similar to RangeExtensionThunkARM64 chunks, it calls the
+// target symbol using a BR instruction. It also contains an entry thunk for EC
+// compatibility and additional ARM64X relocations that swap targets between
+// views.
+class SameAddressThunkARM64EC : public RangeExtensionThunkARM64 {
+public:
+  explicit SameAddressThunkARM64EC(Defined *t, Defined *hybridTarget,
+                                   Defined *entryThunk)
+      : RangeExtensionThunkARM64(ARM64EC, t), hybridTarget(hybridTarget),
+        entryThunk(entryThunk) {}
+
+  Defined *getEntryThunk() const override { return entryThunk; }
+  void setDynamicRelocs(COFFLinkerContext &ctx) const;
+
+private:
+  Defined *hybridTarget;
+  Defined *entryThunk;
 };
 
 // Windows-specific.
@@ -817,12 +849,68 @@ static const uint8_t ECExportThunkCode[] = {
 
 class ECExportThunkChunk : public NonSectionCodeChunk {
 public:
-  explicit ECExportThunkChunk(Defined *targetSym) : target(targetSym) {}
+  explicit ECExportThunkChunk(Defined *targetSym)
+      : NonSectionCodeChunk(ECExportThunkKind), target(targetSym) {}
+  static bool classof(const Chunk *c) { return c->kind() == ECExportThunkKind; }
+
   size_t getSize() const override { return sizeof(ECExportThunkCode); };
   void writeTo(uint8_t *buf) const override;
   MachineTypes getMachine() const override { return AMD64; }
 
   Defined *target;
+};
+
+// ARM64X relocation value, potentially relative to a symbol.
+class Arm64XRelocVal {
+public:
+  Arm64XRelocVal(uint64_t value = 0) : value(value) {}
+  Arm64XRelocVal(Defined *sym, int32_t offset = 0) : sym(sym), value(offset) {}
+  Arm64XRelocVal(const Chunk *chunk, int32_t offset = 0)
+      : chunk(chunk), value(offset) {}
+  uint64_t get() const;
+
+private:
+  Defined *sym = nullptr;
+  const Chunk *chunk = nullptr;
+  uint64_t value;
+};
+
+// ARM64X entry for dynamic relocations.
+class Arm64XDynamicRelocEntry {
+public:
+  Arm64XDynamicRelocEntry(llvm::COFF::Arm64XFixupType type, uint8_t size,
+                          Arm64XRelocVal offset, Arm64XRelocVal value)
+      : offset(offset), value(value), type(type), size(size) {}
+
+  size_t getSize() const;
+  void writeTo(uint8_t *buf) const;
+
+  Arm64XRelocVal offset;
+  Arm64XRelocVal value;
+
+private:
+  llvm::COFF::Arm64XFixupType type;
+  uint8_t size;
+};
+
+// Dynamic relocation chunk containing ARM64X relocations for the hybrid image.
+class DynamicRelocsChunk : public NonSectionChunk {
+public:
+  DynamicRelocsChunk() {}
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) const override;
+  void finalize();
+
+  void add(llvm::COFF::Arm64XFixupType type, uint8_t size,
+           Arm64XRelocVal offset, Arm64XRelocVal value = Arm64XRelocVal()) {
+    arm64xRelocs.emplace_back(type, size, offset, value);
+  }
+
+  void set(Arm64XRelocVal offset, Arm64XRelocVal value);
+
+private:
+  std::vector<Arm64XDynamicRelocEntry> arm64xRelocs;
+  size_t size;
 };
 
 // MinGW specific, for the "automatic import of variables from DLLs" feature.
@@ -847,16 +935,17 @@ private:
 // MinGW specific. A Chunk that contains one pointer-sized absolute value.
 class AbsolutePointerChunk : public NonSectionChunk {
 public:
-  AbsolutePointerChunk(COFFLinkerContext &ctx, uint64_t value)
-      : value(value), ctx(ctx) {
+  AbsolutePointerChunk(SymbolTable &symtab, uint64_t value)
+      : value(value), symtab(symtab) {
     setAlignment(getSize());
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override;
 
 private:
   uint64_t value;
-  COFFLinkerContext &ctx;
+  SymbolTable &symtab;
 };
 
 // Return true if this file has the hotpatch flag set to true in the S_COMPILE3
@@ -873,6 +962,8 @@ inline bool Chunk::isHotPatchable() const {
 inline Defined *Chunk::getEntryThunk() const {
   if (auto *c = dyn_cast<const SectionChunkEC>(this))
     return c->entryThunk;
+  if (auto *c = dyn_cast<const NonSectionChunk>(this))
+    return c->getEntryThunk();
   return nullptr;
 }
 
