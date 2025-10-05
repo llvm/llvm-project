@@ -264,14 +264,6 @@ class HashParameterMapping : public RecursiveASTVisitor<HashParameterMapping> {
 
   UnsignedOrNone OuterPackSubstIndex;
 
-  TemplateArgument getPackSubstitutedTemplateArgument(TemplateArgument Arg) {
-    assert(*SemaRef.ArgPackSubstIndex < Arg.pack_size());
-    Arg = Arg.pack_begin()[*SemaRef.ArgPackSubstIndex];
-    if (Arg.isPackExpansion())
-      Arg = Arg.getPackExpansionPattern();
-    return Arg;
-  }
-
   bool shouldVisitTemplateInstantiations() const { return true; }
 
 public:
@@ -294,7 +286,7 @@ public:
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
 
-      Arg = getPackSubstitutedTemplateArgument(Arg);
+      Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
     }
 
     UsedTemplateArgs.push_back(
@@ -312,7 +304,7 @@ public:
     if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
-      Arg = getPackSubstitutedTemplateArgument(Arg);
+      Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
     }
 
     UsedTemplateArgs.push_back(
@@ -325,8 +317,11 @@ public:
   }
 
   bool TraverseDecl(Decl *D) {
-    if (auto *VD = dyn_cast<ValueDecl>(D))
+    if (auto *VD = dyn_cast<ValueDecl>(D)) {
+      if (auto *Var = dyn_cast<VarDecl>(VD))
+        TraverseStmt(Var->getInit());
       return TraverseType(VD->getType());
+    }
 
     return inherited::TraverseDecl(D);
   }
@@ -361,6 +356,14 @@ public:
 
     Sema::ArgPackSubstIndexRAII _1(SemaRef, OuterPackSubstIndex);
     return inherited::TraverseTemplateArgument(Arg);
+  }
+
+  bool TraverseSizeOfPackExpr(SizeOfPackExpr *SOPE) {
+    return TraverseDecl(SOPE->getPack());
+  }
+
+  bool VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
+    return inherited::TraverseStmt(E->getReplacement());
   }
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
@@ -2083,8 +2086,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
                                         /*UpdateArgsWithConversions=*/false))
     return true;
   auto TemplateArgs = *MLTAL;
-  TemplateArgs.replaceOutermostTemplateArguments(
-      TemplateArgs.getAssociatedDecl(0).first, CTAI.SugaredConverted);
+  TemplateArgs.replaceOutermostTemplateArguments(CSE->getNamedConcept(),
+                                                 CTAI.SugaredConverted);
   return SubstituteParameterMappings(SemaRef, &TemplateArgs, ArgsAsWritten,
                                      InFoldExpr)
       .substitute(CC.getNormalizedConstraint());

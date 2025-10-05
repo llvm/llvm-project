@@ -428,9 +428,9 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   Language::ForEach([this, &result](Language *l) {
     if (l->SymbolNameFitsToLanguage(*this)) {
       result = l->GetLanguageType();
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return result;
 }
