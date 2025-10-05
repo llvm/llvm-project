@@ -239,6 +239,51 @@ def testIntegerAttr():
         print("default_get:", IntegerAttr.get(IntegerType.get_signless(32), 42))
 
 
+@run
+def testLargeIntegerAttr():
+    with Context() as ctx:
+        max_positive_64_val = 0x7fffffffffffffff
+        max_positive_64 = IntegerAttr.get(IntegerType.get_signed(64), max_positive_64_val)
+        # CHECK: max_positive_64: 9223372036854775807 : si64
+        print("max_positive_64:", max_positive_64)
+        assert(int(max_positive_64) == max_positive_64_val)
+
+        neg_one_64_val = -1
+        neg_one_64 = IntegerAttr.get(IntegerType.get_signed(64), neg_one_64_val)
+        # CHECK: neg_one_64: -1 : si64
+        print("neg_one_64:", neg_one_64)
+        assert(int(neg_one_64) == neg_one_64_val)
+
+        max_unsigned_64_val = 0xffffffffffffffff
+        max_unsigned_64 = IntegerAttr.get(IntegerType.get_signless(64), max_unsigned_64_val)
+        # CHECK: max_unsigned_64: -1 : i64
+        print("max_unsigned_64:", max_unsigned_64)
+        assert(int(max_unsigned_64) == max_unsigned_64_val)
+
+        random_64_val = 0x0123456789ABCDEF
+        random_64 = IntegerAttr.get(IntegerType.get_signless(64), random_64_val)
+        # CHECK: random_64: 81985529216486895 : i64
+        print("random_64:", random_64)
+        assert(int(random_64) == random_64_val)
+
+        max_unsigned_65_val = 0x1FFFFFFFFFFFFFFFF
+        max_unsigned_65 = IntegerAttr.get(IntegerType.get_unsigned(65), max_unsigned_65_val)
+        # CHECK: max_unsigned_65: 36893488147419103231 : ui65
+        print("max_unsigned_65:", max_unsigned_65)
+        assert(int(max_unsigned_65) == max_unsigned_65_val)
+
+        random_128_val = 0x0123456789ABCDEF0123456789ABCDEF
+        random_128 = IntegerAttr.get(IntegerType.get_signless(128), random_128_val)
+        # CHECK: random_128: 1512366075204170929049582354406559215 : i128
+        print("random_128:", random_128)
+        assert(int(random_128) == random_128_val)
+
+        random_92_val = 0x9ABCDEF0123456789ABCDEF
+        random_92 = IntegerAttr.get(IntegerType.get_signless(92), random_92_val)
+        # CHECK: random_92: -1958696259612506469130580497 : i92
+        print("random_92:", random_92)
+        assert(int(random_92) == random_92_val)
+
 # CHECK-LABEL: TEST: testBoolAttr
 @run
 def testBoolAttr():
