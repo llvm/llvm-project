@@ -2432,6 +2432,7 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
   if(ArgSz > 3) {
     LiteralIdx = 3;
   }
+
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (LiteralIdx > 0)
