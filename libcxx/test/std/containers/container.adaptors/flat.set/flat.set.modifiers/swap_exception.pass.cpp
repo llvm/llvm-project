@@ -41,8 +41,16 @@ void test_swap_exception_guarantee([[maybe_unused]] F&& swap_function) {
     m1.emplace(2);
     m2.emplace(3);
     m2.emplace(4);
-    // swap is noexcept
-    EXPECT_STD_TERMINATE([&] { swap_function(m1, m2); });
+
+    try {
+      swap_function(m1, m2);
+      assert(false);
+    } catch (int) {
+      check_invariant(m1);
+      check_invariant(m2);
+      LIBCPP_ASSERT(m1.size() == 0);
+      LIBCPP_ASSERT(m2.size() == 0);
+    }
   }
 }
 
