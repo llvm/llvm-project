@@ -5868,17 +5868,14 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
         /*Cases=*/&CasesB,
         /*OtherCases=*/&CasesA,
     };
-
   // Correctness: Cases to the default destination cannot be contiguous cases.
-  if (!ContiguousCases && !HasDefault && !CasesA.empty())
-    if (auto Result = findContiguousCases(SI->getCondition(), CasesA, CasesB,
-                                          DestA, DestB))
-      ContiguousCases = *Result;
+  else if (!HasDefault)
+    ContiguousCases =
+        findContiguousCases(SI->getCondition(), CasesA, CasesB, DestA, DestB);
 
   if (!ContiguousCases)
-    if (auto Result = findContiguousCases(SI->getCondition(), CasesB, CasesA,
-                                          DestB, DestA))
-      ContiguousCases = *Result;
+    ContiguousCases =
+        findContiguousCases(SI->getCondition(), CasesB, CasesA, DestB, DestA);
 
   if (!ContiguousCases)
     return false;
