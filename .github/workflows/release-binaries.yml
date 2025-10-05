@@ -248,7 +248,7 @@ jobs:
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
     - name: Shorten paths on windows
-      run:
+      run: |
        subst S: ${{ github.workspace }}
        subst B: ${{ steps.setup-stage.outputs.build-prefix }}
 
