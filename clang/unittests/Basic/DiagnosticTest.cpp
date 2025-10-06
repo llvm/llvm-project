@@ -314,6 +314,25 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
                                            locForFile("clang/lib/Sema/foo.h")));
 }
 
+TEST_F(SuppressionMappingTest, LongShortMatch) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*test/*
+  src:*lld/*=emit)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("test/my_test1.cpp")));
+
+  // FIXME: This is confusing.
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("lld/test/my_test2.cpp")));
+}
+
 TEST_F(SuppressionMappingTest, IsIgnored) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
