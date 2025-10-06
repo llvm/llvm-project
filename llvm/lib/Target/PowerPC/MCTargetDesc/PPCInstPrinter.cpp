@@ -430,10 +430,10 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
     printOperand(MI, OpNo, STI, O);
 }
 
-template<uint64_t N>
+template <uint64_t N>
 void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   if (MI->getOperand(OpNo).isImm()) {
     int64_t Value = MI->getOperand(OpNo).getImm();
     assert(isInt<N>(Value) && "Invalid imm argument!");

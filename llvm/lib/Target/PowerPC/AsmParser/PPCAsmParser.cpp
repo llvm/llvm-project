@@ -366,8 +366,7 @@ public:
   bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
   bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
 
-  template <uint64_t N>
-  bool isSImmExpr() const {
+  template <uint64_t N> bool isSImmExpr() const {
     // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
     // ContextImmediate is needed.
     return Kind == Expression || isSImm<N>();
