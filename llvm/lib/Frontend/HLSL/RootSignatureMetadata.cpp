@@ -739,8 +739,11 @@ Error MetadataParser::validateRootSignature(
                                                 Descriptor.RegisterSpace));
 
       if (RSD.Version > 1) {
-        if (!hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
-                                                     Descriptor.Flags))
+        bool IsValidFlag =
+            dxbc::isValidRootDesciptorFlags(Descriptor.Flags) &&
+            hlsl::rootsig::verifyRootDescriptorFlag(
+                RSD.Version, dxbc::RootDescriptorFlags(Descriptor.Flags));
+        if (!IsValidFlag)
           DeferredErrs = joinErrors(
               std::move(DeferredErrs),
               createRSError(RSErrorKind::Validation,
@@ -764,9 +767,11 @@ Error MetadataParser::validateRootSignature(
                                                   StringRef("NumDescriptors"),
                                                   Range.NumDescriptors));
 
-        if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType,
-                dxbc::DescriptorRangeFlags(Range.Flags)))
+        bool IsValidFlag = dxbc::isValidDescriptorRangeFlags(Range.Flags) &&
+                           hlsl::rootsig::verifyDescriptorRangeFlag(
+                               RSD.Version, Range.RangeType,
+                               dxbc::DescriptorRangeFlags(Range.Flags));
+        if (!IsValidFlag)
           DeferredErrs = joinErrors(std::move(DeferredErrs),
                                     createRSError(RSErrorKind::Validation,
                                                   StringRef("DescriptorFlag"),
@@ -818,12 +823,15 @@ Error MetadataParser::validateRootSignature(
                                               Sampler.ShaderRegister));
 
     if (!hlsl::rootsig::verifyRegisterSpace(Sampler.RegisterSpace))
-      DeferredErrs = joinErrors(std::move(DeferredErrs),
-                                createRSError(RSErrorKind::Validation,
-                                              StringRef("RegisterSpace"),
-                                              Sampler.RegisterSpace));
-
-    if (!hlsl::rootsig::verifyStaticSamplerFlags(RSD.Version, Sampler.Flags))
+      DeferredErrs =
+          joinErrors(std::move(DeferredErrs),
+                     createRSError(RSErrorKind::Validation, StringRef(
+                         "RegisterSpace"), Sampler.RegisterSpace));
+    bool IsValidFlag =
+        dxbc::isValidStaticSamplerFlags(Sampler.Flags) &&
+        hlsl::rootsig::verifyStaticSamplerFlags(
+            RSD.Version, dxbc::StaticSamplerFlags(Sampler.Flags));
+    if (!IsValidFlag)
       DeferredErrs = joinErrors(std::move(DeferredErrs),
                                 createRSError(RSErrorKind::Validation,
                                               StringRef("Static Sampler Flag"),

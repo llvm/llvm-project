@@ -292,6 +292,23 @@ template <typename T> [[nodiscard]] int bit_width(T Value) {
   return std::numeric_limits<T>::digits - llvm::countl_zero(Value);
 }
 
+/// Returns the number of bits needed to represent Value if Value is nonzero.
+/// Returns 0 otherwise.
+///
+/// A constexpr version of bit_width.
+///
+/// Ex. bit_width_constexpr(5) == 3.
+template <typename T> [[nodiscard]] constexpr int bit_width_constexpr(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  int Width = 0;
+  while (Value > 0) {
+    Value >>= 1;
+    ++Width;
+  }
+  return Width;
+}
+
 /// Returns the largest integral power of two no greater than Value if Value is
 /// nonzero.  Returns 0 otherwise.
 ///
