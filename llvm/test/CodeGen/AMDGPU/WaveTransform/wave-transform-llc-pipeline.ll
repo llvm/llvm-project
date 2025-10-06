@@ -246,21 +246,21 @@
 ; GCN-O3-NEXT:    AMDGPU Preload Kernel Arguments
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      AMDGPU Lower Kernel Arguments
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      CodeGen Prepare
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:      Function Alias Analysis Results
+; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Scalar Evolution Analysis
+; GCN-O3-NEXT:      GPU Load and Store Vectorizer
 ; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O3-NEXT:    AMDGPU lower intrinsics
 ; GCN-O3-NEXT:    CallGraph Construction
 ; GCN-O3-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
-; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        CodeGen Prepare
-; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Scalar Evolution Analysis
-; GCN-O3-NEXT:        GPU Load and Store Vectorizer
 ; GCN-O3-NEXT:        Lazy Value Information Analysis
 ; GCN-O3-NEXT:        Lower SwitchInst's to branches
 ; GCN-O3-NEXT:        Lower invoke and unwind, for unwindless code generators

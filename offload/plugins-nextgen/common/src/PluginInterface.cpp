@@ -9,7 +9,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginInterface.h"
-#include "OpenMP/OMPT/OmptCommonDefs.h"
 
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
@@ -23,13 +22,6 @@
 #include "omptarget.h"
 #include "print_tracing.h"
 #include "trace.h"
-
-#ifdef OMPT_SUPPORT
-#include "OmptDeviceTracing.h"
-#include "OpenMP/OMPT/Callback.h"
-#include "OpenMP/OMPT/Interface.h"
-#include "omp-tools.h"
-#endif
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -47,29 +39,6 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 using namespace error;
-
-#ifdef OMPT_SUPPORT
-using namespace ompt;
-extern void ompt::setOmptTimestamp(uint64_t Start, uint64_t End);
-extern void ompt::setOmptGrantedNumTeams(uint64_t NumTeams);
-
-extern uint64_t getSystemTimestampInNs();
-
-/// RAII used for timing certain plugin functionality and transferring the
-/// information to libomptarget
-struct OmptTimestampRAII {
-  OmptTimestampRAII() { OMPT_IF_TRACING_ENABLED(setStart();); }
-  ~OmptTimestampRAII() { OMPT_IF_ENABLED(setTimestamp();); }
-
-private:
-  uint64_t StartTime = 0;
-  void setStart() { StartTime = getSystemTimestampInNs(); }
-  void setTimestamp() {
-    uint64_t EndTime = getSystemTimestampInNs();
-    ompt::setOmptTimestamp(StartTime, EndTime);
-  }
-};
-#endif
 
 namespace llvm::omp::target::plugin {
 // Used for kernel tracing implementation
@@ -106,11 +75,17 @@ private:
   };
   llvm::SmallVector<GlobalEntry> GlobalEntries{};
 
-  void *suggestAddress(uint64_t MaxMemoryAllocation) {
+  Expected<void *> suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
-    void *Addr =
+    auto AddrOrErr =
         Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
-    Device->free(Addr);
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+
+    void *Addr = *AddrOrErr;
+    if (auto Err = Device->free(Addr))
+      return std::move(Err);
+
     // Align Address to MaxMemoryAllocation
     Addr = (void *)utils::alignPtr((Addr), MaxMemoryAllocation);
     return Addr;
@@ -119,8 +94,12 @@ private:
   Error preAllocateVAMemory(uint64_t MaxMemoryAllocation, void *VAddr) {
     size_t ASize = MaxMemoryAllocation;
 
-    if (!VAddr && isRecording())
-      VAddr = suggestAddress(MaxMemoryAllocation);
+    if (!VAddr && isRecording()) {
+      auto VAddrOrErr = suggestAddress(MaxMemoryAllocation);
+      if (!VAddrOrErr)
+        return VAddrOrErr.takeError();
+      VAddr = *VAddrOrErr;
+    }
 
     DP("Request %ld bytes allocated at %p\n", MaxMemoryAllocation, VAddr);
 
@@ -150,8 +129,11 @@ private:
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
     for (TotalSize = MAX_MEMORY_ALLOCATION; TotalSize > 0; TotalSize -= STEP) {
-      MemoryStart =
+      auto MemoryStartOrErr =
           Device->allocate(TotalSize, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
+      if (!MemoryStartOrErr)
+        return MemoryStartOrErr.takeError();
+      MemoryStart = *MemoryStartOrErr;
       if (MemoryStart)
         break;
     }
@@ -385,13 +367,15 @@ public:
     return Plugin::success();
   }
 
-  void deinit() {
+  Error deinit() {
     if (UsedVAMap) {
       if (auto Err = Device->memoryVAUnMap(MemoryStart, TotalSize))
-        report_fatal_error("Error on releasing virtual memory space");
+        return Err;
     } else {
-      Device->free(MemoryStart);
+      if (auto Err = Device->free(MemoryStart))
+        return Err;
     }
+    return Plugin::success();
   }
 };
 } // namespace llvm::omp::target::plugin
@@ -724,16 +708,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                                  NumBlocks, MultiDeviceLB, MultiDeviceUB))
     return Err;
 
-  OMPT_IF_TRACING_ENABLED(if (llvm::omp::target::ompt::isTracedDevice(
-                                  getDeviceId(&GenericDevice))) {
-    __tgt_async_info *AI = AsyncInfoWrapper;
-    if (AI->ProfilerData != nullptr) {
-      // Set number of granted teams for OMPT
-      setOmptGrantedNumTeams(NumBlocks[0]);
-      reinterpret_cast<OmptEventInfoTy *>(AI->ProfilerData)->NumTeams =
-          NumBlocks[0];
-    }
-  });
+  if (GenericDevice.Plugin.getProfiler())
+    GenericDevice.Plugin.getProfiler()->handlePreKernelLaunch(
+        &GenericDevice, NumBlocks, AsyncInfoWrapper);
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     LaunchParams, AsyncInfoWrapper);
@@ -898,50 +875,18 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMPX_KernelDurationTracing("LIBOMPTARGET_KERNEL_EXE_TIME", false),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this), RPCServer(nullptr), KernelRunRecords(nullptr) {
-#ifdef OMPT_SUPPORT
-  OmptInitialized.store(false);
-  // Bind the callbacks to this device's member functions
-#define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
-    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
-                               ((ompt_callback_t *)&(Name##_fn)));             \
-    DP("class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));           \
-  }
-
-  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
-#undef bindOmptCallback
-
-#define bindOmptTracingFunction(FunctionName)                                  \
-  if (ompt::Initialized && ompt::lookupDeviceTracingFn) {                      \
-    FunctionName##_fn = ompt::lookupDeviceTracingFn(#FunctionName);            \
-    DP("device tracing fn bound %s=%p\n", #FunctionName,                       \
-       ((void *)(uint64_t)FunctionName##_fn));                                 \
-  }
-
-  FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(bindOmptTracingFunction);
-#undef bindOmptTracingFunction
-
-#endif
-}
+      PinnedAllocs(*this), RPCServer(nullptr), KernelRunRecords(nullptr) {}
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
+  auto Profiler = Plugin.getProfiler();
+
   if (auto Err = initImpl(Plugin))
     return Err;
 
-#ifdef OMPT_SUPPORT
-  auto DevicePtr = reinterpret_cast<ompt_device_t *>(this);
-  ompt::setDeviceId(DevicePtr, Plugin.getUserId(DeviceId));
-  if (ompt::Initialized) {
-    bool ExpectedStatus = false;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
-                          /*type=*/getComputeUnitKind().c_str(),
-                          /*device=*/DevicePtr,
-                          /*lookup=*/ompt::lookupDeviceTracingFn,
-                          /*documentation=*/nullptr);
-  }
-#endif
+  if (Profiler)
+    // Invokes profiler backend to dispatch event. Required here to enable
+    // capture hardware-time slope data
+    Profiler->handleInit(this, &Plugin);
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -1055,7 +1000,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   RecordReplayTy &RecordReplay = Plugin.getRecordReplay();
   if (RecordReplay.isRecordingOrReplaying())
-    RecordReplay.deinit();
+    if (auto Err = RecordReplay.deinit())
+      return Err;
 
   if (RPCServer)
     if (auto Err = RPCServer->deinitDevice(*this))
@@ -1069,17 +1015,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     }
   }
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = true;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
-  }
-  ompt::removeDeviceId(reinterpret_cast<ompt_device_t *>(this));
-#endif
+  if (auto Profiler = Plugin.getProfiler(); Profiler)
+    Profiler->handleDeinit(this, &Plugin);
 
   return deinitImpl();
 }
+
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
   DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage.bytes_begin()));
@@ -1122,17 +1063,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    size_t Bytes = InputTgtImage.size();
-    performOmptCallback(
-        device_load, Plugin.getUserId(DeviceId),
-        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes,
-        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-  }
-#endif
+  if (auto Profiler = Plugin.getProfiler(); Profiler)
+    Profiler->handleLoadBinary(this, &Plugin, InputTgtImage);
 
   // Call any global constructors present on the device.
   if (auto Err = callGlobalConstructors(Plugin, *Image))
@@ -1514,6 +1446,11 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
+  // Uses RAII to get timing for this operation through the DataAllocTimer
+  // object
+  auto DataAllocTimer =
+      Plugin.getProfiler()->getScopedDataAllocTimer(this, HostPtr, Size);
+
   void *Alloc = nullptr;
 
   if (Plugin.getRecordReplay().isRecordingOrReplaying())
@@ -1523,7 +1460,10 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
-      Alloc = MemoryManager->allocate(Size, HostPtr);
+      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
+      Alloc = *AllocOrErr;
       if (!Alloc)
         return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                              "failed to allocate from memory manager");
@@ -1531,11 +1471,15 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     }
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
-  case TARGET_ALLOC_SHARED:
-    Alloc = allocate(Size, HostPtr, Kind);
+  case TARGET_ALLOC_SHARED: {
+    auto AllocOrErr = allocate(Size, HostPtr, Kind);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    Alloc = *AllocOrErr;
     if (!Alloc)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate from device allocator");
+  }
   }
 
   // Report error if the memory manager or the device allocator did not return
@@ -1573,6 +1517,10 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
+
+  auto DataDeleteTimer =
+      Plugin.getProfiler()->getScopedDataDeleteTimer(this, TgtPtr);
+
   // Free is a noop when recording or replaying.
   if (Plugin.getRecordReplay().isRecordingOrReplaying())
     return Plugin::success();
@@ -1608,28 +1556,19 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
 #undef DEALLOCATION_ERROR
   }
 
-  int Res;
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
-      Res = MemoryManager->free(TgtPtr);
-      if (Res)
-        return Plugin::error(
-            ErrorCode::OUT_OF_RESOURCES,
-            "failure to deallocate device pointer %p via memory manager",
-            TgtPtr);
+      if (auto Err = MemoryManager->free(TgtPtr))
+        return Err;
       break;
     }
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
   case TARGET_ALLOC_SHARED:
-    Res = free(TgtPtr, Kind);
-    if (Res)
-      return Plugin::error(
-          ErrorCode::UNKNOWN,
-          "failure to deallocate device pointer %p via device deallocator",
-          TgtPtr);
+    if (auto Err = free(TgtPtr, Kind))
+      return Err;
   }
 
   // Unregister deallocated pinned memory buffer if the type is host memory.
@@ -1877,7 +1816,13 @@ void *GenericDeviceTy::getFree_ArgBuf(size_t sz) {
     }
   }
   if (!found_ptr) {
-    found_ptr = this->allocate(sz, &found_ptr, TARGET_ALLOC_SHARED);
+    auto AllocOrErr = this->allocate(sz, &found_ptr, TARGET_ALLOC_SHARED);
+    if (!AllocOrErr) {
+      REPORT("Could not get SHARED mem for Arg Buffer: %s\n",
+             toString(AllocOrErr.takeError()).data());
+      return nullptr;
+    }
+    found_ptr = *AllocOrErr;
     assert(found_ptr && "Could not get SHARED mem for Arg Buffer\n");
     ArgBufEntryTy *new_entry_ptr = new ArgBufEntryTy;
     new_entry_ptr->Size = sz;
@@ -1901,7 +1846,7 @@ void GenericDeviceTy::moveBusyToFree_ArgBuf(void *ptr) {
 }
 void GenericDeviceTy::clear_ArgBufs() {
   for (auto entry : ArgBufEntries) {
-    this->free(entry->Addr, TARGET_ALLOC_SHARED);
+    consumeError(this->free(entry->Addr, TARGET_ALLOC_SHARED));
     delete entry;
   }
   ArgBufEntries.clear();
@@ -2036,85 +1981,68 @@ int32_t GenericPluginTy::supports_empty_images() {
   return supportsEmptyImages();
 }
 
-int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
-  auto T = logger::log<int32_t>(__func__, Image);
-  auto R = [&]() {
-    StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                     utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
-
-    auto HandleError = [&](Error Err) -> bool {
-      [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-      DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
-      return false;
-    };
-    switch (identify_magic(Buffer)) {
-    case file_magic::elf:
-    case file_magic::elf_relocatable:
-    case file_magic::elf_executable:
-    case file_magic::elf_shared_object:
-    case file_magic::elf_core: {
-      auto MatchOrErr = checkELFImage(Buffer);
-      if (Error Err = MatchOrErr.takeError())
-        return HandleError(std::move(Err));
-      return *MatchOrErr;
-    }
-    case file_magic::bitcode: {
-      auto MatchOrErr = checkBitcodeImage(Buffer);
-      if (Error Err = MatchOrErr.takeError())
-        return HandleError(std::move(Err));
-      return *MatchOrErr;
-    }
-    default:
-      return false;
-    }
-  }();
-  T.res(R);
-  return R;
+int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure to check validity of image %p: %s", Image.data(),
+       ErrStr.c_str());
+    return false;
+  };
+  switch (identify_magic(Image)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = checkELFImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  case file_magic::bitcode: {
+    auto MatchOrErr = checkBitcodeImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
+    return false;
+  }
 }
 
-int32_t GenericPluginTy::is_device_compatible(int32_t DeviceId,
-                                              __tgt_device_image *Image) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, Image);
-  auto R = [&]() {
-    StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                     utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
-
-    auto HandleError = [&](Error Err) -> bool {
-      [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-      DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
+int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure to check validity of image %p: %s", Image.data(),
+       ErrStr.c_str());
+    return false;
+  };
+  switch (identify_magic(Image)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = checkELFImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    if (!*MatchOrErr)
       return false;
-    };
-    switch (identify_magic(Buffer)) {
-    case file_magic::elf:
-    case file_magic::elf_relocatable:
-    case file_magic::elf_executable:
-    case file_magic::elf_shared_object:
-    case file_magic::elf_core: {
-      auto MatchOrErr = checkELFImage(Buffer);
-      if (Error Err = MatchOrErr.takeError())
-        return HandleError(std::move(Err));
-      if (!*MatchOrErr)
-        return false;
-
-      // Perform plugin-dependent checks for the specific architecture if
-      // needed.
-      auto CompatibleOrErr = isELFCompatible(DeviceId, Buffer);
-      if (Error Err = CompatibleOrErr.takeError())
-        return HandleError(std::move(Err));
-      return *CompatibleOrErr;
-    }
-    case file_magic::bitcode: {
-      auto MatchOrErr = checkBitcodeImage(Buffer);
-      if (Error Err = MatchOrErr.takeError())
-        return HandleError(std::move(Err));
-      return *MatchOrErr;
-    }
-    default:
-      return false;
-    }
-  }();
-  T.res(R);
-  return R;
+    // Perform plugin-dependent checks for the specific architecture if needed.
+    auto CompatibleOrErr = isELFCompatible(DeviceId, Image);
+    if (Error Err = CompatibleOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *CompatibleOrErr;
+  }
+  case file_magic::bitcode: {
+    auto MatchOrErr = checkBitcodeImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
+    return false;
+  }
 }
 
 int32_t GenericPluginTy::is_device_initialized(int32_t DeviceId) const {
@@ -2258,12 +2186,8 @@ void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind) {
   auto T = logger::log<void *>(__func__, DeviceId, Size, HostPtr, Kind);
   auto R = [&]() -> void * {
-#ifdef OMPT_SUPPORT
-    // If OMPT is enabled, collect start and end times for the allocation.
-    OmptTimestampRAII Ts;
-#endif
-    auto AllocOrErr =
-        getDevice(DeviceId).dataAlloc(Size, HostPtr, (TargetAllocTy)Kind);
+    auto &Dev = getDevice(DeviceId);
+    auto AllocOrErr = Dev.dataAlloc(Size, HostPtr, (TargetAllocTy)Kind);
     if (!AllocOrErr) {
       auto Err = AllocOrErr.takeError();
       REPORT("Failure to allocate device memory: %s\n",
@@ -2282,11 +2206,8 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
                                      int32_t Kind) {
   auto T = logger::log<int32_t>(__func__, DeviceId, TgtPtr, Kind);
   auto R = [&]() {
-#ifdef OMPT_SUPPORT
-    // If OMPT is enabled, collect start and end times for the data delete.
-    OmptTimestampRAII Ts;
-#endif
-    auto Err = getDevice(DeviceId).dataDelete(TgtPtr, (TargetAllocTy)Kind);
+    auto &Dev = getDevice(DeviceId);
+    auto Err = Dev.dataDelete(TgtPtr, (TargetAllocTy)Kind);
     if (Err) {
       REPORT("Failure to deallocate device pointer %p: %s\n", TgtPtr,
              toString(std::move(Err)).data());

@@ -25,6 +25,7 @@
 #include <variant>
 
 #ifdef OMPT_SUPPORT
+#include "OpenMP/OMPT/OmptEventInfoTy.h"
 #include <omp-tools.h>
 #endif
 #include <mutex>
@@ -94,9 +95,6 @@ struct __tgt_async_info {
   /// Use for sync interface. When false => synchronous execution
   bool ExecAsync = true;
   /// Maintain the actal data for OMPT.
-  /// TODO: Moving forward, this should become a void* to not expose OMPT data
-  /// type in general types
-  // llvm::omp::target::ompt::OmptEventInfoTy *OmptEventInfo = nullptr;
   void *ProfilerData = nullptr;
 };
 

@@ -149,7 +149,5 @@ set(OFFLOAD_TESTS_FORCE_NVPTX_ARCH "" CACHE STRING
 set(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH "" CACHE STRING
   "Force building of AMDGPU device code for Offload unit tests with the given arch, e.g. gfx1030")
 
-# FIXME: Re-enable once OMPT design allows
-# add_subdirectory(Plugins)
-# add_subdirectory(OffloadAPI)
+add_subdirectory(OffloadAPI)
 add_subdirectory(Conformance)

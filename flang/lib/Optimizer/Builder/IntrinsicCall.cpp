@@ -46,7 +46,6 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
-#include "flang/Support/LangOptions.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -6995,7 +6994,8 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
   auto fastmathFlags = mlir::arith::FastMathFlags::contract;
   auto fastmathAttr =
       mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
-  mlir::Value divResult = mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
+  mlir::Value divResult =
+      mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
   mlir::Type intType = builder.getIntegerType(
       a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
   mlir::Value intResult = builder.createConvert(loc, intType, divResult);
@@ -7010,9 +7010,11 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
-  bool useFastRealMod = false;
-  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod"))
-    useFastRealMod = attr.getValue();
+  bool dontUseFastRealMod = false;
+  bool canUseApprox = mlir::arith::bitEnumContainsAny(
+      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
+    dontUseFastRealMod = attr.getValue();
 
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
@@ -7025,11 +7027,9 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  if (useFastRealMod) {
-    // If fast MOD for REAL has been requested, generate less precise,
-    // but faster code directly.
-    assert(resultType.isFloat() &&
-           "non floating-point type hit for fast real MOD");
+  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+    // Treat MOD as an approximate function and code-gen inline code
+    // instead of calling into the Fortran runtime library.
     return builder.createConvert(loc, resultType,
                                  genFastMod(builder, loc, args[0], args[1]));
   } else {

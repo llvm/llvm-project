@@ -24,6 +24,7 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
+  src/GenericProfiler.cpp
   ${emissary_sources}
 )
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
@@ -47,9 +48,25 @@ if(OFFLOAD_ENABLE_EMISSARY_APIS AND LIBOMPTARGET_BUILD_DEVICE_FORTRT)
   target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
   -L${CMAKE_BINARY_DIR}/../../lib  -L${CMAKE_INSTALL_PREFIX}/lib)
 endif()
+
 if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
-  target_sources(PluginCommon PRIVATE OMPT/OmptTracing.cpp)
-  target_include_directories(PluginCommon PUBLIC OMPT)
+  add_library(PluginOmpt STATIC OMPT/OmptTracing.cpp OMPT/OmptProfiler.cpp)
+  target_include_directories(PluginOmpt PUBLIC
+    OMPT
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+    ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+    ${LIBOMPTARGET_INCLUDE_DIR}
+  )
+  target_compile_options(PluginOmpt PUBLIC ${offload_compile_flags} -fPIC )
+  target_link_options(PluginOmpt PUBLIC ${offload_link_flags})
+  target_compile_definitions(PluginOmpt PRIVATE
+    TARGET_NAME="Profiler"
+    DEBUG_PREFIX="OMPT"
+  )
+  add_dependencies(PluginOmpt PluginErrcodes)
+
 endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
