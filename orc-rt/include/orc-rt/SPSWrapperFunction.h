@@ -37,12 +37,12 @@ private:
     return Arg;
   }
 
-  static SPSSerializableError toSerializable(Error Err) noexcept {
+  static SPSSerializableError toSerializable(Error Err) {
     return SPSSerializableError(std::move(Err));
   }
 
   template <typename T>
-  static SPSSerializableExpected<T> toSerializable(Expected<T> Arg) noexcept {
+  static SPSSerializableExpected<T> toSerializable(Expected<T> Arg) {
     return SPSSerializableExpected<T>(std::move(Arg));
   }
 
@@ -61,12 +61,12 @@ private:
     return std::forward<T>(Arg);
   }
 
-  static Error fromSerializable(SPSSerializableError Err) noexcept {
+  static Error fromSerializable(SPSSerializableError Err) {
     return Err.toError();
   }
 
   template <typename T>
-  static Expected<T> fromSerializable(SPSSerializableExpected<T> Val) noexcept {
+  static Expected<T> fromSerializable(SPSSerializableExpected<T> Val) {
     return Val.toExpected();
   }
 
