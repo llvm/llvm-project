@@ -18454,12 +18454,12 @@ SDValue DAGCombiner::visitFMULADD(SDNode *N) {
   SDLoc DL(N);
 
   // Constant fold FMULADD.
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FMULADD, DL, VT, {N0, N1, N2}))
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(ISD::FMULADD, DL, VT, {N0, N1, N2}))
     return C;
 
   return SDValue();
 }
-
 
 // Combine multiple FDIVs with the same divisor into multiple FMULs by the
 // reciprocal.
