@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple thumbv8m.base-eabi  -fsyntax-only -ffreestanding -x c++ %s -verify -mcmse
 // expected-no-diagnostics
 
+#include "system_reserved_names.h"
+
 #include <arm_cmse.h>
 
 typedef void (*callback_t)(void);
