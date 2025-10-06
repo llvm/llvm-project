@@ -356,8 +356,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(APInt Val, MachineInstr &I,
   return createConstInt(CI, Val, I, SpvType, TII, ZeroAsNull);
 }
 
-Register SPIRVGlobalRegistry::createConstInt(const Constant *CI,
-                                             APInt Val,
+Register SPIRVGlobalRegistry::createConstInt(const Constant *CI, APInt Val,
                                              MachineInstr &I,
                                              SPIRVType *SpvType,
                                              const SPIRVInstrInfo &TII,
@@ -492,8 +491,9 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-  return getOrCreateConstInt(APInt(BitWidth, Val->getUniqueInteger().getZExtValue()), I,
-                             SpvBaseType, TII, ZeroAsNull);
+  return getOrCreateConstInt(
+      APInt(BitWidth, Val->getUniqueInteger().getZExtValue()), I, SpvBaseType,
+      TII, ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
