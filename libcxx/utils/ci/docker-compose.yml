@@ -3,7 +3,7 @@ x-versions: &compiler_versions
   LLVM_HEAD_VERSION: 22
 
 x-image-versions: &image_versions
-  BASE_IMAGE: ubuntu:jammy
+  BASE_IMAGE: docker.io/library/ubuntu:jammy
   ACTIONS_BASE_IMAGE: ghcr.io/llvm/libcxx-linux-builder-base:77cb0980bcc2675b27d08141526939423fa0be76
 
 services:
@@ -33,7 +33,7 @@ services:
       dockerfile: Dockerfile
       target: android-buildkite-builder
       args:
-        BASE_IMAGE: ubuntu:noble
+        BASE_IMAGE: docker.io/library/ubuntu:noble
         ANDROID_CLANG_VERSION: r563880
         ANDROID_CLANG_PREBUILTS_COMMIT: 6ae4184bb8706f9731569b9a0a82be3fcdcb951c
         ANDROID_SYSROOT_COMMIT: f8b85cc5262c6e5cbc9a92c1bab2b18b32a4c63f
