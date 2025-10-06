@@ -40,6 +40,9 @@
 // AddressSanitizer
 SANITIZER("address", Address)
 
+// IRSanitizer
+SANITIZER("ir", IR)
+
 // Requires AddressSanitizer
 SANITIZER("pointer-compare", PointerCompare)
 
