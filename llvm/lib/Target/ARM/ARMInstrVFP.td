@@ -1499,6 +1499,7 @@ class AVConv1IHs_Encode<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3,
   let hasSideEffects = 0;
 }
 
+let mayRaiseFPException = 1 in 
 def VSITOD : AVConv1IDs_Encode<0b11101, 0b11, 0b1000, 0b1011,
                                (outs DPR:$Dd), (ins SPR:$Sm),
                                IIC_fpCVTID, "vcvt", ".f64.s32\t$Dd, $Sm",
@@ -1515,6 +1516,7 @@ let Predicates=[HasVFP2, HasDPVFP] in {
                (VSITOD (VLDRS addrmode5:$a))>;
 }
 
+let mayRaiseFPException = 1 in 
 def VSITOS : AVConv1InSs_Encode<0b11101, 0b11, 0b1000, 0b1010,
                                 (outs SPR:$Sd),(ins SPR:$Sm),
                                 IIC_fpCVTIS, "vcvt", ".f32.s32\t$Sd, $Sm",
@@ -1533,6 +1535,7 @@ def : VFPNoNEONPat<(f32 (sint_to_fp GPR:$a)),
 def : VFPNoNEONPat<(f32 (sint_to_fp (i32 (alignedload32 addrmode5:$a)))),
                    (VSITOS (VLDRS addrmode5:$a))>;
 
+let mayRaiseFPException = 1 in 
 def VSITOH : AVConv1IHs_Encode<0b11101, 0b11, 0b1000, 0b1001,
                                (outs HPR:$Sd), (ins SPR:$Sm),
                                IIC_fpCVTIH, "vcvt", ".f16.s32\t$Sd, $Sm",
@@ -1545,6 +1548,7 @@ def VSITOH : AVConv1IHs_Encode<0b11101, 0b11, 0b1000, 0b1001,
 def : VFPNoNEONPat<(f16 (sint_to_fp GPR:$a)),
                    (VSITOH (COPY_TO_REGCLASS GPR:$a, SPR))>;
 
+let mayRaiseFPException = 1 in 
 def VUITOD : AVConv1IDs_Encode<0b11101, 0b11, 0b1000, 0b1011,
                                (outs DPR:$Dd), (ins SPR:$Sm),
                                IIC_fpCVTID, "vcvt", ".f64.u32\t$Dd, $Sm",
@@ -1561,6 +1565,7 @@ let Predicates=[HasVFP2, HasDPVFP] in {
                (VUITOD (VLDRS addrmode5:$a))>;
 }
 
+let mayRaiseFPException = 1 in 
 def VUITOS : AVConv1InSs_Encode<0b11101, 0b11, 0b1000, 0b1010,
                                 (outs SPR:$Sd), (ins SPR:$Sm),
                                 IIC_fpCVTIS, "vcvt", ".f32.u32\t$Sd, $Sm",
@@ -1579,6 +1584,7 @@ def : VFPNoNEONPat<(f32 (uint_to_fp GPR:$a)),
 def : VFPNoNEONPat<(f32 (uint_to_fp (i32 (alignedload32 addrmode5:$a)))),
                    (VUITOS (VLDRS addrmode5:$a))>;
 
+let mayRaiseFPException = 1 in 
 def VUITOH : AVConv1IHs_Encode<0b11101, 0b11, 0b1000, 0b1001,
                                 (outs HPR:$Sd), (ins SPR:$Sm),
                                 IIC_fpCVTIH, "vcvt", ".f16.u32\t$Sd, $Sm",
@@ -1826,7 +1832,7 @@ def VTOUIRH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
   let Inst{7} = 0; // Z bit
   let isUnpredicable = 1;
 }
-}
+} // mayRaiseFPException = 1, Uses = [FPSCR_RM]
 
 // v8.3-a Javascript Convert to Signed fixed-point
 def VJCVT : AVConv1IsD_Encode<0b11101, 0b11, 0b1001, 0b1011,
@@ -1844,7 +1850,7 @@ def VJCVT : AVConv1IsD_Encode<0b11101, 0b11, 0b1001, 0b1011,
 //   S32 (U=0, sx=1) -> SL
 //   U32 (U=1, sx=1) -> UL
 
-let Constraints = "$a = $dst" in {
+let Constraints = "$a = $dst", mayRaiseFPException = 1 in {
 
 // FP to Fixed-Point:
 
@@ -1875,7 +1881,7 @@ class AVConv1XInsD_Encode<bits<5> op1, bits<2> op2, bits<4> op3, bits<4> op4,
   let Predicates = [HasVFP2, HasDPVFP];
 }
 
-let isUnpredicable = 1, mayRaiseFPException = 1 in {
+let isUnpredicable = 1 in {
 
 def VTOSHH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1001, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
@@ -1901,9 +1907,8 @@ def VTOULH : AVConv1XInsS_Encode<0b11101, 0b11, 0b1111, 0b1001, 1,
              Requires<[HasFullFP16]>,
              Sched<[WriteFPCVT]>;
 
-} // End of 'let isUnpredicable = 1, mayRaiseFPException = 1 in'
+} // End of 'let isUnpredicable = 1 in'
 
-let mayRaiseFPException = 1 in {
 def VTOSHS : AVConv1XInsS_Encode<0b11101, 0b11, 0b1110, 0b1010, 0,
                        (outs SPR:$dst), (ins SPR:$a, fbits16:$fbits),
                  IIC_fpCVTSI, "vcvt", ".s16.f32\t$dst, $a, $fbits", []>,
@@ -1959,7 +1964,6 @@ def VTOULD : AVConv1XInsD_Encode<0b11101, 0b11, 0b1111, 0b1011, 1,
                        (outs DPR:$dst), (ins DPR:$a, fbits32:$fbits),
                  IIC_fpCVTDI, "vcvt", ".u32.f64\t$dst, $a, $fbits", []>,
              Sched<[WriteFPCVT]>;
-} // let mayRaiseFPException = 1
 
 // Fixed-Point to FP:
 
@@ -2047,7 +2051,7 @@ def VULTOD : AVConv1XInsD_Encode<0b11101, 0b11, 0b1011, 0b1011, 1,
                  IIC_fpCVTID, "vcvt", ".f64.u32\t$dst, $a, $fbits", []>,
              Sched<[WriteFPCVT]>;
 
-} // End of 'let Constraints = "$a = $dst" in'
+} // End of 'let Constraints = "$a = $dst", mayRaiseFPException = 1 in'
 
 // BFloat16  - Single precision, unary, predicated
 let mayRaiseFPException = 1, Uses = [FPSCR_RM] in

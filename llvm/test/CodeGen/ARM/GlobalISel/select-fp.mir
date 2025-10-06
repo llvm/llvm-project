@@ -631,7 +631,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY [[COPY]]
-    ; CHECK-NEXT: [[VSITOS:%[0-9]+]]:spr = VSITOS [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VSITOS:%[0-9]+]]:spr = nofpexcept VSITOS [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $s0 = COPY [[VSITOS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $r0
@@ -659,7 +659,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY [[COPY]]
-    ; CHECK-NEXT: [[VSITOD:%[0-9]+]]:dpr = VSITOD [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VSITOD:%[0-9]+]]:dpr = nofpexcept VSITOD [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $d0 = COPY [[VSITOD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s32) = COPY $r0
@@ -687,7 +687,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY [[COPY]]
-    ; CHECK-NEXT: [[VUITOS:%[0-9]+]]:spr = VUITOS [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VUITOS:%[0-9]+]]:spr = nofpexcept VUITOS [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $s0 = COPY [[VUITOS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $r0
@@ -715,7 +715,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:spr = COPY [[COPY]]
-    ; CHECK-NEXT: [[VUITOD:%[0-9]+]]:dpr = VUITOD [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: [[VUITOD:%[0-9]+]]:dpr = nofpexcept VUITOD [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK-NEXT: $d0 = COPY [[VUITOD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s32) = COPY $r0
