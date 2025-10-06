@@ -1031,6 +1031,16 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
   // Create the cast operation directly to ensure we get a new instruction
   Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
 
+  // Preserve cast instruction flags
+  if (RHSFlags.NNeg)
+    NewCast->setNonNeg();
+  if (RHSFlags.NUW)
+    NewCast->setHasNoUnsignedWrap();
+  if (RHSFlags.NSW)
+    NewCast->setHasNoSignedWrap();
+
+  NewCast->andIRFlags(LHSCast);
+
   // Insert the new instruction
   Value *Result = Builder.Insert(NewCast);
 
@@ -2014,12 +2024,19 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
   uint64_t SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
   uint64_t EltBitMask = (1ull << SrcEltSizeInBits) - 1;
+  uint64_t TotalBits = DL->getTypeSizeInBits(SrcTy);
+  Type *PackedTy = IntegerType::get(SrcTy->getContext(), TotalBits);
+  Value *Mask = ConstantInt::get(PackedTy, EltBitMask);
   for (User *U : Ext->users()) {
     auto *Extract = cast<ExtractElementInst>(U);
     uint64_t Idx =
         cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
-    Value *LShr = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
-    Value *And = Builder.CreateAnd(LShr, EltBitMask);
+    uint64_t ShiftAmt =
+        DL->isBigEndian()
+            ? (TotalBits - SrcEltSizeInBits - Idx * SrcEltSizeInBits)
+            : (Idx * SrcEltSizeInBits);
+    Value *LShr = Builder.CreateLShr(ScalarV, ShiftAmt);
+    Value *And = Builder.CreateAnd(LShr, Mask);
     U->replaceAllUsesWith(And);
   }
   return true;
@@ -2480,21 +2497,31 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
+  // Check whether this is a binary shuffle.
+  bool IsBinaryShuffle = !isa<UndefValue>(V1);
+
   auto *C0 = dyn_cast<CastInst>(V0);
   auto *C1 = dyn_cast<CastInst>(V1);
-  if (!C0 || !C1)
+  if (!C0 || (IsBinaryShuffle && !C1))
     return false;
 
   Instruction::CastOps Opcode = C0->getOpcode();
-  if (C0->getSrcTy() != C1->getSrcTy())
+
+  // If this is allowed, foldShuffleOfCastops can get stuck in a loop
+  // with foldBitcastOfShuffle. Reject in favor of foldBitcastOfShuffle.
+  if (!IsBinaryShuffle && Opcode == Instruction::BitCast)
     return false;
 
-  // Handle shuffle(zext_nneg(x), sext(y)) -> sext(shuffle(x,y)) folds.
-  if (Opcode != C1->getOpcode()) {
-    if (match(C0, m_SExtLike(m_Value())) && match(C1, m_SExtLike(m_Value())))
-      Opcode = Instruction::SExt;
-    else
+  if (IsBinaryShuffle) {
+    if (C0->getSrcTy() != C1->getSrcTy())
       return false;
+    // Handle shuffle(zext_nneg(x), sext(y)) -> sext(shuffle(x,y)) folds.
+    if (Opcode != C1->getOpcode()) {
+      if (match(C0, m_SExtLike(m_Value())) && match(C1, m_SExtLike(m_Value())))
+        Opcode = Instruction::SExt;
+      else
+        return false;
+    }
   }
 
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
@@ -2537,23 +2564,31 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
                            TTI::CastContextHint::None, CostKind);
-  InstructionCost CostC1 =
-      TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
-                           TTI::CastContextHint::None, CostKind);
-  InstructionCost OldCost = CostC0 + CostC1;
-  OldCost +=
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
-                         CastDstTy, OldMask, CostKind, 0, nullptr, {}, &I);
 
-  InstructionCost NewCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, NewShuffleDstTy,
-                         CastSrcTy, NewMask, CostKind);
+  TargetTransformInfo::ShuffleKind ShuffleKind;
+  if (IsBinaryShuffle)
+    ShuffleKind = TargetTransformInfo::SK_PermuteTwoSrc;
+  else
+    ShuffleKind = TargetTransformInfo::SK_PermuteSingleSrc;
+
+  InstructionCost OldCost = CostC0;
+  OldCost += TTI.getShuffleCost(ShuffleKind, ShuffleDstTy, CastDstTy, OldMask,
+                                CostKind, 0, nullptr, {}, &I);
+
+  InstructionCost NewCost = TTI.getShuffleCost(ShuffleKind, NewShuffleDstTy,
+                                               CastSrcTy, NewMask, CostKind);
   NewCost += TTI.getCastInstrCost(Opcode, ShuffleDstTy, NewShuffleDstTy,
                                   TTI::CastContextHint::None, CostKind);
   if (!C0->hasOneUse())
     NewCost += CostC0;
-  if (!C1->hasOneUse())
-    NewCost += CostC1;
+  if (IsBinaryShuffle) {
+    InstructionCost CostC1 =
+        TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
+                             TTI::CastContextHint::None, CostKind);
+    OldCost += CostC1;
+    if (!C1->hasOneUse())
+      NewCost += CostC1;
+  }
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two casts: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -2561,14 +2596,20 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   if (NewCost > OldCost)
     return false;
 
-  Value *Shuf = Builder.CreateShuffleVector(C0->getOperand(0),
-                                            C1->getOperand(0), NewMask);
+  Value *Shuf;
+  if (IsBinaryShuffle)
+    Shuf = Builder.CreateShuffleVector(C0->getOperand(0), C1->getOperand(0),
+                                       NewMask);
+  else
+    Shuf = Builder.CreateShuffleVector(C0->getOperand(0), NewMask);
+
   Value *Cast = Builder.CreateCast(Opcode, Shuf, ShuffleDstTy);
 
   // Intersect flags from the old casts.
   if (auto *NewInst = dyn_cast<Instruction>(Cast)) {
     NewInst->copyIRFlags(C0);
-    NewInst->andIRFlags(C1);
+    if (IsBinaryShuffle)
+      NewInst->andIRFlags(C1);
   }
 
   Worklist.pushValue(Shuf);
@@ -4426,7 +4467,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 
   // Create new mask using difference of the two incoming masks.
   int MaskOffset = NewMask[0u];
-  unsigned Index = (InputNumElements - MaskOffset) % InputNumElements;
+  unsigned Index = (InputNumElements + MaskOffset) % InputNumElements;
   NewMask.clear();
 
   for (unsigned I = 0u; I < InputNumElements; ++I) {

@@ -3399,6 +3399,11 @@ inline UnsignedOrNone getExpandedPackSize(const NamedDecl *Param) {
 /// for their AssociatedDecl.
 TemplateParameterList *getReplacedTemplateParameterList(const Decl *D);
 
+/// If we have a 'templated' declaration for a template, adjust 'D' to
+/// refer to the actual template.
+/// If we have an implicit instantiation, adjust 'D' to refer to template.
+const Decl &adjustDeclToTemplate(const Decl &D);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLTEMPLATE_H

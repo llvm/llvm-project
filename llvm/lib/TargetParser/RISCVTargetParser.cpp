@@ -153,7 +153,7 @@ namespace RISCVVType {
 //
 // Bits | Name       | Description
 // -----+------------+------------------------------------------------
-// 8    | altfmt     | Alternative format for bf16
+// 8    | altfmt     | Alternative format for bf16/ofp8
 // 7    | vma        | Vector mask agnostic
 // 6    | vta        | Vector tail agnostic
 // 5:3  | vsew[2:0]  | Standard element width (SEW) setting

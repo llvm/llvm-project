@@ -1007,7 +1007,7 @@ public:
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     // Match phase.
-    auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
+    auto xferOp = extractOp.getSource().getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
       return failure();
     // Check that we are extracting a scalar and not a sub-vector.
@@ -1081,7 +1081,7 @@ private:
 /// Rewrite transfer_writes of vectors of size 1 (e.g., vector<1x1xf32>)
 /// to memref.store.
 class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {

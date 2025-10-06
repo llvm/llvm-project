@@ -212,8 +212,7 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 2
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -366,8 +365,7 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 2
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -432,6 +430,66 @@ loop:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, %n
   br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; FIXME: We should interleave by 2 after narrowing interleave groups to saturate
+; load/store units.
+define void @test_interleave_after_narrowing(i32 %n, ptr %x, ptr noalias %y) {
+; CHECK-LABEL: define void @test_interleave_after_narrowing(
+; CHECK-SAME: i32 [[N:%.*]], ptr [[X:%.*]], ptr noalias [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH:.*:]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.x = getelementptr inbounds nuw float, ptr %x, i64 %iv
+  %l.x = load float, ptr %gep.x, align 4
+  %neg.0 = fneg float %l.x
+  %gep.y = getelementptr inbounds nuw float, ptr %y, i64 %iv
+  store float %neg.0, ptr %gep.y, align 4
+  %iv.1 = or disjoint i64 %iv, 1
+  %gep.x.1 = getelementptr inbounds nuw float, ptr %x, i64 %iv.1
+  %l.x.1 = load float, ptr %gep.x.1, align 4
+  %neg.1 = fneg float %l.x.1
+  %gep.y.1 = getelementptr inbounds nuw float, ptr %y, i64 %iv.1
+  store float %neg.1, ptr %gep.y.1, align 4
+  %iv.2 = or disjoint i64 %iv, 2
+  %gep.x.2 = getelementptr inbounds nuw float, ptr %x, i64 %iv.2
+  %l.x.2 = load float, ptr %gep.x.2, align 4
+  %neg.2 = fneg float %l.x.2
+  %gep.y.2 = getelementptr inbounds nuw float, ptr %y, i64 %iv.2
+  store float %neg.2, ptr %gep.y.2, align 4
+  %iv.3 = or disjoint i64 %iv, 3
+  %gep.x.3 = getelementptr inbounds nuw float, ptr %x, i64 %iv.3
+  %l.x.3 = load float, ptr %gep.x.3, align 4
+  %neg.3 = fneg float %l.x.3
+  %gep.y.3 = getelementptr inbounds nuw float, ptr %y, i64 %iv.3
+  store float %neg.3, ptr %gep.y.3, align 4
+  %iv.next = add nuw nsw i64 %iv, 4
+  %ec = icmp samesign ult i64 %iv, 1020
+  br i1 %ec, label %loop, label %exit
 
 exit:
   ret void

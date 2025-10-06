@@ -1083,7 +1083,7 @@ define <2 x float> @fcvtxn_2s(<2 x double> %A) nounwind #0 {
 define <4 x float> @fcvtxn_4s(<2 x float> %ret, <2 x double> %A) nounwind #0 {
 ; CHECK-LABEL: define <4 x float> @fcvtxn_4s(
 ; CHECK-SAME: <2 x float> [[RET:%.*]], <2 x double> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
@@ -1358,7 +1358,7 @@ define void @autogen_SD28458(<8 x double> %val.f64, ptr %addr.f32) #0 {
 ; CHECK-LABEL: define void @autogen_SD28458(
 ; CHECK-SAME: <8 x double> [[VAL_F64:%.*]], ptr [[ADDR_F32:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i64> [[TMP1]] to <8 x i32>
 ; CHECK-NEXT:    [[TR53:%.*]] = fptrunc <8 x double> [[VAL_F64]] to <8 x float>
@@ -1383,7 +1383,7 @@ define void @autogen_SD28458(<8 x double> %val.f64, ptr %addr.f32) #0 {
 define void @autogen_SD19225(ptr %addr.f64, ptr %addr.f32) #0 {
 ; CHECK-LABEL: define void @autogen_SD19225(
 ; CHECK-SAME: ptr [[ADDR_F64:%.*]], ptr [[ADDR_F32:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
