@@ -112,7 +112,6 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Section - Alternate Delimiters",
          "Section - Multiple Calls",
      }},
-    {"partials.json", {"Standalone Indentation"}},
 }};
 
 struct TestData {

@@ -4,7 +4,7 @@
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0) }
 // CHECK: %"class.hlsl::RWBuffer.0" = type { target("dx.TypedBuffer", float, 1, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", i32, 0, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", %struct.S, 1, 0) }
+// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", %struct.S, 1, 0), target("dx.RawBuffer", %struct.S, 1, 0) }
 // CHECK: %"class.hlsl::RWBuffer.1" = type { target("dx.TypedBuffer", double, 1, 0, 0) }
 
 // CHECK: @_ZL4U0S0 = internal global %"class.hlsl::RWBuffer" poison, align 4
