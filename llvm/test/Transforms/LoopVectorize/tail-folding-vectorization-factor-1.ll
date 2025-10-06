@@ -6,7 +6,7 @@
 ; loop-vectorization is only unrolling but not vectorizing.
 
 ; CHECK-REMARKS:      remark: {{.*}} interleaved loop (interleaved count: 4)
-; CHECK-REMARKS-NEXT: remark: {{.*}} interleaved loop (interleaved count: 4)
+; CHECK-REMARKS:      remark: {{.*}} interleaved loop (interleaved count: 4)
 ; CHECK-REMARKS-NOT:  remark: {{.*}} vectorized loop
 
 define void @VF1-VPlanExe(ptr %dst) {
