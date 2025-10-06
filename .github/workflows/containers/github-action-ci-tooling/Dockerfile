@@ -1,6 +1,6 @@
 ARG LLVM_VERSION=21.1.0
 
-FROM ubuntu:24.04 AS llvm-downloader
+FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
 ARG LLVM_VERSION
 
 RUN apt-get update && \
