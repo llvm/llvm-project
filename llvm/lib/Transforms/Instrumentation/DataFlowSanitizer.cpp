@@ -263,7 +263,7 @@ static cl::opt<bool> ClIgnorePersonalityRoutine(
 
 static cl::opt<bool> ClAddGlobalNameSuffix(
     "dfsan-add-global-name-suffix",
-    cl::desc("Whether to add \\.dfsan suffix to global names"), cl::Hidden,
+    cl::desc("Whether to add .dfsan suffix to global names"), cl::Hidden,
     cl::init(true));
 
 static StringRef getGlobalTypeString(const GlobalValue &G) {
