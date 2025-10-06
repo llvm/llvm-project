@@ -390,10 +390,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   } else
     return false;
 
-  Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
+  Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
   if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
     if (isa<BranchInst>(LoopPred->getTerminator()))
-      HeaderFirstNonPHI = LoopPred->getTerminator();
+      CtxI = LoopPred->getTerminator();
   }
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment,
@@ -403,9 +403,9 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                    SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
                    SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
              },
-             DL, HeaderFirstNonPHI, AC, &DT) ||
+             DL, CtxI, AC, &DT) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
-                                            HeaderFirstNonPHI, AC, &DT);
+                                            CtxI, AC, &DT);
 }
 
 static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
