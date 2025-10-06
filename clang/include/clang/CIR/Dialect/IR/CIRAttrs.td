@@ -610,42 +610,44 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
   let description = [{
     Provide ABI specific information about a dynamic cast operation.
 
-    The `srcRtti` and the `destRtti` parameters give the RTTI of the source
+    The `src_rtti` and the `dest_rtti` parameters give the RTTI of the source
     record type and the destination record type, respectively.
 
-    The `runtimeFunc` parameter gives the `__dynamic_cast` function which is
-    provided by the runtime. The `badCastFunc` parameter gives the
+    The `runtime_func` parameter gives the `__dynamic_cast` function which is
+    provided by the runtime. The `bad_cast_func` parameter gives the
     `__cxa_bad_cast` function which is also provided by the runtime.
 
-    The `offsetHint` parameter gives the hint value that should be passed to the
-    `__dynamic_cast` runtime function.
+    The `offset_hint` parameter gives the hint value that should be passed to
+    the `__dynamic_cast` runtime function.
   }];
 
   let parameters = (ins
-    CIR_GlobalViewAttr:$srcRtti,
-    CIR_GlobalViewAttr:$destRtti,
-    "mlir::FlatSymbolRefAttr":$runtimeFunc,
-    "mlir::FlatSymbolRefAttr":$badCastFunc,
-    CIR_IntAttr:$offsetHint
+    CIR_GlobalViewAttr:$src_rtti,
+    CIR_GlobalViewAttr:$dest_rtti,
+    "mlir::FlatSymbolRefAttr":$runtime_func,
+    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+    CIR_IntAttr:$offset_hint
   );
 
   let builders = [
-    AttrBuilderWithInferredContext<(ins "GlobalViewAttr":$srcRtti,
-                                        "GlobalViewAttr":$destRtti,
-                                        "mlir::FlatSymbolRefAttr":$runtimeFunc,
-                                        "mlir::FlatSymbolRefAttr":$badCastFunc,
-                                        "IntAttr":$offsetHint), [{
-      return $_get(srcRtti.getContext(), srcRtti, destRtti, runtimeFunc,
-                   badCastFunc, offsetHint);
+    AttrBuilderWithInferredContext<(ins "GlobalViewAttr":$src_rtti,
+                                        "GlobalViewAttr":$dest_rtti,
+                                        "mlir::FlatSymbolRefAttr":$runtime_func,
+                                        "mlir::FlatSymbolRefAttr":$bad_cast_func,
+                                        "IntAttr":$offset_hint), [{
+      return $_get(src_rtti.getContext(), src_rtti, dest_rtti, runtime_func,
+                   bad_cast_func, offset_hint);
     }]>,
   ];
 
   let genVerifyDecl = 1;
   let assemblyFormat = [{
     `<`
-      `srcRtti` `=` qualified($srcRtti) `,` `destRtti` `=` qualified($destRtti)
-      `,` `runtimeFunc` `=` $runtimeFunc `,` `badCastFunc` `=` $badCastFunc `,`
-      `offsetHint` `=` qualified($offsetHint)
+      struct(qualified($src_rtti),
+             qualified($dest_rtti),
+             $runtime_func,
+             $bad_cast_func,
+             qualified($offset_hint))
     `>`
   }];
 
