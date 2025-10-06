@@ -15,6 +15,7 @@
 #include "internal_defs.h"
 #include "platform.h"
 #include "scudo/interface.h"
+#include "string_utils.h"
 #include "wrappers_c.h"
 #include "wrappers_c_checks.h"
 
@@ -36,5 +37,20 @@ scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)> SCUDO_ALLOCATOR;
 #undef SCUDO_PREFIX
 
 extern "C" INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
+
+extern "C" INTERFACE size_t __scudo_get_info(uint32_t topic, void *buffer,
+                                             size_t size) {
+  switch (topic) {
+  case M_INFO_TOPIC_STATS:
+    return Allocator.getStats(reinterpret_cast<char *>(buffer), size);
+  case M_INFO_TOPIC_FRAGMENTATION:
+    return Allocator.getFragmentationInfo(reinterpret_cast<char *>(buffer),
+                                          size);
+  default:
+    scudo::Printf("Scudo WARNING: unrecognized __scudo_get_info topic: %d\n",
+                  topic);
+    return 0;
+  }
+}
 
 #endif // !SCUDO_ANDROID || !_BIONIC
