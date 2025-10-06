@@ -141,36 +141,6 @@ define void @hot_func(i32 %0) !prof !14 {
   ret void
 }
 
-define i32 @main(i32 %0, ptr %1) !prof !15 {
-  br label %11
-
-5:                                                ; preds = %11
-  %6 = call i32 @rand()
-  store i32 %6, ptr @cold_bss
-  store i32 %6, ptr @cold_data
-  store i32 %6, ptr @bss2
-  store i32 %6, ptr @data3
-  call void @cold_func(i32 %6)
-  ret i32 0
-
-11:                                               ; preds = %11, %2
-  %12 = phi i32 [ 0, %2 ], [ %19, %11 ]
-  %13 = call i32 @rand()
-  %14 = srem i32 %13, 2
-  %15 = sext i32 %14 to i64
-  %16 = getelementptr inbounds [2 x ptr], ptr @hot_relro_array, i64 0, i64 %15
-  %17 = load ptr, ptr %16
-  store i32 %13, ptr %17
-  store i32 %13, ptr @external_hot_data
-  %18 = add i32 %13, 1
-  store i32 %18, ptr @hot_bss
-  call void @hot_func(i32 %12)
-  %19 = add i32 %12, 1
-  %20 = icmp eq i32 %19, 100000
-  br i1 %20, label %5, label %11, !prof !16
-}
-
-declare i32 @rand()
 declare i32 @func_taking_arbitrary_param(...)
 
 attributes #0 = {"data-section"="bar"}
