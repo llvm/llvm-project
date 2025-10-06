@@ -58,18 +58,11 @@ namespace __asan {
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
-  if (REAL(strnlen))
+  if (REAL(strnlen)) {
     return REAL(strnlen)(s, maxlen);
-#  endif
+  }
+#endif
   return internal_strnlen(s, maxlen);
-}
-
-static inline uptr MaybeRealWcsnlen(const wchar_t* s, uptr maxlen) {
-#  if SANITIZER_INTERCEPT_WCSNLEN
-  if (REAL(wcsnlen))
-    return REAL(wcsnlen)(s, maxlen);
-#  endif
-  return internal_wcsnlen(s, maxlen);
 }
 
 void SetThreadName(const char *name) {
@@ -577,20 +570,6 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   return REAL(strcpy)(to, from);
 }
 
-INTERCEPTOR(wchar_t*, wcscpy, wchar_t* to, const wchar_t* from) {
-  void* ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, wcscpy);
-  if (!TryAsanInitFromRtl())
-    return REAL(wcscpy)(to, from);
-  if (flags()->replace_str) {
-    uptr size = (internal_wcslen(from) + 1) * sizeof(wchar_t);
-    CHECK_RANGES_OVERLAP("wcscpy", to, size, from, size);
-    ASAN_READ_RANGE(ctx, from, size);
-    ASAN_WRITE_RANGE(ctx, to, size);
-  }
-  return REAL(wcscpy)(to, from);
-}
-
 // Windows doesn't always define the strdup identifier,
 // and when it does it's a macro defined to either _strdup
 // or _strdup_dbg, _strdup_dbg ends up calling _strdup, so
@@ -652,20 +631,6 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
     ASAN_WRITE_RANGE(ctx, to, size);
   }
   return REAL(strncpy)(to, from, size);
-}
-
-INTERCEPTOR(wchar_t*, wcsncpy, wchar_t* to, const wchar_t* from, uptr size) {
-  void* ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, wcsncpy);
-  AsanInitFromRtl();
-  if (flags()->replace_str) {
-    uptr from_size =
-        Min(size, MaybeRealWcsnlen(from, size) + 1) * sizeof(wchar_t);
-    CHECK_RANGES_OVERLAP("wcsncpy", to, from_size, from, from_size);
-    ASAN_READ_RANGE(ctx, from, from_size);
-    ASAN_WRITE_RANGE(ctx, to, size * sizeof(wchar_t));
-  }
-  return REAL(wcsncpy)(to, from, size);
 }
 
 template <typename Fn>
@@ -844,11 +809,6 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
   ASAN_INTERCEPT_FUNC(strdup);
-
-  // Intercept wcs* functions.
-  ASAN_INTERCEPT_FUNC(wcscpy);
-  ASAN_INTERCEPT_FUNC(wcsncpy);
-
 #  if ASAN_INTERCEPT___STRDUP
   ASAN_INTERCEPT_FUNC(__strdup);
 #endif
