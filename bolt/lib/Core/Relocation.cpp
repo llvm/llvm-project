@@ -556,6 +556,8 @@ static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
   case ELF::R_PPC64_ADDR16_HA:
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_TOC16_DS:
+  case ELF::R_PPC64_TOC16_LO_DS:
   case ELF::R_PPC64_ADDR16_DS:
   case ELF::R_PPC64_ADDR16_LO_DS:
   case ELF::R_PPC64_TOC:
