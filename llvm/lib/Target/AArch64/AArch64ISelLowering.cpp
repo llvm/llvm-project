@@ -29394,6 +29394,38 @@ Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {
   return TargetLowering::getSSPStackGuardCheck(M);
 }
 
+bool AArch64TargetLowering::canCombineStoreAndExtract(Type *VectorTy,
+                                                      Value *Idx,
+                                                      unsigned &Cost) const {
+  // Floating point values and vector values map to the same register file.
+  // Therefore, although we could do a store extract of a vector type, this is
+  // better to leave at float as we have more freedom in the addressing mode for
+  // those.
+  if (VectorTy->isFPOrFPVectorTy())
+    return false;
+
+  // If the index is unknown at compile time, this is very expensive to lower
+  // and it is not possible to combine the store with the extract.
+  if (!isa<ConstantInt>(Idx))
+    return false;
+
+  assert(VectorTy->isVectorTy() && "VectorTy is not a vector type");
+
+  // Reject scalable vectors - ST1 lane indexing only works with fixed-size NEON
+  // vectors
+  if (cast<VectorType>(VectorTy)->isScalableTy())
+    return false;
+
+  unsigned BitWidth = VectorTy->getPrimitiveSizeInBits().getFixedValue();
+  // We can do a store + vector extract on any vector that fits perfectly in a V
+  // or Q register.
+  if (BitWidth == 64 || BitWidth == 128) {
+    Cost = 0;
+    return true;
+  }
+  return false;
+}
+
 Value *
 AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the

@@ -385,6 +385,9 @@ public:
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
+  bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
+                                 unsigned &Cost) const override;
+
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                         const MachineFunction &MF) const override;
 
