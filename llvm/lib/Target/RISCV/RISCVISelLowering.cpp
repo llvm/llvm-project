@@ -434,7 +434,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (!Subtarget.useCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
@@ -25031,8 +25031,17 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
     // Mark RVV intrinsic as supported.
-    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID()))
+    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID())) {
+      // GISel doesn't support tuple types yet.
+      if (Inst.getType()->isRISCVVectorTupleTy())
+        return true;
+
+      for (unsigned i = 0; i < II->arg_size(); ++i)
+        if (II->getArgOperand(i)->getType()->isRISCVVectorTupleTy())
+          return true;
+
       return false;
+    }
   }
 
   if (Inst.getType()->isScalableTy())

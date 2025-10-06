@@ -2097,17 +2097,11 @@ void transform::IncludeOp::getEffects(
       getOperation(), getTarget());
   if (!callee)
     return defaultEffects();
-  DiagnosedSilenceableFailure earlyVerifierResult =
-      verifyNamedSequenceOp(callee, /*emitWarnings=*/false);
-  if (!earlyVerifierResult.succeeded()) {
-    (void)earlyVerifierResult.silence();
-    return defaultEffects();
-  }
 
   for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
     if (callee.getArgAttr(i, TransformDialect::kArgConsumedAttrName))
       consumesHandle(getOperation()->getOpOperand(i), effects);
-    else
+    else if (callee.getArgAttr(i, TransformDialect::kArgReadOnlyAttrName))
       onlyReadsHandle(getOperation()->getOpOperand(i), effects);
   }
 }
