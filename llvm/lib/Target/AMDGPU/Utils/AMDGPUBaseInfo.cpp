@@ -1353,11 +1353,6 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (DynamicVGPRBlockSize != 0)
     return DynamicVGPRBlockSize;
 
-  // Temporarily check the subtarget feature, until we fully switch to using
-  // attributes.
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
-    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
-
   bool IsWave32 = EnableWavefrontSize32
                       ? *EnableWavefrontSize32
                       : STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1412,10 +1407,7 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
-  // Temporarily check the subtarget feature, until we fully switch to using
-  // attributes.
-  if (DynamicVGPRBlockSize != 0 ||
-      STI->getFeatureBits().test(FeatureDynamicVGPR))
+  if (DynamicVGPRBlockSize != 0)
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
     return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
   return getAddressableNumArchVGPRs(STI);
@@ -3410,7 +3402,16 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   if (!RC)
     return AMDGPU::NoRegister;
-  return RC->getRegister(Idx | (MSBs << 8));
+
+  Idx |= MSBs << 8;
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    Idx *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++Idx;
+  }
+
+  return RC->getRegister(Idx);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>

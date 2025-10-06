@@ -371,3 +371,152 @@ void no_error_if_dangle_then_rescue_gsl() {
   v = safe;    // 'v' is "rescued" before use by reassigning to a valid object.
   v.use();     // This is safe.
 }
+
+
+//===----------------------------------------------------------------------===//
+// Lifetimebound Attribute Tests
+//===----------------------------------------------------------------------===//
+
+View Identity(View v [[clang::lifetimebound]]);
+View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
+MyObj* GetPointer(const MyObj& obj [[clang::lifetimebound]]);
+
+struct [[gsl::Pointer()]] LifetimeBoundView {
+  LifetimeBoundView();
+  LifetimeBoundView(const MyObj& obj [[clang::lifetimebound]]);
+  LifetimeBoundView pass() [[clang::lifetimebound]] { return *this; }
+  operator View() const [[clang::lifetimebound]];
+};
+
+void lifetimebound_simple_function() {
+  View v;
+  {
+    MyObj obj;
+    v = Identity(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                    // expected-note {{destroyed here}}
+  v.use();             // expected-note {{later used here}}
+}
+
+void lifetimebound_multiple_args_definite() {
+  View v;
+  {
+    MyObj obj1, obj2;
+    v = Choose(true,
+               obj1,  // expected-warning {{object whose reference is captured does not live long enough}}
+               obj2); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                              // expected-note 2 {{destroyed here}}
+  v.use();                       // expected-note 2 {{later used here}}
+}
+
+void lifetimebound_multiple_args_potential(bool cond) {
+  MyObj safe;
+  View v = safe;
+  {
+    MyObj obj1;
+    if (cond) {
+      MyObj obj2;
+      v = Choose(true, 
+                 obj1,             // expected-warning {{object whose reference is captured may not live long enough}}
+                 obj2);            // expected-warning {{object whose reference is captured may not live long enough}}
+    }                              // expected-note {{destroyed here}}
+  }                                // expected-note {{destroyed here}}
+  v.use();                         // expected-note 2 {{later used here}}
+}
+
+View SelectFirst(View a [[clang::lifetimebound]], View b);
+void lifetimebound_mixed_args() {
+  View v;
+  {
+    MyObj obj1, obj2;
+    v = SelectFirst(obj1,        // expected-warning {{object whose reference is captured does not live long enough}}
+                    obj2);
+  }                              // expected-note {{destroyed here}}
+  v.use();                       // expected-note {{later used here}}
+}
+
+void lifetimebound_member_function() {
+  LifetimeBoundView lbv, lbv2;
+  {
+    MyObj obj;
+    lbv = obj;        // expected-warning {{object whose reference is captured does not live long enough}}
+    lbv2 = lbv.pass();
+  }                   // expected-note {{destroyed here}}
+  View v = lbv2;      // expected-note {{later used here}}
+  v.use();
+}
+
+void lifetimebound_conversion_operator() {
+  View v;
+  {
+    MyObj obj;
+    LifetimeBoundView lbv = obj; // expected-warning {{object whose reference is captured does not live long enough}}
+    v = lbv;                     // Conversion operator is lifetimebound
+  }                              // expected-note {{destroyed here}}
+  v.use();                       // expected-note {{later used here}}
+}
+
+void lifetimebound_chained_calls() {
+  View v;
+  {
+    MyObj obj;
+    v = Identity(Identity(Identity(obj))); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                                        // expected-note {{destroyed here}}
+  v.use();                                 // expected-note {{later used here}}
+}
+
+void lifetimebound_with_pointers() {
+  MyObj* ptr;
+  {
+    MyObj obj;
+    ptr = GetPointer(obj); // expected-warning {{object whose reference is captured does not live long enough}}
+  }                        // expected-note {{destroyed here}}
+  (void)*ptr;              // expected-note {{later used here}}
+}
+
+void lifetimebound_no_error_safe_usage() {
+  MyObj obj;
+  View v1 = Identity(obj);      // No warning - obj lives long enough
+  View v2 = Choose(true, v1, Identity(obj)); // No warning - all args are safe
+  v2.use();                     // Safe usage
+}
+
+void lifetimebound_partial_safety(bool cond) {
+  MyObj safe_obj;
+  View v = safe_obj;
+  
+  if (cond) {
+    MyObj temp_obj;
+    v = Choose(true, 
+               safe_obj,
+               temp_obj); // expected-warning {{object whose reference is captured may not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  v.use();                // expected-note {{later used here}}
+}
+
+// FIXME: Creating reference from lifetimebound call doesn't propagate loans.
+const MyObj& GetObject(View v [[clang::lifetimebound]]);
+void lifetimebound_return_reference() {
+  View v;
+  const MyObj* ptr;
+  {
+    MyObj obj;
+    View temp_v = obj;
+    const MyObj& ref = GetObject(temp_v);
+    ptr = &ref;
+  }
+  (void)*ptr;
+}
+
+// FIXME: No warning for non gsl::Pointer types. Origin tracking is only supported for pointer types.
+struct LifetimeBoundCtor {
+  LifetimeBoundCtor();
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]);
+};
+void lifetimebound_ctor() {
+  LifetimeBoundCtor v;
+  {
+    MyObj obj;
+    v = obj;
+  }
+  (void)v;
+}

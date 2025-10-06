@@ -480,13 +480,6 @@ public:
     return true;
   }
 
-  /// Return true if the @llvm.vector.partial.reduce.* intrinsic
-  /// should be expanded using generic code in SelectionDAGBuilder.
-  virtual bool
-  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
-    return true;
-  }
-
   /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded
   /// using generic code in SelectionDAGBuilder.
   virtual bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const {
@@ -3455,6 +3448,10 @@ public:
   /// matching of other patterns.
   virtual bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                                     bool MathUsed) const {
+    // Form it if it is legal.
+    if (isOperationLegal(Opcode, VT))
+      return true;
+
     // TODO: The default logic is inherited from code in CodeGenPrepare.
     // The opcode should not make a difference by default?
     if (Opcode != ISD::UADDO)
@@ -3505,9 +3502,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
-  /// Should we expand [US]CMP nodes using two selects and two compares, or by
-  /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
+  /// Should we prefer selects to doing arithmetic on boolean types
+  virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
+    return false;
+  }
 
   /// True if target has some particular form of dealing with pointer arithmetic
   /// semantics for pointers with the given value type. False if pointer
@@ -4653,23 +4651,6 @@ public:
   virtual bool splitValueIntoRegisterParts(
       SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
       unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
-    return false;
-  }
-
-  /// Allows the target to handle physreg-carried dependency
-  /// in target-specific way. Used from the ScheduleDAGSDNodes to decide whether
-  /// to add the edge to the dependency graph.
-  /// Def - input: Selection DAG node defininfg physical register
-  /// User - input: Selection DAG node using physical register
-  /// Op - input: Number of User operand
-  /// PhysReg - inout: set to the physical register if the edge is
-  /// necessary, unchanged otherwise
-  /// Cost - inout: physical register copy cost.
-  /// Returns 'true' is the edge is necessary, 'false' otherwise
-  virtual bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                         const TargetRegisterInfo *TRI,
-                                         const TargetInstrInfo *TII,
-                                         MCRegister &PhysReg, int &Cost) const {
     return false;
   }
 

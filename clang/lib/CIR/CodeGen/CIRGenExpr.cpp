@@ -461,7 +461,8 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
 
   llvm::StringRef fieldName = field->getName();
   unsigned fieldIndex;
-  assert(!cir::MissingFeatures::lambdaFieldToName());
+  if (cgm.lambdaFieldToName.count(field))
+    fieldName = cgm.lambdaFieldToName[field];
 
   if (rec->isUnion())
     fieldIndex = field->getFieldIndex();
@@ -476,8 +477,16 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
 
   // If this is a reference field, load the reference right now.
   if (fieldType->isReferenceType()) {
-    cgm.errorNYI(field->getSourceRange(), "emitLValueForField: reference type");
-    return LValue();
+    assert(!cir::MissingFeatures::opTBAA());
+    LValue refLVal = makeAddrLValue(addr, fieldType, fieldBaseInfo);
+    if (recordCVR & Qualifiers::Volatile)
+      refLVal.getQuals().addVolatile();
+    addr = emitLoadOfReference(refLVal, getLoc(field->getSourceRange()),
+                               &fieldBaseInfo);
+
+    // Qualifiers on the struct don't apply to the referencee.
+    recordCVR = 0;
+    fieldType = fieldType->getPointeeType();
   }
 
   if (field->hasAttr<AnnotateAttr>()) {
@@ -619,6 +628,38 @@ static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
   return cgm.getAddrOfFunction(gd);
 }
 
+static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
+                                      mlir::Value thisValue) {
+  return cgf.emitLValueForLambdaField(fd, thisValue);
+}
+
+/// Given that we are currently emitting a lambda, emit an l-value for
+/// one of its members.
+///
+LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field,
+                                                mlir::Value thisValue) {
+  bool hasExplicitObjectParameter = false;
+  const auto *methD = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
+  LValue lambdaLV;
+  if (methD) {
+    hasExplicitObjectParameter = methD->isExplicitObjectMemberFunction();
+    assert(methD->getParent()->isLambda());
+    assert(methD->getParent() == field->getParent());
+  }
+  if (hasExplicitObjectParameter) {
+    cgm.errorNYI(field->getSourceRange(), "ExplicitObjectMemberFunction");
+  } else {
+    QualType lambdaTagType =
+        getContext().getCanonicalTagType(field->getParent());
+    lambdaLV = makeNaturalAlignAddrLValue(thisValue, lambdaTagType);
+  }
+  return emitLValueForField(lambdaLV, field);
+}
+
+LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field) {
+  return emitLValueForLambdaField(field, cxxabiThisValue);
+}
+
 static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                      GlobalDecl gd) {
   const FunctionDecl *fd = cast<FunctionDecl>(gd.getDecl());
@@ -645,12 +686,89 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
                             AlignmentSource::Decl);
 }
 
+/// Determine whether we can emit a reference to \p vd from the current
+/// context, despite not necessarily having seen an odr-use of the variable in
+/// this context.
+/// TODO(cir): This could be shared with classic codegen.
+static bool canEmitSpuriousReferenceToVariable(CIRGenFunction &cgf,
+                                               const DeclRefExpr *e,
+                                               const VarDecl *vd) {
+  // For a variable declared in an enclosing scope, do not emit a spurious
+  // reference even if we have a capture, as that will emit an unwarranted
+  // reference to our capture state, and will likely generate worse code than
+  // emitting a local copy.
+  if (e->refersToEnclosingVariableOrCapture())
+    return false;
+
+  // For a local declaration declared in this function, we can always reference
+  // it even if we don't have an odr-use.
+  if (vd->hasLocalStorage()) {
+    return vd->getDeclContext() ==
+           dyn_cast_or_null<DeclContext>(cgf.curCodeDecl);
+  }
+
+  // For a global declaration, we can emit a reference to it if we know
+  // for sure that we are able to emit a definition of it.
+  vd = vd->getDefinition(cgf.getContext());
+  if (!vd)
+    return false;
+
+  // Don't emit a spurious reference if it might be to a variable that only
+  // exists on a different device / target.
+  // FIXME: This is unnecessarily broad. Check whether this would actually be a
+  // cross-target reference.
+  if (cgf.getLangOpts().OpenMP || cgf.getLangOpts().CUDA ||
+      cgf.getLangOpts().OpenCL) {
+    return false;
+  }
+
+  // We can emit a spurious reference only if the linkage implies that we'll
+  // be emitting a non-interposable symbol that will be retained until link
+  // time.
+  switch (cgf.cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false)) {
+  case cir::GlobalLinkageKind::ExternalLinkage:
+  case cir::GlobalLinkageKind::LinkOnceODRLinkage:
+  case cir::GlobalLinkageKind::WeakODRLinkage:
+  case cir::GlobalLinkageKind::InternalLinkage:
+  case cir::GlobalLinkageKind::PrivateLinkage:
+    return true;
+  default:
+    return false;
+  }
+}
+
 LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   const NamedDecl *nd = e->getDecl();
   QualType ty = e->getType();
 
   assert(e->isNonOdrUse() != NOUR_Unevaluated &&
          "should not emit an unevaluated operand");
+
+  if (const auto *vd = dyn_cast<VarDecl>(nd)) {
+    // Global Named registers access via intrinsics only
+    if (vd->getStorageClass() == SC_Register && vd->hasAttr<AsmLabelAttr>() &&
+        !vd->isLocalVarDecl()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitDeclRefLValue: Global Named registers access");
+      return LValue();
+    }
+
+    if (e->isNonOdrUse() == NOUR_Constant &&
+        (vd->getType()->isReferenceType() ||
+         !canEmitSpuriousReferenceToVariable(*this, e, vd))) {
+      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: NonOdrUse");
+      return LValue();
+    }
+
+    // Check for captured variables.
+    if (e->refersToEnclosingVariableOrCapture()) {
+      vd = vd->getCanonicalDecl();
+      if (FieldDecl *fd = lambdaCaptureFields.lookup(vd))
+        return emitCapturedFieldLValue(*this, fd, cxxabiThisValue);
+      assert(!cir::MissingFeatures::cgCapturedStmtInfo());
+      assert(!cir::MissingFeatures::openMP());
+    }
+  }
 
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
@@ -795,8 +913,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
 
     if (e->getType()->isAnyComplexType()) {
-      cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
-      lv = LValue();
+      emitComplexPrePostIncDec(e, lv, kind, /*isPre=*/true);
     } else {
       emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
     }
@@ -991,8 +1108,9 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   return lv;
 }
 
-LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e) {
-  cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e);
+LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
+                                               llvm::StringRef name) {
+  cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e, name);
   assert(globalOp.getAlignment() && "expected alignment for string literal");
   unsigned align = *(globalOp.getAlignment());
   mlir::Value addr =
@@ -1798,8 +1916,7 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
   LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
   switch (getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgm.errorNYI(loc, "convertTempToRValue: complex type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitLoadOfComplex(lvalue, loc));
   case cir::TEK_Aggregate:
     cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
     return RValue::get(nullptr);
@@ -1936,8 +2053,8 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   // CIR uses its own alloca address space rather than follow the target data
   // layout like original CodeGen. The data layout awareness should be done in
   // the lowering pass instead.
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType localVarPtrTy = builder.getPointerTo(ty);
+  cir::PointerType localVarPtrTy =
+      builder.getPointerTo(ty, getCIRAllocaAddressSpace());
   mlir::IntegerAttr alignIntAttr = cgm.getSize(alignment);
 
   mlir::Value addr;
@@ -2254,6 +2371,21 @@ mlir::Value CIRGenFunction::emitScalarConstant(
     return {};
   }
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
+}
+
+LValue CIRGenFunction::emitPredefinedLValue(const PredefinedExpr *e) {
+  const StringLiteral *sl = e->getFunctionName();
+  assert(sl != nullptr && "No StringLiteral name in PredefinedExpr");
+  auto fn = cast<cir::FuncOp>(curFn);
+  StringRef fnName = fn.getName();
+  fnName.consume_front("\01");
+  std::array<StringRef, 2> nameItems = {
+      PredefinedExpr::getIdentKindName(e->getIdentKind()), fnName};
+  std::string gvName = llvm::join(nameItems, ".");
+  if (isa_and_nonnull<BlockDecl>(curCodeDecl))
+    cgm.errorNYI(e->getSourceRange(), "predefined lvalue in block");
+
+  return emitStringLiteralLValue(sl, gvName);
 }
 
 /// An LValue is a candidate for having its loads and stores be made atomic if

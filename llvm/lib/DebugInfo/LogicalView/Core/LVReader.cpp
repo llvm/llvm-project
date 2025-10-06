@@ -148,7 +148,7 @@ std::error_code LVSplitContext::open(std::string ContextName,
   return std::error_code();
 }
 
-LVReader *CurrentReader = nullptr;
+static LVReader *CurrentReader = nullptr;
 LVReader &LVReader::getInstance() {
   if (CurrentReader)
     return *CurrentReader;

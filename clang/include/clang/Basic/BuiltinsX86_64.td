@@ -56,7 +56,7 @@ let Features = "sse2", Attributes = [NoThrow] in {
   def movnti64 : X86Builtin<"void(long long int *, long long int)">;
 }
 
-let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vec_set_v2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, long long int, _Constant int)">;
 }
 
@@ -64,7 +64,7 @@ let Features = "crc32", Attributes = [NoThrow, Const] in {
   def crc32di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def vec_ext_v4di : X86Builtin<"long long int(_Vector<4, long long int>, _Constant int)">;
   def vec_set_v4di : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, long long int, _Constant int)">;
 }
