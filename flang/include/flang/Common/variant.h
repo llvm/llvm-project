@@ -29,9 +29,7 @@ using cuda::std::visit;
 // directly and which defines a macro we need to redefine.
 #include <initializer_list>
 
-// Redefine problematic abort macro to avoid defining symbols related to
-// std::exception. std::exception is defined in the C++ runtime library, which
-// we do not want the Fortran runtime library to depend on.
+// The macro _GLIBCXX_THROW_OR_ABORT is used by libstdc++ to not throw exceptions in -fno-exceptions mode, but immediatly kill the program. Since libstdc++ 15.1 the macro uses (void)(_EXC) after calling abort() to silence compiler warnings of an parameter. In its use in <variant>, _EXC is the construction of `std::bad_variant_access`. In non-optimized builds, some compilers including Clang will emit a call to that constructor. The constructor is implemented in libstdc++.a/.so which Flang-RT must not depend on (to avoid compatibility problems if a Fortran application itself has parts implemented in C++). Note that _GLIBCXX_THROW_OR_ABORT is not on the list of libstdc++'s documented user-configurable macros.
 #undef _GLIBCXX_THROW_OR_ABORT
 #define _GLIBCXX_THROW_OR_ABORT(_EXC) (__builtin_abort())
 
