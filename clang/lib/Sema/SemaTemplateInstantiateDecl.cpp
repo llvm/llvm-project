@@ -735,8 +735,7 @@ static void instantiateDependentCUDAClusterDimsAttr(
       ZExpr = ResultZ.get();
   }
 
-  if (XExpr)
-    S.addClusterDimsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  S.addClusterDimsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that

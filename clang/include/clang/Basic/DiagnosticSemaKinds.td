@@ -13075,7 +13075,7 @@ def err_cuda_cluster_attr_not_supported : Error<
 >;
 
 def err_cuda_cluster_dims_too_large : Error<
-  "only a maximum of %0 thread blocks in a cluster is supported"
+  "cluster does not support more than %0 thread blocks; %1 provided"
 >;
 
 // VTable pointer authentication errors

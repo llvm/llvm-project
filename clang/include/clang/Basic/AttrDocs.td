@@ -7549,9 +7549,10 @@ def CUDAClusterDimsAttrDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 In CUDA/HIP programming, the ``__cluster_dims__`` attribute can be applied to a kernel function
-to set the dimensions of a thread block cluster. ``__cluster_dims__`` defines the cluster size
-as ``(X, Y, Z)``, where each value is the number of thread blocks in that dimension.
-The ``__cluster_dims__`` and `__no_cluster__`` attributes are mutually exclusive.
+to set the dimensions of a thread block cluster, which is an optional level of hierarchy and made
+up of thread blocks. ``__cluster_dims__`` defines the cluster size as ``(X, Y, Z)``, where each value
+is the number of thread blocks in that dimension. The ``__cluster_dims__`` and `__no_cluster__``
+attributes are mutually exclusive.
 
 .. code::
 

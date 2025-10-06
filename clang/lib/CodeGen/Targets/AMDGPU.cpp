@@ -415,13 +415,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     unsigned Z = GetExprVal(Attr->getZ());
     llvm::SmallString<32> AttrVal;
     llvm::raw_svector_ostream OS(AttrVal);
-    OS << X << ", " << Y << ", " << Z;
+    OS << X << ',' << Y << ',' << Z;
     F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
 
   // OpenCL doesn't support cluster feature.
-  if ((IsOpenCLKernel && TargetFetureMap.lookup("gfx1250-insts")) ||
-      FD->getAttr<CUDANoClusterAttr>())
+  const TargetInfo &TTI = M.getContext().getTargetInfo();
+  if ((IsOpenCLKernel &&
+       TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters")) ||
+      FD->hasAttr<CUDANoClusterAttr>())
     F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 

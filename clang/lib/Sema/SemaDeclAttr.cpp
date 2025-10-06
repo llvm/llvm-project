@@ -5733,9 +5733,10 @@ CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
   }
 
   int FlatDim = ValX * ValY * ValZ;
-  auto TT = (!Context.getLangOpts().CUDAIsDevice && Context.getAuxTargetInfo())
-                ? Context.getAuxTargetInfo()->getTriple()
-                : Context.getTargetInfo().getTriple();
+  const llvm::Triple TT =
+      (!Context.getLangOpts().CUDAIsDevice && Context.getAuxTargetInfo())
+          ? Context.getAuxTargetInfo()->getTriple()
+          : Context.getTargetInfo().getTriple();
   int MaxDim = 1;
   if (TT.isNVPTX())
     MaxDim = 8;
@@ -5747,7 +5748,8 @@ CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
   // A maximum of 8 thread blocks in a cluster is supported as a portable
   // cluster size in CUDA. The number is 16 for AMDGPU.
   if (FlatDim > MaxDim) {
-    Diag(CI.getLoc(), diag::err_cuda_cluster_dims_too_large) << MaxDim;
+    Diag(CI.getLoc(), diag::err_cuda_cluster_dims_too_large)
+        << MaxDim << FlatDim;
     return nullptr;
   }
 
@@ -5765,10 +5767,11 @@ void Sema::addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI) {
 }
 
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto &TTI = S.Context.getTargetInfo();
-  auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
+  const TargetInfo &TTI = S.Context.getTargetInfo();
+  OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
-      (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
+      (TTI.getTriple().isAMDGPU() &&
+       !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported)
         << "__cluster_dims__";
     return;
@@ -5784,10 +5787,11 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto &TTI = S.Context.getTargetInfo();
-  auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
+  const TargetInfo &TTI = S.Context.getTargetInfo();
+  OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
-      (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
+      (TTI.getTriple().isAMDGPU() &&
+       !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported)
         << "__no_cluster__";
     return;
