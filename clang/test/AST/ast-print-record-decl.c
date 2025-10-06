@@ -290,9 +290,9 @@ KW DeclGroupInMemberList {
 // A tag decl group in the tag decl's own member list is exercised in
 // defSelfRef above.
 
+#ifdef __cplusplus
 
 // Check out-of-line record definition
-#ifdef __cplusplus
 // PRINT-CXX-NEXT: [[KW]] OutOfLineRecord {
 KW OutOfLineRecord {
   // PRINT-CXX-NEXT: [[KW]] Inner
@@ -304,4 +304,15 @@ KW OutOfLineRecord {
 KW OutOfLineRecord::Inner {
   // PRINT-CXX-NEXT: };
 };
+
+// PRINT-CXX-NEXT: template <typename, typename = int> [[KW]] SmearedTypeDefArgs;
+template <typename, typename = int> KW SmearedTypeDefArgs;
+// PRINT-CXX-NEXT: template <typename = int, typename> [[KW]] SmearedTypeDefArgs;
+template <typename = int, typename> KW SmearedTypeDefArgs;
+
+// PRINT-CXX-NEXT: template <int, int = 0> [[KW]] SmearedNTTPDefArgs;
+template <int, int = 0> KW SmearedNTTPDefArgs;
+// PRINT-CXX-NEXT: template <int = 0, int> [[KW]] SmearedNTTPDefArgs;
+template <int = 0, int> KW SmearedNTTPDefArgs;
+
 #endif

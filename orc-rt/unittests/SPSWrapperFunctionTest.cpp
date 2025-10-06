@@ -297,3 +297,53 @@ TEST(SPSWrapperFunctionUtilsTest, TestHandlerWithReferences) {
   EXPECT_EQ(OpCounter<3>::moves(), 1U);
   EXPECT_EQ(OpCounter<3>::copies(), 0U);
 }
+
+namespace {
+class Adder {
+public:
+  int32_t addSync(int32_t X, int32_t Y) { return X + Y; }
+  void addAsync(move_only_function<void(int32_t)> Return, int32_t X,
+                int32_t Y) {
+    Return(addSync(X, Y));
+  }
+};
+} // anonymous namespace
+
+static void adder_add_async_sps_wrapper(orc_rt_SessionRef Session,
+                                        void *CallCtx,
+                                        orc_rt_WrapperFunctionReturn Return,
+                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      WrapperFunction::handleWithAsyncMethod(&Adder::addAsync));
+}
+
+TEST(SPSWrapperFunctionUtilsTest, HandleWtihAsyncMethod) {
+  auto A = std::make_unique<Adder>();
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::call(
+      DirectCaller(nullptr, adder_add_async_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); },
+      ExecutorAddr::fromPtr(A.get()), 41, 1);
+
+  EXPECT_EQ(Result, 42);
+}
+
+static void adder_add_sync_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                       orc_rt_WrapperFunctionReturn Return,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      WrapperFunction::handleWithSyncMethod(&Adder::addSync));
+}
+
+TEST(SPSWrapperFunctionUtilsTest, HandleWithSyncMethod) {
+  auto A = std::make_unique<Adder>();
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::call(
+      DirectCaller(nullptr, adder_add_sync_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); },
+      ExecutorAddr::fromPtr(A.get()), 41, 1);
+
+  EXPECT_EQ(Result, 42);
+}

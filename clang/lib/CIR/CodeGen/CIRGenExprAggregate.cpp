@@ -201,8 +201,10 @@ public:
   }
 
   void VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitDesignatedInitUpdateExpr");
+    AggValueSlot dest = ensureSlot(cgf.getLoc(e->getExprLoc()), e->getType());
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    emitInitializationToLValue(e->getBase(), destLV);
+    VisitInitListExpr(e->getUpdater());
   }
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
