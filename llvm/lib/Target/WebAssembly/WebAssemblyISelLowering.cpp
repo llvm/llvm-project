@@ -317,6 +317,14 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
     }
 
+    if (Subtarget->hasRelaxedSIMD()) {
+      if (Subtarget->hasFP16()) {
+        setOperationAction(ISD::FMULADD, MVT::v8f16, Legal);
+      }
+      setOperationAction(ISD::FMULADD, MVT::v4f32, Legal);
+      setOperationAction(ISD::FMULADD, MVT::v2f64, Legal);
+    }
+
     // Partial MLA reductions.
     for (auto Op : {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA}) {
       setPartialReduceMLAAction(Op, MVT::v4i32, MVT::v16i8, Legal);
