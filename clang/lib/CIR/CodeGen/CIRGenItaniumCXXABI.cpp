@@ -1571,10 +1571,9 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   cgf.emitAnyExprToExn(e->getSubExpr(), Address(exceptionPtr, exnAlign));
 
   // Get the RTTI symbol address.
-  auto typeInfo = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(
+  auto typeInfo = mlir::cast<cir::GlobalViewAttr>(
       cgm.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
                                   /*forEH=*/true));
-  assert(typeInfo && "expected GlobalViewAttr typeinfo");
   assert(!typeInfo.getIndices() && "expected no indirection");
 
   // The address of the destructor.

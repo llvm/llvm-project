@@ -104,6 +104,7 @@ public:
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
+  void setActive(bool isActive) { cleanupBits.isActive = isActive; }
 
   size_t getCleanupSize() const { return cleanupBits.cleanupSize; }
   void *getCleanupBuffer() { return this + 1; }

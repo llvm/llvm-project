@@ -4177,7 +4177,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 
     `void *__cxa_allocate_exception(size_t thrown_size);`
 
-    If operation fails, program terminates, not throw.
+    If the operation fails, the program terminates rather than throw.
 
     Example:
 
