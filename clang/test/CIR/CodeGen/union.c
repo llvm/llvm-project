@@ -116,7 +116,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U2, !cir.ptr<!rec_U2>, ["u", init] {alignment = 8 : i64}
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U2, !cir.ptr<!rec_U2>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:   %[[ZERO_CHAR:.*]] = cir.cast(integral, %[[ZERO]] : !s32i), !s8i
+// CIR-NEXT:   %[[ZERO_CHAR:.*]] = cir.cast integral %[[ZERO]] : !s32i -> !s8i
 // CIR-NEXT:   %[[B_PTR:.*]] = cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U2> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[ZERO_CHAR]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   %[[B_PTR2:.*]] = cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U2> -> !cir.ptr<!s8i>
@@ -174,11 +174,11 @@ void f3(union U3 u) {
 // CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U3, !cir.ptr<!rec_U3>, ["u", init] {alignment = 1 : i64}
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U3, !cir.ptr<!rec_U3>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:   %[[ZERO_CHAR:.*]] = cir.cast(integral, %[[ZERO]] : !s32i), !s8i
+// CIR-NEXT:   %[[ZERO_CHAR:.*]] = cir.cast integral %[[ZERO]] : !s32i -> !s8i
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U3> -> !cir.ptr<!cir.array<!s8i x 5>>
-// CIR-NEXT:   %[[C_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[C_PTR]] : !cir.ptr<!cir.array<!s8i x 5>>), !cir.ptr<!s8i>
-// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.ptr_stride(%[[C_DECAY]] : !cir.ptr<!s8i>, %[[IDX]] : !s32i), !cir.ptr<!s8i>
+// CIR-NEXT:   %[[C_DECAY:.*]] = cir.cast array_to_ptrdecay %[[C_PTR]] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
+// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.ptr_stride %[[C_DECAY]], %[[IDX]] : (!cir.ptr<!s8i>, !s32i) -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[ZERO_CHAR]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   cir.return
 
@@ -206,11 +206,11 @@ void f5(union U4 u) {
 // CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U4, !cir.ptr<!rec_U4>, ["u", init] {alignment = 4 : i64}
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U4, !cir.ptr<!rec_U4>
 // CIR-NEXT:   %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s32i
-// CIR-NEXT:   %[[CHAR_CAST:.*]] = cir.cast(integral, %[[CHAR_VAL]] : !s32i), !s8i
+// CIR-NEXT:   %[[CHAR_CAST:.*]] = cir.cast integral %[[CHAR_VAL]] : !s32i -> !s8i
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<4> : !s32i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U4> -> !cir.ptr<!cir.array<!s8i x 5>>
-// CIR-NEXT:   %[[C_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[C_PTR]] : !cir.ptr<!cir.array<!s8i x 5>>), !cir.ptr<!s8i>
-// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.ptr_stride(%[[C_DECAY]] : !cir.ptr<!s8i>, %[[IDX]] : !s32i), !cir.ptr<!s8i>
+// CIR-NEXT:   %[[C_DECAY:.*]] = cir.cast array_to_ptrdecay %[[C_PTR]] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
+// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.ptr_stride %[[C_DECAY]], %[[IDX]] : (!cir.ptr<!s8i>, !s32i) -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[CHAR_CAST]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   cir.return
 

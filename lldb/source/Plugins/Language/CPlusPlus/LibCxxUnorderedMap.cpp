@@ -113,10 +113,11 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   // wraps a std::pair. Peel away the internal wrapper type - whose structure is
   // of no value to users, to expose the std::pair. This matches the structure
   // returned by the std::map synthetic provider.
-  if (isUnorderedMap(m_backend.GetCompilerType()
-                         .GetNonReferenceType()
-                         .GetCanonicalType()
-                         .GetTypeName())) {
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (backend_type.IsPointerOrReferenceType())
+    backend_type = backend_type.GetPointeeType();
+
+  if (isUnorderedMap(backend_type.GetCanonicalType().GetTypeName())) {
     std::string name;
     CompilerType field_type =
         element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);

@@ -206,14 +206,25 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
   return typeSymbol_.get<DerivedTypeDetails>().isForwardReferenced();
 }
 
-bool DerivedTypeSpec::HasDefaultInitialization(
+std::optional<std::string> DerivedTypeSpec::ComponentWithDefaultInitialization(
     bool ignoreAllocatable, bool ignorePointer) const {
   DirectComponentIterator components{*this};
-  return bool{std::find_if(
-      components.begin(), components.end(), [&](const Symbol &component) {
-        return IsInitialized(component, /*ignoreDataStatements=*/true,
-            ignoreAllocatable, ignorePointer);
-      })};
+  if (auto it{std::find_if(components.begin(), components.end(),
+          [ignoreAllocatable, ignorePointer](const Symbol &component) {
+            return (!ignoreAllocatable && IsAllocatable(component)) ||
+                (!ignorePointer && IsPointer(component)) ||
+                HasDeclarationInitializer(component);
+          })}) {
+    return it.BuildResultDesignatorName();
+  } else {
+    return std::nullopt;
+  }
+}
+
+bool DerivedTypeSpec::HasDefaultInitialization(
+    bool ignoreAllocatable, bool ignorePointer) const {
+  return ComponentWithDefaultInitialization(ignoreAllocatable, ignorePointer)
+      .has_value();
 }
 
 bool DerivedTypeSpec::HasDestruction() const {
