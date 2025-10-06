@@ -500,7 +500,12 @@ toDW_LNAME(SourceLanguage language) {
   return {};
 }
 
+/// Returns a version-independent language name.
 LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName name);
+
+/// Returns a language name corresponding to the specified version.
+LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName Name,
+                                             uint32_t Version);
 
 inline bool isCPlusPlus(SourceLanguage S) {
   bool result = false;
