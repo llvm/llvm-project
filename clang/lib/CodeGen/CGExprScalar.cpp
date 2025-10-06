@@ -4586,11 +4586,15 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     break;
   case BO_MulAssign:
   case BO_Mul:
-    Result = FPBuilder.CreateMul(LHS, LHSFixedSema, RHS, RHSFixedSema);
+    Result =
+        FPBuilder.CreateMul(LHS, LHSFixedSema, RHS, RHSFixedSema,
+                            CGF.CGM.getCodeGenOpts().OutlineFixedPointMulDiv);
     break;
   case BO_DivAssign:
   case BO_Div:
-    Result = FPBuilder.CreateDiv(LHS, LHSFixedSema, RHS, RHSFixedSema);
+    Result =
+        FPBuilder.CreateDiv(LHS, LHSFixedSema, RHS, RHSFixedSema,
+                            CGF.CGM.getCodeGenOpts().OutlineFixedPointMulDiv);
     break;
   case BO_ShlAssign:
   case BO_Shl:

@@ -2819,6 +2819,15 @@ defm strict_float_cast_overflow : BoolFOption<"strict-float-cast-overflow",
             " of the target's native float-to-int conversion instructions">,
   PosFlag<SetTrue, [], [ClangOption], "Assume that overflowing float-to-int casts are undefined (default)">>;
 
+defm outline_fixed_point_mul_div_intrinsics
+    : BoolFOption<
+          "outline-fixed-point-mul-div-intrinsics",
+          CodeGenOpts<"OutlineFixedPointMulDiv">, DefaultFalse,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option], "Do not outline ">,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option], "Outline ">,
+          BothFlags<[], [ClangOption, CC1Option],
+                    "the fixed point multiplication and division intrinsics">>;
+
 defm protect_parens : BoolFOption<"protect-parens",
   LangOpts<"ProtectParens">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CLOption, CC1Option],

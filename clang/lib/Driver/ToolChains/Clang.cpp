@@ -6278,6 +6278,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_omit_vtable_rtti,
                   options::OPT_fno_experimental_omit_vtable_rtti);
 
+  Args.AddLastArg(CmdArgs, options::OPT_foutline_fixed_point_mul_div_intrinsics,
+                  options::OPT_fno_outline_fixed_point_mul_div_intrinsics);
+
   if (Arg *A = Args.getLastArg(options::OPT_ffuchsia_api_level_EQ))
     A->render(Args, CmdArgs);
 
