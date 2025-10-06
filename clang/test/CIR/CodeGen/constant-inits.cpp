@@ -101,6 +101,10 @@ void function() {
     constexpr static mixed_partial_bitfields p_bf3 = {1, 0, 1, 15};
 }
 
+// Anonymous struct type definitions for bitfields
+// CIR-DAG: !rec_anon_struct = !cir.record<struct  {!u8i, !u8i, !u8i, !u8i}>
+// CIR-DAG: !rec_anon_struct1 = !cir.record<struct  {!u8i, !u8i, !cir.array<!u8i x 2>}>
+
 // CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE1e = #cir.zero : !rec_empty
 // CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE1s = #cir.const_record<{#cir.int<0> : !s32i, #cir.int<-1> : !s32i}> : !rec_simple
 // CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE2p1 = #cir.const_record<{#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.const_array<[#cir.int<99> : !s8i, #cir.int<88> : !s8i, #cir.int<77> : !s8i]> : !cir.array<!s8i x 3>, #cir.int<40> : !s32i}> : !rec_Point
@@ -128,15 +132,32 @@ void function() {
 // CIR-DAG-SAME:   #cir.zero : !rec_packed_and_aligned
 // CIR-DAG-SAME: ]> : !cir.array<!rec_packed_and_aligned x 2>
 
-// Byte-aligned bitfield checks
-// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf1 = #cir.const_record<{#cir.int<255> : !u8i, #cir.int<170> : !u8i, #cir.int<52> : !u8i, #cir.int<18> : !u8i}> : !rec_anon_struct
-// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf2 = #cir.const_record<{#cir.int<255> : !u8i, #cir.int<127> : !u8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>}> : !rec_anon_struct
-// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf3 = #cir.const_record<{#cir.int<42> : !u8i}> : !rec_single_byte_bitfield
-
-// Partial bitfield checks
-// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf1 = #cir.const_record<{#cir.int<17> : !u8i, #cir.int<3> : !u8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>}> : !rec_anon_struct
-// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf2 = #cir.const_record<{#cir.int<127> : !u8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 3>}> : !rec_signed_partial_bitfields
-// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf3 = #cir.const_record<{#cir.int<125> : !u8i}> : !rec_mixed_partial_bitfields
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf1 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<255> : !u8i,
+// CIR-DAG-SAME:   #cir.int<170> : !u8i,
+// CIR-DAG-SAME:   #cir.int<52> : !u8i,
+// CIR-DAG-SAME:   #cir.int<18> : !u8i
+// CIR-DAG-SAME: }> : !rec_anon_struct
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf2 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<255> : !u8i,
+// CIR-DAG-SAME:   #cir.int<127> : !u8i,
+// CIR-DAG-SAME:   #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>
+// CIR-DAG-SAME: }> : !rec_anon_struct1
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf3 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<42> : !u8i
+// CIR-DAG-SAME: }> : !rec_single_byte_bitfield
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf1 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<17> : !u8i,
+// CIR-DAG-SAME:   #cir.int<3> : !u8i,
+// CIR-DAG-SAME:   #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>
+// CIR-DAG-SAME: }> : !rec_anon_struct1
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf2 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<127> : !u8i,
+// CIR-DAG-SAME:   #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 3>
+// CIR-DAG-SAME: }> : !rec_signed_partial_bitfields
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf3 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<125> : !u8i
+// CIR-DAG-SAME: }> : !rec_mixed_partial_bitfields
 
 // CIR-LABEL: cir.func dso_local @_Z8functionv()
 // CIR:   cir.return
