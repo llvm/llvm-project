@@ -825,35 +825,21 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         }
       }
 
-      // Determine the shape of the base tile for each subgroup.
-      SmallVector<int64_t> baseTileShape;
-      if (sgShape.size() == 1) {
-        baseTileShape.push_back(sgShape[0]);
-      } else if (sgShape.size() == 2) {
-        baseTileShape = sgShape;
-      } else {
-        return rewriter.notifyMatchFailure(
-            op, "Only 1D or 2D vector constant supported");
-      }
-
       // Create a constant for the base tile.
       // For 2D case, extract the top-left sgShape[0] x sgShape[1] submatrix.
+      // For 1D case, extract the first sgShape[0] elements.
       SmallVector<Attribute> baseTileValues;
-      if (baseTileShape.size() == 2) {
-        int64_t rows = baseTileShape[0], cols = baseTileShape[1];
-        int64_t wgCols = wgShape[1];
-        for (int64_t r = 0; r < rows; ++r) {
-          for (int64_t c = 0; c < cols; ++c) {
-            baseTileValues.push_back(values[r * wgCols + c]);
-          }
+      int cols = sgShape[sgShape.size() - 1];
+      int64_t wgCols = wgShape[sgShape.size() - 1];
+      int64_t rows = sgShape.size() == 1 ? 1 : sgShape[0];
+      for (int64_t r = 0; r < rows; ++r) {
+        for (int64_t c = 0; c < cols; ++c) {
+          baseTileValues.push_back(values[r * wgCols + c]);
         }
-      } else {
-        // 1D case
-        for (int64_t i = 0; i < computeProduct(baseTileShape); ++i)
-          baseTileValues.push_back(values[i]);
       }
-      auto tileAttr = DenseElementsAttr::get(
-          VectorType::get(baseTileShape, eltType), baseTileValues);
+
+      auto tileAttr = DenseElementsAttr::get(VectorType::get(sgShape, eltType),
+                                             baseTileValues);
       auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
 
       // Get subgroup id
@@ -864,27 +850,24 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       if (failed(sgOffsets))
         return failure();
 
-      auto strideConst = rewriter.create<arith::ConstantIndexOp>(loc, stride);
-      auto rowStrideConst =
-          rewriter.create<arith::ConstantIndexOp>(loc, rowStride);
-      auto colStrideConst =
-          rewriter.create<arith::ConstantIndexOp>(loc, colStride);
+      SmallVector<Value, 2> strideConsts;
+      strideConsts.push_back(
+          rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
+      strideConsts.push_back(
+          rewriter.create<arith::ConstantIndexOp>(loc, colStride));
       SmallVector<Value> newConstOps;
+      Value mulOffset;
       for (auto offsets : *sgOffsets) {
         // Multiply offset with stride, broadcast it and add to baseConstVec
-        Value mulOffset;
-        if (wgShape.size() == 1) {
-          // 1D: offset[0] * strideConst
-          mulOffset = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[0], strideConst);
-        } else if (wgShape.size() == 2) {
-          // 2D: offset[0]*rowStrideConst + offset[1]*colStrideConst
-          Value rowMul = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[0], rowStrideConst);
-          Value colMul = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[1], colStrideConst);
+        SmallVector<Value> muls;
+        for (size_t i = 0; i < strideConsts.size(); ++i) {
+          muls.push_back(rewriter.create<arith::MulIOp>(
+              loc, rewriter.getIndexType(), offsets[i], strideConsts[i]));
+        }
+        mulOffset = muls.front();
+        if (muls.size() > 1) {
           mulOffset = rewriter.create<arith::AddIOp>(
-              loc, rewriter.getIndexType(), rowMul, colMul);
+              loc, rewriter.getIndexType(), mulOffset, muls[1]);
         }
         // Broadcast to baseConstVec size
         auto bcastOffset = rewriter.create<vector::BroadcastOp>(
