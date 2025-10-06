@@ -2803,7 +2803,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Switch to the containing csect.
   OutStreamer->switchSection(Csect);
 
-  if (GV->hasMetadata(LLVMContext::MD_ref)) {
+  if (GV->hasMetadata(LLVMContext::MD_implicit_ref)) {
     emitRefMetadata(GV);
   }
 
@@ -2906,7 +2906,7 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
     OutStreamer->emitLabel(
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 
-  if (F->hasMetadata(LLVMContext::MD_ref)) {
+  if (F->hasMetadata(LLVMContext::MD_implicit_ref)) {
     emitRefMetadata(F);
   }
 }
@@ -3350,7 +3350,7 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
 
 void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
   SmallVector<MDNode *> MDs;
-  GO->getMetadata(LLVMContext::MD_ref, MDs);
+  GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
   assert(MDs.size() && "Expected asscoiated metadata nodes");
 
   for (const MDNode *MD : MDs) {

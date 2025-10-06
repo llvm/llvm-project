@@ -770,12 +770,12 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
                               RangeLikeMetadataKind::AbsoluteSymbol);
     }
 
-    if (GO->hasMetadata(LLVMContext::MD_ref)) {
+    if (GO->hasMetadata(LLVMContext::MD_implicit_ref)) {
       Check(!GO->isDeclaration(),
             "ref metadata must not be placed on a declaration", GO);
 
       SmallVector<MDNode *> MDs;
-      GO->getMetadata(LLVMContext::MD_ref, MDs);
+      GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
       for (const MDNode *MD : MDs) {
         Check(MD->getNumOperands() == 1, "ref metadata must have one operand",
               &GV, MD);

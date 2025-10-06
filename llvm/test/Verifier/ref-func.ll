@@ -2,9 +2,9 @@
 
 @a = global i32 1
 @b = global i32 2
-@c = global i32 3, !ref !0
+@c = global i32 3, !implicit.ref !0
 
-define i32 @foo() !ref !1 {
+define i32 @foo() !implicit.ref !1 {
   ret i32 0
 }
 

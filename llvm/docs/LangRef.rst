@@ -8694,10 +8694,10 @@ of requiring a stack protector.
 
   !0 = !{i32 0}
 
-'``ref``' Metadata
-^^^^^^^^^^^^^^^^^^
+'``implicit.ref``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``ref`` metadata may be attached to a function or global variable
+The ``implicit.ref`` metadata may be attached to a function or global variable
 definition with a single argument that references a global object.
 This is typically used when there is some implicit dependence between the
 symbols that is otherwise opaque to the linker. One such example is metadata
@@ -8719,7 +8719,7 @@ Example:
 
     @a = global i32 1
     @b = global i32 2
-    @c = global i32 3, section "abc", !ref !0, !ref !1
+    @c = global i32 3, section "abc", !implicit.ref !0, !implicit.ref !1
     !0 = !{ptr @a}
     !1 = !{ptr @b}
 
