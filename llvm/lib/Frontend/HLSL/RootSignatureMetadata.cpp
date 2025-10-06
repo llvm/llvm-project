@@ -811,10 +811,10 @@ Error MetadataParser::validateRootSignature(
                                    Sampler.MinLOD));
 
     if (!hlsl::rootsig::verifyLOD(Sampler.MaxLOD))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     createRSError(RSErrorKind::Validation, StringRef("MaxLOD"),
-                                   Sampler.MaxLOD));
+      DeferredErrs = joinErrors(std::move(DeferredErrs),
+                                createRSError(RSErrorKind::Validation,
+                                              StringRef("RegisterSpace"),
+                                              Sampler.RegisterSpace));
 
     if (!hlsl::rootsig::verifyRegisterValue(Sampler.ShaderRegister))
       DeferredErrs = joinErrors(std::move(DeferredErrs),
