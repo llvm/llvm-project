@@ -372,6 +372,8 @@ public:
     return createCommonLinkage(getContext());
   }
 
+  mlir::StringAttr createExternalLinkage() { return getStringAttr("external"); }
+
   mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 
   mlir::StringAttr createLinkOnceLinkage() { return getStringAttr("linkonce"); }
