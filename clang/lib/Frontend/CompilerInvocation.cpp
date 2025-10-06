@@ -4991,15 +4991,17 @@ bool CompilerInvocation::CreateFromArgsImpl(
     Diags.Report(diag::err_drv_missing_argument)
         << Args.getArgString(MissingArgIndex) << MissingArgCount;
 
-  // Issue errors on unknown arguments.
-  for (const auto *A : Args.filtered(OPT_UNKNOWN)) {
-    auto ArgString = A->getAsString(Args);
-    std::string Nearest;
-    if (Opts.findNearest(ArgString, Nearest, VisibilityMask) > 1)
-      Diags.Report(diag::err_drv_unknown_argument) << ArgString;
-    else
-      Diags.Report(diag::err_drv_unknown_argument_with_suggestion)
-          << ArgString << Nearest;
+  if (!Args.hasArg(options::OPT_allow_unrecognized_arguments)) {
+    // Issue errors on unknown arguments.
+    for (const auto *A : Args.filtered(OPT_UNKNOWN)) {
+      auto ArgString = A->getAsString(Args);
+      std::string Nearest;
+      if (Opts.findNearest(ArgString, Nearest, VisibilityMask) > 1)
+        Diags.Report(diag::err_drv_unknown_argument) << ArgString;
+      else
+        Diags.Report(diag::err_drv_unknown_argument_with_suggestion)
+            << ArgString << Nearest;
+    }
   }
 
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);

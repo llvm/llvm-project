@@ -1011,6 +1011,9 @@ def : Flag<["-"], "Xcompiler">, IgnoredGCCCompat;
 def Z_Flag : Flag<["-"], "Z">, Group<Link_Group>;
 def all__load : Flag<["-"], "all_load">;
 def allowable__client : Separate<["-"], "allowable_client">;
+def allow_unrecognized_arguments : Flag<["--"], "allow-unrecognized-arguments">,
+    Visibility<[ClangOption, CLOption]>,
+    HelpText<"Ignore unrecognized command-line arguments instead of reporting an error.">;
 def ansi : Flag<["-", "--"], "ansi">, Group<CompileOnly_Group>;
 def arch__errors__fatal : Flag<["-"], "arch_errors_fatal">;
 def arch : Separate<["-"], "arch">, Flags<[NoXarchOption,TargetSpecific]>;

@@ -303,29 +303,31 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     }
   }
 
-  for (const Arg *A : Args.filtered(options::OPT_UNKNOWN)) {
-    unsigned DiagID;
-    auto ArgString = A->getAsString(Args);
-    std::string Nearest;
-    if (getOpts().findNearest(ArgString, Nearest, VisibilityMask) > 1) {
-      if (!IsCLMode() &&
-          getOpts().findExact(ArgString, Nearest,
-                              llvm::opt::Visibility(options::CC1Option))) {
-        DiagID = diag::err_drv_unknown_argument_with_suggestion;
-        Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
+  if (!Args.hasArg(options::OPT_allow_unrecognized_arguments)) {
+    for (const Arg *A : Args.filtered(options::OPT_UNKNOWN)) {
+      unsigned DiagID;
+      auto ArgString = A->getAsString(Args);
+      std::string Nearest;
+      if (getOpts().findNearest(ArgString, Nearest, VisibilityMask) > 1) {
+        if (!IsCLMode() &&
+            getOpts().findExact(ArgString, Nearest,
+                                llvm::opt::Visibility(options::CC1Option))) {
+          DiagID = diag::err_drv_unknown_argument_with_suggestion;
+          Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
+        } else {
+          DiagID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
+                              : diag::err_drv_unknown_argument;
+          Diags.Report(DiagID) << ArgString;
+        }
       } else {
-        DiagID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
-                            : diag::err_drv_unknown_argument;
-        Diags.Report(DiagID) << ArgString;
+        DiagID = IsCLMode()
+                     ? diag::warn_drv_unknown_argument_clang_cl_with_suggestion
+                     : diag::err_drv_unknown_argument_with_suggestion;
+        Diags.Report(DiagID) << ArgString << Nearest;
       }
-    } else {
-      DiagID = IsCLMode()
-                   ? diag::warn_drv_unknown_argument_clang_cl_with_suggestion
-                   : diag::err_drv_unknown_argument_with_suggestion;
-      Diags.Report(DiagID) << ArgString << Nearest;
+      ContainsError |= Diags.getDiagnosticLevel(DiagID, SourceLocation()) >
+                       DiagnosticsEngine::Warning;
     }
-    ContainsError |= Diags.getDiagnosticLevel(DiagID, SourceLocation()) >
-                     DiagnosticsEngine::Warning;
   }
 
   for (const Arg *A : Args.filtered(options::OPT_o)) {
