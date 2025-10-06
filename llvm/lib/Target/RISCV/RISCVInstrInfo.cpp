@@ -1364,7 +1364,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MI.getIterator(),
                                     /*RestoreAfter=*/false, /*SpAdj=*/0,
                                     /*AllowSpill=*/false);
-  if (TmpGPR != RISCV::NoRegister)
+  if (TmpGPR.isValid())
     RS->setRegUsed(TmpGPR);
   else {
     // The case when there is no scavenged register needs special handling.
@@ -3021,7 +3021,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "Invalid operand type for VL operand";
       return false;
     }
-    if (Op.isReg() && Op.getReg() != RISCV::NoRegister) {
+    if (Op.isReg() && Op.getReg().isValid()) {
       const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
       auto *RC = MRI.getRegClass(Op.getReg());
       if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
@@ -3793,6 +3793,11 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
       return false;
     // Operands 1 and 2 are commutable, if we switch the opcode.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:
@@ -4018,6 +4023,11 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:

@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/MathExtras.h"
 
 /// LLVM_MARK_AS_BITMASK_ENUM lets you opt in an individual enum type so you can
@@ -138,10 +139,6 @@ template <typename E> constexpr std::underlying_type_t<E> Underlying(E Val) {
   return U;
 }
 
-constexpr unsigned bitWidth(uint64_t Value) {
-  return Value ? 1 + bitWidth(Value >> 1) : 0;
-}
-
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
 constexpr bool operator!(E Val) {
   return Val == static_cast<E>(0);
@@ -220,7 +217,7 @@ e &operator>>=(e &lhs, e rhs) {
 // Enable bitmask enums in namespace ::llvm and all nested namespaces.
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-constexpr unsigned BitWidth = BitmaskEnumDetail::bitWidth(
+constexpr unsigned BitWidth = llvm::bit_width_constexpr(
     uint64_t{llvm::to_underlying(E::LLVM_BITMASK_LARGEST_ENUMERATOR)});
 
 } // namespace llvm

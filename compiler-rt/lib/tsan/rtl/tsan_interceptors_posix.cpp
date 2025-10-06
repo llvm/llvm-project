@@ -2412,7 +2412,11 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
 }
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+// Bionic's pthread_create internally calls clone. When the CLONE_THREAD flag is
+// set, clone does not create a new process but a new thread. This is a
+// workaround for Android. Disabling the interception of clone solves the
+// problem in most scenarios.
 TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
                  void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
   SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
@@ -3135,7 +3139,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   TSAN_INTERCEPT(clone);
 #endif
 #if !SANITIZER_ANDROID
