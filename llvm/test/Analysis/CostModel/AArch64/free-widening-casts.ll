@@ -582,7 +582,7 @@ define <8 x i16> @neg_dissimilar_operand_kind_0(<8 x i8> %a, <8 x i8> %b) {
 }
 
 ; COST-LABEL: neg_dissimilar_operand_kind_1
-; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %tmp0 = zext <4 x i8> %a to <4 x i32>
+; COST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %tmp0 = zext <4 x i8> %a to <4 x i32>
 ; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tmp1 = zext <4 x i16> %b to <4 x i32>
 define <4 x i32> @neg_dissimilar_operand_kind_1(<4 x i8> %a, <4 x i16> %b) {
   %tmp0 = zext <4 x i8> %a to <4 x i32>
