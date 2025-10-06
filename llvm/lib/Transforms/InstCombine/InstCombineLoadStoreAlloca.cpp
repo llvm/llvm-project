@@ -107,8 +107,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         // a load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
         bool NoCapture = Call->doesNotCapture(DataOpNo);
-        if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
-            (Call->onlyReadsMemory(DataOpNo) && NoCapture))
+        if (NoCapture &&
+            (Call->onlyReadsMemory() || Call->onlyReadsMemory(DataOpNo)))
           continue;
       }
 
@@ -338,8 +338,18 @@ bool PointerReplacer::collectUsers() {
       if (!TryPushInstOperand(TrueInst) || !TryPushInstOperand(FalseInst))
         return false;
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-      UsersToReplace.insert(GEP);
-      PushUsersToWorklist(GEP);
+      auto *PtrOp = dyn_cast<Instruction>(GEP->getPointerOperand());
+      if (!PtrOp)
+        return false;
+      if (isAvailable(PtrOp)) {
+        UsersToReplace.insert(GEP);
+        PushUsersToWorklist(GEP);
+        continue;
+      }
+
+      Worklist.emplace_back(GEP);
+      if (!TryPushInstOperand(PtrOp))
+        return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;

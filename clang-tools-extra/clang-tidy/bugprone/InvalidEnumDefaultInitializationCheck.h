@@ -1,4 +1,4 @@
-//===--- InvalidEnumDefaultInitializationCheck.h - clang-tidy -*- C++ -*---===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,13 +17,17 @@ namespace clang::tidy::bugprone {
 /// the enum has no enumerator with value of 0.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/invalid-enum-default-initialization.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/invalid-enum-default-initialization.html
 class InvalidEnumDefaultInitializationCheck : public ClangTidyCheck {
 public:
   InvalidEnumDefaultInitializationCheck(StringRef Name,
                                         ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  std::vector<StringRef> IgnoredEnums;
 };
 
 } // namespace clang::tidy::bugprone
