@@ -333,6 +333,23 @@ TEST_F(SuppressionMappingTest, LongShortMatch) {
                                            locForFile("lld/test/t2.cpp")));
 }
 
+TEST_F(SuppressionMappingTest, ShortLongMatch) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*lld/*=emit
+  src:*test/*)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("test/t1.cpp")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("lld/test/t2.cpp")));
+}
+
 TEST_F(SuppressionMappingTest, IsIgnored) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
