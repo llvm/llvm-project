@@ -120,7 +120,7 @@ Branch the Git trunk using the following procedure:
 
     $ git tag -sa llvmorg-N-init
 
-4. Clear the release notes in trunk with the script in
+#. Clear the release notes in trunk with the script in
    ``llvm/utils/release/clear-release-notes.py``.
 
 #. Create the release branch from the last known good revision from before the
