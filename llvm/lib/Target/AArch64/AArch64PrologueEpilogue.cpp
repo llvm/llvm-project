@@ -365,6 +365,42 @@ SVEFrameSizes AArch64PrologueEpilogueCommon::getSVEStackFrameSizes() const {
   return {PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize};
 }
 
+struct SVEPartitions {
+  MachineBasicBlock::iterator PPRBegin, PPREnd;
+  MachineBasicBlock::iterator ZPRBegin, ZPREnd;
+};
+
+static SVEPartitions partitionSVECS(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    StackOffset PPRCalleeSavesSize,
+                                    StackOffset ZPRCalleeSavesSize,
+                                    bool IsEpilogue) {
+  MachineBasicBlock::iterator PPRsI = MBBI;
+  MachineBasicBlock::iterator End =
+      IsEpilogue ? MBB.begin() : MBB.getFirstTerminator();
+  auto AdjustI = [&](auto MBBI) { return IsEpilogue ? std::prev(MBBI) : MBBI; };
+
+  // Process the SVE callee-saves to find the starts/ends of the ZPR and PPR
+  // areas.
+  if (PPRCalleeSavesSize) {
+    PPRsI = AdjustI(PPRsI);
+    assert(isPartOfPPRCalleeSaves(*PPRsI) && "Unexpected instruction");
+    while (PPRsI != End && isPartOfPPRCalleeSaves(AdjustI(PPRsI)))
+      IsEpilogue ? (--PPRsI) : (++PPRsI);
+  }
+  MachineBasicBlock::iterator ZPRsI = PPRsI;
+  if (ZPRCalleeSavesSize) {
+    ZPRsI = AdjustI(ZPRsI);
+    assert(isPartOfZPRCalleeSaves(*ZPRsI) && "Unexpected instruction");
+    while (ZPRsI != End && isPartOfZPRCalleeSaves(AdjustI(ZPRsI)))
+      IsEpilogue ? (--ZPRsI) : (++ZPRsI);
+  }
+
+  if (IsEpilogue)
+    return {PPRsI, MBBI, ZPRsI, PPRsI};
+  return {MBBI, PPRsI, PPRsI, ZPRsI};
+}
+
 AArch64PrologueEmitter::AArch64PrologueEmitter(MachineFunction &MF,
                                                MachineBasicBlock &MBB,
                                                const AArch64FrameLowering &AFL)
@@ -728,37 +764,15 @@ void AArch64PrologueEmitter::emitPrologue() {
   auto [PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize] =
       getSVEStackFrameSizes();
 
-  std::optional<MachineBasicBlock::iterator> ZPRCalleeSavesBegin,
-      ZPRCalleeSavesEnd, PPRCalleeSavesBegin, PPRCalleeSavesEnd;
-
   StackOffset CFAOffset =
       StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes);
+
+  SVEPartitions SVECSPartitions;
   MachineBasicBlock::iterator AfterSVESavesI = AfterGPRSavesI;
   if (SVELayout != SVEStackLayout::CalleeSavesAboveFrameRecord) {
-    // Process the SVE callee-saves to find the starts/ends of the ZPR and PPR
-    // areas.
-    PPRCalleeSavesBegin = AfterGPRSavesI;
-    if (PPRCalleeSavesSize) {
-      LLVM_DEBUG(dbgs() << "PPRCalleeSavedStackSize = "
-                        << PPRCalleeSavesSize.getScalable() << "\n");
-
-      assert(isPartOfPPRCalleeSaves(*PPRCalleeSavesBegin) &&
-             "Unexpected instruction");
-      while (isPartOfPPRCalleeSaves(AfterSVESavesI) &&
-             AfterSVESavesI != MBB.getFirstTerminator())
-        ++AfterSVESavesI;
-    }
-    PPRCalleeSavesEnd = ZPRCalleeSavesBegin = AfterSVESavesI;
-    if (ZPRCalleeSavesSize) {
-      LLVM_DEBUG(dbgs() << "ZPRCalleeSavedStackSize = "
-                        << ZPRCalleeSavesSize.getScalable() << "\n");
-      assert(isPartOfZPRCalleeSaves(*ZPRCalleeSavesBegin) &&
-             "Unexpected instruction");
-      while (isPartOfZPRCalleeSaves(AfterSVESavesI) &&
-             AfterSVESavesI != MBB.getFirstTerminator())
-        ++AfterSVESavesI;
-    }
-    ZPRCalleeSavesEnd = AfterSVESavesI;
+    SVECSPartitions = partitionSVECS(MBB, AfterGPRSavesI, PPRCalleeSavesSize,
+                                     ZPRCalleeSavesSize, /*IsEpilogue=*/false);
+    AfterSVESavesI = SVECSPartitions.ZPREnd;
   }
 
   if (EmitAsyncCFI)
@@ -773,23 +787,23 @@ void AArch64PrologueEmitter::emitPrologue() {
 
     // Split ZPR and PPR allocation.
     // Allocate PPR callee saves
-    allocateStackSpace(*PPRCalleeSavesBegin, 0, PPRCalleeSavesSize,
+    allocateStackSpace(SVECSPartitions.PPRBegin, 0, PPRCalleeSavesSize,
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects() || ZPRCalleeSavesSize ||
                            ZPRLocalsSize || PPRLocalsSize);
     CFAOffset += PPRCalleeSavesSize;
 
     // Allocate PPR locals + ZPR callee saves
-    assert(PPRCalleeSavesEnd == ZPRCalleeSavesBegin &&
+    assert(SVECSPartitions.PPREnd == SVECSPartitions.ZPRBegin &&
            "Expected ZPR callee saves after PPR locals");
-    allocateStackSpace(*PPRCalleeSavesEnd, RealignmentPadding,
+    allocateStackSpace(SVECSPartitions.PPREnd, RealignmentPadding,
                        PPRLocalsSize + ZPRCalleeSavesSize,
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects() || ZPRLocalsSize);
     CFAOffset += PPRLocalsSize + ZPRCalleeSavesSize;
 
     // Allocate ZPR locals
-    allocateStackSpace(*ZPRCalleeSavesEnd, RealignmentPadding,
+    allocateStackSpace(SVECSPartitions.ZPREnd, RealignmentPadding,
                        ZPRLocalsSize + StackOffset::getFixed(NumBytes),
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects());
@@ -1305,37 +1319,6 @@ AArch64EpilogueEmitter::AArch64EpilogueEmitter(MachineFunction &MF,
   SEHEpilogueStartI = MBB.end();
 }
 
-struct SVEEpiloguePartitions {
-  MachineBasicBlock::iterator PPRRestoreBegin, PPRRestoreEnd;
-  MachineBasicBlock::iterator ZPRRestoreBegin, ZPRRestoreEnd;
-
-  MachineBasicBlock::iterator restoreBegin() { return ZPRRestoreBegin; }
-  MachineBasicBlock::iterator restoreEnd() { return PPRRestoreEnd; }
-};
-
-static SVEEpiloguePartitions
-partitionSVEEpilogue(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     StackOffset PPRCalleeSavesSize,
-                     StackOffset ZPRCalleeSavesSize) {
-  MachineBasicBlock::iterator PPRRestoreBegin = MBBI, PPRRestoreEnd = MBBI;
-  if (PPRCalleeSavesSize) {
-    PPRRestoreBegin = std::prev(PPRRestoreEnd);
-    while (PPRRestoreBegin != MBB.begin() &&
-           isPartOfPPRCalleeSaves(std::prev(PPRRestoreBegin)))
-      --PPRRestoreBegin;
-  }
-  MachineBasicBlock::iterator ZPRRestoreBegin = PPRRestoreBegin,
-                              ZPRRestoreEnd = PPRRestoreBegin;
-  if (ZPRCalleeSavesSize) {
-    ZPRRestoreBegin = std::prev(ZPRRestoreEnd);
-    while (ZPRRestoreBegin != MBB.begin() &&
-           isPartOfZPRCalleeSaves(std::prev(ZPRRestoreBegin)))
-      --ZPRRestoreBegin;
-  }
-
-  return {PPRRestoreBegin, PPRRestoreEnd, ZPRRestoreBegin, ZPRRestoreEnd};
-}
-
 void AArch64EpilogueEmitter::emitEpilogue() {
   MachineBasicBlock::iterator EpilogueEndI = MBB.getLastNonDebugInstr();
   if (MBB.end() != EpilogueEndI) {
@@ -1476,17 +1459,18 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   // Process the SVE callee-saves to determine what space needs to be
   // deallocated.
-  auto SVEPartitions = partitionSVEEpilogue(MBB,
+  auto SVECSPartitions = partitionSVECS(
+      MBB,
       SVECalleeSavedSize &&
               SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
           ? MBB.getFirstTerminator()
           : FirstGPRRestoreI,
-      PPRCalleeSavesSize, ZPRCalleeSavesSize);
+      PPRCalleeSavesSize, ZPRCalleeSavesSize, /*IsEpilogue=*/true);
 
   if (SVELayout != SVEStackLayout::Split) {
     StackOffset SVELocalsSize = ZPRLocalsSize + PPRLocalsSize;
-    MachineBasicBlock::iterator RestoreBegin = SVEPartitions.restoreBegin();
-    MachineBasicBlock::iterator RestoreEnd = SVEPartitions.restoreEnd();
+    MachineBasicBlock::iterator RestoreBegin = SVECSPartitions.ZPRBegin;
+    MachineBasicBlock::iterator RestoreEnd = SVECSPartitions.PPREnd;
 
     // Deallocate the SVE area.
     if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
@@ -1577,7 +1561,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     // SplitSVEObjects. Determine the sizes and starts/ends of the ZPR and PPR
     // areas.
     auto [PPRRestoreBegin, PPRRestoreEnd, ZPRRestoreBegin, ZPRRestoreEnd] =
-        SVEPartitions;
+        SVECSPartitions;
 
     auto CFAOffset =
         SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize);
