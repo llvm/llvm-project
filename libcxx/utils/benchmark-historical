@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+
+import argparse
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+import tempfile
+
+PARENT_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return pathlib.Path(string)
+    else:
+        raise NotADirectoryError(string)
+
+def whitespace_separated(stream):
+    """
+    Iterate over a stream, yielding whitespace-delimited elements.
+    """
+    for line in stream:
+        for element in line.split():
+            yield element
+
+def resolve_commit(git_repo, commit):
+    """
+    Resolve the full commit SHA from any tree-ish.
+    """
+    return subprocess.check_output(['git', '-C', git_repo, 'rev-parse', commit], text=True).strip()
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='benchmark-historical',
+        description='Run the libc++ benchmarks against the commits provided on standard input and store the results in '
+                    'LNT format in a directory. This makes it easy to generate historical benchmark results of libc++ '
+                    'for analysis purposes. This script\'s usage is optimized to be run on a set of commits and then '
+                    're-run on a potentially-overlapping set of commits, such as after pulling new commits with Git.')
+    parser.add_argument('--output', '-o', type=pathlib.Path, required=True,
+        help='Path to the directory where the resulting .lnt files are stored.')
+    parser.add_argument('--commit-list', type=argparse.FileType('r'), default=sys.stdin,
+        help='Path to a file containing a whitespace separated list of commits to test. '
+             'By default, this is read from standard input.')
+    parser.add_argument('--existing', type=str, choices=['skip', 'overwrite', 'append'], default='skip',
+        help='This option instructs what to do when data for a commit already exists in the output directory. '
+             'Selecting "skip" instructs the tool to skip generating data for a commit that already has data, '
+             '"overwrite" will overwrite the existing data with the newly-generated one, and "append" will '
+             'append the new data to the existing one. By default, the tool uses "skip".')
+    parser.add_argument('lit_options', nargs=argparse.REMAINDER,
+        help='Optional arguments passed to lit when running the tests. Should be provided last and '
+             'separated from other arguments with a `--`.')
+    parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
+        help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    parser.add_argument('--dry-run', action='store_true',
+        help='Do not actually run anything, just print what would be done.')
+    args = parser.parse_args(argv)
+
+    logging.getLogger().setLevel(logging.INFO)
+
+    # Gather lit options
+    lit_options = []
+    if args.lit_options:
+        if args.lit_options[0] != '--':
+            raise ArgumentError('For clarity, Lit options must be separated from other options by --')
+        lit_options = args.lit_options[1:]
+
+    # Process commits one by one. Commits just need to be whitespace separated: we also handle
+    # the case where there is more than one commit per line.
+    for commit in whitespace_separated(args.commit_list):
+        commit = resolve_commit(args.git_repo, commit) # resolve e.g. HEAD to a real SHA
+
+        output_file = args.output / (commit + '.lnt')
+        if output_file.exists() and args.existing == 'skip':
+            logging.info(f'Skipping {commit} which already has data in {output_file}')
+            continue
+        else:
+            logging.info(f'Benchmarking {commit}')
+
+        with tempfile.TemporaryDirectory() as build_dir:
+            test_cmd = [PARENT_DIR / 'test-at-commit', '--git-repo', args.git_repo,
+                                                       '--build', build_dir,
+                                                       '--commit', commit]
+            test_cmd += ['--'] + lit_options
+
+            if args.dry_run:
+                pretty = ' '.join(str(a) for a in test_cmd)
+                logging.info(f'Running {pretty}')
+                continue
+
+            subprocess.call(test_cmd)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            mode = 'a' if args.existing == 'append' else 'w'
+            if output_file.exists() and args.existing == 'append':
+                logging.info(f'Appending to existing data for {commit}')
+            elif output_file.exists() and args.existing == 'overwrite':
+                logging.info(f'Overwriting existing data for {commit}')
+            else:
+                logging.info(f'Writing data for {commit}')
+            with open(output_file, mode) as out:
+                subprocess.check_call([(PARENT_DIR / 'consolidate-benchmarks'), build_dir], stdout=out)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

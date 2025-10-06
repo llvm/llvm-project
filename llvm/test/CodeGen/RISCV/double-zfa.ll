@@ -69,21 +69,35 @@ define double @loadfpimm8() {
 }
 
 define double @loadfpimm9() {
-; CHECK-LABEL: loadfpimm9:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm9:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI8_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI8_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm9:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    lui a0, 131967
+; RV64DZFA-NEXT:    slli a0, a0, 33
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 255.0
 }
 
 ; Negative test. This is 1 * 2^256.
 define double @loadfpimm10() {
-; CHECK-LABEL: loadfpimm10:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm10:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI9_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI9_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm10:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    slli a0, a0, 60
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x1000000000000000
 }
 
@@ -125,11 +139,18 @@ define double @loadfpimm13() {
 
 ; Negative test. This is 2^-1023, a denormal.
 define double @loadfpimm15() {
-; CHECK-LABEL: loadfpimm15:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI13_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
-; CHECK-NEXT:    ret
+; RV32IDZFA-LABEL: loadfpimm15:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV32IDZFA-NEXT:    fld fa0, %lo(.LCPI13_0)(a0)
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: loadfpimm15:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    li a0, 1
+; RV64DZFA-NEXT:    slli a0, a0, 51
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
   ret double 0x0008000000000000
 }
 

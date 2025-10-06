@@ -1,4 +1,4 @@
-//===--- ProBoundsConstantArrayIndexCheck.h - clang-tidy---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// have a constant index and are within bounds
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index.html
 class ProBoundsConstantArrayIndexCheck : public ClangTidyCheck {
   const StringRef GslHeader;
   utils::IncludeInserter Inserter;
