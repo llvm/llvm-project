@@ -64,8 +64,7 @@ if ("-fvisibility=hidden" IN_LIST LIBFUZZER_CFLAGS)
 endif()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
-  set(FUZZER_TEST_ARCH ${FUZZER_SUPPORTED_ARCH})
-  if (APPLE)
+  if(APPLE)
     darwin_filter_host_archs(FUZZER_SUPPORTED_ARCH FUZZER_TEST_ARCH)
   else()
     # libFuzzer unit tests are only run on the host machine.
@@ -116,5 +115,5 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
       LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
     set_target_properties(FuzzedDataProviderUnitTests PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    endforeach()
+  endforeach()
 endif()
