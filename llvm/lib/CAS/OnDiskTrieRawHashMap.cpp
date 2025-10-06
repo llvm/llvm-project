@@ -1136,7 +1136,7 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
                            "OnDiskTrieRawHashMap is not supported");
 }
 
-Expected<OnDiskTrieRawHashMap::pointer>
+Expected<OnDiskTrieRawHashMap::OnDiskPtr>
 OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
@@ -1144,15 +1144,15 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                            "OnDiskTrieRawHashMap is not supported");
 }
 
-Expected<OnDiskTrieRawHashMap::const_pointer>
+Expected<OnDiskTrieRawHashMap::ConstOnDiskPtr>
 OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   return createStringError(make_error_code(std::errc::not_supported),
                            "OnDiskTrieRawHashMap is not supported");
 }
 
-OnDiskTrieRawHashMap::const_pointer
+OnDiskTrieRawHashMap::ConstOnDiskPtr
 OnDiskTrieRawHashMap::find(ArrayRef<uint8_t> Hash) const {
-  return const_pointer();
+  return ConstOnDiskPtr();
 }
 
 void OnDiskTrieRawHashMap::print(
