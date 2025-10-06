@@ -277,8 +277,8 @@ public:
   bool VisitTemplateTypeParmType(TemplateTypeParmType *T) {
     // A lambda expression can introduce template parameters that don't have
     // corresponding template arguments yet.
-    if (T->getDepth() >= TemplateArgs.getNumLevels()
-        || !TemplateArgs.hasTemplateArgument(T->getDepth(), T->getIndex()))
+    if (T->getDepth() >= TemplateArgs.getNumLevels() ||
+        !TemplateArgs.hasTemplateArgument(T->getDepth(), T->getIndex()))
       return true;
 
     TemplateArgument Arg = TemplateArgs(T->getDepth(), T->getIndex());
