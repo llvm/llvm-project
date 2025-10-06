@@ -1035,7 +1035,7 @@ void foo17() {
 
 // CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
-// CIR: %[[RES:.*]] = cir.cast(float_to_int, %[[TMP]] : !cir.vector<2 x !cir.double>), !cir.vector<2 x !u16i>
+// CIR: %[[RES:.*]] = cir.cast float_to_int %[[TMP]] : !cir.vector<2 x !cir.double> -> !cir.vector<2 x !u16i>
 
 // LLVM: %[[VEC_A:.*]] = alloca <2 x double>, i64 1, align 16
 // LLVM: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
@@ -1270,11 +1270,11 @@ void foo27() {
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<4 x !cir.f16>, !cir.ptr<!cir.vector<4 x !cir.f16>>, ["b"]
 // CIR: %[[C_ADDR:.*]] = cir.alloca !cir.vector<4 x !cir.f16>, !cir.ptr<!cir.vector<4 x !cir.f16>>, ["c", init]
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.f16>>, !cir.vector<4 x !cir.f16>
-// CIR: %[[TMP_A_F16:.*]] = cir.cast(floating, %[[TMP_A]] : !cir.vector<4 x !cir.f16>), !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_A_F16:.*]] = cir.cast floating %[[TMP_A]] : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.f16>>, !cir.vector<4 x !cir.f16>
-// CIR: %[[TMP_B_F16:.*]] = cir.cast(floating, %[[TMP_B]] : !cir.vector<4 x !cir.f16>), !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_B_F16:.*]] = cir.cast floating %[[TMP_B]] : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
 // CIR: %[[RESULT:.*]] = cir.binop(add, %[[TMP_A_F16]], %[[TMP_B_F16]]) : !cir.vector<4 x !cir.float>
-// CIR: %[[RESULT_VF16:.*]] = cir.cast(floating, %[[RESULT]] : !cir.vector<4 x !cir.float>), !cir.vector<4 x !cir.f16>
+// CIR: %[[RESULT_VF16:.*]] = cir.cast floating %[[RESULT]] : !cir.vector<4 x !cir.float> -> !cir.vector<4 x !cir.f16>
 // CIR: cir.store{{.*}} %[[RESULT_VF16]], %[[C_ADDR]] : !cir.vector<4 x !cir.f16>, !cir.ptr<!cir.vector<4 x !cir.f16>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x half>, i64 1, align 8

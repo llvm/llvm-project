@@ -36,10 +36,7 @@
 #include "RPC.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "OmptDeviceTracing.h"
-#include "omp-tools.h"
-#endif
+#include "GenericProfiler.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -50,6 +47,9 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
 
 namespace llvm {
 namespace omp {
@@ -1164,12 +1164,18 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual uint32_t getOMPXAdjustNumTeamsForXteamRedSmallBlockSize() const {
     llvm_unreachable("Unimplemented");
   }
+  virtual bool getOMPXGenericSpmdUseSmallBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
 
   /// Get the number of compute units
   virtual uint32_t getNumComputeUnits() const { return 0; }
+
+  /// Return the device time stamp
+  virtual uint64_t getDeviceTimeStamp() { return 0; }
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
   virtual Expected<std::unique_ptr<MemoryBuffer>>
@@ -1434,21 +1440,6 @@ protected:
   BoolEnvar OMPX_KernelDurationTracing;
 
 private:
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// OMPT device tracing functions
-#define defineOmptTracingFunction(Name) ompt_interface_fn_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(defineOmptTracingFunction);
-#undef defineOmptTracingFunction
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
-
   /// Return the kernel environment object for kernel \p Name.
   Expected<KernelEnvironmentTy>
   getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
@@ -1577,7 +1568,7 @@ struct GenericPluginTy {
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
       : GlobalHandler(nullptr), JIT(TA), RPCServer(nullptr),
-        RecordReplay(nullptr) {}
+        RecordReplay(nullptr), Profiler(getProfilerToAttach()) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -1706,6 +1697,9 @@ struct GenericPluginTy {
                          "async_barrier not supported");
   }
 
+  /// Return a pointer to the profiler instance
+  GenericProfilerTy *getProfiler() const { return Profiler.get(); }
+
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
@@ -1720,10 +1714,10 @@ public:
 
   /// Returns non-zero if the \p Image is compatible with the plugin. This
   /// function does not require the plugin to be initialized before use.
-  int32_t is_plugin_compatible(__tgt_device_image *Image);
+  int32_t isPluginCompatible(StringRef Image);
 
   /// Returns non-zero if the \p Image is compatible with the device.
-  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+  int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
   /// Returns non-zero if the plugin device has been initialized.
   int32_t is_device_initialized(int32_t DeviceId) const;
@@ -1966,6 +1960,9 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RecordReplayTy *RecordReplay;
+
+  /// The Profiler instance
+  std::unique_ptr<GenericProfilerTy> Profiler;
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class

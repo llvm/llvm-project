@@ -102,6 +102,13 @@ ompt_set_result_t setTraceEventTy(int DeviceId, unsigned int Enable,
 /// Return thread id
 uint64_t getThreadId();
 
+/// See TracedDevices in OmptDeviceTracing.h
+extern std::map<int32_t, uint64_t> TracedDevices;
+/// Activate tracing on the given device
+void enableDeviceTracing(int DeviceId);
+/// Deactivate tracing on the given device
+void disableDeviceTracing(int DeviceId);
+
 /// Mutexes to serialize invocation of device registration and checks
 extern std::mutex DeviceAccessMutex;
 

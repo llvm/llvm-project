@@ -473,20 +473,21 @@ template <typename FunctionPairTy, typename AsyncInfoTy, typename... ArgsTy>
 class TracerInterfaceRAII {
 public:
   TracerInterfaceRAII(FunctionPairTy Callbacks, AsyncInfoTy &AsyncInfo,
-                      int TracedDeviceId, ompt_callbacks_t EventType,
-                      ArgsTy... Args)
+                      void *OmptSpecificData, int TracedDeviceId,
+                      ompt_callbacks_t EventType, ArgsTy... Args)
       : Arguments(Args...), beginFunction(std::get<0>(Callbacks)) {
     __tgt_async_info *AI = AsyncInfo;
     if (isTracingEnabled(TracedDeviceId, EventType)) {
       auto Record = begin();
-      // Gets freed in interface.cpp, functions
-      // targetKernel and targetData once launching target operations returns.
-      if (!AI->ProfilerData)
-        AI->ProfilerData = new OmptEventInfoTy();
-      // TODO: Make sure this has the right type
-      auto OEI = reinterpret_cast<OmptEventInfoTy *>(AI->ProfilerData);
-      OEI->TraceRecord = Record;
-      OEI->NumTeams = 0;
+
+      // Access the already allocated profiler data and populate it
+      OmptEventInfoTy *ProfilerData =
+          reinterpret_cast<OmptEventInfoTy *>(OmptSpecificData);
+      ProfilerData->TraceRecord = Record;
+      ProfilerData->NumTeams = 0;
+
+      // Allows to pass down into the plugins via AsyncInfoTy
+      AI->ProfilerData = ProfilerData;
     } else {
       // Actively prevent further tracing of this event
       AI->ProfilerData = nullptr;

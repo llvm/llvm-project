@@ -200,14 +200,6 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
       Rc = AsyncInfo.synchronize();
   }
 
-#ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->ProfilerData) {
-    auto OmptData = reinterpret_cast<OmptEventInfoTy*>(AI->ProfilerData);
-    // These deletes are going to go into the OmptProfiler
-    delete OmptData;
-  }
-#endif
-
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
 }
 
@@ -492,23 +484,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
         PostSyncRc = OFFLOAD_FAIL;
     }
   }
-
-#ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->ProfilerData) {
-    auto OmptData = reinterpret_cast<OmptEventInfoTy*>(AI->ProfilerData);
-    // These deletes are going to go into the OmptProfiler
-    delete OmptData;
-  }
-
-  for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos) {
-    AsyncInfoTy &AsyncInfo = *LocalTAI;
-    if (__tgt_async_info *AI = AsyncInfo; AI->ProfilerData) {
-      auto OmptData = reinterpret_cast<OmptEventInfoTy*>(AI->ProfilerData);
-      // These deletes are going to go into the OmptProfiler
-      delete OmptData;
-    }
-  }
-#endif
 
   // Deallocate the multi-device async infos if any were allocated.
   for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos)

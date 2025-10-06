@@ -61,8 +61,14 @@ using IoDirectionState = std::conditional_t<D == Direction::Input,
     InputStatementState, OutputStatementState>;
 
 // Common state for all kinds of formatted I/O
-template <Direction D> class FormattedIoStatementState {};
-template <> class FormattedIoStatementState<Direction::Input> {
+struct DefinedIoArgs {
+  char ioType[DataEdit::maxIoTypeChars]; // IOTYPE string
+  int vList[DataEdit::maxVListEntries]; // V_LIST(:) values
+};
+template <Direction D>
+class FormattedIoStatementState : public DefinedIoArgs {};
+template <>
+class FormattedIoStatementState<Direction::Input> : public DefinedIoArgs {
 public:
   RT_API_ATTRS std::size_t GetEditDescriptorChars() const;
   RT_API_ATTRS void GotChar(int);
@@ -438,7 +444,9 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
-  RT_API_ATTRS bool inNamelistSequence() const { return inNamelistSequence_; }
+  RT_API_ATTRS const NamelistGroup *namelistGroup() const {
+    return namelistGroup_;
+  }
   RT_API_ATTRS int EndIoStatement();
 
   // Skips value separators, handles repetition and null values.
@@ -451,14 +459,15 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  RT_API_ATTRS void ResetForNextNamelistItem(bool inNamelistSequence) {
+  RT_API_ATTRS void ResetForNextNamelistItem(
+      const NamelistGroup *namelistGroup) {
     remaining_ = 0;
     if (repeatPosition_) {
       repeatPosition_->Cancel();
     }
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
-    inNamelistSequence_ = inNamelistSequence;
+    namelistGroup_ = namelistGroup;
   }
 
   RT_API_ATTRS bool eatComma() const { return eatComma_; }
@@ -467,7 +476,7 @@ public:
   RT_API_ATTRS void set_hitSlash(bool yes) { hitSlash_ = yes; }
 
 protected:
-  bool inNamelistSequence_{false};
+  const NamelistGroup *namelistGroup_{nullptr};
 
 private:
   int remaining_{0}; // for "r*" repetition
@@ -700,6 +709,13 @@ public:
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
+  RT_API_ATTRS bool CanAdvance() {
+    return DIR == Direction::Input &&
+        (canAdvance_ || this->mutableModes().inNamelist);
+  }
+
+private:
+  bool canAdvance_{false};
 };
 
 template <Direction DIR>

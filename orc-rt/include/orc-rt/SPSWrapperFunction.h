@@ -20,9 +20,11 @@
 namespace orc_rt {
 namespace detail {
 
-template <typename... SPSArgTs> struct WFSPSSerializer {
-  template <typename... ArgTs>
-  std::optional<WrapperFunctionBuffer> operator()(const ArgTs &...Args) {
+template <typename... SPSArgTs> struct WFSPSHelper {
+private:
+  template <typename... SerializableArgTs>
+  std::optional<WrapperFunctionBuffer>
+  serializeImpl(const SerializableArgTs &...Args) {
     auto R =
         WrapperFunctionBuffer::allocate(SPSArgList<SPSArgTs...>::size(Args...));
     SPSOutputBuffer OB(R.data(), R.size());
@@ -30,15 +32,65 @@ template <typename... SPSArgTs> struct WFSPSSerializer {
       return std::nullopt;
     return std::move(R);
   }
-};
 
-template <typename... SPSArgTs> struct WFSPSDeserializer {
+  template <typename T> static const T &toSerializable(const T &Arg) noexcept {
+    return Arg;
+  }
+
+  static SPSSerializableError toSerializable(Error Err) noexcept {
+    return SPSSerializableError(std::move(Err));
+  }
+
+  template <typename T>
+  static SPSSerializableExpected<T> toSerializable(Expected<T> Arg) noexcept {
+    return SPSSerializableExpected<T>(std::move(Arg));
+  }
+
+  template <typename... Ts> struct DeserializableTuple;
+
+  template <typename... Ts> struct DeserializableTuple<std::tuple<Ts...>> {
+    typedef std::tuple<
+        std::decay_t<decltype(toSerializable(std::declval<Ts>()))>...>
+        type;
+  };
+
+  template <typename... Ts>
+  using DeserializableTuple_t = typename DeserializableTuple<Ts...>::type;
+
+  template <typename T> static T &&fromSerializable(T &&Arg) noexcept {
+    return std::forward<T>(Arg);
+  }
+
+  static Error fromSerializable(SPSSerializableError Err) noexcept {
+    return Err.toError();
+  }
+
+  template <typename T>
+  static Expected<T> fromSerializable(SPSSerializableExpected<T> Val) noexcept {
+    return Val.toExpected();
+  }
+
+public:
   template <typename... ArgTs>
-  bool operator()(WrapperFunctionBuffer &ArgBytes, ArgTs &...Args) {
+  std::optional<WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
+    return serializeImpl(toSerializable(std::forward<ArgTs>(Args))...);
+  }
+
+  template <typename ArgTuple>
+  std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());
-    return SPSArgList<SPSArgTs...>::deserialize(IB, Args...);
+    DeserializableTuple_t<ArgTuple> Args;
+    if (!SPSSerializationTraits<SPSTuple<SPSArgTs...>,
+                                decltype(Args)>::deserialize(IB, Args))
+      return std::nullopt;
+    return std::apply(
+        [](auto &&...A) {
+          return std::optional<ArgTuple>(std::in_place,
+                                         std::move(fromSerializable(A))...);
+        },
+        std::move(Args));
   }
 };
 
@@ -48,19 +100,8 @@ template <typename SPSSig> struct WrapperFunctionSPSSerializer;
 
 template <typename SPSRetT, typename... SPSArgTs>
 struct WrapperFunctionSPSSerializer<SPSRetT(SPSArgTs...)> {
-  static detail::WFSPSSerializer<SPSArgTs...> argumentSerializer() noexcept {
-    return {};
-  }
-  static detail::WFSPSDeserializer<SPSArgTs...>
-  argumentDeserializer() noexcept {
-    return {};
-  }
-  static detail::WFSPSSerializer<SPSRetT> resultSerializer() noexcept {
-    return {};
-  }
-  static detail::WFSPSDeserializer<SPSRetT> resultDeserializer() noexcept {
-    return {};
-  }
+  static detail::WFSPSHelper<SPSArgTs...> arguments() noexcept { return {}; }
+  static detail::WFSPSHelper<SPSRetT> result() noexcept { return {}; }
 };
 
 /// Provides call and handle utilities to simplify writing and invocation of

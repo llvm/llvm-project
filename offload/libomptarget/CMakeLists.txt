@@ -85,6 +85,9 @@ endforeach()
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})
+if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  target_link_libraries(omptarget PRIVATE PluginOmpt)
+endif()
 
 macro(check_plugin_target target)
 if (TARGET omptarget.rtl.${target})

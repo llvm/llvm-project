@@ -243,7 +243,10 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : plugins()) {
-      if (!R.is_plugin_compatible(Img))
+      StringRef Buffer(reinterpret_cast<const char *>(Img->ImageStart),
+                       utils::getPtrDiff(Img->ImageEnd, Img->ImageStart));
+
+      if (!R.isPluginCompatible(Buffer))
         continue;
 
       if (!initializePlugin(R))
@@ -266,7 +269,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
           continue;
         }
 
-        if (!R.is_device_compatible(DeviceId, Img))
+        if (!R.isDeviceCompatible(DeviceId, Buffer))
           continue;
 
         DP("Image " DPxMOD " is compatible with RTL %s device %d!\n",
@@ -643,3 +646,21 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
                                        DeviceNo);
   return *DevicePtr;
 }
+
+#ifdef OMPT_SUPPORT
+
+#include "OmptProfiler.h"
+
+std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach() {
+  return std::make_unique<llvm::omp::target::ompt::OmptProfilerTy>();
+}
+
+#else
+
+std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach() {
+  return std::make_unique<llvm::omp::target::plugin::GenericProfilerTy>();
+}
+
+#endif
