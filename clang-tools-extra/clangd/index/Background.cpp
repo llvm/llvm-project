@@ -180,13 +180,10 @@ void BackgroundIndex::boostRelated(llvm::StringRef Path) {
     Queue.boost(filenameWithoutExtension(Path), IndexBoostedFile);
 }
 
-/// Given index results from a TU, only update symbols coming from files that
-/// are different or missing from than \p ShardVersionsSnapshot. Also stores new
-/// index information on IndexStorage.
-void BackgroundIndex::update(
-    llvm::StringRef MainFile, IndexFileIn Index,
-    const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
-    bool HadErrors) {
+/// Given index results from a TU, update symbols coming from all files. Also
+/// stores new index information on IndexStorage.
+void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
+                             bool HadErrors) {
   // Keys are URIs.
   llvm::StringMap<std::pair<Path, FileDigest>> FilesToUpdate;
   // Note that sources do not contain any information regarding missing headers,
@@ -198,12 +195,7 @@ void BackgroundIndex::update(
       elog("Failed to resolve URI: {0}", AbsPath.takeError());
       continue;
     }
-    const auto DigestIt = ShardVersionsSnapshot.find(*AbsPath);
-    // File has different contents, or indexing was successful this time.
-    if (DigestIt == ShardVersionsSnapshot.end() ||
-        DigestIt->getValue().Digest != IGN.Digest ||
-        (DigestIt->getValue().HadErrors && !HadErrors))
-      FilesToUpdate[IGN.URI] = {std::move(*AbsPath), IGN.Digest};
+    FilesToUpdate[IGN.URI] = {std::move(*AbsPath), IGN.Digest};
   }
 
   // Shard slabs into files.
@@ -263,13 +255,6 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
     return llvm::errorCodeToError(Buf.getError());
   auto Hash = digest(Buf->get()->getBuffer());
 
-  // Take a snapshot of the versions to avoid locking for each file in the TU.
-  llvm::StringMap<ShardVersion> ShardVersionsSnapshot;
-  {
-    std::lock_guard<std::mutex> Lock(ShardVersionsMu);
-    ShardVersionsSnapshot = ShardVersions;
-  }
-
   vlog("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
   ParseInputs Inputs;
   Inputs.TFS = &TFS;
@@ -286,25 +271,6 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
     return error("Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
-  // Creates a filter to not collect index results from files with unchanged
-  // digests.
-  IndexOpts.FileFilter = [&ShardVersionsSnapshot](const SourceManager &SM,
-                                                  FileID FID) {
-    const auto F = SM.getFileEntryRefForID(FID);
-    if (!F)
-      return false; // Skip invalid files.
-    auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
-    if (!AbsPath)
-      return false; // Skip files without absolute path.
-    auto Digest = digestFile(SM, FID);
-    if (!Digest)
-      return false;
-    auto D = ShardVersionsSnapshot.find(*AbsPath);
-    if (D != ShardVersionsSnapshot.end() && D->second.Digest == Digest &&
-        !D->second.HadErrors)
-      return false; // Skip files that haven't changed, without errors.
-    return true;
-  };
   IndexOpts.CollectMainFileRefs = true;
 
   IndexFileIn Index;
@@ -345,7 +311,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
     for (auto &It : *Index.Sources)
       It.second.Flags |= IncludeGraphNode::SourceFlag::HadErrors;
   }
-  update(AbsolutePath, std::move(Index), ShardVersionsSnapshot, HadErrors);
+  update(AbsolutePath, std::move(Index), HadErrors);
 
   Rebuilder.indexedTU();
   return llvm::Error::success();
