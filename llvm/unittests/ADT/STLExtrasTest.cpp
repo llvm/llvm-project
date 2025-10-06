@@ -1678,6 +1678,11 @@ TEST(STLExtrasTest, SumOf) {
   static_assert(std::is_same_v<decltype(sum_of(V2), 1.0), double>);
   EXPECT_EQ(sum_of(V2), 7.0f);
   EXPECT_EQ(sum_of(V2, 1.0f), 8.0f);
+
+  // Make sure that for a const argument the return value is non-const.
+  const std::vector<float> V3 = {1.0f, 2.0f};
+  static_assert(std::is_same_v<decltype(sum_of(V3)), float>);
+  EXPECT_EQ(sum_of(V3), 3.0f);
 }
 
 TEST(STLExtrasTest, ProductOf) {
@@ -1697,6 +1702,11 @@ TEST(STLExtrasTest, ProductOf) {
   static_assert(std::is_same_v<decltype(product_of(V2), 1.0), double>);
   EXPECT_EQ(product_of(V2), 8.0f);
   EXPECT_EQ(product_of(V2, 4.0f), 32.0f);
+
+  // Make sure that for a const argument the return value is non-const.
+  const std::vector<float> V3 = {1.0f, 2.0f};
+  static_assert(std::is_same_v<decltype(product_of(V3)), float>);
+  EXPECT_EQ(product_of(V3), 2.0f);
 }
 
 struct Foo;
