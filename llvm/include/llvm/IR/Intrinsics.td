@@ -52,7 +52,7 @@ def IntrInaccessibleMemOnly : IntrinsicProperty;
 
 
 class IntrinsicMemoryLocation;
-// This should be added in the Target, but once in IntrinsicsAArch64.td
+// These are used to represent Generic Memory Location. 
 def TargetMem0 : IntrinsicMemoryLocation;
 def TargetMem1 : IntrinsicMemoryLocation;
 // IntrInaccessible{Read|Write}MemOnly needs to set Location

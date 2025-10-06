@@ -2,17 +2,17 @@
 
 include "llvm/IR/Intrinsics.td"
 
-def int_aarch64_set_fpmr_2   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleWriteMemOnly<TargetMem0>]>;
+def int_aarch64_set_target_mem0   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleWriteMemOnly<TargetMem0>]>;
 
-def int_aarch64_get_za_2   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleReadMemOnly<TargetMem1>]>;
+def int_aarch64_get_target_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleReadMemOnly<TargetMem1>]>;
 
-def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleReadMemOnly<TargetMem0>, IntrInaccessibleWriteMemOnly<TargetMem1>]>;
+def int_aarch64_get_target_mem0_set_target_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleReadMemOnly<TargetMem0>, IntrInaccessibleWriteMemOnly<TargetMem1>]>;
 
 // CHECK:    static constexpr unsigned IntrinsicNameOffsetTable[] = {
 // CHECK-NEXT:  1, // not_intrinsic
-// CHECK-NEXT:  15, // llvm.aarch64.get.fpmr.set.za
-// CHECK-NEXT:  44, // llvm.aarch64.get.za.2
-// CHECK-NEXT:  66, // llvm.aarch64.set.fpmr.2
+// CHECK-NEXT:  15, // llvm.aarch64.get.target.mem0.set.target.mem1
+// CHECK-NEXT:  60, // llvm.aarch64.get.target.mem1
+// CHECK-NEXT:  89, // llvm.aarch64.set.target.mem0
 
 // CHECK:   static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
 // CHECK-NEXT:  switch (ID) {
@@ -46,8 +46,3 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
 // CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: Mod, TargetMem1: NoModRef
 // CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(512)),
-
-// CHECK:    0 << 1 | 0, // llvm.aarch64.get.fpmr.set.za
-// CHECK-NEXT:    1 << 1 | 0, // llvm.aarch64.get.za.2
-// CHECK-NEXT:    2 << 1 | 0, // llvm.aarch64.set.fpmr.2
-// CHECK-NEXT:};

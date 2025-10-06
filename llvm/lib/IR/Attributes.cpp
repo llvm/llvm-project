@@ -640,7 +640,10 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       if (MR == OtherMR)
         continue;
 
-      // Dont want to print Target Location if NoModRef
+      // Dont Print Target Location if MR and target_mems ModRefInfo
+      // are NoModRef.
+      // Printing Inacessiblemem: none implies that target_mems are also
+      // not affected.
       if (ME.isTargetMemLoc(Loc) && (MR == ModRefInfo::NoModRef))
         continue;
 
@@ -660,7 +663,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
-        break;
       case IRMemLocation::TargetMem0:
         OS << "target_mem0: ";
         break;
@@ -668,7 +670,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         OS << "target_mem1: ";
         break;
       }
-
       OS << getModRefStr(MR);
     }
     OS << ")";
