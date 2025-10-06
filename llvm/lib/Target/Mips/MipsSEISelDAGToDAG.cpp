@@ -44,32 +44,6 @@ void MipsSEDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
-void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
-                                               MachineFunction &MF) {
-  MachineInstrBuilder MIB(MF, &MI);
-  unsigned Mask = MI.getOperand(1).getImm();
-  unsigned Flag =
-      IsDef ? RegState::ImplicitDefine : RegState::Implicit | RegState::Undef;
-
-  if (Mask & 1)
-    MIB.addReg(Mips::DSPPos, Flag);
-
-  if (Mask & 2)
-    MIB.addReg(Mips::DSPSCount, Flag);
-
-  if (Mask & 4)
-    MIB.addReg(Mips::DSPCarry, Flag);
-
-  if (Mask & 8)
-    MIB.addReg(Mips::DSPOutFlag, Flag);
-
-  if (Mask & 16)
-    MIB.addReg(Mips::DSPCCond, Flag);
-
-  if (Mask & 32)
-    MIB.addReg(Mips::DSPEFI, Flag);
-}
-
 MCRegister MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
   uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
@@ -155,12 +129,6 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
   for (auto &MBB: MF) {
     for (auto &MI: MBB) {
       switch (MI.getOpcode()) {
-      case Mips::RDDSP:
-        addDSPCtrlRegOperands(false, MI, MF);
-        break;
-      case Mips::WRDSP:
-        addDSPCtrlRegOperands(true, MI, MF);
-        break;
       case Mips::BuildPairF64_64:
       case Mips::ExtractElementF64_64:
         if (!Subtarget->useOddSPReg()) {
@@ -231,8 +199,8 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
 
   SDValue OuFlag = CurDAG->getTargetConstant(20, DL, MVT::i32);
 
-  SDNode *DSPCtrlField = CurDAG->getMachineNode(Mips::RDDSP, DL, MVT::i32,
-                                                MVT::Glue, CstOne, InGlue);
+  SDNode *DSPCtrlField = CurDAG->getMachineNode(
+      Mips::RDDSP_Pseudo, DL, MVT::i32, MVT::Glue, CstOne, InGlue);
 
   SDNode *Carry = CurDAG->getMachineNode(
       Mips::EXT, DL, MVT::i32, SDValue(DSPCtrlField, 0), OuFlag, CstOne);
@@ -253,7 +221,7 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
   SDNode *DSPCtrlFinal =
       CurDAG->getMachineNode(Mips::INS, DL, MVT::i32, InsOps);
 
-  SDNode *WrDSP = CurDAG->getMachineNode(Mips::WRDSP, DL, MVT::Glue,
+  SDNode *WrDSP = CurDAG->getMachineNode(Mips::WRDSP_Pseudo, DL, MVT::Glue,
                                          SDValue(DSPCtrlFinal, 0), CstOne);
 
   SDValue Operands[3] = {LHS, RHS, SDValue(WrDSP, 0)};
