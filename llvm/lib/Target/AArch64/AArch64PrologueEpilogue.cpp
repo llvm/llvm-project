@@ -60,7 +60,6 @@ static bool isPartOfZPRCalleeSaves(MachineBasicBlock::iterator I) {
   case AArch64::PTRUE_C_B:
     return I->getFlag(MachineInstr::FrameSetup) ||
            I->getFlag(MachineInstr::FrameDestroy);
-  case AArch64::SEH_SavePReg:
   case AArch64::SEH_SaveZReg:
     return true;
   }
@@ -75,6 +74,8 @@ static bool isPartOfPPRCalleeSaves(MachineBasicBlock::iterator I) {
   case AArch64::LDR_PXI:
     return I->getFlag(MachineInstr::FrameSetup) ||
            I->getFlag(MachineInstr::FrameDestroy);
+  case AArch64::SEH_SavePReg:
+    return true;
   }
 }
 
@@ -1475,8 +1476,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   // Process the SVE callee-saves to determine what space needs to be
   // deallocated.
-  auto SVEPartitions = partitionSVEEpilogue(
-      MBB,
+  auto SVEPartitions = partitionSVEEpilogue(MBB,
       SVECalleeSavedSize &&
               SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
           ? MBB.getFirstTerminator()
