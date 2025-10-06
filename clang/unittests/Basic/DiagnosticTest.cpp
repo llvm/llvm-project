@@ -326,11 +326,11 @@ TEST_F(SuppressionMappingTest, LongShortMatch) {
   EXPECT_THAT(diags(), IsEmpty());
 
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                           locForFile("test/my_test1.cpp")));
+                                           locForFile("test/t1.cpp")));
 
   // FIXME: This is confusing.
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                           locForFile("lld/test/my_test2.cpp")));
+                                           locForFile("lld/test/t2.cpp")));
 }
 
 TEST_F(SuppressionMappingTest, IsIgnored) {
