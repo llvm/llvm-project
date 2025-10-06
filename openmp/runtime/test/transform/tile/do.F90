@@ -2,14 +2,14 @@
 ! It is done 3 times corresponding to every possible fraction of the last
 ! iteration before passing beyond UB.
 
-! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -DUB=16 %s -o %t-ub16.exe
-! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -DUB=17 %s -o %t-ub17.exe
-! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -DUB=18 %s -o %t-ub18.exe
+! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -cpp -DUB=16 %s -o %t-ub16.exe
+! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -cpp -DUB=17 %s -o %t-ub17.exe
+! RUN: %flang %flags %openmp_flags -fopenmp-version=51 -cpp -DUB=18 %s -o %t-ub18.exe
 ! RUN: %t-ub16.exe | FileCheck %s --match-full-lines
 ! RUN: %t-ub17.exe | FileCheck %s --match-full-lines
 ! RUN: %t-ub18.exe | FileCheck %s --match-full-lines
 
-program tile_intfor_1d
+program tile_do_1d
   implicit none
   integer i
   print *, 'do'

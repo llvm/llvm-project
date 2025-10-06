@@ -4,7 +4,8 @@
 ! RUN: %t.exe | FileCheck %s --match-full-lines
 
 
-program unroll_heuristic
+program unroll_heuristic_do
+  implicit none
   integer :: i
   print *, 'do'
 

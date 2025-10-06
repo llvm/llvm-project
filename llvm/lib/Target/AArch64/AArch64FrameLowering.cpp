@@ -2878,7 +2878,7 @@ static SVEStackSizes determineSVEStackSizes(MachineFunction &MF,
     StackTop += MFI.getObjectSize(FI);
     StackTop = alignTo(StackTop, Alignment);
 
-    assert(StackTop < std::numeric_limits<int64_t>::max() &&
+    assert(StackTop < (uint64_t)std::numeric_limits<int64_t>::max() &&
            "SVE StackTop far too large?!");
 
     int64_t Offset = -int64_t(StackTop);
