@@ -800,6 +800,48 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         Known.Zero.setHighBits(ShiftAmt);  // high bits known zero.
     } else {
       llvm::computeKnownBits(I, Known, Q, Depth);
+
+      // Let N = 2 * M.
+      // Given an N-bit integer representing a pack of two M-bit integers,
+      // we can select one of the packed integers by right-shifting by either
+      // zero or M (which is the most straightforward to check if M is a power
+      // of 2), and then isolating the lower M bits. In this case, we can
+      // represent the shift as a select on whether the shr amount is nonzero.
+      uint64_t ShlAmt;
+      Value *Upper, *Lower;
+      if (!match(I->getOperand(0),
+                 m_OneUse(m_DisjointOr(
+                     m_OneUse(m_Shl(m_Value(Upper), m_ConstantInt(ShlAmt))),
+                     m_Value(Lower)))))
+        break;
+      if (!isPowerOf2_64(ShlAmt))
+        break;
+
+      const uint64_t DemandedBitWidth = DemandedMask.getActiveBits();
+      if (DemandedBitWidth > ShlAmt)
+        break;
+
+      // Check that upper demanded bits are not lost from lshift.
+      if (Upper->getType()->getScalarSizeInBits() < ShlAmt + DemandedBitWidth)
+        break;
+
+      KnownBits KnownLowerBits = computeKnownBits(Lower, I, Depth);
+      if (!KnownLowerBits.getMaxValue().isIntN(ShlAmt))
+        break;
+
+      Value *ShrAmt = I->getOperand(1);
+      KnownBits KnownShrBits = computeKnownBits(ShrAmt, I, Depth);
+      // Verify that ShrAmt is either exactly ShlAmt (which is a power of 2) or
+      // zero.
+      if ((~KnownShrBits.Zero).getZExtValue() != ShlAmt)
+        break;
+
+      Value *ShrAmtZ = Builder.CreateICmpEQ(
+          ShrAmt, Constant::getNullValue(ShrAmt->getType()),
+          ShrAmt->getName() + ".z");
+      Value *Select = Builder.CreateSelect(ShrAmtZ, Lower, Upper);
+      Select->takeName(I);
+      return Select;
     }
     break;
   }

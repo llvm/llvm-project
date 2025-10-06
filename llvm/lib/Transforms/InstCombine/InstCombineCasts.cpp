@@ -756,47 +756,6 @@ static Instruction *shrinkInsertElt(CastInst &Trunc,
   return nullptr;
 }
 
-/// Let N = 2 * M.
-/// Given an N-bit integer representing a pack of two M-bit integers,
-/// we can select one of the packed integers by right-shifting by either zero or
-/// M, and then truncating the result to M bits.
-///
-/// This function folds this shift-and-truncate into a select instruction,
-/// enabling further simplification.
-static Instruction *foldPackSelectingShift(TruncInst &Trunc,
-                                           InstCombinerImpl &IC) {
-
-  const uint64_t BitWidth = Trunc.getDestTy()->getScalarSizeInBits();
-  if (!isPowerOf2_64(BitWidth))
-    return nullptr;
-  if (Trunc.getSrcTy()->getScalarSizeInBits() < 2 * BitWidth)
-    return nullptr;
-
-  Value *Upper, *Lower, *ShrAmt;
-  if (!match(Trunc.getOperand(0),
-             m_OneUse(m_Shr(
-                 m_OneUse(m_DisjointOr(
-                     m_OneUse(m_Shl(m_Value(Upper), m_SpecificInt(BitWidth))),
-                     m_Value(Lower))),
-                 m_Value(ShrAmt)))))
-    return nullptr;
-
-  KnownBits KnownLower = IC.computeKnownBits(Lower, nullptr);
-  if (!KnownLower.getMaxValue().isIntN(BitWidth))
-    return nullptr;
-
-  KnownBits KnownShr = IC.computeKnownBits(ShrAmt, nullptr);
-  if ((~KnownShr.Zero).getZExtValue() != BitWidth)
-    return nullptr;
-
-  Value *ShrAmtZ =
-      IC.Builder.CreateICmpEQ(ShrAmt, Constant::getNullValue(Trunc.getSrcTy()),
-                              ShrAmt->getName() + ".z");
-  Value *Select = IC.Builder.CreateSelect(ShrAmtZ, Lower, Upper);
-  Select->takeName(Trunc.getOperand(0));
-  return CastInst::CreateTruncOrBitCast(Select, Trunc.getDestTy());
-}
-
 Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (Instruction *Result = commonCastTransforms(Trunc))
     return Result;
@@ -946,9 +905,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return I;
 
   if (Instruction *I = shrinkInsertElt(Trunc, Builder))
-    return I;
-
-  if (Instruction *I = foldPackSelectingShift(Trunc, *this))
     return I;
 
   if (Src->hasOneUse() &&
