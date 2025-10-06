@@ -1285,6 +1285,9 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return getNumOperands() > 1;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::WidePtrAdd:
+    // WidePtrAdd supports scalar and vector base addresses.
+    return false;
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);

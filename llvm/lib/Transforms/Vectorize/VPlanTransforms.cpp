@@ -3800,24 +3800,30 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   // Create explicit VPInstructions to convert vectors to scalars.
   for (VPBasicBlock *VPBB : VPBBsInsideLoopRegion) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe>(&R))
+      if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe,
+              VPDerivedIVRecipe, VPCanonicalIVPHIRecipe>(&R))
         continue;
       for (VPValue *Def : R.definedValues()) {
+        // Skip recipes that are single-scalar or only have their first lane
+        // used.
+        // TODO: The Defs skipped here may or may not be vector values.
+        // Introduce Unpacks, and remove them later, if they are guaranteed to
+        // produce scalar values.
         if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
           continue;
 
-        auto IsInsideReplicateRegion = [LoopRegion](VPUser *U) {
-          VPRegionBlock *ParentRegion =
-              cast<VPRecipeBase>(U)->getParent()->getParent();
-          return ParentRegion && ParentRegion != LoopRegion;
-        };
         // At the moment, we only create unpacks for scalar users outside
         // replicate regions. Recipes inside replicate regions still manually
-        // extract the required lanes. TODO: Remove once replicate regions are
-        // unrolled explicitly.
-        if (none_of(Def->users(), [Def, &IsInsideReplicateRegion](VPUser *U) {
-              return !IsInsideReplicateRegion(U) && U->usesScalars(Def);
-            }))
+        // extract the required lanes.
+        // TODO: Remove once replicate regions are
+        // unrolled completely.
+        auto IsCandidateUnpackUser = [Def](VPUser *U) {
+          VPRegionBlock *ParentRegion =
+              cast<VPRecipeBase>(U)->getParent()->getParent();
+          return U->usesScalars(Def) &&
+                 (!ParentRegion || !ParentRegion->isReplicator());
+        };
+        if (none_of(Def->users(), IsCandidateUnpackUser))
           continue;
 
         auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
@@ -3825,10 +3831,10 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
           Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
-        Def->replaceUsesWithIf(
-            Unpack, [Def, &IsInsideReplicateRegion](VPUser &U, unsigned) {
-              return !IsInsideReplicateRegion(&U) && U.usesScalars(Def);
-            });
+        Def->replaceUsesWithIf(Unpack,
+                               [&IsCandidateUnpackUser](VPUser &U, unsigned) {
+                                 return IsCandidateUnpackUser(&U);
+                               });
       }
     }
   }

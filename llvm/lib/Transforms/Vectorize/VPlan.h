@@ -1067,7 +1067,7 @@ public:
     /// Extracts all lanes from its (non-scalable) vector operand. This is an
     /// abstract VPInstruction whose single defined VPValue represents VF
     /// scalars extracted from a vector, to be replaced by VF ExtractElement
-    /// VPInstructions?
+    /// VPInstructions.
     Unpack,
   };
 

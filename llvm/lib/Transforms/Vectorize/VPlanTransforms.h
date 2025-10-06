@@ -326,7 +326,7 @@ struct VPlanTransforms {
                                             VPBasicBlock *VectorPH);
 
   /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
-  /// values into single vectors and UnpackVector to extract scalars from a
+  /// values into single vectors and Unpack recipes to extract scalars from a
   /// vector as needed.
   static void materializePacksAndUnpacks(VPlan &Plan);
 
