@@ -906,6 +906,9 @@ void ASTContext::cleanup() {
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
+
+  XRayFilter.reset();
+  NoSanitizeL.reset();
 }
 
 ASTContext::~ASTContext() { cleanup(); }
