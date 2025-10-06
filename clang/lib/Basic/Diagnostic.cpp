@@ -538,11 +538,11 @@ WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
 
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
-  for (const auto& SectionEntry : Sections) {
+  for (const auto &SectionEntry : Sections) {
     StringRef DiagGroup = SectionEntry.SectionStr;
     if (DiagGroup == "*") {
-      // Drop the default section introduced by special case list, we only support
-      // exact diagnostic group names.
+      // Drop the default section introduced by special case list, we only
+      // support exact diagnostic group names.
       // FIXME: We should make this configurable in the parser instead.
       continue;
     }
