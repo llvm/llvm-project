@@ -17,6 +17,7 @@ _Float16 test_mm512_cvtsh_h(__m512h __A) {
   // CHECK: extractelement <32 x half> %{{.*}}, i32 0
   return _mm512_cvtsh_h(__A);
 }
+TEST_CONSTEXPR(_mm512_cvtsh_h((__m512h){-32.0, 31.0, -30.0, 29.0, -28.0, 27.0, -26.0, 25.0, -24.0, 23.0, -22.0, 21.0, -20.0, 19.0, -18.0, 17.0, -16.0, 15.0, -14.0, 13.0, -12.0, 11.0, -10.0, 9.0, -8.0, 7.0, -6.0, 5.0, -4.0, 3.0, -2.0, 1.0}) == -32.0);
 
 __m128h test_mm_setzero_ph(void) {
   // CHECK-LABEL: test_mm_setzero_ph

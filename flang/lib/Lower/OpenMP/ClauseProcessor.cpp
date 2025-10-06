@@ -431,6 +431,19 @@ bool ClauseProcessor::processNumTasks(
   return false;
 }
 
+bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
+                                   mlir::omp::SizesClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Sizes>()) {
+    result.sizes.reserve(clause->v.size());
+    for (const ExprTy &vv : clause->v)
+      result.sizes.push_back(fir::getBase(converter.genExprValue(vv, stmtCtx)));
+
+    return true;
+  }
+
+  return false;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {

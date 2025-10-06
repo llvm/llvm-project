@@ -81,6 +81,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  faccessat
+  SRCS
+    faccessat.cpp
+  HDRS
+    ../faccessat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fchdir
   SRCS
     fchdir.cpp
@@ -190,6 +203,20 @@ add_entrypoint_object(
     libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  gethostname
+  SRCS
+    gethostname.cpp
+  HDRS
+    ../gethostname.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.include.sys_utsname
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
