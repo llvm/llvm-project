@@ -19,7 +19,6 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 // range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
 static constexpr uint16_t POS_STOP = 0x7f80U;
-// static constexpr uint16_t POS_STOP = 0x3e00U;
 
 // range: [-0, -inf]
 static constexpr uint16_t NEG_START = 0x8000U;
