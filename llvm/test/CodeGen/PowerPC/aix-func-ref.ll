@@ -14,11 +14,11 @@
 @b = global i32 2
 @c = global i32 3
 
-define i32 @foo() !ref !0 {
+define i32 @foo() !implicit.ref !0 {
   ret i32 0
 }
 
-define i32 @bar() !ref !1 !ref !2 {
+define i32 @bar() !implicit.ref !1 !implicit.ref !2 {
   ret i32 0
 }
 

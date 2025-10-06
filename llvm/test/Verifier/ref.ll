@@ -1,10 +1,10 @@
 ; RUN: not llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
 
-@a = global i32 1, !ref !0
-@b = global i32 2, !ref !1
-@c = global i32 3, !ref !1, !ref !2
-@d = global i32 4, !ref !3
-@e = external global i32, !ref !1
+@a = global i32 1, !implicit.ref !0
+@b = global i32 2, !implicit.ref !1
+@c = global i32 3, !implicit.ref !1, !implicit.ref !2
+@d = global i32 4, !implicit.ref !3
+@e = external global i32, !implicit.ref !1
 
 !0 = !{i32 1}
 !1 = !{ptr @b}
