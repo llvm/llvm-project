@@ -1342,7 +1342,7 @@ struct VectorScalableExtractOpLowering
 /// ```
 class VectorFMAOpNDRewritePattern : public OpRewritePattern<FMAOp> {
 public:
-  using OpRewritePattern<FMAOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern recursively unpacks one dimension at a time. The recursion
@@ -2127,7 +2127,7 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
 class TransposeOpToMatrixTransposeOpLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {

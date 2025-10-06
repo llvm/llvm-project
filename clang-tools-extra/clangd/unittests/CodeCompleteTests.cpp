@@ -1154,23 +1154,45 @@ TEST(CompletionTest, CommentsOnMembersFromHeader) {
       /// This is a member function.
       int delta();
     };
+
+    template <typename T>
+    struct beta {
+      /// This is a member field inside a template.
+      int omega;
+
+      /// This is a member function inside a template.
+      int epsilon();
+    };
   )cpp";
 
   auto File = testPath("foo.cpp");
   Annotations Test(R"cpp(
 #include "foo.h"
 alpha a;
-int x = a.^
+beta<int> b;
+int x = a.$p1^;
+int y = b.$p2^;
      )cpp");
   runAddDocument(Server, File, Test.code());
   auto CompletionList =
-      llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
+      llvm::cantFail(runCodeComplete(Server, File, Test.point("p1"), {}));
 
   EXPECT_THAT(CompletionList.Completions,
               Contains(AllOf(named("gamma"), doc("This is a member field."))));
   EXPECT_THAT(
       CompletionList.Completions,
       Contains(AllOf(named("delta"), doc("This is a member function."))));
+
+  CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point("p2"), {}));
+
+  EXPECT_THAT(CompletionList.Completions,
+              Contains(AllOf(named("omega")
+                             /* FIXME: Doc retrieval does not work yet*/)));
+  EXPECT_THAT(
+      CompletionList.Completions,
+      Contains(AllOf(named("epsilon"),
+                     doc("This is a member function inside a template."))));
 }
 
 TEST(CompletionTest, CommentsOnMembersFromHeaderOverloadBundling) {

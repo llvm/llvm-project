@@ -10,6 +10,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/Analyses/LifetimeAnnotations.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -503,60 +504,6 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
   return true;
 }
 
-// Return true if this is an "normal" assignment operator.
-// We assume that a normal assignment operator always returns *this, that is,
-// an lvalue reference that is the same type as the implicit object parameter
-// (or the LHS for a non-member operator$=).
-static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
-  OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
-  if (OO == OO_Equal || isCompoundAssignmentOperator(OO)) {
-    QualType RetT = FD->getReturnType();
-    if (RetT->isLValueReferenceType()) {
-      ASTContext &Ctx = FD->getASTContext();
-      QualType LHST;
-      auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isCXXInstanceMember())
-        LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
-      else
-        LHST = FD->getParamDecl(0)->getType();
-      if (Ctx.hasSameType(RetT, LHST))
-        return true;
-    }
-  }
-  return false;
-}
-
-static const FunctionDecl *
-getDeclWithMergedLifetimeBoundAttrs(const FunctionDecl *FD) {
-  return FD != nullptr ? FD->getMostRecentDecl() : nullptr;
-}
-
-static const CXXMethodDecl *
-getDeclWithMergedLifetimeBoundAttrs(const CXXMethodDecl *CMD) {
-  const FunctionDecl *FD = CMD;
-  return cast_if_present<CXXMethodDecl>(
-      getDeclWithMergedLifetimeBoundAttrs(FD));
-}
-
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
-  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
-  if (!TSI)
-    return false;
-  // Don't declare this variable in the second operand of the for-statement;
-  // GCC miscompiles that by ending its lifetime before evaluating the
-  // third operand. See gcc.gnu.org/PR86769.
-  AttributedTypeLoc ATL;
-  for (TypeLoc TL = TSI->getTypeLoc();
-       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-       TL = ATL.getModifiedLoc()) {
-    if (ATL.getAttrAs<LifetimeBoundAttr>())
-      return true;
-  }
-
-  return isNormalAssignmentOperator(FD);
-}
-
 // Visit lifetimebound or gsl-pointer arguments.
 static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
                                        LocalVisitor Visit) {
@@ -639,7 +586,8 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     // lifetimebound.
     if (Sema::CanBeGetReturnObject(Callee))
       CheckCoroObjArg = false;
-    if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
+    if (lifetimes::implicitObjectParamIsLifetimeBound(Callee) ||
+        CheckCoroObjArg)
       VisitLifetimeBoundArg(Callee, ObjectArg);
     else if (EnableGSLAnalysis) {
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
@@ -648,7 +596,8 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     }
   }
 
-  const FunctionDecl *CanonCallee = getDeclWithMergedLifetimeBoundAttrs(Callee);
+  const FunctionDecl *CanonCallee =
+      lifetimes::getDeclWithMergedLifetimeBoundAttrs(Callee);
   unsigned NP = std::min(Callee->getNumParams(), CanonCallee->getNumParams());
   for (unsigned I = 0, N = std::min<unsigned>(NP, Args.size()); I != N; ++I) {
     Expr *Arg = Args[I];
@@ -1276,19 +1225,14 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   return Report;
 }
 
-static bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
-  CMD = getDeclWithMergedLifetimeBoundAttrs(CMD);
-  return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
-         CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
-}
-
 static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
                                            const AssignedEntity &Entity) {
   bool EnableGSLAssignmentWarnings = !SemaRef.getDiagnostics().isIgnored(
       diag::warn_dangling_lifetime_pointer_assignment, SourceLocation());
   return (EnableGSLAssignmentWarnings &&
           (isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
-           isAssignmentOperatorLifetimeBound(Entity.AssignmentOperator)));
+           lifetimes::isAssignmentOperatorLifetimeBound(
+               Entity.AssignmentOperator)));
 }
 
 static void
@@ -1610,11 +1554,11 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
   switch (LK) {
   case LK_Assignment: {
     if (shouldRunGSLAssignmentAnalysis(SemaRef, *AEntity))
-      Path.push_back(
-          {isAssignmentOperatorLifetimeBound(AEntity->AssignmentOperator)
-               ? IndirectLocalPathEntry::LifetimeBoundCall
-               : IndirectLocalPathEntry::GslPointerAssignment,
-           Init});
+      Path.push_back({lifetimes::isAssignmentOperatorLifetimeBound(
+                          AEntity->AssignmentOperator)
+                          ? IndirectLocalPathEntry::LifetimeBoundCall
+                          : IndirectLocalPathEntry::GslPointerAssignment,
+                      Init});
     break;
   }
   case LK_LifetimeCapture: {
