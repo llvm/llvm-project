@@ -394,7 +394,8 @@ TEST_F(LibraryResolverIT, EnumerateSymbolsIncludesUndefWhenNotIgnored) {
 
   bool sawPrintf = false;
   auto onEach = [&](llvm::StringRef sym) -> EnumerateResult {
-    if (matchesEitherUnderscore(sym.str(), "printf"))
+    if (matchesEitherUnderscore(sym.str(), "printf") ||
+        matchesEitherUnderscore(sym.str(), "puts"))
       sawPrintf = true;
     return EnumerateResult::Continue;
   };
