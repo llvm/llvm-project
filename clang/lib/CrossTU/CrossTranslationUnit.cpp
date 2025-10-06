@@ -252,9 +252,9 @@ CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
 std::optional<std::string>
-CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
+CrossTranslationUnitContext::getLookupName(const Decl *D) {
   SmallString<128> DeclUSR;
-  bool Ret = index::generateUSRForDecl(ND, DeclUSR);
+  bool Ret = index::generateUSRForDecl(D, DeclUSR);
   if (Ret)
     return {};
   return std::string(DeclUSR);
@@ -577,8 +577,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
       DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
-      CI.getHeaderSearchOpts());
+      ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
+      CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the

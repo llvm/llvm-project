@@ -8,8 +8,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-LABEL: define ptr @test_interleave_ptradd_with_replicated_op(
 ; CHECK-SAME: ptr [[M:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[M]], i64 768
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -108,14 +108,12 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP56]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[M]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL26:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL26]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[IND_END]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 97, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 8
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[PTR_IV]], i64 4
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[P_4]], align 4

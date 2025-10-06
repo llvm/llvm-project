@@ -13,7 +13,7 @@ define i32 @foo_optsize() #0 {
 ; CHECK-LABEL: define i32 @foo_optsize(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -32,25 +32,13 @@ define i32 @foo_optsize() #0 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 ; AUTOVF-LABEL: define i32 @foo_optsize(
 ; AUTOVF-SAME: ) #[[ATTR0:[0-9]+]] {
 ; AUTOVF-NEXT:  [[ENTRY:.*:]]
-; AUTOVF-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; AUTOVF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AUTOVF:       [[VECTOR_PH]]:
 ; AUTOVF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AUTOVF:       [[VECTOR_BODY]]:
@@ -69,18 +57,6 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END:.*]]
-; AUTOVF:       [[SCALAR_PH]]:
-; AUTOVF-NEXT:    br label %[[FOR_BODY:.*]]
-; AUTOVF:       [[FOR_BODY]]:
-; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; AUTOVF-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; AUTOVF-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; AUTOVF-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AUTOVF:       [[FOR_END]]:
 ; AUTOVF-NEXT:    ret i32 0
 ;
@@ -109,7 +85,7 @@ define i32 @foo_minsize() #1 {
 ; CHECK-LABEL: define i32 @foo_minsize(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -125,28 +101,16 @@ define i32 @foo_minsize() #1 {
 ; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[TMP5]], ptr [[TMP2]], i32 1, <64 x i1> [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; CHECK-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 ; AUTOVF-LABEL: define i32 @foo_minsize(
 ; AUTOVF-SAME: ) #[[ATTR1:[0-9]+]] {
 ; AUTOVF-NEXT:  [[ENTRY:.*:]]
-; AUTOVF-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; AUTOVF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AUTOVF:       [[VECTOR_PH]]:
 ; AUTOVF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AUTOVF:       [[VECTOR_BODY]]:
@@ -162,21 +126,9 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    call void @llvm.masked.store.v32i8.p0(<32 x i8> [[TMP5]], ptr [[TMP2]], i32 1, <32 x i1> [[TMP1]])
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 224
-; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END:.*]]
-; AUTOVF:       [[SCALAR_PH]]:
-; AUTOVF-NEXT:    br label %[[FOR_BODY:.*]]
-; AUTOVF:       [[FOR_BODY]]:
-; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
-; AUTOVF-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
-; AUTOVF-NEXT:    [[DOT:%.*]] = select i1 [[CMP1]], i8 2, i8 1
-; AUTOVF-NEXT:    store i8 [[DOT]], ptr [[ARRAYIDX]], align 1
-; AUTOVF-NEXT:    [[INC]] = add nsw i32 [[I_08]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_08]], 202
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AUTOVF:       [[FOR_END]]:
 ; AUTOVF-NEXT:    ret i32 0
 ;
@@ -207,7 +159,7 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; CHECK-LABEL: define void @scev4stride1(
 ; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], i32 [[K:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[FOR_BODY_PREHEADER:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i32> poison, i32 [[K]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT]], <64 x i32> poison, <64 x i32> zeroinitializer
@@ -223,28 +175,16 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <64 x i32> [[VEC_IND]], splat (i32 64)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[MUL]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_07]]
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 256
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 ; AUTOVF-LABEL: define void @scev4stride1(
 ; AUTOVF-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], i32 [[K:%.*]]) #[[ATTR0]] {
 ; AUTOVF-NEXT:  [[FOR_BODY_PREHEADER:.*:]]
-; AUTOVF-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; AUTOVF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AUTOVF:       [[VECTOR_PH]]:
 ; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[K]], i64 0
 ; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
@@ -260,21 +200,9 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
-; AUTOVF-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; AUTOVF-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; AUTOVF:       [[SCALAR_PH]]:
-; AUTOVF-NEXT:    br label %[[FOR_BODY:.*]]
-; AUTOVF:       [[FOR_BODY]]:
-; AUTOVF-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; AUTOVF-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_07]], [[K]]
-; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[MUL]]
-; AUTOVF-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; AUTOVF-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_07]]
-; AUTOVF-NEXT:    store i32 [[TMP6]], ptr [[ARRAYIDX1]], align 4
-; AUTOVF-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
-; AUTOVF-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 256
-; AUTOVF-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; AUTOVF:       [[FOR_END_LOOPEXIT]]:
 ; AUTOVF-NEXT:    ret void
 ;
@@ -407,7 +335,7 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[END2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP3]], 63
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 64
@@ -428,17 +356,9 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 -4608
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 -72
-; CHECK-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -451,7 +371,7 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[END2]]
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
 ; AUTOVF-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
-; AUTOVF-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; AUTOVF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AUTOVF:       [[VECTOR_PH]]:
 ; AUTOVF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP3]], 7
 ; AUTOVF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
@@ -472,17 +392,9 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; AUTOVF-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 -576
 ; AUTOVF-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; AUTOVF-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; AUTOVF-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
 ; AUTOVF-NEXT:    br label %[[EXIT:.*]]
-; AUTOVF:       [[SCALAR_PH]]:
-; AUTOVF-NEXT:    br label %[[LOOP:.*]]
-; AUTOVF:       [[LOOP]]:
-; AUTOVF-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; AUTOVF-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 -72
-; AUTOVF-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
-; AUTOVF-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; AUTOVF-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AUTOVF:       [[EXIT]]:
 ; AUTOVF-NEXT:    ret void
 ;

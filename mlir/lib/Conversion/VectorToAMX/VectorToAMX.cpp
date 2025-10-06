@@ -363,7 +363,7 @@ static TypedValue<VectorType> storeTile(PatternRewriter &rewriter,
 }
 
 struct ContractionToAMX : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
