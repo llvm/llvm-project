@@ -214,8 +214,8 @@ class PrepareForOMPOffloadPrivatizationPass
             [&](Region &region, llvm::StringRef funcName,
                 llvm::ArrayRef<Value> args, bool returnsValue) -> Value {
           assert(!region.empty() && "region cannot be empty");
-          LLVM::LLVMFuncOp func =
-              createFuncOpForRegion(loc, mod, region, funcName, rewriter, returnsValue);
+          LLVM::LLVMFuncOp func = createFuncOpForRegion(
+              loc, mod, region, funcName, rewriter, returnsValue);
           auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
           return call.getResult();
         };
@@ -297,7 +297,8 @@ class PrepareForOMPOffloadPrivatizationPass
         // Deallocate
         if (needsCleanupTask) {
           if (!cleanupTaskOp) {
-            assert(fakeDependVar && "Need a valid value to set up a dependency");
+            assert(fakeDependVar &&
+                   "Need a valid value to set up a dependency");
             rewriter.setInsertionPointAfter(targetOp);
             omp::TaskOperands taskOperands;
             auto inDepend = omp::ClauseTaskDependAttr::get(
