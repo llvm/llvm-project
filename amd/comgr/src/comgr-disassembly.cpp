@@ -46,14 +46,16 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
     return AMD_COMGR_STATUS_ERROR;
   }
 
-  std::unique_ptr<const MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  llvm::Triple TheTriple(TT);
+  std::unique_ptr<const MCRegisterInfo>
+    MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {
     return AMD_COMGR_STATUS_ERROR;
   }
 
   llvm::MCTargetOptions MCOptions;
   std::unique_ptr<const MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI) {
     return AMD_COMGR_STATUS_ERROR;
   }
@@ -64,7 +66,7 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   }
 
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TT, Ident.Processor, Features));
+      TheTarget->createMCSubtargetInfo(TheTriple, Ident.Processor, Features));
   if (!STI) {
     return AMD_COMGR_STATUS_ERROR;
   }

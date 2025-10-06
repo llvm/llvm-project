@@ -377,14 +377,15 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(
+      llvm::Triple(Opts.Triple)));
   assert(MRI && "Unable to create target register info!");
 
   llvm::MCTargetOptions MCOptions;
   MCOptions.X86RelaxRelocations = Opts.RelaxELFRelocations;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, llvm::Triple(Opts.Triple), MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
@@ -407,7 +408,7 @@ bool executeAssemblerImpl(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
 
   std::unique_ptr<MCObjectFileInfo> MOFI(new MCObjectFileInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
+      TheTarget->createMCSubtargetInfo(llvm::Triple(Opts.Triple), Opts.CPU, FS));
 
   MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   Ctx.setObjectFileInfo(MOFI.get());
