@@ -1979,6 +1979,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
               VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
             [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+        .Case<VPPredInstPHIRecipe>([](auto *I) {
+          // Treat VPPredInstPHIRecipe as Instruction::PHI for CSE. This is only
+          // safe, if they are in the same block and hence share the same
+          // predicate.
+          return std::make_pair(false, Instruction::PHI);
+        })
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
         })
@@ -2053,6 +2059,15 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
         return false;
+    // Recipes in replicate regions implicitly depend on predicate. If either
+    // recipe is in a replicate region, only consider them equal if both have
+    // the same parent.
+    const VPRegionBlock *RegionL = L->getParent()->getParent();
+    const VPRegionBlock *RegionR = R->getParent()->getParent();
+    if (((RegionL && RegionL->isReplicator()) ||
+         (RegionR && RegionR->isReplicator())) &&
+        L->getParent() != R->getParent())
+      return false;
     const VPlan *Plan = L->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
     return TypeInfo.inferScalarType(L) == TypeInfo.inferScalarType(R);
