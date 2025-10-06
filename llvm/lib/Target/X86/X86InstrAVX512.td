@@ -3238,6 +3238,7 @@ multiclass avx512_load<bits<8> opc, string OpcodeStr, string Name,
                                           (_.VT _.RC:$src1),
                                           (_.VT _.RC:$src0))))], _.ExeDomain>,
                        EVEX, EVEX_K, Sched<[Sched.RR]>;
+    let mayLoad = 1, canFoldAsLoad = 1 in
     def rmk : AVX512PI<opc, MRMSrcMem, (outs _.RC:$dst),
                      (ins _.RC:$src0, _.KRCWM:$mask, _.MemOp:$src1),
                      !strconcat(OpcodeStr, "\t{$src1, ${dst} {${mask}}|",
@@ -3248,6 +3249,7 @@ multiclass avx512_load<bits<8> opc, string OpcodeStr, string Name,
                            (_.VT _.RC:$src0))))], _.ExeDomain>,
                      EVEX, EVEX_K, Sched<[Sched.RM]>;
   }
+  let mayLoad = 1, canFoldAsLoad = 1 in
   def rmkz : AVX512PI<opc, MRMSrcMem, (outs _.RC:$dst),
                   (ins _.KRCWM:$mask, _.MemOp:$src),
                   OpcodeStr #"\t{$src, ${dst} {${mask}} {z}|"#
@@ -12298,72 +12300,76 @@ defm : vpclmulqdq_aliases<"VPCLMULQDQZ256", VR256X, i256mem>;
 // VBMI2
 //===----------------------------------------------------------------------===//
 
-multiclass VBMI2_shift_var_rm<bits<8> Op, string OpStr, SDNode OpNode,
+multiclass VBMI2_shift_var_rm<bits<8> Op, string OpStr, SDNode OpNode, bit SwapLR,
                               X86FoldableSchedWrite sched, X86VectorVTInfo VTI> {
   let Constraints = "$src1 = $dst",
       ExeDomain   = VTI.ExeDomain in {
     defm r:   AVX512_maskable_3src<Op, MRMSrcReg, VTI, (outs VTI.RC:$dst),
                 (ins VTI.RC:$src2, VTI.RC:$src3), OpStr,
                 "$src3, $src2", "$src2, $src3",
-                (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2, VTI.RC:$src3))>,
+                !if(SwapLR,
+                (VTI.VT (OpNode (VTI.VT VTI.RC:$src2), (VTI.VT VTI.RC:$src1), (VTI.VT VTI.RC:$src3))),
+                (VTI.VT (OpNode (VTI.VT VTI.RC:$src1), (VTI.VT VTI.RC:$src2), (VTI.VT VTI.RC:$src3))))>,
                 T8, PD, EVEX, VVVV, Sched<[sched]>;
     defm m:   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                 (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
                 "$src3, $src2", "$src2, $src3",
-                (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                        (VTI.VT (VTI.LdFrag addr:$src3))))>,
+                !if(SwapLR,
+                (VTI.VT (OpNode (VTI.VT VTI.RC:$src2), (VTI.VT VTI.RC:$src1), (VTI.VT (VTI.LdFrag addr:$src3)))),
+                (VTI.VT (OpNode (VTI.VT VTI.RC:$src1), (VTI.VT VTI.RC:$src2), (VTI.VT (VTI.LdFrag addr:$src3)))))>,
                 T8, PD, EVEX, VVVV,
                 Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
-multiclass VBMI2_shift_var_rmb<bits<8> Op, string OpStr, SDNode OpNode,
+multiclass VBMI2_shift_var_rmb<bits<8> Op, string OpStr, SDNode OpNode, bit SwapLR,
                                X86FoldableSchedWrite sched, X86VectorVTInfo VTI>
-         : VBMI2_shift_var_rm<Op, OpStr, OpNode, sched, VTI> {
+         : VBMI2_shift_var_rm<Op, OpStr, OpNode, SwapLR, sched, VTI> {
   let Constraints = "$src1 = $dst",
       ExeDomain   = VTI.ExeDomain in
   defm mb:  AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
               (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3), OpStr,
               "${src3}"#VTI.BroadcastStr#", $src2",
               "$src2, ${src3}"#VTI.BroadcastStr,
-              (OpNode VTI.RC:$src1, VTI.RC:$src2,
-               (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))>,
+              !if(SwapLR,
+              (OpNode (VTI.VT VTI.RC:$src2), (VTI.VT VTI.RC:$src1), (VTI.VT (VTI.BroadcastLdFrag addr:$src3))),
+              (OpNode (VTI.VT VTI.RC:$src1), (VTI.VT VTI.RC:$src2), (VTI.VT (VTI.BroadcastLdFrag addr:$src3))))>,
               T8, PD, EVEX, VVVV, EVEX_B,
               Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-multiclass VBMI2_shift_var_rm_common<bits<8> Op, string OpStr, SDNode OpNode,
+multiclass VBMI2_shift_var_rm_common<bits<8> Op, string OpStr, SDNode OpNode, bit SwapLR,
                                      X86SchedWriteWidths sched, AVX512VLVectorVTInfo VTI> {
   let Predicates = [HasVBMI2] in
-  defm Z      : VBMI2_shift_var_rm<Op, OpStr, OpNode, sched.ZMM, VTI.info512>,
+  defm Z      : VBMI2_shift_var_rm<Op, OpStr, OpNode, SwapLR, sched.ZMM, VTI.info512>,
                                    EVEX_V512;
   let Predicates = [HasVBMI2, HasVLX] in {
-    defm Z256 : VBMI2_shift_var_rm<Op, OpStr, OpNode, sched.YMM, VTI.info256>,
+    defm Z256 : VBMI2_shift_var_rm<Op, OpStr, OpNode, SwapLR, sched.YMM, VTI.info256>,
                                    EVEX_V256;
-    defm Z128 : VBMI2_shift_var_rm<Op, OpStr, OpNode, sched.XMM, VTI.info128>,
+    defm Z128 : VBMI2_shift_var_rm<Op, OpStr, OpNode, SwapLR, sched.XMM, VTI.info128>,
                                    EVEX_V128;
   }
 }
 
-multiclass VBMI2_shift_var_rmb_common<bits<8> Op, string OpStr, SDNode OpNode,
+multiclass VBMI2_shift_var_rmb_common<bits<8> Op, string OpStr, SDNode OpNode, bit SwapLR,
                                       X86SchedWriteWidths sched, AVX512VLVectorVTInfo VTI> {
   let Predicates = [HasVBMI2] in
-  defm Z      : VBMI2_shift_var_rmb<Op, OpStr, OpNode, sched.ZMM, VTI.info512>,
+  defm Z      : VBMI2_shift_var_rmb<Op, OpStr, OpNode, SwapLR, sched.ZMM, VTI.info512>,
                                     EVEX_V512;
   let Predicates = [HasVBMI2, HasVLX] in {
-    defm Z256 : VBMI2_shift_var_rmb<Op, OpStr, OpNode, sched.YMM, VTI.info256>,
+    defm Z256 : VBMI2_shift_var_rmb<Op, OpStr, OpNode, SwapLR, sched.YMM, VTI.info256>,
                                     EVEX_V256;
-    defm Z128 : VBMI2_shift_var_rmb<Op, OpStr, OpNode, sched.XMM, VTI.info128>,
+    defm Z128 : VBMI2_shift_var_rmb<Op, OpStr, OpNode, SwapLR, sched.XMM, VTI.info128>,
                                     EVEX_V128;
   }
 }
 multiclass VBMI2_shift_var<bits<8> wOp, bits<8> dqOp, string Prefix,
-                           SDNode OpNode, X86SchedWriteWidths sched> {
-  defm W : VBMI2_shift_var_rm_common<wOp, Prefix#"w", OpNode, sched,
+                           SDNode OpNode, bit SwapLR, X86SchedWriteWidths sched> {
+  defm W : VBMI2_shift_var_rm_common<wOp, Prefix#"w", OpNode, SwapLR, sched,
              avx512vl_i16_info>, REX_W, EVEX_CD8<16, CD8VF>;
-  defm D : VBMI2_shift_var_rmb_common<dqOp, Prefix#"d", OpNode, sched,
+  defm D : VBMI2_shift_var_rmb_common<dqOp, Prefix#"d", OpNode, SwapLR, sched,
              avx512vl_i32_info>, EVEX_CD8<32, CD8VF>;
-  defm Q : VBMI2_shift_var_rmb_common<dqOp, Prefix#"q", OpNode, sched,
+  defm Q : VBMI2_shift_var_rmb_common<dqOp, Prefix#"q", OpNode, SwapLR, sched,
              avx512vl_i64_info>, REX_W, EVEX_CD8<64, CD8VF>;
 }
 
@@ -12379,8 +12385,8 @@ multiclass VBMI2_shift_imm<bits<8> wOp, bits<8> dqOp, string Prefix,
 }
 
 // Concat & Shift
-defm VPSHLDV : VBMI2_shift_var<0x70, 0x71, "vpshldv", X86VShldv, SchedWriteVecIMul>;
-defm VPSHRDV : VBMI2_shift_var<0x72, 0x73, "vpshrdv", X86VShrdv, SchedWriteVecIMul>;
+defm VPSHLDV : VBMI2_shift_var<0x70, 0x71, "vpshldv", fshl, 0, SchedWriteVecIMul>;
+defm VPSHRDV : VBMI2_shift_var<0x72, 0x73, "vpshrdv", fshr, 1, SchedWriteVecIMul>;
 defm VPSHLD  : VBMI2_shift_imm<0x70, 0x71, "vpshld", X86VShld, SchedWriteVecIMul>;
 defm VPSHRD  : VBMI2_shift_imm<0x72, 0x73, "vpshrd", X86VShrd, SchedWriteVecIMul>;
 

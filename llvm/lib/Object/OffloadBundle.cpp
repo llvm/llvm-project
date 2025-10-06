@@ -89,17 +89,17 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
     uint64_t EntryIDSize;
     StringRef EntryID;
 
-    if (auto EC = Reader.readInteger(EntryOffset))
-      return errorCodeToError(object_error::parse_failed);
+    if (Error Err = Reader.readInteger(EntryOffset))
+      return Err;
 
-    if (auto EC = Reader.readInteger(EntrySize))
-      return errorCodeToError(object_error::parse_failed);
+    if (Error Err = Reader.readInteger(EntrySize))
+      return Err;
 
-    if (auto EC = Reader.readInteger(EntryIDSize))
-      return errorCodeToError(object_error::parse_failed);
+    if (Error Err = Reader.readInteger(EntryIDSize))
+      return Err;
 
-    if (auto EC = Reader.readFixedString(EntryID, EntryIDSize))
-      return errorCodeToError(object_error::parse_failed);
+    if (Error Err = Reader.readFixedString(EntryID, EntryIDSize))
+      return Err;
 
     auto Entry = std::make_unique<OffloadBundleEntry>(
         EntryOffset + SectionOffset, EntrySize, EntryIDSize, EntryID);
@@ -120,14 +120,15 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
   if (identify_magic(Buf.getBuffer()) != file_magic::offload_bundle)
     return errorCodeToError(object_error::parse_failed);
 
-  OffloadBundleFatBin *TheBundle = new OffloadBundleFatBin(Buf, FileName);
+  std::unique_ptr<OffloadBundleFatBin> TheBundle(
+      new OffloadBundleFatBin(Buf, FileName));
 
   // Read the Bundle Entries
   Error Err = TheBundle->readEntries(Buf.getBuffer(), SectionOffset);
   if (Err)
-    return errorCodeToError(object_error::parse_failed);
+    return Err;
 
-  return std::unique_ptr<OffloadBundleFatBin>(TheBundle);
+  return std::move(TheBundle);
 }
 
 Error OffloadBundleFatBin::extractBundle(const ObjectFile &Source) {

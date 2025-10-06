@@ -1645,7 +1645,7 @@ def EmitC_ClassOp
         return
       }
     }
-    // Class with a final speciferAdd commentMore actions
+    // Class with a final specifer
     emitc.class final @modelClass {
       emitc.field @fieldName0 : !emitc.array<1xf32> = {emitc.opaque = "input_tensor"}
       emitc.func @execute() {
@@ -1666,8 +1666,6 @@ def EmitC_ClassOp
     // Returns the body block containing class members and methods.
     Block &getBlock();
   }];
-
-  let hasCustomAssemblyFormat = 1;
 
   let assemblyFormat =
       [{ (`final` $final_specifier^)? $sym_name attr-dict-with-keyword $body }];

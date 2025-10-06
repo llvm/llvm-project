@@ -101,6 +101,7 @@ void parser<unsigned long long>::anchor() {}
 void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
+void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
 
 // These anchor functions instantiate opt<T> and reference its virtual
@@ -2258,6 +2259,22 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
     outs() << D.getValue();
   else
     outs() << "*no default*";
+  outs() << ")\n";
+}
+
+void parser<std::optional<std::string>>::printOptionDiff(
+    const Option &O, std::optional<StringRef> V,
+    const OptionValue<std::optional<std::string>> &D,
+    size_t GlobalWidth) const {
+  printOptionName(O, GlobalWidth);
+  outs() << "= " << V;
+  size_t VSize = V.has_value() ? V.value().size() : 0;
+  size_t NumSpaces = MaxOptWidth > VSize ? MaxOptWidth - VSize : 0;
+  outs().indent(NumSpaces) << " (default: ";
+  if (D.hasValue() && D.getValue().has_value())
+    outs() << D.getValue();
+  else
+    outs() << "*no value*";
   outs() << ")\n";
 }
 

@@ -2081,9 +2081,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   if (!MFI.getSavePoints().empty() && MFI.hasTailCall()) {
     assert(MFI.getRestorePoints().size() < 2 &&
            "MFI can't contain multiple restore points!");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
     for (MachineBasicBlock &MBB : MF) {
-      if (MBB.isReturnBlock() && (&MBB) != RestoreBlock)
+      if (MBB.isReturnBlock() && (!MFI.getRestorePoints().contains(&MBB)))
         createTailCallBranchInstr(MBB);
     }
   }

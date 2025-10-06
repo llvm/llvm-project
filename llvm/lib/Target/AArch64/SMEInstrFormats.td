@@ -4967,7 +4967,7 @@ multiclass sme2_movaz_array_to_vec_vg4_multi<string mnemonic> {
 //===----------------------------------------------------------------------===//
 // SME2 multi-vec saturating shift right narrow
 class sme2_sat_shift_vector_vg2<string mnemonic, bit op, bit u>
-    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn, tvecshiftR16:$imm4),
+    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn, vecshiftR16:$imm4),
         mnemonic, "\t$Zd, $Zn, $imm4",
         "", []>, Sched<[]> {
   bits<4> imm4;
@@ -4985,7 +4985,7 @@ class sme2_sat_shift_vector_vg2<string mnemonic, bit op, bit u>
 multiclass sme2_sat_shift_vector_vg2<string mnemonic, bit op, bit u, SDPatternOperator intrinsic> {
   def _H : sme2_sat_shift_vector_vg2<mnemonic, op, u>;
 
-  def : SME2_Sat_Shift_VG2_Pat<NAME # _H, intrinsic, nxv8i16, nxv4i32, tvecshiftR16>;
+  def : SME2_Sat_Shift_VG2_Pat<NAME # _H, intrinsic, nxv8i16, nxv4i32, vecshiftR16>;
 }
 
 class sme2_sat_shift_vector_vg4<bits<2> sz, bits<3> op, ZPRRegOp zpr_ty,
@@ -5008,20 +5008,20 @@ class sme2_sat_shift_vector_vg4<bits<2> sz, bits<3> op, ZPRRegOp zpr_ty,
 }
 
 multiclass sme2_sat_shift_vector_vg4<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
-  def _B : sme2_sat_shift_vector_vg4<{0,1}, op, ZPR8, ZZZZ_s_mul_r, tvecshiftR32,
+  def _B : sme2_sat_shift_vector_vg4<{0,1}, op, ZPR8, ZZZZ_s_mul_r, vecshiftR32,
                                      mnemonic>{
     bits<5> imm;
     let Inst{20-16} = imm;
   }
-  def _H : sme2_sat_shift_vector_vg4<{1,?}, op, ZPR16, ZZZZ_d_mul_r, tvecshiftR64,
+  def _H : sme2_sat_shift_vector_vg4<{1,?}, op, ZPR16, ZZZZ_d_mul_r, vecshiftR64,
                                       mnemonic> {
     bits<6> imm;
     let Inst{22}    = imm{5};
     let Inst{20-16} = imm{4-0};
   }
 
-  def : SME2_Sat_Shift_VG4_Pat<NAME # _B, intrinsic, nxv16i8, nxv4i32, tvecshiftR32>;
-  def : SME2_Sat_Shift_VG4_Pat<NAME # _H, intrinsic, nxv8i16, nxv2i64, tvecshiftR64>;
+  def : SME2_Sat_Shift_VG4_Pat<NAME # _B, intrinsic, nxv16i8, nxv4i32, vecshiftR32>;
+  def : SME2_Sat_Shift_VG4_Pat<NAME # _H, intrinsic, nxv8i16, nxv2i64, vecshiftR64>;
 }
 
 //===----------------------------------------------------------------------===//

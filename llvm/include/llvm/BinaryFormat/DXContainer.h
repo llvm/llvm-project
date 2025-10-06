@@ -185,6 +185,15 @@ enum class DescriptorRangeFlags : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeFlags>> getDescriptorRangeFlags();
 
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag) Enum = Num,
+enum class StaticSamplerFlags : uint32_t {
+#include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(NonNormalizedCoordinates)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<StaticSamplerFlags>> getStaticSamplerFlags();
+
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
@@ -813,12 +822,29 @@ struct DescriptorRange {
   }
 };
 } // namespace v2
+
+namespace v3 {
+struct StaticSampler : public v1::StaticSampler {
+  uint32_t Flags;
+
+  StaticSampler() = default;
+  explicit StaticSampler(v1::StaticSampler &Base)
+      : v1::StaticSampler(Base), Flags(0U) {}
+
+  void swapBytes() {
+    v1::StaticSampler::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+
+} // namespace v3
 } // namespace RTS0
 
 // D3D_ROOT_SIGNATURE_VERSION
 enum class RootSignatureVersion {
   V1_0 = 0x1,
   V1_1 = 0x2,
+  V1_2 = 0x3,
 };
 
 } // namespace dxbc

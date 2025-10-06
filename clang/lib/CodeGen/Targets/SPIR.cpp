@@ -486,6 +486,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    if (ResAttrs.IsCounter) {
+      llvm::Type *ElemType = llvm::Type::getInt32Ty(Ctx);
+      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {ElemType},
+                                      {StorageClass, true});
+    }
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;

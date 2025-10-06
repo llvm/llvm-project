@@ -58,9 +58,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       [[fallthrough]];
     }
     default:
-      Diag(ArgExpr->getExprLoc(), diag::err_amdgcn_load_lds_size_invalid_value)
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::err_amdgcn_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
-      Diag(ArgExpr->getExprLoc(), diag::note_amdgcn_load_lds_size_valid_value)
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::note_amdgcn_load_lds_size_valid_value)
           << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }
@@ -122,7 +124,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
            << ArgExpr->getType();
   auto Ord = ArgResult.Val.getInt().getZExtValue();
 
-  // Check validity of memory ordering as per C11 / C++11's memody model.
+  // Check validity of memory ordering as per C11 / C++11's memory model.
   // Only fence needs check. Atomic dec/inc allow all memory orders.
   if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),

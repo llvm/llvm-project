@@ -904,7 +904,7 @@ def testVariadicResultAccess():
 
             assert (
                 typing.get_type_hints(test.same_variadic_result_vfv)["return"]
-                is Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
+                == Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
             )
             assert (
                 type(test.same_variadic_result_vfv([i[0], i[1]], i[2], [i[3], i[4]]))
@@ -992,7 +992,7 @@ def testVariadicResultAccess():
 
             assert (
                 typing.get_type_hints(test.results_variadic)["return"]
-                is Union[OpResult, OpResultList, test.ResultsVariadicOp]
+                == Union[OpResult, OpResultList, test.ResultsVariadicOp]
             )
             assert type(test.results_variadic([i[0]])) is OpResult
             op_res_variadic = test.ResultsVariadicOp([i[0]])
@@ -1003,7 +1003,7 @@ def testVariadicResultAccess():
             assert type(op_res_variadic.res) is OpResultList
 
 
-# CHECK-LABEL: TEST: testVariadicAndNormalRegion
+# CHECK-LABEL: TEST: testVariadicAndNormalRegionOp
 @run
 def testVariadicAndNormalRegionOp():
     with Context() as ctx, Location.unknown(ctx):
@@ -1024,3 +1024,6 @@ def testVariadicAndNormalRegionOp():
                 is RegionSequence
             )
             assert type(region_op.variadic) is RegionSequence
+
+            assert isinstance(region_op.opview, OpView)
+            assert isinstance(region_op.operation.opview, OpView)

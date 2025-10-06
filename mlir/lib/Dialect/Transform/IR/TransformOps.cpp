@@ -616,11 +616,10 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
       if (diag.succeeded()) {
         // Tracking failure is the only failure.
         return trackingFailure;
-      } else {
-        diag.attachNote() << "tracking listener also failed: "
-                          << trackingFailure.getMessage();
-        (void)trackingFailure.silence();
       }
+      diag.attachNote() << "tracking listener also failed: "
+                        << trackingFailure.getMessage();
+      (void)trackingFailure.silence();
     }
 
     if (!diag.succeeded())

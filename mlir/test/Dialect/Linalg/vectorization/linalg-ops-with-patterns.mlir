@@ -339,8 +339,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL:   func.func @test_vectorize_pack(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x8x16xf32>,
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = ub.poison : f32
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, true, true]} : tensor<32x8x16xf32>, vector<32x8x16xf32>
 // CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 // CHECK:           %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [1, 3, 0, 4, 2] : vector<32x4x2x1x16xf32> to vector<4x1x32x16x2xf32>

@@ -787,10 +787,7 @@ hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
