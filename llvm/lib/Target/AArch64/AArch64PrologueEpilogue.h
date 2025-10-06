@@ -31,6 +31,7 @@ struct SVEFrameSizes {
   StackOffset PPRCalleeSavesSize, ZPRCalleeSavesSize;
   StackOffset PPRLocalsSize, ZPRLocalsSize;
 };
+
 class AArch64PrologueEpilogueCommon {
 public:
   AArch64PrologueEpilogueCommon(MachineFunction &MF, MachineBasicBlock &MBB,
