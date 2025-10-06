@@ -52,8 +52,8 @@ getTargetMachine(mlir::LLVM::TargetAttrInterface attr) {
     return failure();
   }
 
-  return std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
-      parsedTriple, chipAKAcpu, features, {}, {}));
+  return std::unique_ptr<llvm::TargetMachine>(
+      target->createTargetMachine(parsedTriple, chipAKAcpu, features, {}, {}));
 }
 
 FailureOr<llvm::DataLayout>
