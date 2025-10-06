@@ -43,4 +43,5 @@ void test_store_undef(int i, int value) {
   // CHECK: %{{.*}} = icmp ult i32 %i, 10
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   arr[i] = value;
+  init_array(arr);  // Avoid optimization of the above statement.
 }
