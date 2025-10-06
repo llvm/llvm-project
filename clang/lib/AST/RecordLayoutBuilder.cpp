@@ -2087,9 +2087,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   if (InsertExtraPadding) {
     CharUnits ASanAlignment = CharUnits::fromQuantity(8);
     CharUnits ExtraSizeForAsan = ASanAlignment;
-    if (FieldSize % ASanAlignment)
-      ExtraSizeForAsan +=
-          ASanAlignment - CharUnits::fromQuantity(FieldSize % ASanAlignment);
+    if (!FieldSize.isMultipleOf(ASanAlignment))
+      ExtraSizeForAsan += ASanAlignment - (FieldSize % ASanAlignment);
     EffectiveFieldSize = FieldSize = FieldSize + ExtraSizeForAsan;
   }
 
@@ -2119,10 +2118,10 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     if (RD->hasAttr<PackedAttr>() || !MaxFieldAlignment.isZero())
       if (FieldAlign < OriginalFieldAlign)
         if (D->getType()->isRecordType()) {
-          // If the offset is a multiple of the alignment of
+          // If the offset is not a multiple of the alignment of
           // the type, raise the warning.
           // TODO: Takes no account the alignment of the outer struct
-          if (FieldOffset % OriginalFieldAlign != 0)
+          if (!FieldOffset.isMultipleOf(OriginalFieldAlign))
             Diag(D->getLocation(), diag::warn_unaligned_access)
                 << Context.getCanonicalTagType(RD) << D->getName()
                 << D->getType();

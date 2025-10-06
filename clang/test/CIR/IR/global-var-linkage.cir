@@ -1,5 +1,4 @@
-// RUN: cir-opt %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 
