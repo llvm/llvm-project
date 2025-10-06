@@ -647,7 +647,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
-      if (child->isZeroValue()) {
+      if (child->isZeroValue() && !elementType->isFPOrFPVectorTy()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       } else {
         if (llvm::ConstantDataSequential::isElementTypeCompatible(
@@ -2246,18 +2246,22 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   if (!ompBuilder) {
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-    ompBuilder->initialize();
 
     // Flags represented as top-level OpenMP dialect attributes are set in
     // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
     // the default configuration.
-    ompBuilder->setConfig(llvm::OpenMPIRBuilderConfig(
+    llvm::OpenMPIRBuilderConfig config(
         /* IsTargetDevice = */ false, /* IsGPU = */ false,
         /* OpenMPOffloadMandatory = */ false,
         /* HasRequiresReverseOffload = */ false,
         /* HasRequiresUnifiedAddress = */ false,
         /* HasRequiresUnifiedSharedMemory = */ false,
-        /* HasRequiresDynamicAllocators = */ false));
+        /* HasRequiresDynamicAllocators = */ false);
+    unsigned int defaultAS =
+        getLLVMModule()->getDataLayout().getProgramAddressSpace();
+    config.setDefaultTargetAS(defaultAS);
+    ompBuilder->setConfig(std::move(config));
+    ompBuilder->initialize();
   }
   return ompBuilder.get();
 }

@@ -321,20 +321,20 @@ entry:
   ret <4 x i32> %conv6
 }
 
-define <4 x i32> @utesth_f16i32(<4 x half> %x) {
-; CHECK-CVT-SD-LABEL: utesth_f16i32:
+define <4 x i32> @utest_f16i32(<4 x half> %x) {
+; CHECK-CVT-SD-LABEL: utest_f16i32:
 ; CHECK-CVT-SD:       // %bb.0: // %entry
 ; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-SD-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utesth_f16i32:
+; CHECK-FP16-SD-LABEL: utest_f16i32:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
 ; CHECK-FP16-SD-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-FP16-SD-NEXT:    ret
 ;
-; CHECK-CVT-GI-LABEL: utesth_f16i32:
+; CHECK-CVT-GI-LABEL: utest_f16i32:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
@@ -349,7 +349,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
 ; CHECK-CVT-GI-NEXT:    ret
 ;
-; CHECK-FP16-GI-LABEL: utesth_f16i32:
+; CHECK-FP16-GI-LABEL: utest_f16i32:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-GI-NEXT:    mov h2, v0.h[1]
@@ -614,8 +614,8 @@ entry:
   ret <8 x i16> %conv6
 }
 
-define <8 x i16> @utesth_f16i16(<8 x half> %x) {
-; CHECK-CVT-LABEL: utesth_f16i16:
+define <8 x i16> @utest_f16i16(<8 x half> %x) {
+; CHECK-CVT-LABEL: utest_f16i16:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
@@ -625,12 +625,12 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-CVT-NEXT:    uqxtn2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utesth_f16i16:
+; CHECK-FP16-SD-LABEL: utest_f16i16:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
 ; CHECK-FP16-SD-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-FP16-SD-NEXT:    ret
 ;
-; CHECK-FP16-GI-LABEL: utesth_f16i16:
+; CHECK-FP16-GI-LABEL: utest_f16i16:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
@@ -1746,8 +1746,8 @@ entry:
   ret <2 x i64> %conv6
 }
 
-define <2 x i64> @utesth_f16i64(<2 x half> %x) {
-; CHECK-CVT-SD-LABEL: utesth_f16i64:
+define <2 x i64> @utest_f16i64(<2 x half> %x) {
+; CHECK-CVT-SD-LABEL: utest_f16i64:
 ; CHECK-CVT-SD:       // %bb.0: // %entry
 ; CHECK-CVT-SD-NEXT:    sub sp, sp, #48
 ; CHECK-CVT-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
@@ -1777,7 +1777,7 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-CVT-SD-NEXT:    add sp, sp, #48
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utesth_f16i64:
+; CHECK-FP16-SD-LABEL: utest_f16i64:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
 ; CHECK-FP16-SD-NEXT:    sub sp, sp, #48
 ; CHECK-FP16-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
@@ -1807,7 +1807,7 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-FP16-SD-NEXT:    add sp, sp, #48
 ; CHECK-FP16-SD-NEXT:    ret
 ;
-; CHECK-CVT-GI-LABEL: utesth_f16i64:
+; CHECK-CVT-GI-LABEL: utest_f16i64:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-CVT-GI-NEXT:    mov h1, v0.h[1]
@@ -1819,7 +1819,7 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-CVT-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-CVT-GI-NEXT:    ret
 ;
-; CHECK-FP16-GI-LABEL: utesth_f16i64:
+; CHECK-FP16-GI-LABEL: utest_f16i64:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-GI-NEXT:    mov h1, v0.h[1]
@@ -2307,20 +2307,20 @@ entry:
   ret <4 x i32> %conv6
 }
 
-define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
-; CHECK-CVT-SD-LABEL: utesth_f16i32_mm:
+define <4 x i32> @utest_f16i32_mm(<4 x half> %x) {
+; CHECK-CVT-SD-LABEL: utest_f16i32_mm:
 ; CHECK-CVT-SD:       // %bb.0: // %entry
 ; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-SD-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utesth_f16i32_mm:
+; CHECK-FP16-SD-LABEL: utest_f16i32_mm:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
 ; CHECK-FP16-SD-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-FP16-SD-NEXT:    ret
 ;
-; CHECK-CVT-GI-LABEL: utesth_f16i32_mm:
+; CHECK-CVT-GI-LABEL: utest_f16i32_mm:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
@@ -2335,7 +2335,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
 ; CHECK-CVT-GI-NEXT:    ret
 ;
-; CHECK-FP16-GI-LABEL: utesth_f16i32_mm:
+; CHECK-FP16-GI-LABEL: utest_f16i32_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-GI-NEXT:    mov h2, v0.h[1]
@@ -2585,8 +2585,8 @@ entry:
   ret <8 x i16> %conv6
 }
 
-define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
-; CHECK-CVT-LABEL: utesth_f16i16_mm:
+define <8 x i16> @utest_f16i16_mm(<8 x half> %x) {
+; CHECK-CVT-LABEL: utest_f16i16_mm:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
@@ -2596,12 +2596,12 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-CVT-NEXT:    uqxtn2 v0.8h, v2.4s
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utesth_f16i16_mm:
+; CHECK-FP16-SD-LABEL: utest_f16i16_mm:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
 ; CHECK-FP16-SD-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-FP16-SD-NEXT:    ret
 ;
-; CHECK-FP16-GI-LABEL: utesth_f16i16_mm:
+; CHECK-FP16-GI-LABEL: utest_f16i16_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
@@ -3694,8 +3694,8 @@ entry:
   ret <2 x i64> %conv6
 }
 
-define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
-; CHECK-CVT-SD-LABEL: utesth_f16i64_mm:
+define <2 x i64> @utest_f16i64_mm(<2 x half> %x) {
+; CHECK-CVT-SD-LABEL: utest_f16i64_mm:
 ; CHECK-CVT-SD:       // %bb.0: // %entry
 ; CHECK-CVT-SD-NEXT:    sub sp, sp, #48
 ; CHECK-CVT-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
@@ -3725,7 +3725,7 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-CVT-SD-NEXT:    add sp, sp, #48
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utesth_f16i64_mm:
+; CHECK-FP16-SD-LABEL: utest_f16i64_mm:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
 ; CHECK-FP16-SD-NEXT:    sub sp, sp, #48
 ; CHECK-FP16-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
@@ -3755,7 +3755,7 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-FP16-SD-NEXT:    add sp, sp, #48
 ; CHECK-FP16-SD-NEXT:    ret
 ;
-; CHECK-CVT-GI-LABEL: utesth_f16i64_mm:
+; CHECK-CVT-GI-LABEL: utest_f16i64_mm:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-CVT-GI-NEXT:    mov h1, v0.h[1]
@@ -3767,7 +3767,7 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-CVT-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-CVT-GI-NEXT:    ret
 ;
-; CHECK-FP16-GI-LABEL: utesth_f16i64_mm:
+; CHECK-FP16-GI-LABEL: utest_f16i64_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-GI-NEXT:    mov h1, v0.h[1]
@@ -3939,6 +3939,51 @@ entry:
   %spec.store.select7 = call <2 x i128> @llvm.smax.v2i128(<2 x i128> %spec.store.select, <2 x i128> zeroinitializer)
   %conv6 = trunc <2 x i128> %spec.store.select7 to <2 x i64>
   ret <2 x i64> %conv6
+}
+
+; i32 non saturate
+
+define <4 x i32> @ustest_f16i32_nsat(<4 x half> %x) {
+; CHECK-CVT-SD-LABEL: ustest_f16i32_nsat:
+; CHECK-CVT-SD:       // %bb.0: // %entry
+; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-CVT-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-CVT-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: ustest_f16i32_nsat:
+; CHECK-FP16-SD:       // %bb.0: // %entry
+; CHECK-FP16-SD-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-FP16-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-FP16-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-FP16-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: ustest_f16i32_nsat:
+; CHECK-CVT-GI:       // %bb.0: // %entry
+; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-CVT-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-CVT-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    smin v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: ustest_f16i32_nsat:
+; CHECK-FP16-GI:       // %bb.0: // %entry
+; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-FP16-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    smin v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-FP16-GI-NEXT:    ret
+entry:
+  %conv = fptosi <4 x half> %x to <4 x i32>
+  %spec.store.select = call <4 x i32> @llvm.smin.v4i32(<4 x i32> zeroinitializer, <4 x i32> %conv)
+  %spec.store.select7 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %spec.store.select, <4 x i32> zeroinitializer)
+  ret <4 x i32> %spec.store.select7
 }
 
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)

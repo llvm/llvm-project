@@ -3,23 +3,16 @@
 
 ; RUN: llc < %s -mtriple=thumbv5-linux-gnueabi -mcpu=xscale -mattr=+strict-align | FileCheck %s --check-prefix=XSCALE
 ; RUN: llc < %s -mtriple=armv6-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=V6
-; RUN: llc < %s -mtriple=armv6-linux-gnueabi -mattr=+strict-align  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=V6-FAST
 ; RUN: llc < %s -mtriple=armv6-linux-gnueabi -mattr=+strict-align -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=V6M
-; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mattr=+strict-align  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=V6M-FAST
 ; RUN: llc < %s -mtriple=thumbv6sm-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=V6M
-; RUN: llc < %s -mtriple=thumbv6sm-linux-gnueabi -mattr=+strict-align -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=V6M-FAST
 ; RUN: llc < %s -mtriple=armv6-linux-gnueabi -mcpu=arm1156t2f-s -mattr=+strict-align | FileCheck %s --check-prefix=ARM1156T2F-S
-; RUN: llc < %s -mtriple=armv6-linux-gnueabi -mcpu=arm1156t2f-s -mattr=+strict-align  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast  | FileCheck %s --check-prefix=ARM1156T2F-S-FAST
 ; RUN: llc < %s -mtriple=armv6-linux-gnueabi -mcpu=arm1156t2f-s -mattr=+strict-align -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi | FileCheck %s --check-prefix=V7M
-; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=V7M-FAST
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=V7
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=V7-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi | FileCheck %s --check-prefix=V8
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=V8-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi | FileCheck %s --check-prefix=Vt8
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
@@ -31,35 +24,24 @@
 ; RUN: llc < %s -mtriple=thumbv8m.main-linux-gnueabi | FileCheck %s --check-prefix=V8MMAINLINE
 ; RUN: llc < %s -mtriple=thumbv8m.main-linux-gnueabi -mattr=+dsp | FileCheck %s --check-prefix=V8MMAINLINE_DSP
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 | FileCheck %s --check-prefix=CORTEX-A5-DEFAULT
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A5-DEFAULT-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 -mattr=-neon,-d32 | FileCheck %s --check-prefix=CORTEX-A5-NONEON
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 -mattr=-vfp2sp | FileCheck %s --check-prefix=CORTEX-A5-NOFPU
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a5 -mattr=-vfp2sp  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A5-NOFPU-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A8-SOFT
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=soft  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A8-SOFT-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=hard | FileCheck %s --check-prefix=CORTEX-A8-HARD
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=hard  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A8-HARD-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A8-SOFT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A9-SOFT
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=soft  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A9-SOFT-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=hard | FileCheck %s --check-prefix=CORTEX-A9-HARD
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=hard  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A9-HARD-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 | FileCheck %s --check-prefix=CORTEX-A12-DEFAULT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A9-SOFT
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A12-DEFAULT-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 -mattr=-vfp2sp | FileCheck %s --check-prefix=CORTEX-A12-NOFPU
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 -mattr=-vfp2sp  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A12-NOFPU-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 | FileCheck %s --check-prefix=CORTEX-A15
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A15-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17 | FileCheck %s --check-prefix=CORTEX-A17-DEFAULT
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A17-FAST
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17 -mattr=-vfp2sp | FileCheck %s --check-prefix=CORTEX-A17-NOFPU
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17 -mattr=-vfp2sp  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A17-NOFPU-FAST
 
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -enable-no-trapping-fp-math | FileCheck %s --check-prefix=NO-TRAPPING-MATH
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -denormal-fp-math=ieee | FileCheck %s --check-prefix=DENORMAL-IEEE
@@ -74,37 +56,26 @@
 
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m0 | FileCheck %s --check-prefix=CORTEX-M0
-; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m0 -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M0-FAST
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m0 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m0plus | FileCheck %s --check-prefix=CORTEX-M0PLUS
-; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m0plus -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M0PLUS-FAST
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m0plus -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m1 | FileCheck %s --check-prefix=CORTEX-M1
-; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m1 -mattr=+strict-align  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M1-FAST
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=cortex-m1 -mattr=+strict-align -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=sc000 -mattr=+strict-align | FileCheck %s --check-prefix=SC000
-; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=sc000 -mattr=+strict-align  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=SC000-FAST
 ; RUN: llc < %s -mtriple=thumbv6m-linux-gnueabi -mcpu=sc000 -mattr=+strict-align -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m3 | FileCheck %s --check-prefix=CORTEX-M3
-; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m3  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M3-FAST
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m3 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=sc300 | FileCheck %s --check-prefix=SC300
-; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=sc300  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=SC300-FAST
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=sc300 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m4 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-M4-SOFT
-; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m4 -float-abi=soft  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M4-SOFT-FAST
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m4 -float-abi=hard | FileCheck %s --check-prefix=CORTEX-M4-HARD
-; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m4 -float-abi=hard  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M4-HARD-FAST
 ; RUN: llc < %s -mtriple=thumbv7m-linux-gnueabi -mcpu=cortex-m4 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -mattr=-vfp2sp | FileCheck %s --check-prefix=CORTEX-M7 --check-prefix=CORTEX-M7-SOFT
-; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -mattr=-vfp2sp  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M7-NOFPU-FAST
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -mattr=-fp64 | FileCheck %s --check-prefix=CORTEX-M7 --check-prefix=CORTEX-M7-SINGLE
-; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -mattr=-fp64  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M7-FAST
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 | FileCheck %s --check-prefix=CORTEX-M7-DOUBLE
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m23 | FileCheck %s --check-prefix=CORTEX-M23
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=CORTEX-M33
-; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M33-FAST
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 
 ; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m35p | FileCheck %s --check-prefix=CORTEX-M35P
@@ -113,49 +84,34 @@
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r4 | FileCheck %s --check-prefix=CORTEX-R4
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r4f | FileCheck %s --check-prefix=CORTEX-R4F
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r5 | FileCheck %s --check-prefix=CORTEX-R5
-; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r5  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-R5-FAST
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r5 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7 | FileCheck %s --check-prefix=CORTEX-R7
-; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-R7-FAST
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r8 | FileCheck %s --check-prefix=CORTEX-R8
-; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r8  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-R8-FAST
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r8 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a32 | FileCheck %s --check-prefix=CORTEX-A32
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a32  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A32-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a32 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35 | FileCheck %s --check-prefix=CORTEX-A35
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A35-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a53 | FileCheck %s --check-prefix=CORTEX-A53
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a53  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A53-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a53 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a57 | FileCheck %s --check-prefix=CORTEX-A57
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a57  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A57-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a57 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a72 | FileCheck %s --check-prefix=CORTEX-A72
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a72  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A72-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a72 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a73 | FileCheck %s --check-prefix=CORTEX-A73
 ; RUN: llc < %s -mtriple=armv8.1a-linux-gnueabi | FileCheck %s --check-prefix=GENERIC-ARMV8_1-A
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m3 | FileCheck %s --check-prefix=EXYNOS-M3
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m3  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=EXYNOS-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m3 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m4 | FileCheck %s --check-prefix=EXYNOS-M4
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m4  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=EXYNOS-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m4 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m5 | FileCheck %s --check-prefix=EXYNOS-M5
-; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m5  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=EXYNOS-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m5 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
-; RUN: llc < %s -mtriple=armv8.1a-linux-gnueabi  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=GENERIC-ARMV8_1-A-FAST
 ; RUN: llc < %s -mtriple=armv8.1a-linux-gnueabi -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 | FileCheck %s  --check-prefix=CORTEX-A7-CHECK
-; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s  --check-prefix=CORTEX-A7-CHECK-FAST
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -mattr=-vfp2sp,-vfp3,-vfp4,-neon,-fp16 | FileCheck %s --check-prefix=CORTEX-A7-NOFPU
-; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -mattr=-vfp2sp,-vfp3,-vfp4,-neon,-fp16  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A7-NOFPU-FAST
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -mattr=+vfp4,-neon | FileCheck %s --check-prefix=CORTEX-A7-FPUV4
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
-; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -mattr=+vfp4,-neon  -enable-unsafe-fp-math -frame-pointer=all -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A7-FPUV4-FAST
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -mattr=+vfp4,,-d32,-neon | FileCheck %s --check-prefix=CORTEX-A7-FPUV4
 ; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align -relocation-model=pic | FileCheck %s --check-prefix=RELOC-PIC
 ; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align -relocation-model=static | FileCheck %s --check-prefix=RELOC-OTHER
@@ -278,15 +234,6 @@
 ; V6-NOT:   .eabi_attribute 28
 ; V6:    .eabi_attribute 38, 1
 
-; V6-FAST-NOT:   .eabi_attribute 19
-;; Despite the V6 CPU having no FPU by default, we chose to flush to
-;; positive zero here. There's no hardware support doing this, but the
-;; fast maths software library might.
-; V6-FAST-NOT:   .eabi_attribute 20
-; V6-FAST-NOT:   .eabi_attribute 21
-; V6-FAST-NOT:   .eabi_attribute 22
-; V6-FAST:   .eabi_attribute 23, 1
-
 ;; We emit 6, 12 for both v6-M and v6S-M, technically this is incorrect for
 ;; V6-M, however we don't model the OS extension so this is fine.
 ; V6M:  .eabi_attribute 6, 12
@@ -312,14 +259,6 @@
 ; V6M-NOT:  .eabi_attribute 28
 ; V6M:  .eabi_attribute 38, 1
 
-; V6M-FAST-NOT:   .eabi_attribute 19
-;; Despite the V6M CPU having no FPU by default, we chose to flush to
-;; positive zero here. There's no hardware support doing this, but the
-;; fast maths software library might.
-; V6M-FAST-NOT:  .eabi_attribute 20
-; V6M-FAST-NOT:   .eabi_attribute 21
-; V6M-FAST-NOT:   .eabi_attribute 22
-; V6M-FAST:   .eabi_attribute 23, 1
 
 ; ARM1156T2F-S: .cpu arm1156t2f-s
 ; ARM1156T2F-S: .eabi_attribute 6, 8
@@ -342,14 +281,6 @@
 ; ARM1156T2F-S-NOT: .eabi_attribute 28
 ; ARM1156T2F-S: .eabi_attribute 38, 1
 
-; ARM1156T2F-S-FAST-NOT:   .eabi_attribute 19
-;; V6 cores default to flush to positive zero (value 0). Note that value 2 is also equally
-;; valid for this core, it's an implementation defined question as to which of 0 and 2 you
-;; select. LLVM historically picks 0.
-; ARM1156T2F-S-FAST-NOT: .eabi_attribute 20
-; ARM1156T2F-S-FAST-NOT:   .eabi_attribute 21
-; ARM1156T2F-S-FAST-NOT:   .eabi_attribute 22
-; ARM1156T2F-S-FAST:   .eabi_attribute 23, 1
 
 ; V7M:  .eabi_attribute 6, 10
 ; V7M:  .eabi_attribute 7, 77
@@ -374,15 +305,6 @@
 ; V7M-NOT:  .eabi_attribute 28
 ; V7M:  .eabi_attribute 38, 1
 
-; V7M-FAST-NOT:   .eabi_attribute 19
-;; Despite the V7M CPU having no FPU by default, we chose to flush
-;; preserving sign. This matches what the hardware would do in the
-;; architecture revision were to exist on the current target.
-; V7M-FAST:  .eabi_attribute 20, 2
-; V7M-FAST-NOT:   .eabi_attribute 21
-; V7M-FAST-NOT:   .eabi_attribute 22
-; V7M-FAST:   .eabi_attribute 23, 1
-
 ; V7:      .syntax unified
 ; V7: .eabi_attribute 6, 10
 ; V7-NOT: .eabi_attribute 27
@@ -401,13 +323,6 @@
 ; V7-NOT: .eabi_attribute 28
 ; V7: .eabi_attribute 38, 1
 
-; V7-FAST-NOT:   .eabi_attribute 19
-;; The default CPU does have an FPU and it must be VFPv3 or better, so it flushes
-;; denormals to zero preserving the sign.
-; V7-FAST: .eabi_attribute 20, 2
-; V7-FAST-NOT:   .eabi_attribute 21
-; V7-FAST-NOT:   .eabi_attribute 22
-; V7-FAST:   .eabi_attribute 23, 1
 
 ; V7VE:      .syntax unified
 ; V7VE: .eabi_attribute 6, 10   @ Tag_CPU_arch
@@ -435,12 +350,6 @@
 ; V8-NOT: .eabi_attribute 22
 ; V8: .eabi_attribute 23, 3
 
-; V8-FAST-NOT:   .eabi_attribute 19
-;; The default does have an FPU, and for V8-A, it flushes preserving sign.
-; V8-FAST: .eabi_attribute 20, 2
-; V8-FAST-NOT: .eabi_attribute 21
-; V8-FAST-NOT: .eabi_attribute 22
-; V8-FAST: .eabi_attribute 23, 1
 
 ; Vt8:     .syntax unified
 ; Vt8: .eabi_attribute 6, 14
@@ -552,15 +461,11 @@
 ;; We default to IEEE 754 compliance
 ; CORTEX-A7-CHECK: .eabi_attribute      20, 1
 ;; The A7 has VFPv3 support by default, so flush preserving sign.
-; CORTEX-A7-CHECK-FAST: .eabi_attribute 20, 2
 ; CORTEX-A7-NOFPU: .eabi_attribute      20, 1
 ;; Despite there being no FPU, we chose to flush to zero preserving
 ;; sign. This matches what the hardware would do for this architecture
 ;; revision.
-; CORTEX-A7-NOFPU-FAST: .eabi_attribute 20, 2
 ; CORTEX-A7-FPUV4: .eabi_attribute      20, 1
-;; The VFPv4 FPU flushes preserving sign.
-; CORTEX-A7-FPUV4-FAST: .eabi_attribute 20, 2
 
 ; Tag_ABI_FP_exceptions
 ; CORTEX-A7-CHECK: .eabi_attribute      21, 1
@@ -610,13 +515,6 @@
 ; CORTEX-A5-DEFAULT:        .eabi_attribute 24, 1
 ; CORTEX-A5-DEFAULT:        .eabi_attribute 25, 1
 
-; CORTEX-A5-DEFAULT-FAST-NOT:   .eabi_attribute 19
-;; The A5 defaults to a VFPv4 FPU, so it flushed preserving the sign when -ffast-math
-;; is given.
-; CORTEX-A5-DEFAULT-FAST:        .eabi_attribute 20, 2
-; CORTEX-A5-DEFAULT-FAST-NOT: .eabi_attribute 21
-; CORTEX-A5-DEFAULT-FAST-NOT: .eabi_attribute 22
-; CORTEX-A5-DEFAULT-FAST: .eabi_attribute 23, 1
 
 ; CORTEX-A5-NONEON:        .cpu    cortex-a5
 ; CORTEX-A5-NONEON:        .eabi_attribute 6, 10
@@ -634,13 +532,6 @@
 ; CORTEX-A5-NONEON:        .eabi_attribute 24, 1
 ; CORTEX-A5-NONEON:        .eabi_attribute 25, 1
 
-; CORTEX-A5-NONEON-FAST-NOT:   .eabi_attribute 19
-;; The A5 defaults to a VFPv4 FPU, so it flushed preserving sign when -ffast-math
-;; is given.
-; CORTEX-A5-NONEON-FAST:        .eabi_attribute 20, 2
-; CORTEX-A5-NONEON-FAST-NOT: .eabi_attribute 21
-; CORTEX-A5-NONEON-FAST-NOT: .eabi_attribute 22
-; CORTEX-A5-NONEON-FAST: .eabi_attribute 23, 1
 
 ; CORTEX-A5-NOFPU:        .cpu    cortex-a5
 ; CORTEX-A5-NOFPU:        .eabi_attribute 6, 10
@@ -659,14 +550,9 @@
 ; CORTEX-A5-NOFPU:        .eabi_attribute 24, 1
 ; CORTEX-A5-NOFPU:        .eabi_attribute 25, 1
 
-; CORTEX-A5-NOFPU-FAST-NOT:   .eabi_attribute 19
 ;; Despite there being no FPU, we chose to flush to zero preserving
 ;; sign. This matches what the hardware would do for this architecture
 ;; revision.
-; CORTEX-A5-NOFPU-FAST: .eabi_attribute 20, 2
-; CORTEX-A5-NOFPU-FAST-NOT: .eabi_attribute 21
-; CORTEX-A5-NOFPU-FAST-NOT: .eabi_attribute 22
-; CORTEX-A5-NOFPU-FAST: .eabi_attribute 23, 1
 
 ; CORTEX-A8-SOFT:  .cpu cortex-a8
 ; CORTEX-A8-SOFT:  .eabi_attribute 6, 10
@@ -712,15 +598,6 @@
 ; CORTEX-A9-SOFT-NOT:  .eabi_attribute 28
 ; CORTEX-A9-SOFT:  .eabi_attribute 38, 1
 
-; CORTEX-A8-SOFT-FAST-NOT:   .eabi_attribute 19
-; CORTEX-A9-SOFT-FAST-NOT:   .eabi_attribute 19
-;; The A9 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-A8-SOFT-FAST:  .eabi_attribute 20, 2
-; CORTEX-A9-SOFT-FAST:  .eabi_attribute 20, 2
-; CORTEX-A5-SOFT-FAST-NOT: .eabi_attribute 21
-; CORTEX-A5-SOFT-FAST-NOT: .eabi_attribute 22
-; CORTEX-A5-SOFT-FAST: .eabi_attribute 23, 1
 
 ; CORTEX-A8-HARD:  .cpu cortex-a8
 ; CORTEX-A8-HARD:  .eabi_attribute 6, 10
@@ -766,21 +643,6 @@
 ; CORTEX-A9-HARD:  .eabi_attribute 28, 1
 ; CORTEX-A9-HARD:  .eabi_attribute 38, 1
 
-; CORTEX-A8-HARD-FAST-NOT:   .eabi_attribute 19
-;; The A8 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-A8-HARD-FAST:  .eabi_attribute 20, 2
-; CORTEX-A8-HARD-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A8-HARD-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A8-HARD-FAST:  .eabi_attribute 23, 1
-
-; CORTEX-A9-HARD-FAST-NOT:   .eabi_attribute 19
-;; The A9 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-A9-HARD-FAST:  .eabi_attribute 20, 2
-; CORTEX-A9-HARD-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A9-HARD-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A9-HARD-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A12-DEFAULT:  .cpu cortex-a12
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 6, 10
@@ -800,13 +662,6 @@
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 24, 1
 ; CORTEX-A12-DEFAULT:  .eabi_attribute 25, 1
 
-; CORTEX-A12-DEFAULT-FAST-NOT:   .eabi_attribute 19
-;; The A12 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-A12-DEFAULT-FAST:  .eabi_attribute 20, 2
-; CORTEX-A12-HARD-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A12-HARD-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A12-HARD-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A12-NOFPU:  .cpu cortex-a12
 ; CORTEX-A12-NOFPU:  .eabi_attribute 6, 10
@@ -826,14 +681,6 @@
 ; CORTEX-A12-NOFPU:  .eabi_attribute 24, 1
 ; CORTEX-A12-NOFPU:  .eabi_attribute 25, 1
 
-; CORTEX-A12-NOFPU-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
-; CORTEX-A12-NOFPU-FAST:  .eabi_attribute 20, 2
-; CORTEX-A12-NOFPU-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A12-NOFPU-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A12-NOFPU-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A15: .cpu cortex-a15
 ; CORTEX-A15: .eabi_attribute 6, 10
@@ -857,13 +704,6 @@
 ; CORTEX-A15-NOT: .eabi_attribute 28
 ; CORTEX-A15: .eabi_attribute 38, 1
 
-; CORTEX-A15-FAST-NOT:   .eabi_attribute 19
-;; The A15 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-A15-FAST: .eabi_attribute 20, 2
-; CORTEX-A15-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A15-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A15-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A17-DEFAULT:  .cpu cortex-a17
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 6, 10
@@ -883,13 +723,6 @@
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 24, 1
 ; CORTEX-A17-DEFAULT:  .eabi_attribute 25, 1
 
-; CORTEX-A17-FAST-NOT:   .eabi_attribute 19
-;; The A17 defaults to a VFPv3 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-A17-FAST:  .eabi_attribute 20, 2
-; CORTEX-A17-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A17-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A17-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A17-NOFPU:  .cpu cortex-a17
 ; CORTEX-A17-NOFPU:  .eabi_attribute 6, 10
@@ -910,13 +743,6 @@
 ; CORTEX-A17-NOFPU:  .eabi_attribute 25, 1
 
 ; CORTEX-A17-NOFPU-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
-; CORTEX-A17-NOFPU-FAST:  .eabi_attribute 20, 2
-; CORTEX-A17-NOFPU-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A17-NOFPU-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A17-NOFPU-FAST:  .eabi_attribute 23, 1
 
 ; Test flags -enable-no-trapping-fp-math and -denormal-fp-math:
 ; NO-TRAPPING-MATH:  .eabi_attribute 21, 0
@@ -946,16 +772,6 @@
 ; CORTEX-M0-NOT:  .eabi_attribute 28
 ; CORTEX-M0:  .eabi_attribute 38, 1
 
-; CORTEX-M0-FAST-NOT:   .eabi_attribute 19
-;; Despite the M0 CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
-; CORTEX-M0-FAST-NOT:  .eabi_attribute 20
-; CORTEX-M0-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M0-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M0-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M0PLUS:  .cpu cortex-m0plus
 ; CORTEX-M0PLUS:  .eabi_attribute 6, 12
@@ -978,16 +794,6 @@
 ; CORTEX-M0PLUS-NOT:  .eabi_attribute 28
 ; CORTEX-M0PLUS:  .eabi_attribute 38, 1
 
-; CORTEX-M0PLUS-FAST-NOT:   .eabi_attribute 19
-;; Despite the M0+ CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
-; CORTEX-M0PLUS-FAST-NOT:  .eabi_attribute 20
-; CORTEX-M0PLUS-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M0PLUS-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M0PLUS-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M1:  .cpu cortex-m1
 ; CORTEX-M1:  .eabi_attribute 6, 12
@@ -1010,16 +816,6 @@
 ; CORTEX-M1-NOT:  .eabi_attribute 28
 ; CORTEX-M1:  .eabi_attribute 38, 1
 
-; CORTEX-M1-FAST-NOT:   .eabi_attribute 19
-;; Despite the M1 CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
-; CORTEX-M1-FAST-NOT:  .eabi_attribute 20
-; CORTEX-M1-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M1-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M1-FAST:  .eabi_attribute 23, 1
 
 ; SC000:  .cpu sc000
 ; SC000:  .eabi_attribute 6, 12
@@ -1041,16 +837,6 @@
 ; SC000-NOT:  .eabi_attribute 28
 ; SC000:  .eabi_attribute 38, 1
 
-; SC000-FAST-NOT:   .eabi_attribute 19
-;; Despite the SC000 CPU having no FPU in this scenario, we chose to
-;; flush to positive zero here. There's no hardware support doing
-;; this, but the fast maths software library might and such behaviour
-;; would match hardware support on this architecture revision if it
-;; existed.
-; SC000-FAST-NOT:  .eabi_attribute 20
-; SC000-FAST-NOT:  .eabi_attribute 21
-; SC000-FAST-NOT:  .eabi_attribute 22
-; SC000-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M3:  .cpu cortex-m3
 ; CORTEX-M3:  .eabi_attribute 6, 10
@@ -1073,14 +859,6 @@
 ; CORTEX-M3-NOT:  .eabi_attribute 28
 ; CORTEX-M3:  .eabi_attribute 38, 1
 
-; CORTEX-M3-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
-; CORTEX-M3-FAST:  .eabi_attribute 20, 2
-; CORTEX-M3-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M3-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M3-FAST:  .eabi_attribute 23, 1
 
 ; SC300:  .cpu sc300
 ; SC300:  .eabi_attribute 6, 10
@@ -1103,14 +881,6 @@
 ; SC300-NOT:  .eabi_attribute 28
 ; SC300:  .eabi_attribute 38, 1
 
-; SC300-FAST-NOT:   .eabi_attribute 19
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
-; SC300-FAST:  .eabi_attribute 20, 2
-; SC300-FAST-NOT:  .eabi_attribute 21
-; SC300-FAST-NOT:  .eabi_attribute 22
-; SC300-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M4-SOFT:  .cpu cortex-m4
 ; CORTEX-M4-SOFT:  .eabi_attribute 6, 13
@@ -1134,13 +904,6 @@
 ; CORTEX-M4-SOFT-NOT:  .eabi_attribute 28
 ; CORTEX-M4-SOFT:  .eabi_attribute 38, 1
 
-; CORTEX-M4-SOFT-FAST-NOT:   .eabi_attribute 19
-;; The M4 defaults to a VFPv4 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-M4-SOFT-FAST:  .eabi_attribute 20, 2
-; CORTEX-M4-SOFT-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M4-SOFT-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M4-SOFT-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M4-HARD:  .cpu cortex-m4
 ; CORTEX-M4-HARD:  .eabi_attribute 6, 13
@@ -1164,13 +927,6 @@
 ; CORTEX-M4-HARD:  .eabi_attribute 28, 1
 ; CORTEX-M4-HARD:  .eabi_attribute 38, 1
 
-; CORTEX-M4-HARD-FAST-NOT:   .eabi_attribute 19
-;; The M4 defaults to a VFPv4 FPU, so it flushes preserving the sign when
-;; -ffast-math is specified.
-; CORTEX-M4-HARD-FAST:  .eabi_attribute 20, 2
-; CORTEX-M4-HARD-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M4-HARD-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M4-HARD-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M7:  .cpu    cortex-m7
 ; CORTEX-M7:  .eabi_attribute 6, 13
@@ -1197,16 +953,6 @@
 ; CORTEX-M7:  .eabi_attribute 38, 1
 ; CORTEX-M7:  .eabi_attribute 14, 0
 
-; CORTEX-M7-NOFPU-FAST-NOT:   .eabi_attribute 19
-;; The M7 has the ARMv8 FP unit, which always flushes preserving sign.
-; CORTEX-M7-FAST:  .eabi_attribute 20, 2
-;; Despite there being no FPU, we chose to flush to zero preserving
-;; sign. This matches what the hardware would do for this architecture
-;; revision.
-; CORTEX-M7-NOFPU-FAST: .eabi_attribute 20, 2
-; CORTEX-M7-NOFPU-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M7-NOFPU-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M7-NOFPU-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-R4:  .cpu cortex-r4
 ; CORTEX-R4:  .eabi_attribute 6, 10
@@ -1273,12 +1019,6 @@
 ; CORTEX-R5-NOT:  .eabi_attribute 28
 ; CORTEX-R5:  .eabi_attribute 38, 1
 
-; CORTEX-R5-FAST-NOT:   .eabi_attribute 19
-;; The R5 has the VFPv3 FP unit, which always flushes preserving sign.
-; CORTEX-R5-FAST:  .eabi_attribute 20, 2
-; CORTEX-R5-FAST-NOT:  .eabi_attribute 21
-; CORTEX-R5-FAST-NOT:  .eabi_attribute 22
-; CORTEX-R5-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-R7:  .cpu cortex-r7
 ; CORTEX-R7:  .eabi_attribute 6, 10
@@ -1301,12 +1041,6 @@
 ; CORTEX-R7-NOT:  .eabi_attribute 28
 ; CORTEX-R7:  .eabi_attribute 38, 1
 
-; CORTEX-R7-FAST-NOT:   .eabi_attribute 19
-;; The R7 has the VFPv3 FP unit, which always flushes preserving sign.
-; CORTEX-R7-FAST:  .eabi_attribute 20, 2
-; CORTEX-R7-FAST-NOT:  .eabi_attribute 21
-; CORTEX-R7-FAST-NOT:  .eabi_attribute 22
-; CORTEX-R7-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-R8:  .cpu cortex-r8
 ; CORTEX-R8:  .eabi_attribute 6, 10
@@ -1329,12 +1063,6 @@
 ; CORTEX-R8-NOT:  .eabi_attribute 28
 ; CORTEX-R8:  .eabi_attribute 38, 1
 
-; CORTEX-R8-FAST-NOT:   .eabi_attribute 19
-;; The R8 has the VFPv3 FP unit, which always flushes preserving sign.
-; CORTEX-R8-FAST:  .eabi_attribute 20, 2
-; CORTEX-R8-FAST-NOT:  .eabi_attribute 21
-; CORTEX-R8-FAST-NOT:  .eabi_attribute 22
-; CORTEX-R8-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A32:  .cpu cortex-a32
 ; CORTEX-A32:  .eabi_attribute 6, 14
@@ -1359,12 +1087,6 @@
 ; CORTEX-A32-NOT:  .eabi_attribute 28
 ; CORTEX-A32:  .eabi_attribute 38, 1
 
-; CORTEX-A32-FAST-NOT:   .eabi_attribute 19
-;; The A32 has the ARMv8 FP unit, which always flushes preserving sign.
-; CORTEX-A32-FAST:  .eabi_attribute 20, 2
-; CORTEX-A32-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A32-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A32-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-M23:  .cpu cortex-m23
 ; CORTEX-M23:  .eabi_attribute 6, 16
@@ -1430,11 +1152,6 @@
 ; CORTEX-M35P:  .eabi_attribute 38, 1
 ; CORTEX-M35P:  .eabi_attribute 14, 0
 
-; CORTEX-M33-FAST-NOT:   .eabi_attribute 19
-; CORTEX-M33-FAST:  .eabi_attribute 20, 2
-; CORTEX-M33-FAST-NOT:  .eabi_attribute 21
-; CORTEX-M33-FAST-NOT:  .eabi_attribute 22
-; CORTEX-M33-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A35:  .cpu cortex-a35
 ; CORTEX-A35:  .eabi_attribute 6, 14
@@ -1459,12 +1176,6 @@
 ; CORTEX-A35-NOT:  .eabi_attribute 28
 ; CORTEX-A35:  .eabi_attribute 38, 1
 
-; CORTEX-A35-FAST-NOT:   .eabi_attribute 19
-;; The A35 has the ARMv8 FP unit, which always flushes preserving sign.
-; CORTEX-A35-FAST:  .eabi_attribute 20, 2
-; CORTEX-A35-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A35-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A35-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A53:  .cpu cortex-a53
 ; CORTEX-A53:  .eabi_attribute 6, 14
@@ -1489,12 +1200,6 @@
 ; CORTEX-A53-NOT:  .eabi_attribute 28
 ; CORTEX-A53:  .eabi_attribute 38, 1
 
-; CORTEX-A53-FAST-NOT:   .eabi_attribute 19
-;; The A53 has the ARMv8 FP unit, which always flushes preserving sign.
-; CORTEX-A53-FAST:  .eabi_attribute 20, 2
-; CORTEX-A53-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A53-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A53-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A57:  .cpu cortex-a57
 ; CORTEX-A57:  .eabi_attribute 6, 14
@@ -1519,12 +1224,6 @@
 ; CORTEX-A57-NOT:  .eabi_attribute 28
 ; CORTEX-A57:  .eabi_attribute 38, 1
 
-; CORTEX-A57-FAST-NOT:   .eabi_attribute 19
-;; The A57 has the ARMv8 FP unit, which always flushes preserving sign.
-; CORTEX-A57-FAST:  .eabi_attribute 20, 2
-; CORTEX-A57-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A57-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A57-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A72:  .cpu cortex-a72
 ; CORTEX-A72:  .eabi_attribute 6, 14
@@ -1549,12 +1248,6 @@
 ; CORTEX-A72-NOT:  .eabi_attribute 28
 ; CORTEX-A72:  .eabi_attribute 38, 1
 
-; CORTEX-A72-FAST-NOT:   .eabi_attribute 19
-;; The A72 has the ARMv8 FP unit, which always flushes preserving sign.
-; CORTEX-A72-FAST:  .eabi_attribute 20, 2
-; CORTEX-A72-FAST-NOT:  .eabi_attribute 21
-; CORTEX-A72-FAST-NOT:  .eabi_attribute 22
-; CORTEX-A72-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A73:  .cpu cortex-a73
 ; CORTEX-A73:  .eabi_attribute 6, 14
@@ -1580,12 +1273,6 @@
 ; CORTEX-A73:  .eabi_attribute 38, 1
 ; CORTEX-A73:  .eabi_attribute 14, 0
 
-; EXYNOS-FAST-NOT:   .eabi_attribute 19
-;; The Exynos processors have the ARMv8 FP unit, which always flushes preserving sign.
-; EXYNOS-FAST:  .eabi_attribute 20, 2
-; EXYNOS-FAST-NOT:  .eabi_attribute 21
-; EXYNOS-FAST-NOT:  .eabi_attribute 22
-; EXYNOS-FAST:  .eabi_attribute 23, 1
 
 ; EXYNOS-M3:  .cpu exynos-m3
 ; EXYNOS-M3:  .eabi_attribute 6, 14
@@ -1684,12 +1371,6 @@
 ; GENERIC-ARMV8_1-A-NOT:  .eabi_attribute 28
 ; GENERIC-ARMV8_1-A:  .eabi_attribute 38, 1
 
-; GENERIC-ARMV8_1-A-FAST-NOT:   .eabi_attribute 19
-;; GENERIC-ARMV8_1-A has the ARMv8 FP unit, which always flushes preserving sign.
-; GENERIC-ARMV8_1-A-FAST:  .eabi_attribute 20, 2
-; GENERIC-ARMV8_1-A-FAST-NOT:  .eabi_attribute 21
-; GENERIC-ARMV8_1-A-FAST-NOT:  .eabi_attribute 22
-; GENERIC-ARMV8_1-A-FAST:  .eabi_attribute 23, 1
 
 ; RELOC-PIC:  .eabi_attribute 15, 1
 ; RELOC-PIC:  .eabi_attribute 16, 1

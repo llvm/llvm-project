@@ -41,12 +41,12 @@ def GIImmPlus1 :
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
 
 // Define pattern expansions for pointer ult/slt conditional codes
-def : Pat<(XLenVT (setult (PtrVT GPR:$rs1), simm12:$imm12)),
-          (SLTIU GPR:$rs1, simm12:$imm12)>;
+def : Pat<(XLenVT (setult (PtrVT GPR:$rs1), simm12_lo:$imm12)),
+          (SLTIU GPR:$rs1, simm12_lo:$imm12)>;
 def : Pat<(XLenVT (setult (PtrVT GPR:$rs1), (PtrVT GPR:$rs2))),
           (SLTU GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (setlt (PtrVT GPR:$rs1), simm12:$imm12)),
-          (SLTI GPR:$rs1, simm12:$imm12)>;
+def : Pat<(XLenVT (setlt (PtrVT GPR:$rs1), simm12_lo:$imm12)),
+          (SLTI GPR:$rs1, simm12_lo:$imm12)>;
 def : Pat<(XLenVT (setlt (PtrVT GPR:$rs1), (PtrVT GPR:$rs2))),
           (SLT GPR:$rs1, GPR:$rs2)>;
 
@@ -72,12 +72,12 @@ def : Pat<(XLenVT (setgt (Ty GPR:$rs1), (Ty simm12Minus1Nonzero:$imm))),
           (XORI (SLTI GPR:$rs1, (ImmPlus1 simm12Minus1Nonzero:$imm)), 1)>;
 def : Pat<(XLenVT (setgt (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (SLT GPR:$rs2, GPR:$rs1)>;
-def : Pat<(XLenVT (setuge (XLenVT GPR:$rs1), (Ty simm12:$imm))),
-          (XORI (SLTIU GPR:$rs1, simm12:$imm), 1)>;
+def : Pat<(XLenVT (setuge (XLenVT GPR:$rs1), (Ty simm12_lo:$imm))),
+          (XORI (SLTIU GPR:$rs1, simm12_lo:$imm), 1)>;
 def : Pat<(XLenVT (setuge (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(XLenVT (setge (Ty GPR:$rs1), (Ty simm12:$imm))),
-          (XORI (SLTI GPR:$rs1, simm12:$imm), 1)>;
+def : Pat<(XLenVT (setge (Ty GPR:$rs1), (Ty simm12_lo:$imm))),
+          (XORI (SLTI GPR:$rs1, simm12_lo:$imm), 1)>;
 def : Pat<(XLenVT (setge (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(XLenVT (setule (Ty GPR:$rs1), (Ty simm12Minus1NonzeroNonNeg1:$imm))),
@@ -109,28 +109,22 @@ def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
 def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_aext_8,  LB, i16>;
-  def : LdPat<atomic_load_nonext_16, LH, i16>;
+  // Prefer unsigned due to no c.lb in Zcb.
+  def : LdPat<relaxed_load<atomic_load_aext_8>,    LBU, i16>;
+  def : LdPat<relaxed_load<atomic_load_nonext_16>, LH,  i16>;
 
-  def : StPat<atomic_store_8,  SB, GPR, i16>;
-  def : StPat<atomic_store_16, SH, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, i16>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_nonext_32, LW, i32>;
-  def : StPat<atomic_store_32, SW, GPR, i32>;
+  // Load pattern is in RISCVInstrInfoA.td and shared with RV32.
+  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, i32>;
 }
 
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
-
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
-def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
-  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  return Known.isNonNegative();
-}]>;
 
 let Predicates = [IsRV64] in {
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
@@ -139,12 +133,10 @@ def : LdPat<extloadi16, LH, i32>;
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
 
-def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
-def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
-// Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
+def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
+          (ADDIW GPR:$rs1, simm12_lo:$imm)>;
 }
 
 let Predicates = [IsRV64, NoStdExtZba] in
@@ -197,4 +189,30 @@ def : Pat<(i32 (zext (i16 GPR:$rs))), (PACK GPR:$rs, (XLenVT X0))>;
 let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
 def : Pat<(i64 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
 def : Pat<(i32 (zext (i16 GPR:$rs))), (PACKW GPR:$rs, (XLenVT X0))>;
+}
+
+//===----------------------------------------------------------------------===//
+// Zalasr patterns not used by SelectionDAG
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZalasr] in {
+  // the sequentially consistent loads use
+  //  .aq instead of .aqrl to match the psABI/A.7
+  def : PatLAQ<acquiring_load<atomic_load_aext_8>, LB_AQ, i16>;
+  def : PatLAQ<seq_cst_load<atomic_load_aext_8>, LB_AQ, i16>;
+
+  def : PatLAQ<acquiring_load<atomic_load_nonext_16>, LH_AQ, i16>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_16>, LH_AQ, i16>;
+
+  def : PatSRL<releasing_store<atomic_store_8>, SB_RL, i16>;
+  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL, i16>;
+
+  def : PatSRL<releasing_store<atomic_store_16>, SH_RL, i16>;
+  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL, i16>;
+}
+
+let Predicates = [HasStdExtZalasr, IsRV64] in {
+  // Load pattern is in RISCVInstrInfoZalasr.td and shared with RV32.
+  def : PatSRL<releasing_store<atomic_store_32>, SW_RL, i32>;
+  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL, i32>;
 }

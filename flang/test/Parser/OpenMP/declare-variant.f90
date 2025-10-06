@@ -2,15 +2,19 @@
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 subroutine sub0
-!CHECK: !$OMP DECLARE VARIANT (sub:vsub) MATCH(CONSTRUCT={PARALLEL})
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | Name = 'sub'
-!PARSE-TREE: | Name = 'vsub'
+!CHECK: !$OMP DECLARE VARIANT(sub:vsub) MATCH(CONSTRUCT={PARALLEL})
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpBaseVariantNames
+!PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'sub'
+!PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = parallel
+!PARSE-TREE: | Flags = None
+
   !$omp declare variant (sub:vsub) match (construct={parallel})
 contains
   subroutine vsub
@@ -30,14 +34,17 @@ contains
     integer, value :: v1
   end
   subroutine sub (v1)
-!CHECK: !$OMP DECLARE VARIANT (vsub) MATCH(CONSTRUCT={DISPATCH}
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | Name = 'vsub'
+!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH})
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
+!PARSE-TREE: | Flags = None
+
     !$omp declare variant(vsub), match(construct={dispatch})
     integer, value :: v1
   end
@@ -56,17 +63,20 @@ contains
     integer(omp_interop_kind), value :: a2
   end
   subroutine sub (v1)
-!CHECK: !$OMP DECLARE VARIANT (vsub) MATCH(CONSTRUCT={DISPATCH}) APPEND_ARGS(INTEROP(T&
-!CHECK: !$OMP&ARGET),INTEROP(TARGET))
-!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | Name = 'vsub'
+!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH}) APPEND_ARGS(INTEROP(TA&
+!CHECK: !$OMP&RGET),INTEROP(TARGET))
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | OmpClause -> AppendArgs -> OmpAppendArgsClause -> OmpAppendOp -> OmpInteropType -> Value = Target
 !PARSE-TREE: | OmpAppendOp -> OmpInteropType -> Value = Target
+!PARSE-TREE: | Flags = None
+
     !$omp declare variant(vsub), match(construct={dispatch}), append_args (interop(target), interop(target))
     integer, value :: v1
   end
@@ -81,11 +91,12 @@ subroutine sb3 (x1, x2)
 contains
   subroutine sub (v1, v2)
     type(c_ptr), value :: v1, v2
-!CHECK: !$OMP DECLARE VARIANT (vsub) MATCH(CONSTRUCT={DISPATCH}) ADJUST_ARGS(NOTHING:v&
-!CHECK: !$OMP&1) ADJUST_ARGS(NEED_DEVICE_PTR:v2)
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | Name = 'vsub'
+!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH}) ADJUST_ARGS(NOTHING:v1&
+!CHECK: !$OMP&) ADJUST_ARGS(NEED_DEVICE_PTR:v2)
+
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
@@ -96,6 +107,8 @@ contains
 !PARSE-TREE: | OmpClause -> AdjustArgs -> OmpAdjustArgsClause
 !PARSE-TREE: | | OmpAdjustOp -> Value = Need_Device_Ptr
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'v2'
+!PARSE-TREE: | Flags = None
+
     !$omp declare variant(vsub) match ( construct = { dispatch } ) adjust_args(nothing : v1 ) adjust_args(need_device_ptr : v2)
   end
   subroutine vsub(v1, v2)
@@ -119,13 +132,15 @@ contains
     !$omp declare variant (f1) match (construct={simd(uniform(y))})
   end
 end subroutine
-!CHECK: !$OMP DECLARE VARIANT (f1) MATCH(CONSTRUCT={SIMD(UNIFORM(y))})
-!PARSE-TREE: | | | | DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
-!PARSE-TREE-NEXT: | | | | | Verbatim
-!PARSE-TREE-NEXT: | | | | | Name = 'f1'
-!PARSE-TREE-NEXT: | | | | | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
-!PARSE-TREE-NEXT: | | | | | | OmpTraitSetSelectorName -> Value = Construct
-!PARSE-TREE-NEXT: | | | | | | OmpTraitSelector
-!PARSE-TREE-NEXT: | | | | | | | OmpTraitSelectorName -> Value = Simd
-!PARSE-TREE-NEXT: | | | | | | | Properties
-!PARSE-TREE-NEXT: | | | | | | | | OmpTraitProperty -> OmpClause -> Uniform -> Name = 'y'
+!CHECK: !$OMP DECLARE VARIANT(f1) MATCH(CONSTRUCT={SIMD(UNIFORM(y))})
+
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f1'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
+!PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
+!PARSE-TREE: | | OmpTraitSelector
+!PARSE-TREE: | | | OmpTraitSelectorName -> Value = Simd
+!PARSE-TREE: | | | Properties
+!PARSE-TREE: | | | | OmpTraitProperty -> OmpClause -> Uniform -> Name = 'y'
+!PARSE-TREE: | Flags = None

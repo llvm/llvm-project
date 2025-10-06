@@ -142,6 +142,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TOOL_LLDB_SERVER_BUILD=1",
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)
+    "LLVM_ENABLE_DIA_SDK=0", # FIXME: option? just enable on windows?
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
