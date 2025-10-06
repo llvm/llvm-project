@@ -2,7 +2,7 @@ add_lldb_unittest(TargetTests
   ABITest.cpp
   DynamicRegisterInfoTest.cpp
   ExecutionContextTest.cpp
-  Language.cpp
+  LanguageTest.cpp
   LocateModuleCallbackTest.cpp
   MemoryRegionInfoTest.cpp
   MemoryTest.cpp
