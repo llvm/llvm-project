@@ -82,6 +82,27 @@ bool llvm::dxbc::isValidBorderColor(uint32_t V) {
   return false;
 }
 
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  using FlagT = dxbc::RootDescriptorFlags;
+  uint32_t LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
+  using FlagT = dxbc::DescriptorRangeFlags;
+  uint32_t LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
+  using FlagT = dxbc::StaticSamplerFlags;
+  uint32_t LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V < NextPowerOf2(LargestValue);
+}
+
 dxbc::PartType dxbc::parsePartType(StringRef S) {
 #define CONTAINER_PART(PartName) .Case(#PartName, PartType::PartName)
   return StringSwitch<dxbc::PartType>(S)

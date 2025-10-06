@@ -33,11 +33,11 @@ static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
   bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
 
   if (IsRISCVVecTuple) {
-    unsigned NElem = VT->getValueAsInt("nElem");
+    unsigned NF = VT->getValueAsInt("NF");
     unsigned Sz = VT->getValueAsInt("Size");
     OS << "TargetExtType::get(Context, \"riscv.vector.tuple\", "
           "ScalableVectorType::get(Type::getInt8Ty(Context), "
-       << (Sz / (NElem * 8)) << "), " << NElem << ")";
+       << (Sz / (NF * 8)) << "), " << NF << ")";
     return;
   }
 

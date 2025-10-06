@@ -651,8 +651,11 @@ Error MetadataParser::validateRootSignature(
                            "RegisterSpace", Descriptor.RegisterSpace));
 
       if (RSD.Version > 1) {
-        if (!hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
-                                                     Descriptor.Flags))
+        bool IsValidFlag =
+            dxbc::isValidRootDesciptorFlags(Descriptor.Flags) &&
+            hlsl::rootsig::verifyRootDescriptorFlag(
+                RSD.Version, dxbc::RootDescriptorFlags(Descriptor.Flags));
+        if (!IsValidFlag)
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
@@ -676,9 +679,11 @@ Error MetadataParser::validateRootSignature(
                          make_error<RootSignatureValidationError<uint32_t>>(
                              "NumDescriptors", Range.NumDescriptors));
 
-        if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType,
-                dxbc::DescriptorRangeFlags(Range.Flags)))
+        bool IsValidFlag = dxbc::isValidDescriptorRangeFlags(Range.Flags) &&
+                           hlsl::rootsig::verifyDescriptorRangeFlag(
+                               RSD.Version, Range.RangeType,
+                               dxbc::DescriptorRangeFlags(Range.Flags));
+        if (!IsValidFlag)
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
@@ -731,8 +736,11 @@ Error MetadataParser::validateRootSignature(
           joinErrors(std::move(DeferredErrs),
                      make_error<RootSignatureValidationError<uint32_t>>(
                          "RegisterSpace", Sampler.RegisterSpace));
-
-    if (!hlsl::rootsig::verifyStaticSamplerFlags(RSD.Version, Sampler.Flags))
+    bool IsValidFlag =
+        dxbc::isValidStaticSamplerFlags(Sampler.Flags) &&
+        hlsl::rootsig::verifyStaticSamplerFlags(
+            RSD.Version, dxbc::StaticSamplerFlags(Sampler.Flags));
+    if (!IsValidFlag)
       DeferredErrs =
           joinErrors(std::move(DeferredErrs),
                      make_error<RootSignatureValidationError<uint32_t>>(
