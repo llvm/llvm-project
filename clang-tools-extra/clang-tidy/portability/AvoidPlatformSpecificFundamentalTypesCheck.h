@@ -21,6 +21,12 @@ namespace clang::tidy::portability {
 /// https://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-platform-specific-fundamental-types.html
 class AvoidPlatformSpecificFundamentalTypesCheck : public ClangTidyCheck {
 public:
+  enum class IntegerReplacementStyle {
+    Exact,  // int32_t, uint32_t, etc.
+    Fast,   // int_fast32_t, uint_fast32_t, etc.
+    Least   // int_least32_t, uint_least32_t, etc.
+  };
+
   AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
                                              ClangTidyContext *Context);
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
@@ -39,7 +45,7 @@ private:
   const bool WarnOnFloats;
   const bool WarnOnInts;
   const bool WarnOnChars;
-  const std::string IntegerReplacementStyle;
+  const IntegerReplacementStyle IntegerReplacementStyleValue;
   utils::IncludeInserter IncludeInserter;
 };
 

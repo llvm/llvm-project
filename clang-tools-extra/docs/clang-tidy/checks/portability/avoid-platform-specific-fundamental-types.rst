@@ -106,23 +106,25 @@ Options
 
    When `true`, the check will warn about fundamental integer types
    (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and 
-   ``unsigned`` variants).
-   When `false`, integer types are not flagged. 
-   
-   Default is `true`.
+   ``unsigned`` variants). Default is `true`.
 
 .. option:: WarnOnFloats
 
    When `true`, the check will warn about floating point types
-   (``float`` and ``double``).
-   When `false`, floating point types are not flagged.
-
-   Default is `true`
+   (``float`` and ``double``). Default is `true`.
 
 .. option:: WarnOnChars
 
    When `true`, the check will warn about character types (``char``,
-   ``signed char``, and ``unsigned char``).
-   When `false`, character types are not flagged.
+   ``signed char``, and ``unsigned char``). Default is `true`.
 
-   Default is `true`
+.. option:: IntegerReplacementStyle
+
+   Specifies the style of integer type replacements when ``WarnOnInts`` is 
+   enabled. Default is `exact`.
+   
+   The possible values, and replacements for ``int`` when ``int`` is 32-bits:
+
+   - ``"Exact"``: Replace with exact-width types (e.g., ``int`` → ``int32_t``)
+   - ``"Fast"``: Replace with fast minimum-width types (e.g., ``int`` → ``int_fast32_t``)
+   - ``"Least"``: Replace with least minimum-width types (e.g., ``int`` → ``int_least32_t``)

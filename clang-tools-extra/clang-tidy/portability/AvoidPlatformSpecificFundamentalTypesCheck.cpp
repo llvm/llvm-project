@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang::ast_matchers;
 
@@ -46,6 +47,22 @@ AST_MATCHER(clang::QualType, isBuiltinFloat) {
 
 } // namespace
 
+template <>
+struct clang::tidy::OptionEnumMapping<clang::tidy::portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle> {
+  static llvm::ArrayRef<
+      std::pair<portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle,
+                               StringRef>
+        Mapping[] = {
+            {portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Exact, "Exact"},
+            {portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Fast, "Fast"},
+            {portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Least, "Least"},
+        };
+    return {Mapping};
+  }
+};
+
 namespace clang::tidy::portability {
 
 AvoidPlatformSpecificFundamentalTypesCheck::
@@ -55,7 +72,7 @@ AvoidPlatformSpecificFundamentalTypesCheck::
       WarnOnFloats(Options.get("WarnOnFloats", true)),
       WarnOnInts(Options.get("WarnOnInts", true)),
       WarnOnChars(Options.get("WarnOnChars", true)),
-      IntegerReplacementStyle(Options.get("IntegerReplacementStyle", "Exact")),
+      IntegerReplacementStyleValue(Options.get("IntegerReplacementStyle", IntegerReplacementStyle::Exact)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {
@@ -76,7 +93,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::storeOptions(
   Options.store(Opts, "WarnOnFloats", WarnOnFloats);
   Options.store(Opts, "WarnOnInts", WarnOnInts);
   Options.store(Opts, "WarnOnChars", WarnOnChars);
-  Options.store(Opts, "IntegerReplacementStyle", IntegerReplacementStyle);
+  Options.store(Opts, "IntegerReplacementStyle", IntegerReplacementStyleValue);
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
@@ -119,37 +136,35 @@ static std::optional<std::string> getFloatReplacement(const BuiltinType *BT,
   }
 }
 
-static std::optional<std::string> getIntegerReplacement(const BuiltinType *BT,
-                                                        ASTContext &Context,
-                                                        StringRef Style) {
+static std::optional<std::string> getIntegerReplacement(
+    const BuiltinType *BT, ASTContext &Context,
+    AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle Style) {
   const TargetInfo &Target = Context.getTargetInfo();
 
-  auto GetReplacementType = [&Style](unsigned Width, bool IsSigned) -> std::optional<std::string> {
-    std::string Prefix;
-    std::string Suffix;
-    
-    if (Style == "Exact") {
-      Prefix = IsSigned ? "int" : "uint";
-      Suffix = "_t";
-    } else if (Style == "Fast") {
-      Prefix = IsSigned ? "int_fast" : "uint_fast";
-      Suffix = "_t";
-    } else if (Style == "Least") {
-      Prefix = IsSigned ? "int_least" : "uint_least";
-      Suffix = "_t";
-    } else {
-      return std::nullopt;
+  auto GetReplacementType = [Style](unsigned Width, bool IsSigned) -> std::optional<std::string> {
+    std::string Prefix = [Style, IsSigned](){
+    std::string SignedPrefix = IsSigned ? "int" : "uint";
+    switch (Style) {
+    case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Exact:
+      return SignedPrefix;
+    case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Fast:
+      return SignedPrefix + "_fast";
+    case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Least:
+      return SignedPrefix + "_least";
+    default:
+      llvm_unreachable("Invalid integer replacement style");
     }
+  }();
 
     switch (Width) {
     case 8U:
-      return Prefix + "8" + Suffix;
+      return Prefix + "8_t";
     case 16U:
-      return Prefix + "16" + Suffix;
+      return Prefix + "16_t";
     case 32U:
-      return Prefix + "32" + Suffix;
+      return Prefix + "32_t";
     case 64U:
-      return Prefix + "64" + Suffix;
+      return Prefix + "64_t";
     default:
       return std::nullopt;
     }
@@ -238,7 +253,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
         << TypeName;
   } else {
     // Handle integer types
-    const auto Replacement = getIntegerReplacement(BT, *Result.Context, IntegerReplacementStyle);
+    const auto Replacement = getIntegerReplacement(BT, *Result.Context, IntegerReplacementStyleValue);
 
     if (!Replacement.has_value()) {
       diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
