@@ -4608,6 +4608,11 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
   if (SanOpts.has(SanitizerKind::ArrayBounds))
     return;
 
+  // Use the provided IndexVal to avoid duplicating side effects.
+  // The caller has already emitted the index expression once.
+  if (!IndexVal)
+    return;
+
   const Expr *Base = E->getBase();
   const Expr *Idx = E->getIdx();
   QualType BaseType = Base->getType();
@@ -4618,19 +4623,28 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
     }
   }
 
-  // For now: only handle constant array types.
+  // Handle both constant arrays and VLAs (variable-length arrays.)
   const ConstantArrayType *CAT = getContext().getAsConstantArrayType(BaseType);
-  if (!CAT)
-    return;
+  llvm::Value *VLASize = nullptr;
 
-  llvm::APInt ArraySize = CAT->getSize();
+  if (!CAT) {
+    if (const VariableArrayType *VAT =
+            getContext().getAsVariableArrayType(BaseType))
+      VLASize = getVLASize(VAT).NumElts;
+    else
+      return; // Not a constant or VLA.
+  }
+
+  llvm::APInt ArraySize;
+  if (CAT)
+    ArraySize = CAT->getSize();
 
   // Don't generate assumes for flexible array member pattern.
   // Size-1 arrays: "struct { int len; char data[1]; }" (pre-C99 idiom.)
   // Zero-length arrays: "struct { int len; char data[0]; }" (GCC extension
   // https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html)
   // Both patterns use arrays as placeholders for variable-length data.
-  if (ArraySize == 0 || ArraySize == 1) {
+  if (CAT && (ArraySize == 0 || ArraySize == 1)) {
     if (const auto *ME = dyn_cast<MemberExpr>(Base->IgnoreParenImpCasts())) {
       if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
         const RecordDecl *RD = FD->getParent();
@@ -4649,15 +4663,18 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
 
   QualType IdxType = Idx->getType();
   llvm::Type *IndexType = ConvertType(IdxType);
-  llvm::Value *Zero = llvm::ConstantInt::get(IndexType, 0);
+  llvm::Value *ArraySizeVal;
 
-  uint64_t ArraySizeValue = ArraySize.getLimitedValue();
-  llvm::Value *ArraySizeVal = llvm::ConstantInt::get(IndexType, ArraySizeValue);
-
-  // Use the provided IndexVal to avoid duplicating side effects.
-  // The caller has already emitted the index expression once.
-  if (!IndexVal)
-    return;
+  if (CAT)
+    // Constant array: use compile-time size.
+    ArraySizeVal =
+        llvm::ConstantInt::get(IndexType, ArraySize.getLimitedValue());
+  else
+    // VLA: use runtime size.
+    ArraySizeVal =
+        VLASize->getType() == IndexType
+            ? VLASize
+            : Builder.CreateIntCast(VLASize, IndexType, false, "vla.size.cast");
 
   // Ensure index value has the same type as our constants.
   if (IndexVal->getType() != IndexType) {
@@ -4672,6 +4689,7 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
   // array."
   if (IdxType->isSignedIntegerOrEnumerationType()) {
     // For signed indices: index >= 0 && index < size.
+    llvm::Value *Zero = llvm::ConstantInt::get(IndexType, 0);
     llvm::Value *LowerBound =
         Builder.CreateICmpSGE(IndexVal, Zero, "idx.ge.zero");
     llvm::Value *UpperBound =

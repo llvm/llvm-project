@@ -55,11 +55,13 @@ int test_pointer_parameter(int *arr, int i) {
 }
 
 // CHECK-LABEL: define {{.*}} @test_vla
+void init_vla(int *arr, int n);
+
 int test_vla(int n, int i) {
   int arr[n];  // Variable-length array.
-  // CHECK-NOT: call void @llvm.assume
-  // VLAs should NOT generate bounds constraints
-  // because the size is dynamic.
+  init_vla(arr, n);  // Initialize to avoid UB.
+  // CHECK: call void @llvm.assume
+  // For VLAs, generate bounds constraints using the runtime size: 0 <= i < n.
   return arr[i];
 }
 
