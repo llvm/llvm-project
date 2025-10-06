@@ -23,7 +23,12 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-which clang-cl
+mkdir /tmp/clang-download
+pushd /tmp/clang-download
+curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows.msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/ckabg+llvm-21.1.2-x86_64-pc-windows.msvc.tar.xz
+ls -l "clang+llvm-21.1.2-x86_64-pc-windows.msvc.tar.xz"
+
+
 
 export CC=clang-cl
 export CXX=clang-cl
