@@ -1645,6 +1645,22 @@ def BCDSR_rec : VX_VT5_VA5_VB5_PS1_XO9_o<449, "bcdsr.", []>;
 def BCDTRUNC_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<257, "bcdtrunc." , []>;
 def BCDUTRUNC_rec : VX_VT5_VA5_VB5_XO9_o    <321, "bcdutrunc.", []>;
 
+// Patterns mapping BCD DAG nodes to machine instructions
+def : Pat<(PPCbcds v4i32:$Shift, v16i8:$Src, i32:$PS),
+          (BCDS_rec $Shift, $Src, $PS)>;
+
+def : Pat<(PPCbcdsr v4i32:$ShiftRound, v16i8:$Src, i32:$PS),
+          (BCDSR_rec $ShiftRound, $Src, $PS)>;
+
+def : Pat<(PPCbcdtrunc v4i32:$Trunc, v16i8:$Src, i32:$PS),
+          (BCDTRUNC_rec $Trunc, $Src, $PS)>;
+
+def : Pat<(PPCbcdutrunc v4i32:$Trunc, v16i8:$Src),
+          (BCDUTRUNC_rec $Trunc, $Src)>;
+
+def : Pat<(PPCbcdus v4i32:$Shift, v16i8:$Src),
+          (BCDUS_rec $Shift, $Src)>;
+
 // Absolute Difference
 def VABSDUB : VXForm_1<1027, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
                        "vabsdub $VD, $VA, $VB", IIC_VecGeneral,
