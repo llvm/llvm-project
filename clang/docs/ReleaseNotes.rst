@@ -349,6 +349,8 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- ``-Wimplicit-fallthrough`` was added to ``-Wextra`` for GCC compatibility.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
