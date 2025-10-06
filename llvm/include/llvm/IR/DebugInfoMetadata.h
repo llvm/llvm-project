@@ -66,6 +66,44 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
+/// Wrapper structure that holds a language name and its version.
+///
+/// Some debug-info formats, particularly DWARF, distniguish between
+/// language codes that include the version name and codes that don't.
+/// DISourceLanguageName may hold either of these.
+///
+class DISourceLanguageName {
+  /// Language name.
+  /// If \ref Version is not std::nullopt, then this name
+  /// is version independent (i.e., doesn't include the language
+  /// version in its name).
+  uint16_t Name;
+
+  /// Language version. The version scheme is language
+  /// dependent.
+  std::optional<uint32_t> Version;
+
+public:
+  bool hasVersionedName() const { return Version.has_value(); }
+
+  /// Returns a versioned or unversioned language name.
+  uint16_t getName() const { return Name; }
+
+  // Transitional API for cases where we do not yet support
+  // versioned source language names. Use \ref getName instead.
+  //
+  // FIXME: remove once all callers of this API account for versioned
+  // names.
+  uint16_t getUnversionedName() const {
+    assert(!hasVersionedName());
+    return Name;
+  }
+
+  DISourceLanguageName(uint16_t Lang, uint32_t Version)
+      : Name(Lang), Version(Version) {};
+  DISourceLanguageName(uint16_t Lang) : Name(Lang), Version(std::nullopt) {};
+};
+
 class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
@@ -2003,7 +2041,7 @@ public:
   LLVM_ABI static const char *nameTableKindString(DebugNameTableKind PK);
 
 private:
-  unsigned SourceLanguage;
+  DISourceLanguageName SourceLanguage;
   unsigned RuntimeVersion;
   uint64_t DWOId;
   unsigned EmissionKind;
@@ -2013,16 +2051,17 @@ private:
   bool DebugInfoForProfiling;
   bool RangesBaseAddress;
 
-  DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
-                bool IsOptimized, unsigned RuntimeVersion,
-                unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
-                bool DebugInfoForProfiling, unsigned NameTableKind,
-                bool RangesBaseAddress, ArrayRef<Metadata *> Ops);
+  DICompileUnit(LLVMContext &C, StorageType Storage,
+                DISourceLanguageName SourceLanguage, bool IsOptimized,
+                unsigned RuntimeVersion, unsigned EmissionKind, uint64_t DWOId,
+                bool SplitDebugInlining, bool DebugInfoForProfiling,
+                unsigned NameTableKind, bool RangesBaseAddress,
+                ArrayRef<Metadata *> Ops);
   ~DICompileUnit() = default;
 
   static DICompileUnit *
-  getImpl(LLVMContext &Context, unsigned SourceLanguage, DIFile *File,
-          StringRef Producer, bool IsOptimized, StringRef Flags,
+  getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
+          DIFile *File, StringRef Producer, bool IsOptimized, StringRef Flags,
           unsigned RuntimeVersion, StringRef SplitDebugFilename,
           unsigned EmissionKind, DICompositeTypeArray EnumTypes,
           DIScopeArray RetainedTypes,
@@ -2042,8 +2081,8 @@ private:
         getCanonicalMDString(Context, SDK), Storage, ShouldCreate);
   }
   LLVM_ABI static DICompileUnit *
-  getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
-          MDString *Producer, bool IsOptimized, MDString *Flags,
+  getImpl(LLVMContext &Context, DISourceLanguageName SourceLanguage,
+          Metadata *File, MDString *Producer, bool IsOptimized, MDString *Flags,
           unsigned RuntimeVersion, MDString *SplitDebugFilename,
           unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
           Metadata *GlobalVariables, Metadata *ImportedEntities,
@@ -2068,7 +2107,7 @@ public:
 
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
-      (unsigned SourceLanguage, DIFile *File, StringRef Producer,
+      (DISourceLanguageName SourceLanguage, DIFile *File, StringRef Producer,
        bool IsOptimized, StringRef Flags, unsigned RuntimeVersion,
        StringRef SplitDebugFilename, DebugEmissionKind EmissionKind,
        DICompositeTypeArray EnumTypes, DIScopeArray RetainedTypes,
@@ -2084,7 +2123,7 @@ public:
        SysRoot, SDK))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
-      (unsigned SourceLanguage, Metadata *File, MDString *Producer,
+      (DISourceLanguageName SourceLanguage, Metadata *File, MDString *Producer,
        bool IsOptimized, MDString *Flags, unsigned RuntimeVersion,
        MDString *SplitDebugFilename, unsigned EmissionKind, Metadata *EnumTypes,
        Metadata *RetainedTypes, Metadata *GlobalVariables,
@@ -2099,7 +2138,7 @@ public:
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
-  unsigned getSourceLanguage() const { return SourceLanguage; }
+  DISourceLanguageName getSourceLanguage() const { return SourceLanguage; }
   bool isOptimized() const { return IsOptimized; }
   unsigned getRuntimeVersion() const { return RuntimeVersion; }
   DebugEmissionKind getEmissionKind() const {
