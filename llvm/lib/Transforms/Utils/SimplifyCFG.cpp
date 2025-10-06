@@ -5734,8 +5734,8 @@ findContiguousCases(Value *Condition, SmallVectorImpl<ConstantInt *> &Cases,
   assert(Cases.size() >= 1);
 
   array_pod_sort(Cases.begin(), Cases.end(), constantIntSortPredicate);
-  APInt Min = Cases.back()->getValue();
-  APInt Max = Cases.front()->getValue();
+  const APInt &Min = Cases.back()->getValue();
+  const APInt &Max = Cases.front()->getValue();
   APInt Offset = Max - Min;
   size_t ContiguousOffset = Cases.size() - 1;
   if (Offset == ContiguousOffset) {
