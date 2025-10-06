@@ -214,7 +214,7 @@ SmallVector<int64_t> static getStridedSliceInsertionIndices(
 /// vector.extract_strided_slice operation.
 struct LinearizeVectorExtractStridedSlice final
     : public mlir::OpConversionPattern<mlir::vector::ExtractStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorExtractStridedSlice(const TypeConverter &typeConverter,
                                      MLIRContext *context,
                                      PatternBenefit benefit = 1)
@@ -285,7 +285,7 @@ struct LinearizeVectorExtractStridedSlice final
 ///
 struct LinearizeVectorInsertStridedSlice final
     : public mlir::OpConversionPattern<mlir::vector::InsertStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorInsertStridedSlice(const TypeConverter &typeConverter,
                                     MLIRContext *context,
                                     PatternBenefit benefit = 1)
@@ -348,7 +348,7 @@ struct LinearizeVectorInsertStridedSlice final
 /// of the original shuffle operation.
 struct LinearizeVectorShuffle final
     : public OpConversionPattern<vector::ShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorShuffle(const TypeConverter &typeConverter,
                          MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -423,7 +423,7 @@ struct LinearizeVectorShuffle final
 ///
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorExtract(const TypeConverter &typeConverter,
                          MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -501,7 +501,7 @@ struct LinearizeVectorExtract final
 ///
 struct LinearizeVectorInsert final
     : public OpConversionPattern<vector::InsertOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorInsert(const TypeConverter &typeConverter,
                         MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -575,7 +575,7 @@ struct LinearizeVectorInsert final
 ///   %out_nd = vector.shape_cast %out_1d: vector<16xf16> to vector<4x4xf16>
 struct LinearizeVectorBitCast final
     : public OpConversionPattern<vector::BitCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorBitCast(const TypeConverter &typeConverter,
                          MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -598,7 +598,7 @@ struct LinearizeVectorBitCast final
 ///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
 struct LinearizeVectorSplat final
     : public OpConversionPattern<vector::SplatOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LinearizeVectorSplat(const TypeConverter &typeConverter, MLIRContext *context,
                        PatternBenefit benefit = 1)
@@ -629,7 +629,7 @@ struct LinearizeVectorSplat final
 ///   %shape_cast = vector.shape_cast %mask : vector<4xi1> to vector<1x4xi1>
 struct LinearizeVectorCreateMask final
     : OpConversionPattern<vector::CreateMaskOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LinearizeVectorCreateMask(const TypeConverter &typeConverter,
                             MLIRContext *context, PatternBenefit benefit = 1)
@@ -684,7 +684,7 @@ struct LinearizeVectorCreateMask final
 /// For generic cases, the vector unroll pass should be used to unroll the load
 /// to vector<1x1x...xN> form and then linearized
 struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorLoad(const TypeConverter &typeConverter, MLIRContext *context,
                       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -731,7 +731,7 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
 /// to vector<1x1x...xN> form and then linearized
 struct LinearizeVectorStore final
     : public OpConversionPattern<vector::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorStore(const TypeConverter &typeConverter, MLIRContext *context,
                        PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -778,7 +778,7 @@ struct LinearizeVectorStore final
 ///
 struct LinearizeVectorFromElements final
     : public OpConversionPattern<vector::FromElementsOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LinearizeVectorFromElements(const TypeConverter &typeConverter,
                               MLIRContext *context, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit) {}
@@ -814,7 +814,7 @@ struct LinearizeVectorFromElements final
 ///
 struct LinearizeVectorToElements final
     : public OpConversionPattern<vector::ToElementsOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LinearizeVectorToElements(const TypeConverter &typeConverter,
                             MLIRContext *context, PatternBenefit benefit = 1)
