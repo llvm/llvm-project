@@ -36,28 +36,28 @@
 #define REDEFINE
 
 // CHECK: Macro Definitions:
-// CHECK-DAG: REDEFINE
-// CHECK-DAG: FUNC_Macro
-// CHECK-DAG: CONSTANT
-// CHECK-DAG: FOO
+// CHECK: CONSTANT
+// CHECK: FOO
+// CHECK: FUNC_Macro
+// CHECK: REDEFINE
 // CHECK-NEXT: ===
 
 //--- include_foo.h
 #include "foo.h"
 #undef REDEFINE
 // CHECK: Macro Definitions:
-// CHECK-DAG: CONSTANT
-// CHECK-DAG: FUNC_Macro
-// CHECK-DAG: FOO
+// CHECK: CONSTANT
+// CHECK: FOO
+// CHECK: FUNC_Macro
 // CHECK-NEXT: ===
 
 //--- import_foo.h
 import "foo.h";
 #undef REDEFINE
 // CHECK: Macro Definitions:
-// CHECK-DAG: CONSTANT
-// CHECK-DAG: FUNC_Macro
-// CHECK-DAG: FOO
+// CHECK: CONSTANT
+// CHECK: FOO
+// CHECK: FUNC_Macro
 // CHECK-NEXT: ===
 
 //--- named_module.cppm

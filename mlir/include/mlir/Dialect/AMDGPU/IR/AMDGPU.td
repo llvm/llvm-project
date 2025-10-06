@@ -235,7 +235,7 @@ def AMDGPU_FatRawBufferCastOp :
        DeclareOpInterfaceMethods<InferTypeOpInterface>,
        ViewLikeOpInterface, AttrSizedOperandSegments]>,
     Arguments<(ins AnyMemRef:$source,
-      Optional<I32>:$validBytes,
+      Optional<I64>:$validBytes,
       Optional<I<14>>:$cacheSwizzleStride,
       DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
       UnitAttr:$resetOffset)>,
@@ -680,8 +680,8 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
     * `$fetch_inactive`: Optional. Used to dertermine behavior of a fetch from a disabled lane.
       `fetch_inactive = false`: If the source lane is disabled, use `bound_ctrl` to determine the source value.
       `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway (ignoring `bound_ctrl`).
-    * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from 
-      a disabled lane: use the value zero, or disable the write. 
+    * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from
+      a disabled lane: use the value zero, or disable the write.
       `bound_ctrl = false`: Do not write when source is from a disabled lane
       `bound_ctrl = true`: Use zero as input if source is from a disabled lane
 
@@ -1048,5 +1048,6 @@ def AMDGPU_ScaledMFMAOp :
     attr-dict
     `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];
+  let hasCanonicalizer = 1;
 }
 #endif // AMDGPU

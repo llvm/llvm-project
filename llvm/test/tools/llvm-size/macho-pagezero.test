@@ -1,0 +1,108 @@
+## Test the --exclude-pagezero option to skip __PAGEZERO segment in Mach-O files.
+
+# RUN: yaml2obj %s --docnum=1 -o %t-pagezero.o
+# RUN: llvm-size %t-pagezero.o | \
+# RUN:   FileCheck %s --check-prefix=NORMAL --match-full-lines
+# RUN: llvm-size --exclude-pagezero %t-pagezero.o | \
+# RUN:   FileCheck %s --check-prefix=SKIP --match-full-lines
+
+# RUN: yaml2obj %s --docnum=2 -o %t-pagezero32.o
+# RUN: llvm-size %t-pagezero32.o | \
+# RUN:   FileCheck %s --check-prefix=NORMAL --match-full-lines
+# RUN: llvm-size --exclude-pagezero %t-pagezero32.o | \
+# RUN:   FileCheck %s --check-prefix=SKIP --match-full-lines
+
+# NORMAL:__TEXT	__DATA	__OBJC	others	dec	hex
+# NORMAL-NEXT:20	100	0	4096	4216	1078
+
+# SKIP:__TEXT	__DATA	__OBJC	others	dec	hex
+# SKIP-NEXT:20	100	0	0	120	78
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x2
+  ncmds:           3
+  sizeofcmds:      216
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0x0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __TEXT
+    vmaddr:          0x100000000
+    vmsize:          20
+    fileoff:         248
+    filesize:        20
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __DATA
+    vmaddr:          0x100001000
+    vmsize:          100
+    fileoff:         268
+    filesize:        100
+    maxprot:         7
+    initprot:        3
+    nsects:          0
+    flags:           0
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x7
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           3
+  sizeofcmds:      168
+  flags:           0x2000
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __PAGEZERO
+    vmaddr:          0x0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __TEXT
+    vmaddr:          0x1000
+    vmsize:          20
+    fileoff:         196
+    filesize:        20
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __DATA
+    vmaddr:          0x2000
+    vmsize:          100
+    fileoff:         216
+    filesize:        100
+    maxprot:         7
+    initprot:        3
+    nsects:          0
+    flags:           0
