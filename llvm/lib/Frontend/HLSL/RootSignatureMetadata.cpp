@@ -28,7 +28,7 @@ template <typename T>
 void formatImpl(raw_string_ostream &Buff,
                 std::integral_constant<RSErrorKind, RSErrorKind::Validation>,
                 StringRef ParamName, T Value) {
-  Buff << "Invalid value for: " << ParamName << ":";
+  Buff << "Invalid value for " << ParamName << ": ";
   if constexpr (std::is_same_v<std::decay_t<T>, std::nullptr_t>) {
     Buff << "nullptr";
   } else {
@@ -385,12 +385,6 @@ Error MetadataParser::parseRootDescriptors(
     return createRSError(RSErrorKind::InvalidMetadataValue,
                          StringRef("RegisterSpace"));
 
-  if (RSD.Version == 1) {
-    RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
-    return Error::success();
-  }
-  assert(RSD.Version > 1);
-
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 4))
     Descriptor.Flags = *Val;
   else
@@ -738,14 +732,12 @@ Error MetadataParser::validateRootSignature(
                                                 StringRef("RegisterSpace"),
                                                 Descriptor.RegisterSpace));
 
-      if (RSD.Version > 1) {
-        if (!hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
-                                                     Descriptor.Flags))
-          DeferredErrs = joinErrors(
-              std::move(DeferredErrs),
-              createRSError(RSErrorKind::Validation,
-                            StringRef("RootDescriptorFlag"), Descriptor.Flags));
-      }
+      if (!hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
+                                                    Descriptor.Flags))
+        DeferredErrs = joinErrors(
+            std::move(DeferredErrs),
+            createRSError(RSErrorKind::Validation,
+                          StringRef("RootDescriptorFlag"), Descriptor.Flags));
       break;
     }
     case dxbc::RootParameterType::DescriptorTable: {

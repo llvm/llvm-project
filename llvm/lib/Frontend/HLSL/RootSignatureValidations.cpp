@@ -35,12 +35,16 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
 }
 
 bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
+  assert((Version <= 3) && "Provided invalid root signature version");
+  uint32_t LargestValue = llvm::to_underlying(
+      dxbc::RootDescriptorFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  if (FlagsVal >= NextPowerOf2(LargestValue))
+    return false;
+  
   using FlagT = dxbc::RootDescriptorFlags;
   FlagT Flags = FlagT(FlagsVal);
   if (Version == 1)
     return Flags == FlagT::DataVolatile;
-
-  assert((Version <= 3) && "Provided invalid root signature version");
 
   // The data-specific flags are mutually exclusive.
   FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
@@ -114,6 +118,7 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
 }
 
 bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
+  assert(Version == 3 && "Provided invalid root signature version");
   uint32_t LargestValue = llvm::to_underlying(
       dxbc::StaticSamplerFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
   if (FlagsNumber >= NextPowerOf2(LargestValue))
@@ -123,7 +128,6 @@ bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
   if (Version <= 2)
     return Flags == dxbc::StaticSamplerFlags::None;
 
-  assert(Version == 3 && "Provided invalid root signature version");
 
   dxbc::StaticSamplerFlags Mask =
       dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
