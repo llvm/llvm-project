@@ -93,6 +93,8 @@ struct __mask_operations<_Tp, simd_abi::__scalar> {
   static _LIBCPP_HIDE_FROM_ABI void __load(_MaskStorage& __s, const bool* __mem) noexcept { __s.__data = __mem[0]; }
 
   static _LIBCPP_HIDE_FROM_ABI void __store(_MaskStorage __s, bool* __mem) noexcept { __mem[0] = __s.__data; }
+
+  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __negate(_MaskStorage __s) noexcept { return {{!__s.__data}}; }
 };
 
 } // namespace parallelism_v2
