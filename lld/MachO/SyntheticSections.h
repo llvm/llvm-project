@@ -571,18 +571,10 @@ public:
   uint64_t getSize() const override { return size; }
   void finalizeContents() override;
   void writeTo(uint8_t *buf) const override;
-
-  struct StringOffset {
-    uint8_t trailingZeros;
-    uint64_t outSecOff = UINT64_MAX;
-
-    explicit StringOffset(uint8_t zeros) : trailingZeros(zeros) {}
-  };
-
-  StringOffset getStringOffset(StringRef str) const;
+  uint64_t getStringOffset(StringRef str) const;
 
 private:
-  llvm::DenseMap<llvm::CachedHashStringRef, StringOffset> stringOffsetMap;
+  llvm::DenseMap<llvm::CachedHashStringRef, uint64_t> stringOffsetMap;
   size_t size = 0;
 };
 
@@ -843,6 +835,9 @@ void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
+  /// The list of cstring sections. Note that this includes \p cStringSection
+  /// and \p objcMethnameSection already.
+  llvm::SmallVector<CStringSection *> cStringSections;
   CStringSection *cStringSection = nullptr;
   DeduplicatedCStringSection *objcMethnameSection = nullptr;
   WordLiteralSection *wordLiteralSection = nullptr;
@@ -863,6 +858,26 @@ struct InStruct {
   InitOffsetsSection *initOffsets = nullptr;
   ObjCMethListSection *objcMethList = nullptr;
   ChainedFixupsSection *chainedFixups = nullptr;
+
+  CStringSection *getOrCreateCStringSection(StringRef name,
+                                            bool forceDedupStrings = false) {
+    auto [it, didEmplace] =
+        cStringSectionMap.try_emplace(name, cStringSections.size());
+    if (!didEmplace)
+      return cStringSections[it->getValue()];
+
+    std::string &nameData = *make<std::string>(name);
+    CStringSection *sec;
+    if (config->dedupStrings || forceDedupStrings)
+      sec = make<DeduplicatedCStringSection>(nameData.c_str());
+    else
+      sec = make<CStringSection>(nameData.c_str());
+    cStringSections.push_back(sec);
+    return sec;
+  }
+
+private:
+  llvm::StringMap<unsigned> cStringSectionMap;
 };
 
 extern InStruct in;
