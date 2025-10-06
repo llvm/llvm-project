@@ -64,14 +64,6 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
-static cl::opt<bool> UseSelectionDAGPTRADD(
-    "amdgpu-use-sdag-ptradd", cl::Hidden,
-    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
-             "SelectionDAG ISel"),
-    cl::init(false));
-
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -850,6 +842,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, {MVT::v4i16, MVT::v4f16, MVT::v4bf16},
                        Custom);
+
+    if (Subtarget->hasBF16PackedInsts()) {
+      for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
+        // Split vector operations.
+        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+                           VT, Custom);
+    }
 
     if (Subtarget->hasPackedFP32Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
@@ -5963,9 +5962,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    unsigned SelOpc =
+        Subtarget->isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(-1).addImm(0);
 
     MI.eraseFromParent();
     return BB;
@@ -6621,10 +6620,12 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
                                              SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
-         VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
-         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
+         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
+         VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
+         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
+         VT == MVT::v32bf16);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
@@ -11457,7 +11458,7 @@ static bool isNoUnsignedWrap(SDValue Addr) {
 
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
-  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+  return PtrVT == MVT::i64;
 }
 
 bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,
@@ -18857,31 +18858,6 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
   return Flags;
-}
-
-bool SITargetLowering::checkForPhysRegDependency(
-    SDNode *Def, SDNode *User, unsigned Op, const TargetRegisterInfo *TRI,
-    const TargetInstrInfo *TII, MCRegister &PhysReg, int &Cost) const {
-  if (User->getOpcode() != ISD::CopyToReg)
-    return false;
-  if (!Def->isMachineOpcode())
-    return false;
-  MachineSDNode *MDef = dyn_cast<MachineSDNode>(Def);
-  if (!MDef)
-    return false;
-
-  unsigned ResNo = User->getOperand(Op).getResNo();
-  if (User->getOperand(Op)->getValueType(ResNo) != MVT::i1)
-    return false;
-  const MCInstrDesc &II = TII->get(MDef->getMachineOpcode());
-  if (II.isCompare() && II.hasImplicitDefOfPhysReg(AMDGPU::SCC)) {
-    PhysReg = AMDGPU::SCC;
-    const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(PhysReg, Def->getSimpleValueType(ResNo));
-    Cost = RC->getCopyCost();
-    return true;
-  }
-  return false;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

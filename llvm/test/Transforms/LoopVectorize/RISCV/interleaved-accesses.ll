@@ -31,24 +31,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; CHECK-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; CHECK-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; CHECK-NEXT:    store i32 [[Y1]], ptr [[Q1]], align 4
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -73,24 +56,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; FIXED-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; FIXED-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; FIXED-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; FIXED-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; FIXED-NEXT:    store i32 [[Y1]], ptr [[Q1]], align 4
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -121,24 +87,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; SCALABLE-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; SCALABLE-NEXT:    store i32 [[Y1]], ptr [[Q1]], align 4
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -194,24 +143,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -236,24 +168,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; FIXED-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -284,24 +199,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -359,29 +257,7 @@ define void @load_store_factor3_i32(ptr %p) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; CHECK-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; CHECK-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; CHECK-NEXT:    store i32 [[Y1]], ptr [[Q1]], align 4
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[Q2]], align 4
-; CHECK-NEXT:    [[Y2:%.*]] = add i32 [[X2]], 3
-; CHECK-NEXT:    store i32 [[Y2]], ptr [[Q2]], align 4
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -410,29 +286,7 @@ define void @load_store_factor3_i32(ptr %p) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; FIXED-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; FIXED-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; FIXED-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; FIXED-NEXT:    store i32 [[Y1]], ptr [[Q1]], align 4
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i32, ptr [[Q2]], align 4
-; FIXED-NEXT:    [[Y2:%.*]] = add i32 [[X2]], 3
-; FIXED-NEXT:    store i32 [[Y2]], ptr [[Q2]], align 4
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -465,29 +319,7 @@ define void @load_store_factor3_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; SCALABLE-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; SCALABLE-NEXT:    store i32 [[Y1]], ptr [[Q1]], align 4
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i32, ptr [[Q2]], align 4
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i32 [[X2]], 3
-; SCALABLE-NEXT:    store i32 [[Y2]], ptr [[Q2]], align 4
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -551,29 +383,7 @@ define void @load_store_factor3_i64(ptr %p) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; CHECK-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; CHECK-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -602,29 +412,7 @@ define void @load_store_factor3_i64(ptr %p) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; FIXED-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; FIXED-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -657,29 +445,7 @@ define void @load_store_factor3_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; SCALABLE-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -745,34 +511,7 @@ define void @load_store_factor4(ptr %p) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 4
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; CHECK-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; CHECK-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; CHECK-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; CHECK-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; CHECK-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -803,34 +542,7 @@ define void @load_store_factor4(ptr %p) {
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 4
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; FIXED-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; FIXED-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; FIXED-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; FIXED-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; FIXED-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; FIXED-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; FIXED-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -865,34 +577,7 @@ define void @load_store_factor4(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 4
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; SCALABLE-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; SCALABLE-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; SCALABLE-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; SCALABLE-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -966,39 +651,7 @@ define void @load_store_factor5(ptr %p) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 5
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; CHECK-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; CHECK-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; CHECK-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; CHECK-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; CHECK-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; CHECK-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; CHECK-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; CHECK-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; CHECK-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; CHECK-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1033,39 +686,7 @@ define void @load_store_factor5(ptr %p) {
 ; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 5
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; FIXED-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; FIXED-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; FIXED-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; FIXED-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; FIXED-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; FIXED-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; FIXED-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; FIXED-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; FIXED-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; FIXED-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; FIXED-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; FIXED-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -1102,39 +723,7 @@ define void @load_store_factor5(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 5
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; SCALABLE-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; SCALABLE-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; SCALABLE-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; SCALABLE-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; SCALABLE-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; SCALABLE-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; SCALABLE-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -1216,44 +805,7 @@ define void @load_store_factor6(ptr %p) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 6
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; CHECK-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; CHECK-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; CHECK-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; CHECK-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; CHECK-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; CHECK-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; CHECK-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; CHECK-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; CHECK-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; CHECK-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; CHECK-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; CHECK-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; CHECK-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; CHECK-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; CHECK-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1291,44 +843,7 @@ define void @load_store_factor6(ptr %p) {
 ; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 6
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; FIXED-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; FIXED-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; FIXED-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; FIXED-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; FIXED-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; FIXED-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; FIXED-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; FIXED-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; FIXED-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; FIXED-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; FIXED-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; FIXED-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; FIXED-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; FIXED-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; FIXED-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; FIXED-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; FIXED-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -1367,44 +882,7 @@ define void @load_store_factor6(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 6
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; SCALABLE-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; SCALABLE-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; SCALABLE-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; SCALABLE-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; SCALABLE-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; SCALABLE-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; SCALABLE-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; SCALABLE-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; SCALABLE-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; SCALABLE-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; SCALABLE-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -1494,49 +972,7 @@ define void @load_store_factor7(ptr %p) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 7
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; CHECK-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; CHECK-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; CHECK-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; CHECK-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; CHECK-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; CHECK-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; CHECK-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; CHECK-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; CHECK-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; CHECK-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; CHECK-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; CHECK-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; CHECK-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; CHECK-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; CHECK-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; CHECK-NEXT:    [[OFFSET6:%.*]] = add i64 [[OFFSET5]], 1
-; CHECK-NEXT:    [[Q6:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET6]]
-; CHECK-NEXT:    [[X6:%.*]] = load i64, ptr [[Q6]], align 8
-; CHECK-NEXT:    [[Y6:%.*]] = add i64 [[X6]], 7
-; CHECK-NEXT:    store i64 [[Y6]], ptr [[Q6]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1578,49 +1014,7 @@ define void @load_store_factor7(ptr %p) {
 ; FIXED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 7
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; FIXED-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; FIXED-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; FIXED-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; FIXED-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; FIXED-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; FIXED-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; FIXED-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; FIXED-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; FIXED-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; FIXED-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; FIXED-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; FIXED-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; FIXED-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; FIXED-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; FIXED-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; FIXED-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; FIXED-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; FIXED-NEXT:    [[OFFSET6:%.*]] = add i64 [[OFFSET5]], 1
-; FIXED-NEXT:    [[Q6:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET6]]
-; FIXED-NEXT:    [[X6:%.*]] = load i64, ptr [[Q6]], align 8
-; FIXED-NEXT:    [[Y6:%.*]] = add i64 [[X6]], 7
-; FIXED-NEXT:    store i64 [[Y6]], ptr [[Q6]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -1661,49 +1055,7 @@ define void @load_store_factor7(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 7
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; SCALABLE-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; SCALABLE-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; SCALABLE-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; SCALABLE-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; SCALABLE-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; SCALABLE-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; SCALABLE-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; SCALABLE-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; SCALABLE-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; SCALABLE-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; SCALABLE-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; SCALABLE-NEXT:    [[OFFSET6:%.*]] = add i64 [[OFFSET5]], 1
-; SCALABLE-NEXT:    [[Q6:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET6]]
-; SCALABLE-NEXT:    [[X6:%.*]] = load i64, ptr [[Q6]], align 8
-; SCALABLE-NEXT:    [[Y6:%.*]] = add i64 [[X6]], 7
-; SCALABLE-NEXT:    store i64 [[Y6]], ptr [[Q6]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -1801,54 +1153,7 @@ define void @load_store_factor8(ptr %p) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 3
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; CHECK-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; CHECK-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; CHECK-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; CHECK-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; CHECK-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; CHECK-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; CHECK-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; CHECK-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; CHECK-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; CHECK-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; CHECK-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; CHECK-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; CHECK-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; CHECK-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; CHECK-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; CHECK-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; CHECK-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; CHECK-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; CHECK-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; CHECK-NEXT:    [[OFFSET6:%.*]] = add i64 [[OFFSET5]], 1
-; CHECK-NEXT:    [[Q6:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET6]]
-; CHECK-NEXT:    [[X6:%.*]] = load i64, ptr [[Q6]], align 8
-; CHECK-NEXT:    [[Y6:%.*]] = add i64 [[X6]], 7
-; CHECK-NEXT:    store i64 [[Y6]], ptr [[Q6]], align 8
-; CHECK-NEXT:    [[OFFSET7:%.*]] = add i64 [[OFFSET6]], 1
-; CHECK-NEXT:    [[Q7:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET7]]
-; CHECK-NEXT:    [[X7:%.*]] = load i64, ptr [[Q7]], align 8
-; CHECK-NEXT:    [[Y7:%.*]] = add i64 [[X7]], 8
-; CHECK-NEXT:    store i64 [[Y7]], ptr [[Q7]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1891,54 +1196,7 @@ define void @load_store_factor8(ptr %p) {
 ; FIXED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 3
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; FIXED-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; FIXED-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; FIXED-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; FIXED-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; FIXED-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; FIXED-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; FIXED-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; FIXED-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; FIXED-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; FIXED-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; FIXED-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; FIXED-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; FIXED-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; FIXED-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; FIXED-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; FIXED-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; FIXED-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; FIXED-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; FIXED-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; FIXED-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; FIXED-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; FIXED-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; FIXED-NEXT:    [[OFFSET6:%.*]] = add i64 [[OFFSET5]], 1
-; FIXED-NEXT:    [[Q6:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET6]]
-; FIXED-NEXT:    [[X6:%.*]] = load i64, ptr [[Q6]], align 8
-; FIXED-NEXT:    [[Y6:%.*]] = add i64 [[X6]], 7
-; FIXED-NEXT:    store i64 [[Y6]], ptr [[Q6]], align 8
-; FIXED-NEXT:    [[OFFSET7:%.*]] = add i64 [[OFFSET6]], 1
-; FIXED-NEXT:    [[Q7:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET7]]
-; FIXED-NEXT:    [[X7:%.*]] = load i64, ptr [[Q7]], align 8
-; FIXED-NEXT:    [[Y7:%.*]] = add i64 [[X7]], 8
-; FIXED-NEXT:    store i64 [[Y7]], ptr [[Q7]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -1981,54 +1239,7 @@ define void @load_store_factor8(ptr %p) {
 ; SCALABLE-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 3
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
-; SCALABLE-NEXT:    store i64 [[Y0]], ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 2
-; SCALABLE-NEXT:    store i64 [[Y1]], ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[OFFSET2:%.*]] = add i64 [[OFFSET1]], 1
-; SCALABLE-NEXT:    [[Q2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET2]]
-; SCALABLE-NEXT:    [[X2:%.*]] = load i64, ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[Y2:%.*]] = add i64 [[X2]], 3
-; SCALABLE-NEXT:    store i64 [[Y2]], ptr [[Q2]], align 8
-; SCALABLE-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET2]], 1
-; SCALABLE-NEXT:    [[Q3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET3]]
-; SCALABLE-NEXT:    [[X3:%.*]] = load i64, ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[Y3:%.*]] = add i64 [[X3]], 4
-; SCALABLE-NEXT:    store i64 [[Y3]], ptr [[Q3]], align 8
-; SCALABLE-NEXT:    [[OFFSET4:%.*]] = add i64 [[OFFSET3]], 1
-; SCALABLE-NEXT:    [[Q4:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET4]]
-; SCALABLE-NEXT:    [[X4:%.*]] = load i64, ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[Y4:%.*]] = add i64 [[X4]], 5
-; SCALABLE-NEXT:    store i64 [[Y4]], ptr [[Q4]], align 8
-; SCALABLE-NEXT:    [[OFFSET5:%.*]] = add i64 [[OFFSET4]], 1
-; SCALABLE-NEXT:    [[Q5:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET5]]
-; SCALABLE-NEXT:    [[X5:%.*]] = load i64, ptr [[Q5]], align 8
-; SCALABLE-NEXT:    [[Y5:%.*]] = add i64 [[X5]], 6
-; SCALABLE-NEXT:    store i64 [[Y5]], ptr [[Q5]], align 8
-; SCALABLE-NEXT:    [[OFFSET6:%.*]] = add i64 [[OFFSET5]], 1
-; SCALABLE-NEXT:    [[Q6:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET6]]
-; SCALABLE-NEXT:    [[X6:%.*]] = load i64, ptr [[Q6]], align 8
-; SCALABLE-NEXT:    [[Y6:%.*]] = add i64 [[X6]], 7
-; SCALABLE-NEXT:    store i64 [[Y6]], ptr [[Q6]], align 8
-; SCALABLE-NEXT:    [[OFFSET7:%.*]] = add i64 [[OFFSET6]], 1
-; SCALABLE-NEXT:    [[Q7:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET7]]
-; SCALABLE-NEXT:    [[X7:%.*]] = load i64, ptr [[Q7]], align 8
-; SCALABLE-NEXT:    [[Y7:%.*]] = add i64 [[X7]], 8
-; SCALABLE-NEXT:    store i64 [[Y7]], ptr [[Q7]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -2118,23 +1329,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[X0]], [[X1]]
-; CHECK-NEXT:    [[DST:%.*]] = getelementptr i32, ptr [[Q]], i64 [[I]]
-; CHECK-NEXT:    store i32 [[RES]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -2157,23 +1352,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; FIXED-NEXT:    [[RES:%.*]] = add i32 [[X0]], [[X1]]
-; FIXED-NEXT:    [[DST:%.*]] = getelementptr i32, ptr [[Q]], i64 [[I]]
-; FIXED-NEXT:    store i32 [[RES]], ptr [[DST]], align 4
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -2202,23 +1381,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i32, ptr [[Q1]], align 4
-; SCALABLE-NEXT:    [[RES:%.*]] = add i32 [[X0]], [[X1]]
-; SCALABLE-NEXT:    [[DST:%.*]] = getelementptr i32, ptr [[Q]], i64 [[I]]
-; SCALABLE-NEXT:    store i32 [[RES]], ptr [[DST]], align 4
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;
@@ -2273,23 +1436,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[RES:%.*]] = add i64 [[X0]], [[X1]]
-; CHECK-NEXT:    [[DST:%.*]] = getelementptr i64, ptr [[Q]], i64 [[I]]
-; CHECK-NEXT:    store i64 [[RES]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -2312,23 +1459,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br label [[EXIT:%.*]]
-; FIXED:       scalar.ph:
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
-; FIXED:       loop:
-; FIXED-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; FIXED-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; FIXED-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; FIXED-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; FIXED-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; FIXED-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; FIXED-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; FIXED-NEXT:    [[RES:%.*]] = add i64 [[X0]], [[X1]]
-; FIXED-NEXT:    [[DST:%.*]] = getelementptr i64, ptr [[Q]], i64 [[I]]
-; FIXED-NEXT:    store i64 [[RES]], ptr [[DST]], align 8
-; FIXED-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; FIXED-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; FIXED-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void
 ;
@@ -2357,23 +1488,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; SCALABLE:       middle.block:
-; SCALABLE-NEXT:    br label [[EXIT:%.*]]
-; SCALABLE:       scalar.ph:
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
-; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
-; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
-; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
-; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
-; SCALABLE-NEXT:    [[OFFSET1:%.*]] = add i64 [[OFFSET0]], 1
-; SCALABLE-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET1]]
-; SCALABLE-NEXT:    [[X1:%.*]] = load i64, ptr [[Q1]], align 8
-; SCALABLE-NEXT:    [[RES:%.*]] = add i64 [[X0]], [[X1]]
-; SCALABLE-NEXT:    [[DST:%.*]] = getelementptr i64, ptr [[Q]], i64 [[I]]
-; SCALABLE-NEXT:    store i64 [[RES]], ptr [[DST]], align 8
-; SCALABLE-NEXT:    [[NEXTI]] = add i64 [[I]], 1
-; SCALABLE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; SCALABLE-NEXT:    br i1 [[DONE]], label [[EXIT]], label [[LOOP]]
 ; SCALABLE:       exit:
 ; SCALABLE-NEXT:    ret void
 ;

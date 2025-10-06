@@ -115,9 +115,10 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
-  template <typename T> T deref() const {
+  template <typename T> const T &deref() const {
     return *reinterpret_cast<const T *>(data());
   }
+  template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
   /// Invokes the constructor.
   void invokeCtor() {

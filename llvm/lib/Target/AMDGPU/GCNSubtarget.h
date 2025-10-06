@@ -99,6 +99,7 @@ protected:
   bool EnableDS128 = false;
   bool EnablePRTStrictNull = false;
   bool DumpCode = false;
+  bool AssemblerPermissiveWavesize = false;
 
   // Subtarget statically properties set by tablegen
   bool FP64 = false;
@@ -286,6 +287,8 @@ protected:
   bool HasGloballyAddressableScratch = false;
 
   bool Has45BitNumRecordsBufferResource = false;
+
+  bool HasCluster = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1836,7 +1839,7 @@ public:
   }
 
   /// \returns true if the subtarget supports clusters of workgroups.
-  bool hasClusters() const { return GFX1250Insts; }
+  bool hasClusters() const { return HasCluster; }
 
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.

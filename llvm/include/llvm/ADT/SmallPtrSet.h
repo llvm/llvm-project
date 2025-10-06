@@ -96,8 +96,8 @@ public:
   SmallPtrSetImplBase &operator=(const SmallPtrSetImplBase &) = delete;
 
   [[nodiscard]] bool empty() const { return size() == 0; }
-  size_type size() const { return NumEntries; }
-  size_type capacity() const { return CurArraySize; }
+  [[nodiscard]] size_type size() const { return NumEntries; }
+  [[nodiscard]] size_type capacity() const { return CurArraySize; }
 
   void clear() {
     incrementEpoch();
@@ -279,18 +279,12 @@ private:
 
 /// SmallPtrSetIteratorImpl - This is the common base class shared between all
 /// instances of SmallPtrSetIterator.
-class SmallPtrSetIteratorImpl {
-protected:
-  const void *const *Bucket;
-  const void *const *End;
-
+class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIteratorImpl
+    : public DebugEpochBase::HandleBase {
 public:
-  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E)
-      : Bucket(BP), End(E) {
-    if (shouldReverseIterate()) {
-      RetreatIfNotValid();
-      return;
-    }
+  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E,
+                                   const DebugEpochBase &Epoch)
+      : DebugEpochBase::HandleBase(&Epoch), Bucket(BP), End(E) {
     AdvanceIfNotValid();
   }
 
@@ -302,6 +296,18 @@ public:
   }
 
 protected:
+  void *dereference() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    assert(Bucket < End);
+    return const_cast<void *>(*Bucket);
+  }
+  void increment() {
+    assert(isHandleInSync() && "invalid iterator access!");
+    ++Bucket;
+    AdvanceIfNotValid();
+  }
+
+private:
   /// AdvanceIfNotValid - If the current bucket isn't valid, advance to a bucket
   /// that is.   This is guaranteed to stop because the end() bucket is marked
   /// valid.
@@ -312,21 +318,19 @@ protected:
             *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
       ++Bucket;
   }
-  void RetreatIfNotValid() {
-    assert(Bucket >= End);
-    while (Bucket != End &&
-           (Bucket[-1] == SmallPtrSetImplBase::getEmptyMarker() ||
-            Bucket[-1] == SmallPtrSetImplBase::getTombstoneMarker())) {
-      --Bucket;
-    }
-  }
+
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate(),
+                         std::reverse_iterator<const void *const *>,
+                         const void *const *>;
+
+  BucketItTy Bucket;
+  BucketItTy End;
 };
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
 template <typename PtrTy>
-class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
-    : public SmallPtrSetIteratorImpl,
-      DebugEpochBase::HandleBase {
+class SmallPtrSetIterator : public SmallPtrSetIteratorImpl {
   using PtrTraits = PointerLikeTypeTraits<PtrTy>;
 
 public:
@@ -336,37 +340,22 @@ public:
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
 
-  explicit SmallPtrSetIterator(const void *const *BP, const void *const *E,
-                               const DebugEpochBase &Epoch)
-      : SmallPtrSetIteratorImpl(BP, E), DebugEpochBase::HandleBase(&Epoch) {}
+  using SmallPtrSetIteratorImpl::SmallPtrSetIteratorImpl;
 
   // Most methods are provided by the base class.
 
-  const PtrTy operator*() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    if (shouldReverseIterate()) {
-      assert(Bucket > End);
-      return PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket[-1]));
-    }
-    assert(Bucket < End);
-    return PtrTraits::getFromVoidPointer(const_cast<void *>(*Bucket));
+  [[nodiscard]] const PtrTy operator*() const {
+    return PtrTraits::getFromVoidPointer(dereference());
   }
 
   inline SmallPtrSetIterator &operator++() { // Preincrement
-    assert(isHandleInSync() && "invalid iterator access!");
-    if (shouldReverseIterate()) {
-      --Bucket;
-      RetreatIfNotValid();
-      return *this;
-    }
-    ++Bucket;
-    AdvanceIfNotValid();
+    increment();
     return *this;
   }
 
   SmallPtrSetIterator operator++(int) { // Postincrement
     SmallPtrSetIterator tmp = *this;
-    ++*this;
+    increment();
     return tmp;
   }
 };
@@ -463,13 +452,13 @@ public:
   }
 
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
-  size_type count(ConstPtrType Ptr) const {
+  [[nodiscard]] size_type count(ConstPtrType Ptr) const {
     return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
-  iterator find(ConstPtrType Ptr) const {
+  [[nodiscard]] iterator find(ConstPtrType Ptr) const {
     return makeIterator(find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)));
   }
-  bool contains(ConstPtrType Ptr) const {
+  [[nodiscard]] bool contains(ConstPtrType Ptr) const {
     return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
 
@@ -486,19 +475,21 @@ public:
     insert(adl_begin(R), adl_end(R));
   }
 
-  iterator begin() const {
-    if (shouldReverseIterate())
+  [[nodiscard]] iterator begin() const {
+    if constexpr (shouldReverseIterate())
       return makeIterator(EndPointer() - 1);
-    return makeIterator(CurArray);
+    else
+      return makeIterator(CurArray);
   }
-  iterator end() const { return makeIterator(EndPointer()); }
+  [[nodiscard]] iterator end() const { return makeIterator(EndPointer()); }
 
 private:
   /// Create an iterator that dereferences to same place as the given pointer.
   iterator makeIterator(const void *const *P) const {
-    if (shouldReverseIterate())
+    if constexpr (shouldReverseIterate())
       return iterator(P == EndPointer() ? CurArray : P + 1, CurArray, *this);
-    return iterator(P, EndPointer(), *this);
+    else
+      return iterator(P, EndPointer(), *this);
   }
 };
 
@@ -507,8 +498,8 @@ private:
 /// Iterates over elements of LHS confirming that each value from LHS is also in
 /// RHS, and that no additional values are in RHS.
 template <typename PtrType>
-bool operator==(const SmallPtrSetImpl<PtrType> &LHS,
-                const SmallPtrSetImpl<PtrType> &RHS) {
+[[nodiscard]] bool operator==(const SmallPtrSetImpl<PtrType> &LHS,
+                              const SmallPtrSetImpl<PtrType> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -523,8 +514,8 @@ bool operator==(const SmallPtrSetImpl<PtrType> &LHS,
 ///
 /// Equivalent to !(LHS == RHS).
 template <typename PtrType>
-bool operator!=(const SmallPtrSetImpl<PtrType> &LHS,
-                const SmallPtrSetImpl<PtrType> &RHS) {
+[[nodiscard]] bool operator!=(const SmallPtrSetImpl<PtrType> &LHS,
+                              const SmallPtrSetImpl<PtrType> &RHS) {
   return !(LHS == RHS);
 }
 
