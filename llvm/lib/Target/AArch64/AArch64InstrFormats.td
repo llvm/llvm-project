@@ -812,85 +812,54 @@ def fixedpoint_recip_f16_i64 : fixedpoint_recip_i64<f16>;
 def fixedpoint_recip_f32_i64 : fixedpoint_recip_i64<f32>;
 def fixedpoint_recip_f64_i64 : fixedpoint_recip_i64<f64>;
 
-def vecshiftR8 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR8 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
 }]> {
   let EncoderMethod = "getVecShiftR8OpValue";
   let DecoderMethod = "DecodeVecShiftR8Imm";
   let ParserMatchClass = Imm1_8Operand;
 }
-def vecshiftR16 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR16 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 17);
 }]> {
   let EncoderMethod = "getVecShiftR16OpValue";
   let DecoderMethod = "DecodeVecShiftR16Imm";
   let ParserMatchClass = Imm1_16Operand;
 }
-def vecshiftR16Narrow : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR16Narrow : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
 }]> {
   let EncoderMethod = "getVecShiftR16OpValue";
   let DecoderMethod = "DecodeVecShiftR16ImmNarrow";
   let ParserMatchClass = Imm1_8Operand;
 }
-def vecshiftR32 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR32 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 33);
 }]> {
   let EncoderMethod = "getVecShiftR32OpValue";
   let DecoderMethod = "DecodeVecShiftR32Imm";
   let ParserMatchClass = Imm1_32Operand;
 }
-def vecshiftR32Narrow : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR32Narrow : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 17);
 }]> {
   let EncoderMethod = "getVecShiftR32OpValue";
   let DecoderMethod = "DecodeVecShiftR32ImmNarrow";
   let ParserMatchClass = Imm1_16Operand;
 }
-def vecshiftR64 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 65);
 }]> {
   let EncoderMethod = "getVecShiftR64OpValue";
   let DecoderMethod = "DecodeVecShiftR64Imm";
   let ParserMatchClass = Imm1_64Operand;
 }
-def vecshiftR64Narrow : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftR64Narrow : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 33);
 }]> {
   let EncoderMethod = "getVecShiftR64OpValue";
   let DecoderMethod = "DecodeVecShiftR64ImmNarrow";
   let ParserMatchClass = Imm1_32Operand;
-}
-
-// Same as vecshiftR#N, but use TargetConstant (TimmLeaf) instead of Constant
-// (ImmLeaf)
-def tvecshiftR8 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
-}]> {
-  let EncoderMethod = "getVecShiftR8OpValue";
-  let DecoderMethod = "DecodeVecShiftR8Imm";
-  let ParserMatchClass = Imm1_8Operand;
-}
-def tvecshiftR16 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 17);
-}]> {
-  let EncoderMethod = "getVecShiftR16OpValue";
-  let DecoderMethod = "DecodeVecShiftR16Imm";
-  let ParserMatchClass = Imm1_16Operand;
-}
-def tvecshiftR32 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 33);
-}]> {
-  let EncoderMethod = "getVecShiftR32OpValue";
-  let DecoderMethod = "DecodeVecShiftR32Imm";
-  let ParserMatchClass = Imm1_32Operand;
-}
-def tvecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 65);
-}]> {
-  let EncoderMethod = "getVecShiftR64OpValue";
-  let DecoderMethod = "DecodeVecShiftR64Imm";
-  let ParserMatchClass = Imm1_64Operand;
 }
 
 def Imm0_0Operand : AsmImmRange<0, 0>;
@@ -904,28 +873,28 @@ def Imm0_15Operand : AsmImmRange<0, 15>;
 def Imm0_31Operand : AsmImmRange<0, 31>;
 def Imm0_63Operand : AsmImmRange<0, 63>;
 
-def vecshiftL8 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftL8 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 8);
 }]> {
   let EncoderMethod = "getVecShiftL8OpValue";
   let DecoderMethod = "DecodeVecShiftL8Imm";
   let ParserMatchClass = Imm0_7Operand;
 }
-def vecshiftL16 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftL16 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 16);
 }]> {
   let EncoderMethod = "getVecShiftL16OpValue";
   let DecoderMethod = "DecodeVecShiftL16Imm";
   let ParserMatchClass = Imm0_15Operand;
 }
-def vecshiftL32 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftL32 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 32);
 }]> {
   let EncoderMethod = "getVecShiftL32OpValue";
   let DecoderMethod = "DecodeVecShiftL32Imm";
   let ParserMatchClass = Imm0_31Operand;
 }
-def vecshiftL64 : Operand<i32>, ImmLeaf<i32, [{
+def vecshiftL64 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 64);
 }]> {
   let EncoderMethod = "getVecShiftL64OpValue";
@@ -933,36 +902,6 @@ def vecshiftL64 : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = Imm0_63Operand;
 }
 
-// Same as vecshiftL#N, but use TargetConstant (TimmLeaf) instead of Constant
-// (ImmLeaf)
-def tvecshiftL8 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) < 8);
-}]> {
-  let EncoderMethod = "getVecShiftL8OpValue";
-  let DecoderMethod = "DecodeVecShiftL8Imm";
-  let ParserMatchClass = Imm0_7Operand;
-}
-def tvecshiftL16 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) < 16);
-}]> {
-  let EncoderMethod = "getVecShiftL16OpValue";
-  let DecoderMethod = "DecodeVecShiftL16Imm";
-  let ParserMatchClass = Imm0_15Operand;
-}
-def tvecshiftL32 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) < 32);
-}]> {
-  let EncoderMethod = "getVecShiftL32OpValue";
-  let DecoderMethod = "DecodeVecShiftL32Imm";
-  let ParserMatchClass = Imm0_31Operand;
-}
-def tvecshiftL64 : Operand<i32>, TImmLeaf<i32, [{
-  return (((uint32_t)Imm) < 64);
-}]> {
-  let EncoderMethod = "getVecShiftL64OpValue";
-  let DecoderMethod = "DecodeVecShiftL64Imm";
-  let ParserMatchClass = Imm0_63Operand;
-}
 
 // Crazy immediate formats used by 32-bit and 64-bit logical immediate
 // instructions for splatting repeating bit patterns across the immediate.
@@ -1561,13 +1500,12 @@ def VectorIndexHOperand : AsmVectorIndex<0, 7>;
 def VectorIndexSOperand : AsmVectorIndex<0, 3>;
 def VectorIndexDOperand : AsmVectorIndex<0, 1>;
 
-let OperandNamespace = "AArch64" in {
-  let OperandType = "OPERAND_IMPLICIT_IMM_0" in {
-    defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
-                                [{ return ((uint64_t)Imm) == 0; }]>;
-    defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
-                                [{ return ((uint32_t)Imm) == 0; }]>;
-  }
+let OperandNamespace = "AArch64", OperandType = "OPERAND_IMPLICIT_IMM_0",
+    DecoderMethod = "DecodeZeroImm" in {
+  defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
+                                  [{ return ((uint64_t)Imm) == 0; }]>;
+  defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
+                                     [{ return ((uint32_t)Imm) == 0; }]>;
 }
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
                                 [{ return ((uint64_t)Imm) == 1; }]>;
@@ -1620,6 +1558,7 @@ def sme_elm_idx0_0 : Operand<i32>, TImmLeaf<i32, [{
   let PrintMethod = "printMatrixIndex";
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
+  let DecoderMethod = "DecodeZeroImm";
 }
 def sme_elm_idx0_1 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) <= 1;
@@ -1683,6 +1622,7 @@ def uimm0s2range : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm0s2RangeOperand;
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
+  let DecoderMethod = "DecodeZeroImm";
 }
 
 def uimm0s4range : Operand<i64>, ImmLeaf<i64,
@@ -1691,6 +1631,7 @@ def uimm0s4range : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm0s4RangeOperand;
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
+  let DecoderMethod = "DecodeZeroImm";
 }
 
 def uimm1s2range : Operand<i64>, ImmLeaf<i64,
@@ -5299,28 +5240,29 @@ multiclass FPToIntegerUnscaled<bits<2> rmode, bits<3> opcode, string asm,
   }
 }
 
-multiclass FPToIntegerSIMDScalar<bits<2> rmode, bits<3> opcode, string asm> {
+multiclass FPToIntegerSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, 
+                                 SDPatternOperator OpN = null_frag> {
   // double-precision to 32-bit SIMD/FPR
   def SDr :  BaseFPToIntegerUnscaled<0b01, rmode, opcode, FPR64, FPR32, asm,
-                                     []> {
+             [(set FPR32:$Rd, (i32 (OpN (f64 FPR64:$Rn))))]> {
     let Inst{31} = 0; // 32-bit FPR flag
   }
 
   // half-precision to 32-bit SIMD/FPR
   def SHr :  BaseFPToIntegerUnscaled<0b11, rmode, opcode, FPR16, FPR32, asm,
-                                     []> {
+             [(set FPR32:$Rd, (i32 (OpN (f16 FPR16:$Rn))))]> {
     let Inst{31} = 0; // 32-bit FPR flag
   }
 
   // half-precision to 64-bit SIMD/FPR
   def DHr :  BaseFPToIntegerUnscaled<0b11, rmode, opcode, FPR16, FPR64, asm,
-                                     []> {
+             [(set FPR64:$Rd, (i64 (OpN (f16 FPR16:$Rn))))]> {
     let Inst{31} = 1; // 64-bit FPR flag
   }
 
   // single-precision to 64-bit SIMD/FPR
   def DSr :  BaseFPToIntegerUnscaled<0b00, rmode, opcode, FPR32, FPR64, asm,
-                                     []> {
+             [(set FPR64:$Rd, (i64 (OpN (f32 FPR32:$Rn))))]> {
     let Inst{31} = 1; // 64-bit FPR flag
   }
 }
@@ -7938,14 +7880,18 @@ multiclass SIMDTwoScalarD<bit U, bits<5> opc, string asm,
   }
 }
 
-let mayRaiseFPException = 1, Uses = [FPCR] in
-multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm> {
+let mayRaiseFPException = 1, Uses = [FPCR], FastISelShouldIgnore = 1 in
+multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm,
+                           SDPatternOperator OpN = null_frag> {
   let Predicates = [HasNEONandIsStreamingSafe] in {
-  def v1i64       : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,[]>;
-  def v1i32       : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,[]>;
+  def v1i64       : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
+                    [(set (i64 FPR64:$Rd), (OpN (f64 FPR64:$Rn)))]>;
+  def v1i32       : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,
+                    [(set FPR32:$Rd, (i32 (OpN (f32 FPR32:$Rn))))]>;
   }
   let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
-  def v1f16       : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,[]>;
+  def v1f16       : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
+                    [(set FPR16:$Rd, (i16 (OpN (f16 FPR16:$Rn))))]>;
   }
 }
 
@@ -8220,18 +8166,23 @@ multiclass SMov {
   // streaming mode.
   let Predicates = [HasNEONandIsStreamingSafe] in {
     def vi8to32_idx0 : SIMDSMov<0, ".b", GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00001;
     }
     def vi8to64_idx0 : SIMDSMov<1, ".b", GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00001;
     }
     def vi16to32_idx0 : SIMDSMov<0, ".h", GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00010;
     }
     def vi16to64_idx0 : SIMDSMov<1, ".h", GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00010;
     }
     def vi32to64_idx0 : SIMDSMov<1, ".s", GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00100;
     }
   }
@@ -8267,15 +8218,19 @@ multiclass UMov {
   // streaming mode.
   let Predicates = [HasNEONandIsStreamingSafe] in {
     def vi8_idx0 : SIMDUMov<0, ".b", v16i8, GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00001;
     }
     def vi16_idx0 : SIMDUMov<0, ".h", v8i16, GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00010;
     }
     def vi32_idx0 : SIMDUMov<0, ".s", v4i32, GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00100;
     }
     def vi64_idx0 : SIMDUMov<1, ".d", v2i64, GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b01000;
     }
     def : SIMDMovAlias<"mov", ".s",
@@ -10160,28 +10115,6 @@ multiclass SIMDScalarLShiftBHSD<bit U, bits<5> opc, string asm,
             (!cast<Instruction>(NAME # "d") FPR64:$Rn, vecshiftL64:$imm)>;
 }
 
-multiclass SIMDScalarRShiftBHSD<bit U, bits<5> opc, string asm> {
-  def b : BaseSIMDScalarShift<U, opc, {0,0,0,1,?,?,?},
-                              FPR8, FPR8, vecshiftR8, asm, []> {
-    let Inst{18-16} = imm{2-0};
-  }
-
-  def h : BaseSIMDScalarShift<U, opc, {0,0,1,?,?,?,?},
-                              FPR16, FPR16, vecshiftR16, asm, []> {
-    let Inst{19-16} = imm{3-0};
-  }
-
-  def s : BaseSIMDScalarShift<U, opc, {0,1,?,?,?,?,?},
-                              FPR32, FPR32, vecshiftR32, asm, []> {
-    let Inst{20-16} = imm{4-0};
-  }
-
-  def d : BaseSIMDScalarShift<U, opc, {1,?,?,?,?,?,?},
-                              FPR64, FPR64, vecshiftR64, asm, []> {
-    let Inst{21-16} = imm{5-0};
-  }
-}
-
 //----------------------------------------------------------------------------
 // AdvSIMD vector x indexed element
 //----------------------------------------------------------------------------
@@ -10238,7 +10171,7 @@ multiclass SIMDVectorRShiftSD<bit U, bits<5> opc, string asm,
   def v4i16_shift : BaseSIMDVectorShift<0, U, opc, {0,0,1,?,?,?,?},
                                   V64, V64, vecshiftR16,
                                   asm, ".4h", ".4h",
-      [(set (v4i16 V64:$Rd), (OpNode (v4f16 V64:$Rn), (i32 imm:$imm)))]> {
+      [(set (v4i16 V64:$Rd), (OpNode (v4f16 V64:$Rn), (i32 vecshiftR16:$imm)))]> {
     bits<4> imm;
     let Inst{19-16} = imm;
   }
@@ -10246,15 +10179,16 @@ multiclass SIMDVectorRShiftSD<bit U, bits<5> opc, string asm,
   def v8i16_shift : BaseSIMDVectorShift<1, U, opc, {0,0,1,?,?,?,?},
                                   V128, V128, vecshiftR16,
                                   asm, ".8h", ".8h",
-      [(set (v8i16 V128:$Rd), (OpNode (v8f16 V128:$Rn), (i32 imm:$imm)))]> {
+      [(set (v8i16 V128:$Rd), (OpNode (v8f16 V128:$Rn), (i32 vecshiftR16:$imm)))]> {
     bits<4> imm;
     let Inst{19-16} = imm;
   }
   } // Predicates = [HasNEON, HasFullFP16]
+
   def v2i32_shift : BaseSIMDVectorShift<0, U, opc, {0,1,?,?,?,?,?},
                                   V64, V64, vecshiftR32,
                                   asm, ".2s", ".2s",
-      [(set (v2i32 V64:$Rd), (OpNode (v2f32 V64:$Rn), (i32 imm:$imm)))]> {
+      [(set (v2i32 V64:$Rd), (OpNode (v2f32 V64:$Rn), (i32 vecshiftR32:$imm)))]> {
     bits<5> imm;
     let Inst{20-16} = imm;
   }
@@ -10262,7 +10196,7 @@ multiclass SIMDVectorRShiftSD<bit U, bits<5> opc, string asm,
   def v4i32_shift : BaseSIMDVectorShift<1, U, opc, {0,1,?,?,?,?,?},
                                   V128, V128, vecshiftR32,
                                   asm, ".4s", ".4s",
-      [(set (v4i32 V128:$Rd), (OpNode (v4f32 V128:$Rn), (i32 imm:$imm)))]> {
+      [(set (v4i32 V128:$Rd), (OpNode (v4f32 V128:$Rn), (i32 vecshiftR32:$imm)))]> {
     bits<5> imm;
     let Inst{20-16} = imm;
   }
@@ -10270,7 +10204,7 @@ multiclass SIMDVectorRShiftSD<bit U, bits<5> opc, string asm,
   def v2i64_shift : BaseSIMDVectorShift<1, U, opc, {1,?,?,?,?,?,?},
                                   V128, V128, vecshiftR64,
                                   asm, ".2d", ".2d",
-      [(set (v2i64 V128:$Rd), (OpNode (v2f64 V128:$Rn), (i32 imm:$imm)))]> {
+      [(set (v2i64 V128:$Rd), (OpNode (v2f64 V128:$Rn), (i32 vecshiftR64:$imm)))]> {
     bits<6> imm;
     let Inst{21-16} = imm;
   }
@@ -10282,7 +10216,7 @@ multiclass SIMDVectorRShiftToFP<bit U, bits<5> opc, string asm,
   def v4i16_shift : BaseSIMDVectorShift<0, U, opc, {0,0,1,?,?,?,?},
                                   V64, V64, vecshiftR16,
                                   asm, ".4h", ".4h",
-      [(set (v4f16 V64:$Rd), (OpNode (v4i16 V64:$Rn), (i32 imm:$imm)))]> {
+      [(set (v4f16 V64:$Rd), (OpNode (v4i16 V64:$Rn), (i32 vecshiftR16:$imm)))]> {
     bits<4> imm;
     let Inst{19-16} = imm;
   }
@@ -10290,7 +10224,7 @@ multiclass SIMDVectorRShiftToFP<bit U, bits<5> opc, string asm,
   def v8i16_shift : BaseSIMDVectorShift<1, U, opc, {0,0,1,?,?,?,?},
                                   V128, V128, vecshiftR16,
                                   asm, ".8h", ".8h",
-      [(set (v8f16 V128:$Rd), (OpNode (v8i16 V128:$Rn), (i32 imm:$imm)))]> {
+      [(set (v8f16 V128:$Rd), (OpNode (v8i16 V128:$Rn), (i32 vecshiftR16:$imm)))]> {
     bits<4> imm;
     let Inst{19-16} = imm;
   }
@@ -10299,7 +10233,7 @@ multiclass SIMDVectorRShiftToFP<bit U, bits<5> opc, string asm,
   def v2i32_shift : BaseSIMDVectorShift<0, U, opc, {0,1,?,?,?,?,?},
                                   V64, V64, vecshiftR32,
                                   asm, ".2s", ".2s",
-      [(set (v2f32 V64:$Rd), (OpNode (v2i32 V64:$Rn), (i32 imm:$imm)))]> {
+      [(set (v2f32 V64:$Rd), (OpNode (v2i32 V64:$Rn), (i32 vecshiftR32:$imm)))]> {
     bits<5> imm;
     let Inst{20-16} = imm;
   }
@@ -10307,7 +10241,7 @@ multiclass SIMDVectorRShiftToFP<bit U, bits<5> opc, string asm,
   def v4i32_shift : BaseSIMDVectorShift<1, U, opc, {0,1,?,?,?,?,?},
                                   V128, V128, vecshiftR32,
                                   asm, ".4s", ".4s",
-      [(set (v4f32 V128:$Rd), (OpNode (v4i32 V128:$Rn), (i32 imm:$imm)))]> {
+      [(set (v4f32 V128:$Rd), (OpNode (v4i32 V128:$Rn), (i32 vecshiftR32:$imm)))]> {
     bits<5> imm;
     let Inst{20-16} = imm;
   }
@@ -10315,7 +10249,7 @@ multiclass SIMDVectorRShiftToFP<bit U, bits<5> opc, string asm,
   def v2i64_shift : BaseSIMDVectorShift<1, U, opc, {1,?,?,?,?,?,?},
                                   V128, V128, vecshiftR64,
                                   asm, ".2d", ".2d",
-      [(set (v2f64 V128:$Rd), (OpNode (v2i64 V128:$Rn), (i32 imm:$imm)))]> {
+      [(set (v2f64 V128:$Rd), (OpNode (v2i64 V128:$Rn), (i32 vecshiftR64:$imm)))]> {
     bits<6> imm;
     let Inst{21-16} = imm;
   }

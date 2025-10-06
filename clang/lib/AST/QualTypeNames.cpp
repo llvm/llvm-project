@@ -58,9 +58,9 @@ static bool getFullyQualifiedTemplateName(const ASTContext &Ctx,
   NestedNameSpecifier NNS = std::nullopt;
 
   TemplateDecl *ArgTDecl = TName.getAsTemplateDecl();
-  // ArgTDecl won't be NULL because we asserted that this isn't a
-  // dependent context very early in the call chain.
-  assert(ArgTDecl != nullptr);
+  if (!ArgTDecl) // ArgTDecl can be null in dependent contexts.
+    return false;
+
   QualifiedTemplateName *QTName = TName.getAsQualifiedTemplateName();
 
   if (QTName &&
@@ -252,6 +252,9 @@ createNestedNameSpecifierForScopeOf(const ASTContext &Ctx, const Decl *Decl,
                                     bool WithGlobalNsPrefix) {
   assert(Decl);
 
+  // Some declaration cannot be qualified.
+  if (Decl->isTemplateParameter())
+    return std::nullopt;
   const DeclContext *DC = Decl->getDeclContext()->getRedeclContext();
   const auto *Outer = dyn_cast<NamedDecl>(DC);
   const auto *OuterNS = dyn_cast<NamespaceDecl>(DC);
