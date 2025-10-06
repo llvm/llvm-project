@@ -1,0 +1,131 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc socket.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "madvise_test",
+    srcs = ["linux/madvise_test.cpp"],
+    deps = [
+        "//libc:madvise",
+        "//libc:mmap",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "mincore_test",
+    srcs = ["linux/mincore_test.cpp"],
+    deps = [
+        "//libc:madvise",
+        "//libc:mincore",
+        "//libc:mlock",
+        "//libc:mmap",
+        "//libc:munlock",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "mlock_test",
+    srcs = ["linux/mlock_test.cpp"],
+    deps = [
+        "//libc:__support_osutil_syscall",
+        "//libc:getrlimit",
+        "//libc:madvise",
+        "//libc:mincore",
+        "//libc:mlock",
+        "//libc:mlock2",
+        "//libc:mlockall",
+        "//libc:mmap",
+        "//libc:munlock",
+        "//libc:munlockall",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "mmap_test",
+    srcs = ["linux/mmap_test.cpp"],
+    deps = [
+        "//libc:mmap",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "mprotect_test",
+    srcs = ["linux/mprotect_test.cpp"],
+    deps = [
+        "//libc:mmap",
+        "//libc:mprotect",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "mremap_test",
+    srcs = ["linux/mremap_test.cpp"],
+    deps = [
+        "//libc:mmap",
+        "//libc:mremap",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "msync_test",
+    srcs = ["linux/msync_test.cpp"],
+    deps = [
+        "//libc:mlock",
+        "//libc:mmap",
+        "//libc:msync",
+        "//libc:munlock",
+        "//libc:munmap",
+    ],
+)
+
+libc_test(
+    name = "posix_madvise_test",
+    srcs = ["linux/posix_madvise_test.cpp"],
+    deps = [
+        "//libc:mmap",
+        "//libc:munmap",
+        "//libc:posix_madvise",
+    ],
+)
+
+libc_test(
+    name = "remap_file_pages_test",
+    srcs = ["linux/remap_file_pages_test.cpp"],
+    deps = [
+        "//libc:close",
+        "//libc:mmap",
+        "//libc:munmap",
+        "//libc:open",
+        "//libc:remap_file_pages",
+    ],
+)
+
+libc_test(
+    name = "shm_test",
+    srcs = ["linux/shm_test.cpp"],
+    deps = [
+        "//libc:close",
+        "//libc:fcntl",
+        "//libc:ftruncate",
+        "//libc:hdr_fcntl_macros",
+        "//libc:mmap",
+        "//libc:munmap",
+        "//libc:open",
+        "//libc:shm_open",
+        "//libc:shm_unlink",
+    ],
+)
