@@ -34,7 +34,8 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0);
 }
 
-bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
+bool verifyRootDescriptorFlag(uint32_t Version,
+                              dxbc::RootDescriptorFlags FlagsVal) {
   using FlagT = dxbc::RootDescriptorFlags;
   FlagT Flags = FlagT(FlagsVal);
   if (Version == 1)
@@ -56,7 +57,6 @@ bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
 bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
                                dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-
   const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
   if (Version == 1) {
@@ -113,13 +113,8 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
   return (Flags & ~Mask) == FlagT::None;
 }
 
-bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
-  uint32_t LargestValue = llvm::to_underlying(
-      dxbc::StaticSamplerFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  if (FlagsNumber >= NextPowerOf2(LargestValue))
-    return false;
-
-  dxbc::StaticSamplerFlags Flags = dxbc::StaticSamplerFlags(FlagsNumber);
+bool verifyStaticSamplerFlags(uint32_t Version,
+                              dxbc::StaticSamplerFlags Flags) {
   if (Version <= 2)
     return Flags == dxbc::StaticSamplerFlags::None;
 

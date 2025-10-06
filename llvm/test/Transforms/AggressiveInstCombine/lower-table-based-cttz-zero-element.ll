@@ -28,4 +28,4 @@ entry:
 
 !0 = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 100}
+; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}

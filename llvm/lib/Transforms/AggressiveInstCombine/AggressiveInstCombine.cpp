@@ -607,17 +607,12 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
     auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
 
-    // Attach heuristic branch weigths to the newly 'select' instruction that
-    // handles the cttz(0) edge case The assumpltion is tht the input to a cttz
-    // operation is rarely 0, so we add a strong 100-to-1 bias weights to the
-    // 'false' path.
-    // The 'ProfcheckDisableMetadataFixes' flag is a testing utility to disable
-    // this specific behavior.
+    // The true branch of select handles the cttz(0) case, which is rare.
     if (!ProfcheckDisableMetadataFixes) {
       if (Instruction *SelectI = dyn_cast<Instruction>(Select))
         SelectI->setMetadata(
             LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createBranchWeights(1, 100));
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
     }
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
