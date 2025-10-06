@@ -2341,6 +2341,12 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    A compiler builtin function must be marked as `builtin` for further
+    processing when lowering from CIR.
+
+    The `coroutine` keyword is used to mark a coroutine function, which requires
+    at least one `cir.await` instruction to be used in its body.
+
     The `lambda` translates to a C++ `operator()` that implements a lambda, this
     allow callsites to make certain assumptions about the real function nature
     when writing analysis.
@@ -2362,11 +2368,22 @@ def CIR_FuncOp : CIR_Op<"func", [
     // Linkage information
     cir.func linkonce_odr @some_method(...)
     ```
+    // Builtin function
+    cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
+    // Coroutine
+    cir.func coroutine @_Z10silly_taskv() -> !CoroTask {
+      ...
+      cir.await(...)
+      ...
+    }
+    ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$builtin,
+                       UnitAttr:$coroutine,
                        UnitAttr:$lambda,
                        UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
@@ -3260,18 +3277,20 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
   let summary = "Extract the real part of a complex value";
   let description = [{
-    `cir.complex.real` operation takes an operand of `!cir.complex` type and
-    yields the real part of it.
+    `cir.complex.real` operation takes an operand of `!cir.complex`, `!cir.int`
+    or `!cir.float`. If the operand is `!cir.complex`, the real part of it will
+    be returned, otherwise the value returned unmodified. 
 
     Example:
 
     ```mlir
-    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %complex : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %scalar : !cir.float -> !cir.float
     ```
   }];
 
   let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let arguments = (ins CIR_AnyComplexOrIntOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))
@@ -3289,18 +3308,20 @@ def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
 def CIR_ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
   let summary = "Extract the imaginary part of a complex value";
   let description = [{
-    `cir.complex.imag` operation takes an operand of `!cir.complex` type and
-    yields the imaginary part of it.
+    `cir.complex.imag` operation takes an operand of `!cir.complex`, `!cir.int`
+    or `!cir.float`. If the operand is `!cir.complex`, the imag part of it will
+    be returned, otherwise a zero value will be returned.  
 
     Example:
 
     ```mlir
-    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    %imag = cir.complex.imag %complex : !cir.complex<!cir.float> -> !cir.float
+    %imag = cir.complex.imag %scalar : !cir.float -> !cir.float
     ```
   }];
 
   let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let arguments = (ins CIR_AnyComplexOrIntOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))

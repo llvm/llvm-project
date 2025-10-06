@@ -1361,9 +1361,19 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
     return;
   }
 
+  auto isValidSymbol{[](const Symbol *sym) {
+    if (IsProcedure(*sym) || IsFunction(*sym)) {
+      return true;
+    }
+    if (const Symbol *owner{GetScopingUnit(sym->owner()).symbol()}) {
+      return IsProcedure(*owner) || IsFunction(*owner);
+    }
+    return false;
+  }};
+
   const parser::OmpArgument &arg{args.v.front()};
   if (auto *sym{GetArgumentSymbol(arg)}) {
-    if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+    if (!isValidSymbol(sym)) {
       auto &msg{context_.Say(arg.source,
           "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
       if (sym->test(Symbol::Flag::Implicit)) {
@@ -3135,6 +3145,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_sizes);
+  for (const parser::Cosubscript &v : c.v)
+    RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
+        /*paramName=*/"parameter", /*allowZero=*/false);
+}
+
 // Following clauses do not have a separate node in parse-tree.h.
 CHECK_SIMPLE_CLAUSE(Absent, OMPC_absent)
 CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
@@ -3176,7 +3193,6 @@ CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
 CHECK_SIMPLE_CLAUSE(Partial, OMPC_partial)
 CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
 CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)
-CHECK_SIMPLE_CLAUSE(Sizes, OMPC_sizes)
 CHECK_SIMPLE_CLAUSE(Permutation, OMPC_permutation)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)

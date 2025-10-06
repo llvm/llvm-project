@@ -1001,7 +1001,7 @@ public:
               OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
                   .getOrCreateRecipe(
                       cgf.getContext(), recipeInsertLocation, varExpr,
-                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      varRecipe.AllocaDecl,
                       /*temporary=*/nullptr, OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
@@ -1036,20 +1036,13 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
-          // this, and won't work when we get to bounds/etc. Do this for now to
-          // limit the scope of this refactor.
-          VarDecl *allocaDecl = varRecipe.AllocaDecl;
-          allocaDecl->setInit(varRecipe.InitExpr);
-          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
                                                                     builder)
                   .getOrCreateRecipe(
                       cgf.getContext(), recipeInsertLocation, varExpr,
-                      varRecipe.AllocaDecl, varRecipe.InitExpr,
-                      varRecipe.InitFromTemporary,
+                      varRecipe.AllocaDecl, varRecipe.InitFromTemporary,
                       OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
@@ -1086,18 +1079,12 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
-          // this, and won't work when we get to bounds/etc. Do this for now to
-          // limit the scope of this refactor.
-          VarDecl *allocaDecl = varRecipe.AllocaDecl;
-          allocaDecl->setInit(varRecipe.InitExpr);
-          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
                   .getOrCreateRecipe(
                       cgf.getContext(), recipeInsertLocation, varExpr,
-                      varRecipe.AllocaDecl, varRecipe.InitExpr,
+                      varRecipe.AllocaDecl,
                       /*temporary=*/nullptr, clause.getReductionOp(),
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,

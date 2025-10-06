@@ -978,6 +978,16 @@ void VPlan::execute(VPTransformState *State) {
 
   // If the original loop is unreachable, delete it and all its blocks.
   if (!ScalarPhVPBB->hasPredecessors()) {
+    // DeleteDeadBlocks will remove single-entry phis. Remove them from the exit
+    // VPIRBBs in VPlan as well, otherwise we would retain references to deleted
+    // IR instructions.
+    for (VPIRBasicBlock *EB : getExitBlocks()) {
+      for (VPRecipeBase &R : make_early_inc_range(EB->phis())) {
+        if (R.getNumOperands() == 1)
+          R.eraseFromParent();
+      }
+    }
+
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
     auto Blocks = OrigLoop->getBlocksVector();
@@ -1742,6 +1752,16 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
       Plan->print(O);
 }
 #endif
+
+bool llvm::canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+                                 TTI::PartialReductionExtendKind ExtKind) {
+  APInt TruncatedVal = CI->getValue().trunc(NarrowType->getScalarSizeInBits());
+  unsigned WideSize = CI->getType()->getScalarSizeInBits();
+  APInt ExtendedVal = ExtKind == TTI::PR_SignExtend
+                          ? TruncatedVal.sext(WideSize)
+                          : TruncatedVal.zext(WideSize);
+  return ExtendedVal == CI->getValue();
+}
 
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {

@@ -55,6 +55,7 @@ struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
 
 KERNEL_TEST(Foo, foo)
 KERNEL_TEST(NoArgs, noargs)
+KERNEL_TEST(Byte, byte)
 KERNEL_TEST(LocalMem, localmem)
 KERNEL_TEST(LocalMemReduction, localmem_reduction)
 KERNEL_TEST(LocalMemStatic, localmem_static)
