@@ -135,13 +135,15 @@ public:
     std::string OrcRuntimePath = "";
     /// PID of the out-of-process JIT executor.
     uint32_t ExecutorPID = 0;
+    /// Custom lambda to be executed inside child process/executor
+    std::function<void()> CustomizeFork = nullptr;
     /// An optional code model to provide to the JITTargetMachineBuilder
     std::optional<llvm::CodeModel::Model> CM = std::nullopt;
 
     JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
           UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
-          ExecutorPID(0), CM(std::nullopt) {}
+          ExecutorPID(0), CustomizeFork(nullptr), CM(std::nullopt) {}
   };
 
 protected:

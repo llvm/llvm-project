@@ -334,7 +334,7 @@ Align MachineFunction::getPreferredAlignment() const {
     PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
   else
     PrefAlignment = Align(1);
-  
+
   return std::max(PrefAlignment, getAlignment());
 }
 

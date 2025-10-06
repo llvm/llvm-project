@@ -12,8 +12,9 @@
 define float @float_imm() nounwind {
 ; CHECK-LABEL: float_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    flw fa0, %lo(.LCPI0_0)(a0)
+; CHECK-NEXT:    lui a0, 263313
+; CHECK-NEXT:    addi a0, a0, -37
+; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; CHECKZFINX-LABEL: float_imm:

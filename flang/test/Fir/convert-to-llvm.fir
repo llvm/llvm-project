@@ -3,8 +3,8 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-pc-win32" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT,GENERIC
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT,GENERIC 
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa, datalayout=e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-P0" %s | FileCheck -check-prefixes=CHECK,AMDGPU %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT,GENERIC
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa, datalayout=e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9" %s | FileCheck -check-prefixes=CHECK,AMDGPU %s
 
 //===================================================
 // SUMMARY: Tests for FIR --> LLVM MLIR conversion
@@ -17,7 +17,10 @@ fir.global @g_i0 : i32 {
   fir.has_value %1 : i32
 }
 
-// CHECK: llvm.mlir.global external @g_i0() {addr_space = 0 : i32} : i32 {
+// CHECK: llvm.mlir.global external @g_i0()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: i32 {
 // CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:   llvm.return %[[C0]] : i32
 // CHECK: }
@@ -29,7 +32,10 @@ fir.global @g_ci5 constant : i32 {
   fir.has_value %c : i32
 }
 
-// CHECK: llvm.mlir.global external constant @g_ci5() {addr_space = 0 : i32} : i32 {
+// CHECK: llvm.mlir.global external constant @g_ci5()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: i32 {
 // CHECK:   %[[C5:.*]] = llvm.mlir.constant(5 : i32) : i32
 // CHECK:   llvm.return %[[C5]] : i32
 // CHECK: }
@@ -37,17 +43,26 @@ fir.global @g_ci5 constant : i32 {
 // -----
 
 fir.global internal @i_i515 (515:i32) : i32
-// CHECK: llvm.mlir.global internal @i_i515(515 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global internal @i_i515(515 : i32)
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : i32
 
 // -----
 
 fir.global common @C_i511 (0:i32) : i32
-// CHECK: llvm.mlir.global common @C_i511(0 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global common @C_i511(0 : i32)
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : i32
 
 // -----
 
 fir.global weak @w_i86 (86:i32) : i32
-// CHECK: llvm.mlir.global weak @w_i86(86 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global weak @w_i86(86 : i32)
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : i32
 
 // -----
 
@@ -69,9 +84,13 @@ fir.global @symbol : i64 {
   fir.has_value %0 : i64
 }
 
-// CHECK: %{{.*}} = llvm.mlir.addressof @[[SYMBOL:.*]] : !llvm.ptr
+// CHECK:  %[[ADDROF:.*]] = llvm.mlir.addressof @[[SYMBOL:.*]] : !llvm.ptr
+// AMDGPU: %{{.*}} = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<1> to !llvm.ptr
 
-// CHECK: llvm.mlir.global external @[[SYMBOL]]() {addr_space = 0 : i32} : i64 {
+// CHECK: llvm.mlir.global external @[[SYMBOL]]()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: i64 {
 // CHECK:   %{{.*}} = llvm.mlir.constant(1 : i64) : i64
 // CHECK:   llvm.return %{{.*}} : i64
 // CHECK: }
@@ -88,7 +107,10 @@ fir.global internal @_QEmultiarray : !fir.array<32x32xi32> {
   fir.has_value %2 : !fir.array<32x32xi32>
 }
 
-// CHECK: llvm.mlir.global internal @_QEmultiarray() {addr_space = 0 : i32} : !llvm.array<32 x array<32 x i32>> {
+// CHECK: llvm.mlir.global internal @_QEmultiarray() 
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : !llvm.array<32 x array<32 x i32>> {
 // CHECK:   %[[CST:.*]] = llvm.mlir.constant(dense<1> : vector<32x32xi32>) : !llvm.array<32 x array<32 x i32>>
 // CHECK:   llvm.return %[[CST]] : !llvm.array<32 x array<32 x i32>>
 // CHECK: }
@@ -105,7 +127,10 @@ fir.global internal @_QEmultiarray : !fir.array<32xi32> {
   fir.has_value %2 : !fir.array<32xi32>
 }
 
-// CHECK:          llvm.mlir.global internal @_QEmultiarray() {addr_space = 0 : i32} : !llvm.array<32 x i32> {
+// CHECK:          llvm.mlir.global internal @_QEmultiarray() 
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : !llvm.array<32 x i32> {
 // CHECK:            %[[CST:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:            %{{.*}} = llvm.mlir.undef : !llvm.array<32 x i32>
 // CHECK:            %{{.*}} = llvm.insertvalue %[[CST]], %{{.*}}[5] : !llvm.array<32 x i32>
@@ -1801,7 +1826,9 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
 // CHECK:         %{{.*}} = llvm.insertvalue %[[VERSION]], %{{.*}}[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)> 
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TYPE_CODE_I8]], %{{.*}}[4] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
-// CHECK:         %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr
+// GENERIC:       %[[TDESC:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr
+// AMDGPU:        %[[ADDROF:.*]] = llvm.mlir.addressof @_QMtest_dinitE.dt.tseq : !llvm.ptr<1>
+// AMDGPU:        %[[TDESC:.*]] = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<1> to !llvm.ptr
 // CHECK:         %{{.*}} = llvm.insertvalue %[[TDESC]], %{{.*}}[7] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
 
 // -----
@@ -2824,7 +2851,10 @@ func.func @coordinate_array_unknown_size_1d(%arg0: !fir.ptr<!fir.array<? x i32>>
 
 fir.global common @c_(dense<0> : vector<4294967296xi8>) : !fir.array<4294967296xi8>
 
-// CHECK: llvm.mlir.global common @c_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
+// CHECK: llvm.mlir.global common @c_(dense<0> : vector<4294967296xi8>) 
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: !llvm.array<4294967296 x i8>
 
 // -----
 

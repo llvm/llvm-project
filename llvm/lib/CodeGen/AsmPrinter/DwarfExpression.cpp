@@ -154,7 +154,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     unsigned Size = TRI.getSubRegIdxSize(Idx);
     unsigned Offset = TRI.getSubRegIdxOffset(Idx);
     Reg = TRI.getDwarfRegNum(SR, false);
-    if (Reg < 0)
+    if (Reg < 0 || Offset + Size > RegSize)
       continue;
 
     // Used to build the intersection between the bits we already
@@ -618,12 +618,15 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
     case dwarf::DW_OP_gt:
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:
