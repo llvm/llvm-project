@@ -486,8 +486,20 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
 
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
-#if defined(__x86_64__)
-# if SANITIZER_LINUX
+#    if SANITIZER_ANDROID
+  if (longjmp_xor_key == 0) {
+    // bionic libc initialization process: __libc_init_globals ->
+    // __libc_init_vdso (calls strcmp) -> __libc_init_setjmp_cookie. strcmp is
+    // intercepted by TSan, so during TSan initialization the setjmp_cookie
+    // remains uninitialized. On Android, longjmp_xor_key must be set on first
+    // use.
+    InitializeLongjmpXorKey();
+    CHECK_NE(longjmp_xor_key, 0);
+  }
+#    endif
+
+#    if defined(__x86_64__)
+#      if SANITIZER_LINUX
   // Reverse of:
   //   xor  %fs:0x30, %rsi
   //   rol  $0x11, %rsi
@@ -542,13 +554,23 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # else
 #  define LONG_JMP_SP_ENV_SLOT 2
 # endif
-#elif SANITIZER_LINUX
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 13
-# elif defined(__loongarch__)
-#  define LONG_JMP_SP_ENV_SLOT 1
-# elif defined(__mips64)
-#  define LONG_JMP_SP_ENV_SLOT 1
+#    elif SANITIZER_ANDROID
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 3
+#      elif SANITIZER_RISCV64
+#        define LONG_JMP_SP_ENV_SLOT 3
+#      elif defined(__x86_64__)
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      else
+#        error unsupported
+#      endif
+#    elif SANITIZER_LINUX
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 13
+#      elif defined(__loongarch__)
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      elif defined(__mips64)
+#        define LONG_JMP_SP_ENV_SLOT 1
 #      elif SANITIZER_RISCV64
 #        define LONG_JMP_SP_ENV_SLOT 13
 #      elif defined(__s390x__)
@@ -556,7 +578,7 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #      else
 #        define LONG_JMP_SP_ENV_SLOT 6
 #      endif
-#endif
+#    endif
 
 uptr ExtractLongJmpSp(uptr *env) {
   uptr mangled_sp = env[LONG_JMP_SP_ENV_SLOT];
@@ -653,7 +675,12 @@ ThreadState *cur_thread() {
     }
     CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &oldset, nullptr));
   }
-  return thr;
+
+  // Skia calls mallopt(M_THREAD_DISABLE_MEM_INIT, 1), which sets the least
+  // significant bit of TLS_SLOT_SANITIZER to 1. Scudo allocator uses this bit
+  // as a flag to disable memory initialization. This is a workaround to get the
+  // correct ThreadState pointer.
+  reinterpret_cast<ThreadState*>(addr & ~1ULL);
 }
 
 void set_cur_thread(ThreadState *thr) {

@@ -205,6 +205,7 @@ __cpp_lib_ranges_chunk_by                               202202L <ranges>
 __cpp_lib_ranges_concat                                 202403L <ranges>
 __cpp_lib_ranges_contains                               202207L <algorithm>
 __cpp_lib_ranges_find_last                              202207L <algorithm>
+__cpp_lib_ranges_indices                                202506L <ranges>
 __cpp_lib_ranges_iota                                   202202L <numeric>
 __cpp_lib_ranges_join_with                              202202L <ranges>
 __cpp_lib_ranges_repeat                                 202207L <ranges>
@@ -591,6 +592,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_philox_engine                        202406L
 // # define __cpp_lib_ranges_concat                        202403L
+# define __cpp_lib_ranges_indices                       202506L
 # define __cpp_lib_ratio                                202306L
 // # define __cpp_lib_rcu                                  202306L
 # define __cpp_lib_reference_wrapper                    202403L
