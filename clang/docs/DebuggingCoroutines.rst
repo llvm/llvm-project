@@ -206,11 +206,11 @@ Tracking the exact suspension point
 
 Among the compiler-generated members, the ``__coro_index`` is particularly
 important. This member identifies the suspension point at which the coroutine
-is currently suspended. However, it is non-trivial to map this number backto
+is currently suspended. However, it is non-trivial to map this number back to
 a source code location.
 
 For GDB, the provided :ref:`gdb-script` already takes care of this and provides
-the exact line number of the suspension point as part of the couroutine handle's
+the exact line number of the suspension point as part of the coroutine handle's
 summary string. Unfortunately, LLDB's pretty-printer does not support this, yet.
 Furthermore, those labels are only emitted starting with clang 21.0.
 
@@ -749,7 +749,7 @@ the suspension point.
   Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
   Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
 
-LLDB does not support looking up labels, yet. That's also why LLDB's pretty-printer
+LLDB does not support looking up labels, yet. For this reason, LLDB's pretty-printer
 does not show the exact line number of the suspension point.
 
 
@@ -1014,13 +1014,11 @@ Note that this script requires LLDB 21.0 or newer.
 GDB Debugger Script
 -------------------
 
-For GDB, the following script provides a couple of useful commands:
-
-The following script provides
+The following script provides:
 
 * a pretty-printer for coroutine handles
 * a frame filter to add coroutine frames to the built-in ``bt`` command
-* the commands ``get_coro_frame`` and ``get_coro_promise`` to be used in
+* the ``get_coro_frame`` and ``get_coro_promise`` functions to be used in
   expressions, e.g. ``p get_coro_promise(fib.coro_hdl)->current_state``
 
 It can be loaded into GDB using ``source gdb_coro_debugging.py``.
