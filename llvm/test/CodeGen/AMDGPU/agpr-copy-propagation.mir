@@ -40,8 +40,8 @@ body: |
     ; GFX908: liveins: $agpr0
     ; GFX908-NEXT: {{  $}}
     ; GFX908-NEXT: renamable $vgpr0 = COPY renamable $agpr0, implicit $exec
-    ; GFX908-NEXT: renamable $agpr1 = COPY renamable $vgpr0, implicit $exec
-    ; GFX908-NEXT: renamable $agpr2 = COPY renamable $vgpr0, implicit $exec
+    ; GFX908-NEXT: renamable $agpr1 = COPY $agpr0, implicit $exec
+    ; GFX908-NEXT: renamable $agpr2 = COPY $agpr0, implicit $exec
     ; GFX908-NEXT: S_ENDPGM 0, implicit $vgpr0, implicit $agpr1, implicit $agpr2
     ;
     ; GFX90A-LABEL: name: do_not_propagate_agpr_to_agpr

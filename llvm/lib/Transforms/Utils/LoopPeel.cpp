@@ -1347,7 +1347,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 
   // Update metadata for the estimated trip count.  The original branch weight
   // metadata is already correct for both the remaining loop and the peeled loop
-  // iterations, so don't adjust it.
+  // iterations, so do not adjust it.
   //
   // For example, consider what happens when peeling 2 iterations from a loop
   // with an estimated trip count of 10 and inserting them before the remaining
@@ -1363,23 +1363,9 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   // while examining it in isolation without considering the probability of
   // actually reaching it, we store the new trip count as separate metadata.
   if (auto EstimatedTripCount = getLoopEstimatedTripCount(L)) {
-    // FIXME: The previous updateBranchWeights implementation had this
-    // comment:
-    //
-    //   Don't set the probability of taking the edge from latch to loop header
-    //   to less than 1:1 ratio (meaning Weight should not be lower than
-    //   SubWeight), as this could significantly reduce the loop's hotness,
-    //   which would be incorrect in the case of underestimating the trip count.
-    //
-    // See e8d5db206c2f commit log for further discussion.  That seems to
-    // suggest that we should avoid ever setting a trip count of < 2 here
-    // (equal chance of continuing and exiting means the loop will likely
-    // continue once and then exit once).  Or is keeping the original branch
-    // weights already a sufficient improvement for whatever analysis cares
-    // about this case?
     unsigned EstimatedTripCountNew = *EstimatedTripCount;
-    if (EstimatedTripCountNew < TotalPeeled) // FIXME: TotalPeeled + 2?
-      EstimatedTripCountNew = 0;             // FIXME: = 2?
+    if (EstimatedTripCountNew < TotalPeeled)
+      EstimatedTripCountNew = 0;
     else
       EstimatedTripCountNew -= TotalPeeled;
     setLoopEstimatedTripCount(L, EstimatedTripCountNew);
