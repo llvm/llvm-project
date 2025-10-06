@@ -322,8 +322,8 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
 
     if (DestSubReg) {
       const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      auto *SR = NewLI.createSubRange(
-                                      Alloc, TRI->getSubRegIndexLaneMask(DestSubReg));
+      auto *SR =
+          NewLI.createSubRange(Alloc, TRI->getSubRegIndexLaneMask(DestSubReg));
       SR->addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(),
                                            SR->getNextValue(Idx, Alloc)));
     }
