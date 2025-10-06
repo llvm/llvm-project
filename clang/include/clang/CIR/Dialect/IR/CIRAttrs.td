@@ -630,11 +630,12 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
   );
 
   let builders = [
-    AttrBuilderWithInferredContext<(ins "GlobalViewAttr":$src_rtti,
-                                        "GlobalViewAttr":$dest_rtti,
-                                        "mlir::FlatSymbolRefAttr":$runtime_func,
-                                        "mlir::FlatSymbolRefAttr":$bad_cast_func,
-                                        "IntAttr":$offset_hint), [{
+    AttrBuilderWithInferredContext<(ins
+                                    "GlobalViewAttr":$src_rtti,
+                                    "GlobalViewAttr":$dest_rtti,
+                                    "mlir::FlatSymbolRefAttr":$runtime_func,
+                                    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+                                    "IntAttr":$offset_hint), [{
       return $_get(src_rtti.getContext(), src_rtti, dest_rtti, runtime_func,
                    bad_cast_func, offset_hint);
     }]>,
