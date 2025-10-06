@@ -987,7 +987,7 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
             ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
           [&](auto type) { print(type, os); })
-      .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
+      .DefaultUnreachable("Unhandled SPIR-V type");
 }
 
 //===----------------------------------------------------------------------===//

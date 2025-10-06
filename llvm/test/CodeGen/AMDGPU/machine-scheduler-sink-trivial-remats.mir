@@ -6429,7 +6429,7 @@ body:             |
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_19:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_20:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def %22, 2031625 /* reguse:VGPR_32 */, [[V_CVT_I32_F64_e32_4]]
+  ; GFX908-NEXT:   INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %22, 1835017 /* reguse:VGPR_32 */, [[V_CVT_I32_F64_e32_4]]
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
   ; GFX908-NEXT:   successors: %bb.2(0x80000000)
@@ -6478,7 +6478,7 @@ body:             |
     %19:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
     %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
     %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
-    INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def %22:vgpr_32, 2031625 /* reguse:VGPR_32 */, %4
+    INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %22:vgpr_32, 1835017 /* reguse:VGPR_32 */, %4
     %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
 
   bb.1:

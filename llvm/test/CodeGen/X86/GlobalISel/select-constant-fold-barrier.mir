@@ -1,0 +1,77 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+
+---
+name:            select_cfb_scalar_s32
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0:
+    liveins: $edi
+
+    ; CHECK-LABEL: name:            select_cfb_scalar_s32
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NOT: G_CONSTANT_FOLD_BARRIER
+    ; CHECK-NEXT: $eax = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $eax
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = G_CONSTANT_FOLD_BARRIER %0
+    $eax = COPY %1(s32)
+    RET 0, implicit $eax
+...
+
+---
+name:            select_cfb_scalar_s64
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
+liveins:
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    ; CHECK-LABEL: name:            select_cfb_scalar_s64
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NOT: G_CONSTANT_FOLD_BARRIER
+    ; CHECK-NEXT: $rax = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $rax
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s64) = G_CONSTANT_FOLD_BARRIER %0
+    $rax = COPY %1(s64)
+    RET 0, implicit $rax
+...
+
+
+---
+name:            select_cfb_vec128
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: vecr, preferred-register: '', flags: [  ] }
+  - { id: 1, class: vecr, preferred-register: '', flags: [  ] }
+body:             |
+  bb.0:
+    liveins: $xmm0
+
+    ; CHECK-LABEL: name:            select_cfb_vec128
+    ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+    ; CHECK-NOT: G_CONSTANT_FOLD_BARRIER
+    ; CHECK-NEXT: $xmm1 = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $xmm1
+    %0:vecr(<4 x s32>) = COPY $xmm0
+    %1:vecr(<4 x s32>) = G_CONSTANT_FOLD_BARRIER %0
+    $xmm1 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm1
+...
