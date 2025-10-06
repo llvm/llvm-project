@@ -288,7 +288,7 @@ protected:
 
   bool Has45BitNumRecordsBufferResource = false;
 
-  bool HasCluster = false;
+  bool HasClusters = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1839,7 +1839,7 @@ public:
   }
 
   /// \returns true if the subtarget supports clusters of workgroups.
-  bool hasClusters() const { return HasCluster; }
+  bool hasClusters() const { return HasClusters; }
 
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.
