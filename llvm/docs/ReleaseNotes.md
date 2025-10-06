@@ -177,6 +177,10 @@ Changes to Sanitizers
 Other Changes
 -------------
 
+* Introduces the `AllocToken` pass, an instrumentation pass providing tokens to
+  memory allocators enabling various heap organization strategies, such as heap
+  partitioning.
+
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
 
