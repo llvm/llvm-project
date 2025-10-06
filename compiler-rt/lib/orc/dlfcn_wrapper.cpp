@@ -42,7 +42,7 @@ __orc_rt_jit_dlopen_wrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
