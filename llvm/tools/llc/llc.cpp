@@ -243,136 +243,29 @@ static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
 // PGO command line options
 enum PGOKind {
   NoPGO,
-  InstrGen,
-  InstrUse,
   SampleUse,
-};
-
-enum CSPGOKind {
-  NoCSPGO,
-  CSInstrGen,
-  CSInstrUse,
 };
 
 static cl::opt<PGOKind>
     PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
                 cl::desc("The kind of profile guided optimization"),
                 cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
-                           clEnumValN(InstrGen, "pgo-instr-gen-pipeline",
-                                      "Instrument the IR to generate profile."),
-                           clEnumValN(InstrUse, "pgo-instr-use-pipeline",
-                                      "Use instrumented profile to guide PGO."),
                            clEnumValN(SampleUse, "pgo-sample-use-pipeline",
                                       "Use sampled profile to guide PGO.")));
-
-static cl::opt<std::string>
-    ProfileFile("profile-file", cl::desc("Path to the profile."), cl::Hidden);
-
-static cl::opt<std::string>
-    MemoryProfileFile("memory-profile-file",
-                      cl::desc("Path to the memory profile."), cl::Hidden);
-
-static cl::opt<CSPGOKind> CSPGOKindFlag(
-    "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
-    cl::desc("The kind of context sensitive profile guided optimization"),
-    cl::values(
-        clEnumValN(NoCSPGO, "nocspgo", "Do not use CSPGO."),
-        clEnumValN(
-            CSInstrGen, "cspgo-instr-gen-pipeline",
-            "Instrument (context sensitive) the IR to generate profile."),
-        clEnumValN(
-            CSInstrUse, "cspgo-instr-use-pipeline",
-            "Use instrumented (context sensitive) profile to guide PGO.")));
-
-static cl::opt<std::string> CSProfileGenFile(
-    "cs-profilegen-file",
-    cl::desc("Path to the instrumented context sensitive profile."),
-    cl::Hidden);
-
-static cl::opt<std::string>
-    ProfileRemappingFile("profile-remapping-file",
-                         cl::desc("Path to the profile remapping file."),
-                         cl::Hidden);
-
-static cl::opt<PGOOptions::ColdFuncOpt> PGOColdFuncAttr(
-    "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
-    cl::desc(
-        "Function attribute to apply to cold functions as determined by PGO"),
-    cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
-                          "Default (no attribute)"),
-               clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
-                          "Mark cold functions with optsize."),
-               clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
-                          "Mark cold functions with minsize."),
-               clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
-                          "Mark cold functions with optnone.")));
-
-static cl::opt<bool> DebugInfoForProfiling(
-    "debug-info-for-profiling", cl::init(false), cl::Hidden,
-    cl::desc("Emit special debug info to enable PGO profile generation."));
-
-static cl::opt<bool> PseudoProbeForProfiling(
-    "pseudo-probe-for-profiling", cl::init(false), cl::Hidden,
-    cl::desc("Emit pseudo probes to enable PGO profile generation."));
 
 // Function to set PGO options on TargetMachine based on command line flags
 static void setPGOOptions(TargetMachine &TM) {
   std::optional<PGOOptions> PGOOpt;
 
   switch (PGOKindFlag) {
-  case InstrGen:
-    PGOOpt =
-        PGOOptions(ProfileFile, "", "", MemoryProfileFile, PGOOptions::IRInstr,
-                   PGOOptions::NoCSAction, PGOColdFuncAttr);
-    break;
-  case InstrUse:
-    PGOOpt =
-        PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
-                   PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
-    break;
   case SampleUse:
-    PGOOpt = PGOOptions(ProfileFile, "", ProfileRemappingFile,
-                        MemoryProfileFile, PGOOptions::SampleUse,
-                        PGOOptions::NoCSAction, PGOColdFuncAttr);
+    // Use default values for other PGOOptions parameters
+    PGOOpt = PGOOptions("", "", "", "", PGOOptions::SampleUse,
+                        PGOOptions::NoCSAction);
     break;
   case NoPGO:
-    if (DebugInfoForProfiling || PseudoProbeForProfiling ||
-        !MemoryProfileFile.empty())
-      PGOOpt = PGOOptions("", "", "", MemoryProfileFile, PGOOptions::NoAction,
-                          PGOOptions::NoCSAction, PGOColdFuncAttr,
-                          DebugInfoForProfiling, PseudoProbeForProfiling);
-    else
-      PGOOpt = std::nullopt;
+    PGOOpt = std::nullopt;
     break;
-  }
-
-  // Handle context-sensitive PGO options
-  if (CSPGOKindFlag != NoCSPGO) {
-    if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
-                   PGOOpt->Action == PGOOptions::SampleUse)) {
-      errs() << "CSPGOKind cannot be used with IRInstr or SampleUse";
-      exit(1);
-    }
-    if (CSPGOKindFlag == CSInstrGen) {
-      if (CSProfileGenFile.empty()) {
-        errs() << "CSInstrGen needs to specify CSProfileGenFile";
-        exit(1);
-      }
-      if (PGOOpt) {
-        PGOOpt->CSAction = PGOOptions::CSIRInstr;
-        PGOOpt->CSProfileGenFile = CSProfileGenFile;
-      } else {
-        PGOOpt = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                            /*MemoryProfile=*/"", PGOOptions::NoAction,
-                            PGOOptions::CSIRInstr);
-      }
-    } else /* CSPGOKindFlag == CSInstrUse */ {
-      if (!PGOOpt) {
-        errs() << "CSInstrUse needs to be together with InstrUse";
-        exit(1);
-      }
-      PGOOpt->CSAction = PGOOptions::CSIRUse;
-    }
   }
 
   if (PGOOpt)
