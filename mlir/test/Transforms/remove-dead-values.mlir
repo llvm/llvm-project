@@ -570,21 +570,21 @@ module @return_void_with_unused_argument {
     return %unused : memref<4xi32>
   }
 
-  // the function is immutable because it is public.
-  func.func public @immutable_fn_return_void_with_unused_argument(%arg0: i32, %unused: i32) -> () {
-    %sum = arith.addi %arg0, %arg0 : i32
-    %c0 = arith.constant 0 : index
-    %buf = memref.alloc() : memref<1xi32>
-    memref.store %sum, %buf[%c0] : memref<1xi32>
+  // the function signature is immutable because it is public.
+  func.func public @immutable_fn_with_unused_argument(%arg0: i32, %arg1: memref<4xf32>) -> () {
     return
   }
+
   // CHECK-LABEL: func.func @main2
-  // CHECK-SAME: (%[[ARG0_MAIN:.*]]: i32)
+  // CHECK: %[[MEM:.*]] = memref.alloc() : memref<4xf32>
   // CHECK: %[[UNUSED:.*]] = arith.constant 0 : i32
-  // CHECK: call @immutable_fn_return_void_with_unused_argument(%[[ARG0_MAIN]], %[[UNUSED]]) : (i32, i32) -> ()
-  func.func @main2(%arg0: i32) -> () {
-    %zero = arith.constant 0 : i32
-    call @immutable_fn_return_void_with_unused_argument(%arg0, %zero) : (i32, i32) -> ()
+  // CHECK: call @immutable_fn_with_unused_argument(%[[UNUSED]], %[[MEM]]) : (i32, memref<4xf32>) -> ()
+  func.func @main2() -> () {
+    %one = arith.constant 1 : i32
+    %scalar = arith.addi %one, %one: i32
+    %mem = memref.alloc() : memref<4xf32>
+
+    call @immutable_fn_with_unused_argument(%scalar, %mem) : (i32, memref<4xf32>) -> ()
     return
   }
 }

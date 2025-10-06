@@ -119,8 +119,7 @@ struct RDVFinalCleanupList {
 /// Return true iff at least one value in `values` is live, given the liveness
 /// information in `la`.
 static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
-                    const DenseSet<Value> &liveSet,
-                    RunLivenessAnalysis &la) {
+                    const DenseSet<Value> &liveSet, RunLivenessAnalysis &la) {
   for (Value value : values) {
     if (liveSet.contains(value)) {
       LDBG() << "Value " << value << " is marked live by CallOp";
@@ -151,7 +150,8 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
 static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
-                           const DenseSet<Value> &liveSet, RunLivenessAnalysis &la) {
+                           const DenseSet<Value> &liveSet,
+                           RunLivenessAnalysis &la) {
   BitVector lives(values.size(), true);
 
   for (auto [index, value] : llvm::enumerate(values)) {
@@ -269,7 +269,7 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
-  for (Value val: op->getResults()) {
+  for (Value val : op->getResults()) {
     if (liveSet.contains(val)) {
       LDBG() << "Simple op is used by a public function, "
                 "preserving it: "
@@ -307,8 +307,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///       removal.
 ///   (6) Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
-                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet, DenseSet<Value> &liveSet,
-                          RDVFinalCleanupList &cl) {
+                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
+                          DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp, OpPrintingFlags().skipRegions());
   if (funcOp.isPublic() || funcOp.isExternal()) {
@@ -372,7 +372,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, liveSet, la);
+    BitVector liveCallRets =
+        markLives(callOp->getResults(), nonLiveSet, liveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
@@ -398,20 +399,22 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
   }
 }
-// create a cheaper value with the same type of oldVal in front of CallOp.
+
+// Create a cheaper value with the same type of oldVal in front of CallOp.
 static Value createDummyArgument(CallOpInterface callOp, Value oldVal) {
   OpBuilder builder(callOp.getOperation());
   Type type = oldVal.getType();
 
   // Create zero constant for any supported type
   if (TypedAttr zeroAttr = builder.getZeroAttr(type)) {
-      return builder.create<arith::ConstantOp>(oldVal.getLoc(), type, zeroAttr);
+    return builder.create<arith::ConstantOp>(oldVal.getLoc(), type, zeroAttr);
   }
   return {};
 }
 
 static void processCallOp(CallOpInterface callOp, Operation *module,
-                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet, DenseSet<Value> &liveSet) {
+                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
+                          DenseSet<Value> &liveSet) {
   if (!la.getSolverConfig().isInterprocedural())
     return;
 
@@ -420,7 +423,8 @@ static void processCallOp(CallOpInterface callOp, Operation *module,
   if (!funcOp || !funcOp.isPublic()) {
     return;
   }
-  LDBG() << "processCallOp" << funcOp.getName();
+
+  LDBG() << "processCallOp to a public function: " << funcOp.getName();
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
   BitVector nonLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
@@ -443,7 +447,6 @@ static void processCallOp(CallOpInterface callOp, Operation *module,
         liveSet.insert(oldVal);
       }
     }
-    LDBG() << "after changed " << callOp;
   }
 }
 
@@ -485,7 +488,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
          << OpWithFlags(regionBranchOp, OpPrintingFlags().skipRegions());
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
-    liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, liveSet, la);
+    liveResults =
+        markLives(regionBranchOp->getResults(), nonLiveSet, liveSet, la);
   };
 
   // Mark live arguments in the regions of `regionBranchOp` in `liveArgs`.
@@ -766,8 +770,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 ///     as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
-                            DenseSet<Value> &nonLiveSet, DenseSet<Value> &liveSet,
-                            RDVFinalCleanupList &cl) {
+                            DenseSet<Value> &nonLiveSet,
+                            DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
   LDBG() << "Processing branch op: " << *branchOp;
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
@@ -945,7 +949,8 @@ void RemoveDeadValues::runOnOperation() {
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
   DenseSet<Value> deadVals;
-  // mark outgoing arguments to a public function LIVE. We also propagate liveness backward.
+  // mark outgoing arguments to a public function LIVE. We also propagate
+  // liveness backward.
   DenseSet<Value> liveVals;
 
   // Maintains a list of Ops, values, branches, etc., slated for cleanup at the
