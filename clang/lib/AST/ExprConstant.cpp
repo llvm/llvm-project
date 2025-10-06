@@ -12100,7 +12100,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       if ((K >> i) & 1)
         ResultElements.push_back(A.getVectorElt(base + i));
       else
-        ResultElements.push_back(W.getVectorElt(i)); // maskz/unmasked 모두 헤더에서 맞춰줌
+        ResultElements.push_back(W.getVectorElt(i)); 
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
