@@ -2989,10 +2989,10 @@ static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
 
   unsigned NumElems = Concat.getNumElems();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemPT = Concat.getFieldDesc()->getPrimType();
+  PrimType ElemT = Concat.getFieldDesc()->getPrimType();
 
-  TYPE_SWITCH(ElemPT, {
-    for (unsigned I = 0; I < NumElems; ++I) {
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I) {
       if (I + Shift < NumElems)
         Dst.elem<T>(I) = Concat.elem<T>(I + Shift);
       else
@@ -3021,15 +3021,15 @@ static bool interp__builtin_x86_palignr(InterpState &S, CodePtr OpPC,
     return false;
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemPT = VecA.getFieldDesc()->getPrimType();
+  PrimType ElemT = VecA.getFieldDesc()->getPrimType();
 
   unsigned LenA = VecA.getNumElems();
   unsigned LenB = VecB.getNumElems();
 
   assert(LenA == LenB && (LenA % 16 == 0));
 
-  TYPE_SWITCH(ElemPT, {
-    for (unsigned I = 0; I < LenA; ++I) {
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != LenA; ++I) {
       if (I + Shift < LenA) {
         Dst.elem<T>(I) = VecB.elem<T>(I + Shift);
       } else if (I + Shift < LenA + LenB) {
