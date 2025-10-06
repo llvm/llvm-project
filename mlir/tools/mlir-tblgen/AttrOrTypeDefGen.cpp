@@ -864,11 +864,8 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
 
     // Declare all the def classes first (in case they reference each other).
     for (const AttrOrTypeDef &def : defs) {
-      std::string comments = tblgen::emitSummaryAndDescComments(
-          def.getSummary(), def.getDescription());
-      if (!comments.empty()) {
-        os << comments << "\n";
-      }
+      tblgen::emitSummaryAndDescComments(os, def.getSummary(),
+                                         def.getDescription());
       os << "class " << def.getCppClassName() << ";\n";
     }
 
