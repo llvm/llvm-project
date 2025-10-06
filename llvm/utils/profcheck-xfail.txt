@@ -73,6 +73,7 @@ CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/RISCV/zmmul.ll
+CodeGen/SPIRV/hlsl-resources/UniqueImplicitBindingNumber.ll
 CodeGen/WebAssembly/memory-interleave.ll
 CodeGen/X86/masked_gather_scatter.ll
 CodeGen/X86/nocfivalue.ll
@@ -1109,6 +1110,7 @@ Transforms/LoopSimplifyCFG/invalidate-scev-dispositions.ll
 Transforms/LoopSimplifyCFG/lcssa.ll
 Transforms/LoopSimplifyCFG/live_block_marking.ll
 Transforms/LoopSimplifyCFG/mssa_update.ll
+Transforms/LoopSimplifyCFG/pr117537.ll
 Transforms/LoopSimplifyCFG/update_parents.ll
 Transforms/LoopUnroll/peel-last-iteration-expansion-cost.ll
 Transforms/LoopUnroll/peel-last-iteration-with-guards.ll
