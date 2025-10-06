@@ -173,8 +173,6 @@ struct TestXeGPUUnrollingPatterns
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "test-xegpu-layout-interface"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 // Test pattern for distributing vector::StepOp from workgroup to subgroup.
 // Validates DistributeLayoutAttr interfaces for offset computation
@@ -217,6 +215,35 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
     }
     rewriter.replaceOpWithMultiple(op, {newOps});
     return success();
+  }
+};
+
+struct TestXeGPUSGDistribute
+    : public PassWrapper<TestXeGPUSGDistribute,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSGDistribute)
+
+  StringRef getArgument() const final { return "test-xegpu-sg-distribute"; }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU Subgroup Distribution";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<index::IndexDialect>();
+  }
+
+  TestXeGPUSGDistribute() = default;
+  TestXeGPUSGDistribute(const TestXeGPUSGDistribute &pass) = default;
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -284,6 +311,7 @@ namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
+  PassRegistration<TestXeGPUSGDistribute>();
 }
 } // namespace test
 } // namespace mlir
