@@ -475,4 +475,34 @@ gpu.module @test_distribution {
     %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>} dense<[[0], [16], [32], [48], [64], [80], [96], [112], [128], [144], [160], [176], [192], [208], [224], [240], [256], [272], [288], [304], [320], [336], [352], [368], [384], [400], [416], [432], [448], [464], [480], [496]]> : vector<32x1xindex>
     gpu.return
   }
+
+  // CHECK-LABEL: non_splat_constant_2D_non_unit_dim
+  gpu.func @non_splat_constant_2D_non_unit_dim() {
+    // CHECK-DAG: %[[BASECST:.*]] = arith.constant dense<{{.*}} : vector<2x2xindex>
+    // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[IDY:.*]] = affine.apply #map()[%[[SGID]]]
+    // CHECK-DAG: %[[IDX:.*]] = affine.apply #map1()[%[[SGID]]]
+    // CHECK-DAG: %[[MULY:.*]] = index.mul %[[IDY]], %[[C2:.*]]
+    // CHECK-DAG: %[[C2_2:.*]] = arith.constant 2 : index
+    // CHECK-DAG: %[[MULX:.*]] = index.mul %[[IDX]], %[[C2:.*]]
+    // CHECK-DAG: %[[REMU_Y:.*]] = index.remu %[[MULY]], %[[C8:.*]]
+    // CHECK-DAG: %[[C8_2:.*]] = arith.constant 8 : index
+    // CHECK-DAG: %[[REMU_X:.*]] = index.remu %[[MULX]], %[[C8:.*]]
+    // CHECK-DAG: %[[MUL5:.*]] = arith.muli %[[REMU_Y]], %[[C8:.*]] : index
+    // CHECK-DAG: %[[MUL6:.*]] = arith.muli %[[REMU_X]], %[[C16:.*]] : index
+    // CHECK-DAG: %[[ADDIDX:.*]] = arith.addi %[[MUL5]], %[[MUL6]] : index
+    // CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[ADDIDX]] : index to vector<2x2xindex>
+    // CHECK-DAG: %[[ADDCST:.*]] = arith.addi %[[BASECST]], %[[BCAST]] : vector<2x2xindex>
+    %cst_8x8 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [4, 4], sg_data = [2, 2]>} dense<[
+         [0, 16, 32, 48, 64, 80, 96, 112],
+         [8, 24, 40, 56, 72, 88, 104, 120],
+         [16, 32, 48, 64, 80, 96, 112, 128],
+         [24, 40, 56, 72, 88, 104, 120, 136],
+         [32, 48, 64, 80, 96, 112, 128, 144],
+         [40, 56, 72, 88, 104, 120, 136, 152],
+         [48, 64, 80, 96, 112, 128, 144, 160],
+         [56, 72, 88, 104, 120, 136, 152, 168]
+      ]> : vector<8x8xindex>
+      gpu.return
+  }
 }
