@@ -39,6 +39,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -142,7 +143,7 @@ public:
     DigestAnalyzerOptions();
 
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
-        Opts.ShouldSerializeStats) {
+        Opts.ShouldSerializeStats || !Opts.DumpEntryPointStatsToCSV.empty()) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
       SyntaxCheckTimer = std::make_unique<llvm::Timer>(
@@ -706,6 +707,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 }
 
 static UnsignedEPStat PathRunningTime("PathRunningTime");
+static UnsignedEPStat SyntaxRunningTime("SyntaxRunningTime");
 
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
@@ -744,6 +746,8 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       SyntaxCheckTimer->stopTimer();
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
       CheckerEndTime -= CheckerStartTime;
+      FunctionSummaries.findOrInsertSummary(D)->second.SyntaxRunningTime =
+          std::lround(CheckerEndTime.getWallTime() * 1000);
       DisplayTime(CheckerEndTime);
     }
   }
@@ -757,6 +761,36 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       NumFunctionsAnalyzed++;
   }
 }
+
+namespace {
+template <typename DeclT>
+static clang::Decl *preferDefinitionImpl(clang::Decl *D) {
+  if (auto *X = dyn_cast<DeclT>(D))
+    if (auto *Def = X->getDefinition())
+      return Def;
+  return D;
+}
+
+template <> clang::Decl *preferDefinitionImpl<ObjCMethodDecl>(clang::Decl *D) {
+  if (const auto *X = dyn_cast<ObjCMethodDecl>(D)) {
+    for (auto *I : X->redecls())
+      if (I->hasBody())
+        return I;
+  }
+  return D;
+}
+
+static Decl *getDefinitionOrCanonicalDecl(Decl *D) {
+  assert(D);
+  D = D->getCanonicalDecl();
+  D = preferDefinitionImpl<VarDecl>(D);
+  D = preferDefinitionImpl<FunctionDecl>(D);
+  D = preferDefinitionImpl<TagDecl>(D);
+  D = preferDefinitionImpl<ObjCMethodDecl>(D);
+  assert(D);
+  return D;
+}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Path-sensitive checking.
@@ -774,6 +808,16 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
 
+  const Decl *DefDecl = getDefinitionOrCanonicalDecl(D);
+
+  // Get the SyntaxRunningTime from the function summary, because it is computed
+  // during the AM_Syntax analysis, which is done at a different point in time
+  // and in different order, but always before AM_Path.
+  if (const auto *Summary = FunctionSummaries.findSummary(DefDecl);
+      Summary && Summary->SyntaxRunningTime.has_value()) {
+    SyntaxRunningTime.set(*Summary->SyntaxRunningTime);
+  }
+
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
   // Execute the worklist algorithm.
@@ -788,6 +832,8 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     ExprEngineTimer->stopTimer();
     llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
     ExprEngineEndTime -= ExprEngineStartTime;
+    PathRunningTime.set(static_cast<unsigned>(
+        std::lround(ExprEngineEndTime.getWallTime() * 1000)));
     DisplayTime(ExprEngineEndTime);
   }
 

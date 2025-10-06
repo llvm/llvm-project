@@ -47,7 +47,7 @@ class BoolEPStat : public EntryPointStat {
 
 public:
   explicit BoolEPStat(llvm::StringLiteral Name);
-  unsigned value() const { return Value && *Value; }
+  std::optional<bool> value() const { return Value; }
   void set(bool V) {
     assert(!Value.has_value());
     Value = V;
@@ -98,7 +98,7 @@ class UnsignedEPStat : public EntryPointStat {
 
 public:
   explicit UnsignedEPStat(llvm::StringLiteral Name);
-  unsigned value() const { return Value.value_or(0); }
+  std::optional<unsigned> value() const { return Value; }
   void reset() { Value.reset(); }
   void set(unsigned V) {
     assert(!Value.has_value());

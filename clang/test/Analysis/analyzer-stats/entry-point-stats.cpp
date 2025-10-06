@@ -8,6 +8,8 @@
 // CHECK-NEXT:   "c:@F@fib#i#": {
 // CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "fib(unsigned int)",
+// CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
+// CHECK-NEXT:     "SyntaxRunningTime": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumBlocks": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumBlocksUnreachable": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumCTUSteps": "{{[0-9]+}}",
@@ -39,12 +41,13 @@
 // CHECK-NEXT:     "MaxQueueSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxReachableSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxTimeSpentSolvingZ3Queries": "{{[0-9]+}}",
-// CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}",
-// CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}"
+// CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}"
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "c:@F@main#I#**C#": {
 // CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "main(int, char **)",
+// CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
+// CHECK-NEXT:     "SyntaxRunningTime": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumBlocks": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumBlocksUnreachable": "{{[0-9]+}}",
 // CHECK-NEXT:     "NumCTUSteps": "{{[0-9]+}}",
@@ -76,8 +79,7 @@
 // CHECK-NEXT:     "MaxQueueSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxReachableSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxTimeSpentSolvingZ3Queries": "{{[0-9]+}}",
-// CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}",
-// CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}"
+// CHECK-NEXT:     "MaxValidBugClassSize": "{{[0-9]+}}"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NOT: non_entry_point
