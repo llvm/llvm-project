@@ -448,11 +448,9 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
       if (OptionalFileEntryRef CurrentModuleMap =
               PP.getHeaderSearchInfo()
                   .getModuleMap()
-                  .getModuleMapFileForUniquing(CurrentModule)) {
+                  .getModuleMapFileForUniquing(CurrentModule))
         CI.getFrontendOpts().ModuleMapFiles.emplace_back(
             CurrentModuleMap->getNameAsRequested());
-        Consumer.handleFileDependency(CurrentModuleMap->getNameAsRequested());
-      }
 
     SmallVector<ModuleID> DirectDeps;
     for (const auto &KV : ModularDeps)
@@ -686,6 +684,13 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
+
+  if (Module *CurrentModule = PP.getCurrentModuleImplementation()) {
+    if (OptionalFileEntryRef CurrentModuleMap =
+            PP.getHeaderSearchInfo().getModuleMap().getModuleMapFileForUniquing(
+                CurrentModule))
+      MDC.addFileDep(CurrentModuleMap->getNameAsRequested());
+  }
 
   for (const Module *M :
        MDC.ScanInstance.getPreprocessor().getAffectingClangModules())
