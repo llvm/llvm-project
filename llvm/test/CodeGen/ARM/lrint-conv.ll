@@ -3,12 +3,15 @@
 ; RUN: llc < %s -mtriple=armv7-none-eabihf -mattr=+vfp2 -float-abi=hard | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16
 ; RUN: llc < %s -mtriple=armv7-none-eabihf -mattr=+vfp2,+fullfp16 -float-abi=hard | FileCheck %s --check-prefixes=CHECK,CHECK-FP16
 
-; FIXME: crash
-; define i32 @testmswh_builtin(half %x) {
-; entry:
-;   %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
-;   ret i32 %0
-; }
+; SOFTFP-LABEL: testmswh_builtin:
+; SOFTFP:       bl      lrintf
+; HARDFP-LABEL: testmswh_builtin:
+; HARDFP:       bl      lrintf
+define i32 @testmswh_builtin(half %x) {
+entry:
+  %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
+  ret i32 %0
+}
 
 define i32 @testmsws_builtin(float %x) {
 ; CHECK-LABEL: testmsws_builtin:
