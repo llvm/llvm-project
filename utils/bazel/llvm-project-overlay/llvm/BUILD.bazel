@@ -770,6 +770,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":CodeGenTypes",
+        ":Option",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
@@ -4966,6 +4967,22 @@ cc_binary(
         ":TransformUtils",
         ":config",
         ":llvm-reduce-defs-lib",
+    ],
+)
+
+cc_binary(
+    name = "llvm-remarkutil",
+    srcs = glob([
+        "tools/llvm-remarkutil/**/*.cpp",
+        "tools/llvm-remarkutil/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-remarkutil"],
+    stamp = 0,
+    deps = [
+        ":Demangle",
+        ":Remarks",
+        ":Support",
     ],
 )
 

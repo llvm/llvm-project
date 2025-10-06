@@ -1250,6 +1250,82 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI2->getExpression(), Expr2);
 }
 
+TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
+  LLVMContext C;
+
+  // Create IR with 3 levels of inlining:
+  // main() calls inline1() which calls inline2() which calls inline3()
+  // We'll test from the perspective of code in inline3()
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define void @main() !dbg !10 {
+      ret void, !dbg !20
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+    !1 = !DIFile(filename: "test.c", directory: "/test")
+    !2 = !{i32 2, !"Debug Info Version", i32 3}
+
+    ; Subprograms for each function in the call chain
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+
+    ; Location in inline3 (line 401), inlined at location !21
+    !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)
+
+    ; Location in inline2 (line 301) where inline3 was called, inlined at !22
+    !21 = !DILocation(line: 301, column: 10, scope: !12, inlinedAt: !22)
+
+    ; Location in inline1 (line 201) where inline2 was called, inlined at !23
+    !22 = !DILocation(line: 201, column: 15, scope: !11, inlinedAt: !23)
+
+    ; Location in main (line 101) where inline1 was called (no more inlinedAt)
+    !23 = !DILocation(line: 101, column: 3, scope: !10)
+  )");
+
+  ASSERT_TRUE(M);
+
+  Function *MainFunc = M->getFunction("main");
+  ASSERT_TRUE(MainFunc);
+  Instruction &RetInst = MainFunc->getEntryBlock().front();
+
+  // Use getDebugLoc() to get the location from the ret instruction.
+  const DILocation *InnermostLoc = RetInst.getDebugLoc().get();
+  ASSERT_TRUE(InnermostLoc);
+
+  // Test getScope() - should return the immediate scope (inline3).
+  DILocalScope *ImmediateScope = InnermostLoc->getScope();
+  ASSERT_TRUE(ImmediateScope);
+  EXPECT_TRUE(isa<DISubprogram>(ImmediateScope));
+  EXPECT_EQ(cast<DISubprogram>(ImmediateScope)->getName(), "inline3");
+
+  // Test getInlinedAt() - should return the next level in the inlining chain.
+  const DILocation *NextLevel = InnermostLoc->getInlinedAt();
+  ASSERT_TRUE(NextLevel);
+  EXPECT_EQ(NextLevel->getLine(), 301u);
+  EXPECT_EQ(cast<DISubprogram>(NextLevel->getScope())->getName(), "inline2");
+
+  // Test getInlinedAtLocation() - should return the outermost location.
+  const DILocation *OutermostLoc = InnermostLoc->getInlinedAtLocation();
+  ASSERT_TRUE(OutermostLoc);
+  EXPECT_EQ(OutermostLoc->getLine(), 101u);
+  EXPECT_EQ(OutermostLoc->getColumn(), 3u);
+  EXPECT_EQ(OutermostLoc->getInlinedAt(), nullptr);
+  EXPECT_EQ(cast<DISubprogram>(OutermostLoc->getScope())->getName(), "main");
+
+  // Test getInlinedAtScope() - should return the scope of the outermost
+  // location.
+  DILocalScope *InlinedAtScope = InnermostLoc->getInlinedAtScope();
+  ASSERT_TRUE(InlinedAtScope);
+  EXPECT_TRUE(isa<DISubprogram>(InlinedAtScope));
+  EXPECT_EQ(cast<DISubprogram>(InlinedAtScope)->getName(), "main");
+  EXPECT_EQ(InlinedAtScope, OutermostLoc->getScope());
+}
+
 // Test that the hashing function for DISubprograms representing methods produce
 // the same result after replacing their scope (the type containing the
 // subprogram) from a temporary DIType with the permanent one.

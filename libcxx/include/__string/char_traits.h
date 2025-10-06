@@ -369,6 +369,13 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 const _CharT* __searc
   if (__len1 < __len2)
     return __last1;
 
+  if (__builtin_constant_p(__len2 == 1) && __len2 == 1) {
+    auto __res = _Traits::find(__first1, __len1, *__first2);
+    if (__res == nullptr)
+      return __last1;
+    return __res;
+  }
+
   // First element of __first2 is loop invariant.
   _CharT __f2 = *__first2;
   while (true) {

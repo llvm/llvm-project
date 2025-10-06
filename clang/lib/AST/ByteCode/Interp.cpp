@@ -889,6 +889,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckConst(S, OpPC, Ptr))
     return false;
+  if (!CheckVolatile(S, OpPC, Ptr, AK_Assign))
+    return false;
   if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
   return true;
@@ -1027,8 +1029,8 @@ static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
-  if (!This.isZero())
+bool CheckThis(InterpState &S, CodePtr OpPC) {
+  if (S.Current->hasThisPointer())
     return true;
 
   const Expr *E = S.Current->getExpr(OpPC);
@@ -1198,8 +1200,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis()) &&
-      S.Current->getFunction()->isDestructor()) {
+  if (S.Current->hasThisPointer() && S.Current->getFunction()->isDestructor() &&
+      Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);
     return false;
@@ -1636,6 +1638,36 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
+static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+                           const CXXRecordDecl *&DynamicDecl) {
+  while (TypePtr.isBaseClass())
+    TypePtr = TypePtr.getBase();
+
+  QualType DynamicType = TypePtr.getType();
+  if (TypePtr.isStatic() || TypePtr.isConst()) {
+    const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
+    if (!VD->isConstexpr()) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      APValue V = TypePtr.toAPValue(S.getASTContext());
+      QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
+      S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+          << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
+      return false;
+    }
+  }
+
+  if (DynamicType->isPointerType() || DynamicType->isReferenceType()) {
+    DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
+  } else if (DynamicType->isArrayType()) {
+    const Type *ElemType = DynamicType->getPointeeOrArrayElementType();
+    assert(ElemType);
+    DynamicDecl = ElemType->getAsCXXRecordDecl();
+  } else {
+    DynamicDecl = DynamicType->getAsCXXRecordDecl();
+  }
+  return true;
+}
+
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
   assert(Func->hasThisPointer());
@@ -1660,17 +1692,8 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  {
-    Pointer TypePtr = ThisPtr;
-    while (TypePtr.isBaseClass())
-      TypePtr = TypePtr.getBase();
-
-    QualType DynamicType = TypePtr.getType();
-    if (DynamicType->isPointerType() || DynamicType->isReferenceType())
-      DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
-    else
-      DynamicDecl = DynamicType->getAsCXXRecordDecl();
-  }
+  if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+    return false;
   assert(DynamicDecl);
 
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());

@@ -2591,13 +2591,34 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+
+  // Check if we can generate no-loop kernel
+  bool noLoopMode = false;
+  omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
+  if (targetOp) {
+    Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+    // We need this check because, without it, noLoopMode would be set to true
+    // for every omp.wsloop nested inside a no-loop SPMD target region, even if
+    // that loop is not the top-level SPMD one.
+    if (loopOp == targetCapturedOp) {
+      omp::TargetRegionFlags kernelFlags =
+          targetOp.getKernelExecFlags(targetCapturedOp);
+      if (omp::bitEnumContainsAll(kernelFlags,
+                                  omp::TargetRegionFlags::spmd |
+                                      omp::TargetRegionFlags::no_loop) &&
+          !omp::bitEnumContainsAny(kernelFlags,
+                                   omp::TargetRegionFlags::generic))
+        noLoopMode = true;
+    }
+  }
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
           ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType);
+          workshareLoopType, noLoopMode);
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
@@ -3154,6 +3175,45 @@ applyUnrollHeuristic(omp::UnrollHeuristicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Apply a `#pragma omp tile` / `!$omp tile` transformation using the
+/// OpenMPIRBuilder.
+static LogicalResult applyTile(omp::TileOp op, llvm::IRBuilderBase &builder,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  SmallVector<llvm::CanonicalLoopInfo *> translatedLoops;
+  SmallVector<llvm::Value *> translatedSizes;
+
+  for (Value size : op.getSizes()) {
+    llvm::Value *translatedSize = moduleTranslation.lookupValue(size);
+    assert(translatedSize &&
+           "sizes clause arguments must already be translated");
+    translatedSizes.push_back(translatedSize);
+  }
+
+  for (Value applyee : op.getApplyees()) {
+    llvm::CanonicalLoopInfo *consBuilderCLI =
+        moduleTranslation.lookupOMPLoop(applyee);
+    assert(applyee && "Canonical loop must already been translated");
+    translatedLoops.push_back(consBuilderCLI);
+  }
+
+  auto generatedLoops =
+      ompBuilder->tileLoops(loc.DL, translatedLoops, translatedSizes);
+  if (!op.getGeneratees().empty()) {
+    for (auto [mlirLoop, genLoop] :
+         zip_equal(op.getGeneratees(), generatedLoops))
+      moduleTranslation.mapOmpLoop(mlirLoop, genLoop);
+  }
+
+  // CLIs can only be consumed once
+  for (Value applyee : op.getApplyees())
+    moduleTranslation.invalidateOmpLoop(applyee);
+
+  return success();
+}
+
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 static llvm::AtomicOrdering
 convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
@@ -3595,8 +3655,10 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
           llvm::StringRef(loc.getFilename()), loc.getLine());
     };
 
+    auto vfs = llvm::vfs::getRealFileSystem();
     os << llvm::format(
-        "_%x", ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack).FileID);
+        "_%x",
+        ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack, *vfs).FileID);
   }
   os << "_decl_tgt_ref_ptr";
 
@@ -4654,10 +4716,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             info.HasNoWait = updateDataOp.getNowait();
             return success();
           })
-          .Default([&](Operation *op) {
-            llvm_unreachable("unexpected operation");
-            return failure();
-          });
+          .DefaultUnreachable("unexpected operation");
 
   if (failed(result))
     return failure();
@@ -5250,9 +5309,7 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
             (void)found;
             assert(found && "unsupported host_eval use");
           })
-          .Default([](Operation *) {
-            llvm_unreachable("unsupported host_eval use");
-          });
+          .DefaultUnreachable("unsupported host_eval use");
     }
   }
 }
@@ -5425,6 +5482,12 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
                 ? llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD
                 : llvm::omp::OMP_TGT_EXEC_MODE_GENERIC
           : llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
+  if (omp::bitEnumContainsAll(kernelFlags,
+                              omp::TargetRegionFlags::spmd |
+                                  omp::TargetRegionFlags::no_loop) &&
+      !omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic))
+    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
   attrs.MinThreads = 1;
@@ -5888,10 +5951,12 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                                                      lineNo);
       };
 
+      auto vfs = llvm::vfs::getRealFileSystem();
+
       ompBuilder->registerTargetGlobalVariable(
           captureClause, deviceClause, isDeclaration, isExternallyVisible,
-          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack), mangledName,
-          generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
+          mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
           /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
           gVal->getType(), gVal);
 
@@ -5901,9 +5966,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
-            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack), mangledName,
-            generatedRefs, /*OpenMPSimd*/ false, targetTriple, gVal->getType(),
-            /*GlobalInitializer*/ nullptr,
+            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
+            mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+            gVal->getType(), /*GlobalInitializer*/ nullptr,
             /*VariableLinkage*/ nullptr);
       }
     }
@@ -6195,6 +6260,9 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
             // contained region including their transformations must occur at
             // the omp.canonical_loop.
             return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::TileOp op) {
+            return applyTile(op, builder, moduleTranslation);
           })
           .Case([&](omp::TargetAllocMemOp) {
             return convertTargetAllocMemOp(*op, builder, moduleTranslation);

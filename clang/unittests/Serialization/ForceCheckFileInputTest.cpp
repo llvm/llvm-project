@@ -122,8 +122,8 @@ export int aa = 43;
 
     Clang.setDiagnostics(Diags);
     Clang.createVirtualFileSystem(CIOpts.VFS);
-    FileManager *FM = Clang.createFileManager();
-    Clang.createSourceManager(*FM);
+    Clang.createFileManager();
+    Clang.createSourceManager();
 
     EXPECT_TRUE(Clang.createTarget());
     Clang.createPreprocessor(TU_Complete);
