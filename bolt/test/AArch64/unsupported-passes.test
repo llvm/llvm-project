@@ -3,6 +3,9 @@
 // REQUIRES: system-linux,asserts,target=aarch64{{.*}}
 
 RUN: %clang %cflags %p/../Inputs/hello.c -o %t -Wl,-q
-RUN: not llvm-bolt %t -o %t.bolt --frame-opt=all 2>&1 | FileCheck %s
+RUN: not llvm-bolt %t -o %t.bolt --frame-opt=all 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-OPT
 
-CHECK: BOLT-ERROR: frame-optimizer is supported only on X86
+CHECK-FRAME-OPT: BOLT-ERROR: frame-optimizer is supported only on X86
+
+RUN: not llvm-bolt %t -o %t.bolt split-functions --split-strategy=cdsplit 2>&1 | FileCheck %s --check-prefix=CHECK-CDSPLIT
+CHECK-CDSPLIT: BOLT-ERROR: CDSplit is not supported with LongJmp. Try with '--compact-code-model'

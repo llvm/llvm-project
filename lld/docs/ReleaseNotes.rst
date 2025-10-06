@@ -46,6 +46,8 @@ MachO Improvements
 
 * ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
   (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
+* ``--tail-merge-strings`` enables tail merging of cstring literals.
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
 
 WebAssembly Improvements
 ------------------------

@@ -1013,6 +1013,15 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
       }
     }
   } else if (T == X_CNT) {
+    WaitEventType OtherEvent = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP;
+    if (PendingEvents & (1 << OtherEvent)) {
+      // Hardware inserts an implicit xcnt between interleaved
+      // SMEM and VMEM operations. So there will never be
+      // outstanding address translations for both SMEM and
+      // VMEM at the same time.
+      setScoreLB(T, CurrScore - 1);
+      PendingEvents &= ~(1 << OtherEvent);
+    }
     for (const MachineOperand &Op : Inst.all_uses())
       setScoreByOperand(&Inst, Op, T, CurrScore);
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
@@ -2220,6 +2229,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   // Now look at the instruction opcode. If it is a memory access
   // instruction, update the upper-bound of the appropriate counter's
   // bracket and the destination operand scores.
+  // For architectures with X_CNT, mark the source address operands
+  // with the appropriate counter values.
   // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
 
   bool IsVMEMAccess = false;

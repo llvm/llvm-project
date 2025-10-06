@@ -1560,7 +1560,7 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
   MCRegister BaseReg = TRI.getSubReg(Reg, RISCV::sub_vrm1_0);
   // If it's not a grouped vector register, it doesn't have subregister, so
   // the base register is just itself.
-  if (BaseReg == RISCV::NoRegister)
+  if (!BaseReg.isValid())
     BaseReg = Reg;
   return BaseReg;
 }

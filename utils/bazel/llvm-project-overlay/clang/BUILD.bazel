@@ -1445,6 +1445,7 @@ cc_library(
         ":crosstu",
         ":driver",
         ":frontend",
+        ":index",
         ":lex",
         ":rewrite",
         ":static_analyzer_checkers_gen",

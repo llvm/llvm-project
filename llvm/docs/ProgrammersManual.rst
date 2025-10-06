@@ -463,7 +463,7 @@ recovery.
    situations where you absolutely must emit a non-programmatic error and
    the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
    which will call installed error handlers, print a message, and exit the
-   program. The use of `reportFatalUsageError` in this case is discouraged.
+   program. The use of ``reportFatalUsageError`` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -579,7 +579,7 @@ This second form is often more readable for functions that involve multiple
 
 If an ``Expected<T>`` value will be moved into an existing variable then the
 ``moveInto()`` method avoids the need to name an extra variable.  This is
-useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+useful to enable ``operator->()`` if the ``Expected<T>`` value has pointer-like
 semantics.  For example:
 
 .. code-block:: c++
@@ -957,7 +957,7 @@ Concatenating Errors with joinErrors
 """"""""""""""""""""""""""""""""""""
 
 In the archive walking example above, ``BadFileFormat`` errors are simply
-consumed and ignored. If the client had wanted report these errors after
+consumed and ignored. If the client had wanted to report these errors after
 completing the walk over the archive they could use the ``joinErrors`` utility:
 
 .. code-block:: c++
@@ -989,7 +989,7 @@ Building fallible iterators and iterator ranges
 """""""""""""""""""""""""""""""""""""""""""""""
 
 The archive walking examples above retrieve archive members by index; however,
-this requires considerable boiler-plate for iteration and error checking. We can
+this requires considerable boilerplate for iteration and error checking. We can
 clean this up by using the "fallible iterator" pattern, which supports the
 following natural iteration idiom for fallible containers like Archive:
 
@@ -1039,7 +1039,7 @@ fallible_iterator utility which provides ``operator++`` and ``operator--``,
 returning any errors via a reference passed in to the wrapper at construction
 time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
 range on error, and (b) marking the error as checked whenever an iterator is
-compared to ``end`` and found to be inequal (in particular, this marks the
+compared to ``end`` and found to be unequal (in particular, this marks the
 error as checked throughout the body of a range-based for loop), enabling early
 exit from the loop without redundant error checking.
 
@@ -1452,7 +1452,7 @@ A more general utility is provided in `llvm/tools/reduce-chunk-list/reduce-chunk
 How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
-Than find the line with the counter of interest. it should look like:
+Then find the line with the counter of interest. it should look like:
 
 .. code-block:: none
 
@@ -1460,7 +1460,7 @@ Than find the line with the counter of interest. it should look like:
 
 The number of calls to `my-counter` is 5678
 
-Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
+Then find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
 
 .. code-block:: bash
@@ -1469,7 +1469,7 @@ Build a reproducer script like:
   opt -debug-counter=my-counter=$1
   # ... Test result of the command. Failure of the script is considered interesting
 
-Than run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
+Then run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
 This command may take some time.
 but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-12:33-34`
 
@@ -1528,7 +1528,7 @@ LLVM has a plethora of data structures in the ``llvm/ADT/`` directory, and we
 commonly use STL data structures.  This section describes the trade-offs you
 should consider when you pick one.
 
-The first step is a choose your own adventure: do you want a sequential
+The first step is to choose your own adventure: do you want a sequential
 container, a set-like container, or a map-like container?  The most important
 thing when choosing a container is the algorithmic properties of how you plan to
 access the container.  Based on that, you should use:

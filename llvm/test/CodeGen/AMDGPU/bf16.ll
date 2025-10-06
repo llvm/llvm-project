@@ -569,10 +569,10 @@ define <16 x bfloat> @v_load_global_v16bf16(ptr addrspace(1) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
+; GFX1250-NEXT:    v_dual_mov_b32 v9, v1 :: v_dual_mov_b32 v8, v0
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_b128 v[0:3], v[4:5], off
-; GFX1250-NEXT:    global_load_b128 v[4:7], v[4:5], off offset:16
+; GFX1250-NEXT:    global_load_b128 v[0:3], v[8:9], off
+; GFX1250-NEXT:    global_load_b128 v[4:7], v[8:9], off offset:16
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %load = load <16 x bfloat>, ptr addrspace(1) %ptr
@@ -752,12 +752,12 @@ define <32 x bfloat> @v_load_global_v32bf16(ptr addrspace(1) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v13, v1 :: v_dual_mov_b32 v12, v0
+; GFX1250-NEXT:    v_dual_mov_b32 v17, v1 :: v_dual_mov_b32 v16, v0
 ; GFX1250-NEXT:    s_clause 0x3
-; GFX1250-NEXT:    global_load_b128 v[0:3], v[12:13], off
-; GFX1250-NEXT:    global_load_b128 v[4:7], v[12:13], off offset:16
-; GFX1250-NEXT:    global_load_b128 v[8:11], v[12:13], off offset:32
-; GFX1250-NEXT:    global_load_b128 v[12:15], v[12:13], off offset:48
+; GFX1250-NEXT:    global_load_b128 v[0:3], v[16:17], off
+; GFX1250-NEXT:    global_load_b128 v[4:7], v[16:17], off offset:16
+; GFX1250-NEXT:    global_load_b128 v[8:11], v[16:17], off offset:32
+; GFX1250-NEXT:    global_load_b128 v[12:15], v[16:17], off offset:48
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %load = load <32 x bfloat>, ptr addrspace(1) %ptr
@@ -1055,16 +1055,16 @@ define <64 x bfloat> @v_load_global_v64bf16(ptr addrspace(1) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v29, v1 :: v_dual_mov_b32 v28, v0
+; GFX1250-NEXT:    v_dual_mov_b32 v33, v1 :: v_dual_mov_b32 v32, v0
 ; GFX1250-NEXT:    s_clause 0x7
-; GFX1250-NEXT:    global_load_b128 v[0:3], v[28:29], off
-; GFX1250-NEXT:    global_load_b128 v[4:7], v[28:29], off offset:16
-; GFX1250-NEXT:    global_load_b128 v[8:11], v[28:29], off offset:32
-; GFX1250-NEXT:    global_load_b128 v[12:15], v[28:29], off offset:48
-; GFX1250-NEXT:    global_load_b128 v[16:19], v[28:29], off offset:64
-; GFX1250-NEXT:    global_load_b128 v[20:23], v[28:29], off offset:80
-; GFX1250-NEXT:    global_load_b128 v[24:27], v[28:29], off offset:96
-; GFX1250-NEXT:    global_load_b128 v[28:31], v[28:29], off offset:112
+; GFX1250-NEXT:    global_load_b128 v[0:3], v[32:33], off
+; GFX1250-NEXT:    global_load_b128 v[4:7], v[32:33], off offset:16
+; GFX1250-NEXT:    global_load_b128 v[8:11], v[32:33], off offset:32
+; GFX1250-NEXT:    global_load_b128 v[12:15], v[32:33], off offset:48
+; GFX1250-NEXT:    global_load_b128 v[16:19], v[32:33], off offset:64
+; GFX1250-NEXT:    global_load_b128 v[20:23], v[32:33], off offset:80
+; GFX1250-NEXT:    global_load_b128 v[24:27], v[32:33], off offset:96
+; GFX1250-NEXT:    global_load_b128 v[28:31], v[32:33], off offset:112
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %load = load <64 x bfloat>, ptr addrspace(1) %ptr

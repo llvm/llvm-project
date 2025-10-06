@@ -2860,8 +2860,7 @@ static SDValue fillSubVectorFromBuildVector(BuildVectorSDNode *Node,
                                             EVT ResTy, unsigned first) {
   unsigned NumElts = ResTy.getVectorNumElements();
 
-  assert(first >= 0 &&
-         first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
+  assert(first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
 
   SmallVector<SDValue, 16> Ops(Node->op_begin() + first,
                                Node->op_begin() + first + NumElts);

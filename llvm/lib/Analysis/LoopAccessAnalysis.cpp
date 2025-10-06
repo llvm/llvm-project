@@ -233,19 +233,25 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const SCEV *DerefBytesSCEV = SE.getConstant(WiderTy, DerefBytes);
 
   // Check if we have a suitable dereferencable assumption we can use.
-  if (!StartPtrV->canBeFreed()) {
-    Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
-    if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
-      if (isa<BranchInst>(LoopPred->getTerminator()))
-        CtxI = LoopPred->getTerminator();
-    }
-
-    RetainedKnowledge DerefRK = getKnowledgeValidInContext(
-        StartPtrV, {Attribute::Dereferenceable}, *AC, CtxI, DT);
-    if (DerefRK) {
-      DerefBytesSCEV =
-          SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
-    }
+  Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
+  if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
+    if (isa<BranchInst>(LoopPred->getTerminator()))
+      CtxI = LoopPred->getTerminator();
+  }
+  RetainedKnowledge DerefRK;
+  getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
+                       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+                         if (!isValidAssumeForContext(Assume, CtxI, DT))
+                           return false;
+                         if (StartPtrV->canBeFreed() &&
+                             !willNotFreeBetween(Assume, CtxI))
+                           return false;
+                         DerefRK = std::max(DerefRK, RK);
+                         return true;
+                       });
+  if (DerefRK) {
+    DerefBytesSCEV =
+        SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
   }
 
   if (DerefBytesSCEV->isZero())

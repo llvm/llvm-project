@@ -44,8 +44,8 @@ namespace llvm {
 
 template <typename KeyT, typename ValueT, typename Config>
 class ValueMapCallbackVH;
-template <typename DenseMapT, typename KeyT> class ValueMapIterator;
-template <typename DenseMapT, typename KeyT> class ValueMapConstIterator;
+template <typename DenseMapT, typename KeyT, bool IsConst>
+class ValueMapIteratorImpl;
 
 /// This class defines the default behavior for configurable aspects of
 /// ValueMap<>.  User Configs should inherit from this class to be as compatible
@@ -132,8 +132,8 @@ public:
     return Where->second.get();
   }
 
-  using iterator = ValueMapIterator<MapT, KeyT>;
-  using const_iterator = ValueMapConstIterator<MapT, KeyT>;
+  using iterator = ValueMapIteratorImpl<MapT, KeyT, false>;
+  using const_iterator = ValueMapIteratorImpl<MapT, KeyT, true>;
 
   inline iterator begin() { return iterator(Map.begin()); }
   inline iterator end() { return iterator(Map.end()); }
@@ -318,8 +318,10 @@ struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   }
 };
 
-template <typename DenseMapT, typename KeyT> class ValueMapIterator {
-  using BaseT = typename DenseMapT::iterator;
+template <typename DenseMapT, typename KeyT, bool IsConst>
+class ValueMapIteratorImpl {
+  using BaseT = std::conditional_t<IsConst, typename DenseMapT::const_iterator,
+                                   typename DenseMapT::iterator>;
   using ValueT = typename DenseMapT::mapped_type;
 
   BaseT I;
@@ -331,67 +333,23 @@ public:
   using pointer = value_type *;
   using reference = value_type &;
 
-  ValueMapIterator() : I() {}
-  ValueMapIterator(BaseT I) : I(I) {}
+  ValueMapIteratorImpl() = default;
+  ValueMapIteratorImpl(BaseT I) : I(I) {}
 
-  BaseT base() const { return I; }
-
-  struct ValueTypeProxy {
-    const KeyT first;
-    ValueT &second;
-
-    ValueTypeProxy *operator->() { return this; }
-
-    operator std::pair<KeyT, ValueT>() const {
-      return std::make_pair(first, second);
-    }
-  };
-
-  ValueTypeProxy operator*() const {
-    ValueTypeProxy Result = {I->first.Unwrap(), I->second};
-    return Result;
-  }
-
-  ValueTypeProxy operator->() const { return operator*(); }
-
-  bool operator==(const ValueMapIterator &RHS) const { return I == RHS.I; }
-  bool operator!=(const ValueMapIterator &RHS) const { return I != RHS.I; }
-
-  inline ValueMapIterator &operator++() { // Preincrement
-    ++I;
-    return *this;
-  }
-  ValueMapIterator operator++(int) { // Postincrement
-    ValueMapIterator tmp = *this;
-    ++*this;
-    return tmp;
-  }
-};
-
-template <typename DenseMapT, typename KeyT> class ValueMapConstIterator {
-  using BaseT = typename DenseMapT::const_iterator;
-  using ValueT = typename DenseMapT::mapped_type;
-
-  BaseT I;
-
-public:
-  using iterator_category = std::forward_iterator_tag;
-  using value_type = std::pair<KeyT, typename DenseMapT::mapped_type>;
-  using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = value_type &;
-
-  ValueMapConstIterator() : I() {}
-  ValueMapConstIterator(BaseT I) : I(I) {}
-  ValueMapConstIterator(ValueMapIterator<DenseMapT, KeyT> Other)
+  // Allow conversion from iterator to const_iterator.
+  template <bool C = IsConst, typename = std::enable_if_t<C>>
+  ValueMapIteratorImpl(
+      const ValueMapIteratorImpl<DenseMapT, KeyT, false> &Other)
       : I(Other.base()) {}
 
   BaseT base() const { return I; }
 
   struct ValueTypeProxy {
     const KeyT first;
-    const ValueT &second;
+    std::conditional_t<IsConst, const ValueT &, ValueT &> second;
+
     ValueTypeProxy *operator->() { return this; }
+
     operator std::pair<KeyT, ValueT>() const {
       return std::make_pair(first, second);
     }
@@ -404,19 +362,25 @@ public:
 
   ValueTypeProxy operator->() const { return operator*(); }
 
-  bool operator==(const ValueMapConstIterator &RHS) const { return I == RHS.I; }
-  bool operator!=(const ValueMapConstIterator &RHS) const { return I != RHS.I; }
+  bool operator==(const ValueMapIteratorImpl &RHS) const { return I == RHS.I; }
+  bool operator!=(const ValueMapIteratorImpl &RHS) const { return I != RHS.I; }
 
-  inline ValueMapConstIterator &operator++() { // Preincrement
+  inline ValueMapIteratorImpl &operator++() { // Preincrement
     ++I;
     return *this;
   }
-  ValueMapConstIterator operator++(int) { // Postincrement
-    ValueMapConstIterator tmp = *this;
+  ValueMapIteratorImpl operator++(int) { // Postincrement
+    ValueMapIteratorImpl tmp = *this;
     ++*this;
     return tmp;
   }
 };
+
+template <typename DenseMapT, typename KeyT>
+using ValueMapIterator = ValueMapIteratorImpl<DenseMapT, KeyT, false>;
+
+template <typename DenseMapT, typename KeyT>
+using ValueMapConstIterator = ValueMapIteratorImpl<DenseMapT, KeyT, true>;
 
 } // end namespace llvm
 

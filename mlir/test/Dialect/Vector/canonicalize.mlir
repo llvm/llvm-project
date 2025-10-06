@@ -3377,6 +3377,9 @@ func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
 
 // -----
 
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
+
 // CHECK-LABEL: @negative_from_elements_poison
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xf32>
 //       CHECK:   return %[[VAL]] : vector<2xf32>
@@ -3388,6 +3391,9 @@ func.func @negative_from_elements_poison_f32() -> vector<2xf32> {
 
 // -----
 
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
+
 // CHECK-LABEL: @negative_from_elements_poison_i32
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xi32>
 //       CHECK:   return %[[VAL]] : vector<2xi32>
@@ -3398,6 +3404,9 @@ func.func @negative_from_elements_poison_i32() -> vector<2xi32> {
 }
 
 // -----
+
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
 
 // CHECK-LABEL: @negative_from_elements_poison_constant_mix
 //       CHECK:   %[[POISON:.*]] = ub.poison : f32
