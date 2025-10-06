@@ -23,6 +23,14 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
+
+mkdir /tmp/xz-download
+pushd /tmp/xz-download
+curl -L -o xz-5.8.1-windows.zip http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip
+unzip xz-5.8.1-windows.zip
+ls -l xz*
+popd
+
 mkdir /tmp/clang-download
 pushd /tmp/clang-download
 curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
