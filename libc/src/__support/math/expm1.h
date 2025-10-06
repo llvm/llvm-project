@@ -70,7 +70,7 @@ using namespace common_constants_internal;
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) / dx | < 2^-51.
-LIBC_INLINE static constexpr double poly_approx_d(double dx) {
+LIBC_INLINE static double poly_approx_d(double dx) {
   // dx^2
   double dx2 = dx * dx;
   // c0 = 1 + dx / 2
@@ -144,8 +144,8 @@ std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 // Compute exp(x) - 1 using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-[[maybe_unused]] LIBC_INLINE static constexpr Float128
-expm1_f128(double x, double kd, int idx1, int idx2) {
+[[maybe_unused]] LIBC_INLINE static Float128 expm1_f128(double x, double kd,
+                                                        int idx1, int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -196,9 +196,9 @@ expm1_f128(double x, double kd, int idx1, int idx2) {
 }
 
 // Compute exp(x) - 1 with double-double precision.
-LIBC_INLINE static constexpr DoubleDouble
-exp_double_double(double x, double kd, const DoubleDouble &exp_mid,
-                  const DoubleDouble &hi_part) {
+LIBC_INLINE static DoubleDouble exp_double_double(double x, double kd,
+                                                  const DoubleDouble &exp_mid,
+                                                  const DoubleDouble &hi_part) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log(2)
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
