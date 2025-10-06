@@ -45,11 +45,14 @@ using FuncTypeBuilder = function_ref<Type(
 /// indicates whether functions with variadic arguments are supported. The
 /// trailing arguments are populated by this function with names, types,
 /// attributes and locations of the arguments and those of the results.
+/// You can override the default type parsing behavior using the typeParser
+/// parameter.
 ParseResult parseFunctionSignatureWithArguments(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<DictionaryAttr> &resultAttrs);
+    SmallVectorImpl<DictionaryAttr> &resultAttrs,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser = {});
 
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
@@ -59,25 +62,32 @@ ParseResult parseFunctionSignatureWithArguments(
 /// whether the function is variadic.  If the builder returns a null type,
 /// `result` will not contain the `type` attribute.  The caller can then add a
 /// type, report the error or delegate the reporting to the op's verifier.
-ParseResult parseFunctionOp(OpAsmParser &parser, OperationState &result,
-                            bool allowVariadic, StringAttr typeAttrName,
-                            FuncTypeBuilder funcTypeBuilder,
-                            StringAttr argAttrsName, StringAttr resAttrsName);
+/// You can override the default type parsing behavior using the typeParser
+/// parameter.
+ParseResult parseFunctionOp(
+    OpAsmParser &parser, OperationState &result, bool allowVariadic,
+    StringAttr typeAttrName, FuncTypeBuilder funcTypeBuilder,
+    StringAttr argAttrsName, StringAttr resAttrsName,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser = {});
 
 /// Printer implementation for function-like operations.
-void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
-                     StringRef typeAttrName, StringAttr argAttrsName,
-                     StringAttr resAttrsName);
+/// You can override the default type printing behavior using the typePrinter
+/// parameter.
+void printFunctionOp(
+    OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
+    StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName,
+    function_ref<void(AsmPrinter &, Type)> typePrinter = {});
 
 /// Prints the signature of the function-like operation `op`. Assumes `op` has
 /// is a FunctionOpInterface and has passed verification.
-inline void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
-                                   ArrayRef<Type> argTypes, bool isVariadic,
-                                   ArrayRef<Type> resultTypes) {
+inline void printFunctionSignature(
+    OpAsmPrinter &p, FunctionOpInterface op, ArrayRef<Type> argTypes,
+    bool isVariadic, ArrayRef<Type> resultTypes,
+    function_ref<void(AsmPrinter &, Type)> typePrinter = {}) {
   call_interface_impl::printFunctionSignature(
       p, argTypes, op.getArgAttrsAttr(), isVariadic, resultTypes,
       op.getResAttrsAttr(), &op->getRegion(0),
-      /*printEmptyResult=*/false);
+      /*printEmptyResult=*/false, typePrinter);
 }
 
 /// Prints the list of function prefixed with the "attributes" keyword. The
