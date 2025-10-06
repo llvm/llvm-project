@@ -366,6 +366,7 @@ Bug Fixes in This Version
 - Fixed an assertion when an improper use of the ``malloc`` attribute targeting
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
+- Fixed clang crash that caused by missing diagnostic argument. (#GH161072)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -417,6 +418,7 @@ Bug Fixes to C++ Support
   ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
+- Fix an assertion failure of format string signedness check when ``-Wformat-signedness`` (#GH161075).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
