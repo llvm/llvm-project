@@ -244,19 +244,15 @@ void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
 
 void CommonSPIRTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (M.getLangOpts().OpenCL)
-    return;
-
-  if (GV->isDeclaration())
-    return;
-
-  llvm::Function *F = dyn_cast<llvm::Function>(GV);
-  if (!F)
+  if (M.getLangOpts().OpenCL || GV->isDeclaration())
     return;
 
   const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return;
+
+  llvm::Function *F = dyn_cast<llvm::Function>(GV);
+  assert(F && "Expected GlobalValue to be a Function");
 
   if (FD->hasAttr<DeviceKernelAttr>())
     F->setCallingConv(getDeviceKernelCallingConv());
@@ -289,16 +285,15 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
   if (GV->isDeclaration())
     return;
 
-  auto F = dyn_cast<llvm::Function>(GV);
-  if (!F)
-    return;
-
-  auto FD = dyn_cast_or_null<FunctionDecl>(D);
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)
     return;
 
+  llvm::Function *F = dyn_cast<llvm::Function>(GV);
+  assert(F && "Expected GlobalValue to be a Function");
+
   if (FD->hasAttr<DeviceKernelAttr>())
-    F->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+    F->setCallingConv(getDeviceKernelCallingConv());
 
   if (!M.getLangOpts().HIP ||
       M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)

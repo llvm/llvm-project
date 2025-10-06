@@ -5213,13 +5213,11 @@ static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           << AL << AL.isRegularKeywordAttribute() << "function templates";
       AL.setInvalid();
       return;
-    } else {
-      S.SYCL().handleKernelAttr(D, AL);
     }
+    S.SYCL().handleKernelAttr(D, AL);
   } else if (DeviceKernelAttr::isSYCLSpelling(AL)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
     AL.setInvalid();
-
     return;
   } else if (Triple.isNVPTX()) {
     handleGlobalAttr(S, D, AL);
