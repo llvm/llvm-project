@@ -1,5 +1,10 @@
 ; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
+; Test PHIs that are uniform because they have a common/constant value over
+; the divergent paths.
+
+; Loop is uniform because loop exit PHI has constant value over all internal
+; divergent paths.
 define amdgpu_kernel void @no_divergent_exit1(i32 %a, i32 %b, i32 %c) #0 {
 ; CHECK-LABEL: for function 'no_divergent_exit1'
 entry:
@@ -37,6 +42,7 @@ end:
   ret void
 }
 
+; As no_divergent_exit1 but with merge block before exit.
 define amdgpu_kernel void @no_divergent_exit2(i32 %a, i32 %b, i32 %c) #0 {
 ; CHECK-LABEL: for function 'no_divergent_exit2'
 entry:
@@ -81,6 +87,7 @@ end:
   ret void
 }
 
+; Test PHI with constant value over divergent path without a loop.
 define amdgpu_kernel void @no_loop_phi_divergence(i32 %a) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
