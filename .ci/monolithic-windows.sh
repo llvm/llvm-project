@@ -27,8 +27,7 @@ mkdir /tmp/clang-download
 pushd /tmp/clang-download
 curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
 ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
-unxz "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
-tar xvf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
+tar xJvf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
 ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 
 
