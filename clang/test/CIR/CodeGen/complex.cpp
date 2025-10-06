@@ -613,7 +613,7 @@ void foo24() {
 // CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["r", init]
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
-// CIR: %[[RESULT_VAL:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!cir.complex<!s32i>>, %[[IDX]] : !s32i), !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[RESULT_VAL:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!cir.complex<!s32i>>, !s32i) -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[RESULT_VAL]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
