@@ -1096,8 +1096,8 @@ To load this by default, add this command to your ``~/.gdbinit`` file.
               return None
           name = self.destroy_func.function.name
           # Strip the "clone" suffix if it exists.
-          if " [clone " in name:
-              name = name[:name.index(" [clone ")]
+          if "() [clone " in name:
+              name = name[:name.index("() [clone ")]
           return name
 
       def to_string(self):
@@ -1215,10 +1215,10 @@ To load this by default, add this command to your ``~/.gdbinit`` file.
           self.coro_frame = coro_frame
 
       def function(self):
-          func_name = self.coro_frame.destroy_func.function.name
+          func_name = self.coro_frame.get_function_name()
           if func_name is not None:
-              return func_name
-          return "coroutine (coro_frame=" + str(self.coro_frame.frame_ptr_raw) + ")"
+              return "[async] " + func_name
+          return "[async] coroutine (coro_frame=" + str(self.coro_frame.frame_ptr_raw) + ")"
 
       def address(self):
           return None
