@@ -82,6 +82,20 @@ func.func @linalg_fused_red_add(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
 // -----
 
 // expected-remark@below {{Testing function}}
+func.func @linalg_multiple_inputs(%arg0: tensor<1x8229x40x8xf32>, %arg1: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %0 = tensor.empty() : tensor<1x1xf32>
+  // expected-remark@below {{Reduction found in output #0!}}
+  // expected-remark@below {{Reduced Value: <block argument> of type 'f32' at index: 0}}
+  // expected-remark@below {{Combiner Op: %2 = arith.addf }}
+  %1 = linalg.pooling_nhwc_sum {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>}
+                               ins(%arg0, %0 : tensor<1x8229x40x8xf32>, tensor<1x1xf32>)
+                               outs(%arg1 : tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32>
+  return %1 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+// expected-remark@below {{Testing function}}
 func.func @affine_no_red_rec(%in: memref<512xf32>) {
  %cst = arith.constant 0.000000e+00 : f32
  // %rec is the value loaded in the previous iteration.
