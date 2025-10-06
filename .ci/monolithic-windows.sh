@@ -28,14 +28,15 @@ mkdir /tmp/xz-download
 pushd /tmp/xz-download
 curl -L -o xz-5.8.1-windows.zip http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip
 unzip xz-5.8.1-windows.zip
-ls -l xz*
+ls -l /tmp/xz-download/bin_x86-64/xz.exe
 popd
 
 mkdir /tmp/clang-download
 pushd /tmp/clang-download
 curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
 ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
-tar xJvf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+/tmp/xz-download/bin_x86-64/xz.exe -d -qq "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+tar xvf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
 ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 
 
