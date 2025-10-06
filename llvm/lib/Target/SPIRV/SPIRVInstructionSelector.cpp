@@ -2258,6 +2258,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
                   .constrainAllUses(TII, TRI, RBI);
 
     // B[i]
+    Register BElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
     Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(BElt)
                   .addUse(GR.getSPIRVTypeID(ResType))
@@ -2281,14 +2282,15 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // Discard 24 highest-bits so that stored i32 register is i8 equivalent
     Register MaskMul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result &=
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
-            .addDef(MaskMul)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(Mul)
-            .addUse(GR.getOrCreateConstInt(APInt(8, 0), I, EltType, TII, ZeroAsNull))
-            .addUse(GR.getOrCreateConstInt(APInt(8, 8), I, EltType, TII, ZeroAsNull))
-            .constrainAllUses(TII, TRI, RBI);
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+                  .addDef(MaskMul)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(Mul)
+                  .addUse(GR.getOrCreateConstInt(APInt(8, 0), I, EltType, TII,
+                                                 ZeroAsNull))
+                  .addUse(GR.getOrCreateConstInt(APInt(8, 8), I, EltType, TII,
+                                                 ZeroAsNull))
+                  .constrainAllUses(TII, TRI, RBI);
 
     // Acc = Acc + A[i] * B[i]
     Register Sum =
