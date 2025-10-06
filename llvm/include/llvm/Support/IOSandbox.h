@@ -54,22 +54,42 @@ namespace llvm::sys::sandbox {
 ///   }
 template <class FnTy> struct Interposed;
 
-template <class RetTy, class... ArgTy, bool NE>
-struct Interposed<RetTy (*)(ArgTy...) noexcept(NE)> {
+template <class RetTy, class... ArgTy> struct Interposed<RetTy (*)(ArgTy...)> {
   RetTy (*Fn)(ArgTy...);
 
-  RetTy operator()(ArgTy... Arg) const noexcept(NE) {
+  RetTy operator()(ArgTy... Arg) const {
     violationIfEnabled();
     return Fn(std::forward<ArgTy>(Arg)...);
   }
 };
 
-template <class RetTy, class... ArgTy, bool NE>
-struct Interposed<RetTy (*)(ArgTy..., ...) noexcept(NE)> {
+template <class RetTy, class... ArgTy>
+struct Interposed<RetTy (*)(ArgTy...) noexcept> {
+  RetTy (*Fn)(ArgTy...) noexcept;
+
+  RetTy operator()(ArgTy... Arg) const noexcept {
+    violationIfEnabled();
+    return Fn(std::forward<ArgTy>(Arg)...);
+  }
+};
+
+template <class RetTy, class... ArgTy>
+struct Interposed<RetTy (*)(ArgTy..., ...)> {
   RetTy (*Fn)(ArgTy..., ...);
 
   template <class... CVarArgTy>
-  RetTy operator()(ArgTy... Arg, CVarArgTy... CVarArg) const noexcept(NE) {
+  RetTy operator()(ArgTy... Arg, CVarArgTy... CVarArg) const {
+    violationIfEnabled();
+    return Fn(std::forward<ArgTy>(Arg)..., std::forward<CVarArgTy>(CVarArg)...);
+  }
+};
+
+template <class RetTy, class... ArgTy>
+struct Interposed<RetTy (*)(ArgTy..., ...) noexcept> {
+  RetTy (*Fn)(ArgTy..., ...) noexcept;
+
+  template <class... CVarArgTy>
+  RetTy operator()(ArgTy... Arg, CVarArgTy... CVarArg) const noexcept {
     violationIfEnabled();
     return Fn(std::forward<ArgTy>(Arg)..., std::forward<CVarArgTy>(CVarArg)...);
   }
