@@ -93,12 +93,11 @@ let Predicates = [HasStdExtZalasr] in {
 
   def : PatSRL<releasing_store<atomic_store_32>, SW_RL>;
   def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL>;
-} // Predicates = [HasStdExtZalasr]
 
-let Predicates = [HasStdExtZalasr, IsRV32] in {
-  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ>;
-} // Predicates = [HasStdExtZalasr, IsRV32]
+  // Used by GISel for RV32 and RV64.
+  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ, i32>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ, i32>;
+} // Predicates = [HasStdExtZalasr]
 
 let Predicates = [HasStdExtZalasr, IsRV64] in {
   def : PatLAQ<acquiring_load<atomic_load_asext_32>, LW_AQ, i64>;
