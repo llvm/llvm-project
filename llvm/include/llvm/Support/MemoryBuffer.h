@@ -150,7 +150,7 @@ public:
   /// is "-".
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFileOrSTDIN(const Twine &Filename, bool IsText = false,
-                 bool RequiresNullTerminator = true,
+                 bool RequiresNullTerminator = false,
                  std::optional<Align> Alignment = std::nullopt);
 
   /// Map a subrange of the specified file as a MemoryBuffer.
