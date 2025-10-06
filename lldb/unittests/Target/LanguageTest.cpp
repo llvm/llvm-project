@@ -40,10 +40,8 @@ TEST_F(LanguageTest, SourceLanguage_GetDescription) {
   EXPECT_EQ(SourceLanguage(eLanguageTypeC_plus_plus_20).GetDescription(),
             "C++20");
 
-  EXPECT_EQ(SourceLanguage(eLanguageTypeC).GetDescription(),
-            "C (K&R and ISO)");
-  EXPECT_EQ(SourceLanguage(eLanguageTypeC89).GetDescription(),
-            "C89");
+  EXPECT_EQ(SourceLanguage(eLanguageTypeC).GetDescription(), "C (K&R and ISO)");
+  EXPECT_EQ(SourceLanguage(eLanguageTypeC89).GetDescription(), "C89");
 
   EXPECT_EQ(SourceLanguage(eLanguageTypeObjC).GetDescription(), "Objective C");
   EXPECT_EQ(SourceLanguage(eLanguageTypeMipsAssembler).GetDescription(),
