@@ -764,7 +764,7 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RegName << "r" << RegNum;
       if (MCRegister Reg = MatchRegisterName(RegName.str())) {
         Op.makeReg(Reg);
-        if (validateOperandClass(Op, Expected) == Match_Success) {
+        if (validateOperandClass(Op, Expected, *STI) == Match_Success) {
           return Match_Success;
         }
       }
@@ -780,7 +780,7 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
       if (correspondingDREG) {
         Op.makeReg(correspondingDREG);
-        return validateOperandClass(Op, Expected);
+        return validateOperandClass(Op, Expected, *STI);
       }
     }
   }

@@ -436,8 +436,8 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32(half %x) {
-; RV32-LABEL: utesth_f16i32:
+define i32 @utest_f16i32(half %x) {
+; RV32-LABEL: utest_f16i32:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
@@ -456,7 +456,7 @@ define i32 @utesth_f16i32(half %x) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: utesth_f16i32:
+; RV64-LABEL: utest_f16i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
@@ -974,8 +974,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16(half %x) {
-; RV32-LABEL: utesth_f16i16:
+define i16 @utest_f16i16(half %x) {
+; RV32-LABEL: utest_f16i16:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
@@ -995,7 +995,7 @@ define i16 @utesth_f16i16(half %x) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: utesth_f16i16:
+; RV64-LABEL: utest_f16i16:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
@@ -3827,6 +3827,52 @@ entry:
   %spec.store.select7 = call i128 @llvm.smax.i128(i128 %spec.store.select, i128 0)
   %conv6 = trunc i128 %spec.store.select7 to i64
   ret i64 %conv6
+}
+
+; i32 non saturate
+
+define i32 @ustest_f16i32_nsat(half %x) {
+; RV32-LABEL: ustest_f16i32_nsat:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    call __extendhfsf2
+; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32-NEXT:    srai a1, a0, 31
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    sgtz a1, a0
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ustest_f16i32_nsat:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    call __extendhfsf2
+; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-NEXT:    srai a1, a0, 63
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    sgtz a1, a0
+; RV64-NEXT:    neg a1, a1
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+  %conv = fptosi half %x to i32
+  %spec.store.select = call i32 @llvm.smin.i32(i32 0, i32 %conv)
+  %spec.store.select7 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 0)
+  ret i32 %spec.store.select7
 }
 
 declare i32 @llvm.smin.i32(i32, i32)

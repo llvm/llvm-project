@@ -27,7 +27,7 @@ float function() {
 // CIR:  cir.store{{.*}} %[[TWO_FP]], %[[MEMBER_B]]
 // CIR:  %[[MEMBER_A:.+]] = cir.get_member %[[STRUCT]][0] {name = "a"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!s32i>
 // CIR:  %[[LOAD_A:.+]] = cir.load align(4) %[[MEMBER_A]] : !cir.ptr<!s32i>, !s32i
-// CIR:  %[[CAST_A:.+]] = cir.cast(int_to_float, %[[LOAD_A]] : !s32i), !cir.float
+// CIR:  %[[CAST_A:.+]] = cir.cast int_to_float %[[LOAD_A]] : !s32i -> !cir.float
 // CIR:  %[[MEMBER_B:.+]] = cir.get_member %[[STRUCT]][1] {name = "b"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!cir.float>
 // CIR:  %[[LOAD_B:.+]] = cir.load align(4) %[[MEMBER_B]] : !cir.ptr<!cir.float>, !cir.float
 // CIR:  %[[ADD:.+]] = cir.binop(add, %[[CAST_A]], %[[LOAD_B]]) : !cir.float

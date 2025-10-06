@@ -30,6 +30,8 @@ namespace lldb_dap::protocol {
 
 // MARK: Base Protocol
 
+using Id = int64_t;
+
 /// A client or debug adapter initiated request.
 struct Request {
   /// Sequence number of the message (also known as message ID). The `seq` for
@@ -39,7 +41,7 @@ struct Request {
   /// associate requests with their corresponding responses. For protocol
   /// messages of type `request` the sequence number can be used to cancel the
   /// request.
-  int64_t seq;
+  Id seq;
 
   /// The command to execute.
   std::string command;
@@ -76,7 +78,7 @@ enum ResponseMessage : unsigned {
 /// Response for a request.
 struct Response {
   /// Sequence number of the corresponding request.
-  int64_t request_seq;
+  Id request_seq;
 
   /// The command requested.
   std::string command;
