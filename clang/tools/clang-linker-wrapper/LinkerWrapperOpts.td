@@ -53,7 +53,8 @@ def wrapper_time_trace_granularity : Joined<["--"], "wrapper-time-trace-granular
 
 def wrapper_jobs : Joined<["--"], "wrapper-jobs=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<number>">,
-  HelpText<"Sets the number of parallel jobs to use for device linking">;
+  HelpText<"Sets the number of parallel jobs for device linking. Can be a "
+            "positive integer or 'jobserver'.">;
 
 def override_image : Joined<["--"], "override-image=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,

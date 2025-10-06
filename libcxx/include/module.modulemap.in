@@ -200,6 +200,7 @@ module std_core [system] {
       header "__type_traits/is_fundamental.h"
       export std_core.type_traits.integral_constant
     }
+    module is_generic_transparent_comparator { header "__type_traits/is_generic_transparent_comparator.h" }
     module is_implicit_lifetime {
       header "__type_traits/is_implicit_lifetime.h"
       export std_core.type_traits.integral_constant
@@ -353,6 +354,7 @@ module std_core [system] {
     module make_32_64_or_128_bit                      { header "__type_traits/make_32_64_or_128_bit.h" }
     module make_const_lvalue_ref                      { header "__type_traits/make_const_lvalue_ref.h" }
     module make_signed                                { header "__type_traits/make_signed.h" }
+    module make_transparent                           { header "__type_traits/make_transparent.h" }
     module make_unsigned                              { header "__type_traits/make_unsigned.h" }
     module maybe_const                                { header "__type_traits/maybe_const.h" }
     module nat                                        { header "__type_traits/nat.h" }

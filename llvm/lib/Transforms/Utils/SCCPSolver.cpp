@@ -317,24 +317,29 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       // Early exit if we know nothing about X.
       if (LRange.isFullSet())
         return nullptr;
-      // We are allowed to refine the comparison to either true or false for out
-      // of range inputs. Here we refine the comparison to true, i.e. we relax
-      // the range check.
-      auto NewCR = CR->exactUnionWith(LRange.inverse());
-      // TODO: Check if we can narrow the range check to an equality test.
-      // E.g, for X in [0, 4), X - 3 u< 2 -> X == 3
-      if (!NewCR)
+      auto ConvertCRToICmp =
+          [&](const std::optional<ConstantRange> &NewCR) -> Value * {
+        ICmpInst::Predicate Pred;
+        APInt RHS;
+        // Check if we can represent NewCR as an icmp predicate.
+        if (NewCR && NewCR->getEquivalentICmp(Pred, RHS)) {
+          IRBuilder<NoFolder> Builder(&Inst);
+          Value *NewICmp =
+              Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+          InsertedValues.insert(NewICmp);
+          return NewICmp;
+        }
         return nullptr;
-      ICmpInst::Predicate Pred;
-      APInt RHS;
-      // Check if we can represent NewCR as an icmp predicate.
-      if (NewCR->getEquivalentICmp(Pred, RHS)) {
-        IRBuilder<NoFolder> Builder(&Inst);
-        Value *NewICmp =
-            Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
-        InsertedValues.insert(NewICmp);
-        return NewICmp;
-      }
+      };
+      // We are allowed to refine the comparison to either true or false for out
+      // of range inputs.
+      // Here we refine the comparison to false, and check if we can narrow the
+      // range check to a simpler test.
+      if (auto *V = ConvertCRToICmp(CR->exactIntersectWith(LRange)))
+        return V;
+      // Here we refine the comparison to true, i.e. we relax the range check.
+      if (auto *V = ConvertCRToICmp(CR->exactUnionWith(LRange.inverse())))
+        return V;
     }
   }
 

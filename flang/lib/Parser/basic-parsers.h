@@ -828,7 +828,7 @@ struct NextCh {
     if (std::optional<const char *> result{state.GetNextChar()}) {
       return result;
     }
-    state.Say("end of file"_err_en_US);
+    state.Say(MessageFixedText::endOfFileMessage);
     return std::nullopt;
   }
 };
