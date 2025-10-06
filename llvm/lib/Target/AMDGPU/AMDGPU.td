@@ -1462,6 +1462,12 @@ def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records
   "The buffer resource (V#) supports 45-bit num_records"
 >;
 
+def FeatureCluster : SubtargetFeature< "cluster",
+  "HasCluster",
+  "true",
+  "Has cluster support"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2126,6 +2132,9 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
    Feature45BitNumRecordsBufferResource,
+   FeatureSupportsXNACK,
+   FeatureXNACK,
+   FeatureCluster,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2589,6 +2598,8 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 // only allow 32-bit registers in operands and use low halves thereof.
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
+def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(not (all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts))>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;

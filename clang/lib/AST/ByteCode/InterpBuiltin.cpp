@@ -2773,6 +2773,48 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
+                                       const CallExpr *Call, bool IsShufHW) {
+  assert(Call->getNumArgs() == 2 && "masked forms handled via select*");
+  APSInt ControlImm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElems = Dst.getNumElems();
+  PrimType ElemT = Dst.getFieldDesc()->getPrimType();
+
+  unsigned ElemBits = static_cast<unsigned>(primSize(ElemT) * 8);
+  if (ElemBits != 16 && ElemBits != 32)
+    return false;
+
+  unsigned LaneElts = 128u / ElemBits;
+  assert(LaneElts && (NumElems % LaneElts == 0));
+
+  uint8_t Ctl = static_cast<uint8_t>(ControlImm.getZExtValue());
+
+  for (unsigned Idx = 0; Idx != NumElems; Idx++) {
+    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
+    unsigned LaneIdx = Idx % LaneElts;
+    unsigned SrcIdx = Idx;
+    unsigned Sel = (Ctl >> (2 * (LaneIdx & 0x3))) & 0x3;
+    if (ElemBits == 32) {
+      SrcIdx = LaneBase + Sel;
+    } else {
+      constexpr unsigned HalfSize = 4;
+      bool InHigh = LaneIdx >= HalfSize;
+      if (!IsShufHW && !InHigh) {
+        SrcIdx = LaneBase + Sel;
+      } else if (IsShufHW && InHigh) {
+        SrcIdx = LaneBase + HalfSize + Sel;
+      }
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(Idx) = Src.elem<T>(SrcIdx); });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -2875,6 +2917,61 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
 
   Dst.initializeAllElements();
 
+  return true;
+}
+
+static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
+                                    const CallExpr *Call, unsigned ID) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Vec = S.Stk.pop<Pointer>();
+  if (!Vec.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned NumElems = Vec.getNumElems();
+  unsigned Index =
+      static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElems - 1));
+
+  PrimType ElemPT = Vec.getFieldDesc()->getPrimType();
+  // FIXME(#161685): Replace float+int split with a numeric-only type switch
+  if (ElemPT == PT_Float) {
+    S.Stk.push<Floating>(Vec.elem<Floating>(Index));
+    return true;
+  }
+  INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
+    APSInt V = Vec.elem<T>(Index).toAPSInt();
+    pushInteger(S, V, Call->getType());
+  });
+
+  return true;
+}
+
+static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
+                                    const CallExpr *Call, unsigned ID) {
+  assert(Call->getNumArgs() == 3);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
+  APSInt ValAPS = popToAPSInt(S, Call->getArg(1));
+
+  const Pointer &Base = S.Stk.pop<Pointer>();
+  if (!Base.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElems = Base.getNumElems();
+  unsigned Index =
+      static_cast<unsigned>(ImmAPS.getZExtValue() & (NumElems - 1));
+
+  PrimType ElemPT = Base.getFieldDesc()->getPrimType();
+  INT_TYPE_SWITCH_NO_BOOL(ElemPT, {
+    for (unsigned I = 0; I != NumElems; ++I)
+      Dst.elem<T>(I) = Base.elem<T>(I);
+    Dst.elem<T>(Index) = static_cast<T>(ValAPS);
+  });
+
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -3606,6 +3703,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
 
+  case X86::BI__builtin_ia32_pshuflw:
+  case X86::BI__builtin_ia32_pshuflw256:
+  case X86::BI__builtin_ia32_pshuflw512:
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, false);
+
+  case X86::BI__builtin_ia32_pshufhw:
+  case X86::BI__builtin_ia32_pshufhw256:
+  case X86::BI__builtin_ia32_pshufhw512:
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, true);
+
+  case X86::BI__builtin_ia32_pshufd:
+  case X86::BI__builtin_ia32_pshufd256:
+  case X86::BI__builtin_ia32_pshufd512:
+    return interp__builtin_ia32_pshuf(S, OpPC, Call, false);
+
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
@@ -3685,6 +3797,29 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vinsertf128_si256:
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_vec_ext_v4hi:
+  case X86::BI__builtin_ia32_vec_ext_v16qi:
+  case X86::BI__builtin_ia32_vec_ext_v8hi:
+  case X86::BI__builtin_ia32_vec_ext_v4si:
+  case X86::BI__builtin_ia32_vec_ext_v2di:
+  case X86::BI__builtin_ia32_vec_ext_v32qi:
+  case X86::BI__builtin_ia32_vec_ext_v16hi:
+  case X86::BI__builtin_ia32_vec_ext_v8si:
+  case X86::BI__builtin_ia32_vec_ext_v4di:
+  case X86::BI__builtin_ia32_vec_ext_v4sf:
+    return interp__builtin_vec_ext(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_vec_set_v4hi:
+  case X86::BI__builtin_ia32_vec_set_v16qi:
+  case X86::BI__builtin_ia32_vec_set_v8hi:
+  case X86::BI__builtin_ia32_vec_set_v4si:
+  case X86::BI__builtin_ia32_vec_set_v2di:
+  case X86::BI__builtin_ia32_vec_set_v32qi:
+  case X86::BI__builtin_ia32_vec_set_v16hi:
+  case X86::BI__builtin_ia32_vec_set_v8si:
+  case X86::BI__builtin_ia32_vec_set_v4di:
+    return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

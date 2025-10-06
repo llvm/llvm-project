@@ -285,6 +285,9 @@ public:
   bool IsForwardReferenced() const;
   bool HasDefaultInitialization(
       bool ignoreAllocatable = false, bool ignorePointer = true) const;
+  std::optional<std::string> // component path suitable for error messages
+  ComponentWithDefaultInitialization(
+      bool ignoreAllocatable = false, bool ignorePointer = true) const;
   bool HasDestruction() const;
 
   // The "raw" type parameter list is a simple transcription from the

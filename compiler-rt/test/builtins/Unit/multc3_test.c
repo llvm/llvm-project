@@ -1,15 +1,14 @@
-// XFAIL: target=aarch64-{{.*}}-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_multc3
 
 #include <stdio.h>
+#include "int_lib.h"
 
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
 
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#include "int_lib.h"
 #include <math.h>
 #include <complex.h>
 
@@ -351,7 +350,7 @@ fp_t x[][2] =
 
 int main()
 {
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
     const unsigned N = sizeof(x) / sizeof(x[0]);
     unsigned i, j;
     for (i = 0; i < N; ++i)
