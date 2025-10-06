@@ -7589,8 +7589,8 @@ class APValueToBufferConverter {
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
 
-    if (VTy->isPackedVectorBoolType(Info.Ctx)) {
-      // Special handling for OpenCL bool vectors:
+    if (VTy->isPackedVectorBoolType(Info.Ctx) || VTy->isBitIntVectorType()) {
+      // Special handling for OpenCL bool and sub-byte vectors:
       // Since these vectors are stored as packed bits, but we can't write
       // individual bits to the BitCastBuffer, we'll buffer all of the elements
       // together into an appropriately sized APInt and write them all out at
@@ -7599,18 +7599,21 @@ class APValueToBufferConverter {
       // have to worry about writing data which should have been left
       // uninitialized.
       bool BigEndian = Info.Ctx.getTargetInfo().isBigEndian();
+      uint64_t EltSize = Info.Ctx.getVectorElementSize(VTy);
 
-      llvm::APInt Res = llvm::APInt::getZero(NElts);
+      llvm::APInt Res = llvm::APInt::getZero(NElts * EltSize);
       for (unsigned I = 0; I < NElts; ++I) {
         const llvm::APSInt &EltAsInt = Val.getVectorElt(I).getInt();
-        assert(EltAsInt.isUnsigned() && EltAsInt.getBitWidth() == 1 &&
-               "bool vector element must be 1-bit unsigned integer!");
-
-        Res.insertBits(EltAsInt, BigEndian ? (NElts - I - 1) : I);
+        assert(!VTy->isPackedVectorBoolType(Info.Ctx) ||
+               (EltAsInt.isUnsigned() && EltAsInt.getBitWidth()) == 1 &&
+                   "bool vector element must be 1-bit unsigned integer!");
+        uint64_t BitOffset = EltSize * (BigEndian ? (NElts - I - 1) : I);
+        Res.insertBits(EltAsInt, BitOffset);
       }
 
-      SmallVector<uint8_t, 8> Bytes(NElts / 8);
-      llvm::StoreIntToMemory(Res, &*Bytes.begin(), NElts / 8);
+      uint64_t NumBytes = NElts * EltSize / 8;
+      SmallVector<uint8_t, 8> Bytes(NumBytes);
+      llvm::StoreIntToMemory(Res, &*Bytes.begin(), NumBytes);
       Buffer.writeObject(Offset, Bytes);
     } else {
       // Iterate over each of the elements and write them out to the buffer at
@@ -7852,13 +7855,11 @@ class BufferToAPValueConverter {
   std::optional<APValue> visit(const VectorType *VTy, CharUnits Offset) {
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
-    unsigned EltSize =
-        VTy->isPackedVectorBoolType(Info.Ctx) ? 1 : Info.Ctx.getTypeSize(EltTy);
 
     SmallVector<APValue, 4> Elts;
     Elts.reserve(NElts);
-    if (VTy->isPackedVectorBoolType(Info.Ctx)) {
-      // Special handling for OpenCL bool vectors:
+    if (VTy->isPackedVectorBoolType(Info.Ctx) || VTy->isBitIntVectorType()) {
+      // Special handling for OpenCL bool and sub-byte vectors:
       // Since these vectors are stored as packed bits, but we can't read
       // individual bits from the BitCastBuffer, we'll buffer all of the
       // elements together into an appropriately sized APInt and write them all
@@ -7867,20 +7868,22 @@ class BufferToAPValueConverter {
       // we don't have to worry about reading any padding data which didn't
       // actually need to be accessed.
       bool BigEndian = Info.Ctx.getTargetInfo().isBigEndian();
+      uint64_t EltSize = Info.Ctx.getVectorElementSize(VTy);
+      bool IsSigned = EltTy->isSignedIntegerType();
 
+      uint64_t NumBytes = NElts * EltSize / 8;
       SmallVector<uint8_t, 8> Bytes;
-      Bytes.reserve(NElts / 8);
-      if (!Buffer.readObject(Offset, CharUnits::fromQuantity(NElts / 8), Bytes))
+      Bytes.reserve(NumBytes);
+      if (!Buffer.readObject(Offset, CharUnits::fromQuantity(NumBytes), Bytes))
         return std::nullopt;
 
-      APSInt SValInt(NElts, true);
-      llvm::LoadIntFromMemory(SValInt, &*Bytes.begin(), Bytes.size());
+      APSInt SValInt(NElts * EltSize);
+      llvm::LoadIntFromMemory(SValInt, Bytes.data(), Bytes.size());
 
       for (unsigned I = 0; I < NElts; ++I) {
-        llvm::APInt Elt =
-            SValInt.extractBits(1, (BigEndian ? NElts - I - 1 : I) * EltSize);
-        Elts.emplace_back(
-            APSInt(std::move(Elt), !EltTy->isSignedIntegerType()));
+        uint64_t BitOffset = EltSize * (BigEndian ? (NElts - I - 1) : I);
+        llvm::APInt Elt = SValInt.extractBits(EltSize, BitOffset);
+        Elts.emplace_back(APSInt(std::move(Elt), !IsSigned));
       }
     } else {
       // Iterate over each of the elements and read them from the buffer at
@@ -7986,8 +7989,7 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
   if (const auto *VTy = Ty->getAs<VectorType>()) {
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
-    unsigned EltSize =
-        VTy->isPackedVectorBoolType(Ctx) ? 1 : Ctx.getTypeSize(EltTy);
+    unsigned EltSize = Ctx.getVectorElementSize(VTy);
 
     if ((NElts * EltSize) % Ctx.getCharWidth() != 0) {
       // The vector's size in bits is not a multiple of the target's byte size,

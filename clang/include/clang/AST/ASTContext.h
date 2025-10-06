@@ -2677,6 +2677,16 @@ public:
     return getTypeSizeInCharsIfKnown(QualType(Ty, 0));
   }
 
+  /// Return the size of an element inside a given vector type.
+  uint64_t getVectorElementSize(const VectorType *VTy) const {
+    QualType EltTy = VTy->getElementType();
+    if (VTy->isPackedVectorBoolType(*this))
+      return 1;
+    if (EltTy.getTypePtrOrNull() && EltTy->isBitIntType())
+      return EltTy->castAs<BitIntType>()->getNumBits();
+    return getTypeSize(EltTy);
+  }
+
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// bits.
   unsigned getTypeAlign(QualType T) const { return getTypeInfo(T).Align; }
