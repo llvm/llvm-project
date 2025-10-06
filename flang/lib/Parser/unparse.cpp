@@ -2089,6 +2089,11 @@ public:
   // OpenMP Clauses & Directives
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
 
+  void Unparse(const OmpBaseVariantNames &x) {
+    Walk(std::get<0>(x.t)); // OmpObject
+    Put(":");
+    Walk(std::get<1>(x.t)); // OmpObject
+  }
   void Unparse(const OmpTypeNameList &x) { //
     Walk(x.v, ",");
   }
@@ -2106,7 +2111,7 @@ public:
     Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpTypeNameList>(x.t));
-    Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
+    Walk(": ", std::get<std::optional<OmpReductionCombiner>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
@@ -2168,10 +2173,22 @@ public:
   void Unparse(const OmpContextSelectorSpecification &x) { Walk(x.v, ", "); }
 
   void Unparse(const OmpObject &x) {
-    common::visit(common::visitors{
-                      [&](const Designator &y) { Walk(y); },
-                      [&](const Name &y) { Put("/"), Walk(y), Put("/"); },
-                  },
+    common::visit( //
+        common::visitors{
+            [&](const Designator &y) { Walk(y); },
+            [&](const Name &y) {
+              Put("/");
+              Walk(y);
+              Put("/");
+            },
+            [&](const OmpObject::Invalid &y) {
+              switch (y.v) {
+              case OmpObject::Invalid::Kind::BlankCommonBlock:
+                Put("//");
+                break;
+              }
+            },
+        },
         x.u);
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
@@ -2328,6 +2345,13 @@ public:
       }
     }
   }
+  void Unparse(const OmpLoopRangeClause &x) {
+    Word("LOOPRANGE(");
+    Walk(std::get<0>(x.t));
+    Put(", ");
+    Walk(std::get<1>(x.t));
+    Put(")");
+  }
   void Unparse(const OmpReductionClause &x) {
     using Modifier = OmpReductionClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2403,120 +2427,6 @@ public:
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
-  void Unparse(const OmpLoopDirective &x) {
-    switch (x.v) {
-    case llvm::omp::Directive::OMPD_distribute:
-      Word("DISTRIBUTE ");
-      break;
-    case llvm::omp::Directive::OMPD_distribute_parallel_do:
-      Word("DISTRIBUTE PARALLEL DO ");
-      break;
-    case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
-      Word("DISTRIBUTE PARALLEL DO SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_distribute_simd:
-      Word("DISTRIBUTE SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_do:
-      Word("DO ");
-      break;
-    case llvm::omp::Directive::OMPD_do_simd:
-      Word("DO SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_loop:
-      Word("LOOP ");
-      break;
-    case llvm::omp::Directive::OMPD_masked_taskloop_simd:
-      Word("MASKED TASKLOOP SIMD");
-      break;
-    case llvm::omp::Directive::OMPD_masked_taskloop:
-      Word("MASKED TASKLOOP");
-      break;
-    case llvm::omp::Directive::OMPD_master_taskloop_simd:
-      Word("MASTER TASKLOOP SIMD");
-      break;
-    case llvm::omp::Directive::OMPD_master_taskloop:
-      Word("MASTER TASKLOOP");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_do:
-      Word("PARALLEL DO ");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_do_simd:
-      Word("PARALLEL DO SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
-      Word("PARALLEL MASKED TASKLOOP SIMD");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
-      Word("PARALLEL MASKED TASKLOOP");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_master_taskloop_simd:
-      Word("PARALLEL MASTER TASKLOOP SIMD");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_master_taskloop:
-      Word("PARALLEL MASTER TASKLOOP");
-      break;
-    case llvm::omp::Directive::OMPD_simd:
-      Word("SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_target_loop:
-      Word("TARGET LOOP ");
-      break;
-    case llvm::omp::Directive::OMPD_target_parallel_do:
-      Word("TARGET PARALLEL DO ");
-      break;
-    case llvm::omp::Directive::OMPD_target_parallel_do_simd:
-      Word("TARGET PARALLEL DO SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_target_parallel_loop:
-      Word("TARGET PARALLEL LOOP ");
-      break;
-    case llvm::omp::Directive::OMPD_target_teams_distribute:
-      Word("TARGET TEAMS DISTRIBUTE ");
-      break;
-    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
-      Word("TARGET TEAMS DISTRIBUTE PARALLEL DO ");
-      break;
-    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd:
-      Word("TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
-      Word("TARGET TEAMS DISTRIBUTE SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_target_teams_loop:
-      Word("TARGET TEAMS LOOP ");
-      break;
-    case llvm::omp::Directive::OMPD_target_simd:
-      Word("TARGET SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_taskloop:
-      Word("TASKLOOP ");
-      break;
-    case llvm::omp::Directive::OMPD_taskloop_simd:
-      Word("TASKLOOP SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_teams_distribute:
-      Word("TEAMS DISTRIBUTE ");
-      break;
-    case llvm::omp::Directive::OMPD_teams_distribute_parallel_do:
-      Word("TEAMS DISTRIBUTE PARALLEL DO ");
-      break;
-    case llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd:
-      Word("TEAMS DISTRIBUTE PARALLEL DO SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_teams_distribute_simd:
-      Word("TEAMS DISTRIBUTE SIMD ");
-      break;
-    case llvm::omp::Directive::OMPD_tile:
-      Word("TILE ");
-      break;
-    case llvm::omp::Directive::OMPD_unroll:
-      Word("UNROLL ");
-      break;
-    default:
-      break;
-    }
-  }
   void Unparse(const OmpObjectList &x) { Walk(x.v, ","); }
 
   void Unparse(const common::OmpMemoryOrderType &x) {
@@ -2589,9 +2499,6 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpDeclareTargetWithList &x) {
-    Put("("), Walk(x.v), Put(")");
-  }
   void Unparse(const OmpInitializerProc &x) {
     Walk(std::get<ProcedureDesignator>(x.t));
     Put("(");
@@ -2602,18 +2509,24 @@ public:
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
     if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
-      Walk(assignment->t, "=");
+      Walk(assignment->t, " = ");
+    } else {
+      Walk(x.u);
+    }
+  }
+  void Unparse(const OmpReductionCombiner &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, " = ");
     } else {
       Walk(x.u);
     }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE REDUCTION ");
-    Put("(");
-    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
-    Put(")");
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2630,12 +2543,8 @@ public:
   }
   void Unparse(const OmpDeclareVariantDirective &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE VARIANT ");
-    Put("(");
-    Walk(std::get<std::optional<Name>>(x.t), ":");
-    Walk(std::get<Name>(x.t));
-    Put(")");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2656,41 +2565,29 @@ public:
 
   void Unparse(const OpenMPDeclarativeAssumes &x) {
     BeginOpenMP();
-    Word("!$OMP ASSUMES ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &z) {
+  void Unparse(const OpenMPDeclareMapperConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE MAPPER (");
-    const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
-    const auto &mapperName{std::get<std::string>(spec.t)};
-    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
-      Walk(mapperName);
-      Put(":");
-    }
-    Walk(std::get<TypeSpec>(spec.t));
-    Put("::");
-    Walk(std::get<Name>(spec.t));
-    Put(")");
-
-    Walk(std::get<OmpClauseList>(z.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &y) {
+  void Unparse(const OpenMPDeclareSimdConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE SIMD ");
-    Walk("(", std::get<std::optional<Name>>(y.t), ")");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPDeclareTargetConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE TARGET ");
-    Walk(std::get<parser::OmpDeclareTargetSpecifier>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2704,45 +2601,37 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPRequiresConstruct &y) {
+  void Unparse(const OpenMPRequiresConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP REQUIRES ");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPThreadprivate &x) {
     BeginOpenMP();
-    Word("!$OMP THREADPRIVATE (");
-    Walk(std::get<parser::OmpObjectList>(x.t));
-    Put(")\n");
+    Word("!$OMP ");
+    Walk(x.v);
+    Put("\n");
     EndOpenMP();
   }
-
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
   }
   void Unparse(const OmpErrorDirective &x) {
-    Word("!$OMP ERROR ");
-    Walk(x.t);
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OmpNothingDirective &x) {
-    Word("!$OMP NOTHING");
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
-  }
-  void Unparse(const OmpSectionsDirective &x) {
-    switch (x.v) {
-    case llvm::omp::Directive::OMPD_sections:
-      Word("SECTIONS ");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_sections:
-      Word("PARALLEL SECTIONS ");
-      break;
-    default:
-      break;
-    }
+    EndOpenMP();
   }
   void Unparse(const OpenMPSectionConstruct &x) {
     if (auto &&dirSpec{
@@ -2755,18 +2644,16 @@ public:
     }
     Walk(std::get<Block>(x.t), "");
   }
+  void Unparse(const OmpBeginSectionsDirective &x) {
+    Unparse(static_cast<const OmpBeginDirective &>(x));
+  }
+  void Unparse(const OmpEndSectionsDirective &x) {
+    Unparse(static_cast<const OmpEndDirective &>(x));
+  }
   void Unparse(const OpenMPSectionsConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ");
     Walk(std::get<OmpBeginSectionsDirective>(x.t));
-    Put("\n");
-    EndOpenMP();
     Walk(std::get<std::list<OpenMPConstruct>>(x.t), "");
-    BeginOpenMP();
-    Word("!$OMP END ");
     Walk(std::get<std::optional<OmpEndSectionsDirective>>(x.t));
-    Put("\n");
-    EndOpenMP();
   }
   // Clause unparsers are usually generated by tablegen in the form
   // CLAUSE(VALUE). Here we only want to print VALUE so a custom unparser is
@@ -2789,8 +2676,8 @@ public:
   void Unparse(const OmpFailClause &x) { Walk(x.v); }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
-    Word("!$OMP METADIRECTIVE ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2815,13 +2702,11 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OmpBeginLoopDirective &x) {
+    Unparse(static_cast<const OmpBeginDirective &>(x));
+  }
   void Unparse(const OmpEndLoopDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP END ");
-    Walk(std::get<OmpLoopDirective>(x.t));
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
+    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpClauseList &x, const char *sep = " ") {
     Walk(" ", x.v, sep);
@@ -2834,11 +2719,7 @@ public:
     EndOpenMP();
   }
   void Unparse(const OpenMPLoopConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ");
     Walk(std::get<OmpBeginLoopDirective>(x.t));
-    Put("\n");
-    EndOpenMP();
     Walk(std::get<std::optional<std::variant<DoConstruct,
             common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t));
     Walk(std::get<std::optional<OmpEndLoopDirective>>(x.t));
@@ -3216,11 +3097,7 @@ template void Unparse<Expr>(llvm::raw_ostream &, const Expr &,
     const common::LangOptions &, Encoding, bool, bool, preStatementType *,
     AnalyzedObjectsAsFortran *);
 
-template void Unparse<parser::OpenMPDeclareReductionConstruct>(
-    llvm::raw_ostream &, const parser::OpenMPDeclareReductionConstruct &,
-    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
-    AnalyzedObjectsAsFortran *);
-template void Unparse<parser::OmpMetadirectiveDirective>(llvm::raw_ostream &,
-    const parser::OmpMetadirectiveDirective &, const common::LangOptions &,
+template void Unparse<parser::OpenMPDeclarativeConstruct>(llvm::raw_ostream &,
+    const parser::OpenMPDeclarativeConstruct &, const common::LangOptions &,
     Encoding, bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser

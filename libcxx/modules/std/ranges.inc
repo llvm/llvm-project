@@ -114,6 +114,9 @@ export namespace std {
 
     namespace views {
       using std::ranges::views::iota;
+#if _LIBCPP_STD_VER >= 26
+      using std::ranges::views::indices;
+#endif
     } // namespace views
 
 #if _LIBCPP_STD_VER >= 23
