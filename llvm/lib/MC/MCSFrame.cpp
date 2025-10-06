@@ -243,7 +243,7 @@ class SFrameEmitterImpl {
     }
 
     // This loop deals with are dwarf::CFIProgram::Instructions. Everywhere
-    // else, This file deals with MCCFIInstructions..
+    // else this file deals with MCCFIInstructions..
     for (const dwarf::CFIProgram::Instruction &I : P) {
       switch (I.Opcode) {
       case dwarf::DW_CFA_nop:
