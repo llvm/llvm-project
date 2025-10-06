@@ -118,7 +118,7 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
 }
 
 bool verifyStaticSamplerFlags(uint32_t Version, uint32_t FlagsNumber) {
-  assert(Version == 3 && "Provided invalid root signature version");
+  assert(Version <= 3 && "Provided invalid root signature version");
   uint32_t LargestValue = llvm::to_underlying(
       dxbc::StaticSamplerFlags::LLVM_BITMASK_LARGEST_ENUMERATOR);
   if (FlagsNumber >= NextPowerOf2(LargestValue))

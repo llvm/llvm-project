@@ -583,12 +583,6 @@ Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
     return Error(std::move(E));
   Sampler.ShaderVisibility = *Visibility;
 
-  if (RSD.Version < 3) {
-    RSD.StaticSamplers.push_back(Sampler);
-    return Error::success();
-  }
-  assert(RSD.Version >= 3);
-
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 14))
     Sampler.Flags = *Val;
   else
