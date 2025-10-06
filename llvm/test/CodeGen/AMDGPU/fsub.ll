@@ -100,7 +100,7 @@ define amdgpu_kernel void @v_fneg_fsub_nsz_attribute_f32(ptr addrspace(1) %out, 
   %a = load float, ptr addrspace(1) %in, align 4
   %b = load float, ptr addrspace(1) %b_ptr, align 4
   %result = fsub float %a, %b
-  %neg.result = fsub float -0.0, %result
+  %neg.result = fsub nsz float -0.0, %result
   store float %neg.result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -129,6 +129,3 @@ define amdgpu_kernel void @v_fsub_0_nsz_attribute_f32(ptr addrspace(1) %out, ptr
   store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
-
-attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="false" }
