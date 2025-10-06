@@ -1,0 +1,13 @@
+// Regression test for https://github.com/llvm/llvm-project/issues/53486
+
+// RUN: %clang_cc1 -x c++ -std=c++11 -fcxx-exceptions -fexceptions -triple=x86_64-pc-windows-msvc -emit-pch -building-pch-with-obj -fmodules-codegen -o %t.pch %S/microsoft-abi-throw-pch.h
+// RUN: %clang_cc1 -x c++ -std=c++11 -fcxx-exceptions -fexceptions -triple=x86_64-pc-windows-msvc -include-pch %t.pch -emit-llvm -building-pch-with-obj -fmodules-codegen -o - %s | FileCheck %s
+
+// CHECK-DAG: @"_CT??_R0?AUTrivial@@@81" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R0?AUTrivial@@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 1, i32 0 }, section ".xdata", comdat
+// CHECK-DAG: @"_CTA1?AUTrivial@@" = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"_CT??_R0?AUTrivial@@@81" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
+
+// CHECK-DAG: @"_CT??_R0?AUNonTrivial@@@8??0NonTrivial@@QEAA@AEBU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R0?AUNonTrivial@@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??0NonTrivial@@QEAA@AEBU0@@Z" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, section ".xdata", comdat
+// CHECK-DAG: @"_CTA1?AUNonTrivial@@" = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"_CT??_R0?AUNonTrivial@@@8??0NonTrivial@@QEAA@AEBU0@@Z1" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
+
+// CHECK-DAG: @"_CT??_R0?AUTemplateWithDefault@@@8??$?_OH@TemplateWithDefault@@QEAAXAEAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R0?AUTemplateWithDefault@@@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??$?_OH@TemplateWithDefault@@QEAAXAEAU0@@Z" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, section ".xdata", comdat
+// CHECK-DAG: @"_CTA1?AUTemplateWithDefault@@" = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"_CT??_R0?AUTemplateWithDefault@@@8??$?_OH@TemplateWithDefault@@QEAAXAEAU0@@Z1" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
