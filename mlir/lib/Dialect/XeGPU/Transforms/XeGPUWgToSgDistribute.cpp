@@ -762,13 +762,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       return success();
     } else {
       // Non-splat constant
-      // Only supports 1D & 2D (with one unit dim)
+      // Only supports 1D & 2D
       // TODO: support other cases that require SLM access
       if (!eltType.isIndex())
         return rewriter.notifyMatchFailure(
             op, "Unsupported element type for non-splat constant op.");
 
-      SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
       if (wgShape.size() > 2)
         return rewriter.notifyMatchFailure(
             op, "Only 1D & 2D vector constant supported");
@@ -792,9 +791,6 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       } else if (wgShape.size() == 2) {
         // 2D case: row stride and column stride
         int64_t rows = wgShape[0], cols = wgShape[1];
-        if (values.size() != static_cast<size_t>(rows * cols))
-          return rewriter.notifyMatchFailure(
-              op, "Mismatch between vector shape and constant values size.");
         // Compute col stride (stride between elements in a column)
         if (cols > 1) {
           colStride = cast<IntegerAttr>(values[1]).getInt() -
@@ -840,17 +836,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
             op, "Only 1D or 2D vector constant supported");
       }
 
-      // Compute the number of elements in the base tile.
-      int64_t baseTileElemCount = 1;
-      for (int64_t d : baseTileShape)
-        baseTileElemCount *= d;
-
       // Create a constant for the base tile.
       // For 2D case, extract the top-left sgShape[0] x sgShape[1] submatrix.
       SmallVector<Attribute> baseTileValues;
       if (baseTileShape.size() == 2) {
         int64_t rows = baseTileShape[0], cols = baseTileShape[1];
-        int64_t wgRows = wgShape[0], wgCols = wgShape[1];
+        int64_t wgCols = wgShape[1];
         for (int64_t r = 0; r < rows; ++r) {
           for (int64_t c = 0; c < cols; ++c) {
             baseTileValues.push_back(values[r * wgCols + c]);
@@ -858,7 +849,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         }
       } else {
         // 1D case
-        for (int64_t i = 0; i < baseTileElemCount; ++i)
+        for (int64_t i = 0; i < computeProduct(baseTileShape); ++i)
           baseTileValues.push_back(values[i]);
       }
       auto tileAttr = DenseElementsAttr::get(
@@ -874,24 +865,24 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
         return failure();
 
       auto strideConst = rewriter.create<arith::ConstantIndexOp>(loc, stride);
-      auto strideConstRow =
+      auto rowStrideConst =
           rewriter.create<arith::ConstantIndexOp>(loc, rowStride);
-      auto strideConstCol =
+      auto colStrideConst =
           rewriter.create<arith::ConstantIndexOp>(loc, colStride);
       SmallVector<Value> newConstOps;
       for (auto offsets : *sgOffsets) {
         // Multiply offset with stride, broadcast it and add to baseConstVec
         Value mulOffset;
-        if (baseTileShape.size() == 1) {
+        if (wgShape.size() == 1) {
           // 1D: offset[0] * strideConst
           mulOffset = rewriter.create<arith::MulIOp>(
               loc, rewriter.getIndexType(), offsets[0], strideConst);
-        } else if (baseTileShape.size() == 2) {
-          // 2D: offset[0]*strideConstRow + offset[1]*strideConstCol
+        } else if (wgShape.size() == 2) {
+          // 2D: offset[0]*rowStrideConst + offset[1]*colStrideConst
           Value rowMul = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[0], strideConstRow);
+              loc, rewriter.getIndexType(), offsets[0], rowStrideConst);
           Value colMul = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[1], strideConstCol);
+              loc, rewriter.getIndexType(), offsets[1], colStrideConst);
           mulOffset = rewriter.create<arith::AddIOp>(
               loc, rewriter.getIndexType(), rowMul, colMul);
         }
