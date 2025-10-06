@@ -37,7 +37,7 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 
 catch.dispatch.1:
@@ -80,8 +80,8 @@ cleanup2:
 ; CHECK: cleanup2.corodispatch:
 ; CHECK:   %1 = phi i8 [ 0, %handler2 ], [ 1, %catch.dispatch.2 ]
 ; CHECK:   %2 = cleanuppad within %h1 []
-; CHECK:   %switch = icmp ult i8 %1, 1
-; CHECK:   br i1 %switch, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
+; CHECK:   %3 = icmp eq i8 %1, 0
+; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
 
 ; CHECK: cleanup2.from.handler2:
 ; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4
@@ -106,7 +106,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare void @print(i32)

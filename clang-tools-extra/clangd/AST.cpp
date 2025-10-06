@@ -29,6 +29,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -146,7 +147,8 @@ std::string getQualification(ASTContext &Context,
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurD)) {
       QualType T;
       if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
-          ClassTemplateDecl *CTD = RD->getDescribedClassTemplate()) {
+          ClassTemplateDecl *CTD =
+              RD ? RD->getDescribedClassTemplate() : nullptr) {
         ArrayRef<TemplateArgument> Args;
         if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
           Args = SD->getTemplateArgs().asArray();
@@ -479,10 +481,12 @@ namespace {
 /// a deduced type set. The AST should be improved to simplify this scenario.
 class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
   SourceLocation SearchedLocation;
+  const HeuristicResolver *Resolver;
 
 public:
-  DeducedTypeVisitor(SourceLocation SearchedLocation)
-      : SearchedLocation(SearchedLocation) {}
+  DeducedTypeVisitor(SourceLocation SearchedLocation,
+                     const HeuristicResolver *Resolver)
+      : SearchedLocation(SearchedLocation), Resolver(Resolver) {}
 
   // Handle auto initializers:
   //- auto i = 1;
@@ -499,6 +503,14 @@ public:
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
+      if (AT->isUndeducedAutoType()) {
+        if (const auto *VD = dyn_cast<VarDecl>(D)) {
+          if (Resolver && VD->hasInit()) {
+            DeducedType = Resolver->resolveExprToType(VD->getInit());
+            return true;
+          }
+        }
+      }
       DeducedType = AT->desugar();
     }
     return true;
@@ -608,10 +620,12 @@ public:
 };
 } // namespace
 
-std::optional<QualType> getDeducedType(ASTContext &ASTCtx, SourceLocation Loc) {
+std::optional<QualType> getDeducedType(ASTContext &ASTCtx,
+                                       const HeuristicResolver *Resolver,
+                                       SourceLocation Loc) {
   if (!Loc.isValid())
     return {};
-  DeducedTypeVisitor V(Loc);
+  DeducedTypeVisitor V(Loc, Resolver);
   V.TraverseAST(ASTCtx);
   if (V.DeducedType.isNull())
     return std::nullopt;

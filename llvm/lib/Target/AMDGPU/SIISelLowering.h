@@ -16,6 +16,7 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUISelLowering.h"
+#include "SIDefines.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -64,6 +65,11 @@ private:
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
+  SDValue lowerWorkGroupId(
+      SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,
@@ -84,6 +90,9 @@ private:
                                         unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 
@@ -267,6 +276,9 @@ public:
   bool shouldExpandVectorDynExt(SDNode *N) const;
 
   bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
+
+  bool canTransformPtrArithOutOfBounds(const Function &F,
+                                       EVT PtrVT) const override;
 
 private:
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
@@ -548,11 +560,6 @@ public:
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, const MachineFunction &MF) const;
-
-  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                 const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII,
-                                 MCRegister &PhysReg, int &Cost) const override;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,

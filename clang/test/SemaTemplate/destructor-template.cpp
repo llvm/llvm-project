@@ -104,3 +104,18 @@ struct T : S {
   ~T() = default;
 };
 } // namespace PR38671
+
+namespace GH159630 {
+
+struct X {
+  template<typename T>
+  struct typo { // expected-note {{'typo' declared here}}
+    ~typo();
+  };
+};
+
+template<typename T>
+X::typo<T>::typ0::~typ0() {} // expected-error {{no member named 'typ0'}} \
+                             // expected-error {{no type named 'typ0'}}
+
+}

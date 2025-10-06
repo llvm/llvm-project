@@ -775,7 +775,9 @@ public:
   }
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCXXConstructExpr");
+    if (!e->getConstructor()->isTrivial())
+      return nullptr;
+    cgm.errorNYI(e->getBeginLoc(), "trivial constructor const handling");
     return {};
   }
 
@@ -1464,25 +1466,24 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   case APValue::ComplexInt:
   case APValue::ComplexFloat: {
     mlir::Type desiredType = cgm.convertType(destType);
-    cir::ComplexType complexType =
-        mlir::dyn_cast<cir::ComplexType>(desiredType);
+    auto complexType = mlir::dyn_cast<cir::ComplexType>(desiredType);
 
     mlir::Type complexElemTy = complexType.getElementType();
     if (isa<cir::IntType>(complexElemTy)) {
-      llvm::APSInt real = value.getComplexIntReal();
-      llvm::APSInt imag = value.getComplexIntImag();
-      return builder.getAttr<cir::ConstComplexAttr>(
-          complexType, cir::IntAttr::get(complexElemTy, real),
-          cir::IntAttr::get(complexElemTy, imag));
+      const llvm::APSInt &real = value.getComplexIntReal();
+      const llvm::APSInt &imag = value.getComplexIntImag();
+      return cir::ConstComplexAttr::get(builder.getContext(), complexType,
+                                        cir::IntAttr::get(complexElemTy, real),
+                                        cir::IntAttr::get(complexElemTy, imag));
     }
 
     assert(isa<cir::FPTypeInterface>(complexElemTy) &&
            "expected floating-point type");
-    llvm::APFloat real = value.getComplexFloatReal();
-    llvm::APFloat imag = value.getComplexFloatImag();
-    return builder.getAttr<cir::ConstComplexAttr>(
-        complexType, cir::FPAttr::get(complexElemTy, real),
-        cir::FPAttr::get(complexElemTy, imag));
+    const llvm::APFloat &real = value.getComplexFloatReal();
+    const llvm::APFloat &imag = value.getComplexFloatImag();
+    return cir::ConstComplexAttr::get(builder.getContext(), complexType,
+                                      cir::FPAttr::get(complexElemTy, real),
+                                      cir::FPAttr::get(complexElemTy, imag));
   }
   case APValue::FixedPoint:
   case APValue::AddrLabelDiff:

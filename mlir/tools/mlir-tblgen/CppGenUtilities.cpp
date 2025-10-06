@@ -14,26 +14,31 @@
 #include "CppGenUtilities.h"
 #include "mlir/Support/IndentedOstream.h"
 
-std::string
-mlir::tblgen::emitSummaryAndDescComments(llvm::StringRef summary,
-                                         llvm::StringRef description) {
+void mlir::tblgen::emitSummaryAndDescComments(llvm::raw_ostream &os,
+                                              llvm::StringRef summary,
+                                              llvm::StringRef description,
+                                              bool terminateComment) {
 
   std::string comments = "";
   StringRef trimmedSummary = summary.trim();
   StringRef trimmedDesc = description.trim();
-  llvm::raw_string_ostream os(comments);
   raw_indented_ostream ros(os);
 
+  bool empty = true;
   if (!trimmedSummary.empty()) {
     ros.printReindented(trimmedSummary, "/// ");
+    empty = false;
   }
 
   if (!trimmedDesc.empty()) {
-    if (!trimmedSummary.empty()) {
+    if (!empty) {
       // If there is a summary, add a newline after it.
       ros << "\n";
     }
     ros.printReindented(trimmedDesc, "/// ");
+    empty = false;
   }
-  return comments;
+
+  if (!empty && terminateComment)
+    ros << "\n";
 }

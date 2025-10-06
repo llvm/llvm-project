@@ -27,18 +27,30 @@ __m128i test_mm_blend_epi16(__m128i V1, __m128i V2) {
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 7>
   return _mm_blend_epi16(V1, V2, 42);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0x00),1,2,3,4,5,6,7,8));
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0x5A),1,-2,3,-4,-5,6,-7,8));
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0x94),1,2,-3,4,-5,6,7,-8));
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0xFF),-1,-2,-3,-4,-5,-6,-7,-8));
 
 __m128d test_mm_blend_pd(__m128d V1, __m128d V2) {
   // CHECK-LABEL: test_mm_blend_pd
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 0, i32 3>
   return _mm_blend_pd(V1, V2, 2);
 }
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 0), 1.0, 2.0));
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 1), 3.0, 2.0));
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 2), 1.0, 4.0));
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 3), 3.0, 4.0));
 
 __m128 test_mm_blend_ps(__m128 V1, __m128 V2) {
   // CHECK-LABEL: test_mm_blend_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   return _mm_blend_ps(V1, V2, 6);
 }
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0x0), 1.0f, 2.0f, 3.0f, 4.0f));
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0x5), 5.0f, 2.0f, 7.0f, 4.0f));
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0xA), 1.0f, 6.0f, 3.0f, 8.0f));
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0xF), 5.0f, 6.0f, 7.0f, 8.0f));
 
 __m128i test_mm_blendv_epi8(__m128i V1, __m128i V2, __m128i V3) {
   // CHECK-LABEL: test_mm_blendv_epi8
@@ -219,24 +231,28 @@ int test_mm_extract_epi8(__m128i x) {
   // CHECK: zext i8 %{{.*}} to i32
   return _mm_extract_epi8(x, 1);
 }
+TEST_CONSTEXPR(_mm_extract_epi8(((__m128i)(__v16qi){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}), 20) == 4);
 
 int test_mm_extract_epi32(__m128i x) {
   // CHECK-LABEL: test_mm_extract_epi32
   // CHECK: extractelement <4 x i32> %{{.*}}, {{i32|i64}} 1
   return _mm_extract_epi32(x, 1);
 }
+TEST_CONSTEXPR(_mm_extract_epi32(((__m128i)(__v4si){1, 3, 5, 7}), 10) == 5);
 
 long long test_mm_extract_epi64(__m128i x) {
   // CHECK-LABEL: test_mm_extract_epi64
   // CHECK: extractelement <2 x i64> %{{.*}}, {{i32|i64}} 1
   return _mm_extract_epi64(x, 1);
 }
+TEST_CONSTEXPR(_mm_extract_epi64(((__m128i)(__v2di){11, 22}), 5) == 22);
 
 int test_mm_extract_ps(__m128 x) {
   // CHECK-LABEL: test_mm_extract_ps
   // CHECK: extractelement <4 x float> %{{.*}}, {{i32|i64}} 1
   return _mm_extract_ps(x, 1);
 }
+TEST_CONSTEXPR(_mm_extract_ps(((__m128){1.25f, 2.5f, 3.75f, 5.0f}), 6) == __builtin_bit_cast(int, 3.75f));
 
 __m128d test_mm_floor_pd(__m128d x) {
   // CHECK-LABEL: test_mm_floor_pd
@@ -267,12 +283,14 @@ __m128i test_mm_insert_epi8(__m128i x, char b) {
   // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, {{i32|i64}} 1
   return _mm_insert_epi8(x, b, 1);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_insert_epi8(((__m128i)(__v16qi){ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}), 101, 33), 0, 101, 2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12, 13, 14, 15));
 
 __m128i test_mm_insert_epi32(__m128i x, int b) {
   // CHECK-LABEL: test_mm_insert_epi32
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, {{i32|i64}} 1
   return _mm_insert_epi32(x, b, 1);
 }
+TEST_CONSTEXPR(match_v4si(_mm_insert_epi32(((__m128i)(__v4si){0, 1, 2, 3}), 5678, 18), 0, 1, 5678, 3));
 
 #ifdef __x86_64__
 __m128i test_mm_insert_epi64(__m128i x, long long b) {
@@ -280,6 +298,7 @@ __m128i test_mm_insert_epi64(__m128i x, long long b) {
   // X64: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 1
   return _mm_insert_epi64(x, b, 1);
 }
+TEST_CONSTEXPR(match_v2di(_mm_insert_epi64(((__m128i)(__v2di){100, 200}), -999, 9), 100, -999));
 #endif
 
 __m128 test_mm_insert_ps(__m128 x, __m128 y) {
@@ -387,6 +406,7 @@ __m128i test_mm_packus_epi32(__m128i x, __m128i y) {
   // CHECK: call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_packus_epi32(x, y);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_packus_epi32((__m128i)(__v4si){40000, -50000, 32767, -32768}, (__m128i)(__v4si){0, 1, -1, 70000}), -25536, 0, 32767, 0, 0, 1, 0, -1));
 
 __m128d test_mm_round_pd(__m128d x) {
   // CHECK-LABEL: test_mm_round_pd
@@ -459,4 +479,3 @@ int test_mm_testz_si128(__m128i x, __m128i y) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testz_si128(x, y);
 }
-

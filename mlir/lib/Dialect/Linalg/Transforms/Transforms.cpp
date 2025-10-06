@@ -1427,10 +1427,7 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
           .Case([&](linalg::PoolingNchwMaxOp op) {
             return std::make_tuple(0, 1, 2, 3);
           })
-          .Default([&](Operation *op) {
-            llvm_unreachable("unexpected conv2d/pool2d operation.");
-            return std::make_tuple(0, 0, 0, 0);
-          });
+          .DefaultUnreachable("unexpected conv2d/pool2d operation.");
 
   // Only handle the case where at least one of the window dimensions is
   // of size 1. Other cases can rely on tiling to reduce to such cases.

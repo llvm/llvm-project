@@ -13,6 +13,7 @@
 #include "flang/Runtime/c-or-cpp.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 
 // The file defines a set of utilities/classes that might be
