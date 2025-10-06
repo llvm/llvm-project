@@ -23,9 +23,7 @@ Discussions = "https://discourse.llvm.org/"
 [build-system]
 requires = [
     "scikit-build-core>=0.10.7",
-    "typing_extensions>=4.12.2",
-    "nanobind>=2.9, <3.0",
-    "pybind11>=2.10.0, <=2.13.6",
+    "typing_extensions>=4.12.2"
 ]
 build-backend = "scikit_build_core.build"
 

@@ -683,6 +683,9 @@ def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
 
+def err_drv_profile_instrument_use_path_with_no_kind : Error<
+  "option '-fprofile-instrument-use-path=' requires -fprofile-instrument-use=<kind>">;
+
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
   " characters, hyphens, and underscores">;

@@ -81,6 +81,11 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
          clEnumValN(mlir::ReinterpretMapScope::kExceptGeneric,
                     "except-generic",
                     "Run on operations expect linalg.generic (e.g., foreach)"))}]>,
+    Option<"loopOrderingStrategy", "loop-ordering-strategy", "mlir::sparse_tensor::LoopOrderingStrategy",
+       "mlir::sparse_tensor::LoopOrderingStrategy::kDefault",
+       "Set the loop ordering strategy for sparse code generation", [{llvm::cl::values(
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDefault, "default",
+                    "Default strategy (eagerly selects last loop in topological sort)"))}]>,
   ];
 }
 
