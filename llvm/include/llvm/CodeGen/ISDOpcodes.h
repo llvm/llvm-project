@@ -514,6 +514,9 @@ enum NodeType {
   /// separately rounded operations.
   FMAD,
 
+  /// FMULADD - Performs a * b + c, with, or without, intermediate rounding.
+  FMULADD,
+
   /// FCOPYSIGN(X, Y) - Return the value of X with the sign of Y.  NOTE: This
   /// DAG node does not require that X and Y have the same type, just that
   /// they are both floating point.  X and the result must have the same type.
