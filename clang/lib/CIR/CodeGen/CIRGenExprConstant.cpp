@@ -176,6 +176,69 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   return false;
 }
 
+bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,
+                                       bool allowOverwrite) {
+  const ASTContext &astContext = cgm.getASTContext();
+  const uint64_t charWidth = cgm.getASTContext().getCharWidth();
+  mlir::Type charTy = cgm.getBuilder().getUIntNTy(charWidth);
+  
+  // Offset of where we want the first bit to go within the bits of the
+  // current char.
+  unsigned offsetWithinChar = offsetInBits % charWidth;
+
+  // We split bit-fields up into individual bytes. Walk over the bytes and
+  // update them.
+  for (CharUnits offsetInChars =
+           astContext.toCharUnitsFromBits(offsetInBits - offsetWithinChar);
+       /**/; ++offsetInChars) {
+    // Number of bits we want to fill in this char.
+    unsigned wantedBits =
+        std::min((uint64_t)bits.getBitWidth(), charWidth - offsetWithinChar);
+
+    // Get a char containing the bits we want in the right places. The other
+    // bits have unspecified values.
+    llvm::APInt bitsThisChar = bits;
+    if (bitsThisChar.getBitWidth() < charWidth)
+      bitsThisChar = bitsThisChar.zext(charWidth);
+    if (cgm.getDataLayout().isBigEndian()) {
+      // Figure out how much to shift by. We may need to left-shift if we have
+      // less than one byte of Bits left.
+      int shift = bits.getBitWidth() - charWidth + offsetWithinChar;
+      if (shift > 0)
+        bitsThisChar.lshrInPlace(shift);
+      else if (shift < 0)
+        bitsThisChar = bitsThisChar.shl(-shift);
+    } else {
+      bitsThisChar = bitsThisChar.shl(offsetWithinChar);
+    }
+    if (bitsThisChar.getBitWidth() > charWidth)
+      bitsThisChar = bitsThisChar.trunc(charWidth);
+
+    if (wantedBits == charWidth) {
+      // Got a full byte: just add it directly.
+      add(cir::IntAttr::get(charTy, bitsThisChar), offsetInChars,
+          allowOverwrite);
+    } else {
+      cgm.errorNYI("partial byte bitfield updates");
+      return false;
+    }
+
+    // Stop if we've added all the bits.
+    if (wantedBits == bits.getBitWidth())
+      break;
+
+    // Remove the consumed bits from Bits.
+    if (!cgm.getDataLayout().isBigEndian())
+      bits.lshrInPlace(wantedBits);
+    bits = bits.trunc(bits.getBitWidth() - wantedBits);
+
+    // The remaining bits go at the start of the following bytes.
+    offsetWithinChar = 0;
+  }
+
+  return true;
+}
+
 mlir::Attribute
 ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
                                     CharUnits startOffset, CharUnits size,
@@ -301,6 +364,9 @@ private:
   bool appendBytes(CharUnits fieldOffsetInChars, mlir::TypedAttr initCst,
                    bool allowOverwrite = false);
 
+  bool appendBitField(const FieldDecl *field, uint64_t fieldOffset,
+                      cir::IntAttr ci, bool allowOverwrite = false);
+
   bool build(InitListExpr *ile, bool allowOverwrite);
   bool build(const APValue &val, const RecordDecl *rd, bool isPrimaryBase,
              const CXXRecordDecl *vTableClass, CharUnits baseOffset);
@@ -323,6 +389,29 @@ bool ConstRecordBuilder::appendBytes(CharUnits fieldOffsetInChars,
                                      mlir::TypedAttr initCst,
                                      bool allowOverwrite) {
   return builder.add(initCst, startOffset + fieldOffsetInChars, allowOverwrite);
+}
+
+bool ConstRecordBuilder::appendBitField(const FieldDecl *field,
+                                        uint64_t fieldOffset, cir::IntAttr ci,
+                                        bool allowOverwrite) {
+  const auto &rl = cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  const auto &info = rl.getBitFieldInfo(field);
+  llvm::APInt fieldValue = ci.getValue();
+
+  // Promote the size of FieldValue if necessary
+  // FIXME: This should never occur, but currently it can because initializer
+  // constants are cast to bool, and because clang is not enforcing bitfield
+  // width limits.
+  if (info.size > fieldValue.getBitWidth())
+    fieldValue = fieldValue.zext(info.size);
+
+  // Truncate the size of FieldValue to the bit field size.
+  if (info.size < fieldValue.getBitWidth())
+    fieldValue = fieldValue.trunc(info.size);
+
+  return builder.addBits(fieldValue,
+                         cgm.getASTContext().toBits(startOffset) + fieldOffset,
+                         allowOverwrite);
 }
 
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
@@ -407,12 +496,14 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     } else {
       // Otherwise we have a bitfield.
       if (auto constInt = dyn_cast<cir::IntAttr>(eltInit)) {
-        assert(!cir::MissingFeatures::bitfields());
-        cgm.errorNYI(field->getSourceRange(), "bitfields");
+        if (!appendBitField(field, layout.getFieldOffset(index), constInt,
+                            allowOverwrite))
+          return false;
+      } else {
+        // We are trying to initialize a bitfield with a non-trivial constant,
+        // this must require run-time code.
+        return false;
       }
-      // We are trying to initialize a bitfield with a non-trivial constant,
-      // this must require run-time code.
-      return false;
     }
   }
 
@@ -510,8 +601,16 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
       if (field->hasAttr<NoUniqueAddressAttr>())
         allowOverwrite = true;
     } else {
-      assert(!cir::MissingFeatures::bitfields());
-      cgm.errorNYI(field->getSourceRange(), "bitfields");
+      // Otherwise we have a bitfield.
+      if (auto constInt = dyn_cast<cir::IntAttr>(eltInit)) {
+        if (!appendBitField(field, layout.getFieldOffset(index) + offsetBits,
+                            constInt, allowOverwrite))
+          return false;
+      } else {
+        // We are trying to initialize a bitfield with a non-trivial constant,
+        // this must require run-time code.
+        return false;
+      }
     }
   }
 

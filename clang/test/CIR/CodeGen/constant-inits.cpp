@@ -30,6 +30,21 @@ struct simple {
     int a, b;
 };
 
+struct Bitfields {
+    unsigned int a : 8;
+    unsigned int b : 8;
+    unsigned int c : 16;
+};
+
+struct SignedBitfields {
+    int x : 8;
+    int y : 8;
+};
+
+struct ByteBitfields {
+    unsigned char a : 8;
+};
+
 void function() {
     constexpr static empty e;
 
@@ -54,6 +69,10 @@ void function() {
     constexpr static simple simple_array[] {
         s, {1111, 2222}, s
     };
+
+    constexpr static Bitfields bf1 = {0xFF, 0xAA, 0x1234};
+    constexpr static SignedBitfields bf2 = {-1, 127};
+    constexpr static ByteBitfields bf3 = {42};
 }
 
 // CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE1e = #cir.zero : !rec_empty
@@ -83,6 +102,10 @@ void function() {
 // CIR-DAG-SAME:   #cir.zero : !rec_packed_and_aligned
 // CIR-DAG-SAME: ]> : !cir.array<!rec_packed_and_aligned x 2>
 
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE3bf1 = #cir.const_record<{#cir.int<255> : !u8i, #cir.int<170> : !u8i, #cir.int<52> : !u8i, #cir.int<18> : !u8i}> : !rec_anon_struct
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE3bf2 = #cir.const_record<{#cir.int<255> : !u8i, #cir.int<127> : !u8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>}> : !rec_anon_struct
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE3bf3 = #cir.const_record<{#cir.int<42> : !u8i}> : !rec_ByteBitfields
+
 // CIR-LABEL: cir.func dso_local @_Z8functionv()
 // CIR:   cir.return
 
@@ -96,6 +119,9 @@ void function() {
 // LLVM-DAG: @_ZZ8functionvE3paa = internal global %struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>
 // LLVM-DAG: @_ZZ8functionvE5array = internal global [2 x %struct.Point] [%struct.Point { i32 123, i32 456, [3 x i8] c"\0B\16!", i32 789 }, %struct.Point { i32 10, i32 20, [3 x i8] zeroinitializer, i32 40 }]
 // LLVM-DAG: @_ZZ8functionvE9paa_array = internal global [2 x %struct.packed_and_aligned] [%struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>, %struct.packed_and_aligned zeroinitializer]
+// LLVM-DAG: @_ZZ8functionvE3bf1 = internal global { i8, i8, i8, i8 } { i8 -1, i8 -86, i8 52, i8 18 }
+// LLVM-DAG: @_ZZ8functionvE3bf2 = internal global { i8, i8, [2 x i8] } { i8 -1, i8 127, [2 x i8] zeroinitializer }
+// LLVM-DAG: @_ZZ8functionvE3bf3 = internal global %struct.ByteBitfields { i8 42 }
 
 // LLVM-LABEL: define{{.*}} void @_Z8functionv
 // LLVM:   ret void
@@ -110,6 +136,9 @@ void function() {
 // OGCG-DAG: @_ZZ8functionvE3paa = internal constant %struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 undef }>
 // OGCG-DAG: @_ZZ8functionvE5array = internal constant [2 x %struct.Point] [%struct.Point { i32 123, i32 456, [3 x i8] c"\0B\16!", i32 789 }, %struct.Point { i32 10, i32 20, [3 x i8] zeroinitializer, i32 40 }]
 // OGCG-DAG: @_ZZ8functionvE9paa_array = internal constant [2 x %struct.packed_and_aligned] [%struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 undef }>, %struct.packed_and_aligned <{ i16 0, i8 0, float 0.000000e+00, i8 undef }>]
+// OGCG-DAG: @_ZZ8functionvE3bf1 = internal constant { i8, i8, i8, i8 } { i8 -1, i8 -86, i8 52, i8 18 }
+// OGCG-DAG: @_ZZ8functionvE3bf2 = internal constant { i8, i8, [2 x i8] } { i8 -1, i8 127, [2 x i8] undef }
+// OGCG-DAG: @_ZZ8functionvE3bf3 = internal constant %struct.ByteBitfields { i8 42 }
 
 // OGCG-LABEL: define{{.*}} void @_Z8functionv
 // OGCG:   ret void
