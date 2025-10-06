@@ -53,6 +53,13 @@
 #define __opencl_c_kernel_clock_scope_work_group 1
 #define __opencl_c_kernel_clock_scope_sub_group 1
 
+#ifdef __undef___opencl_c_integer_dot_product_input_4x8bit
+#undef __opencl_c_integer_dot_product_input_4x8bit
+#endif
+#ifdef __undef___opencl_c_integer_dot_product_input_4x8bit_packed
+#undef __opencl_c_integer_dot_product_input_4x8bit_packed
+#endif
+
 #endif // defined(__SPIR__) || defined(__SPIRV__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
