@@ -76,8 +76,15 @@ void TestAliasAnalysisBase::runAliasAnalysisOnOperation(
 
   // Check for aliasing behavior between each of the values.
   for (auto it = valsToCheck.begin(), e = valsToCheck.end(); it != e; ++it)
-    for (auto *innerIt = valsToCheck.begin(); innerIt != it; ++innerIt)
+    for (auto *innerIt = valsToCheck.begin(); innerIt != it; ++innerIt) {
+      llvm::errs()
+          << "\n============================================\nChecking: ";
+      printAliasOperand(*innerIt);
+      llvm::errs() << " vs ";
+      printAliasOperand(*it);
+      llvm::errs() << "\n";
       printAliasResult(aliasAnalysis.alias(*innerIt, *it), *innerIt, *it);
+    }
 }
 
 void TestAliasAnalysisModRefBase::runAliasAnalysisOnOperation(

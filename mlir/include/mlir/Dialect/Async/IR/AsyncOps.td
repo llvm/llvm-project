@@ -101,7 +101,6 @@ def Async_ExecuteOp :
   let extraClassDeclaration = [{
     using BodyBuilderFn =
         function_ref<void(OpBuilder &, Location, ValueRange)>;
-
   }];
 }
 
