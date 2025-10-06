@@ -34,7 +34,7 @@ using namespace mlir::vector;
 class DecomposeDifferentRankInsertStridedSlice
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -84,7 +84,7 @@ public:
 class ConvertSameRankInsertStridedSliceIntoShuffle
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern creates recursive InsertStridedSliceOp, but the recursion is
@@ -183,7 +183,7 @@ public:
 class Convert1DExtractStridedSliceIntoShuffle
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -271,7 +271,7 @@ private:
 class DecomposeNDExtractStridedSlice
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern creates recursive ExtractStridedSliceOp, but the recursion

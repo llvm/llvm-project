@@ -44,7 +44,7 @@ namespace {
 ///
 struct MixedSizeInputShuffleOpRewrite final
     : OpRewritePattern<vector::ShuffleOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ShuffleOp shuffleOp,
                                 PatternRewriter &rewriter) const override {

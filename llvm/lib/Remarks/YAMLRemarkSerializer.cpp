@@ -114,11 +114,13 @@ template <> struct MappingTraits<Argument> {
   static void mapping(IO &io, Argument &A) {
     assert(io.outputting() && "input not yet implemented");
 
+    // NB: A.Key.data() is not necessarily null-terminated, as the StringRef may
+    // be a span into the middle of a string.
     if (StringRef(A.Val).count('\n') > 1) {
       StringBlockVal S(A.Val);
-      io.mapRequired(A.Key.data(), S);
+      io.mapRequired(A.Key, S);
     } else {
-      io.mapRequired(A.Key.data(), A.Val);
+      io.mapRequired(A.Key, A.Val);
     }
     io.mapOptional("DebugLoc", A.Loc);
   }

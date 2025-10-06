@@ -65,6 +65,8 @@ public:
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
 
+  static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
+
 private:
   CharBlock text_;
   Severity severity_{Severity::None};
@@ -305,9 +307,9 @@ public:
   bool Merge(const Message &);
   bool operator==(const Message &that) const;
   bool operator!=(const Message &that) const { return !(*this == that); }
+  bool AtSameLocation(const Message &) const;
 
 private:
-  bool AtSameLocation(const Message &) const;
   std::variant<ProvenanceRange, CharBlock> location_;
   std::variant<MessageFixedText, MessageFormattedText, MessageExpectedText>
       text_;
