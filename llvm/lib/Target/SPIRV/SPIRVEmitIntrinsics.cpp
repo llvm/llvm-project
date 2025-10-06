@@ -236,6 +236,8 @@ class SPIRVEmitIntrinsics
 
   Instruction *buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP);
 
+  bool promoteEmbddedBitcodeMarker(Module &M) const;
+
 public:
   static char ID;
   SPIRVEmitIntrinsics(SPIRVTargetMachine *TM = nullptr)
@@ -3005,9 +3007,43 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
   }
 }
 
+bool SPIRVEmitIntrinsics::promoteEmbddedBitcodeMarker(Module &M) const {
+  const SPIRVSubtarget *STI = TM->getSubtargetImpl();
+  if (STI->isShader())
+    return false;
+
+  GlobalVariable *EmbeddedBitcode = M.getNamedGlobal("llvm.embedded.module");
+  if (!EmbeddedBitcode)
+    return false;
+
+  ArrayType *AT = cast<ArrayType>(EmbeddedBitcode->getValueType());
+  if (AT->getNumElements() != 0)
+    return false;
+
+  // When compiling with -fembed-bitcode=marker, LLVM generates a [0 x i8]
+  // zeroinitialized global variable containing the bitcode. This results in an
+  // assert outside of shaders. As a workaround, we replace this global with a
+  // zeroinitialized [1 x i8].
+  ArrayType *AT1 = ArrayType::get(AT->getElementType(), 1);
+  Constant *ZeroInit = Constant::getNullValue(AT1);
+  GlobalVariable *NewEmbeddedBitcode = new GlobalVariable(
+      AT1, EmbeddedBitcode->isConstant(), EmbeddedBitcode->getLinkage(),
+      ZeroInit, "", EmbeddedBitcode->getThreadLocalMode(),
+      EmbeddedBitcode->getAddressSpace(),
+      EmbeddedBitcode->isExternallyInitialized());
+  NewEmbeddedBitcode->setSection(NewEmbeddedBitcode->getSection());
+  NewEmbeddedBitcode->takeName(EmbeddedBitcode);
+
+  M.insertGlobalVariable(NewEmbeddedBitcode);
+  EmbeddedBitcode->replaceAllUsesWith(NewEmbeddedBitcode);
+  EmbeddedBitcode->eraseFromParent();
+  return true;
+}
+
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
+  Changed |= promoteEmbddedBitcodeMarker(M);
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
 
