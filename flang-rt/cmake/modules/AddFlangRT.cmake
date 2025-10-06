@@ -231,6 +231,12 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
+
+      # Define our own _GLIBCXX_THROW_OR_ABORT because libstdc++ headers
+      # reference std::exception in its definition, and we do not want
+      # to link against std::exception since doing that would link us to
+      # the C++ runtime.
+      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
@@ -285,12 +291,6 @@ function (add_flangrt_library name)
 
     # For Flang-RT's configured config.h to be found
     target_include_directories(${tgtname} PRIVATE "${FLANG_RT_BINARY_DIR}")
-
-    # Define our own _GLIBCXX_THROW_OR_ABORT because libstdc++ headers
-    # reference std::exception in its definition, and we do not want
-    # to link against std::exception since doing that would link us to
-    # the C++ runtime.
-    target_compile_definitions(${tgtname} PUBLIC "_GLIBCXX_THROW_OR_ABORT=(__builtin_abort())")
 
     # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
