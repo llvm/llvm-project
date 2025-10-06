@@ -9,7 +9,7 @@
 #ifndef LLVM_ASMPARSER_FILELOC_H
 #define LLVM_ASMPARSER_FILELOC_H
 
-#include <assert.h>
+#include <cassert>
 #include <utility>
 
 namespace llvm {
