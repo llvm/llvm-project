@@ -30,7 +30,13 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
-set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+  # Reduce projects built for Windows due to 2GB installer limits.
+  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
+else()
+  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+endif()
+
 # bolt only supports ELF, so only enable it for Linux.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
@@ -143,8 +149,10 @@ endif()
 # We want to generate an installer on Windows.
 if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
-else()
-  set_final_stage_var(CMAKE_OBJECT_PATH_MAX "1024" STRING)
+endif()
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+  # Limit installation size on Windows to avoid 2GB installer limt.
+  set_final_stage_var(LLVM_INSTALL_TOOLCHAIN_ONLY "ON" BOOL)
 endif()
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
