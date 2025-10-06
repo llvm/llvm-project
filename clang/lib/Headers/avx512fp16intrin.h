@@ -41,7 +41,8 @@ typedef _Float16 __m512h_u __attribute__((__vector_size__(64), __aligned__(1)));
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
 #endif
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS512 _mm512_cvtsh_h(__m512h __a) {
+static __inline__ _Float16 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_cvtsh_h(__m512h __a) {
   return __a[0];
 }
 
@@ -3309,7 +3310,7 @@ _mm512_reduce_min_ph(__m512h __V) {
   return __builtin_ia32_reduce_fmin_ph512(__V);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_blend_ph(__mmask32 __U, __m512h __A, __m512h __W) {
   return (__m512h)__builtin_ia32_selectph_512((__mmask32)__U, (__v32hf)__W,
                                               (__v32hf)__A);

@@ -117,9 +117,7 @@ static bool ReturnsDataPointer(const Symbol &symbol) {
 }
 
 static bool LoopConstructIsSIMD(parser::OpenMPLoopConstruct *ompLoop) {
-  auto &begin = std::get<parser::OmpBeginLoopDirective>(ompLoop->t);
-  auto directive = std::get<parser::OmpLoopDirective>(begin.t).v;
-  return llvm::omp::allSimdSet.test(directive);
+  return llvm::omp::allSimdSet.test(ompLoop->BeginDir().DirName().v);
 }
 
 // Remove non-SIMD OpenMPConstructs once they are parsed.

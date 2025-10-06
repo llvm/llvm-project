@@ -18,22 +18,19 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1
 ; GCN-LABEL: load_1d_lwe:
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-NEXT:    v_mov_b32_e32 v6, v0
 ; GCN-NEXT:    v_mov_b32_e32 v9, v8
 ; GCN-NEXT:    v_mov_b32_e32 v10, v8
 ; GCN-NEXT:    v_mov_b32_e32 v11, v8
 ; GCN-NEXT:    v_mov_b32_e32 v12, v8
-; GCN-NEXT:    v_mov_b32_e32 v2, v8
-; GCN-NEXT:    v_mov_b32_e32 v3, v9
-; GCN-NEXT:    v_mov_b32_e32 v4, v10
-; GCN-NEXT:    v_mov_b32_e32 v5, v11
-; GCN-NEXT:    v_mov_b32_e32 v6, v12
-; GCN-NEXT:    image_load v[2:6], v0, s[0:7] dmask:0xf unorm lwe
+; GCN-NEXT:    v_mov_b32_e32 v0, v8
+; GCN-NEXT:    v_mov_b32_e32 v1, v9
+; GCN-NEXT:    v_mov_b32_e32 v2, v10
+; GCN-NEXT:    v_mov_b32_e32 v3, v11
+; GCN-NEXT:    v_mov_b32_e32 v4, v12
+; GCN-NEXT:    image_load v[0:4], v6, s[0:7] dmask:0xf unorm lwe
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, v2
-; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    v_mov_b32_e32 v2, v4
-; GCN-NEXT:    v_mov_b32_e32 v3, v5
-; GCN-NEXT:    global_store_dword v8, v6, s[8:9]
+; GCN-NEXT:    global_store_dword v8, v4, s[8:9]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:

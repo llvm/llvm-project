@@ -605,7 +605,7 @@ class VectorType;
 
     bool preferZeroCompareBranch() const override { return true; }
 
-    bool shouldExpandCmpUsingSelects(EVT VT) const override;
+    bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
@@ -775,6 +775,16 @@ class VectorType;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 
+    /// Return true if it is profitable to fold a pair of shifts into a mask.
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+      EVT VT = Y.getValueType();
+
+      if (VT.isVector())
+        return false;
+
+      return VT.getScalarSizeInBits() <= 32;
+    }
+
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                               unsigned SelectOpcode, SDValue X,
                                               SDValue Y) const override;
@@ -908,6 +918,7 @@ class VectorType;
                    SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
