@@ -252,7 +252,7 @@ GlobalModuleIndex::~GlobalModuleIndex() {
 std::pair<GlobalModuleIndex *, llvm::Error>
 GlobalModuleIndex::readIndex(StringRef Path) {
   // This is a compiler-internal input/output, let's bypass the sandbox.
-  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+  [[maybe_unused]] auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
   // Load the index file, if it's there.
   llvm::SmallString<128> IndexPath;
@@ -848,7 +848,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                               const PCHContainerReader &PCHContainerRdr,
                               StringRef Path) {
   // This is a compiler-internal input/output, let's bypass the sandbox.
-  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+  [[maybe_unused]] auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
   llvm::SmallString<128> IndexPath;
   IndexPath += Path;

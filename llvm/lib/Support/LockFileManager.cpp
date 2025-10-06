@@ -52,7 +52,7 @@ using namespace llvm;
 /// \returns The process ID of the process that owns this lock file
 std::optional<LockFileManager::OwnedByAnother>
 LockFileManager::readLockFile(StringRef LockFileName) {
-  auto SandboxBypass = sys::sandbox::scopedDisable();
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Read the owning host and PID out of the lock file. If it appears that the
   // owning process is dead, the lock file is invalid.
@@ -249,7 +249,7 @@ Expected<bool> LockFileManager::tryLock() {
 }
 
 LockFileManager::~LockFileManager() {
-  auto SandboxBypass = sys::sandbox::scopedDisable();
+  [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
 
   if (!std::holds_alternative<OwnedByUs>(Owner))
     return;

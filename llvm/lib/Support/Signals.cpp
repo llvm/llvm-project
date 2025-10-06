@@ -97,7 +97,7 @@ CallBacksToRun() {
 // Signal-safe.
 void sys::RunSignalHandlers() {
   // Let's not interfere with stack trace symbolication and friends.
-  auto BypassSandbox = sandbox::scopedDisable();
+  [[maybe_unused]] auto BypassSandbox = sandbox::scopedDisable();
 
   for (CallbackAndCookie &RunMe : CallBacksToRun()) {
     auto Expected = CallbackAndCookie::Status::Initialized;
