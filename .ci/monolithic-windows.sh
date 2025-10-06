@@ -41,8 +41,8 @@ ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.
 
 
 
-export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl
-export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+export CC=cl
+export CXX=cl
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
