@@ -13,6 +13,7 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -378,13 +379,13 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
   else if (R->isSubClassOf("IntrInaccessibleReadMemOnly")) {
-    llvm::IRMemLocation Loc = getLocationTypeAsInt(R, "Loc");
+    llvm::IRMemLocation Loc = getValueAsIRMemLocation(R, "Loc");
     if (ME.onlyAccessTargetMemoryLocation())
       ME = ME.getWithModRef(Loc, ModRefInfo::Ref);
     else
       ME &= MemoryEffects::inaccessibleReadMemOnly(Loc);
   } else if (R->isSubClassOf("IntrInaccessibleWriteMemOnly")) {
-    llvm::IRMemLocation Loc = getLocationTypeAsInt(R, "Loc");
+    llvm::IRMemLocation Loc = getValueAsIRMemLocation(R, "Loc");
     if (ME.onlyAccessTargetMemoryLocation())
       ME = ME.getWithModRef(Loc, ModRefInfo::Mod);
     else
@@ -465,18 +466,22 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
 }
 
 llvm::IRMemLocation
-CodeGenIntrinsic::getLocationTypeAsInt(const Record *R,
-                                       StringRef FieldName) const {
+CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R,
+                                          StringRef FieldName) const {
   const Record *LocRec = R->getValueAsDef(FieldName);
   StringRef Name = LocRec->getName();
-  if (Name == "TargetMem0")
-    return IRMemLocation::TargetMem0;
-  else if (Name == "TargetMem1")
-    return IRMemLocation::TargetMem1;
-  else if (Name == "InaccessibleMem")
-    return llvm::IRMemLocation::InaccessibleMem;
-  else
-    PrintFatalError(R->getLoc(), "unknown IRMemLocation: " + Name);
+
+  IRMemLocation Loc =
+      StringSwitch<IRMemLocation>(Name)
+          .Case("TargetMem0", IRMemLocation::TargetMem0)
+          .Case("TargetMem1", IRMemLocation::TargetMem1)
+          .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
+          .Default(IRMemLocation::Other); // fallback enum
+
+  if (Loc == IRMemLocation::Other)
+    PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
+
+  return Loc;
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {

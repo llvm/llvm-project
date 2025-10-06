@@ -73,8 +73,9 @@ enum class IRMemLocation {
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  Last = TargetMem1,
   FirstTarget = TargetMem0,
+  // TargetMem IDs must be at the end of the list.
+  Last = TargetMem1,
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {
