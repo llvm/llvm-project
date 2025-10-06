@@ -6804,6 +6804,7 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 class MappableExprsHandler {
 public:
   /// Custom comparator for attach-pointer expressions that compares them by
+  /// complexity (i.e. their component-depth) first, then by the order in which
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
