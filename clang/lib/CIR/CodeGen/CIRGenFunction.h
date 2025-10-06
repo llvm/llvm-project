@@ -1258,6 +1258,9 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
+                        Address ptr);
+
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
