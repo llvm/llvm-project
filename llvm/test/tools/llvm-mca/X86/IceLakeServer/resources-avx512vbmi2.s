@@ -153,12 +153,12 @@ vpshrdw           $1, (%rax), %zmm17, %zmm19 {k1}{z}
 # CHECK-NEXT:  2      10    1.00           *            vpcompressw	%zmm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vpcompressw	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                  U     vpexpandb	%zmm16, %zmm19
-# CHECK-NEXT:  2      10    1.00                  U     vpexpandb	(%rax), %zmm19
+# CHECK-NEXT:  2      10    1.00    *             U     vpexpandb	(%rax), %zmm19
 # CHECK-NEXT:  1      3     1.00                        vpexpandb	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      10    1.00    *                   vpexpandb	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  1      3     1.00                        vpexpandb	%zmm16, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                  U     vpexpandw	%zmm16, %zmm19
-# CHECK-NEXT:  2      10    1.00                  U     vpexpandw	(%rax), %zmm19
+# CHECK-NEXT:  2      10    1.00    *             U     vpexpandw	(%rax), %zmm19
 # CHECK-NEXT:  1      3     1.00                        vpexpandw	%zmm16, %zmm19 {%k1}
 # CHECK-NEXT:  2      10    1.00    *                   vpexpandw	(%rax), %zmm19 {%k1}
 # CHECK-NEXT:  1      3     1.00                        vpexpandw	%zmm16, %zmm19 {%k1} {z}

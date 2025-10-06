@@ -264,14 +264,6 @@ class HashParameterMapping : public RecursiveASTVisitor<HashParameterMapping> {
 
   UnsignedOrNone OuterPackSubstIndex;
 
-  TemplateArgument getPackSubstitutedTemplateArgument(TemplateArgument Arg) {
-    assert(*SemaRef.ArgPackSubstIndex < Arg.pack_size());
-    Arg = Arg.pack_begin()[*SemaRef.ArgPackSubstIndex];
-    if (Arg.isPackExpansion())
-      Arg = Arg.getPackExpansionPattern();
-    return Arg;
-  }
-
   bool shouldVisitTemplateInstantiations() const { return true; }
 
 public:
@@ -294,7 +286,7 @@ public:
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
 
-      Arg = getPackSubstitutedTemplateArgument(Arg);
+      Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
     }
 
     UsedTemplateArgs.push_back(
@@ -312,7 +304,7 @@ public:
     if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
-      Arg = getPackSubstitutedTemplateArgument(Arg);
+      Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
     }
 
     UsedTemplateArgs.push_back(
@@ -325,8 +317,11 @@ public:
   }
 
   bool TraverseDecl(Decl *D) {
-    if (auto *VD = dyn_cast<ValueDecl>(D))
+    if (auto *VD = dyn_cast<ValueDecl>(D)) {
+      if (auto *Var = dyn_cast<VarDecl>(VD))
+        TraverseStmt(Var->getInit());
       return TraverseType(VD->getType());
+    }
 
     return inherited::TraverseDecl(D);
   }
@@ -361,6 +356,14 @@ public:
 
     Sema::ArgPackSubstIndexRAII _1(SemaRef, OuterPackSubstIndex);
     return inherited::TraverseTemplateArgument(Arg);
+  }
+
+  bool TraverseSizeOfPackExpr(SizeOfPackExpr *SOPE) {
+    return TraverseDecl(SOPE->getPack());
+  }
+
+  bool VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
+    return inherited::TraverseStmt(E->getReplacement());
   }
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
@@ -1046,6 +1049,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   case NormalizedConstraint::ConstraintKind::Compound:
     return Evaluate(static_cast<const CompoundConstraint &>(Constraint), MLTAL);
   }
+  llvm_unreachable("Unknown ConstraintKind enum");
 }
 
 static bool CheckConstraintSatisfaction(
@@ -2083,8 +2087,8 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
                                         /*UpdateArgsWithConversions=*/false))
     return true;
   auto TemplateArgs = *MLTAL;
-  TemplateArgs.replaceOutermostTemplateArguments(
-      TemplateArgs.getAssociatedDecl(0).first, CTAI.SugaredConverted);
+  TemplateArgs.replaceOutermostTemplateArguments(CSE->getNamedConcept(),
+                                                 CTAI.SugaredConverted);
   return SubstituteParameterMappings(SemaRef, &TemplateArgs, ArgsAsWritten,
                                      InFoldExpr)
       .substitute(CC.getNormalizedConstraint());
@@ -2138,6 +2142,7 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     return substitute(Compound.getRHS());
   }
   }
+  llvm_unreachable("Unknown ConstraintKind enum");
 }
 
 } // namespace
@@ -2558,7 +2563,6 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
   };
 
   switch (NC.getKind()) {
-
   case NormalizedConstraint::ConstraintKind::Atomic:
     return {{find(&static_cast<const AtomicConstraint &>(NC))}};
 
@@ -2598,6 +2602,7 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     return Res;
   }
   }
+  llvm_unreachable("Unknown ConstraintKind enum");
 }
 
 void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
