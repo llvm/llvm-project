@@ -1645,7 +1645,7 @@ def BCDSR_rec : VX_VT5_VA5_VB5_PS1_XO9_o<449, "bcdsr.", []>;
 def BCDTRUNC_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<257, "bcdtrunc." , []>;
 def BCDUTRUNC_rec : VX_VT5_VA5_VB5_XO9_o    <321, "bcdutrunc.", []>;
 
-// Patterns mapping BCD DAG nodes to machine instructions
+// Patterns mapping BCD PPCISD nodes to machine instructions
 def : Pat<(PPCbcds v4i32:$Shift, v16i8:$Src, i32:$PS),
           (BCDS_rec $Shift, $Src, $PS)>;
 
