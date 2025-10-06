@@ -46,8 +46,8 @@ static int printSupportedCPUs(llvm::StringRef triple) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions targetOpts;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(parsedTriple, "", "+cpuhelp",
-                                  targetOpts, std::nullopt));
+      target->createTargetMachine(parsedTriple, "", "+cpuhelp", targetOpts,
+                                  std::nullopt));
   return 0;
 }
 
