@@ -133,9 +133,15 @@ struct MissingFeatures {
   // RecordType
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
-  static bool recordZeroInit() { return false; }
   static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
+
+  // Coroutines
+  static bool coroAllocBuiltinCall() { return false; }
+  static bool coroBeginBuiltinCall() { return false; }
+  static bool coroEndBuiltinCall() { return false; }
+  static bool coroSizeBuiltinCall() { return false; }
+  static bool coroutineFrame() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -192,6 +198,7 @@ struct MissingFeatures {
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool cgFPOptionsRAII() { return false; }
+  static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupsToDeactivate() { return false; }
@@ -209,6 +216,7 @@ struct MissingFeatures {
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
+  static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeMemberFunction() { return false; }

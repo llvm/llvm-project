@@ -110,28 +110,21 @@ def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
   // Prefer unsigned due to no c.lb in Zcb.
-  def : LdPat<atomic_load_aext_8,    LBU, i16>;
-  def : LdPat<atomic_load_nonext_16, LH,  i16>;
+  def : LdPat<relaxed_load<atomic_load_aext_8>,    LBU, i16>;
+  def : LdPat<relaxed_load<atomic_load_nonext_16>, LH,  i16>;
 
-  def : StPat<atomic_store_8,  SB, GPR, i16>;
-  def : StPat<atomic_store_16, SH, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, i16>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_nonext_32, LW, i32>;
-  def : StPat<atomic_store_32, SW, GPR, i32>;
+  // Load pattern is in RISCVInstrInfoA.td and shared with RV32.
+  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, i32>;
 }
 
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
-
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
-def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
-  KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  return Known.isNonNegative();
-}]>;
 
 let Predicates = [IsRV64] in {
 def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
@@ -140,15 +133,10 @@ def : LdPat<extloadi16, LH, i32>;
 def : StPat<truncstorei8, SB, GPR, i32>;
 def : StPat<truncstorei16, SH, GPR, i32>;
 
-def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
-def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
 def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
           (ADDIW GPR:$rs1, simm12_lo:$imm)>;
-
-// Use sext if the sign bit of the input is 0.
-def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
 let Predicates = [IsRV64, NoStdExtZba] in

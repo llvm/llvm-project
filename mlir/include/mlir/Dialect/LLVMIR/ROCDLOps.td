@@ -985,7 +985,6 @@ class ScaleArgInfo<TypeConstraint argTyVal, string typeName> {
 //===---------------------------------------------------------------------===//
 // Scaled {fp4,bf8,fp8} to {bf16,f16,f32} conversion intrinsics
 //===---------------------------------------------------------------------===//
-
 foreach smallT = [
   ScaleArgInfo<I32, "Fp4">,
   ScaleArgInfo<ROCDL_V2I32Type, "Fp8">,
@@ -996,6 +995,8 @@ foreach smallT = [
     ScaleArgInfo<ROCDL_V8BF16Type, "Bf16">,
     ScaleArgInfo<ROCDL_V8F32Type, "F32">,
   ] in {
+
+    // Up-scaling
     def ROCDL_CvtPkScalePk8 # largeT.nameForOp # smallT.nameForOp # Op :
           ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk8." # largeT.name # "." # smallT.name,
           [Pure], 1, [2], ["scaleSel"]>,
@@ -1010,13 +1011,30 @@ foreach smallT = [
         attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
       }];
     }
+
+    // Down-scaling
+    def ROCDL_CvtScaleF32Pk8 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk8." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name ;
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `:` type($res)
+      }];
+    }
   } // foreach largeT
 } // foreach smallTOp
 
 //===---------------------------------------------------------------------===//
 // Scaled {bf6,fp6} to {bf16,f16,f32} conversion intrinsics
 //===---------------------------------------------------------------------===//
-
 foreach smallT = [
   ScaleArgInfo<ROCDL_V3I32Type, "Fp6">,
   ScaleArgInfo<ROCDL_V3I32Type, "Bf6">
