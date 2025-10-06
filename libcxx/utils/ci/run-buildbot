@@ -706,7 +706,7 @@ mingw-dll)
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     check-runtimes
 ;;
-mingw-static|mingw-static-aarch64)
+mingw-static)
     clean
     generate-cmake \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake" \

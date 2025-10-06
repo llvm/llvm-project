@@ -250,8 +250,8 @@ jobs:
         - { config: mingw-static, mingw: true }
         - { config: mingw-dll-i686, mingw: true }
         - { config: mingw-incomplete-sysroot, mingw: true }
-        - { config: mingw-static-aarch64, mingw: true, runner: windows-11-arm }
-    runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-latest' }}
+        - { config: mingw-static, mingw: true, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
