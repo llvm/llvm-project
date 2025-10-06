@@ -213,9 +213,9 @@ TEST(RecordOpsTest, CopyRecordBetweenDerivedAndBase) {
   )";
   auto SyntheticFieldCallback = [](QualType Ty) -> llvm::StringMap<QualType> {
     CXXRecordDecl *ADecl = nullptr;
-    if (Ty.getAsString() == "A")
+    if (Ty.getAsString() == "A" || Ty.getAsString() == "struct A")
       ADecl = Ty->getAsCXXRecordDecl();
-    else if (Ty.getAsString() == "B")
+    else if (Ty.getAsString() == "B" || Ty.getAsString() == "struct B")
       ADecl = Ty->getAsCXXRecordDecl()
                   ->bases_begin()
                   ->getType()
