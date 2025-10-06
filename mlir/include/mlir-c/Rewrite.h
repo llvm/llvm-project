@@ -101,6 +101,12 @@ mlirRewriterBaseGetInsertionBlock(MlirRewriterBase rewriter);
 MLIR_CAPI_EXPORTED MlirBlock
 mlirRewriterBaseGetBlock(MlirRewriterBase rewriter);
 
+/// Returns the operation right after the current insertion point
+/// of the rewriter. A null MlirOperation will be returned
+// if the current insertion point is at the end of the block.
+MLIR_CAPI_EXPORTED MlirOperation
+mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter);
+
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 //===----------------------------------------------------------------------===//
@@ -311,6 +317,14 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
     MlirGreedyRewriteDriverConfig);
 
 //===----------------------------------------------------------------------===//
+/// PatternRewriter API
+//===----------------------------------------------------------------------===//
+
+/// Cast the PatternRewriter to a RewriterBase
+MLIR_CAPI_EXPORTED MlirRewriterBase
+mlirPatternRewriterAsBase(MlirPatternRewriter rewriter);
+
+//===----------------------------------------------------------------------===//
 /// PDLPatternModule API
 //===----------------------------------------------------------------------===//
 
@@ -374,6 +388,20 @@ typedef MlirLogicalResult (*MlirPDLRewriteFunction)(
 MLIR_CAPI_EXPORTED void mlirPDLPatternModuleRegisterRewriteFunction(
     MlirPDLPatternModule pdlModule, MlirStringRef name,
     MlirPDLRewriteFunction rewriteFn, void *userData);
+
+/// This function type is used as callbacks for PDL native constraint functions.
+/// Input values can be accessed by `values` with its size `nValues`;
+/// output values can be added into `results` by `mlirPDLResultListPushBack*`
+/// APIs. And the return value indicates whether the constraint holds.
+typedef MlirLogicalResult (*MlirPDLConstraintFunction)(
+    MlirPatternRewriter rewriter, MlirPDLResultList results, size_t nValues,
+    MlirPDLValue *values, void *userData);
+
+/// Register a constraint function into the given PDL pattern module.
+/// `userData` will be provided as an argument to the constraint function.
+MLIR_CAPI_EXPORTED void mlirPDLPatternModuleRegisterConstraintFunction(
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
+    MlirPDLConstraintFunction constraintFn, void *userData);
 
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 

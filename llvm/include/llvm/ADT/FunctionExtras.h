@@ -90,13 +90,12 @@ protected:
   template <typename T> struct AdjustedParamTBase {
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
-    template <typename U>
-    using IsSizeLessThanThresholdT =
-        std::bool_constant<sizeof(U) <= 2 * sizeof(void *)>;
+    static constexpr bool IsSizeLessThanThreshold =
+        sizeof(T) <= 2 * sizeof(void *);
     using type =
         std::conditional_t<std::is_trivially_copy_constructible<T>::value &&
                                std::is_trivially_move_constructible<T>::value &&
-                               IsSizeLessThanThresholdT<T>::value,
+                               IsSizeLessThanThreshold,
                            T, T &>;
   };
 
