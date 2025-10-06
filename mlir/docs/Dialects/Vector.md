@@ -125,7 +125,7 @@ Some existing Arith and Vector Dialect on `n-D` `vector` types comprise:
 // Produces a vector<3x7x8xf32>
 %b = arith.mulf %0, %1 : vector<3x7x8xf32>
 // Produces a vector<3x7x8xf32>
-%c = vector.splat %1 : vector<3x7x8xf32>
+%c = vector.broadcast %1 : f32 to vector<3x7x8xf32>
 
 %d = vector.extract %0[1]: vector<7x8xf32> from vector<3x7x8xf32>
 %e = vector.extract %0[1, 5]: vector<8xf32> from vector<3x7x8xf32>
