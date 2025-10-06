@@ -440,10 +440,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                           Register SwiftErrorVReg) const {
   auto MIB = MIRBuilder.buildInstrNoInsert(WebAssembly::RETURN);
   MachineFunction &MF = MIRBuilder.getMF();
-  auto &TLI = *getTLI<WebAssemblyTargetLowering>();
   auto &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
-  auto &TRI = *Subtarget.getRegisterInfo();
-  auto &TII = *Subtarget.getInstrInfo();
   auto &RBI = *Subtarget.getRegBankInfo();
 
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&

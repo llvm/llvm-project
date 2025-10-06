@@ -290,8 +290,6 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     assert(CmpWidth == MRI.getType(RHS).getSizeInBits() &&
            "LHS and RHS for FCMP are diffrent lengths???");
 
-    auto IsI64 = CmpWidth == 64;
-
     switch (Cond) {
     case CmpInst::FCMP_FALSE:
       return false;
