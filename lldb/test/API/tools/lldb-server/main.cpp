@@ -267,7 +267,8 @@ int main(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (consume_front(arg, "syncfile:")) {
-      // Write to this file to tell test framework that attaching is now possible.
+      // Write to this file to tell test framework that attaching is now
+      // possible.
       std::ofstream(arg).close();
     } else if (consume_front(arg, "stderr:")) {
       // Treat remainder as text to go to stderr.
