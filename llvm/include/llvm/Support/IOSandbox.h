@@ -29,8 +29,8 @@ inline void violationIfEnabled() {
 #else
 
 namespace llvm::sys::sandbox {
-inline int scopedEnable() {}
-inline int scopedDisable() {}
+inline int scopedEnable() { return 0; }
+inline int scopedDisable() { return 0; }
 inline void violationIfEnabled() {}
 } // namespace llvm::sys::sandbox
 

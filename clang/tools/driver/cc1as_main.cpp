@@ -428,7 +428,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = [=] {
     // FIXME(sandboxing): Make this a proper input file.
-    auto BypassSandbox = sys::sandbox::scopedDisable();
+    [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
     return MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
   }();
 
@@ -677,7 +677,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
   auto VFS = [] {
-    auto BypassSandbox = sys::sandbox::scopedDisable();
+    [[maybe_unused]] auto BypassSandbox = sys::sandbox::scopedDisable();
     return vfs::getRealFileSystem();
   }();
 
