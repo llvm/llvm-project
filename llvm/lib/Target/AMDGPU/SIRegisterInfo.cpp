@@ -3871,9 +3871,6 @@ MCRegister SIRegisterInfo::findUnusedRegister(
 bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
                                   const RegisterBankInfo &RBI,
                                   Register Reg) const {
-  if (WaveTransformCF)
-    return false;
-
   auto *RB = RBI.getRegBank(Reg, MRI, *MRI.getTargetRegisterInfo());
   if (!RB)
     return false;
