@@ -1004,8 +1004,9 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
 Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, bool *IsValid) {
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  *IsValid = Device->Device->Plugin.isDeviceCompatible(
-      Device->Device->getDeviceId(), Buffer);
+  *IsValid = Device->Device ? Device->Device->Plugin.isDeviceCompatible(
+                                  Device->Device->getDeviceId(), Buffer)
+                            : false;
   return Error::success();
 }
 
