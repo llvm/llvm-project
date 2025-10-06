@@ -18,6 +18,7 @@
 include "mlir/IR/OpBase.td"
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
@@ -82,7 +83,7 @@ def Tosa_YieldOp : Tosa_Op<"yield", [
 //===----------------------------------------------------------------------===//
 // Operator: variable
 //===----------------------------------------------------------------------===//
-def Tosa_VariableOp : Tosa_Op<"variable", []> {
+def Tosa_VariableOp : Tosa_Op<"variable", [Symbol]> {
   let summary = "Defines a variable";
 
   let description = [{
@@ -91,7 +92,10 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
   }];
 
   let arguments = (ins
-    SymbolNameAttr:$name,
+    // Note: "sym_name" is used as opposed to "name" in the specification,
+    // since a Symbol must be named "sym_name" for it to be recognised by
+    // the containing SymbolTable.
+    SymbolNameAttr:$sym_name,
     IndexElementsAttr:$var_shape,
     TypeAttr:$type,
     OptionalAttr<AnyAttr>:$initial_value
@@ -105,14 +109,18 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
   let hasCustomAssemblyFormat = 1;
 
   let assemblyFormat = [{
-    $name
+    $sym_name
     attr-dict
     custom<VariableOpTypeOrInitialValue>($var_shape, $type, $initial_value)
   }];
 
   let builders = [Tosa_VariableOpBuilder];
 
-  let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    ::llvm::StringRef getName() {
+      return getSymName();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
