@@ -21,7 +21,7 @@ include "WebAssembly.td"
 //===----------------------------------------------------------------------===//
 
 defvar ModeAddr32 = DefaultMode;
-def ModeAddr64 : HwMode<"", [HasAddr64]>;
+def ModeAddr64 : HwMode<[HasAddr64]>;
 
 def Addr0VT : ValueTypeByHwMode<[ModeAddr32, ModeAddr64],
                                [i32,  i64]>;
