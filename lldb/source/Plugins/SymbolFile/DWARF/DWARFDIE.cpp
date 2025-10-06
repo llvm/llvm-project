@@ -13,9 +13,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
-#ifdef LLDB_ENABLE_SWIFT
-#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
-#endif
+#include "LogChannelDWARF.h"
 #include "lldb/Symbol/Type.h"
 
 #include "llvm/ADT/iterator.h"
@@ -441,25 +439,6 @@ static void GetDeclContextImpl(DWARFDIE die, bool derive_template_names,
     }
 
     // Add this DIE's contribution at the end of the chain.
-    auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
-#ifdef LLDB_ENABLE_SWIFT
-      // FIXME: This layering violation works around a limitation in
-      // LLVM that prevents swiftc from emitting both DW_AT_name and
-      // DW_AT_linkage_name on forward declarations and typedefs.
-      //
-      // We should not upstream this but instead fix the Swift compiler.
-      std::string base_name;
-      if (!name.empty() && name[0] == '$') {
-        // We should also check the unit's DW_LANG here.
-        const char *mangled = ConstString(name).AsCString();
-        base_name = TypeSystemSwiftTypeRef::GetBaseName(
-            (lldb::opaque_compiler_type_t)mangled);
-        if (!base_name.empty())
-          name = base_name;
-      }
-#endif
-      context.push_back({kind, ConstString(name)});
-    };
     switch (die.Tag()) {
     case DW_TAG_module:
     case DW_TAG_namespace:

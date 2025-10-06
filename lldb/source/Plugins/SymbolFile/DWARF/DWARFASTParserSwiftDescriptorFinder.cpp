@@ -98,7 +98,7 @@ DWARFASTParserSwift::ResolveTypeAlias(lldb_private::CompilerType alias) {
   std::string alias_name = ts.GetBaseName(alias.GetOpaqueQualType());
   for (DWARFDIE child_die : parent_die.children()) {
     auto tag = child_die.Tag();
-    if (tag == DW_TAG_member)
+    if (tag == llvm::dwarf::DW_TAG_member)
       continue;
     std::string base_name;
     const auto *name =
