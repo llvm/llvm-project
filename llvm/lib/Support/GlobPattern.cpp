@@ -143,15 +143,6 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
     return Pat;
   S = S.substr(PrefixSize);
 
-  // Just in case we stop on unmatched opening brackets.
-  size_t SuffixStart = S.find_last_of("?*[]{}\\");
-  assert(SuffixStart != std::string::npos);
-  if (S[SuffixStart] == '\\')
-    ++SuffixStart;
-  ++SuffixStart;
-  Pat.Suffix = S.substr(SuffixStart);
-  S = S.substr(0, SuffixStart);
-
   SmallVector<std::string, 1> SubPats;
   if (auto Err = parseBraceExpansions(S, MaxSubPatterns).moveInto(SubPats))
     return std::move(Err);
@@ -201,8 +192,6 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
 
 bool GlobPattern::match(StringRef S) const {
   if (!S.consume_front(Prefix))
-    return false;
-  if (!S.consume_back(Suffix))
     return false;
   if (SubGlobs.empty() && S.empty())
     return true;
