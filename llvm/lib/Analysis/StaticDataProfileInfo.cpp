@@ -8,6 +8,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 
+#define DEBUG_TYPE "static-data-profile-info"
+
 using namespace llvm;
 
 extern cl::opt<bool> AnnotateStaticDataSectionPrefix;
@@ -79,18 +81,22 @@ StaticDataProfileInfo::getSectionHotnessUsingDAP(
 
 StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     const Constant *C, const ProfileSummaryInfo *PSI) const {
-  auto Count = getConstantProfileCount(C);
+  std::optional<uint64_t> Count = getConstantProfileCount(C);
 
   if (HasDataAccessProf) {
-    // Module flag `HasDataAccessProf` is 1 -> empty section prefix means uknown
-    // hotness except for string literals.
+    // Module flag `HasDataAccessProf` is 1 -> empty section prefix means
+    // unknown hotness except for string literals.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
         GV && !GV->getName().starts_with(".str")) {
       auto HotnessFromDAP = getSectionHotnessUsingDAP(GV->getSectionPrefix());
 
-      if (!Count)
+      if (!Count) {
+        // Use data access profiles to infer hotness when the profile counter
+        // isn't computed.
         return hotnessToStr(HotnessFromDAP);
+      }
 
+      // Both DAP and PGO counters are available. Use the hotter one.
       auto HotnessFromPGO = getSectionHotnessUsingProfileCount(C, PSI, *Count);
       return hotnessToStr(std::max(HotnessFromDAP, HotnessFromPGO));
     }

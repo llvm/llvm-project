@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
+#include "llvm/MC/MCInstrAnalysis.h"
 #include <cstdint>
 #include <memory>
 
@@ -44,6 +45,28 @@ MCAsmBackend *createAMDGPUAsmBackend(const Target &T,
 std::unique_ptr<MCObjectTargetWriter>
 createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
                             bool HasRelocationAddend);
+
+namespace AMDGPU {
+class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
+private:
+  unsigned VgprMSBs = 0;
+
+public:
+  explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override;
+
+  void resetState() override { VgprMSBs = 0; }
+
+  void updateState(const MCInst &Inst, uint64_t Addr) override;
+
+  unsigned getVgprMSBs() const { return VgprMSBs; }
+};
+
+} // namespace AMDGPU
+
 } // namespace llvm
 
 #define GET_REGINFO_ENUM

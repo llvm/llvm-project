@@ -765,7 +765,6 @@ class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
 class MVEVectorIndex<int NumLanes> : Operand<i32> {
   let PrintMethod = "printVectorIndex";
   let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // shift_imm: An integer that encodes a shift amount and the type of shift
@@ -1181,7 +1180,6 @@ def PostIdxImm8AsmOperand : AsmOperandClass { let Name = "PostIdxImm8"; }
 def postidx_imm8 : MemOperand {
   let PrintMethod = "printPostIdxImm8Operand";
   let ParserMatchClass = PostIdxImm8AsmOperand;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // postidx_imm8s4 := +/- [0,1020]
@@ -5185,12 +5183,6 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
   let Inst{31-0} = 0xf57ff070;
   let Unpredictable = 0x000fff0f;
   let hasSideEffects = 1;
-}
-
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-  // Pseudo instruction that combines movs + predicated rsbmi
-  // to implement integer ABS
-  def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
 }
 
 let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {

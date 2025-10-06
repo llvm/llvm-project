@@ -26,8 +26,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/LogicalResult.h"
 
-#include <numeric>
-
 using namespace mlir;
 using namespace cir;
 
@@ -342,8 +340,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::VTableAttr>(
-          attrType))
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
+                cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -1357,9 +1355,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
   return success();
 }
 
-void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          llvm::StringRef sym_name, mlir::Type sym_type,
-                          bool isConstant, cir::GlobalLinkageKind linkage) {
+void cir::GlobalOp::build(
+    OpBuilder &odsBuilder, OperationState &odsState, llvm::StringRef sym_name,
+    mlir::Type sym_type, bool isConstant, cir::GlobalLinkageKind linkage,
+    function_ref<void(OpBuilder &, Location)> ctorBuilder,
+    function_ref<void(OpBuilder &, Location)> dtorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
@@ -1372,26 +1372,88 @@ void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
   odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
 
+  Region *ctorRegion = odsState.addRegion();
+  if (ctorBuilder) {
+    odsBuilder.createBlock(ctorRegion);
+    ctorBuilder(odsBuilder, odsState.location);
+  }
+
+  Region *dtorRegion = odsState.addRegion();
+  if (dtorBuilder) {
+    odsBuilder.createBlock(dtorRegion);
+    dtorBuilder(odsBuilder, odsState.location);
+  }
+
   odsState.addAttribute(getGlobalVisibilityAttrName(odsState.name),
                         cir::VisibilityAttr::get(odsBuilder.getContext()));
 }
 
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void cir::GlobalOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `ctor` and `dtor` regions always branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // Don't consider the ctor region if it is empty.
+  Region *ctorRegion = &this->getCtorRegion();
+  if (ctorRegion->empty())
+    ctorRegion = nullptr;
+
+  // Don't consider the dtor region if it is empty.
+  Region *dtorRegion = &this->getCtorRegion();
+  if (dtorRegion->empty())
+    dtorRegion = nullptr;
+
+  // If the condition isn't constant, both regions may be executed.
+  if (ctorRegion)
+    regions.push_back(RegionSuccessor(ctorRegion));
+  if (dtorRegion)
+    regions.push_back(RegionSuccessor(dtorRegion));
+}
+
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
-                                             TypeAttr type,
-                                             Attribute initAttr) {
+                                             TypeAttr type, Attribute initAttr,
+                                             mlir::Region &ctorRegion,
+                                             mlir::Region &dtorRegion) {
+  auto printType = [&]() { p << ": " << type; };
   if (!op.isDeclaration()) {
     p << "= ";
-    // This also prints the type...
-    if (initAttr)
-      printConstant(p, initAttr);
+    if (!ctorRegion.empty()) {
+      p << "ctor ";
+      printType();
+      p << " ";
+      p.printRegion(ctorRegion,
+                    /*printEntryBlockArgs=*/false,
+                    /*printBlockTerminators=*/false);
+    } else {
+      // This also prints the type...
+      if (initAttr)
+        printConstant(p, initAttr);
+    }
+
+    if (!dtorRegion.empty()) {
+      p << " dtor ";
+      p.printRegion(dtorRegion,
+                    /*printEntryBlockArgs=*/false,
+                    /*printBlockTerminators=*/false);
+    }
   } else {
-    p << ": " << type;
+    printType();
   }
 }
 
-static ParseResult
-parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
-                                 Attribute &initialValueAttr) {
+static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
+                                                    TypeAttr &typeAttr,
+                                                    Attribute &initialValueAttr,
+                                                    mlir::Region &ctorRegion,
+                                                    mlir::Region &dtorRegion) {
   mlir::Type opTy;
   if (parser.parseOptionalEqual().failed()) {
     // Absence of equal means a declaration, so we need to parse the type.
@@ -1399,16 +1461,38 @@ parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
     if (parser.parseColonType(opTy))
       return failure();
   } else {
-    // Parse constant with initializer, examples:
-    //  cir.global @y = #cir.fp<1.250000e+00> : !cir.double
-    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
-    if (parseConstantValue(parser, initialValueAttr).failed())
-      return failure();
+    // Parse contructor, example:
+    //  cir.global @rgb = ctor : type { ... }
+    if (!parser.parseOptionalKeyword("ctor")) {
+      if (parser.parseColonType(opTy))
+        return failure();
+      auto parseLoc = parser.getCurrentLocation();
+      if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
+        return failure();
+      if (ensureRegionTerm(parser, ctorRegion, parseLoc).failed())
+        return failure();
+    } else {
+      // Parse constant with initializer, examples:
+      //  cir.global @y = 3.400000e+00 : f32
+      //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+      if (parseConstantValue(parser, initialValueAttr).failed())
+        return failure();
 
-    assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
-           "Non-typed attrs shouldn't appear here.");
-    auto typedAttr = mlir::cast<mlir::TypedAttr>(initialValueAttr);
-    opTy = typedAttr.getType();
+      assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
+             "Non-typed attrs shouldn't appear here.");
+      auto typedAttr = mlir::cast<mlir::TypedAttr>(initialValueAttr);
+      opTy = typedAttr.getType();
+    }
+
+    // Parse destructor, example:
+    //   dtor { ... }
+    if (!parser.parseOptionalKeyword("dtor")) {
+      auto parseLoc = parser.getCurrentLocation();
+      if (parser.parseRegion(dtorRegion, /*arguments=*/{}, /*argTypes=*/{}))
+        return failure();
+      if (ensureRegionTerm(parser, dtorRegion, parseLoc).failed())
+        return failure();
+    }
   }
 
   typeAttr = TypeAttr::get(opTy);
@@ -1548,11 +1632,21 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
 
+  mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
+  mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
+  mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
 
+  if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
+    state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
+  if (::mlir::succeeded(
+          parser.parseOptionalKeyword(coroutineNameAttr.strref())))
+    state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
+  if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
+    state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
@@ -1660,6 +1754,15 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getBuiltin())
+    p << " builtin";
+
+  if (getCoroutine())
+    p << " coroutine";
+
+  if (getLambda())
+    p << " lambda";
+
   if (getNoProto())
     p << " no_proto";
 
@@ -1753,9 +1856,6 @@ LogicalResult cir::BinOp::verify() {
   if (noWrap && saturated)
     return emitError() << "The nsw/nuw flags and the saturated flag are "
                           "mutually exclusive";
-
-  assert(!cir::MissingFeatures::complexType());
-  // TODO(cir): verify for complex binops
 
   return mlir::success();
 }
@@ -1917,6 +2017,21 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         return previous.getInput();
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// CopyOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CopyOp::verify() {
+  // A data layout is required for us to know the number of bytes to be copied.
+  if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
+    return emitError() << "missing data layout for pointee type";
+
+  if (getSrc() == getDst())
+    return emitError() << "source and destination are the same";
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2286,14 +2401,22 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ComplexRealOp::verify() {
-  if (getType() != getOperand().getType().getElementType()) {
+  mlir::Type operandTy = getOperand().getType();
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
+    operandTy = complexOperandTy.getElementType();
+
+  if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
     return failure();
   }
+
   return success();
 }
 
 OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  if (!mlir::isa<cir::ComplexType>(getOperand().getType()))
+    return nullptr;
+
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(0);
 
@@ -2307,14 +2430,22 @@ OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ComplexImagOp::verify() {
-  if (getType() != getOperand().getType().getElementType()) {
+  mlir::Type operandTy = getOperand().getType();
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
+    operandTy = complexOperandTy.getElementType();
+
+  if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
     return failure();
   }
+
   return success();
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (!mlir::isa<cir::ComplexType>(getOperand().getType()))
+    return nullptr;
+
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(1);
 
@@ -2713,6 +2844,34 @@ mlir::LogicalResult cir::ThrowOp::verify() {
   }
 
   return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCmpXchg
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicCmpXchg::verify() {
+  mlir::Type pointeeType = getPtr().getType().getPointee();
+
+  if (pointeeType != getExpected().getType() ||
+      pointeeType != getDesired().getType())
+    return emitOpError("ptr, expected and desired types must match");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::TypeInfoAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ::mlir::ArrayAttr typeInfoData) {
+
+  if (cir::ConstRecordAttr::verify(emitError, type, typeInfoData).failed())
+    return failure();
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

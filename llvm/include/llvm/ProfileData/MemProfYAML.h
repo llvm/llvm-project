@@ -217,8 +217,8 @@ template <> struct MappingTraits<memprof::CallSiteInfo> {
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
-    Io.mapRequired("AllocSites", Pair.Record.AllocSites);
-    Io.mapRequired("CallSites", Pair.Record.CallSites);
+    Io.mapOptional("AllocSites", Pair.Record.AllocSites);
+    Io.mapOptional("CallSites", Pair.Record.CallSites);
   }
 };
 

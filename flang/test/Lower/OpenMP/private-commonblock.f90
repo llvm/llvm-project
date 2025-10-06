@@ -20,32 +20,28 @@ end subroutine
 !CHECK:    %[[D_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.array<5x!fir.char<1,5>>>
 !CHECK:    %[[B_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.array<10xf32>>
 !CHECK:    %[[BLK_ADDR:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<74xi8>>
-!CHECK:    %[[I8_ARR:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK:    %[[C0:.*]] = arith.constant 0 : index
-!CHECK:    %[[A_I8_REF:.*]] = fir.coordinate_of %[[I8_ARR]], %[[C0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[A_I8_REF:.*]] = fir.coordinate_of %[[BLK_ADDR]], %[[C0]] : (!fir.ref<!fir.array<74xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[A_REF:.*]] = fir.convert %[[A_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_REF]] {uniq_name = "_QFprivate_clause_commonblockEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[I8_ARR:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_REF]] storage(%[[BLK_ADDR]][0]) {uniq_name = "_QFprivate_clause_commonblockEa"} : (!fir.ref<i32>, !fir.ref<!fir.array<74xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C4:.*]] = arith.constant 4 : index
-!CHECK:    %[[B_I8_REF:.*]] = fir.coordinate_of %[[I8_ARR]], %[[C4]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[B_I8_REF:.*]] = fir.coordinate_of %[[BLK_ADDR]], %[[C4]] : (!fir.ref<!fir.array<74xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[B_REF:.*]] = fir.convert %[[B_I8_REF:.*]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
 !CHECK:    %[[C10:.*]] = arith.constant 10 : index
 !CHECK:    %[[SH10:.*]] = fir.shape %[[C10]] : (index) -> !fir.shape<1>
-!CHECK:    %[[B_DECL:.*]]:2 = hlfir.declare %[[B_REF]](%[[SH10]]) {uniq_name = "_QFprivate_clause_commonblockEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
-!CHECK:    %[[I8_ARR:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[B_DECL:.*]]:2 = hlfir.declare %[[B_REF]](%[[SH10]]) storage(%[[BLK_ADDR]][4]) {uniq_name = "_QFprivate_clause_commonblockEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<74xi8>>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 !CHECK:    %[[C44:.*]] = arith.constant 44 : index
-!CHECK:    %[[C_I8_REF:.*]] = fir.coordinate_of %[[I8_ARR]], %[[C44]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[C_I8_REF:.*]] = fir.coordinate_of %[[BLK_ADDR]], %[[C44]] : (!fir.ref<!fir.array<74xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[C_REF:.*]] = fir.convert %[[C_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<!fir.char<1,5>>
 !CHECK:    %[[C5:.*]] = arith.constant 5 : index
-!CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] typeparams %[[C5]] {uniq_name = "_QFprivate_clause_commonblockEc"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
-!CHECK:    %[[I8_ARR:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] typeparams %[[C5]] storage(%[[BLK_ADDR]][44]) {uniq_name = "_QFprivate_clause_commonblockEc"} : (!fir.ref<!fir.char<1,5>>, index, !fir.ref<!fir.array<74xi8>>) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 !CHECK:    %[[C49:.*]] = arith.constant 49 : index
-!CHECK:    %[[D_I8_REF:.*]] = fir.coordinate_of %[[I8_ARR]], %[[C49]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[D_I8_REF:.*]] = fir.coordinate_of %[[BLK_ADDR]], %[[C49]] : (!fir.ref<!fir.array<74xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[D_REF:.*]] = fir.convert %[[D_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<5x!fir.char<1,5>>>
 !CHECK:    %[[TP5:.*]] = arith.constant 5 : index
 !CHECK:    %[[C5:.*]] = arith.constant 5 : index
 !CHECK:    %[[SH5:.*]] = fir.shape %[[C5]] : (index) -> !fir.shape<1>
-!CHECK:    %[[D_DECL:.*]]:2 = hlfir.declare %[[D_REF]](%[[SH5:.*]]) typeparams %[[TP5]] {uniq_name = "_QFprivate_clause_commonblockEd"} : (!fir.ref<!fir.array<5x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<5x!fir.char<1,5>>>, !fir.ref<!fir.array<5x!fir.char<1,5>>>)
+!CHECK:    %[[D_DECL:.*]]:2 = hlfir.declare %[[D_REF]](%[[SH5:.*]]) typeparams %[[TP5]] storage(%[[BLK_ADDR]][49]) {uniq_name = "_QFprivate_clause_commonblockEd"} : (!fir.ref<!fir.array<5x!fir.char<1,5>>>, !fir.shape<1>, index, !fir.ref<!fir.array<74xi8>>) -> (!fir.ref<!fir.array<5x!fir.char<1,5>>>, !fir.ref<!fir.array<5x!fir.char<1,5>>>)
 !CHECK:    %[[C_BOX:.*]] = fir.emboxchar %[[C_DECL]]#0, %c5 : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 !CHECK:    %[[D_REF:.*]] = fir.convert %[[D_DECL]]#0 : (!fir.ref<!fir.array<5x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,5>>
 !CHECK:    %[[D_BOX:.*]] = fir.emboxchar %[[D_REF]], %[[TP5]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
@@ -89,16 +85,16 @@ end subroutine
 
 !CHECK: func.func @_QPprivate_clause_commonblock_pointer() {
 !CHECK:    %[[BLK_ADDR:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<74xi8>>
-!CHECK:    %[[BLK_I8_REF:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[BLK_I8_REF:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<28xi8>>
 !CHECK:    %[[C24:.*]] = arith.constant 24 : index
-!CHECK:    %[[A_I8_REF:.*]] = fir.coordinate_of %[[BLK_I8_REF]], %[[C24]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[A_I8_REF:.*]] = fir.coordinate_of %[[BLK_I8_REF]], %[[C24]] : (!fir.ref<!fir.array<28xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[A_REF:.*]] = fir.convert %[[A_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_REF]] {uniq_name = "_QFprivate_clause_commonblock_pointerEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    %[[BLK_I8_REF:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<?xi8>>
+!CHECK:    %[[A_DECL:.*]]:2 = hlfir.declare %[[A_REF]] storage(%[[BLK_I8_REF]][24]) {uniq_name = "_QFprivate_clause_commonblock_pointerEa"} : (!fir.ref<i32>, !fir.ref<!fir.array<28xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[BLK_I8_REF:.*]] = fir.convert %[[BLK_ADDR]] : (!fir.ref<!fir.array<74xi8>>) -> !fir.ref<!fir.array<28xi8>>
 !CHECK:    %[[C0:.*]] = arith.constant 0 : index
-!CHECK:    %[[C_I8_REF:.*]] = fir.coordinate_of %[[BLK_I8_REF]], %[[C0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:    %[[C_I8_REF:.*]] = fir.coordinate_of %[[BLK_I8_REF]], %[[C0]] : (!fir.ref<!fir.array<28xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[C_REF:.*]] = fir.convert %[[C_I8_REF]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
-!CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>)
+!CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_REF]] storage(%[[BLK_I8_REF]][0]) {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFprivate_clause_commonblock_pointerEc"} : (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.ref<!fir.array<28xi8>>) -> (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>)
 !CHECK:    %[[C_BOX:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
 !CHECK:    %[[C_ADDR:.*]] = fir.box_addr %[[C_BOX]] : (!fir.box<!fir.ptr<complex<f32>>>) -> !fir.ptr<complex<f32>>
 !CHECK:    %[[C_REF:.*]] = fir.convert %[[C_ADDR]] : (!fir.ptr<complex<f32>>) -> !fir.ref<complex<f32>>

@@ -899,10 +899,34 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
   // Nothing to do.
 }
 
+llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
+                                                   const Expr *Message,
+                                                   SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_message);
+  return nullptr;
+}
+
+llvm::Value *
+CGOpenMPRuntimeGPU::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                       SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_severity);
+  return nullptr;
+}
+
 void CGOpenMPRuntimeGPU::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
+  if (Modifier == OMPC_NUMTHREADS_strict) {
+    CGM.getDiags().Report(Loc,
+                          diag::warn_omp_gpu_unsupported_modifier_for_clause)
+        << "strict" << getOpenMPClauseName(OMPC_num_threads);
+    return;
+  }
+
   // Nothing to do.
 }
 
@@ -1210,9 +1234,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
   if (!CGF.HaveInsertPoint())
     return;
 
-  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond, NumThreads,
-                        NumThreadsModifier, Severity, Message](
-                           CodeGenFunction &CGF, PrePostActionTy &Action) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond,
+                        NumThreads](CodeGenFunction &CGF,
+                                    PrePostActionTy &Action) {
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
@@ -1260,22 +1284,21 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
     assert(IfCondVal && "Expected a value");
-    RuntimeFunction FnID = OMPRTL___kmpc_parallel_51;
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-    llvm::SmallVector<llvm::Value *, 10> Args(
-        {RTLoc, getThreadID(CGF, Loc), IfCondVal, NumThreadsVal,
-         llvm::ConstantInt::get(CGF.Int32Ty, -1), FnPtr, ID,
-         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
-                                    CGF.VoidPtrPtrTy),
-         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())});
-    if (NumThreadsModifier == OMPC_NUMTHREADS_strict) {
-      FnID = OMPRTL___kmpc_parallel_60;
-      Args.append({llvm::ConstantInt::get(CGM.Int32Ty, true),
-                   emitSeverityClause(Severity),
-                   emitMessageClause(CGF, Message)});
-    }
-    CGF.EmitRuntimeCall(
-        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
+    llvm::Value *Args[] = {
+        RTLoc,
+        getThreadID(CGF, Loc),
+        IfCondVal,
+        NumThreadsVal,
+        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        FnPtr,
+        ID,
+        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
+                                   CGF.VoidPtrPtrTy),
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                        Args);
   };
 
   RegionCodeGenTy RCG(ParallelGen);
@@ -2337,6 +2360,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
+      case OffloadArch::GFX1251:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

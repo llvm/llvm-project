@@ -87,9 +87,9 @@ Fixed Width Integers
 ^^^^^^^^^^^^^^^^^^^^
 
 Fixed-width integer values have their low bits emitted directly to the file.
-For example, a 3-bit integer value encodes 1 as 001.  Fixed width integers are
+For example, a 3-bit integer value encodes 1 as 001.  Fixed-width integers are
 used when there are a well-known number of options for a field.  For example,
-boolean values are usually encoded with a 1-bit wide integer.
+boolean values are usually encoded with a 1-bit-wide integer.
 
 .. _Variable Width Integers:
 .. _Variable Width Integer:
@@ -229,7 +229,7 @@ Data Records
 ------------
 
 Data records consist of a record code and a number of (up to) 64-bit integer
-values.  The interpretation of the code and values is application specific and
+values.  The interpretation of the code and values is application-specific and
 may vary between different block types.  Records can be encoded either using an
 unabbrev record, or with an abbreviation.  In the LLVM IR format, for example,
 there is a record which encodes the target triple of a module.  The code is
@@ -469,19 +469,19 @@ Native Object File Wrapper Format
 =================================
 
 Bitcode files for LLVM IR may also be wrapped in a native object file
-(i.e. ELF, COFF, Mach-O).  The bitcode must be stored in a section of the object
-file named ``__LLVM,__bitcode`` for MachO or ``.llvmbc`` for the other object
+(i.e., ELF, COFF, Mach-O).  The bitcode must be stored in a section of the object
+file named ``__LLVM,__bitcode`` for Mach-O or ``.llvmbc`` for the other object
 formats. ELF objects additionally support a ``.llvm.lto`` section for
-:doc:`FatLTO`, which contains bitcode suitable for LTO compilation (i.e. bitcode
+:doc:`FatLTO`, which contains bitcode suitable for LTO compilation (i.e., bitcode
 that has gone through a pre-link LTO pipeline).  The ``.llvmbc`` section
 predates FatLTO support in LLVM, and may not always contain bitcode that is
-suitable for LTO (i.e. from ``-fembed-bitcode``).  The wrapper format is useful
+suitable for LTO (i.e., from ``-fembed-bitcode``).  The wrapper format is useful
 for accommodating LTO in compilation pipelines where intermediate objects must
 be native object files which contain metadata in other sections.
 
 Not all tools support this format.  For example, lld and the gold plugin will
 ignore the ``.llvmbc`` section when linking object files, but can use
-``.llvm.lto`` sections when passed the correct command line options.
+``.llvm.lto`` sections when passed the correct command-line options.
 
 .. _encoding of LLVM IR:
 
@@ -585,7 +585,7 @@ MODULE_CODE_VERSION Record
 ``[VERSION, version#]``
 
 The ``VERSION`` record (code 1) contains a single value indicating the format
-version. Versions 0, 1 and 2 are supported at this time. The difference between
+version. Versions 0, 1, and 2 are supported at this time. The difference between
 version 0 and 1 is in the encoding of instruction operands in
 each `FUNCTION_BLOCK`_.
 
@@ -1033,13 +1033,13 @@ in the file `Attributes.td
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
   arguments, which are 32-bit integers, are packed into one 64-bit integer value
-  (i.e. ``(EltSizeParam << 32) | NumEltsParam``), with ``NumEltsParam`` taking on
+  (i.e., ``(EltSizeParam << 32) | NumEltsParam``), with ``NumEltsParam`` taking on
   the sentinel value -1 if it is not specified.
 
 .. note::
   The ``vscale_range`` attribute has a special encoding for its arguments. Its two
   arguments, which are 32-bit integers, are packed into one 64-bit integer value
-  (i.e. ``(Min << 32) | Max``), with ``Max`` taking on the value of ``Min`` if
+  (i.e., ``(Min << 32) | Max``), with ``Max`` taking on the value of ``Min`` if
   it is not specified.
 
 .. _TYPE_BLOCK:
@@ -1137,7 +1137,7 @@ TYPE_CODE_POINTER Record
 ``[POINTER, pointee type, address space]``
 
 The ``POINTER`` record (code 8) adds a pointer type to the type table. The
-operand fields are
+operand fields are:
 
 * *pointee type*: The type index of the pointed-to type
 
@@ -1155,7 +1155,7 @@ TYPE_CODE_FUNCTION_OLD Record
 ``[FUNCTION_OLD, vararg, ignored, retty, ...paramty... ]``
 
 The ``FUNCTION_OLD`` record (code 9) adds a function type to the type table.
-The operand fields are
+The operand fields are:
 
 * *vararg*: Non-zero if the type represents a varargs function
 
@@ -1173,7 +1173,7 @@ TYPE_CODE_ARRAY Record
 ``[ARRAY, numelts, eltty]``
 
 The ``ARRAY`` record (code 11) adds an array type to the type table.  The
-operand fields are
+operand fields are:
 
 * *numelts*: The number of elements in arrays of this type
 
@@ -1185,7 +1185,7 @@ TYPE_CODE_VECTOR Record
 ``[VECTOR, numelts, eltty]``
 
 The ``VECTOR`` record (code 12) adds a vector type to the type table.  The
-operand fields are
+operand fields are:
 
 * *numelts*: The number of elements in vectors of this type
 
@@ -1235,7 +1235,7 @@ TYPE_CODE_STRUCT_ANON Record
 ``[STRUCT_ANON, ispacked, ...eltty...]``
 
 The ``STRUCT_ANON`` record (code 18) adds a literal struct type to the type
-table. The operand fields are
+table. The operand fields are:
 
 * *ispacked*: Non-zero if the type represents a packed structure
 
@@ -1258,7 +1258,7 @@ TYPE_CODE_STRUCT_NAMED Record
 
 The ``STRUCT_NAMED`` record (code 20) adds an identified struct type to the
 type table, with a name defined by a previously encountered ``STRUCT_NAME``
-record. The operand fields are
+record. The operand fields are:
 
 * *ispacked*: Non-zero if the type represents a packed structure
 
@@ -1271,7 +1271,7 @@ TYPE_CODE_FUNCTION Record
 ``[FUNCTION, vararg, retty, ...paramty... ]``
 
 The ``FUNCTION`` record (code 21) adds a function type to the type table. The
-operand fields are
+operand fields are:
 
 * *vararg*: Non-zero if the type represents a varargs function
 
@@ -1294,7 +1294,7 @@ TYPE_CODE_TARGET_TYPE Record
 
 The ``TARGET_TYPE`` record (code 26) adds a target extension type to the type
 table, with a name defined by a previously encountered ``STRUCT_NAME`` record.
-The operand fields are
+The operand fields are:
 
 * *num_tys*: The number of parameters that are types (as opposed to integers)
 

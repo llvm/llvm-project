@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 
 #define DEBUG_TYPE "dataflow"
 
@@ -49,25 +52,30 @@ static void copySyntheticField(QualType FieldType, StorageLocation &SrcFieldLoc,
 }
 
 void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
-                Environment &Env) {
+                Environment &Env, const QualType TypeToCopy) {
   auto SrcType = Src.getType().getCanonicalType().getUnqualifiedType();
   auto DstType = Dst.getType().getCanonicalType().getUnqualifiedType();
 
   auto SrcDecl = SrcType->getAsCXXRecordDecl();
   auto DstDecl = DstType->getAsCXXRecordDecl();
 
-  [[maybe_unused]] bool compatibleTypes =
+  const CXXRecordDecl *DeclToCopy =
+      TypeToCopy.isNull() ? nullptr : TypeToCopy->getAsCXXRecordDecl();
+
+  [[maybe_unused]] bool CompatibleTypes =
       SrcType == DstType ||
       (SrcDecl != nullptr && DstDecl != nullptr &&
-       (SrcDecl->isDerivedFrom(DstDecl) || DstDecl->isDerivedFrom(SrcDecl)));
+       (SrcDecl->isDerivedFrom(DstDecl) || DstDecl->isDerivedFrom(SrcDecl) ||
+        (DeclToCopy != nullptr && SrcDecl->isDerivedFrom(DeclToCopy) &&
+         DstDecl->isDerivedFrom(DeclToCopy))));
 
   LLVM_DEBUG({
-    if (!compatibleTypes) {
+    if (!CompatibleTypes) {
       llvm::dbgs() << "Source type " << Src.getType() << "\n";
       llvm::dbgs() << "Destination type " << Dst.getType() << "\n";
     }
   });
-  assert(compatibleTypes);
+  assert(CompatibleTypes);
 
   if (SrcType == DstType || (SrcDecl != nullptr && DstDecl != nullptr &&
                              SrcDecl->isDerivedFrom(DstDecl))) {
@@ -76,12 +84,24 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
     for (const auto &[Name, DstFieldLoc] : Dst.synthetic_fields())
       copySyntheticField(DstFieldLoc->getType(), Src.getSyntheticField(Name),
                          *DstFieldLoc, Env);
-  } else {
+  } else if (SrcDecl != nullptr && DstDecl != nullptr &&
+             DstDecl->isDerivedFrom(SrcDecl)) {
     for (auto [Field, SrcFieldLoc] : Src.children())
       copyField(*Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
     for (const auto &[Name, SrcFieldLoc] : Src.synthetic_fields())
       copySyntheticField(SrcFieldLoc->getType(), *SrcFieldLoc,
                          Dst.getSyntheticField(Name), Env);
+  } else {
+    for (const FieldDecl *Field :
+         Env.getDataflowAnalysisContext().getModeledFields(TypeToCopy)) {
+      copyField(*Field, Src.getChild(*Field), Dst.getChild(*Field), Dst, Env);
+    }
+    for (const auto &[SyntheticFieldName, SyntheticFieldType] :
+         Env.getDataflowAnalysisContext().getSyntheticFields(TypeToCopy)) {
+      copySyntheticField(SyntheticFieldType,
+                         Src.getSyntheticField(SyntheticFieldName),
+                         Dst.getSyntheticField(SyntheticFieldName), Env);
+    }
   }
 }
 

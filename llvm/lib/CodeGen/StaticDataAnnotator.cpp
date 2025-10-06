@@ -81,7 +81,7 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
       continue;
 
     StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
-    Changed |= GV.updateSectionPrefix(SectionPrefix);
+    Changed |= GV.setSectionPrefix(SectionPrefix);
   }
 
   return Changed;

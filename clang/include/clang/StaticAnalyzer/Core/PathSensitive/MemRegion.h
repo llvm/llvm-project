@@ -1548,8 +1548,8 @@ public:
   ///  a specified FieldDecl.  'superRegion' corresponds to the containing
   ///  memory region (which typically represents the memory representing
   ///  a structure or class).
-  const FieldRegion *getFieldRegion(const FieldDecl *fd,
-                                    const SubRegion* superRegion);
+  const FieldRegion *getFieldRegion(const FieldDecl *FD,
+                                    const SubRegion *SuperRegion);
 
   const FieldRegion *getFieldRegionWithSuper(const FieldRegion *FR,
                                              const SubRegion *superRegion) {

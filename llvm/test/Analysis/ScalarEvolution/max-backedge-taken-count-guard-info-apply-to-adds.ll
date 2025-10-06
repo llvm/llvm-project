@@ -5,7 +5,7 @@ define void @max_btc_improved_by_applying_guards_to_add_subexpr(i32 %low, i32 %h
 ; CHECK-LABEL: 'max_btc_improved_by_applying_guards_to_add_subexpr'
 ; CHECK-NEXT:  Determining loop execution counts for: @max_btc_improved_by_applying_guards_to_add_subexpr
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i32 (1 + (-1 * %low) + %high) to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 7
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 (1 + (-1 * %low) + %high) to i64))<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
