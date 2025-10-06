@@ -1099,15 +1099,17 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          b.create<cir::YieldOp>(loc, cgf.evaluateExprAsBool(e->getRHS()));
+          mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+          lexScope.forceCleanup();
+          cir::YieldOp::create(b, loc, res);
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          auto res = b.create<cir::ConstantOp>(loc, builder.getFalseAttr());
-          b.create<cir::YieldOp>(loc, res.getRes());
+          auto res = cir::ConstantOp::create(b, loc, builder.getFalseAttr());
+          cir::YieldOp::create(b, loc, res.getRes());
         });
     return maybePromoteBoolResult(resOp.getResult(), resTy);
   }
@@ -1143,15 +1145,17 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          auto res = b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
-          b.create<cir::YieldOp>(loc, res.getRes());
+          auto res = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
+          cir::YieldOp::create(b, loc, res.getRes());
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          b.create<cir::YieldOp>(loc, cgf.evaluateExprAsBool(e->getRHS()));
+          mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+          lexScope.forceCleanup();
+          cir::YieldOp::create(b, loc, res);
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);

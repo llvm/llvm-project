@@ -99,7 +99,6 @@ add_libc_unittest(
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.munlock
-    libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -125,7 +124,6 @@ add_libc_unittest(
     libc.src.sys.mman.munlockall
     libc.src.sys.resource.getrlimit
     libc.src.__support.OSUtil.osutil
-    libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -146,7 +144,6 @@ add_libc_unittest(
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
     libc.src.sys.mman.munlock
-    libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -160,13 +157,14 @@ add_libc_unittest(
   DEPENDS
     libc.include.sys_mman
     libc.include.sys_stat
-    libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.src.sys.mman.remap_file_pages
     libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+    libc.src.fcntl.open
+    libc.src.unistd.close
 )
 
 add_libc_unittest(

@@ -371,6 +371,13 @@ public:
                    mayOverlap, isZeroed);
   }
 
+  IsDestructed_t isExternallyDestructed() const {
+    return IsDestructed_t(destructedFlag);
+  }
+  void setExternallyDestructed(bool destructed = true) {
+    destructedFlag = destructed;
+  }
+
   clang::Qualifiers getQualifiers() const { return quals; }
 
   Address getAddress() const { return addr; }

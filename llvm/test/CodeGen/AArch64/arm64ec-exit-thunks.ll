@@ -563,6 +563,41 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
 
+declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
+; CHECK-LABEL:       .def    "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@";
+; CHECK-NEXT:        .scl    2;
+; CHECK-NEXT:        .type   32;
+; CHECK-NEXT:        .endef
+; CHECK-NEXT:        .section        .wowthk$aa,"xr",discard,"??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT:        .globl  "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@" // -- Begin function ??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@
+; CHECK-NEXT:        .p2align        2
+; CHECK-NEXT: "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@": // @"??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT:         .weak_anti_dep  "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
+; CHECK-NEXT: "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@" = "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT:         .weak_anti_dep  "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT: "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@" = "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT: .seh_proc "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT: // %bb.0:
+; CHECK-NEXT:         str     x30, [sp, #-16]!                // 8-byte Folded Spill
+; CHECK-NEXT:         .seh_save_reg_x x30, 16
+; CHECK-NEXT:         .seh_endprologue
+; CHECK-NEXT:         adrp    x8, __os_arm64x_check_icall
+; CHECK-NEXT:         adrp    x11, "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
+; CHECK-NEXT:         add     x11, x11, :lo12:"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
+; CHECK-NEXT:         ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
+; CHECK-NEXT:         adrp    x10, $iexit_thunk$cdecl$v$v
+; CHECK-NEXT:         add     x10, x10, :lo12:$iexit_thunk$cdecl$v$v
+; CHECK-NEXT:         blr     x8
+; CHECK-NEXT:         .seh_startepilogue
+; CHECK-NEXT:         ldr     x30, [sp], #16                  // 8-byte Folded Reload
+; CHECK-NEXT:         .seh_save_reg_x x30, 16
+; CHECK-NEXT:         .seh_endepilogue
+; CHECK-NEXT:         br      x11
+; CHECK-NEXT:         .seh_endfunclet
+; CHECK-NEXT:         .seh_endproc
+
+
+
 ; CHECK-LABEL:    .section        .hybmp$x,"yi"
 ; CHECK-NEXT:     .symidx "#func_caller"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$v
@@ -633,6 +668,12 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     .symidx	"#large_vector$exit_thunk"
 ; CHECK-NEXT:     .symidx	large_vector
 ; CHECK-NEXT:     .word	0
+; CHECK-NEXT:     .symidx "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$v
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@"
+; CHECK-NEXT:     .symidx "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
+; CHECK-NEXT:     .word   0
 
 define void @func_caller() nounwind {
   call void @no_op()
@@ -649,5 +690,6 @@ define void @func_caller() nounwind {
   call %T2 @simple_struct(%T1 { i16 0 }, %T2 { i32 0, float 0.0 }, %T3 { i64 0, double 0.0 }, %T4 { i64 0, double 0.0, i8 0 })
   call <4 x i8> @small_vector(<4 x i8> <i8 0, i8 0, i8 0, i8 0>)
   call <8 x i16> @large_vector(<8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  call void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
   ret void
 }

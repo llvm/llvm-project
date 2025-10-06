@@ -433,6 +433,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_rlimit",
+    hdrs = ["hdr/types/struct_rlimit.h"],
+)
+
+libc_support_library(
     name = "types_pid_t",
     hdrs = ["hdr/types/pid_t.h"],
 )
@@ -6757,6 +6762,230 @@ libc_function(
         ":errno",
         ":hdr_fcntl_macros",
         ":llvm_libc_macros_fcntl_macros",
+    ],
+)
+
+############################### sys/mman targets ###############################
+
+libc_function(
+    name = "madvise",
+    srcs = ["src/sys/mman/linux/madvise.cpp"],
+    hdrs = ["src/sys/mman/madvise.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mincore",
+    srcs = ["src/sys/mman/linux/mincore.cpp"],
+    hdrs = ["src/sys/mman/mincore.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mlock",
+    srcs = ["src/sys/mman/linux/mlock.cpp"],
+    hdrs = ["src/sys/mman/mlock.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mlock2",
+    srcs = ["src/sys/mman/linux/mlock2.cpp"],
+    hdrs = ["src/sys/mman/mlock2.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mlockall",
+    srcs = ["src/sys/mman/linux/mlockall.cpp"],
+    hdrs = ["src/sys/mman/mlockall.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mmap",
+    srcs = ["src/sys/mman/linux/mmap.cpp"],
+    hdrs = ["src/sys/mman/mmap.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mprotect",
+    srcs = ["src/sys/mman/linux/mprotect.cpp"],
+    hdrs = ["src/sys/mman/mprotect.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "mremap",
+    srcs = ["src/sys/mman/linux/mremap.cpp"],
+    hdrs = ["src/sys/mman/mremap.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "msync",
+    srcs = ["src/sys/mman/linux/msync.cpp"],
+    hdrs = ["src/sys/mman/msync.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "munlock",
+    srcs = ["src/sys/mman/linux/munlock.cpp"],
+    hdrs = ["src/sys/mman/munlock.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "munlockall",
+    srcs = ["src/sys/mman/linux/munlockall.cpp"],
+    hdrs = ["src/sys/mman/munlockall.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "munmap",
+    srcs = ["src/sys/mman/linux/munmap.cpp"],
+    hdrs = ["src/sys/mman/munmap.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "posix_madvise",
+    srcs = ["src/sys/mman/linux/posix_madvise.cpp"],
+    hdrs = ["src/sys/mman/posix_madvise.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "remap_file_pages",
+    srcs = ["src/sys/mman/linux/remap_file_pages.cpp"],
+    hdrs = ["src/sys/mman/remap_file_pages.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_support_library(
+    name = "shm_common",
+    hdrs = ["src/sys/mman/linux/shm_common.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_array",
+        ":__support_cpp_string_view",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":errno",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "shm_open",
+    srcs = ["src/sys/mman/linux/shm_open.cpp"],
+    hdrs = ["src/sys/mman/shm_open.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_fcntl",
+        ":errno",
+        ":hdr_fcntl_macros",
+        ":shm_common",
+        ":types_mode_t",
+    ],
+)
+
+libc_function(
+    name = "shm_unlink",
+    srcs = ["src/sys/mman/linux/shm_unlink.cpp"],
+    hdrs = ["src/sys/mman/shm_unlink.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_fcntl_macros",
+        ":shm_common",
+        ":types_mode_t",
+    ],
+)
+
+############################# sys/resource targets #############################
+
+libc_function(
+    name = "getrlimit",
+    srcs = ["src/sys/resource/linux/getrlimit.cpp"],
+    hdrs = ["src/sys/resource/getrlimit.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_struct_rlimit",
+    ],
+)
+
+libc_function(
+    name = "setrlimit",
+    srcs = ["src/sys/resource/linux/setrlimit.cpp"],
+    hdrs = ["src/sys/resource/setrlimit.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_struct_rlimit",
     ],
 )
 
