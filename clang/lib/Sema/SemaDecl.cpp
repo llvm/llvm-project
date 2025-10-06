@@ -3877,6 +3877,23 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     RequiresAdjustment = true;
   }
 
+  // If the declaration is marked with cfi_unchecked_callee but the definition
+  // isn't, the definition is also cfi_unchecked_callee.
+  if (auto *FPT1 = OldType->getAs<FunctionProtoType>()) {
+    if (auto *FPT2 = NewType->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI1 = FPT1->getExtProtoInfo();
+      FunctionProtoType::ExtProtoInfo EPI2 = FPT2->getExtProtoInfo();
+
+      if (EPI1.CFIUncheckedCallee && !EPI2.CFIUncheckedCallee) {
+        EPI2.CFIUncheckedCallee = true;
+        NewQType = Context.getFunctionType(FPT2->getReturnType(),
+                                           FPT2->getParamTypes(), EPI2);
+        NewType = cast<FunctionType>(NewQType);
+        New->setType(NewQType);
+      }
+    }
+  }
+
   // Merge regparm attribute.
   if (OldTypeInfo.getHasRegParm() != NewTypeInfo.getHasRegParm() ||
       OldTypeInfo.getRegParm() != NewTypeInfo.getRegParm()) {
@@ -6392,12 +6409,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       NextTL =
           TL.castAs<DependentNameTypeLoc>().getQualifierLoc().getAsTypeLoc();
       break;
-    case TypeLoc::DependentTemplateSpecialization: {
-      auto TST = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-      TemplateKeywordLoc = TST.getTemplateKeywordLoc();
-      NextTL = TST.getQualifierLoc().getAsTypeLoc();
-      break;
-    }
     default:
       break;
     }
@@ -6783,7 +6794,9 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(Oversized, 10);
+    Diag(Loc, diag::err_array_too_large) << toString(
+        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
+        /*UpperCase=*/false, /*InsertSeparators=*/true);
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;
@@ -8401,7 +8414,7 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
 /// Return the location of the capture if the given lambda captures the given
 /// variable \p VD, or an invalid source location otherwise.
 static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
-                                         const VarDecl *VD) {
+                                         const ValueDecl *VD) {
   for (const Capture &Capture : LSI->Captures) {
     if (Capture.isVariableCapture() && Capture.getVariable() == VD)
       return Capture.getLocation();
@@ -8498,7 +8511,9 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+        // Handle both VarDecl and BindingDecl in lambda contexts
+        if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+          const auto *VD = cast<ValueDecl>(ShadowedDecl);
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
           if (RD->getLambdaCaptureDefault() == LCD_None) {
             // Try to avoid warnings for lambdas with an explicit capture
@@ -8527,18 +8542,27 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
-      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
-          VD && VD->hasLocalStorage()) {
-        // A variable can't shadow a local variable in an enclosing scope, if
-        // they are separated by a non-capturing declaration context.
-        for (DeclContext *ParentDC = NewDC;
-             ParentDC && !ParentDC->Equals(OldDC);
-             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
-          // Only block literals, captured statements, and lambda expressions
-          // can capture; other scopes don't.
-          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
-              !isLambdaCallOperator(ParentDC)) {
-            return;
+      // Apply scoping logic to both VarDecl and BindingDecl with local storage
+      if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+        bool HasLocalStorage = false;
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl))
+          HasLocalStorage = VD->hasLocalStorage();
+        else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl))
+          HasLocalStorage =
+              cast<VarDecl>(BD->getDecomposedDecl())->hasLocalStorage();
+
+        if (HasLocalStorage) {
+          // A variable can't shadow a local variable or binding in an enclosing
+          // scope, if they are separated by a non-capturing declaration
+          // context.
+          for (DeclContext *ParentDC = NewDC;
+               ParentDC && !ParentDC->Equals(OldDC);
+               ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
+            // Only block literals, captured statements, and lambda expressions
+            // can capture; other scopes don't.
+            if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
+                !isLambdaCallOperator(ParentDC))
+              return;
           }
         }
       }
@@ -8585,7 +8609,8 @@ void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
     const NamedDecl *ShadowedDecl = Shadow.ShadowedDecl;
     // Try to avoid the warning when the shadowed decl isn't captured.
     const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+    if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+      const auto *VD = cast<ValueDecl>(ShadowedDecl);
       SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
       Diag(Shadow.VD->getLocation(),
            CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
@@ -11015,17 +11040,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         Diag(NewFD->getLocation(), diag::err_config_scalar_return)
             << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
-    }
-
-    // Variadic functions, other than a *declaration* of printf, are not allowed
-    // in device-side CUDA code, unless someone passed
-    // -fcuda-allow-variadic-functions.
-    if (!getLangOpts().CUDAAllowVariadicFunctions && NewFD->isVariadic() &&
-        (NewFD->hasAttr<CUDADeviceAttr>() ||
-         NewFD->hasAttr<CUDAGlobalAttr>()) &&
-        !(II && II->isStr("printf") && NewFD->isExternC() &&
-          !D.isFunctionDefinition())) {
-      Diag(NewFD->getLocation(), diag::err_variadic_device_fn);
     }
   }
 
@@ -18884,8 +18898,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 

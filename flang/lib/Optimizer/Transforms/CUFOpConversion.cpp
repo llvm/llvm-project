@@ -557,8 +557,8 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
     mlir::Value src = op.getSrc();
     if (srcTy.isInteger(1)) {
       // i1 is not a supported type in the descriptor and it is actually coming
-      // from a LOGICAL constant. Store it as a fir.logical.
-      srcTy = fir::LogicalType::get(rewriter.getContext(), 4);
+      // from a LOGICAL constant. Use the destination type to avoid mismatch.
+      srcTy = dstEleTy;
       src = createConvertOp(rewriter, loc, srcTy, src);
       addr = builder.createTemporary(loc, srcTy);
       fir::StoreOp::create(builder, loc, src, addr);
@@ -650,7 +650,7 @@ struct CUFDataTransferOpConversion
 
       if (fir::isa_trivial(srcTy) && !fir::isa_trivial(dstTy)) {
         // Initialization of an array from a scalar value should be implemented
-        // via a kernel launch. Use the flan runtime via the Assign function
+        // via a kernel launch. Use the flang runtime via the Assign function
         // until we have more infrastructure.
         mlir::Value src = emboxSrc(rewriter, op, symtab);
         mlir::Value dst = emboxDst(rewriter, op, symtab);

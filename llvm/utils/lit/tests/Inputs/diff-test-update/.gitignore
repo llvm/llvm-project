@@ -1,2 +1,10 @@
 ; diff-tmp-dir.test clobbers this file
 empty.txt
+; these test cases are clobbered when run, so they're recreated each time
+single-split-file.test
+single-split-file-populated.test
+multiple-split-file.test
+multiple-split-file-populated.test
+single-split-file-no-expected.test
+split-c-comments.test
+split whitespace.test

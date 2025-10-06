@@ -5188,6 +5188,14 @@ private:
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
+  struct ParsedSemantic {
+    StringRef Name = "";
+    unsigned Index = 0;
+    bool Explicit = false;
+  };
+
+  ParsedSemantic ParseHLSLSemantic();
+
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
@@ -6758,6 +6766,9 @@ private:
   OMPClause *ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
+
+  /// Parses the 'looprange' clause of a '#pragma omp fuse' directive.
+  OMPClause *ParseOpenMPLoopRangeClause();
 
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();

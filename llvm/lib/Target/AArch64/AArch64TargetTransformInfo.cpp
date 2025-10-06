@@ -2103,15 +2103,15 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
 }
 
 static std::optional<Instruction *>
-instCombineSMECntsElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts,
-                       const AArch64Subtarget *ST) {
+instCombineSMECntsd(InstCombiner &IC, IntrinsicInst &II,
+                    const AArch64Subtarget *ST) {
   if (!ST->isStreaming())
     return std::nullopt;
 
-  // In streaming-mode, aarch64_sme_cnts is equivalent to aarch64_sve_cnt
+  // In streaming-mode, aarch64_sme_cntds is equivalent to aarch64_sve_cntd
   // with SVEPredPattern::all
-  Value *Cnt = IC.Builder.CreateElementCount(
-      II.getType(), ElementCount::getScalable(NumElts));
+  Value *Cnt =
+      IC.Builder.CreateElementCount(II.getType(), ElementCount::getScalable(2));
   Cnt->takeName(&II);
   return IC.replaceInstUsesWith(II, Cnt);
 }
@@ -2747,6 +2747,15 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineWhilelo(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  return IC.replaceInstUsesWith(
+      II,
+      IC.Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                                 {II.getType(), II.getOperand(0)->getType()},
+                                 {II.getOperand(0), II.getOperand(1)}));
+}
+
 static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
                                                      IntrinsicInst &II) {
   if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
@@ -2826,13 +2835,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
   case Intrinsic::aarch64_sme_cntsd:
-    return instCombineSMECntsElts(IC, II, 2, ST);
-  case Intrinsic::aarch64_sme_cntsw:
-    return instCombineSMECntsElts(IC, II, 4, ST);
-  case Intrinsic::aarch64_sme_cntsh:
-    return instCombineSMECntsElts(IC, II, 8, ST);
-  case Intrinsic::aarch64_sme_cntsb:
-    return instCombineSMECntsElts(IC, II, 16, ST);
+    return instCombineSMECntsd(IC, II, ST);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
@@ -2889,6 +2892,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEDupqLane(IC, II);
   case Intrinsic::aarch64_sve_insr:
     return instCombineSVEInsr(IC, II);
+  case Intrinsic::aarch64_sve_whilelo:
+    return instCombineWhilelo(IC, II);
   case Intrinsic::aarch64_sve_ptrue:
     return instCombinePTrue(IC, II);
   case Intrinsic::aarch64_sve_uxtb:
@@ -5627,75 +5632,97 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
     TTI::TargetCostKind CostKind) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
-  InstructionCost Cost(TTI::TCC_Basic);
 
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  // Sub opcodes currently only occur in chained cases.
-  // Independent partial reduction subtractions are still costed as an add
+  if (VF.isFixed() && !ST->isSVEorStreamingSVEAvailable() &&
+      (!ST->isNeonAvailable() || !ST->hasDotProd()))
+    return Invalid;
+
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
       OpAExtend == TTI::PR_None)
     return Invalid;
 
-  // We only support multiply binary operations for now, and for muls we
-  // require the types being extended to be the same.
-  // NOTE: For muls AArch64 supports lowering mixed extensions to a usdot but
-  // only if the i8mm or sve/streaming features are available.
-  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB ||
-                OpBExtend == TTI::PR_None ||
-                (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
-                 !ST->isSVEorStreamingSVEAvailable())))
-    return Invalid;
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
+         (!BinOp || (OpBExtend != TTI::PR_None && InputTypeB)) &&
          "Unexpected values for OpBExtend or InputTypeB");
 
-  EVT InputEVT = EVT::getEVT(InputTypeA);
-  EVT AccumEVT = EVT::getEVT(AccumType);
+  // We only support multiply binary operations for now, and for muls we
+  // require the types being extended to be the same.
+  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB))
+    return Invalid;
 
-  unsigned VFMinValue = VF.getKnownMinValue();
+  bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
+  if (IsUSDot && !ST->hasMatMulInt8())
+    return Invalid;
 
-  if (VF.isScalable()) {
-    if (!ST->isSVEorStreamingSVEAvailable())
+  unsigned Ratio =
+      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+  if (VF.getKnownMinValue() <= Ratio)
+    return Invalid;
+
+  VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
+  VectorType *AccumVectorType =
+      VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+  // We don't yet support all kinds of legalization.
+  auto TC = TLI->getTypeConversion(AccumVectorType->getContext(),
+                                   EVT::getEVT(AccumVectorType));
+  switch (TC.first) {
+  default:
+    return Invalid;
+  case TargetLowering::TypeLegal:
+  case TargetLowering::TypePromoteInteger:
+  case TargetLowering::TypeSplitVector:
+    // The legalised type (e.g. after splitting) must be legal too.
+    if (TLI->getTypeAction(AccumVectorType->getContext(), TC.second) !=
+        TargetLowering::TypeLegal)
       return Invalid;
-
-    // Don't accept a partial reduction if the scaled accumulator is vscale x 1,
-    // since we can't lower that type.
-    unsigned Scale =
-        AccumEVT.getScalarSizeInBits() / InputEVT.getScalarSizeInBits();
-    if (VFMinValue == Scale)
-      return Invalid;
+    break;
   }
-  if (VF.isFixed() &&
-      (!ST->isNeonAvailable() || !ST->hasDotProd() || AccumEVT == MVT::i64))
-    return Invalid;
 
-  if (InputEVT == MVT::i8) {
-    switch (VFMinValue) {
-    default:
-      return Invalid;
-    case 8:
-      if (AccumEVT == MVT::i32)
-        Cost *= 2;
-      else if (AccumEVT != MVT::i64)
-        return Invalid;
-      break;
-    case 16:
-      if (AccumEVT == MVT::i64)
-        Cost *= 2;
-      else if (AccumEVT != MVT::i32)
-        return Invalid;
-      break;
-    }
-  } else if (InputEVT == MVT::i16) {
-    // FIXME: Allow i32 accumulator but increase cost, as we would extend
-    //        it to i64.
-    if (VFMinValue != 8 || AccumEVT != MVT::i64)
-      return Invalid;
-  } else
-    return Invalid;
+  std::pair<InstructionCost, MVT> AccumLT =
+      getTypeLegalizationCost(AccumVectorType);
+  std::pair<InstructionCost, MVT> InputLT =
+      getTypeLegalizationCost(InputVectorType);
 
-  return Cost;
+  InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
+
+  // Prefer using full types by costing half-full input types as more expensive.
+  if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),
+                          TypeSize::getScalable(128)))
+    // FIXME: This can be removed after the cost of the extends are folded into
+    // the dot-product expression in VPlan, after landing:
+    //  https://github.com/llvm/llvm-project/pull/147302
+    Cost *= 2;
+
+  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
+    // i16 -> i64 is natively supported for udot/sdot
+    if (AccumLT.second.getScalarType() == MVT::i64 &&
+        InputLT.second.getScalarType() == MVT::i16)
+      return Cost;
+    // i8 -> i64 is supported with an extra level of extends
+    if (AccumLT.second.getScalarType() == MVT::i64 &&
+        InputLT.second.getScalarType() == MVT::i8)
+      // FIXME: This cost should probably be a little higher, e.g. Cost + 2
+      // because it requires two extra extends on the inputs. But if we'd change
+      // that now, a regular reduction would be cheaper because the costs of
+      // the extends in the IR are still counted. This can be fixed
+      // after https://github.com/llvm/llvm-project/pull/147302 has landed.
+      return Cost;
+  }
+
+  // i8 -> i32 is natively supported for udot/sdot/usdot, both for NEON and SVE.
+  if (ST->isSVEorStreamingSVEAvailable() ||
+      (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
+       ST->hasDotProd())) {
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i8)
+      return Cost;
+  }
+
+  // Add additional cost for the extends that would need to be inserted.
+  return Cost + 4;
 }
 
 InstructionCost

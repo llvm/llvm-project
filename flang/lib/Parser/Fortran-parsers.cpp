@@ -1100,14 +1100,14 @@ TYPE_PARSER(construct<EquivalenceObject>(indirect(designator)))
 // R873 common-stmt ->
 //        COMMON [/ [common-block-name] /] common-block-object-list
 //        [[,] / [common-block-name] / common-block-object-list]...
-TYPE_PARSER(
+TYPE_PARSER(sourced(
     construct<CommonStmt>("COMMON" >> defaulted("/" >> maybe(name) / "/"),
         nonemptyList("expected COMMON block objects"_err_en_US,
             Parser<CommonBlockObject>{}),
         many(maybe(","_tok) >>
             construct<CommonStmt::Block>("/" >> maybe(name) / "/",
                 nonemptyList("expected COMMON block objects"_err_en_US,
-                    Parser<CommonBlockObject>{})))))
+                    Parser<CommonBlockObject>{}))))))
 
 // R874 common-block-object -> variable-name [( array-spec )]
 TYPE_PARSER(construct<CommonBlockObject>(name, maybe(arraySpec)))

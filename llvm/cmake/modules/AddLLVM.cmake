@@ -1442,6 +1442,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-lib
     llvm-mca
     llvm-ml
+    llvm-ml64
     llvm-nm
     llvm-objcopy
     llvm-objdump

@@ -570,12 +570,18 @@ public:
 
   /// Update loop metadata and profile info for both the scalar remainder loop
   /// and \p VectorLoop, if it exists. Keeps all loop hints from the original
-  /// loop on the vector loop and replaces vectorizer-specific metadata.
-  void updateLoopMetadataAndProfileInfo(Loop *VectorLoop,
-                                        VPBasicBlock *HeaderVPBB,
-                                        bool VectorizingEpilogue,
-                                        unsigned EstimatedVFxUF,
-                                        bool DisableRuntimeUnroll);
+  /// loop on the vector loop and replaces vectorizer-specific metadata. The
+  /// loop ID of the original loop \p OrigLoopID must be passed, together with
+  /// the average trip count and invocation weight of the original loop (\p
+  /// OrigAverageTripCount and \p OrigLoopInvocationWeight respectively). They
+  /// cannot be retrieved after the plan has been executed, as the original loop
+  /// may have been removed.
+  void updateLoopMetadataAndProfileInfo(
+      Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
+      bool VectorizingEpilogue, MDNode *OrigLoopID,
+      std::optional<unsigned> OrigAverageTripCount,
+      unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
+      bool DisableRuntimeUnroll);
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
