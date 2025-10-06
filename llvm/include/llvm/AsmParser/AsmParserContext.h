@@ -16,7 +16,7 @@
 
 namespace llvm {
 
-/// Registry of file location information for LLVM IR constructs
+/// Registry of file location information for LLVM IR constructs.
 ///
 /// This class provides access to the file location information
 /// for various LLVM IR constructs. Currently, it supports Function,
