@@ -1567,14 +1567,9 @@ void AArch64EpilogueEmitter::emitEpilogue() {
            "SVE stack objects");
     // SplitSVEObjects. Determine the sizes and starts/ends of the ZPR and PPR
     // areas.
-    auto ZPRCalleeSavedSize =
-        StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
-    auto PPRCalleeSavedSize =
-        StackOffset::getScalable(AFI->getPPRCalleeSavedStackSize());
-
     MachineBasicBlock::iterator PPRRestoreBegin = FirstGPRRestoreI,
                                 PPRRestoreEnd = FirstGPRRestoreI;
-    if (PPRCalleeSavedSize) {
+    if (PPRCalleeSavesSize) {
       PPRRestoreBegin = std::prev(PPRRestoreEnd);
       while (PPRRestoreBegin != MBB.begin() &&
              isPartOfPPRCalleeSaves(std::prev(PPRRestoreBegin)))
@@ -1583,7 +1578,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
     MachineBasicBlock::iterator ZPRRestoreBegin = PPRRestoreBegin,
                                 ZPRRestoreEnd = PPRRestoreBegin;
-    if (ZPRCalleeSavedSize) {
+    if (ZPRCalleeSavesSize) {
       ZPRRestoreBegin = std::prev(ZPRRestoreEnd);
       while (ZPRRestoreBegin != MBB.begin() &&
              isPartOfZPRCalleeSaves(std::prev(ZPRRestoreBegin)))
@@ -1592,7 +1587,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
     auto CFAOffset =
         SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize);
-    if (PPRCalleeSavedSize || ZPRCalleeSavedSize) {
+    if (PPRCalleeSavesSize || ZPRCalleeSavesSize) {
       // Deallocate the non-SVE locals first before we can deallocate (and
       // restore callee saves) from the SVE area.
       auto NonSVELocals = StackOffset::getFixed(NumBytes);
@@ -1610,18 +1605,18 @@ void AArch64EpilogueEmitter::emitEpilogue() {
       CFAOffset -= ZPRLocalsSize;
     }
 
-    if (PPRLocalsSize || ZPRCalleeSavedSize) {
+    if (PPRLocalsSize || ZPRCalleeSavesSize) {
       assert(PPRRestoreBegin == ZPRRestoreEnd &&
              "Expected PPR restores after ZPR");
       emitFrameOffset(MBB, PPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
-                      PPRLocalsSize + ZPRCalleeSavedSize, TII,
+                      PPRLocalsSize + ZPRCalleeSavesSize, TII,
                       MachineInstr::FrameDestroy, false, false, nullptr,
                       EmitCFI && !HasFP, CFAOffset);
-      CFAOffset -= PPRLocalsSize + ZPRCalleeSavedSize;
+      CFAOffset -= PPRLocalsSize + ZPRCalleeSavesSize;
     }
-    if (PPRCalleeSavedSize) {
+    if (PPRCalleeSavesSize) {
       emitFrameOffset(MBB, PPRRestoreEnd, DL, AArch64::SP, AArch64::SP,
-                      PPRCalleeSavedSize, TII, MachineInstr::FrameDestroy,
+                      PPRCalleeSavesSize, TII, MachineInstr::FrameDestroy,
                       false, false, nullptr, EmitCFI && !HasFP, CFAOffset);
     }
 
