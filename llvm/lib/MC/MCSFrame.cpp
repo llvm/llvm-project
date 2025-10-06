@@ -220,6 +220,7 @@ class SFrameEmitterImpl {
   // an FDE in those cases. Allow any that are known safe. It is likely that
   // more thorough test cases could refine this code, but it handles the most
   // important ones compatibly with gas.
+  // Returns true if the CFI escape sequence is safe for sframes.
   bool isCFIEscapeSafe(SFrameFDE &FDE, const SFrameFRE &FRE,
                        const MCCFIInstruction &CFI) {
     const MCAsmInfo *AI = Streamer.getContext().getAsmInfo();
@@ -242,8 +243,8 @@ class SFrameEmitterImpl {
       return false;
     }
 
-    // This loop deals with are dwarf::CFIProgram::Instructions. Everywhere
-    // else this file deals with MCCFIInstructions..
+    // This loop deals with dwarf::CFIProgram::Instructions. Everywhere else
+    // this file deals with MCCFIInstructions.
     for (const dwarf::CFIProgram::Instruction &I : P) {
       switch (I.Opcode) {
       case dwarf::DW_CFA_nop:
@@ -360,7 +361,7 @@ class SFrameEmitterImpl {
   }
 
   // Add the effects of CFI to the current FDE, creating a new FRE when
-  // necessary.
+  // necessary. Return true if the CFI is representable in the sframe format.
   bool handleCFI(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &CFI) {
     switch (CFI.getOperation()) {
     case MCCFIInstruction::OpDefCfaRegister:
@@ -413,11 +414,11 @@ class SFrameEmitterImpl {
       FRE = FDE.SaveState.pop_back_val();
       return true;
     case MCCFIInstruction::OpEscape:
-      // This is a string of bytes that contains an aribtrary dwarf-expression
-      // that may or may not affect uwnind info.
+      // This is a string of bytes that contains an arbitrary dwarf-expression
+      // that may or may not affect unwind info.
       return isCFIEscapeSafe(FDE, FRE, CFI);
     default:
-      // Instructions that don't affect the CFA, RA, and SP can be safely
+      // Instructions that don't affect the CFA, RA, and FP can be safely
       // ignored.
       return true;
     }
