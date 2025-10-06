@@ -396,6 +396,8 @@ public:
     return true;
   }
 
+  bool preferZeroCompareBranch(BranchInst *) const override;
+
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
   bool hasAndNotCompare(SDValue V) const override {
