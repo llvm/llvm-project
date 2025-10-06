@@ -418,7 +418,11 @@ protected:
         if (process_sp) {
           // Seems weird that we Launch a core file, but that is what we
           // do!
-          error = process_sp->LoadCore();
+          {
+            ElapsedTime load_core_time(
+                target_sp->GetStatistics().GetLoadCoreTime());
+            error = process_sp->LoadCore();
+          }
 
           if (error.Fail()) {
             result.AppendError(error.AsCString("unknown core file format"));
@@ -2210,7 +2214,9 @@ protected:
 
     const char *clang_args[] = {"clang", pcm_path};
     clang::CompilerInstance compiler(clang::createInvocation(clang_args));
-    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
 
     // Pass empty deleter to not attempt to free memory that was allocated
     // outside of the current scope, possibly statically.
@@ -2275,7 +2281,8 @@ protected:
         if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping clang ast"))
           break;
         if (SymbolFile *sf = module_sp->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream(), filter);
+          sf->DumpClangAST(result.GetOutputStream(), filter,
+                           GetCommandInterpreter().GetDebugger().GetUseColor());
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
@@ -2304,7 +2311,8 @@ protected:
 
         Module *m = module_list.GetModulePointerAtIndex(i);
         if (SymbolFile *sf = m->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream(), filter);
+          sf->DumpClangAST(result.GetOutputStream(), filter,
+                           GetCommandInterpreter().GetDebugger().GetUseColor());
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -5294,7 +5302,8 @@ protected:
     // Go over every scratch TypeSystem and dump to the command output.
     for (lldb::TypeSystemSP ts : GetTarget().GetScratchTypeSystems())
       if (ts)
-        ts->Dump(result.GetOutputStream().AsRawOstream(), "");
+        ts->Dump(result.GetOutputStream().AsRawOstream(), "",
+                 GetCommandInterpreter().GetDebugger().GetUseColor());
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
