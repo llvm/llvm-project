@@ -48,3 +48,33 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void* ignore_const_return(){
+  void* const p = nullptr;
+  return p;
+}
+
+void const* const_return(){
+  void * p = nullptr;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p' of type 'void *' can be declared 'const'
+  // CHECK-FIXES: void  const* p
+  return p;
+}
+
+template<typename T>
+T* ignore_const_return_template(){
+  T* const p = nullptr;
+  return p;
+}
+
+template<typename T>
+T const* const_return_template(){
+  T * p = nullptr;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: T  const* p
+  return p;
+}
+
+void instantiate_return_templates() {
+  ignore_const_return_template<int>();
+  const_return_template<int>();
+}
