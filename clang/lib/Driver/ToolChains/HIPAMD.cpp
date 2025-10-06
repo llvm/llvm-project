@@ -168,9 +168,14 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
   assert(!Inputs.empty() && "Must have at least one input.");
 
-  constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
-
-  // Linked BC is now in Output
+  InputInfo LinkedBC = Inputs.front();
+  if (Inputs.size() > 1) {
+    std::string TempPath = C.getDriver().GetTemporaryPath("pre-spirv-translate",
+                                                          "bc");
+    LinkedBC = InputInfo(&JA, C.getArgs().MakeArgString(TempPath),
+                         Output.getBaseInput());
+    constructLlvmLinkCommand(C, JA, Inputs, LinkedBC, Args);
+  }
 
   // Emit SPIR-V binary.
   llvm::opt::ArgStringList TrArgs{
@@ -180,7 +185,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
       "--spirv-lower-const-expr",
       "--spirv-preserve-auxdata",
       "--spirv-debug-info-version=nonsemantic-shader-200"};
-  SPIRV::constructTranslateCommand(C, *this, JA, Output, Output, TrArgs);
+  SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBC, TrArgs);
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
