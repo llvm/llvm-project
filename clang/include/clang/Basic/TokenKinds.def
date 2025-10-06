@@ -353,6 +353,9 @@ KEYWORD(__ptrauth                   , KEYALL)
 // C2y
 UNARY_EXPR_OR_TYPE_TRAIT(_Countof, CountOf, KEYNOCXX)
 
+// z/OS specific keywords
+KEYWORD(_Export                     , KEYZOS)
+
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
 KEYWORD(bool                        , BOOLSUPPORT|KEYC23)
