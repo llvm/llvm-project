@@ -18,7 +18,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include "common_constants.h"
+#include "src/__support/math/common_constants.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -28,6 +28,8 @@ using Float128 = typename fputil::DyadicFloat<128>;
 using LIBC_NAMESPACE::operator""_u128;
 
 namespace {
+
+using namespace common_constants_internal;
 
 // R1[i] = 2^-8 * nearestint( 2^8 / (1 + i * 2^-7) )
 constexpr double R1[129] = {

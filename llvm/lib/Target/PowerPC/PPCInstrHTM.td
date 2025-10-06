@@ -11,10 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-
-def HasHTM : Predicate<"Subtarget->hasHTM()">;
-
 def HTM_get_imm : SDNodeXForm<imm, [{
   return getI32Imm (N->getZExtValue(), SDLoc(N));
 }]>;
