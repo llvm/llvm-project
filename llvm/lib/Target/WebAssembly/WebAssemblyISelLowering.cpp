@@ -3209,7 +3209,8 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
   using namespace llvm::SDPatternMatch;
 
   SDValue LHS;
-  if (!sd_match(N->getOperand(1),
+  if (N->getNumOperands() < 2 ||
+      !sd_match(N->getOperand(1),
                 m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
     return SDValue();
   EVT LT = LHS.getValueType();

@@ -132,4 +132,12 @@ define i32 @all_true_2_4_i32(<4 x i32> %v) {
   ret i32 %conv3
 }
 
+; Regression test for the intrinsic pattern matcher with nullary intrinsics
+define i64 @other_intrinsic() #0 {
+entry:
+  %0 = call i64 @llvm.wasm.tls.align.i64()
+  ret i64 %0
+}
+
+attributes #0 = { "target-features"="+atomics" }
 
