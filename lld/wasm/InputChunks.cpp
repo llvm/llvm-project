@@ -406,6 +406,14 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
   return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
 
+bool isValidRuntimeRelocation(WasmRelocType type) {
+  // TODO(https://github.com/llvm/llvm-project/issues/146923): Currently
+  // this means that R_WASM_FUNCTION_INDEX_I32 is not valid in `-pie` data
+  // sections.
+  return type == R_WASM_TABLE_INDEX_I32 || type == R_WASM_TABLE_INDEX_I64 ||
+         type == R_WASM_MEMORY_ADDR_I32 || type == R_WASM_MEMORY_ADDR_I64;
+}
+
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
@@ -424,8 +432,6 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   for (const WasmRelocation &rel : relocations) {
-    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
-
     Symbol *sym = file->getSymbol(rel);
     // Runtime relocations are needed when we don't know the address of
     // a symbol statically.
@@ -433,6 +439,11 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     if (!requiresRuntimeReloc)
       continue;
 
+    if (!isValidRuntimeRelocation(rel.getType()))
+      error("invalid runtime relocation type in data section: " +
+            relocTypetoString(rel.Type));
+
+    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
                       << " output offset=" << offset << "\n");
