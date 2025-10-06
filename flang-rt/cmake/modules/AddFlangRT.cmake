@@ -286,6 +286,12 @@ function (add_flangrt_library name)
     # For Flang-RT's configured config.h to be found
     target_include_directories(${tgtname} PRIVATE "${FLANG_RT_BINARY_DIR}")
 
+    # Define our own _GLIBCXX_THROW_OR_ABORT because libstdc++ headers
+    # reference std::exception in its definition, and we do not want
+    # to link against std::exception since doing that would link us to
+    # the C++ runtime.
+    target_compile_definitions(${tgtname} PUBLIC "_GLIBCXX_THROW_OR_ABORT=(__builtin_abort())")
+
     # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
     target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
