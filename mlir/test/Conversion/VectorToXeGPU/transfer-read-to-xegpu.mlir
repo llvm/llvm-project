@@ -83,9 +83,9 @@ gpu.func @load_zero_pad_out_of_bounds(%source: memref<32x64xf32>,
 // LOAD-ND-LABEL:  @load_zero_pad_out_of_bounds(
 // LOAD-ND-SAME:   %[[SRC:.+]]: memref<32x64xf32>,
 // LOAD-ND-SAME:   %[[OFFSET:.+]]: index
-// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]]
 // LOAD-ND-SAME:     memref<32x64xf32> -> !xegpu.tensor_desc<8x16xf32>
-// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]]{{.*}}-> vector<8x16xf32>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFFSET]], %[[OFFSET]]]{{.*}}-> vector<8x16xf32>
 // LOAD-ND:        return %[[VEC]]
 
 // LOAD-GATHER-LABEL:  @load_zero_pad_out_of_bounds(
@@ -109,9 +109,9 @@ gpu.func @load_transposed(%source: memref<32x64xf32>,
 // LOAD-ND-SAME:   %[[SRC:.+]]: memref<32x64xf32>,
 // LOAD-ND-SAME:   %[[OFFSET1:.+]]: index, 
 // LOAD-ND-SAME:   %[[OFFSET2:.+]]: index  
-// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET1]], %[[OFFSET2]]]
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]]
 // LOAD-ND-SAME:     memref<32x64xf32> -> !xegpu.tensor_desc<16x8xf32
-// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]] <{transpose = array<i64: 1, 0>}>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFFSET1]], %[[OFFSET2]]] <{transpose = array<i64: 1, 0>}>
 // LOAD-ND-SAME:     -> vector<8x16xf32>
 // LOAD-ND:        return %[[VEC]]
 
