@@ -676,6 +676,10 @@ public:
   mlir::Value VisitRealImag(const UnaryOperator *e,
                             QualType promotionType = QualType());
 
+  mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
+    return Visit(e->getSubExpr());
+  }
+
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
     return Visit(die->getExpr());
@@ -686,6 +690,10 @@ public:
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
+  }
+  mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *e) {
+    cgf.emitCXXDeleteExpr(e);
+    return {};
   }
 
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
@@ -1274,9 +1282,6 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
   } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
     switch (uo->getOpcode()) {
     case UO_Imag:
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter::emitPromoted unary imag");
-      return {};
     case UO_Real:
       return VisitRealImag(uo, promotionType);
     case UO_Minus:
@@ -2146,22 +2151,24 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
   }
 
   if (e->getOpcode() == UO_Real) {
-    return promotionTy.isNull() ? Visit(op)
-                                : cgf.emitPromotedScalarExpr(op, promotionTy);
+    mlir::Value operand = promotionTy.isNull()
+                              ? Visit(op)
+                              : cgf.emitPromotedScalarExpr(op, promotionTy);
+    return builder.createComplexReal(loc, operand);
   }
 
   // __imag on a scalar returns zero. Emit the subexpr to ensure side
   // effects are evaluated, but not the actual value.
-  if (op->isGLValue())
-    cgf.emitLValue(op);
-  else if (!promotionTy.isNull())
-    cgf.emitPromotedScalarExpr(op, promotionTy);
-  else
-    cgf.emitScalarExpr(op);
-
-  mlir::Type valueTy =
-      cgf.convertType(promotionTy.isNull() ? e->getType() : promotionTy);
-  return builder.getNullValue(valueTy, loc);
+  mlir::Value operand;
+  if (op->isGLValue()) {
+    operand = cgf.emitLValue(op).getPointer();
+    operand = cir::LoadOp::create(builder, loc, operand);
+  } else if (!promotionTy.isNull()) {
+    operand = cgf.emitPromotedScalarExpr(op, promotionTy);
+  } else {
+    operand = cgf.emitScalarExpr(op);
+  }
+  return builder.createComplexImag(loc, operand);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

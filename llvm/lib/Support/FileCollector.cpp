@@ -68,9 +68,8 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
   SmallString<256> RealPath;
   auto DirWithSymlink = CachedDirs.find(Directory);
   if (DirWithSymlink == CachedDirs.end()) {
-    // FIXME: Should this be a call to FileSystem::getRealpath(), in some
-    // cases? What if there is nothing on disk?
-    if (sys::fs::real_path(Directory, RealPath))
+    // FIXME: What if there is nothing on disk?
+    if (VFS->getRealPath(Directory, RealPath))
       return;
     CachedDirs[Directory] = std::string(RealPath);
   } else {

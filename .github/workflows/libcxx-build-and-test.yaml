@@ -215,7 +215,7 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
-          xcode-version: '16.3'
+          xcode-version: '26.0'
       - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
       - name: Build and test
         run: |
@@ -255,7 +255,6 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
         run: |
-          choco install -y ninja
           pip install psutil
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
@@ -281,6 +280,10 @@ jobs:
       - name: Set up the MSVC dev environment
         if: ${{ matrix.mingw != true }}
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Add the installed Clang at the start of the path
+        if: ${{ matrix.mingw != true }}
+        run: |
+          echo "c:\Program Files\LLVM\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and test
         run: |
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}

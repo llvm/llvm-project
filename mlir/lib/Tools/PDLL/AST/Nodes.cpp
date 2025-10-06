@@ -72,7 +72,7 @@ public:
 
             const Module>(
             [&](auto derivedNode) { this->visitImpl(derivedNode); })
-        .Default([](const Node *) { llvm_unreachable("unknown AST node"); });
+        .DefaultUnreachable("unknown AST node");
   }
 
 private:
