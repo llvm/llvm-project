@@ -71,7 +71,7 @@ TEST_P(OnDiskTrieRawHashMapTestFixture, General) {
   std::optional<FileOffset> Offset;
   std::optional<MutableArrayRef<char>> Data;
   {
-    std::optional<OnDiskTrieRawHashMap::pointer> Insertion;
+    std::optional<OnDiskTrieRawHashMap::OnDiskPtr> Insertion;
     ASSERT_THAT_ERROR(Trie1->insert({Hash0, Data0v1}).moveInto(Insertion),
                       Succeeded());
     EXPECT_EQ(Hash0, (*Insertion)->Hash);
@@ -128,7 +128,7 @@ TEST_P(OnDiskTrieRawHashMapTestFixture, General) {
 
   // Recover from an offset.
   {
-    OnDiskTrieRawHashMap::const_pointer Recovered;
+    OnDiskTrieRawHashMap::ConstOnDiskPtr Recovered;
     ASSERT_THAT_ERROR(Trie1->recoverFromFileOffset(*Offset).moveInto(Recovered),
                       Succeeded());
     ASSERT_TRUE(Recovered);
@@ -140,14 +140,14 @@ TEST_P(OnDiskTrieRawHashMapTestFixture, General) {
   // Recover from a bad offset.
   {
     FileOffset BadOffset(1);
-    OnDiskTrieRawHashMap::const_pointer Recovered;
+    OnDiskTrieRawHashMap::ConstOnDiskPtr Recovered;
     ASSERT_THAT_ERROR(
         Trie1->recoverFromFileOffset(BadOffset).moveInto(Recovered), Failed());
   }
 
   // Insert another thing.
   {
-    std::optional<OnDiskTrieRawHashMap::pointer> Insertion;
+    std::optional<OnDiskTrieRawHashMap::OnDiskPtr> Insertion;
     ASSERT_THAT_ERROR(Trie1->insert({Hash1, Data1}).moveInto(Insertion),
                       Succeeded());
     EXPECT_EQ(Hash1, (*Insertion)->Hash);
@@ -210,7 +210,7 @@ TEST(OnDiskTrieRawHashMapTest, OutOfSpace) {
   auto Hash0 = ArrayRef(Hash0Bytes);
   constexpr StringLiteral Data0v1Bytes = "data0.v1";
   ArrayRef<char> Data0v1 = ArrayRef(Data0v1Bytes.data(), Data0v1Bytes.size());
-  std::optional<OnDiskTrieRawHashMap::pointer> Insertion;
+  std::optional<OnDiskTrieRawHashMap::OnDiskPtr> Insertion;
   ASSERT_THAT_ERROR(Trie->insert({Hash0, Data0v1}).moveInto(Insertion),
                     Failed());
 }
