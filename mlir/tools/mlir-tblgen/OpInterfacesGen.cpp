@@ -536,11 +536,8 @@ void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
-  std::string comments = tblgen::emitSummaryAndDescComments(
-      "", interface.getDescription().value_or(""));
-  if (!comments.empty()) {
-    os << comments << "\n";
-  }
+  tblgen::emitSummaryAndDescComments(os, "",
+                                     interface.getDescription().value_or(""));
 
   StringRef interfaceName = interface.getName();
   os << "class " << interfaceName << ";\n";
@@ -560,11 +557,8 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
-  std::string comments = tblgen::emitSummaryAndDescComments(
-      "", interface.getDescription().value_or(""));
-  if (!comments.empty()) {
-    os << comments << "\n";
-  }
+  tblgen::emitSummaryAndDescComments(os, "",
+                                     interface.getDescription().value_or(""));
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"

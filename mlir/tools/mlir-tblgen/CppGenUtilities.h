@@ -15,14 +15,16 @@
 #define MLIR_TOOLS_MLIRTBLGEN_CPPGENUTILITIES_H_
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 namespace tblgen {
 
-// Emit the summary and description as a C++ comment, perperly aligned placed
-// adjacent to the class declaration of generated classes.
-std::string emitSummaryAndDescComments(llvm::StringRef summary,
-                                       llvm::StringRef description);
+// Emit the summary and description as a C++ comment. If `terminateComment` is
+// true, terminates the comment with a `\n`.
+void emitSummaryAndDescComments(llvm::raw_ostream &os, llvm::StringRef summary,
+                                llvm::StringRef description,
+                                bool terminateComment = true);
 } // namespace tblgen
 } // namespace mlir
 
