@@ -2650,47 +2650,53 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
   ret <4 x bfloat> %r
 }
 
-; nnan minimum(X, +inf) -> X
-define float @test_fminimum_inf_nnan(float %x) nounwind {
+; nnan minimum(Y, +inf) -> Y
+define float @test_fminimum_inf_nnan(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fminimum_inf_nnan:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_inf_nnan:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX10_2-LABEL: test_fminimum_inf_nnan:
 ; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_inf_nnan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
-  %1 = call nnan float @llvm.minimum.f32(float %x, float 0x7ff0000000000000)
+  %1 = call nnan float @llvm.minimum.f32(float %y, float 0x7ff0000000000000)
   ret float %1
 }
 
-; nnan maximum(X, -inf) -> X
-define float @test_fmaximum_neg_inf_nnan(float %x) nounwind {
+; nnan maximum(Y, -inf) -> Y
+define float @test_fmaximum_neg_inf_nnan(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fmaximum_neg_inf_nnan:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fmaximum_neg_inf_nnan:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX10_2-LABEL: test_fmaximum_neg_inf_nnan:
 ; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_neg_inf_nnan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
-  %1 = call nnan float @llvm.maximum.f32(float %x, float 0xfff0000000000000)
+  %1 = call nnan float @llvm.maximum.f32(float %y, float 0xfff0000000000000)
   ret float %1
 }
 

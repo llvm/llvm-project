@@ -645,20 +645,32 @@ define float @test_maxnum_const_op2(float %x) {
   ret float %r
 }
 
-define float @test_maxnum_const_nan(float %x) {
-; CHECK-LABEL: test_maxnum_const_nan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %r = call float @llvm.maxnum.f32(float %x, float 0x7fff000000000000)
+define float @test_maxnum_const_nan(float %x, float %y) {
+; SSE-LABEL: test_maxnum_const_nan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_const_nan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float %y, float 0x7fff000000000000)
   ret float %r
 }
 
-; nnan maxnum(X, -inf) -> X
-define float @test_maxnum_neg_inf_nnan(float %x) nounwind {
-; CHECK-LABEL: test_maxnum_neg_inf_nnan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %r = call nnan float @llvm.maxnum.f32(float %x, float 0xfff0000000000000)
+; nnan maxnum(Y, -inf) -> Y
+define float @test_maxnum_neg_inf_nnan(float %x, float %y) nounwind {
+; SSE-LABEL: test_maxnum_neg_inf_nnan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_maxnum_neg_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call nnan float @llvm.maxnum.f32(float %y, float 0xfff0000000000000)
   ret float %r
 }
 
