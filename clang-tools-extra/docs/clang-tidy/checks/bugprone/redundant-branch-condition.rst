@@ -78,8 +78,9 @@ Every possible change is considered, thus if the condition variable is not
 a local variable of the function, it is a volatile or it has an alias (pointer
 or reference) then no warning is issued.
 
-Known limitations
-^^^^^^^^^^^^^^^^^
+
+Limitations
+-----------
 
 The ``else`` branch is not checked currently for negated condition variable:
 

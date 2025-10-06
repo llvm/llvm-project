@@ -14,7 +14,7 @@ multiclass ACC_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
   def PP :
     XX3Form_AT3_XAB6<opcode, xo, (outs acc:$AT), !con((ins acc:$ATi), IOL),
                      !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   def NAME#W :
@@ -24,7 +24,7 @@ multiclass ACC_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
   def WPP :
     XX3Form_AT3_XAB6<opcode, xo, (outs wacc:$AT), !con((ins wacc:$ATi), IOL),
                      !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -48,7 +48,7 @@ multiclass ACC_UM_M844_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u8imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#W :
@@ -65,7 +65,7 @@ multiclass ACC_UM_M844_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u8imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -89,7 +89,7 @@ multiclass ACC_UM_M444_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#W :
@@ -106,7 +106,7 @@ multiclass ACC_UM_M444_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -129,7 +129,7 @@ multiclass ACC_UM_M244_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#W :
@@ -145,7 +145,7 @@ multiclass ACC_UM_M244_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -162,7 +162,7 @@ multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
     XX3Form_AT3_XAB6<
       opcode, !or(xo, 0x20), (outs acc:$AT), !con((ins acc:$ATi), IOL),
       !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsNotISAFuture] in {
   def PM#NAME :
@@ -179,7 +179,7 @@ multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   def NAME#W :
@@ -190,7 +190,7 @@ multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
     XX3Form_AT3_XAB6<
       opcode, !or(xo, 0x20), (outs wacc:$AT), !con((ins wacc:$ATi), IOL),
       !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#W :
@@ -207,7 +207,7 @@ multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -220,29 +220,29 @@ multiclass ACC_NEG_UM_M244_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
   def PN : XX3Form_AT3_XAB6<
              opcode, !or(xo, 0x80), (outs acc:$AT), !con((ins acc:$ATi), IOL),
              !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NP : XX3Form_AT3_XAB6<
              opcode, !or(xo, 0x40), (outs acc:$AT), !con((ins acc:$ATi), IOL),
              !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NN : XX3Form_AT3_XAB6<
              opcode, !or(xo, 0xC0), (outs acc:$AT), !con((ins acc:$ATi), IOL),
              !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   def WPN : XX3Form_AT3_XAB6<
               opcode, !or(xo, 0x80), (outs wacc:$AT), !con((ins wacc:$ATi), IOL),
               !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def WNP : XX3Form_AT3_XAB6<
               opcode, !or(xo, 0x40), (outs wacc:$AT), !con((ins wacc:$ATi), IOL),
               !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def WNN : XX3Form_AT3_XAB6<
               opcode, !or(xo, 0xC0), (outs wacc:$AT), !con((ins wacc:$ATi), IOL),
               !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsNotISAFuture] in {
   def PM#NAME#PN :
@@ -251,21 +251,21 @@ multiclass ACC_NEG_UM_M244_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NP :
     MMIRR_XX3Form_XY4P2_XAB6<
       opcode, !or(xo, 0x40), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NN :
     MMIRR_XX3Form_XY4P2_XAB6<
       opcode, !or(xo, 0xC0), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#WPN :
@@ -274,21 +274,21 @@ multiclass ACC_NEG_UM_M244_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WNP :
     MMIRR_XX3Form_XY4P2_XAB6<
       opcode, !or(xo, 0x40), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WNN :
     MMIRR_XX3Form_XY4P2_XAB6<
       opcode, !or(xo, 0xC0), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -301,29 +301,29 @@ multiclass ACC_NEG_UM_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
   def PN : XX3Form_AT3_XAB6<opcode, !or(xo, 0x80), (outs acc:$AT),
                             !con((ins acc:$ATi), IOL),
                             !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NP : XX3Form_AT3_XAB6<opcode, !or(xo, 0x40), (outs acc:$AT),
                             !con((ins acc:$ATi), IOL),
                             !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NN : XX3Form_AT3_XAB6<opcode, !or(xo, 0xC0), (outs acc:$AT),
                             !con((ins acc:$ATi), IOL),
                             !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   def WPN : XX3Form_AT3_XAB6<opcode, !or(xo, 0x80), (outs wacc:$AT),
                             !con((ins wacc:$ATi), IOL),
                             !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def WNP : XX3Form_AT3_XAB6<opcode, !or(xo, 0x40), (outs wacc:$AT),
                             !con((ins wacc:$ATi), IOL),
                             !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def WNN : XX3Form_AT3_XAB6<opcode, !or(xo, 0xC0), (outs wacc:$AT),
                             !con((ins wacc:$ATi), IOL),
                             !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -346,28 +346,28 @@ multiclass ACC_NEG_UM_M44_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#PN :
     MMIRR_XX3Form_XY4_XAB6<
       opcode, !or(xo, 0x80), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NP :
     MMIRR_XX3Form_XY4_XAB6<
       opcode, !or(xo, 0x40), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NN :
     MMIRR_XX3Form_XY4_XAB6<
       opcode, !or(xo, 0xC0), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#W :
@@ -383,28 +383,28 @@ multiclass ACC_NEG_UM_M44_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WPN :
     MMIRR_XX3Form_XY4_XAB6<
       opcode, !or(xo, 0x80), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WNP :
     MMIRR_XX3Form_XY4_XAB6<
       opcode, !or(xo, 0x40), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WNN :
     MMIRR_XX3Form_XY4_XAB6<
       opcode, !or(xo, 0xC0), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -427,28 +427,28 @@ multiclass ACC_NEG_UM_M42_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#PN :
     MMIRR_XX3Form_X4Y2_XAB6<
       opcode, !or(xo, 0x80), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NP :
     MMIRR_XX3Form_X4Y2_XAB6<
       opcode, !or(xo, 0x40), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NN :
     MMIRR_XX3Form_X4Y2_XAB6<
       opcode, !or(xo, 0xC0), (outs acc:$AT),
       !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
   def PM#NAME#W :
@@ -464,28 +464,28 @@ multiclass ACC_NEG_UM_M42_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WPN :
     MMIRR_XX3Form_X4Y2_XAB6<
       opcode, !or(xo, 0x80), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WNP :
     MMIRR_XX3Form_X4Y2_XAB6<
       opcode, !or(xo, 0x40), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#WNN :
     MMIRR_XX3Form_X4Y2_XAB6<
       opcode, !or(xo, 0xC0), (outs wacc:$AT),
       !con((ins wacc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -497,12 +497,12 @@ let Predicates = [MMA, IsNotISAFuture] in {
     XForm_AT3<31, 0, 177, (outs acc:$ATo), (ins acc:$AT), "xxmfacc $AT",
               IIC_VecGeneral,
               [(set v512i1:$ATo, (int_ppc_mma_xxmfacc v512i1:$AT))]>,
-              RegConstraint<"$ATo = $AT">, NoEncode<"$ATo">;
+              RegConstraint<"$ATo = $AT">;
   def XXMTACC :
     XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
               IIC_VecGeneral,
               [(set v512i1:$AT, (int_ppc_mma_xxmtacc v512i1:$ATi))]>,
-              RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+              RegConstraint<"$ATi = $AT">;
   def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
                                       "#KILL_PAIR", []>,
                                       RegConstraint<"$XTp = $XSp">;
@@ -519,7 +519,7 @@ let Predicates = [MMA, IsNotISAFuture] in {
   def XVI8GER4SPP :
     XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
                      "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   let mayStore = 1 in {
     def SPILL_ACC: PPCEmitTimePseudo<(outs), (ins acc:$AT, memrix16:$dst),
                                      "#SPILL_ACC", []>;
@@ -544,11 +544,11 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   def XXMFACCW :
     XForm_AT3<31, 0, 177, (outs wacc:$ATo), (ins wacc:$AT), "xxmfacc $AT",
               IIC_VecGeneral, []>,
-              RegConstraint<"$ATo = $AT">, NoEncode<"$ATo">;
+              RegConstraint<"$ATo = $AT">;
   def XXMTACCW :
     XForm_AT3<31, 1, 177, (outs wacc:$AT), (ins wacc:$ATi), "xxmtacc $AT",
               IIC_VecGeneral, []>,
-              RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+              RegConstraint<"$ATi = $AT">;
 
   let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
     def DMXXSETACCZ :
@@ -560,7 +560,7 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
     XX3Form_AT3_XAB6<59, 99, (outs wacc:$AT),
                      (ins wacc:$ATi, vsrc:$XA, vsrc:$XB),
                      "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
-                     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+                     RegConstraint<"$ATi = $AT">;
 
   let mayStore = 1 in {
     def SPILL_WACC: PPCEmitTimePseudo<(outs), (ins wacc:$AT, memrix16:$dst),
@@ -593,7 +593,7 @@ let Predicates = [MMA, PrefixInstrs, IsNotISAFuture] in {
                              u4imm:$YMSK, u4imm:$PMSK),
                             "pmxvi8ger4spp $AT, $XA, $XB, $XMSK, $YMSK, $PMSK",
                             IIC_VecGeneral, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
 }
 
 let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
@@ -603,7 +603,7 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture], isCodeGenOnly = 1 in {
                              u4imm:$YMSK, u4imm:$PMSK),
                             "pmxvi8ger4spp $AT, $XA, $XB, $XMSK, $YMSK, $PMSK",
                             IIC_VecGeneral, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
 }
 
 // MMA accumulating/non-accumulating instructions.

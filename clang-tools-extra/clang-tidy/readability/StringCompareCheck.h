@@ -1,4 +1,4 @@
-//===--- StringCompareCheck.h - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// equality or inequality.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/string-compare.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/string-compare.html
 class StringCompareCheck : public ClangTidyCheck {
 public:
   StringCompareCheck(StringRef Name, ClangTidyContext *Context);

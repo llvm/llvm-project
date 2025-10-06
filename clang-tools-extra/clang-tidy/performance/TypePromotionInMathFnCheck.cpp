@@ -1,4 +1,4 @@
-//===--- TypePromotionInMathFnCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -166,7 +166,7 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
       "log1p",     "log2",       "logb",      "lrint",  "lround",   "nearbyint",
       "nextafter", "nexttoward", "remainder", "remquo", "rint",     "round",
       "scalbln",   "scalbn",     "tgamma",    "trunc"};
-  bool StdFnRequiresCpp11 = Cpp11OnlyFns.count(OldFnName);
+  bool StdFnRequiresCpp11 = Cpp11OnlyFns.contains(OldFnName);
 
   std::string NewFnName;
   bool FnInCmath = false;

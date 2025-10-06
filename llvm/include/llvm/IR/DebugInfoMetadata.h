@@ -66,7 +66,6 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
-class DbgVariableIntrinsic;
 class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
@@ -2507,10 +2506,8 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
              unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
@@ -2540,20 +2537,8 @@ class DILocation : public MDNode {
   }
 
 public:
-  uint64_t getAtomGroup() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomGroup;
-#else
-    return 0;
-#endif
-  }
-  uint8_t getAtomRank() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomRank;
-#else
-    return 0;
-#endif
-  }
+  uint64_t getAtomGroup() const { return AtomGroup; }
+  uint8_t getAtomRank() const { return AtomRank; }
 
   const DILocation *getWithoutAtom() const {
     if (!getAtomGroup() && !getAtomRank())
@@ -2615,14 +2600,19 @@ public:
   StringRef getDirectory() const { return getScope()->getDirectory(); }
   std::optional<StringRef> getSource() const { return getScope()->getSource(); }
 
-  /// Get the scope where this is inlined.
-  ///
-  /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
-  /// location.
+  /// Walk through \a getInlinedAt() and return the \a DILocation of the
+  /// outermost call site in the inlining chain.
+  const DILocation *getInlinedAtLocation() const {
+    const DILocation *Current = this;
+    while (const DILocation *Next = Current->getInlinedAt())
+      Current = Next;
+    return Current;
+  }
+
+  // Return the \a DILocalScope of the outermost call site in the inlining
+  // chain.
   DILocalScope *getInlinedAtScope() const {
-    if (auto *IA = getInlinedAt())
-      return IA->getInlinedAtScope();
-    return getScope();
+    return getInlinedAtLocation()->getScope();
   }
 
   /// Get the DWARF discriminator.
@@ -4613,7 +4603,6 @@ class DebugVariable {
   LLVM_ABI static const FragmentInfo DefaultFragment;
 
 public:
-  LLVM_ABI DebugVariable(const DbgVariableIntrinsic *DII);
   LLVM_ABI DebugVariable(const DbgVariableRecord *DVR);
 
   DebugVariable(const DILocalVariable *Var,
@@ -4681,7 +4670,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 /// information).
 class DebugVariableAggregate : public DebugVariable {
 public:
-  LLVM_ABI DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  LLVM_ABI DebugVariableAggregate(const DbgVariableRecord *DVR);
   DebugVariableAggregate(const DebugVariable &V)
       : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
 };

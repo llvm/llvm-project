@@ -31,6 +31,8 @@
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -76,12 +78,14 @@ enum DAPBroadcasterBits {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-struct DAP {
+using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
+
+struct DAP final : public DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
   Log *log;
-  Transport &transport;
+  DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
@@ -112,7 +116,6 @@ struct DAP {
   /// The focused thread for this DAP session.
   lldb::tid_t focus_tid = LLDB_INVALID_THREAD_ID;
 
-  bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;
   bool is_attach = false;
@@ -151,6 +154,9 @@ struct DAP {
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
 
+  /// Whether to disable sourcing .lldbinit files.
+  bool no_lldbinit;
+
   /// The initial thread list upon attaching.
   std::vector<protocol::Thread> initial_thread_list;
 
@@ -173,10 +179,16 @@ struct DAP {
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is
   ///     allocated.
+  /// \param[in] no_lldbinit
+  ///     Whether to disable sourcing .lldbinit files.
   /// \param[in] transport
   ///     Transport for this debug session.
+  /// \param[in] loop
+  ///     Main loop associated with this instance.
   DAP(Log *log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, Transport &transport);
+      std::vector<std::string> pre_init_commands, bool no_lldbinit,
+      llvm::StringRef client_name, DAPTransport &transport,
+      lldb_private::MainLoop &loop);
 
   ~DAP();
 
@@ -315,7 +327,7 @@ struct DAP {
   lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
-  /// listeing for its breakpoint events.
+  /// listening for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
   bool HandleObject(const protocol::Message &M);
@@ -358,6 +370,9 @@ struct DAP {
 
   /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
+
+  /// The set of custom capabilities supported by this adapter.
+  protocol::Capabilities GetCustomCapabilities();
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
@@ -418,11 +433,20 @@ struct DAP {
       const std::optional<std::vector<protocol::SourceBreakpoint>>
           &breakpoints);
 
+  void Received(const protocol::Event &) override;
+  void Received(const protocol::Request &) override;
+  void Received(const protocol::Response &) override;
+  void OnError(llvm::Error) override;
+  void OnClosed() override;
+
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
       const protocol::Source &source,
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
       SourceBreakpointMap &existing_breakpoints);
+
+  void TransportHandler();
+  void TerminateLoop(bool failed = false);
 
   /// Registration of request handler.
   /// @{
@@ -442,6 +466,8 @@ private:
   std::thread progress_event_thread;
   /// @}
 
+  const llvm::StringRef m_client_name;
+
   /// List of addresses mapped by sourceReference.
   std::vector<lldb::addr_t> m_source_references;
   std::mutex m_source_references_mutex;
@@ -450,6 +476,11 @@ private:
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
+  bool m_disconnecting = false;
+  bool m_error_occurred = false;
+
+  // Loop for managing reading from the client.
+  lldb_private::MainLoop &m_loop;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;

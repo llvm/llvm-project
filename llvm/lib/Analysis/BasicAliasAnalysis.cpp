@@ -103,12 +103,15 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
                                              const TargetLibraryInfo &TLI,
                                              bool NullIsValidLoc,
                                              bool RoundToAlign = false) {
-  uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
-  if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::getFixed(Size);
+  if (std::optional<TypeSize> Size = getBaseObjectSize(V, DL, &TLI, Opts)) {
+    // FIXME: Remove this check, only exists to preserve previous behavior.
+    if (Size->isScalable())
+      return std::nullopt;
+    return Size;
+  }
   return std::nullopt;
 }
 
@@ -227,9 +230,9 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
   auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
     std::pair<Instruction *, CaptureComponents> EarliestCapture =
-        FindEarliestCapture(
-            Object, *const_cast<Function *>(DT.getRoot()->getParent()),
-            /*ReturnCaptures=*/false, DT, CaptureComponents::Provenance);
+        FindEarliestCapture(Object, *DT.getRoot()->getParent(),
+                            /*ReturnCaptures=*/false, DT,
+                            CaptureComponents::Provenance);
     if (EarliestCapture.first)
       Inst2Obj[EarliestCapture.first].push_back(Object);
     Iter.first->second = EarliestCapture;
@@ -948,7 +951,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
+  ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
+  ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
 
   // An identified function-local object that does not escape can only be
   // accessed via call arguments. Reduce OtherMR (which includes accesses to
@@ -994,6 +998,15 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   }
 
   ModRefInfo Result = ArgMR | OtherMR;
+
+  // Refine accesses to errno memory.
+  if ((ErrnoMR | Result) != Result) {
+    if (AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+      // Exclusion conditions do not hold, this memory location may alias errno.
+      Result |= ErrnoMR;
+    }
+  }
+
   if (!isModAndRefSet(Result))
     return Result;
 
@@ -1845,6 +1858,20 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return AliasResult::PartialAlias;
   }
 
+  return AliasResult::MayAlias;
+}
+
+AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
+                                      const Module *M) {
+  // There cannot be any alias with errno if the given memory location is an
+  // identified function-local object, or the size of the memory access is
+  // larger than the integer size.
+  if (Loc.Size.hasValue() &&
+      Loc.Size.getValue().getKnownMinValue() * 8 > TLI.getIntSize())
+    return AliasResult::NoAlias;
+
+  if (isIdentifiedFunctionLocal(getUnderlyingObject(Loc.Ptr)))
+    return AliasResult::NoAlias;
   return AliasResult::MayAlias;
 }
 

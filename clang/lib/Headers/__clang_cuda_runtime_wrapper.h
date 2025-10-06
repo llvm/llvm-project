@@ -385,7 +385,12 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 #endif // CUDA_VERSION
 #endif // __cplusplus >= 201103L && CUDA_VERSION >= 9000
 #include "surface_indirect_functions.h"
+#if CUDA_VERSION < 13000
+// Direct texture fetch functions had been deprecated since CUDA-11.
+// The file in CUDA-12 only carried unused texture types, and is no longer
+// needed.
 #include "texture_fetch_functions.h"
+#endif // CUDA_VERSION < 13000
 #include "texture_indirect_functions.h"
 
 // Restore state of __CUDA_ARCH__ and __THROW we had on entry.

@@ -978,7 +978,7 @@ static bool IsValueFullyAvailableInBlock(
   unsigned NumNewNewSpeculativelyAvailableBBs = 0;
 
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
+  SmallPtrSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
   SmallVector<BasicBlock *, 32> AvailableBBs;
 #endif
 
@@ -1222,7 +1222,7 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
                         const Instruction *To, const DominatorTree *DT) {
   if (From->getParent() == Between->getParent())
     return DT->dominates(From, Between);
-  SmallSet<BasicBlock *, 1> Exclusion;
+  SmallPtrSet<BasicBlock *, 1> Exclusion;
   Exclusion.insert(Between->getParent());
   return !isPotentiallyReachable(From, To, &Exclusion, DT);
 }
@@ -1310,7 +1310,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
   BatchAAResults BatchAA(*AA);
   for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor())
     for (auto *Inst = BB == FromBB ? From : BB->getTerminator();
-         Inst != nullptr; Inst = Inst->getPrevNonDebugInstruction()) {
+         Inst != nullptr; Inst = Inst->getPrevNode()) {
       // Stop the search if limit is reached.
       if (++NumVisitedInsts > MaxNumVisitedInsts)
         return nullptr;
@@ -2287,6 +2287,35 @@ bool GVNPass::processLoad(LoadInst *L) {
   return true;
 }
 
+// Attempt to process masked loads which have loaded from
+// masked stores with the same mask
+bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
+  if (!MD)
+    return false;
+  MemDepResult Dep = MD->getDependency(I);
+  Instruction *DepInst = Dep.getInst();
+  if (!DepInst || !Dep.isLocal() || !Dep.isDef())
+    return false;
+
+  Value *Mask = I->getOperand(2);
+  Value *Passthrough = I->getOperand(3);
+  Value *StoreVal;
+  if (!match(DepInst, m_MaskedStore(m_Value(StoreVal), m_Value(), m_Value(),
+                                    m_Specific(Mask))) ||
+      StoreVal->getType() != I->getType())
+    return false;
+
+  // Remove the load but generate a select for the passthrough
+  Value *OpToForward = llvm::SelectInst::Create(Mask, StoreVal, Passthrough, "",
+                                                I->getIterator());
+
+  ICF->removeUsersOf(I);
+  I->replaceAllUsesWith(OpToForward);
+  salvageAndRemoveInstruction(I);
+  ++NumGVNLoad;
+  return true;
+}
+
 /// Return a pair the first field showing the value number of \p Exp and the
 /// second field showing whether it is a value number newly created.
 std::pair<uint32_t, bool>
@@ -2367,11 +2396,14 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   // See if we can refine the value number by looking at the PN incoming value
   // for the given predecessor.
   if (PHINode *PN = NumberingPhi[Num]) {
-    if (PN->getParent() == PhiBlock)
-      for (unsigned I = 0; I != PN->getNumIncomingValues(); ++I)
-        if (PN->getIncomingBlock(I) == Pred)
-          if (uint32_t TransVal = lookup(PN->getIncomingValue(I), false))
-            return TransVal;
+    if (PN->getParent() != PhiBlock)
+      return Num;
+    for (unsigned I = 0; I != PN->getNumIncomingValues(); ++I) {
+      if (PN->getIncomingBlock(I) != Pred)
+        continue;
+      if (uint32_t TransVal = lookup(PN->getIncomingValue(I), false))
+        return TransVal;
+    }
     return Num;
   }
 
@@ -2496,9 +2528,13 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 bool GVNPass::replaceOperandsForInBlockEquality(Instruction *Instr) const {
   bool Changed = false;
   for (unsigned OpNum = 0; OpNum < Instr->getNumOperands(); ++OpNum) {
-    Value *Operand = Instr->getOperand(OpNum);
-    auto It = ReplaceOperandsWithMap.find(Operand);
+    Use &Operand = Instr->getOperandUse(OpNum);
+    auto It = ReplaceOperandsWithMap.find(Operand.get());
     if (It != ReplaceOperandsWithMap.end()) {
+      const DataLayout &DL = Instr->getDataLayout();
+      if (!canReplacePointersInUseIfEqual(Operand, It->second, DL))
+        continue;
+
       LLVM_DEBUG(dbgs() << "GVN replacing: " << *Operand << " with "
                         << *It->second << " in instruction " << *Instr << '\n');
       Instr->setOperand(OpNum, It->second);
@@ -2676,6 +2712,11 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
       Worklist.emplace_back(A, ConstantInt::get(A->getType(), IsKnownTrue));
       continue;
     }
+
+    if (match(LHS, m_Not(m_Value(A)))) {
+      Worklist.emplace_back(A, ConstantInt::get(A->getType(), !IsKnownTrue));
+      continue;
+    }
   }
 
   return Changed;
@@ -2721,6 +2762,10 @@ bool GVNPass::processInstruction(Instruction *I) {
     LeaderTable.insert(Num, Load, Load->getParent());
     return false;
   }
+
+  if (match(I, m_Intrinsic<Intrinsic::masked_load>()) &&
+      processMaskedLoad(cast<IntrinsicInst>(I)))
+    return true;
 
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
@@ -2970,7 +3015,8 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
 bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (isa<AllocaInst>(CurInst) || CurInst->isTerminator() ||
       isa<PHINode>(CurInst) || CurInst->getType()->isVoidTy() ||
-      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects())
+      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects() ||
+      CurInst->getType()->isTokenLikeTy())
     return false;
 
   // Don't do PRE on compares. The PHI would prevent CodeGenPrepare from

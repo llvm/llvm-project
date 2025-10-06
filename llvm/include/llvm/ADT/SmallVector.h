@@ -199,30 +199,32 @@ protected:
   }
 
   /// Check whether any part of the range will be invalidated by clearing.
-  void assertSafeToReferenceAfterClear(const T *From, const T *To) {
-    if (From == To)
-      return;
-    this->assertSafeToReferenceAfterResize(From, 0);
-    this->assertSafeToReferenceAfterResize(To - 1, 0);
+  template <class ItTy>
+  void assertSafeToReferenceAfterClear(ItTy From, ItTy To) {
+    if constexpr (std::is_pointer_v<ItTy> &&
+                  std::is_same_v<
+                      std::remove_const_t<std::remove_pointer_t<ItTy>>,
+                      std::remove_const_t<T>>) {
+      if (From == To)
+        return;
+      this->assertSafeToReferenceAfterResize(From, 0);
+      this->assertSafeToReferenceAfterResize(To - 1, 0);
+    }
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
-  void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
-  void assertSafeToAddRange(const T *From, const T *To) {
-    if (From == To)
-      return;
-    this->assertSafeToAdd(From, To - From);
-    this->assertSafeToAdd(To - 1, To - From);
+  template <class ItTy> void assertSafeToAddRange(ItTy From, ItTy To) {
+    if constexpr (std::is_pointer_v<ItTy> &&
+                  std::is_same_v<std::remove_cv_t<std::remove_pointer_t<ItTy>>,
+                                 T>) {
+      if (From == To)
+        return;
+      this->assertSafeToAdd(From, To - From);
+      this->assertSafeToAdd(To - 1, To - From);
+    }
+    (void)From;
+    (void)To;
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
-  void assertSafeToAddRange(ItTy, ItTy) {}
 
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
@@ -500,25 +502,22 @@ protected:
 
   /// Copy the range [I, E) onto the uninitialized memory
   /// starting with "Dest", constructing elements into it as needed.
-  template<typename It1, typename It2>
+  template <typename It1, typename It2>
   static void uninitialized_copy(It1 I, It1 E, It2 Dest) {
-    // Arbitrary iterator types; just use the basic implementation.
-    std::uninitialized_copy(I, E, Dest);
-  }
-
-  /// Copy the range [I, E) onto the uninitialized memory
-  /// starting with "Dest", constructing elements into it as needed.
-  template <typename T1, typename T2>
-  static void uninitialized_copy(
-      T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * =
-          nullptr) {
-    // Use memcpy for PODs iterated by pointers (which includes SmallVector
-    // iterators): std::uninitialized_copy optimizes to memmove, but we can
-    // use memcpy here. Note that I and E are iterators and thus might be
-    // invalid for memcpy if they are equal.
-    if (I != E)
-      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+    if constexpr (std::is_pointer_v<It1> && std::is_pointer_v<It2> &&
+                  std::is_same_v<
+                      std::remove_const_t<std::remove_pointer_t<It1>>,
+                      std::remove_pointer_t<It2>>) {
+      // Use memcpy for PODs iterated by pointers (which includes SmallVector
+      // iterators): std::uninitialized_copy optimizes to memmove, but we can
+      // use memcpy here. Note that I and E are iterators and thus might be
+      // invalid for memcpy if they are equal.
+      if (I != E)
+        std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+    } else {
+      // Arbitrary iterator types; just use the basic implementation.
+      std::uninitialized_copy(I, E, Dest);
+    }
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -561,7 +560,7 @@ protected:
 public:
   void push_back(ValueParamT Elt) {
     const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    std::memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
     this->set_size(this->size() + 1);
   }
 

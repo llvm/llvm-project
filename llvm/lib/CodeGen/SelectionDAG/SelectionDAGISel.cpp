@@ -144,6 +144,11 @@ UseMBPI("use-mbpi",
         cl::init(true), cl::Hidden);
 
 #ifndef NDEBUG
+static cl::opt<bool>
+    DumpSortedDAG("dump-sorted-dags", cl::Hidden,
+                  cl::desc("Print DAGs with sorted nodes in debug dump"),
+                  cl::init(false));
+
 static cl::opt<std::string>
 FilterDAGBasicBlockName("filter-view-dags", cl::Hidden,
                         cl::desc("Only display the basic block whose name "
@@ -480,10 +485,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   MachineModuleInfo &MMI =
       MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
-
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs,
-               TTI->hasBranchDivergence(&Fn));
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -501,6 +503,10 @@ void SelectionDAGISel::initializeAnalysisResults(
     BatchAA = std::nullopt;
 
   SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
+
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
+  TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
+#endif
 }
 
 void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
@@ -536,10 +542,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   MachineModuleInfo &MMI =
       MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-  TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
-
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs,
-               TTI->hasBranchDivergence(&Fn));
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -558,6 +561,10 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
     BatchAA = std::nullopt;
 
   SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
+
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
+  TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
+#endif
 }
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
@@ -930,7 +937,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   ISEL_DUMP(dbgs() << "\nInitial selection DAG: "
                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                    << "'\n";
-            CurDAG->dump());
+            CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (TTI->hasBranchDivergence())
@@ -950,7 +957,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   ISEL_DUMP(dbgs() << "\nOptimized lowered selection DAG: "
                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                    << "'\n";
-            CurDAG->dump());
+            CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (TTI->hasBranchDivergence())
@@ -972,7 +979,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   ISEL_DUMP(dbgs() << "\nType-legalized selection DAG: "
                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                    << "'\n";
-            CurDAG->dump());
+            CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (TTI->hasBranchDivergence())
@@ -996,7 +1003,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     ISEL_DUMP(dbgs() << "\nOptimized type-legalized selection DAG: "
                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                      << "'\n";
-              CurDAG->dump());
+              CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (TTI->hasBranchDivergence())
@@ -1014,7 +1021,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     ISEL_DUMP(dbgs() << "\nVector-legalized selection DAG: "
                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                      << "'\n";
-              CurDAG->dump());
+              CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (TTI->hasBranchDivergence())
@@ -1030,7 +1037,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     ISEL_DUMP(dbgs() << "\nVector/type-legalized selection DAG: "
                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                      << "'\n";
-              CurDAG->dump());
+              CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (TTI->hasBranchDivergence())
@@ -1050,7 +1057,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     ISEL_DUMP(dbgs() << "\nOptimized vector-legalized selection DAG: "
                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                      << "'\n";
-              CurDAG->dump());
+              CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (TTI->hasBranchDivergence())
@@ -1070,7 +1077,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   ISEL_DUMP(dbgs() << "\nLegalized selection DAG: "
                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                    << "'\n";
-            CurDAG->dump());
+            CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (TTI->hasBranchDivergence())
@@ -1090,7 +1097,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   ISEL_DUMP(dbgs() << "\nOptimized legalized selection DAG: "
                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                    << "'\n";
-            CurDAG->dump());
+            CurDAG->dump(DumpSortedDAG));
 
 #if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (TTI->hasBranchDivergence())
@@ -1114,7 +1121,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   ISEL_DUMP(dbgs() << "\nSelected selection DAG: "
                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                    << "'\n";
-            CurDAG->dump());
+            CurDAG->dump(DumpSortedDAG));
 
   if (ViewSchedDAGs && MatchFilterBB)
     CurDAG->viewGraph("scheduler input for " + BlockName);
@@ -1727,9 +1734,17 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     // Setup an EH landing-pad block.
     FuncInfo->ExceptionPointerVirtReg = Register();
     FuncInfo->ExceptionSelectorVirtReg = Register();
-    if (LLVMBB->isEHPad())
+    if (LLVMBB->isEHPad()) {
       if (!PrepareEHLandingPad())
         continue;
+
+      if (!FastIS) {
+        SDValue NewRoot = TLI->lowerEHPadEntry(CurDAG->getRoot(),
+                                               SDB->getCurSDLoc(), *CurDAG);
+        if (NewRoot && NewRoot != CurDAG->getRoot())
+          CurDAG->setRoot(NewRoot);
+      }
+    }
 
     // Before doing SelectionDAG ISel, see if FastISel has been requested.
     if (FastIS) {

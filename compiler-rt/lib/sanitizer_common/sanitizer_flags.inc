@@ -65,6 +65,8 @@ COMMON_FLAG(
     bool, log_to_syslog, (bool)SANITIZER_ANDROID || (bool)SANITIZER_APPLE,
     "Write all sanitizer output to syslog in addition to other means of "
     "logging.")
+COMMON_FLAG(bool, log_fallback_to_stderr, false,
+            "When set, fallback to stderr if we are unable to open log path.")
 COMMON_FLAG(
     int, verbosity, 0,
     "Verbosity level (0 - silent, 1 - a bit of output, 2+ - more output).")

@@ -88,13 +88,13 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
         } else if (directOut) {
           Value mem;
           if (kind == SparseTensorFieldKind::PosMemRef)
-            mem = builder.create<sparse_tensor::ToPositionsOp>(loc, inputs[0],
-                                                               lv);
+            mem = sparse_tensor::ToPositionsOp::create(builder, loc, inputs[0],
+                                                       lv);
           else if (kind == SparseTensorFieldKind::CrdMemRef)
-            mem = builder.create<sparse_tensor::ToCoordinatesOp>(loc, inputs[0],
-                                                                 lv);
+            mem = sparse_tensor::ToCoordinatesOp::create(builder, loc,
+                                                         inputs[0], lv);
           else
-            mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
+            mem = sparse_tensor::ToValuesOp::create(builder, loc, inputs[0]);
           toVals.push_back(mem);
         } else {
           ShapedType rtp = cast<ShapedType>(t);
@@ -109,7 +109,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
 
     if (isIn) {
       // Assemble multiple inputs into a single sparse tensor.
-      auto a = builder.create<sparse_tensor::AssembleOp>(loc, rtp, inputs);
+      auto a = sparse_tensor::AssembleOp::create(builder, loc, rtp, inputs);
       toVals.push_back(a.getResult());
     } else if (!directOut) {
       // Disassemble a single sparse input into multiple outputs.
@@ -117,7 +117,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
       unsigned len = retTypes.size();
       retTypes.append(cntTypes);
       auto d =
-          builder.create<sparse_tensor::DisassembleOp>(loc, retTypes, inputs);
+          sparse_tensor::DisassembleOp::create(builder, loc, retTypes, inputs);
       for (unsigned i = 0; i < len; i++)
         toVals.push_back(d.getResult(i));
     }
@@ -199,8 +199,9 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     OpBuilder moduleBuilder(modOp.getBodyRegion());
     unsigned extra = inputTypes.size();
     inputTypes.append(extraTypes);
-    auto func = moduleBuilder.create<func::FuncOp>(
-        loc, orgName, FunctionType::get(context, inputTypes, outputTypes));
+    auto func = func::FuncOp::create(
+        moduleBuilder, loc, orgName,
+        FunctionType::get(context, inputTypes, outputTypes));
     func.setPublic();
 
     // Construct new wrapper method body.
@@ -216,14 +217,14 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     // Call the original, now private method. A subsequent inlining pass can
     // determine whether cloning the method body in place is worthwhile.
     auto org = SymbolRefAttr::get(context, wrapper);
-    auto call = rewriter.create<func::CallOp>(loc, funcOp.getResultTypes(), org,
-                                              inputs);
+    auto call = func::CallOp::create(rewriter, loc, funcOp.getResultTypes(),
+                                     org, inputs);
 
     // Convert outputs and return.
     SmallVector<Value> outputs;
     convVals(rewriter, loc, funcOp.getResultTypes(), call.getResults(),
              body->getArguments(), outputs, extra, /*isIn=*/false, directOut);
-    rewriter.create<func::ReturnOp>(loc, outputs);
+    func::ReturnOp::create(rewriter, loc, outputs);
 
     // Finally, migrate a potential c-interface property.
     if (funcOp->getAttrOfType<UnitAttr>(

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
@@ -597,7 +598,6 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
           // Estimate all types may be fused with contract/unsafe flags
           const TargetOptions &Options = TLI->getTargetMachine().Options;
           if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-              Options.UnsafeFPMath ||
               (FAdd->hasAllowContract() && CxtI->hasAllowContract()))
             return TargetTransformInfo::TCC_Free;
         }
@@ -607,13 +607,15 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   case ISD::FSUB:
     if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
       NElts = (NElts + 1) / 2;
+    if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
+      NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64)
       return LT.first * NElts * get64BitInstrCost(CostKind);
 
     if (ST->has16BitInsts() && SLT == MVT::f16)
       NElts = (NElts + 1) / 2;
 
-    if (SLT == MVT::f32 || SLT == MVT::f16)
+    if (SLT == MVT::f32 || SLT == MVT::f16 || SLT == MVT::bf16)
       return LT.first * NElts * getFullRateInstrCost();
     break;
   case ISD::FDIV:
@@ -650,8 +652,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && ((CxtI && CxtI->hasApproxFunc()) ||
-                            TLI->getTargetMachine().Options.UnsafeFPMath)) {
+    if (SLT == MVT::f32 && (CxtI && CxtI->hasApproxFunc())) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
@@ -747,7 +748,9 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
-  if ((ST->hasVOP3PInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
+  if ((ST->hasVOP3PInsts() &&
+       (SLT == MVT::f16 || SLT == MVT::i16 ||
+        (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
       (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
 
@@ -993,10 +996,30 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
-    if (Intrinsic->getIntrinsicID() == Intrinsic::read_register)
+    Intrinsic::ID IID = Intrinsic->getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::read_register:
       return isReadRegisterSourceOfDivergence(Intrinsic);
-
-    return AMDGPU::isIntrinsicSourceOfDivergence(Intrinsic->getIntrinsicID());
+    case Intrinsic::amdgcn_addrspacecast_nonnull: {
+      unsigned SrcAS =
+          Intrinsic->getOperand(0)->getType()->getPointerAddressSpace();
+      unsigned DstAS = Intrinsic->getType()->getPointerAddressSpace();
+      return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+             DstAS == AMDGPUAS::FLAT_ADDRESS &&
+             ST->hasGloballyAddressableScratch();
+    }
+    case Intrinsic::amdgcn_workitem_id_y:
+    case Intrinsic::amdgcn_workitem_id_z: {
+      const Function *F = Intrinsic->getFunction();
+      bool HasUniformYZ =
+          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequitezUniformYZ=*/true);
+      std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
+          *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
+      return !HasUniformYZ && (!ThisDimSize || *ThisDimSize != 1);
+    }
+    default:
+      return AMDGPU::isIntrinsicSourceOfDivergence(IID);
+    }
   }
 
   // Assume all function calls are a source of divergence.
@@ -1009,6 +1032,15 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // Assume all function calls are a source of divergence.
   if (isa<InvokeInst>(V))
     return true;
+
+  // If the target supports globally addressable scratch, the mapping from
+  // scratch memory to the flat aperture changes therefore an address space cast
+  // is no longer uniform.
+  if (auto *CastI = dyn_cast<AddrSpaceCastInst>(V)) {
+    return CastI->getSrcAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS &&
+           CastI->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
+           ST->hasGloballyAddressableScratch();
+  }
 
   return false;
 }
@@ -1031,28 +1063,31 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   // packed into a same wave which gives 1 and 0 after the division by 64
   // respectively.
   //
-  // FIXME: limit it to 1D kernels only, although that shall be possible
-  // to perform this optimization is the size of the X dimension is a power
-  // of 2, we just do not currently have infrastructure to query it.
+  // The X dimension doesn't reset within a wave if either both the Y
+  // and Z dimensions are of length 1, or if the X dimension's required
+  // size is a power of 2. Note, however, if the X dimension's maximum
+  // size is a power of 2 < the wavefront size, division by the wavefront
+  // size is guaranteed to yield 0, so this is also a no-reset case.
+  bool XDimDoesntResetWithinWaves = false;
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    const Function *F = I->getFunction();
+    XDimDoesntResetWithinWaves = ST->hasWavefrontsEvenlySplittingXDim(*F);
+  }
   using namespace llvm::PatternMatch;
   uint64_t C;
   if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                       m_ConstantInt(C))) ||
       match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                       m_ConstantInt(C)))) {
-    const Function *F = cast<Instruction>(V)->getFunction();
-    return C >= ST->getWavefrontSizeLog2() &&
-           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+    return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
   }
 
   Value *Mask;
   if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                        m_Value(Mask)))) {
-    const Function *F = cast<Instruction>(V)->getFunction();
-    const DataLayout &DL = F->getDataLayout();
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
-           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+           XDimDoesntResetWithinWaves;
   }
 
   const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);

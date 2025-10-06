@@ -8,9 +8,7 @@
 
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 using namespace mlir::detail;

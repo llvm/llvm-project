@@ -90,22 +90,6 @@
 // RUN: FileCheck %s -check-prefix=PS3
 // PS3: target datalayout = "E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64"
 
-// RUN: %clang_cc1 -triple i686-nacl -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=I686-NACL
-// I686-NACL: target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n8:16:32-S128"
-
-// RUN: %clang_cc1 -triple x86_64-nacl -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=X86_64-NACL
-// X86_64-NACL: target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n8:16:32:64-S128"
-
-// RUN: %clang_cc1 -triple arm-nacl -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=ARM-NACL
-// ARM-NACL: target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128"
-
-// RUN: %clang_cc1 -triple mipsel-nacl -o - -emit-llvm %s | \
-// RUN: FileCheck %s -check-prefix=MIPS-NACL
-// MIPS-NACL: target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
-
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY32
 // WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-ni:1:10:20"
@@ -160,11 +144,11 @@
 
 // RUN: %clang_cc1 -triple nvptx-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX
-// NVPTX: target datalayout = "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+// NVPTX: target datalayout = "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
 
 // RUN: %clang_cc1 -triple nvptx64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX64
-// NVPTX64: target datalayout = "e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+// NVPTX64: target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
 
 // RUN: %clang_cc1 -triple r600-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=R600

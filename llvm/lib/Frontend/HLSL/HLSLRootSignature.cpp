@@ -11,29 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 namespace hlsl {
 namespace rootsig {
-
-template <typename T>
-static std::optional<StringRef> getEnumName(const T Value,
-                                            ArrayRef<EnumEntry<T>> Enums) {
-  for (const auto &EnumItem : Enums)
-    if (EnumItem.Value == Value)
-      return EnumItem.Name;
-  return std::nullopt;
-}
-
-template <typename T>
-static raw_ostream &printEnum(raw_ostream &OS, const T Value,
-                              ArrayRef<EnumEntry<T>> Enums) {
-  auto MaybeName = getEnumName(Value, Enums);
-  if (MaybeName)
-    OS << *MaybeName;
-  return OS;
-}
 
 template <typename T>
 static raw_ostream &printFlags(raw_ostream &OS, const T Value,
@@ -46,9 +29,9 @@ static raw_ostream &printFlags(raw_ostream &OS, const T Value,
       if (FlagSet)
         OS << " | ";
 
-      auto MaybeFlag = getEnumName(T(Bit), Flags);
-      if (MaybeFlag)
-        OS << *MaybeFlag;
+      StringRef MaybeFlag = enumToStringRef(T(Bit), Flags);
+      if (!MaybeFlag.empty())
+        OS << MaybeFlag;
       else
         OS << "invalid: " << Bit;
 
@@ -70,58 +53,49 @@ static const EnumEntry<RegisterType> RegisterNames[] = {
 };
 
 static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
-  printEnum(OS, Reg.ViewType, ArrayRef(RegisterNames));
-  OS << Reg.Number;
+  OS << enumToStringRef(Reg.ViewType, ArrayRef(RegisterNames)) << Reg.Number;
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const llvm::dxbc::ShaderVisibility &Visibility) {
-  printEnum(OS, Visibility, dxbc::getShaderVisibility());
+  OS << enumToStringRef(Visibility, dxbc::getShaderVisibility());
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const llvm::dxbc::SamplerFilter &Filter) {
-  printEnum(OS, Filter, dxbc::getSamplerFilters());
+  OS << enumToStringRef(Filter, dxbc::getSamplerFilters());
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const dxbc::TextureAddressMode &Address) {
-  printEnum(OS, Address, dxbc::getTextureAddressModes());
+  OS << enumToStringRef(Address, dxbc::getTextureAddressModes());
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const dxbc::ComparisonFunc &CompFunc) {
-  printEnum(OS, CompFunc, dxbc::getComparisonFuncs());
+  OS << enumToStringRef(CompFunc, dxbc::getComparisonFuncs());
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const dxbc::StaticBorderColor &BorderColor) {
-  printEnum(OS, BorderColor, dxbc::getStaticBorderColors());
+  OS << enumToStringRef(BorderColor, dxbc::getStaticBorderColors());
 
   return OS;
 }
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"CBV", dxil::ResourceClass::CBuffer},
-    {"SRV", dxil::ResourceClass::SRV},
-    {"UAV", dxil::ResourceClass::UAV},
-    {"Sampler", dxil::ResourceClass::Sampler},
-};
-
-static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
-  printEnum(OS, dxil::ResourceClass(llvm::to_underlying(Type)),
-            ArrayRef(ResourceClassNames));
-
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const dxil::ResourceClass &Type) {
+  OS << dxil::getResourceClassName(Type);
   return OS;
 }
 
@@ -135,6 +109,13 @@ static raw_ostream &operator<<(raw_ostream &OS,
 static raw_ostream &operator<<(raw_ostream &OS,
                                const llvm::dxbc::DescriptorRangeFlags &Flags) {
   printFlags(OS, Flags, dxbc::getDescriptorRangeFlags());
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::StaticSamplerFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getStaticSamplerFlags());
 
   return OS;
 }
@@ -179,8 +160,7 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const RootDescriptor &Descriptor) {
-  ClauseType Type = ClauseType(llvm::to_underlying(Descriptor.Type));
-  OS << "Root" << Type << "(" << Descriptor.Reg
+  OS << "Root" << Descriptor.Type << "(" << Descriptor.Reg
      << ", space = " << Descriptor.Space
      << ", visibility = " << Descriptor.Visibility
      << ", flags = " << Descriptor.Flags << ")";
@@ -199,7 +179,7 @@ raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
      << ", borderColor = " << Sampler.BorderColor
      << ", minLOD = " << Sampler.MinLOD << ", maxLOD = " << Sampler.MaxLOD
      << ", space = " << Sampler.Space << ", visibility = " << Sampler.Visibility
-     << ")";
+     << ", flags = " << Sampler.Flags << ")";
   return OS;
 }
 

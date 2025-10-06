@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
 namespace mlir {
@@ -285,7 +286,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
     // If the next operation has no blocking uses, everything is fine.
-    auto it = userToBlockingUses.find(user);
+    auto *it = userToBlockingUses.find(user);
     if (it == userToBlockingUses.end())
       continue;
 
@@ -632,8 +633,7 @@ MemorySlotPromoter::promoteSlot() {
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "[mem2reg] Promoted memory slot: " << slot.ptr
-                          << "\n");
+  LDBG() << "Promoted memory slot: " << slot.ptr;
 
   if (statistics.promotedAmount)
     (*statistics.promotedAmount)++;

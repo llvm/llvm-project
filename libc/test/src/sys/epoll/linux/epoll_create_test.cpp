@@ -10,7 +10,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcEpollCreateTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -23,8 +22,6 @@ TEST_F(LlvmLibcEpollCreateTest, Basic) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
 }
 
-#ifdef SYS_epoll_create
 TEST_F(LlvmLibcEpollCreateTest, Fails) {
   ASSERT_THAT(LIBC_NAMESPACE::epoll_create(0), Fails(EINVAL));
 }
-#endif

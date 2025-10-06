@@ -3,17 +3,17 @@
 
 declare void @llvm.assume(i1)
 
-define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
+define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
 ; CHECK: tags must be valid attribute names
 ; CHECK: "adazdazd"
   call void @llvm.assume(i1 true) ["adazdazd"()]
-; CHECK: the second argument should be a constant integral value
+; CHECK-NOT: call{{.+}}deref
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 %P1)]
-; CHECK: the second argument should be a constant integral value
+; CHECK: second argument should be an integer
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, float 1.5)]
-; CHECK: too many arguments
+; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 8, i32 8)]
-; CHECK: this attribute should have 2 arguments
+; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P)]
 ; CHECK: this attribute has no argument
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 4), "cold"(ptr %P)]
@@ -30,7 +30,9 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3) {
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P)]
 ; CHECK: arguments to separate_storage assumptions should be pointers
   call void @llvm.assume(i1 true) ["separate_storage"(ptr %P, i32 123)]
-; CHECK: this attribute should have 2 arguments
+; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["align"(ptr %P, i32 4), "dereferenceable"(ptr %P)]
+; CHECK: assume with operand bundles must have i1 true condition
+  call void @llvm.assume(i1 %cond) ["nonnull"(ptr %P)]
   ret void
 }

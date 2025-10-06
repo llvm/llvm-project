@@ -548,6 +548,16 @@ bool DwarfDebug::shareAcrossDWOCUs() const {
   return SplitDwarfCrossCuReferences;
 }
 
+DwarfCompileUnit &
+DwarfDebug::getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
+                                            DwarfCompileUnit &SrcCU) {
+  auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  if (CU.getSkeleton())
+    return shareAcrossDWOCUs() ? CU : SrcCU;
+
+  return CU;
+}
+
 void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
                                                      LexicalScope *Scope) {
   assert(Scope && Scope->getScopeNode());
@@ -558,19 +568,12 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
 
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  if (useSplitDwarf() && !shareAcrossDWOCUs() && !SP->getUnit()->getSplitDebugInlining())
-    // Avoid building the original CU if it won't be used
-    SrcCU.constructAbstractSubprogramScopeDIE(Scope);
-  else {
-    auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
-    if (auto *SkelCU = CU.getSkeleton()) {
-      (shareAcrossDWOCUs() ? CU : SrcCU)
-          .constructAbstractSubprogramScopeDIE(Scope);
-      if (CU.getCUNode()->getSplitDebugInlining())
-        SkelCU->constructAbstractSubprogramScopeDIE(Scope);
-    } else
-      CU.constructAbstractSubprogramScopeDIE(Scope);
-  }
+  auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  auto &TargetCU = getOrCreateAbstractSubprogramCU(SP, SrcCU);
+  TargetCU.constructAbstractSubprogramScopeDIE(Scope);
+  if (auto *SkelCU = CU.getSkeleton())
+    if (CU.getCUNode()->getSplitDebugInlining())
+      SkelCU->constructAbstractSubprogramScopeDIE(Scope);
 }
 
 /// Represents a parameter whose call site value can be described by applying a
@@ -936,27 +939,38 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (MI.hasDelaySlot() && !delaySlotSupported(*&MI))
         return;
 
+      DIType *AllocSiteTy = dyn_cast_or_null<DIType>(MI.getHeapAllocMarker());
+
       // If this is a direct call, find the callee's subprogram.
       // In the case of an indirect call find the register that holds
       // the callee.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
-      if (!CalleeOp.isGlobal() &&
-          (!CalleeOp.isReg() || !CalleeOp.getReg().isPhysical()))
-        continue;
+      bool PhysRegCalleeOperand =
+          CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
+      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
+      // describe the call target operand.
+      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
+        const MCOperandInfo &MCOI =
+            MI.getDesc().operands()[CalleeOp.getOperandNo()];
+        PhysRegCalleeOperand =
+            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
+      }
 
       unsigned CallReg = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
-      if (CalleeOp.isReg()) {
-        CallReg = CalleeOp.getReg();
-        if (!CallReg)
-          continue;
-      } else {
+      if (PhysRegCalleeOperand) {
+        CallReg = CalleeOp.getReg(); // might be zero
+      } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
-        if (!CalleeDecl || !CalleeDecl->getSubprogram())
-          continue;
-        CalleeSP = CalleeDecl->getSubprogram();
+        if (CalleeDecl)
+          CalleeSP = CalleeDecl->getSubprogram(); // might be nullptr
       }
+
+      // Omit DIE if we can't tell where the call goes *and* we don't want to
+      // add metadata to it.
+      if (CalleeSP == nullptr && CallReg == 0 && AllocSiteTy == nullptr)
+        continue;
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
 
@@ -972,10 +986,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // the call graph which could lead to some target function. For tail
       // calls, no return PC information is needed, unless tuning for GDB in
       // DWARF4 mode in which case we fake a return PC for compatibility.
-      const MCSymbol *PCAddr =
-          (!IsTail || CU.useGNUAnalogForDwarf5Feature())
-              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
-              : nullptr;
+      const MCSymbol *PCAddr = (!IsTail || CU.useGNUAnalogForDwarf5Feature())
+                                   ? getLabelAfterInsn(TopLevelCallMI)
+                                   : nullptr;
 
       // For tail calls, it's necessary to record the address of the branch
       // instruction so that the debugger can show where the tail call occurred.
@@ -991,8 +1004,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                                        ->getName(CallReg)))
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
-          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg);
+      DIE &CallSiteDIE =
+          CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
+                                       PCAddr, CallAddr, CallReg, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -2701,7 +2715,8 @@ void DwarfDebug::skippedNonDebugFunction() {
 
 // Gather and emit post-function debug information.
 void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
-  const DISubprogram *SP = MF->getFunction().getSubprogram();
+  const Function &F = MF->getFunction();
+  const DISubprogram *SP = F.getSubprogram();
 
   assert(CurFn == MF &&
       "endFunction should be called with the same function as beginFunction");
@@ -2770,11 +2785,12 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 
   ProcessedSPNodes.insert(SP);
   DIE &ScopeDIE =
-      TheCU.constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+      TheCU.constructSubprogramScopeDIE(SP, F, FnScope, FunctionLineTableLabel);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+      SkelCU->constructSubprogramScopeDIE(SP, F, FnScope,
+                                          FunctionLineTableLabel);
 
   FunctionLineTableLabel = nullptr;
 
@@ -3101,8 +3117,10 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                             &AP](const DbgValueLocEntry &Entry,
                                  DIExpressionCursor &Cursor) -> bool {
     if (Entry.isInt()) {
-      if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
-                 BT->getEncoding() == dwarf::DW_ATE_signed_char))
+      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean))
+        DwarfExpr.addBooleanConstant(Entry.getInt());
+      else if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
+                      BT->getEncoding() == dwarf::DW_ATE_signed_char))
         DwarfExpr.addSignedConstant(Entry.getInt());
       else
         DwarfExpr.addUnsignedConstant(Entry.getInt());

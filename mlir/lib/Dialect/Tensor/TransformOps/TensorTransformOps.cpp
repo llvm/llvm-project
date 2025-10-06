@@ -165,7 +165,7 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
       return Value();
     }
-    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+    return tensor::CastOp::create(builder, loc, resultType, input).getResult();
   });
   converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
                                         ValueRange inputs,
@@ -177,7 +177,7 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
       return Value();
     }
-    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+    return tensor::CastOp::create(builder, loc, resultType, input).getResult();
   });
 }
 

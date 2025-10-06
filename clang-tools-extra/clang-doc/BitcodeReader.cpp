@@ -384,6 +384,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Path, Blob);
   case REFERENCE_FIELD:
     return decodeRecord(R, F, Blob);
+  case REFERENCE_FILE:
+    return decodeRecord(R, I->DocumentationFileName, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for Reference");
