@@ -287,7 +287,7 @@ them. Here's a motivating example that shows how we could use these:
     # Iterative fib.
     def fibi(x)
       var a = 1, b = 1, c in
-      (for i = 3, i < x in
+      (for i = 3, i < x + 1 in
          c = a + b :
          a = b :
          b = c) :
@@ -384,17 +384,16 @@ the unabridged code):
 
       // Store the value into the alloca.
       Builder->CreateStore(StartVal, Alloca);
+
+      // If the loop variable shadows an existing variable, we have to restore it,
+      // so save it now. Set VarName to refer to our recently created alloca.
+      AllocaInst *OldVal = NamedValues[VarName];
+      NamedValues[VarName] = Alloca;
       ...
 
-      // Compute the end condition.
-      Value *EndCond = End->codegen();
-      if (!EndCond)
-        return nullptr;
-
-      // Reload, increment, and restore the alloca.  This handles the case where
-      // the body of the loop mutates the variable.
+      // Load, increment and store the new loop variable.
       Value *CurVar = Builder->CreateLoad(Alloca->getAllocatedType(), Alloca,
-                                          VarName.c_str());
+                                          VarName);
       Value *NextVar = Builder->CreateFAdd(CurVar, StepVal, "nextvar");
       Builder->CreateStore(NextVar, Alloca);
       ...
@@ -883,4 +882,3 @@ Here is the code:
    :language: c++
 
 `Next: Compiling to Object Code <LangImpl08.html>`_
-
