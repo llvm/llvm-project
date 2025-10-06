@@ -1446,8 +1446,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   auto SVECSPartitions = partitionSVECS(
       MBB,
-      SVECalleeSavesSize &&
-              SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
+      SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
           ? MBB.getFirstTerminator()
           : FirstGPRRestoreI,
       PPRCalleeSavesSize, ZPRCalleeSavesSize, /*IsEpilogue=*/true);
