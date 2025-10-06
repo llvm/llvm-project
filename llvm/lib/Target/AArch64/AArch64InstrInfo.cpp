@@ -5098,33 +5098,31 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    } else if (Subtarget.hasZeroCycleRegMoveGPR64() &&
+               !Subtarget.hasZeroCycleRegMoveGPR32()) {
+      // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
+      MCRegister DestRegX = TRI->getMatchingSuperReg(DestReg, AArch64::sub_32,
+                                                     &AArch64::GPR64spRegClass);
+      assert(DestRegX.isValid() && "Destination super-reg not valid");
+      MCRegister SrcRegX =
+          SrcReg == AArch64::WZR
+              ? AArch64::XZR
+              : TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                         &AArch64::GPR64spRegClass);
+      assert(SrcRegX.isValid() && "Source super-reg not valid");
+      // This instruction is reading and writing X registers.  This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegX, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestRegX)
+          .addReg(AArch64::XZR)
+          .addReg(SrcRegX, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
     } else {
-      if (Subtarget.hasZeroCycleRegMoveGPR64() &&
-          !Subtarget.hasZeroCycleRegMoveGPR32()) {
-        // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
-        MCRegister DestRegX = TRI->getMatchingSuperReg(
-            DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
-        assert(DestRegX.isValid() && "Destination super-reg not valid");
-        MCRegister SrcRegX =
-            SrcReg == AArch64::WZR
-                ? AArch64::XZR
-                : TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
-                                           &AArch64::GPR64spRegClass);
-        assert(SrcRegX.isValid() && "Source super-reg not valid");
-        // This instruction is reading and writing X registers.  This may upset
-        // the register scavenger and machine verifier, so we need to indicate
-        // that we are reading an undefined value from SrcRegX, but a proper
-        // value from SrcReg.
-        BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestRegX)
-            .addReg(AArch64::XZR)
-            .addReg(SrcRegX, RegState::Undef)
-            .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
-      } else {
-        // Otherwise, expand to ORR WZR.
-        BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
-            .addReg(AArch64::WZR)
-            .addReg(SrcReg, getKillRegState(KillSrc));
-      }
+      // Otherwise, expand to ORR WZR.
+      BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
+          .addReg(AArch64::WZR)
+          .addReg(SrcReg, getKillRegState(KillSrc));
     }
     return;
   }
