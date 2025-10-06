@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefixes=X64,X64-SDAGISEL
 ; RUN: llc < %s -mtriple=i686-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X86-FASTISEL
 ; RUN: llc < %s -mtriple=x86_64-linux -fast-isel -fast-isel-abort=1  | FileCheck %s -check-prefixes=X64,X64-FASTISEL
-; RUN: llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X86,X86-GISEL
+; RUN: llc < %s -mtriple=i686-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X86-GISEL
 ; RUN: llc < %s -mtriple=x86_64-linux -global-isel -global-isel-abort=1  | FileCheck %s -check-prefixes=X64,X64-GISEL
 
 define i1 @isnone_f(float %x) {
@@ -23,6 +23,11 @@ define i1 @isnone_f(float %x) {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    xorl %eax, %eax
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-GISEL-LABEL: isnone_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    xorl %eax, %eax
+; X86-GISEL-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 0)
   ret i1 %0
@@ -45,6 +50,11 @@ define i1 @isany_f(float %x) nounwind {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    movb $1, %al
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-GISEL-LABEL: isany_f:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movb $1, %al
+; X86-GISEL-NEXT:    retl
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1023)
   ret i1 %0
@@ -534,6 +544,8 @@ define i1 @not_is_minus_inf_f(float %x) nounwind {
 ; X86-GISEL-LABEL: not_is_minus_inf_f:
 ; X86-GISEL:       # %bb.0: # %entry
 ; X86-GISEL-NEXT:    pushl %ebx
+; X86-GISEL-NEXT:    .cfi_def_cfa_offset 8
+; X86-GISEL-NEXT:    .cfi_offset %ebx, -8
 ; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-GISEL-NEXT:    movl %eax, %ecx
 ; X86-GISEL-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
@@ -548,6 +560,7 @@ define i1 @not_is_minus_inf_f(float %x) nounwind {
 ; X86-GISEL-NEXT:    seta %al
 ; X86-GISEL-NEXT:    orb %ah, %al
 ; X86-GISEL-NEXT:    popl %ebx
+; X86-GISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-GISEL-NEXT:    retl
 ;
 ; X64-GISEL-LABEL: not_is_minus_inf_f:
@@ -768,6 +781,11 @@ define i1 @isnone_d(double %x) nounwind {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    xorl %eax, %eax
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-GISEL-LABEL: isnone_d:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    xorl %eax, %eax
+; X86-GISEL-NEXT:    retl
 entry:
     %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 0)
     ret i1 %0
@@ -790,6 +808,11 @@ define i1 @isany_d(double %x) nounwind {
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    movb $1, %al
 ; X86-FASTISEL-NEXT:    retl
+;
+; X86-GISEL-LABEL: isany_d:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movb $1, %al
+; X86-GISEL-NEXT:    retl
 entry:
     %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 1023)
     ret i1 %0
@@ -819,6 +842,11 @@ define i1 @isnone_f80(x86_fp80 %x) nounwind {
 ; X64-FASTISEL-NEXT:    fstp %st(0)
 ; X64-FASTISEL-NEXT:    xorl %eax, %eax
 ; X64-FASTISEL-NEXT:    retq
+;
+; X86-GISEL-LABEL: isnone_f80:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    xorl %eax, %eax
+; X86-GISEL-NEXT:    retl
 ;
 ; X64-GISEL-LABEL: isnone_f80:
 ; X64-GISEL:       # %bb.0: # %entry
@@ -853,6 +881,11 @@ define i1 @isany_f80(x86_fp80 %x) nounwind {
 ; X64-FASTISEL-NEXT:    fstp %st(0)
 ; X64-FASTISEL-NEXT:    movb $1, %al
 ; X64-FASTISEL-NEXT:    retq
+;
+; X86-GISEL-LABEL: isany_f80:
+; X86-GISEL:       # %bb.0: # %entry
+; X86-GISEL-NEXT:    movb $1, %al
+; X86-GISEL-NEXT:    retl
 ;
 ; X64-GISEL-LABEL: isany_f80:
 ; X64-GISEL:       # %bb.0: # %entry
