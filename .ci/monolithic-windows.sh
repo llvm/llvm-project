@@ -25,8 +25,11 @@ pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 mkdir /tmp/clang-download
 pushd /tmp/clang-download
-curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows.msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/ckabg+llvm-21.1.2-x86_64-pc-windows.msvc.tar.xz
-ls -l "clang+llvm-21.1.2-x86_64-pc-windows.msvc.tar.xz"
+curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
+ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+unxz "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+tar xvf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
+ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 
 
 
