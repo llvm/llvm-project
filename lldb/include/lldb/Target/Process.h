@@ -87,6 +87,7 @@ public:
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
   FileSpec GetPythonOSPluginPath() const;
+  FileSpec GetPythonJITLoaderPath() const;
   uint32_t GetVirtualAddressableBits() const;
   void SetVirtualAddressableBits(uint32_t bits);
   uint32_t GetHighmemVirtualAddressableBits() const;

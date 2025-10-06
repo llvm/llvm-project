@@ -329,6 +329,11 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(Event *event) {
 }
 
 python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ModuleSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
 lldb_private::python::SWIGBridge::ToSWIGWrapper(const Stream *stream) {
   return python::PythonObject();
 }

@@ -15,6 +15,7 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include "JITLoaderPythonInterface.h"
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedBreakpointPythonInterface.h"
 #include "ScriptedFramePythonInterface.h"

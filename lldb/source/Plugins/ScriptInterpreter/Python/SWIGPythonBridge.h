@@ -260,6 +260,7 @@ void *LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);

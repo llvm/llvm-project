@@ -468,6 +468,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ModuleSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -600,6 +604,11 @@ template <>
 lldb::ExecutionContextRefSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::ModuleSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ModuleSP>(python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
 

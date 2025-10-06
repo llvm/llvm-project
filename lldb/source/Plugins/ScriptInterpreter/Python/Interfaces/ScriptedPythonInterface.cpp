@@ -194,4 +194,22 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
   return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
 }
 
+template <>
+lldb::ModuleSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ModuleSP>(python::PythonObject &p, Status &error) {
+
+  lldb::SBModule *sb_module =
+      reinterpret_cast<lldb::SBModule *>(
+          python::LLDBSWIGPython_CastPyObjectToSBModule(p.get()));
+
+  if (!sb_module) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBModule to lldb::ModuleSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBModule(*sb_module);
+}
+
 #endif

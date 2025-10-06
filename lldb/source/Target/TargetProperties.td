@@ -247,6 +247,9 @@ let Definition = "process" in {
   def PythonOSPluginPath: Property<"python-os-plugin-path", "FileSpec">,
     DefaultUnsignedValue<1>,
     Desc<"A path to a python OS plug-in module file that contains a OperatingSystemPlugIn class.">;
+  def PythonJITLoaderPath: Property<"python-jit-loader-path", "FileSpec">,
+    DefaultUnsignedValue<1>,
+    Desc<"A path to a python JIT loader plug-in module file that contains a JITLoaderPlugin class.">;
   def StopOnSharedLibraryEvents: Property<"stop-on-sharedlibrary-events", "Boolean">,
     Global,
     DefaultFalse,

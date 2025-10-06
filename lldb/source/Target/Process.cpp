@@ -211,6 +211,12 @@ FileSpec ProcessProperties::GetPythonOSPluginPath() const {
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
+FileSpec ProcessProperties::GetPythonJITLoaderPath() const {
+  const uint32_t idx = ePropertyPythonJITLoaderPath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+
 uint32_t ProcessProperties::GetVirtualAddressableBits() const {
   const uint32_t idx = ePropertyVirtualAddressableBits;
   return GetPropertyAtIndexAs<uint64_t>(
