@@ -126,6 +126,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp
   MachineFunctionSplitter.cpp
+  MachineIDFSSAUpdater.cpp
   MachineInstrBundle.cpp
   MachineInstr.cpp
   MachineLateInstrsCleanup.cpp
