@@ -1,0 +1,25 @@
+//===--------- Implementation header of the munmap function -----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_MUNMAP_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_MUNMAP_H
+
+#include "hdr/types/off_t.h"
+#include "hdr/types/size_t.h"
+#include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
+
+ErrorOr<int> munmap(void *addr, size_t size);
+
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_MUNMAP_H

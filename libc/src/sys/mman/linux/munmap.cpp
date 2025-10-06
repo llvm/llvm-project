@@ -8,29 +8,24 @@
 
 #include "src/sys/mman/munmap.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/munmap.h"
 #include "src/__support/common.h"
-
 #include "src/__support/libc_errno.h"
-#include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {
 
-// This function is currently linux only. It has to be refactored suitably if
-// mmap is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, munmap, (void *addr, size_t size)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_munmap, reinterpret_cast<long>(addr), size);
+  auto ret = internal::munmap(addr, size);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
-  if (ret < 0) {
-    libc_errno = -ret;
+  if (LIBC_UNLIKELY(!ret.has_value())) {
+    libc_errno = ret.error();
     return -1;
   }
 
-  return 0;
+  return ret.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
