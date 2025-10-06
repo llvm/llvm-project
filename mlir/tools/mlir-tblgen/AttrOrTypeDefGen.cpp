@@ -864,11 +864,8 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
 
     // Declare all the def classes first (in case they reference each other).
     for (const AttrOrTypeDef &def : defs) {
-      std::string comments = tblgen::emitSummaryAndDescComments(
-          def.getSummary(), def.getDescription());
-      if (!comments.empty()) {
-        os << comments << "\n";
-      }
+      tblgen::emitSummaryAndDescComments(os, def.getSummary(),
+                                         def.getDescription());
       os << "class " << def.getCppClassName() << ";\n";
     }
 
@@ -1166,7 +1163,7 @@ getAllCppAttrConstraints(const RecordKeeper &records) {
 
 /// Emit the declarations for the given constraints, of the form:
 /// `bool <constraintCppFunctionName>(<parameterTypeName> <parameterName>);`
-static void emitConstraintDecls(const std::vector<Constraint> &constraints,
+static void emitConstraintDecls(ArrayRef<Constraint> constraints,
                                 raw_ostream &os, StringRef parameterTypeName,
                                 StringRef parameterName) {
   static const char *const constraintDecl = "bool {0}({1} {2});\n";
@@ -1192,7 +1189,7 @@ static void emitAttrConstraintDecls(const RecordKeeper &records,
 ///   return (<condition>); }`
 /// where `<condition>` is the condition template with the `self` variable
 /// replaced with the `selfName` parameter.
-static void emitConstraintDefs(const std::vector<Constraint> &constraints,
+static void emitConstraintDefs(ArrayRef<Constraint> constraints,
                                raw_ostream &os, StringRef parameterTypeName,
                                StringRef selfName) {
   static const char *const constraintDef = R"(

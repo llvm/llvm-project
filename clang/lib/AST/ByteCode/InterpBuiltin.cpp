@@ -736,25 +736,6 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-/// rotateleft(value, amount)
-static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame,
-                                   const CallExpr *Call, bool Right) {
-  APSInt Amount = popToAPSInt(S, Call->getArg(1));
-  APSInt Value = popToAPSInt(S, Call->getArg(0));
-
-  APSInt Result;
-  if (Right)
-    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
-                    /*IsUnsigned=*/true);
-  else // Left.
-    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
-                    /*IsUnsigned=*/true);
-
-  pushInteger(S, Result, Call->getType());
-  return true;
-}
-
 static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame,
                                 const CallExpr *Call) {
@@ -2796,7 +2777,7 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
     unsigned LaneBase = (Idx / LaneElts) * LaneElts;
     unsigned LaneIdx = Idx % LaneElts;
     unsigned SrcIdx = Idx;
-    unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
+    unsigned Sel = (Ctl >> (2 * (LaneIdx & 0x3))) & 0x3;
     if (ElemBits == 32) {
       SrcIdx = LaneBase + Sel;
     } else {
@@ -2805,8 +2786,6 @@ static bool interp__builtin_ia32_pshuf(InterpState &S, CodePtr OpPC,
       if (!IsShufHW && !InHigh) {
         SrcIdx = LaneBase + Sel;
       } else if (IsShufHW && InHigh) {
-        unsigned Rel = LaneIdx - HalfSize;
-        Sel = (Ctl >> (2 * Rel)) & 0x3;
         SrcIdx = LaneBase + HalfSize + Sel;
       }
     }
@@ -3204,7 +3183,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotl:
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
-    return interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/false);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+          return Value.rotl(Amount);
+        });
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
@@ -3215,7 +3197,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
-    return interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/true);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+          return Value.rotr(Amount);
+        });
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
