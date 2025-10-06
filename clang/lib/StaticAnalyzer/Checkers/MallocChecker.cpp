@@ -3812,6 +3812,15 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     return true;
   }
 
+  // Protobuf function declared in `generated_message_util.h` that takes
+  // ownership of the second argument. As the first and third arguments are
+  // allocation arenas and won't be tracked by this checker, there is no reason
+  // to set `EscapingSymbol`. (Also, this is an implementation detail of
+  // Protobuf, so it's better to be a bit more permissive.)
+  if (FName == "GetOwnedMessageInternal") {
+    return true;
+  }
+
   // Handle cases where we know a buffer's /address/ can escape.
   // Note that the above checks handle some special cases where we know that
   // even though the address escapes, it's still our responsibility to free the
