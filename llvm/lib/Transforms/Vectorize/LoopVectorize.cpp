@@ -8393,11 +8393,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     R->setOperand(1, WideIV->getStepValue());
   }
 
-  VPlanTransforms::runPass(
-      VPlanTransforms::addExitUsersForFirstOrderRecurrences, *Plan, Range);
+  // TODO: We can't call runPass on these transforms yet, due to verifier
+  // failures.
+  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::runPass(VPlanTransforms::addScalarResumePhis, *Plan,
-                           RecipeBuilder, IVEndValues);
+  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8508,8 +8508,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   DenseMap<VPValue *, VPValue *> IVEndValues;
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
   // values.
-  VPlanTransforms::runPass(VPlanTransforms::addScalarResumePhis, *Plan,
-                           RecipeBuilder, IVEndValues);
+  // TODO: We can't call runPass on the transform yet, due to verifier
+  // failures.
+  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
