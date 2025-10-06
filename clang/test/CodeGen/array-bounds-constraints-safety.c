@@ -6,6 +6,19 @@
 // intentionally accesses out-of-bounds for performance or compatibility.
 // This test verifies that bounds constraints are only applied to safe cases.
 
+// CHECK-LABEL: define {{.*}} @test_zero_length_array
+struct ZeroLengthData {
+    int count;
+    int items[0];  // GNU C extension: zero-length array
+};
+
+int test_zero_length_array(struct ZeroLengthData *d, int i) {
+  // CHECK-NOT: call void @llvm.assume
+  // Zero-length array as last field should not generate bounds constraints.
+  // See https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html
+  return d->items[i];
+}
+
 // CHECK-LABEL: define {{.*}} @test_flexible_array_member
 struct Data {
     int count;

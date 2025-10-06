@@ -4624,13 +4624,13 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
     return;
 
   llvm::APInt ArraySize = CAT->getSize();
-  if (ArraySize == 0)
-    return;
 
   // Don't generate assumes for flexible array member pattern.
-  // Arrays of size 1 in structs are often used as placeholders for
-  // variable-length data (pre-C99 flexible array member idiom.)
-  if (ArraySize == 1) {
+  // Size-1 arrays: "struct { int len; char data[1]; }" (pre-C99 idiom.)
+  // Zero-length arrays: "struct { int len; char data[0]; }" (GCC extension
+  // https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html)
+  // Both patterns use arrays as placeholders for variable-length data.
+  if (ArraySize == 0 || ArraySize == 1) {
     if (const auto *ME = dyn_cast<MemberExpr>(Base->IgnoreParenImpCasts())) {
       if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
         const RecordDecl *RD = FD->getParent();
@@ -4640,7 +4640,7 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
         for (const auto *Field : RD->fields())
           LastField = Field;
         if (LastField == FD)
-          // This is a size-1 array as the last field in a struct.
+          // This is a zero-length or size-1 array as the last field.
           // Likely a flexible array member pattern - skip assumes.
           return;
       }
