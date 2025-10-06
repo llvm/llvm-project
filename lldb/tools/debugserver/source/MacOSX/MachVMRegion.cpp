@@ -114,6 +114,11 @@ bool MachVMRegion::RestoreProtections() {
   return false;
 }
 
+#ifdef VM_REGION_FLAG_JIT_ENABLED
+#define VM_REGION_HAS_FLAGS 1
+#else
+#define VM_REGION_HAS_FLAGS 0
+#endif
 bool MachVMRegion::GetRegionForAddress(nub_addr_t addr) {
   // Restore any original protections and clear our vars
   Clear();
@@ -140,6 +145,30 @@ bool MachVMRegion::GetRegionForAddress(nub_addr_t addr) {
   if (failed)
     return false;
   if (log_protections) {
+#if VM_REGION_HAS_FLAGS
+    DNBLogThreaded("info = { prot = %u, "
+                   "max_prot = %u, "
+                   "inheritance = 0x%8.8x, "
+                   "offset = 0x%8.8llx, "
+                   "user_tag = 0x%8.8x, "
+                   "ref_count = %u, "
+                   "shadow_depth = %u, "
+                   "ext_pager = %u, "
+                   "share_mode = %u, "
+                   "is_submap = %d, "
+                   "behavior = %d, "
+                   "object_id = 0x%8.8x, "
+                   "user_wired_count = 0x%4.4x, "
+                   "flags = %d }",
+                   m_data.protection, m_data.max_protection, m_data.inheritance,
+                   (uint64_t)m_data.offset, m_data.user_tag, m_data.ref_count,
+                   m_data.shadow_depth, m_data.external_pager,
+                   m_data.share_mode, m_data.is_submap, m_data.behavior,
+                   m_data.object_id, m_data.user_wired_count, m_data.flags);
+#else
+    // Duplicate log call instead of #if-defing printing of flags to avoid
+    // compiler warning: 'embedding a directive within macro arguments has
+    // undefined behavior'
     DNBLogThreaded("info = { prot = %u, "
                    "max_prot = %u, "
                    "inheritance = 0x%8.8x, "
@@ -158,6 +187,7 @@ bool MachVMRegion::GetRegionForAddress(nub_addr_t addr) {
                    m_data.shadow_depth, m_data.external_pager,
                    m_data.share_mode, m_data.is_submap, m_data.behavior,
                    m_data.object_id, m_data.user_wired_count);
+#endif
   }
   m_curr_protection = m_data.protection;
 
@@ -181,6 +211,22 @@ uint32_t MachVMRegion::GetDNBPermissions() const {
   if ((m_data.protection & VM_PROT_EXECUTE) == VM_PROT_EXECUTE)
     dnb_permissions |= eMemoryPermissionsExecutable;
   return dnb_permissions;
+}
+
+#ifndef VM_REGION_FLAG_MTE_ENABLED
+#define VM_REGION_FLAG_MTE_ENABLED 0x4
+#endif
+std::vector<std::string> MachVMRegion::GetFlags() const {
+  std::vector<std::string> flags;
+#if VM_REGION_HAS_FLAGS
+  if (m_data.flags & VM_REGION_FLAG_JIT_ENABLED)
+    flags.push_back("jit");
+  if (m_data.flags & VM_REGION_FLAG_TPRO_ENABLED)
+    flags.push_back("tpro");
+  if (m_data.flags & VM_REGION_FLAG_MTE_ENABLED)
+    flags.push_back("mt");
+#endif
+  return flags;
 }
 
 std::vector<std::string> MachVMRegion::GetMemoryTypes() const {

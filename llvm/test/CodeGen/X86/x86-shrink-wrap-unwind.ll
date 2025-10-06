@@ -317,13 +317,13 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB4_1: ## %throw
-; CHECK-NEXT:  Ltmp0:
+; CHECK-NEXT:  Ltmp0: ## EH_LABEL
 ; CHECK-NEXT:    callq _throw_exception
-; CHECK-NEXT:  Ltmp1:
+; CHECK-NEXT:  Ltmp1: ## EH_LABEL
 ; CHECK-NEXT:  ## %bb.2: ## %unreachable
 ; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  LBB4_3: ## %landing
-; CHECK-NEXT:  Ltmp2:
+; CHECK-NEXT:  Ltmp2: ## EH_LABEL
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  Lfunc_end0:
@@ -340,12 +340,12 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; NOCOMPACTUNWIND-NEXT:    retq
 ; NOCOMPACTUNWIND-NEXT:  .LBB4_1: # %throw
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:  .Ltmp0:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp0: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
-; NOCOMPACTUNWIND-NEXT:  .Ltmp1:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp1: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %unreachable
 ; NOCOMPACTUNWIND-NEXT:  .LBB4_3: # %landing
-; NOCOMPACTUNWIND-NEXT:  .Ltmp2:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp2: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    popq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
@@ -379,9 +379,9 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; CHECK-NEXT:  ## %bb.1: ## %throw
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  Ltmp3:
+; CHECK-NEXT:  Ltmp3: ## EH_LABEL
 ; CHECK-NEXT:    callq _throw_exception
-; CHECK-NEXT:  Ltmp4:
+; CHECK-NEXT:  Ltmp4: ## EH_LABEL
 ; CHECK-NEXT:  LBB5_3: ## %fallthrough
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    nop
@@ -390,7 +390,7 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; CHECK-NEXT:  LBB5_4: ## %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB5_2: ## %landing
-; CHECK-NEXT:  Ltmp5:
+; CHECK-NEXT:  Ltmp5: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB5_3
 ; CHECK-NEXT:  Lfunc_end1:
 ;
@@ -401,9 +401,9 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; NOCOMPACTUNWIND-NEXT:  # %bb.1: # %throw
 ; NOCOMPACTUNWIND-NEXT:    pushq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:  .Ltmp3:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp3: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
-; NOCOMPACTUNWIND-NEXT:  .Ltmp4:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp4: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:  .LBB5_3: # %fallthrough
 ; NOCOMPACTUNWIND-NEXT:    #APP
 ; NOCOMPACTUNWIND-NEXT:    nop
@@ -414,7 +414,7 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; NOCOMPACTUNWIND-NEXT:    retq
 ; NOCOMPACTUNWIND-NEXT:  .LBB5_2: # %landing
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
-; NOCOMPACTUNWIND-NEXT:  .Ltmp5:
+; NOCOMPACTUNWIND-NEXT:  .Ltmp5: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    jmp .LBB5_3
 entry:
   br i1 %cond, label %throw, label %return
