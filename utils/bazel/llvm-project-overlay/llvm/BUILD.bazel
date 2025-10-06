@@ -770,6 +770,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":CodeGenTypes",
+        ":Option",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",

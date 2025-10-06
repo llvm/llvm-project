@@ -3298,7 +3298,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
-    bool UsedByLoadStoreAddress = isUsedByLoadStoreAddress(this);
+    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
+    bool UsedByLoadStoreAddress =
+        !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
                               PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
@@ -3312,8 +3314,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // don't assign scalarization overhead in general, if the target prefers
     // vectorized addressing or the loaded value is used as part of an address
     // of another load or store.
-    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
-    if (PreferVectorizedAddressing || !UsedByLoadStoreAddress) {
+    if (!UsedByLoadStoreAddress) {
       bool EfficientVectorLoadStore =
           Ctx.TTI.supportsEfficientVectorElementLoadStore();
       if (!(IsLoad && !PreferVectorizedAddressing) &&
