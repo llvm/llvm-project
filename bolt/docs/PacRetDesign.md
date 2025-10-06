@@ -28,7 +28,7 @@ The DW_CFA_AARCH64_negate_ra_state operation negates bit[0] of the RA_SIGN_STATE
 This bit indicates to the unwinder whether the current return address is signed
 or not (hence the name). The unwinder uses this information to authenticate the
 pointer, and remove the Pointer Authentication Code (PAC) bits.
-Incorrect placment of negate-ra-state CFIs causes the unwinder to either attempt
+Incorrect placement of negate-ra-state CFIs causes the unwinder to either attempt
 to authenticate an unsigned pointer (resulting in a segmentation fault), or skip
 authentication on a signed pointer, which can also cause a fault.
 
