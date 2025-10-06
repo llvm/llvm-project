@@ -512,7 +512,7 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   // YYYYMM
   case DW_LNAME_C: {
     if (Version == 0)
-      return "K&R C";
+      break;
     if (Version <= 198912)
       return "C89";
     if (Version <= 199901)
