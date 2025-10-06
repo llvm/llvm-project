@@ -12,7 +12,7 @@ define i128 @add_reduc_i32_i128_unsupported(ptr %a, ptr %b) "target-features"="+
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NO-PARTIAL-REDUCTION:       [[VECTOR_BODY]]:
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i128> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i128> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 1
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
@@ -21,18 +21,18 @@ define i128 @add_reduc_i32_i128_unsupported(ptr %a, ptr %b) "target-features"="+
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP3:%.*]] = zext <4 x i32> [[WIDE_LOAD1]] to <4 x i64>
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP4:%.*]] = mul nuw <4 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP5:%.*]] = zext <4 x i64> [[TMP4]] to <4 x i128>
-; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i128> @llvm.vector.partial.reduce.add.v2i128.v4i128(<2 x i128> [[VEC_PHI]], <4 x i128> [[TMP5]])
+; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP7]] = add <4 x i128> [[VEC_PHI]], [[TMP5]]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4024
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-NO-PARTIAL-REDUCTION:       [[MIDDLE_BLOCK]]:
-; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP7:%.*]] = call i128 @llvm.vector.reduce.add.v2i128(<2 x i128> [[PARTIAL_REDUCE]])
+; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[TMP8:%.*]] = call i128 @llvm.vector.reduce.add.v4i128(<4 x i128> [[TMP7]])
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK-NO-PARTIAL-REDUCTION:       [[SCALAR_PH]]:
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-NO-PARTIAL-REDUCTION:       [[FOR_BODY]]:
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[IV:%.*]] = phi i64 [ 4024, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[ACCUM:%.*]] = phi i128 [ [[TMP7]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[ACCUM:%.*]] = phi i128 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[LOAD_A:%.*]] = load i32, ptr [[GEP_A]], align 1
 ; CHECK-NO-PARTIAL-REDUCTION-NEXT:    [[EXT_A:%.*]] = zext i32 [[LOAD_A]] to i64
