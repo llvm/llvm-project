@@ -188,7 +188,7 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,
   const ASTContext &astContext = cgm.getASTContext();
   const uint64_t charWidth = cgm.getASTContext().getCharWidth();
   mlir::Type charTy = cgm.getBuilder().getUIntNTy(charWidth);
-  
+
   // Offset of where we want the first bit to go within the bits of the
   // current char.
   unsigned offsetWithinChar = offsetInBits % charWidth;
@@ -312,7 +312,7 @@ std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits pos) {
 
     size_t index = iter - elements.begin() - 1;
     const Element &elt = elements[index];
-    
+
     // If we already have an element starting at pos, we're done.
     if (elt.offset == pos)
       return index;
@@ -336,7 +336,8 @@ bool ConstantAggregateBuilder::split(size_t index, CharUnits hint) {
   return false;
 }
 
-void ConstantAggregateBuilder::condense(CharUnits offset, mlir::Type desiredTy) {
+void ConstantAggregateBuilder::condense(CharUnits offset,
+                                        mlir::Type desiredTy) {
   CharUnits desiredSize = getSize(desiredTy);
 
   std::optional<size_t> firstElemToReplace = splitAt(offset);
@@ -361,11 +362,11 @@ void ConstantAggregateBuilder::condense(CharUnits offset, mlir::Type desiredTy) 
 
   // Build a new constant from the elements in the range.
   SmallVector<Element> subElems(elements.begin() + first,
-                                 elements.begin() + last);
+                                elements.begin() + last);
   mlir::Attribute replacement =
       buildFrom(cgm, subElems, offset, desiredSize,
                 /*naturalLayout=*/false, desiredTy, false);
-  
+
   // Replace the range with the condensed constant.
   Element newElt(mlir::cast<mlir::TypedAttr>(replacement), offset);
   replace(elements, first, last, {newElt});
@@ -526,8 +527,9 @@ bool ConstRecordBuilder::appendBytes(CharUnits fieldOffsetInChars,
 bool ConstRecordBuilder::appendBitField(const FieldDecl *field,
                                         uint64_t fieldOffset, cir::IntAttr ci,
                                         bool allowOverwrite) {
-  const auto &rl = cgm.getTypes().getCIRGenRecordLayout(field->getParent());
-  const auto &info = rl.getBitFieldInfo(field);
+  const CIRGenRecordLayout &rl =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  const CIRGenBitFieldInfo &info = rl.getBitFieldInfo(field);
   llvm::APInt fieldValue = ci.getValue();
 
   // Promote the size of FieldValue if necessary
