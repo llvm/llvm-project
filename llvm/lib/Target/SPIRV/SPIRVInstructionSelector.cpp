@@ -2270,14 +2270,13 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
                   .constrainAllUses(TII, TRI, RBI);
 
     // A[i] * B[i]
-    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
-                  .addDef(MaskMul)
+    Register Mul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulS))
+                  .addDef(Mul)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Mul)
-                  .addUse(GR.getOrCreateConstInt(APInt(8, 0), I, EltType, TII,
-                                                 ZeroAsNull))
-                  .addUse(GR.getOrCreateConstInt(APInt(8, 8), I, EltType, TII,
-                                                 ZeroAsNull))
+                  .addUse(AElt)
+                  .addUse(BElt)
                   .constrainAllUses(TII, TRI, RBI);
 
     // Discard 24 highest-bits so that stored i32 register is i8 equivalent
