@@ -102,7 +102,7 @@ if (isPrBranch) {
 }
 if (postsub) {
     propsList.add(
-        pipelineTriggers([cron('@midnight')])
+        pipelineTriggers([cron('TZ=Asia/Kolkata\n@midnight')])
     )
 }
 properties(propsList)
@@ -368,7 +368,7 @@ try {
                 ]
                 List<String> downstreamSuites = ['GFortran', 'NAGLLVM']
                 if (timerTrigger) {
-                    downstreamSuites += 'Fujitsu'
+                    downstreamSuites.addAll(['Fujitsu', 'Polyhedron'])
                 }
                 for (suite in downstreamSuites) {
                     String suiteName = suite
