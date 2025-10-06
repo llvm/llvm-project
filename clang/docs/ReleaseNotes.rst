@@ -124,7 +124,7 @@ AST Dumping Potentially Breaking Changes
     ``__atomic_test_and_set(p, 0)``
 
 - Pretty-printing of templates with inherited (i.e. specified in a previous
-  redeclaration) default arguments has been fixed.
+  redeclaration) and template default arguments has been fixed.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------

@@ -1190,7 +1190,11 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
       VisitNonTypeTemplateParmDecl(NTTP);
     } else if (auto TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
       VisitTemplateDecl(TTPD);
-      // FIXME: print the default argument, if present.
+      if (TTPD->hasDefaultArgument() && !TTPD->defaultArgumentWasInherited()) {
+        Out << " = ";
+        TTPD->getDefaultArgument().getArgument().print(Policy, Out,
+                                                       /*IncludeType=*/false);
+      }
     }
   }
 
