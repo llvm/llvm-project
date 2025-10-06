@@ -220,7 +220,7 @@ class SFrameEmitterImpl {
   // an FDE in those cases. Allow any that are known safe. It is likely that
   // more thorough test cases could refine this code, but it handles the most
   // important ones compatibly with gas.
-  bool IsCFIEscapeSafe(SFrameFDE &FDE, const SFrameFRE &FRE,
+  bool isCFIEscapeSafe(SFrameFDE &FDE, const SFrameFRE &FRE,
                        const MCCFIInstruction &CFI) {
     const MCAsmInfo *AI = Streamer.getContext().getAsmInfo();
     DWARFDataExtractorSimple data(CFI.getValues(), AI->isLittleEndian(),
@@ -411,7 +411,7 @@ class SFrameEmitterImpl {
     case MCCFIInstruction::OpEscape:
       // This is a string of bytes that contains an aribtrary dwarf-expression
       // that may or may not affect uwnind info.
-      return IsCFIEscapeSafe(FDE, FRE, CFI);
+      return isCFIEscapeSafe(FDE, FRE, CFI);
     default:
       // Instructions that don't affect the CFA, RA, and SP can be safely
       // ignored.
