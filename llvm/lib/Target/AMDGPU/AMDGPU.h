@@ -15,6 +15,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetVerifier.h"
 
 namespace llvm {
 
@@ -550,6 +551,12 @@ extern char &GCNRewritePartialRegUsesID;
 
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
+
+FunctionPass *createAMDGPUTargetVerifierLegacyPass(bool FatalErrors);
+void initializeAMDGPUTargetVerifierLegacyPassPass(PassRegistry &);
+struct AMDGPUTargetVerifierPass : public TargetVerifierPass {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) override;
+};
 
 class AMDGPURewriteAGPRCopyMFMAPass
     : public PassInfoMixin<AMDGPURewriteAGPRCopyMFMAPass> {
