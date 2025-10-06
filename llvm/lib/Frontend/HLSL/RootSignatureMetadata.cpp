@@ -836,7 +836,8 @@ MetadataParser::ParseRootSignature(uint32_t Version) {
       return joinErrors(
           std::move(DeferredErrs),
           createRSError(RSErrorKind::GenericMetadata,
-                        StringRef("Missing Root Element Metadata Node.")));
+                        StringRef("Missing Root Element Metadata Node."),
+                        Element));
 
     if (auto Err = parseRootSignatureElement(RSD, Element))
       DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
