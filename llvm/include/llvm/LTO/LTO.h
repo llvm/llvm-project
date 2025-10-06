@@ -618,10 +618,10 @@ private:
   // Identify symbols exported dynamically, and that therefore could be
   // referenced by a shared library not visible to the linker.
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
-  
+
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
-  
+
 public:
   /// DTLTO mode.
   bool Dtlto = false;
@@ -631,7 +631,7 @@ public:
 
   // Array of input bitcode files for LTO.
   std::vector<std::unique_ptr<llvm::lto::InputFile>> InputFiles;
-  std::unique_ptr<dtlto::TempFilesRemover> TempsRemover; 
+  std::unique_ptr<dtlto::TempFilesRemover> TempsRemover;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for
