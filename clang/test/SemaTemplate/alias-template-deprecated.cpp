@@ -46,23 +46,19 @@ using UsingInstWithCPPAttr [[deprecated("Do not use this")]] = NoAttr<int>;
 void bar() {
   NoAttr<int> obj; // Okay
 
-  // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
-  // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
+  // expected-warning@+1 {{'UsingWithAttr' is deprecated}}
   UsingWithAttr<int> objUsingWA;
 
-  // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
-  // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
+  // expected-warning@+1 {{'UsingWithAttr' is deprecated}}
   NoAttr<UsingWithAttr<int>> s;
 
   // expected-note@+1 {{'DepInt' has been explicitly marked deprecated here}}
   using DepInt [[deprecated]] = int;
-  // expected-warning@+3 {{'UsingWithAttr' is deprecated}}
-  // expected-warning@+2 {{'DepInt' is deprecated}}
-  // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
+  // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
+  // expected-warning@+1 {{'DepInt' is deprecated}}
   using X = UsingWithAttr<DepInt>;
 
-  // expected-warning@+2 {{'UsingWithAttr' is deprecated}}
-  // expected-note@+1 {{in instantiation of template type alias 'UsingWithAttr' requested here}}
+  // expected-warning@+1 {{'UsingWithAttr' is deprecated}}
   UsingWithAttr<int>().foo();
 
   // expected-warning@+1 {{'UsingInstWithAttr' is deprecated}}
@@ -74,8 +70,7 @@ void bar() {
   // expected-warning@+1 {{'UsingTDWithAttr' is deprecated}}
   UsingTDWithAttr objUTDWA;
 
-  // expected-warning@+2 {{'UsingWithCPPAttr' is deprecated}}
-  // expected-note@+1 {{in instantiation of template type alias 'UsingWithCPPAttr' requested here}}
+  // expected-warning@+1 {{'UsingWithCPPAttr' is deprecated}}
   UsingWithCPPAttr<int> objUsingWCPPA;
 
   // expected-warning@+1 {{'UsingInstWithCPPAttr' is deprecated: Do not use this}}

@@ -38,12 +38,12 @@ define i32 @cdotp_i8_rot0(<vscale x 32 x i8> %a0, <vscale x 32 x i8> %b0, <vscal
 ; CHECK-SVE2-NEXT:    [[B1_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B1_IMAG]] to <vscale x 16 x i32>
 ; CHECK-SVE2-NEXT:    [[TMP2:%.*]] = mul nsw <vscale x 16 x i32> [[B0_IMAG_EXT]], [[A0_IMAG_EXT]]
 ; CHECK-SVE2-NEXT:    [[TMP3:%.*]] = mul nsw <vscale x 16 x i32> [[B1_IMAG_EXT]], [[A1_IMAG_EXT]]
-; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
-; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
 ; CHECK-SVE2-NEXT:    [[TMP4:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-SVE2-NEXT:    [[TMP5:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP3]]
-; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
-; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
 ; CHECK-SVE2-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-SVE2:       [[MIDDLE_BLOCK]]:
 ; CHECK-SVE2-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE34]], [[PARTIAL_REDUCE33]]
@@ -81,12 +81,12 @@ define i32 @cdotp_i8_rot0(<vscale x 32 x i8> %a0, <vscale x 32 x i8> %b0, <vscal
 ; CHECK-SVE-NEXT:    [[B1_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B1_IMAG]] to <vscale x 16 x i32>
 ; CHECK-SVE-NEXT:    [[TMP2:%.*]] = mul nsw <vscale x 16 x i32> [[B0_IMAG_EXT]], [[A0_IMAG_EXT]]
 ; CHECK-SVE-NEXT:    [[TMP3:%.*]] = mul nsw <vscale x 16 x i32> [[B1_IMAG_EXT]], [[A1_IMAG_EXT]]
-; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
-; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
 ; CHECK-SVE-NEXT:    [[TMP4:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-SVE-NEXT:    [[TMP5:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP3]]
-; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
-; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
 ; CHECK-SVE-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-SVE:       [[MIDDLE_BLOCK]]:
 ; CHECK-SVE-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE34]], [[PARTIAL_REDUCE33]]
@@ -124,12 +124,12 @@ define i32 @cdotp_i8_rot0(<vscale x 32 x i8> %a0, <vscale x 32 x i8> %b0, <vscal
 ; CHECK-NOSVE-NEXT:    [[B1_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B1_IMAG]] to <vscale x 16 x i32>
 ; CHECK-NOSVE-NEXT:    [[TMP2:%.*]] = mul nsw <vscale x 16 x i32> [[B0_IMAG_EXT]], [[A0_IMAG_EXT]]
 ; CHECK-NOSVE-NEXT:    [[TMP3:%.*]] = mul nsw <vscale x 16 x i32> [[B1_IMAG_EXT]], [[A1_IMAG_EXT]]
-; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
-; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
+; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
+; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
 ; CHECK-NOSVE-NEXT:    [[TMP4:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NOSVE-NEXT:    [[TMP5:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP3]]
-; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
-; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
+; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
+; CHECK-NOSVE-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
 ; CHECK-NOSVE-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-NOSVE:       [[MIDDLE_BLOCK]]:
 ; CHECK-NOSVE-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE34]], [[PARTIAL_REDUCE33]]
@@ -166,12 +166,12 @@ vector.body:                                      ; preds = %vector.body, %entry
   %b1.imag.ext = sext <vscale x 16 x i8> %b1.imag to <vscale x 16 x i32>
   %24 = mul nsw <vscale x 16 x i32> %b0.imag.ext, %a0.imag.ext
   %25 = mul nsw <vscale x 16 x i32> %b1.imag.ext, %a1.imag.ext
-  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %vec.phi, <vscale x 16 x i32> %18)
-  %partial.reduce32 = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %vec.phi25, <vscale x 16 x i32> %19)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %vec.phi, <vscale x 16 x i32> %18)
+  %partial.reduce32 = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %vec.phi25, <vscale x 16 x i32> %19)
   %26 = sub nsw <vscale x 16 x i32> zeroinitializer, %24
   %27 = sub nsw <vscale x 16 x i32> zeroinitializer, %25
-  %partial.reduce33 = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %partial.reduce, <vscale x 16 x i32> %26)
-  %partial.reduce34 = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %partial.reduce32, <vscale x 16 x i32> %27)
+  %partial.reduce33 = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %partial.reduce, <vscale x 16 x i32> %26)
+  %partial.reduce34 = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> %partial.reduce32, <vscale x 16 x i32> %27)
   br i1 true, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
@@ -180,11 +180,11 @@ middle.block:                                     ; preds = %vector.body
   ret i32 %29
 }
 
-declare <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16>, <vscale x 16 x i32>)
-declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>)
-declare <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv8i32(<vscale x 2 x i64>, <vscale x 16 x i32>)
+declare <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i32(<vscale x 8 x i16>, <vscale x 16 x i32>)
+declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>)
+declare <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv8i32(<vscale x 2 x i64>, <vscale x 16 x i32>)
 
-declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32>, <16 x i32>)
+declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32>, <16 x i32>)
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
 declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>)

@@ -65,8 +65,7 @@ thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
             AddStreamFn IRAddStream = nullptr,
             const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
-LLVM_ABI Error
-finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile);
+LLVM_ABI Error finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile);
 
 /// Returns the BitcodeModule that is ThinLTO.
 LLVM_ABI BitcodeModule *findThinLTOModule(MutableArrayRef<BitcodeModule> BMs);

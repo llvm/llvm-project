@@ -190,7 +190,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
   // Therefore, %14's known zero are 0x80 shifted by one 0xC0.
   // If we had simulated the loop we could have more zero bits, basically
   // up to 0xFC (count leading zero of 5, + 1).
-  EXPECT_EQ((uint64_t)0xC0, Res.Zero.getZExtValue());
+  EXPECT_EQ((uint64_t)0xFC, Res.Zero.getZExtValue());
 
   KnownBits Res2 = Info.getKnownBits(DstReg);
   EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
