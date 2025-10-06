@@ -11,7 +11,18 @@
 ## Dump the PSV0 part and verify its size.
 # RUN: llvm-objcopy --dump-section=PSV0=%t.psv0 %t.dxbc
 # RUN: wc -c %t.psv0 | FileCheck %s --check-prefix=PSV0-SIZE
+# RUN: od -h %t.psv0 | FileCheck %s --check-prefix=PSV0-CONTENTS
 # PSV0-SIZE: 76
+
+# For a compute shader the structure size is encoded followed by a bunch of 00'd
+# bytes until you get to the unused wave size min and max (0xffff), followed by
+# the shader stage (5 for compute).
+# TODO: Update this test to use objdump or obj2yaml once we support
+# --add-section in objcopy. See issue:
+# https://github.com/llvm/llvm-project/issues/162159.
+# PSV0-CONTENTS: 0000000      0034    0000    0000    0000    0000    0000    0000    0000
+# PSV0-CONTENTS: 0000020      0000    0000    0000    0000    ffff    ffff    0005    0000
+
 --- !dxcontainer
 Header:
   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -19,9 +30,9 @@ Header:
   Version:
     Major:           1
     Minor:           0
-  FileSize:        1956
-  PartCount:       6
-  PartOffsets:     [ 56, 1796, 1812, 1840, 1856, 1872 ]
+  FileSize:        1872
+  PartCount:       2
+  PartOffsets:     [ 40, 1780 ]
 Parts:
   - Name:            DXIL
     Size:            1732
@@ -240,22 +251,6 @@ Parts:
                          0x3, 0x1, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x7, 0x50,
                          0x10, 0xCD, 0x14, 0x61, 0x0, 0x0, 0x0, 0x0, 0x0,
                          0x0, 0x0, 0x0, 0x0, 0x0 ]
-  - Name:            SFI0
-    Size:            8
-  - Name:            HASH
-    Size:            20
-    Hash:
-      IncludesSource:  false
-      Digest:          [ 0x2, 0xB5, 0x24, 0x1, 0x50, 0x48, 0xC3, 0x12,
-                         0x39, 0x28, 0xAE, 0x46, 0x68, 0x14, 0x84, 0xDA ]
-  - Name:            ISG1
-    Size:            8
-    Signature:
-      Parameters:      []
-  - Name:            OSG1
-    Size:            8
-    Signature:
-      Parameters:      []
   - Name:            PSV0
     Size:            76
     PSVInfo:
