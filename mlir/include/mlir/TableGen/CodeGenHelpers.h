@@ -88,7 +88,7 @@ public:
   ///
   /// Constraints that do not meet the restriction that they can only reference
   /// `$_self` and `$_op` are not uniqued.
-  void emitOpConstraints(ArrayRef<const llvm::Record *> opDefs);
+  void emitOpConstraints();
 
   /// Unique all compatible type and attribute constraints from a pattern file
   /// and emit them at the top of the generated file.
