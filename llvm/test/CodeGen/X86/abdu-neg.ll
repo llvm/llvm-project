@@ -731,8 +731,8 @@ define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
 ;
 ; X64-LABEL: abd_cmp_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    movzbl %sil, %ecx
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    subl %eax, %edx
 ; X64-NEXT:    subl %ecx, %eax
