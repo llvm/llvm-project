@@ -221,6 +221,27 @@ TEST(SPSWrapperFunctionUtilsTest, TestFunctionReturningExpectedFailureCase) {
   EXPECT_EQ(ErrMsg, "N is not a multiple of 2");
 }
 
+static void
+round_trip_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                   orc_rt_WrapperFunctionReturn Return,
+                                   orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      [](move_only_function<void(int32_t *)> Return, int32_t *P) {
+        Return(P);
+      });
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TestTransparentSerializationForPointers) {
+  int X = 42;
+  int *P = nullptr;
+  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
+      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
+      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); }, &X);
+
+  EXPECT_EQ(P, &X);
+}
+
 template <size_t N> struct SPSOpCounter {};
 
 namespace orc_rt {
