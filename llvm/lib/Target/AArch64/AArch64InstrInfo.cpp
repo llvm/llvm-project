@@ -2579,8 +2579,6 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STZ2Gi:
   case AArch64::STZGi:
   case AArch64::TAGPstack:
-  case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
-  case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
     return 2;
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1B_H_IMM:
@@ -4387,8 +4385,6 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 254;
     break;
-  case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
-  case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
     Scale = TypeSize::getScalable(16);
@@ -5648,11 +5644,6 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZXI;
       StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
-             "Unexpected predicate store without SVE store instructions");
-      Opc = AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO;
-      StackID = TargetStackID::ScalableVector;
     }
     break;
   case 24:
@@ -5832,11 +5823,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
-             "Unexpected predicate load without SVE load instructions");
-      Opc = AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO;
       StackID = TargetStackID::ScalableVector;
     }
     break;
