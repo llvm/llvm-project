@@ -3778,8 +3778,11 @@ void target(Base* B, Base* OtherB) {
          ASTContext &ASTCtx) {
         // This is a crash repro. We used to crash when transferring the
         // copy construction of B from OtherB because B's StorageLocation had a
-        // child for the field C, but Base doesn't. Now, we should only copy the
-        // fields from B that are present in Base.
+        // child for the field C, but Base doesn't (so OtherB doesn't, since
+        // it's never been cast to any other type), and we tried to copy from
+        // the source (OtherB) all the fields present in the destination (B).
+        // Now, we should only try to copy the fields from OtherB that are
+        // present in Base.
       });
 }
 
@@ -5394,7 +5397,7 @@ TEST(TransferTest, UnsupportedValueEquality) {
       A,
       B
     };
-  
+
     void target() {
       EC ec = EC::A;
 
