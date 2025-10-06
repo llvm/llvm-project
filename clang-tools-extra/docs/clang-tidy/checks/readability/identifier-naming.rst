@@ -59,6 +59,7 @@ The available options are summarized below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`, :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
+ - :option:`ClassConstexprCase`, :option:`ClassConstexprPrefix`, :option:`ClassConstexprSuffix`, :option:`ClassConstexprIgnoredRegexp`, :option:`ClassConstexprHungarianPrefix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
  - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`, :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
@@ -73,12 +74,14 @@ The available options are summarized below:
  - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`, :option:`EnumIgnoredRegexp`
  - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`, :option:`EnumConstantSuffix`, :option:`EnumConstantIgnoredRegexp`, :option:`EnumConstantHungarianPrefix`
  - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`, :option:`FunctionIgnoredRegexp`
+ - :option:`GlobalConstexprVariableCase`, :option:`GlobalConstexprVariablePrefix`, :option:`GlobalConstexprVariableSuffix`, :option:`GlobalConstexprVariableIgnoredRegexp`, :option:`GlobalConstexprVariableHungarianPrefix`
  - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`, :option:`GlobalConstantSuffix`, :option:`GlobalConstantIgnoredRegexp`, :option:`GlobalConstantHungarianPrefix`
  - :option:`GlobalConstantPointerCase`, :option:`GlobalConstantPointerPrefix`, :option:`GlobalConstantPointerSuffix`, :option:`GlobalConstantPointerIgnoredRegexp`, :option:`GlobalConstantPointerHungarianPrefix`
  - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`, :option:`GlobalFunctionIgnoredRegexp`
  - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`, :option:`GlobalPointerSuffix`, :option:`GlobalPointerIgnoredRegexp`, :option:`GlobalPointerHungarianPrefix`
  - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`, :option:`GlobalVariableSuffix`, :option:`GlobalVariableIgnoredRegexp`, :option:`GlobalVariableHungarianPrefix`
  - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`, :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
+ - :option:`LocalConstexprVariableCase`, :option:`LocalConstexprVariablePrefix`, :option:`LocalConstexprVariableSuffix`, :option:`LocalConstexprVariableIgnoredRegexp`, :option:`LocalConstexprVariableHungarianPrefix`
  - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`, :option:`LocalConstantSuffix`, :option:`LocalConstantIgnoredRegexp`, :option:`LocalConstantHungarianPrefix`
  - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`, :option:`LocalConstantPointerIgnoredRegexp`, :option:`LocalConstantPointerHungarianPrefix`
  - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`, :option:`LocalPointerSuffix`, :option:`LocalPointerIgnoredRegexp`, :option:`LocalPointerHungarianPrefix`
@@ -97,6 +100,7 @@ The available options are summarized below:
  - :option:`PublicMemberCase`, :option:`PublicMemberPrefix`, :option:`PublicMemberSuffix`, :option:`PublicMemberIgnoredRegexp`, :option:`PublicMemberHungarianPrefix`
  - :option:`PublicMethodCase`, :option:`PublicMethodPrefix`, :option:`PublicMethodSuffix`, :option:`PublicMethodIgnoredRegexp`
  - :option:`ScopedEnumConstantCase`, :option:`ScopedEnumConstantPrefix`, :option:`ScopedEnumConstantSuffix`, :option:`ScopedEnumConstantIgnoredRegexp`
+ - :option:`StaticConstexprVariableCase`, :option:`StaticConstexprVariablePrefix`, :option:`StaticConstexprVariableSuffix`, :option:`StaticConstexprVariableIgnoredRegexp`, :option:`StaticConstexprVariableHungarianPrefix`
  - :option:`StaticConstantCase`, :option:`StaticConstantPrefix`, :option:`StaticConstantSuffix`, :option:`StaticConstantIgnoredRegexp`, :option:`StaticConstantHungarianPrefix`
  - :option:`StaticVariableCase`, :option:`StaticVariablePrefix`, :option:`StaticVariableSuffix`, :option:`StaticVariableIgnoredRegexp`, :option:`StaticVariableHungarianPrefix`
  - :option:`StructCase`, :option:`StructPrefix`, :option:`StructSuffix`, :option:`StructIgnoredRegexp`
@@ -305,6 +309,58 @@ After:
     public:
       pre_foo_post();
       ~pre_foo_post();
+    };
+
+.. option:: ClassConstexprCase
+
+    When defined, the check will ensure class ``constexpr`` names conform to
+    the selected casing.
+
+.. option:: ClassConstexprPrefix
+
+    When defined, the check will ensure class ``constexpr`` names will add the
+    prefixed with the given value (regardless of casing).
+
+.. option:: ClassConstexprIgnoredRegexp
+
+    Identifier naming checks won't be enforced for class ``constexpr`` names
+    matching this regular expression.
+
+.. option:: ClassConstexprSuffix
+
+    When defined, the check will ensure class ``constexpr`` names will add the
+    suffix with the given value (regardless of casing).
+
+.. option:: ClassConstexprHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - ClassConstexprCase of ``lower_case``
+   - ClassConstexprPrefix of ``pre_``
+   - ClassConstexprSuffix of ``_post``
+   - ClassConstexprHungarianPrefix of ``On``
+
+Identifies and/or transforms class ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    class FOO {
+    public:
+      static constexpr int CLASS_CONSTEXPR;
+    };
+
+After:
+
+.. code-block:: c++
+
+    class FOO {
+    public:
+      static const int pre_class_constexpr_post;
     };
 
 .. option:: ClassConstantCase
@@ -950,6 +1006,52 @@ After:
     different style.
     Default value is `true`.
 
+.. option:: GlobalConstexprVariableCase
+
+    When defined, the check will ensure global ``constexpr`` variable names
+    conform to the selected casing.
+
+.. option:: GlobalConstexprVariablePrefix
+
+    When defined, the check will ensure global ``constexpr`` variable names
+    will add the prefixed with the given value (regardless of casing).
+
+.. option:: GlobalConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for global ``constexpr``
+    variable names matching this regular expression.
+
+.. option:: GlobalConstexprVariableSuffix
+
+    When defined, the check will ensure global ``constexpr`` variable names
+    will add the suffix with the given value (regardless of casing).
+
+.. option:: GlobalConstexprVariableHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - GlobalConstexprVariableCase of ``lower_case``
+   - GlobalConstexprVariablePrefix of ``pre_``
+   - GlobalConstexprVariableSuffix of ``_post``
+   - GlobalConstexprVariableHungarianPrefix of ``On``
+
+Identifies and/or transforms global ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    constexpr unsigned ImportantValue = 69;
+
+After:
+
+.. code-block:: c++
+
+    constexpr unsigned pre_important_value_post = 69;
+
 .. option:: GlobalConstantCase
 
     When defined, the check will ensure global constant names conform to the
@@ -1227,6 +1329,52 @@ After:
     ...
     }
     } // namespace FOO_NS
+
+.. option:: LocalConstexprVariableCase
+
+    When defined, the check will ensure local ``constexpr`` variable names
+    conform to the selected casing.
+
+.. option:: LocalConstexprVariablePrefix
+
+    When defined, the check will ensure local ``constexpr`` variable names will
+    add the prefixed with the given value (regardless of casing).
+
+.. option:: LocalConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for local ``constexpr`` variable
+    names matching this regular expression.
+
+.. option:: LocalConstexprVariableSuffix
+
+    When defined, the check will ensure local ``constexpr`` variable names will
+    add the suffix with the given value (regardless of casing).
+
+.. option:: LocalConstexprVariableHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - LocalConstexprVariableCase of ``lower_case``
+   - LocalConstexprVariablePrefix of ``pre_``
+   - LocalConstexprVariableSuffix of ``_post``
+   - LocalConstexprVariableHungarianPrefix of ``On``
+
+Identifies and/or transforms local ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void foo() { int const local_Constexpr = 420; }
+
+After:
+
+.. code-block:: c++
+
+    void foo() { int const pre_local_constexpr_post = 420; }
 
 .. option:: LocalConstantCase
 
@@ -2076,6 +2224,52 @@ After:
 .. code-block:: c++
 
     enum class FOO { pre_One_post, pre_Two_post, pre_Three_post };
+
+.. option:: StaticConstexprVariableCase
+
+    When defined, the check will ensure static ``constexpr`` variable names
+    conform to the selected casing.
+
+.. option:: StaticConstexprVariablePrefix
+
+    When defined, the check will ensure static ``constexpr`` variable names
+    will add the prefixed with the given value (regardless of casing).
+
+.. option:: StaticConstexprVariableIgnoredRegexp
+
+    Identifier naming checks won't be enforced for static ``constexpr``
+    variable names matching this regular expression.
+
+.. option:: StaticConstexprVariableSuffix
+
+    When defined, the check will ensure static ``constexpr`` variable names
+    will add the suffix with the given value (regardless of casing).
+
+.. option:: StaticConstexprVariableHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will have a
+    Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - StaticConstexprVariableCase of ``lower_case``
+   - StaticConstexprVariablePrefix of ``pre_``
+   - StaticConstexprVariableSuffix of ``_post``
+   - StaticConstexprVariableHungarianPrefix of ``On``
+
+Identifies and/or transforms static ``constexpr`` variable names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    static unsigned constexpr MyConstexprStatic_array[] = {1, 2, 3};
+
+After:
+
+.. code-block:: c++
+
+    static unsigned constexpr pre_my_constexpr_static_array_post[] = {1, 2, 3};
 
 .. option:: StaticConstantCase
 

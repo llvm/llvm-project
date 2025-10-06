@@ -396,7 +396,8 @@ Changes in existing checks
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
-  to differentiate the general options from the specific ones.
+  to differentiate the general options from the specific ones. Options for
+  fine-grained control over ``constexpr`` variables were added.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
