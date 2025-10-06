@@ -334,7 +334,7 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       // We are allowed to refine the comparison to either true or false for out
       // of range inputs.
       // Here we refine the comparison to false, and check if we can narrow the
-      // range check to an equality test.
+      // range check to a simpler test.
       if (auto *V = ConvertCRToICmp(CR->exactIntersectWith(LRange)))
         return V;
       // Here we refine the comparison to true, i.e. we relax the range check.
