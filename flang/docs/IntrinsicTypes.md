@@ -14,13 +14,13 @@ local:
 ---
 ```
 
-Intrinsic types are integer, real, complex, character, and logical.
-All intrinsic types have a kind type parameter called KIND,
+Intrinsic types are `INTEGER`, `REAL`, `COMPLEX`, `CHARACTER`, and `LOGICAL`.
+All intrinsic types have a kind type parameter called `KIND`,
 which determines the representation method for the specified type.
-The intrinsic type character also has a length type parameter called LEN,
+The intrinsic type character also has a length type parameter called `LEN`,
 which determines the length of the character string.
 
-The implementation of `CHARACTER` type in f18 is described
+The implementation of the `CHARACTER` type in f18 is described
 in [Character.md](Character.md).
 
 ## Supported TYPES and KINDS
@@ -65,16 +65,17 @@ f18 defaults to the following kinds for these types:
 * `DOUBLE PRECISION` 8
 * `LOGICAL` 4
 
-Modules compiled with different default-real and default-integer kinds
-may be freely mixed. Module files encode the kind value for every entity.
+Modules compiled with different `-fdefault-real-<kind>` and
+`-f-default-integer-<kind>` may be freely mixed. Module files encode the kind
+value for every entity.
 
-#### Modifying the default kind with default-real-8.  
+#### Modifying the default kind with -fdefault-real-8:
 
 * `REAL` 8
 * `DOUBLE PRECISION` 8
 * `COMPLEX` 8
 
-#### Modifying the default kind with default-integer-8:  
+#### Modifying the default kind with -fdefault-integer-8:
 
 * `INTEGER` 8
 * `LOGICAL` 8
