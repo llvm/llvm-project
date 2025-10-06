@@ -3408,10 +3408,9 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 }
 
-bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
+bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B16_t16_e32:
-  case AMDGPU::V_MOV_B16_t16_e64:
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
@@ -3428,34 +3427,10 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
     return true;
+  case AMDGPU::V_MOV_B16_t16_e64:
+    return !hasAnyModifiersSet(MI);
   default:
     return false;
-  }
-}
-
-unsigned SIInstrInfo::getFoldableCopySrcIdx(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case AMDGPU::V_MOV_B16_t16_e32:
-  case AMDGPU::V_MOV_B16_t16_e64:
-    return 2;
-  case AMDGPU::V_MOV_B32_e32:
-  case AMDGPU::V_MOV_B32_e64:
-  case AMDGPU::V_MOV_B64_PSEUDO:
-  case AMDGPU::V_MOV_B64_e32:
-  case AMDGPU::V_MOV_B64_e64:
-  case AMDGPU::S_MOV_B32:
-  case AMDGPU::S_MOV_B64:
-  case AMDGPU::S_MOV_B64_IMM_PSEUDO:
-  case AMDGPU::COPY:
-  case AMDGPU::WWM_COPY:
-  case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
-  case AMDGPU::V_ACCVGPR_READ_B32_e64:
-  case AMDGPU::V_ACCVGPR_MOV_B32:
-  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
-  case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
-    return 1;
-  default:
-    llvm_unreachable("MI is not a foldable copy");
   }
 }
 
@@ -3976,12 +3951,13 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   return false;
 }
 
-static bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
-                           int64_t &Imm, MachineInstr **DefMI = nullptr) {
+bool SIInstrInfo::getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
+                                 int64_t &Imm,
+                                 MachineInstr **DefMI = nullptr) const {
   if (Reg.isPhysical())
     return false;
   auto *Def = MRI.getUniqueVRegDef(Reg);
-  if (Def && SIInstrInfo::isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
+  if (Def && isFoldableCopy(*Def) && Def->getOperand(1).isImm()) {
     Imm = Def->getOperand(1).getImm();
     if (DefMI)
       *DefMI = Def;
@@ -3990,8 +3966,8 @@ static bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
   return false;
 }
 
-static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm,
-                           MachineInstr **DefMI = nullptr) {
+bool SIInstrInfo::getFoldableImm(const MachineOperand *MO, int64_t &Imm,
+                                 MachineInstr **DefMI = nullptr) const {
   if (!MO->isReg())
     return false;
   const MachineFunction *MF = MO->getParent()->getParent()->getParent();
@@ -10643,10 +10619,11 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     int64_t Mask;
-    const auto isMask = [&Mask, SrcSize](const MachineOperand *MO) -> bool {
+    const auto isMask = [&Mask, SrcSize,
+                         this](const MachineOperand *MO) -> bool {
       if (MO->isImm())
         Mask = MO->getImm();
-      else if (!getFoldableImm(MO, Mask))
+      else if (!this->getFoldableImm(MO, Mask))
         return false;
       Mask &= maxUIntN(SrcSize);
       return isPowerOf2_64(Mask);
