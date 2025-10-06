@@ -11,6 +11,7 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "include/llvm-libc-types/stdfix-types.h"
+#include "include/llvm-libc-types/uint_ur_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
