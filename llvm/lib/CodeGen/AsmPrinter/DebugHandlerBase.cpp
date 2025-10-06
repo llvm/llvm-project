@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -236,9 +237,10 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
           Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
           Encoding == dwarf::DW_ATE_boolean ||
           Encoding == dwarf::DW_ATE_complex_float ||
-          Encoding == dwarf::DW_ATE_GNU_complex_signed ||
           Encoding == dwarf::DW_ATE_signed_fixed ||
           Encoding == dwarf::DW_ATE_unsigned_fixed ||
+          (Encoding >= dwarf::DW_ATE_lo_user &&
+           Encoding <= dwarf::DW_ATE_hi_user) ||
           (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
            Ty->getName() == "decltype(nullptr)")) &&
          "Unsupported encoding");

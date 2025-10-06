@@ -15,7 +15,7 @@
 
 ; CHECK: [[complex]]: DW_TAG_base_type
 ; CHECK-NEXT: DW_AT_name        ("complex")
-; CHECK-NEXT: DW_AT_encoding    (DW_ATE_GNU_complex_signed)
+; CHECK-NEXT: DW_AT_encoding    (0x80)
 ; CHECK-NEXT: DW_AT_byte_size   (0x04)
 
 @g = dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
