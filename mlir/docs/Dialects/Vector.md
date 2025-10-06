@@ -176,8 +176,6 @@ infrastructure can apply iteratively.
 ### Virtual Vector to Hardware Vector Lowering
 
 For now, `VV -> HWV` are specified in C++ (see for instance the
-[SplatOpLowering for n-D vectors](https://github.com/tensorflow/mlir/commit/0a0c4867c6a6fcb0a2f17ef26a791c1d551fe33d)
-or the
 [VectorOuterProductOp lowering](https://github.com/tensorflow/mlir/commit/957b1ca9680b4aacabb3a480fbc4ebd2506334b8)).
 
 Simple
