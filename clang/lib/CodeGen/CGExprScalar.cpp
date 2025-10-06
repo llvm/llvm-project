@@ -3847,7 +3847,17 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
     QualType type = atomicTy->getValueType();
-    if (!type->isBooleanType() && type->isIntegerType() &&
+    const bool isFloat   = type->isFloatingType();
+    const bool isInteger = type->isIntegerType();
+
+    bool isPowerOfTwo = false;
+    if (isFloat || isInteger) {
+      llvm::Type *IRTy = CGF.ConvertType(type);
+      uint64_t StoreBits =
+          CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
+      isPowerOfTwo = llvm::isPowerOf2_64(StoreBits);
+    }
+    if (!type->isBooleanType() && (isInteger || isFloat) && isPowerOfTwo &&
         !(type->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
@@ -3862,12 +3872,16 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
         case BO_ShrAssign:
           break;
         case BO_AddAssign:
-          AtomicOp = llvm::AtomicRMWInst::Add;
-          Op = llvm::Instruction::Add;
+          AtomicOp = isFloat ? llvm::AtomicRMWInst::FAdd
+                             : llvm::AtomicRMWInst::Add;
+          Op = isFloat ? llvm::Instruction::FAdd
+                       : llvm::Instruction::Add;
           break;
         case BO_SubAssign:
-          AtomicOp = llvm::AtomicRMWInst::Sub;
-          Op = llvm::Instruction::Sub;
+          AtomicOp = isFloat ? llvm::AtomicRMWInst::FSub
+                             : llvm::AtomicRMWInst::Sub;
+          Op = isFloat ? llvm::Instruction::FSub
+                       : llvm::Instruction::Sub;
           break;
         case BO_AndAssign:
           AtomicOp = llvm::AtomicRMWInst::And;
