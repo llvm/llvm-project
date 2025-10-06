@@ -10,12 +10,13 @@ define i32 @fred(ptr %a0) #0 {
 ; CHECK-LABEL: fred:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) jump:nt .LBB0_2
+; CHECK-NEXT:     r1:0 = combine(r0,#0)
+; CHECK-NEXT:     if (p0) jumpr r31
 ; CHECK-NEXT:    }
-; CHECK-NEXT:  // %bb.1: // %b2
+; CHECK-NEXT:  .LBB0_1: // %b2
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r3:2 = combine(#0,#0)
-; CHECK-NEXT:     r1:0 = memd(r0+#0)
+; CHECK-NEXT:     r1:0 = memd(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = vcmph.eq(r1:0,r3:2)
@@ -27,16 +28,7 @@ define i32 @fred(ptr %a0) #0 {
 ; CHECK-NEXT:     r0 = and(r0,#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = cmp.eq(r0,#11)
-; CHECK-NEXT:     r0 = #1
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) r0 = #0
-; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:    }
-; CHECK-NEXT:  .LBB0_2: // %b14
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = #0
+; CHECK-NEXT:     r0 = !cmp.eq(r0,#11)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b0:
