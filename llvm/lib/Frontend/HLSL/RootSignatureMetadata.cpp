@@ -28,7 +28,7 @@ template <typename T>
 void formatImpl(raw_string_ostream &Buff,
                 std::integral_constant<RSErrorKind, RSErrorKind::Validation>,
                 StringRef ParamName, T Value) {
-  Buff << "Invalid value for: " << ParamName << ":";
+  Buff << "Invalid value for " << ParamName << ": ";
   if constexpr (std::is_same_v<std::decay_t<T>, std::nullptr_t>) {
     Buff << "nullptr";
   } else {
@@ -844,7 +844,8 @@ MetadataParser::ParseRootSignature(uint32_t Version) {
       return joinErrors(
           std::move(DeferredErrs),
           createRSError(RSErrorKind::GenericMetadata,
-                        StringRef("Missing Root Element Metadata Node.")));
+                        StringRef("Missing Root Element Metadata Node."),
+                        Element));
 
     if (auto Err = parseRootSignatureElement(RSD, Element))
       DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
