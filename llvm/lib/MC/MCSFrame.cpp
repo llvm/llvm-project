@@ -298,7 +298,11 @@ class SFrameEmitterImpl {
           return false;
         }
       } break;
-      case dwarf::DW_CFA_GNU_args_size:
+      case dwarf::DW_CFA_GNU_args_size: {
+        auto Size = I.getOperandAsSigned(P, 0);
+        // Zero size doesn't affect the cfa.
+        if (Size && *Size == 0)
+          break;
         if (FRE.Info.getBaseRegister() != BaseReg::FP) {
           Streamer.getContext().reportWarning(
               CFI.getLoc(),
@@ -306,7 +310,7 @@ class SFrameEmitterImpl {
                     "with non frame-pointer CFA"));
           return false;
         }
-        break;
+      } break;
       // Cases that gas doesn't specially handle. TODO: Some of these could be
       // analyzed and handled instead of just punting. But these are uncommon,
       // or should be written as normal cfi directives. Some will need fixes to
