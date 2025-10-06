@@ -175,7 +175,7 @@ jobs:
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*|windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            build_runs_on="depot-${{ inputs.runs-on }}-64"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
@@ -319,6 +319,7 @@ jobs:
     - name: Check Disk
       if: always()
       run: |
+        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
         Get-WmiObject -Class Win32_LogicalDisk -ComputerName LOCALHOST | ? {$_. DriveType -eq 3} | select DeviceID, {$_.Size /1GB}, {$_.FreeSpace /1GB}
 
   upload-release-binaries:
