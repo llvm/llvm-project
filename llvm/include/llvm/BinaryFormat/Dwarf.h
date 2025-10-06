@@ -504,6 +504,8 @@ toDW_LNAME(SourceLanguage language) {
 LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName name);
 
 /// Returns a language name corresponding to the specified version.
+/// If the version is not recognized for the specified language, returns
+/// the version-independent name.
 LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName Name,
                                              uint32_t Version);
 
