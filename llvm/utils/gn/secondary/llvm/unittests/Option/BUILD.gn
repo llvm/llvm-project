@@ -6,7 +6,7 @@ tablegen("Opts") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
-tablegen("SubcommandOpts") {
+tablegen("SubCommandOpts") {
   visibility = [ ":OptionTests" ]
   args = [ "-gen-opt-parser-defs" ]
 }
@@ -14,7 +14,7 @@ tablegen("SubcommandOpts") {
 unittest("OptionTests") {
   deps = [
     ":Opts",
-    ":SubcommandOpts",
+    ":SubCommandOpts",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
