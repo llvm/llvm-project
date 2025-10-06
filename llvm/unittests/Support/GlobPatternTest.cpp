@@ -271,13 +271,4 @@ TEST_F(GlobPatternTest, Pathological) {
   EXPECT_FALSE(Pat->match(S));
   EXPECT_TRUE(Pat->match(S + 'b'));
 }
-
-TEST_F(GlobPatternTest, SlashAgnostic) {
-  auto Pat = GlobPattern::create("clang/*");
-  ASSERT_TRUE((bool)Pat);
-  EXPECT_TRUE(Pat->match("clang/foo"));
-  EXPECT_FALSE(Pat->match(R"(clang\foo)"));
-  EXPECT_TRUE(Pat->match("clang/foo", /*isSlashAgnostic=*/true));
-  EXPECT_TRUE(Pat->match(R"(clang\foo)", /*isSlashAgnostic=*/true));
-}
 }

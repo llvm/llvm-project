@@ -174,9 +174,10 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
-* On windows hosts, the [sanitizer special case list format](https://clang.llvm.org/docs/SanitizerSpecialCaseList.html#format)
-  now treats forward slashes in filenames as matching either a forward or a
-  backslash, to accommodate paths with mixed unix and windows styles.
+* (Sanitizer Special Case Lists)[https://clang.llvm.org/docs/SanitizerSpecialCaseList.html]
+  may now be prefixed with ``#!canonical-paths`` to specify that filename patterns
+  should be matched against canonicalized paths, without leading dots or slashes
+  and (on Windows only) without any backslashes.
 
 Other Changes
 -------------

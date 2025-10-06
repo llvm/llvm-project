@@ -137,7 +137,7 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   GlobPattern Pat;
 
   // Store the prefix that does not contain any metacharacter.
-  size_t PrefixSize = S.find_first_of("?*[{\\/");
+  size_t PrefixSize = S.find_first_of("?*[{\\");
   Pat.Prefix = S.substr(0, PrefixSize);
   if (PrefixSize == std::string::npos)
     return Pat;
@@ -190,22 +190,21 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
   return Pat;
 }
 
-bool GlobPattern::match(StringRef S, bool IsSlashAgnostic) const {
+bool GlobPattern::match(StringRef S) const {
   if (!S.consume_front(Prefix))
     return false;
   if (SubGlobs.empty() && S.empty())
     return true;
   for (auto &Glob : SubGlobs)
-    if (Glob.match(S, IsSlashAgnostic))
+    if (Glob.match(S))
       return true;
   return false;
 }
 
 // Factor the pattern into segments split by '*'. The segment is matched
-// sequentially by finding the first occurrence past the end of the previous
+// sequentianlly by finding the first occurrence past the end of the previous
 // match.
-bool GlobPattern::SubGlobPattern::match(StringRef Str,
-                                        bool IsSlashAgnostic) const {
+bool GlobPattern::SubGlobPattern::match(StringRef Str) const {
   const char *P = Pat.data(), *SegmentBegin = nullptr, *S = Str.data(),
              *SavedS = S;
   const char *const PEnd = P + Pat.size(), *const End = S + Str.size();
@@ -232,10 +231,6 @@ bool GlobPattern::SubGlobPattern::match(StringRef Str,
         ++S;
         continue;
       }
-    } else if (IsSlashAgnostic && *P == '/' && *S == '\\') {
-      ++P;
-      ++S;
-      continue;
     } else if (*P == *S || *P == '?') {
       ++P;
       ++S;

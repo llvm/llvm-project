@@ -362,9 +362,8 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
 }
 
 #ifdef _WIN32
-// We're only slash-agnostic on windows hosts
-TEST_F(SuppressionMappingTest, TreatsFilesAsSlashAgnosticOnWindows) {
-  llvm::StringLiteral SuppressionMappingFile = R"(
+TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
+  llvm::StringLiteral SuppressionMappingFile = R"(#!canonical-paths
   [unused]
   src:*clang/*
   src:*clang/lib/Sema/*=emit
@@ -378,14 +377,21 @@ TEST_F(SuppressionMappingTest, TreatsFilesAsSlashAgnosticOnWindows) {
 
   EXPECT_TRUE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Basic/bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic\bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib/Basic/bar.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/baz.h)")));
   EXPECT_FALSE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Sema\baz.h)")));
 
-  // We require a literal backslash before "Sema"
-  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+  // The backslash gets canonicalized so we never match the third pattern
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
   EXPECT_FALSE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
 }
 #endif
+
 } // namespace

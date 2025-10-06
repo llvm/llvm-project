@@ -612,18 +612,24 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
       SrcEntriesIt->getValue();
   // We also use presumed locations here to improve reproducibility for
   // preprocessed inputs.
-  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
-    return globsMatches(
-        CategoriesToMatchers,
-        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
+  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid()) {
+    if (CanonicalizePaths) {
+      return globsMatches(
+          CategoriesToMatchers,
+          llvm::sys::path::convert_to_slash(
+              llvm::sys::path::remove_leading_dotslash(PLoc.getFilename())));
+    } else {
+      return globsMatches(
+          CategoriesToMatchers,
+          llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
+    }
+  }
   return false;
 }
 
 bool WarningsSpecialCaseList::globsMatches(
     const llvm::StringMap<Matcher> &CategoriesToMatchers,
     StringRef FilePath) const {
-  static bool HaveWindowsPathStyle =
-      llvm::sys::path::is_style_windows(llvm::sys::path::Style::native);
   StringRef LongestMatch;
   bool LongestIsPositive = false;
   for (const auto &Entry : CategoriesToMatchers) {
@@ -633,8 +639,7 @@ bool WarningsSpecialCaseList::globsMatches(
     for (const auto &Glob : Matcher.Globs) {
       if (Glob->Name.size() < LongestMatch.size())
         continue;
-      if (!Glob->Pattern.match(FilePath,
-                               /*IsSlashAgnostic=*/HaveWindowsPathStyle))
+      if (!Glob->Pattern.match(FilePath))
         continue;
       LongestMatch = Glob->Name;
       LongestIsPositive = IsPositive;

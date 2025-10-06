@@ -122,11 +122,10 @@ protected:
   class Matcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
-                          bool UseRegex);
+                          bool UseGlobs);
     // Returns the line number in the source file that this query matches to.
-    // On windows, treat '/' as also matching '\' in filenames when using globs.
-    // Returns zero if no match is found
-    LLVM_ABI unsigned match(StringRef Query, bool IsFilename) const;
+    // Returns zero if no match is found.
+    LLVM_ABI unsigned match(StringRef Query) const;
 
     struct Glob {
       std::string Name;
@@ -155,6 +154,7 @@ protected:
   };
 
   std::vector<Section> Sections;
+  bool CanonicalizePaths = false;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
                                           unsigned FileIdx, unsigned LineNo,

@@ -36,8 +36,6 @@ namespace llvm {
 ///   brace expansions are not supported and characters `{,}` are treated as
 ///   literals.
 /// * `\` escapes the next character so it is treated as a literal.
-/// * If \p IsSlashAgnostic is passed to the match function, then forward
-///   slashes `/` also match backslashes `\`.
 ///
 /// Some known edge cases are:
 /// * The literal `]` is allowed as the first character in a character class,
@@ -59,9 +57,8 @@ public:
   ///                       brace expansion
   LLVM_ABI static Expected<GlobPattern>
   create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
-  /// \param IsSlashAgnostic whether to treat '/' as also matching '\'
   /// \returns \p true if \p S matches this glob pattern
-  LLVM_ABI bool match(StringRef S, bool IsSlashAgnostic = false) const;
+  LLVM_ABI bool match(StringRef S) const;
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
@@ -79,9 +76,8 @@ private:
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
     LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
-    /// \param IsSlashAgnostic whether to treat '/' as also matching '\'
     /// \returns \p true if \p S matches this glob pattern
-    LLVM_ABI bool match(StringRef S, bool IsSlashAgnostic) const;
+    LLVM_ABI bool match(StringRef S) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
 
     // Brackets with their end position and matched bytes.
