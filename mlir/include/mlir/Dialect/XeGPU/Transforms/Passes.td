@@ -67,8 +67,17 @@ def XeGPUBlocking: Pass<"xegpu-blocking"> {
     to a hardware instruction.
   }];
   let dependentDialects = [
-      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
-  ];
+      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect",
+      "index::IndexDialect"];
+}
+
+def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
+  let summary = "Linearize n-D vectors to 1-D vectors";
+  let description = [{
+    This pass linearizes n-D vectors to 1-D vectors for lowering to XeVM.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
+                           "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD

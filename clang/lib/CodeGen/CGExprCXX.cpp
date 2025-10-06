@@ -180,8 +180,7 @@ static CXXRecordDecl *getCXXRecord(const Expr *E) {
   QualType T = E->getType();
   if (const PointerType *PTy = T->getAs<PointerType>())
     T = PTy->getPointeeType();
-  const RecordType *Ty = T->castAs<RecordType>();
-  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
+  return T->castAsCXXRecordDecl();
 }
 
 // Note: This function also emit constructor calls to support a MSVC
@@ -1235,9 +1234,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // If we have a struct whose every field is value-initialized, we can
   // usually use memset.
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
-    if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
-      const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isStruct()) {
+    if (const RecordType *RType =
+            ILE->getType()->getAsCanonical<RecordType>()) {
+      if (RType->getOriginalDecl()->isStruct()) {
+        const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
         unsigned NumElements = 0;
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();
@@ -1377,58 +1377,6 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
 }
 
 namespace {
-/// The parameters to pass to a usual operator delete.
-struct UsualDeleteParams {
-  TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
-  bool DestroyingDelete = false;
-  bool Size = false;
-  AlignedAllocationMode Alignment = AlignedAllocationMode::No;
-};
-}
-
-static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
-  UsualDeleteParams Params;
-
-  const FunctionProtoType *FPT = FD->getType()->castAs<FunctionProtoType>();
-  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
-
-  if (FD->isTypeAwareOperatorNewOrDelete()) {
-    Params.TypeAwareDelete = TypeAwareAllocationMode::Yes;
-    assert(AI != AE);
-    ++AI;
-  }
-
-  // The first argument after the type-identity parameter (if any) is
-  // always a void* (or C* for a destroying operator delete for class
-  // type C).
-  ++AI;
-
-  // The next parameter may be a std::destroying_delete_t.
-  if (FD->isDestroyingOperatorDelete()) {
-    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
-    Params.DestroyingDelete = true;
-    assert(AI != AE);
-    ++AI;
-  }
-
-  // Figure out what other parameters we should be implicitly passing.
-  if (AI != AE && (*AI)->isIntegerType()) {
-    Params.Size = true;
-    ++AI;
-  } else
-    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
-
-  if (AI != AE && (*AI)->isAlignValT()) {
-    Params.Alignment = AlignedAllocationMode::Yes;
-    ++AI;
-  } else
-    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
-
-  assert(AI == AE && "unexpected usual deallocation function parameter");
-  return Params;
-}
-
-namespace {
   /// A cleanup to call the given 'operator delete' function upon abnormal
   /// exit from a new expression. Templated on a traits type that deals with
   /// ensuring that the arguments dominate the cleanup if necessary.
@@ -1505,7 +1453,7 @@ namespace {
       } else {
         // For a non-placement new-expression, 'operator delete' can take a
         // size and/or an alignment if it has the right parameters.
-        Params = getUsualDeleteParams(OperatorDelete);
+        Params = OperatorDelete->getUsualDeleteParams();
       }
 
       assert(!Params.DestroyingDelete &&
@@ -1687,11 +1635,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       QualType AlignValT = sizeType;
       if (allocatorType->getNumParams() > IndexOfAlignArg) {
         AlignValT = allocatorType->getParamType(IndexOfAlignArg);
-        assert(getContext().hasSameUnqualifiedType(AlignValT->castAs<EnumType>()
-                                                       ->getOriginalDecl()
-                                                       ->getDefinitionOrSelf()
-                                                       ->getIntegerType(),
-                                                   sizeType) &&
+        assert(getContext().hasSameUnqualifiedType(
+                   AlignValT->castAsEnumDecl()->getIntegerType(), sizeType) &&
                "wrong type for alignment parameter");
         ++ParamsToSkip;
       } else {
@@ -1841,7 +1786,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   const auto *DeleteFTy = DeleteFD->getType()->castAs<FunctionProtoType>();
   CallArgList DeleteArgs;
 
-  auto Params = getUsualDeleteParams(DeleteFD);
+  auto Params = DeleteFD->getUsualDeleteParams();
   auto ParamTypeIt = DeleteFTy->param_type_begin();
 
   std::optional<llvm::AllocaInst *> TagAlloca;
@@ -1973,9 +1918,7 @@ static bool EmitObjectDelete(CodeGenFunction &CGF,
   // Find the destructor for the type, if applicable.  If the
   // destructor is virtual, we'll just emit the vcall and return.
   const CXXDestructorDecl *Dtor = nullptr;
-  if (const RecordType *RT = ElementType->getAs<RecordType>()) {
-    auto *RD =
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  if (const auto *RD = ElementType->getAsCXXRecordDecl()) {
     if (RD->hasDefinition() && !RD->hasTrivialDestructor()) {
       Dtor = RD->getDestructor();
 
@@ -2295,8 +2238,7 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   bool IsExact = !IsDynamicCastToVoid &&
                  CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
-                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
-                 !getLangOpts().PointerAuthCalls;
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
 
   std::optional<CGCXXABI::ExactDynamicCastInfo> ExactCastInfo;
   if (IsExact) {

@@ -868,7 +868,12 @@ def crbitm: Operand<i8> {
 def PPCRegGxRCNoR0Operand : AsmOperandClass {
   let Name = "RegGxRCNoR0"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_nor0 : Operand<iPTR>, PointerLikeRegClass<1> {
+
+def ptr_rc_nor0_by_hwmode : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC_NOR0, G8RC_NOX0]>;
+
+def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCNoR0Operand;
 }
 
@@ -902,7 +907,11 @@ def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
 def PPCRegGxRCOperand : AsmOperandClass {
   let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_idx : Operand<iPTR>, PointerLikeRegClass<0> {
+
+def ptr_rc_idx_by_hwmode : RegClassByHwMode<[PPC32, PPC64],
+                                            [GPRC, G8RC]>;
+
+def ptr_rc_idx : RegisterOperand<ptr_rc_idx_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCOperand;
 }
 

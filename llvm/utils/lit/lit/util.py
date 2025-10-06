@@ -13,14 +13,6 @@ import sys
 import threading
 
 
-def is_string(value):
-    try:
-        # Python 2 and Python 3 are different here.
-        return isinstance(value, basestring)
-    except NameError:
-        return isinstance(value, str)
-
-
 def pythonize_bool(value):
     if value is None:
         return False
@@ -28,7 +20,7 @@ def pythonize_bool(value):
         return value
     if isinstance(value, numbers.Number):
         return value != 0
-    if is_string(value):
+    if isinstance(value, str):
         if value.lower() in ("1", "true", "on", "yes"):
             return True
         if value.lower() in ("", "0", "false", "off", "no"):

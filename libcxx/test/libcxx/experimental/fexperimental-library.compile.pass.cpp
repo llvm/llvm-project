@@ -14,8 +14,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -fexperimental-library
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <version>
 
 #if !_LIBCPP_HAS_EXPERIMENTAL_PSTL

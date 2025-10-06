@@ -560,6 +560,8 @@ def setupSysPath():
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
 
+    configuration.yaml2macho_core = shutil.which("yaml2macho-core", path=lldbDir)
+
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
     # If our lldb supports the -P option, use it to find the python path:

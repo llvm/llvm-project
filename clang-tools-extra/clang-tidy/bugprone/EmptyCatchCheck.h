@@ -1,4 +1,4 @@
-//===--- EmptyCatchCheck.h - clang-tidy -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// Detects and suggests addressing issues with empty catch statements.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/empty-catch.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/empty-catch.html
 class EmptyCatchCheck : public ClangTidyCheck {
 public:
   EmptyCatchCheck(StringRef Name, ClangTidyContext *Context);

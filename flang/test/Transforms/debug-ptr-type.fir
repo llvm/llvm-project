@@ -32,8 +32,9 @@ module {
 #loc4 = loc("test.f90":8:1)
 
 // CHECK-DAG: #[[INT_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer"{{.*}}>
-// CHECK-DAG: #[[ARR1_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>, #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>>, dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>>
-// CHECK-DAG: #[[ARR2_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>>, dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>>
+// CHECK-DAG: #[[ARR1_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>, elements = #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>, #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>>>
+// CHECK-DAG: #[[ARR2_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>, elements = #llvm.di_subrange<count = #llvm.di_expression<{{.*}}>, lowerBound = #llvm.di_expression<{{.*}}>>>
+
 // CHECK-DAG: #[[PTR_TY:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type{{.*}}baseType = #[[INT_TY]]{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "par"{{.*}}type = #[[ARR1_TY]]{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "par2"{{.*}}type = #[[ARR2_TY]]{{.*}}>

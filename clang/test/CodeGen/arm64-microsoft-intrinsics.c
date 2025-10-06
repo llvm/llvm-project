@@ -4,14 +4,21 @@
 // RUN: not %clang_cc1 -triple arm64-linux -Werror -S -o /dev/null %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-LINUX
 
-// RUN: %clang_cc1 -triple arm64-darwin -Wno-implicit-function-declaration -fms-compatibility -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple arm64-darwin -Wno-implicit-function-declaration -fms-compatibility -emit-llvm -o - -DARM64_DARWIN %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-MSCOMPAT
 
-long test_InterlockedAdd(long volatile *Addend, long Value) {
+// For some reason '_InterlockedAdd` on arm64-darwin takes an 'int*' rather than a 'long*'.
+#ifdef ARM64_DARWIN
+typedef int int32_t;
+#else
+typedef long int32_t;
+#endif
+
+long test_InterlockedAdd(int32_t volatile *Addend, long Value) {
   return _InterlockedAdd(Addend, Value);
 }
 
-long test_InterlockedAdd_constant(long volatile *Addend) {
+long test_InterlockedAdd_constant(int32_t volatile *Addend) {
   return _InterlockedAdd(Addend, -1);
 }
 
@@ -21,7 +28,7 @@ long test_InterlockedAdd_constant(long volatile *Addend) {
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd'
 
-long test_InterlockedAdd_acq(long volatile *Addend, long Value) {
+long test_InterlockedAdd_acq(int32_t volatile *Addend, long Value) {
   return _InterlockedAdd_acq(Addend, Value);
 }
 
@@ -31,7 +38,7 @@ long test_InterlockedAdd_acq(long volatile *Addend, long Value) {
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_acq'
 
-long test_InterlockedAdd_nf(long volatile *Addend, long Value) {
+long test_InterlockedAdd_nf(int32_t volatile *Addend, long Value) {
   return _InterlockedAdd_nf(Addend, Value);
 }
 
@@ -41,7 +48,7 @@ long test_InterlockedAdd_nf(long volatile *Addend, long Value) {
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_nf'
 
-long test_InterlockedAdd_rel(long volatile *Addend, long Value) {
+long test_InterlockedAdd_rel(int32_t volatile *Addend, long Value) {
   return _InterlockedAdd_rel(Addend, Value);
 }
 

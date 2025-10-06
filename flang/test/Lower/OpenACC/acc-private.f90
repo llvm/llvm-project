@@ -95,6 +95,9 @@
 ! CHECK: ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:   %[[ALLOCMEM:.*]] = fir.allocmem i32
+! CHECK:   %[[BOX:.*]] = fir.embox %[[ALLOCMEM]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:   fir.store %[[BOX]] to %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: }
 

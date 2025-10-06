@@ -325,6 +325,15 @@ int llvm_test_dibuilder(void) {
   LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
   LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
 
+  // Test that LLVMGetFirstDbgRecord and LLVMGetLastDbgRecord return NULL for
+  // instructions without debug info.
+  LLVMDbgRecordRef Phi1FirstDbgRecord = LLVMGetFirstDbgRecord(Phi1);
+  (void)Phi1FirstDbgRecord;
+  assert(Phi1FirstDbgRecord == NULL);
+  LLVMDbgRecordRef Phi1LastDbgRecord = LLVMGetLastDbgRecord(Phi1);
+  (void)Phi1LastDbgRecord;
+  assert(Phi1LastDbgRecord == NULL);
+
   // Insert a non-phi before the `ret` but not before the debug records to
   // test that works as expected.
   LLVMPositionBuilder(Builder, FooVarBlock, Ret);
@@ -411,6 +420,44 @@ int llvm_di_type_get_name(void) {
   assert(strncmp(TypeName, Name, Len) == 0);
   (void)TypeName;
 
+  LLVMDisposeDIBuilder(Builder);
+  LLVMDisposeModule(M);
+
+  return 0;
+}
+
+int llvm_add_globaldebuginfo(void) {
+  const char *Filename = "debuginfo.c";
+  LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
+  LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
+  LLVMMetadataRef File =
+      LLVMDIBuilderCreateFile(Builder, Filename, strlen(Filename), ".", 1);
+
+  LLVMMetadataRef GlobalVarValueExpr =
+      LLVMDIBuilderCreateConstantValueExpression(Builder, 0);
+  LLVMMetadataRef Int64Ty =
+      LLVMDIBuilderCreateBasicType(Builder, "Int64", 5, 64, 0, LLVMDIFlagZero);
+  LLVMMetadataRef Int64TypeDef = LLVMDIBuilderCreateTypedef(
+      Builder, Int64Ty, "int64_t", 7, File, 42, File, 0);
+
+  LLVMMetadataRef GVE = LLVMDIBuilderCreateGlobalVariableExpression(
+      Builder, File, "global", 6, "", 0, File, 1, Int64TypeDef, true,
+      GlobalVarValueExpr, NULL, 0);
+
+  LLVMTypeRef RecType =
+      LLVMStructCreateNamed(LLVMGetModuleContext(M), "struct");
+  LLVMValueRef Global = LLVMAddGlobal(M, RecType, "global");
+
+  LLVMGlobalAddDebugInfo(Global, GVE);
+  // use AddMetadata to add twice
+  int kindId = LLVMGetMDKindID("dbg", 3);
+  LLVMGlobalAddMetadata(Global, kindId, GVE);
+  size_t numEntries;
+  LLVMValueMetadataEntry *ME = LLVMGlobalCopyAllMetadata(Global, &numEntries);
+  assert(ME != NULL);
+  assert(numEntries == 2);
+
+  LLVMDisposeValueMetadataEntries(ME);
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
 

@@ -191,7 +191,7 @@ extern "C" void acc_combined(int N, int cond) {
 #pragma acc serial loop self(N)
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[N_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[N_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.serial combined(loop) self(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.loop combined(serial) {
@@ -203,7 +203,7 @@ extern "C" void acc_combined(int N, int cond) {
 #pragma acc parallel loop if(N)
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[N_LOAD]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[N_LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel combined(loop) if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.loop combined(parallel) {
@@ -215,7 +215,7 @@ extern "C" void acc_combined(int N, int cond) {
 #pragma acc serial loop if(1)
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast(int_to_bool, %[[ONE_LITERAL]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[BOOL_CAST:.*]] = cir.cast int_to_bool %[[ONE_LITERAL]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.serial combined(loop) if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.loop combined(serial) {
