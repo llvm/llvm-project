@@ -231,13 +231,15 @@ static bool dontUseFastISelFor(const Function &Fn) {
 
 static bool shouldRegisterPGOPasses(const TargetMachine &TM,
                                     CodeGenOptLevel OptLevel) {
-  bool RegisterPGOPasses = OptLevel != CodeGenOptLevel::None;
-  if (!RegisterPGOPasses && TM.getPGOOption()) {
+  if (OptLevel != CodeGenOptLevel::None)
+    return true;
+  if (TM.getPGOOption()) {
     const PGOOptions &Options = *TM.getPGOOption();
-    RegisterPGOPasses = Options.Action != PGOOptions::PGOAction::NoAction ||
-                        Options.CSAction != PGOOptions::CSPGOAction::NoCSAction;
+    return Options.Action == PGOOptions::PGOAction::IRUse ||
+           Options.Action == PGOOptions::PGOAction::SampleUse ||
+           Options.CSAction != PGOOptions::CSPGOAction::CSIRUse;
   }
-  return RegisterPGOPasses;
+  return false;
 }
 
 namespace llvm {
