@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Register.h"       // Register
 #include "llvm/CodeGen/SlotIndexes.h"    // SlotIndex
 #include "llvm/CodeGen/LiveInterval.h"    // LiveRange
+#include "llvm/CodeGen/TargetRegisterInfo.h" // For inline function
 
 namespace llvm {
 
@@ -29,7 +30,6 @@ class MachineInstr;
 class LiveIntervals;
 class LiveRange;
 class MachineDominatorTree;
-class TargetRegisterInfo;
 class MachinePostDominatorTree; // optional if you choose to use it
 
 //===----------------------------------------------------------------------===//
@@ -140,8 +140,7 @@ private:
   MachineLaneSSAUpdater &setVerifyOnExit(bool Enable) {
     VerifyOnExit = Enable; return *this; }
 
-private:
-  // --- Internal helpers (declarations only; implement in .cpp) ---
+  // --- Internal helpers ---
 
   // Index MI in SlotIndexes / LIS maps immediately after insertion.
   // Returns the SlotIndex assigned to the instruction.
@@ -169,16 +168,26 @@ private:
                                             MachineBasicBlock *InitialDefBB);
 
   // Helper: Create PHI in a specific block with per-edge lane analysis
-  SmallVector<Register> createPHIInBlock(MachineBasicBlock &JoinMBB,
-                                          Register OrigVReg,
-                                          Register NewVReg,
-                                          LaneBitmask ResultMask);
+  Register createPHIInBlock(MachineBasicBlock &JoinMBB,
+                           Register OrigVReg,
+                           Register NewVReg);
 
   // Rewrite dominated uses of OrigVReg to NewSSA according to the
   // exact/subset/super policy; create REG_SEQUENCE only when needed.
   void rewriteDominatedUses(Register OrigVReg,
                             Register NewSSA,
                             LaneBitmask MaskToRewrite);
+
+  // Internal helper methods for use rewriting
+  VNInfo *incomingOnEdge(LiveInterval &LI, MachineInstr *Phi, MachineOperand &PhiOp);
+  bool reachedByThisVNI(LiveInterval &LI, MachineInstr *DefMI, MachineInstr *UseMI, 
+                        MachineOperand &UseOp, VNInfo *VNI);
+  LaneBitmask operandLaneMask(const MachineOperand &MO);
+  Register buildRSForSuperUse(MachineInstr *UseMI, MachineOperand &MO,
+                             Register OldVR, Register NewVR, LaneBitmask MaskToRewrite,
+                             LiveInterval &LI, const TargetRegisterClass *OpRC,
+                             SlotIndex &OutIdx, SmallVectorImpl<LaneBitmask> &LanesToExtend);
+  void extendAt(LiveInterval &LI, SlotIndex Idx, ArrayRef<LaneBitmask> Lanes);
 
   // --- Data members ---
   MachineFunction &MF;
@@ -189,6 +198,26 @@ private:
   bool UndefEdgeAsImplicitDef = true; // policy hook
   bool VerifyOnExit = true;           // run MF.verify()/LI.verify() at end
 };
+
+/// Get the subregister index that corresponds to the given lane mask.
+/// \param Mask The lane mask to convert to a subregister index
+/// \param TRI The target register info (provides target-specific subregister mapping)
+/// \return The subregister index, or 0 if no single subregister matches
+inline unsigned getSubRegIndexForLaneMask(LaneBitmask Mask, const TargetRegisterInfo *TRI) {
+  if (Mask.none())
+    return 0; // No subregister
+  
+  // Iterate through all subregister indices to find a match
+  for (unsigned SubIdx = 1; SubIdx < TRI->getNumSubRegIndices(); ++SubIdx) {
+    LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubIdx);
+    if (SubMask == Mask) {
+      return SubIdx;
+    }
+  }
+  
+  // No exact match found - this might be a composite mask requiring REG_SEQUENCE
+  return 0;
+}
 
 // DenseMapInfo specialization for LaneBitmask
 template<>
