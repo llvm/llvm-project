@@ -27,6 +27,10 @@ class AArch64Subtarget;
 class AArch64FunctionInfo;
 class AArch64FrameLowering;
 
+struct SVEFrameSizes {
+  StackOffset PPRCalleeSavesSize, ZPRCalleeSavesSize;
+  StackOffset PPRLocalsSize, ZPRLocalsSize;
+};
 class AArch64PrologueEpilogueCommon {
 public:
   AArch64PrologueEpilogueCommon(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -58,6 +62,8 @@ protected:
                                          uint64_t LocalStackSize) const;
 
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
+
+  SVEFrameSizes getSVEStackFrameSizes() const;
 
   MachineFunction &MF;
   MachineBasicBlock &MBB;

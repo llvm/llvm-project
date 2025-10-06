@@ -354,6 +354,16 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   return true;
 }
 
+SVEFrameSizes AArch64PrologueEpilogueCommon::getSVEStackFrameSizes() const {
+  StackOffset PPRCalleeSavesSize =
+      StackOffset::getScalable(AFI->getPPRCalleeSavedStackSize());
+  StackOffset ZPRCalleeSavesSize =
+      StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
+  StackOffset PPRLocalsSize = AFL.getPPRStackSize(MF) - PPRCalleeSavesSize;
+  StackOffset ZPRLocalsSize = AFL.getZPRStackSize(MF) - ZPRCalleeSavesSize;
+  return {PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize};
+}
+
 AArch64PrologueEmitter::AArch64PrologueEmitter(MachineFunction &MF,
                                                MachineBasicBlock &MBB,
                                                const AArch64FrameLowering &AFL)
@@ -714,13 +724,8 @@ void AArch64PrologueEmitter::emitPrologue() {
   if (AFL.windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding))
     emitWindowsStackProbe(AfterGPRSavesI, DL, NumBytes, RealignmentPadding);
 
-  StackOffset PPRCalleeSavesSize =
-      StackOffset::getScalable(AFI->getPPRCalleeSavedStackSize());
-  StackOffset ZPRCalleeSavesSize =
-      StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
-  StackOffset SVECalleeSavesSize = PPRCalleeSavesSize + ZPRCalleeSavesSize;
-  StackOffset PPRLocalsSize = AFL.getPPRStackSize(MF) - PPRCalleeSavesSize;
-  StackOffset ZPRLocalsSize = AFL.getZPRStackSize(MF) - ZPRCalleeSavesSize;
+  auto [PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize] =
+      getSVEStackFrameSizes();
 
   std::optional<MachineBasicBlock::iterator> ZPRCalleeSavesBegin,
       ZPRCalleeSavesEnd, PPRCalleeSavesBegin, PPRCalleeSavesEnd;
@@ -788,6 +793,7 @@ void AArch64PrologueEmitter::emitPrologue() {
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects());
   } else {
+    StackOffset SVECalleeSavesSize = ZPRCalleeSavesSize + PPRCalleeSavesSize;
     // Allocate space for the callee saves (if any).
     StackOffset LocalsSize =
         PPRLocalsSize + ZPRLocalsSize + StackOffset::getFixed(NumBytes);
@@ -1434,13 +1440,9 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   if (HasFP && AFI->hasSwiftAsyncContext())
     emitSwiftAsyncContextFramePointer(EpilogueEndI, DL);
 
-  StackOffset ZPRStackSize = AFL.getZPRStackSize(MF);
-  StackOffset PPRStackSize = AFL.getPPRStackSize(MF);
-  StackOffset SVEStackSize = ZPRStackSize + PPRStackSize;
-
   // If there is a single SP update, insert it before the ret and we're done.
   if (CombineSPBump) {
-    assert(!SVEStackSize && "Cannot combine SP bump with SVE");
+    assert(!AFI->hasSVEStackSize() && "Cannot combine SP bump with SVE");
 
     // When we are about to restore the CSRs, the CFA register is SP again.
     if (EmitCFI && HasFP)
@@ -1457,10 +1459,15 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   NumBytes -= PrologueSaveSize;
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
+  auto [PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize] =
+      getSVEStackFrameSizes();
+  StackOffset SVEStackSize =
+      PPRCalleeSavesSize + ZPRCalleeSavesSize + PPRLocalsSize + ZPRLocalsSize;
+
   if (SVELayout != SVEStackLayout::Split) {
     StackOffset SVECalleeSavedSize =
         StackOffset::getScalable(AFI->getSVECalleeSavedStackSize());
-    StackOffset SVELocalsSize = SVEStackSize - SVECalleeSavedSize;
+    StackOffset SVELocalsSize = ZPRLocalsSize + PPRLocalsSize;
 
     // Process the SVE callee-saves to determine what space needs to be
     // deallocated.
@@ -1499,7 +1506,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
       emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
                       SVECalleeSavedSize, TII, MachineInstr::FrameDestroy,
                       false, NeedsWinCFI, &HasWinCFI);
-    } else if (SVEStackSize) {
+    } else if (AFI->hasSVEStackSize()) {
       // If we have stack realignment or variable-sized objects we must use the
       // FP to restore SVE callee saves (as there is an unknown amount of
       // data/padding between the SP and SVE CS area).
@@ -1553,7 +1560,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
       if (EmitCFI)
         emitCalleeSavedSVERestores(RestoreEnd);
     }
-  } else if (SVELayout == SVEStackLayout::Split && SVEStackSize) {
+  } else if (SVELayout == SVEStackLayout::Split && AFI->hasSVEStackSize()) {
     // TODO: Support stack realigment and variable-sized objects.
     assert(!AFI->isStackRealigned() && !MFI.hasVarSizedObjects() &&
            "unexpected stack realignment or variable sized objects with split "
@@ -1564,8 +1571,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
     auto PPRCalleeSavedSize =
         StackOffset::getScalable(AFI->getPPRCalleeSavedStackSize());
-    StackOffset PPRLocalsSize = PPRStackSize - PPRCalleeSavedSize;
-    StackOffset ZPRLocalsSize = ZPRStackSize - ZPRCalleeSavedSize;
 
     MachineBasicBlock::iterator PPRRestoreBegin = FirstGPRRestoreI,
                                 PPRRestoreEnd = FirstGPRRestoreI;
