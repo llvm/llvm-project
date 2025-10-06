@@ -2453,7 +2453,7 @@ static void buildCtorDtorList(
   builder.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
 
   mlir::Value result =
-      builder.create<mlir::LLVM::UndefOp>(loc, ctorStructArrayTy);
+      mlir::LLVM::UndefOp::create(builder, loc, ctorStructArrayTy);
 
   for (auto [index, fn] : llvm::enumerate(globalXtors)) {
     mlir::Value structInit =

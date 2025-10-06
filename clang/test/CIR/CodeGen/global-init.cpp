@@ -47,4 +47,3 @@ NeedsCtor needsCtor;
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME]]() {{.*}} section ".text.startup" {
 // OGCG:   call void @__cxx_global_var_init()
-  
