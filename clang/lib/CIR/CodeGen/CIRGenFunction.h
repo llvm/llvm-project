@@ -883,6 +883,9 @@ public:
 
     LexicalScope *parentScope = nullptr;
 
+    // Holds actual value for ScopeKind::Try
+    cir::TryOp tryOp = nullptr;
+
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
     enum Kind {
@@ -942,6 +945,10 @@ public:
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
+    void setAsTry(cir::TryOp op) {
+      scopeKind = Kind::Try;
+      tryOp = op;
+    }
 
     // Lazy create cleanup block or return what's available.
     mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
@@ -962,6 +969,11 @@ public:
                                            : &cgf.curFn->getRegion(0);
       cleanupBlock = builder.createBlock(r);
       return cleanupBlock;
+    }
+
+    cir::TryOp getTry() {
+      assert(isTry());
+      return tryOp;
     }
 
     // ---
@@ -1264,6 +1276,15 @@ public:
                         Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
+
+  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
+
+  mlir::LogicalResult emitCXXTryStmtUnderScope(const clang::CXXTryStmt &s);
+
+  void enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
+                       bool isFnTryBlock = false);
+
+  void exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock = false);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);

@@ -532,10 +532,38 @@ public:
   }
 };
 
+class CIRTryOpFlattening : public mlir::OpRewritePattern<cir::TryOp> {
+public:
+  using OpRewritePattern<cir::TryOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::TryOp tryOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Region *tryRegion = &tryOp.getTryRegion();
+
+    // Empty scope can be removed.
+    if (tryRegion->empty()) {
+      rewriter.eraseOp(tryOp);
+      return mlir::success();
+    }
+
+    // Scope with only yield can be removed.
+    mlir::Block *tryRegionFirstBlock = &tryRegion->front();
+    if (tryRegionFirstBlock->getOperations().size() == 1 &&
+        mlir::isa<YieldOp>(tryRegionFirstBlock->front())) {
+      rewriter.eraseOp(tryOp);
+      return mlir::success();
+    }
+
+    llvm_unreachable("TryOp: non-empty try block is NYI");
+    return mlir::success();
+  }
+};
+
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
   patterns
       .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
-           CIRSwitchOpFlattening, CIRTernaryOpFlattening>(
+           CIRSwitchOpFlattening, CIRTernaryOpFlattening, CIRTryOpFlattening>(
           patterns.getContext());
 }
 
@@ -549,7 +577,7 @@ void CIRFlattenCFGPass::runOnOperation() {
     assert(!cir::MissingFeatures::ifOp());
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp>(op))
+    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, TryOp>(op))
       ops.push_back(op);
   });
 

@@ -537,7 +537,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
-  "DoWhileOp", "WhileOp", "ForOp"
+  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -684,7 +684,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
-  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp"
+  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -4200,6 +4200,66 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
   let assemblyFormat = [{
     $size `->` qualified(type($addr)) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+// Represents the unwind region where unwind continues or
+// the program std::terminate's.
+def CIR_CatchUnwind : CIR_UnitAttr<"CatchUnwind", "unwind"> {
+  let storageType = [{ CatchUnwind }];
+}
+
+// Represents the catch_all region.
+def CIR_CatchAll : CIR_UnitAttr<"CatchAll", "all"> {
+  let storageType = [{ CatchAllAttr }];
+}
+
+def CIR_TryOp : CIR_Op<"try",[
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+]> {
+  let summary = "C++ try block";
+  let description = [{
+    ```mlir
+
+    Holds the lexical scope of `try {}`. Note that resources used on catch
+    clauses are usually allocated in the same parent as `cir.try`.
+
+    `synthetic`: use `cir.try` to represent try/catches not originally
+    present in the source code (e.g. `g = new Class` under `-fexceptions`).
+
+    `cleanup`: signal to targets (LLVM for now) that this try/catch, needs
+    to specially tag their landing pads as needing "cleanup".
+
+    Example: TBD
+    ```
+  }];
+
+  let arguments = (ins UnitAttr:$synthetic, UnitAttr:$cleanup,
+                       OptionalAttr<ArrayAttr>:$catch_types);
+  let regions = (region AnyRegion:$try_region,
+                        VariadicRegion<AnyRegion>:$catch_regions);
+
+  let assemblyFormat = [{
+    (`synthetic` $synthetic^)?
+    (`cleanup` $cleanup^)?
+    $try_region
+    custom<CatchRegions>($catch_regions, $catch_types)
+    attr-dict
+  }];
+
+  // Everything already covered elsewhere.
+  let builders = [
+    OpBuilder<(ins
+              "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$tryBuilder,
+              "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, mlir::OperationState &)>"
+              :$catchBuilder)>,
+  ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
