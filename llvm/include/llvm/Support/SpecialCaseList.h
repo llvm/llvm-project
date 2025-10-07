@@ -147,7 +147,9 @@ protected:
     Section(StringRef Str, unsigned FileIdx)
         : SectionStr(Str), FileIdx(FileIdx) {};
 
-    std::unique_ptr<Matcher> SectionMatcher = std::make_unique<Matcher>();
+    Section(Section &&) = default;
+
+    Matcher SectionMatcher;
     SectionEntries Entries;
     std::string SectionStr;
     unsigned FileIdx;
