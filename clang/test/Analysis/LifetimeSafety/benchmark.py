@@ -340,7 +340,7 @@ if __name__ == "__main__":
             "name": "cycle",
             "title": "Pointer Cycle in Loop",
             "generator_func": generate_cpp_cycle_test,
-            "n_values": [25, 50, 75, 100],
+            "n_values": [50, 75, 100, 200, 300],
         },
         {
             "name": "merge",

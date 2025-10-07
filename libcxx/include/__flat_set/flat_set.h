@@ -12,7 +12,6 @@
 
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
-#include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
@@ -24,20 +23,16 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/swappable.h>
 #include <__config>
-#include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/sorted_unique.h>
 #include <__flat_set/ra_iterator.h>
 #include <__flat_set/utils.h>
-#include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__fwd/vector.h>
 #include <__iterator/concepts.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
-#include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/uses_allocator.h>
@@ -47,10 +42,7 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/from_range.h>
-#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
-#include <__ranges/subrange.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/container_traits.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>

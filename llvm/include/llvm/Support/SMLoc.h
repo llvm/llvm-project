@@ -28,8 +28,8 @@ public:
 
   constexpr bool isValid() const { return Ptr != nullptr; }
 
-  constexpr bool operator==(const SMLoc &RHS) const { return RHS.Ptr == Ptr; }
-  constexpr bool operator!=(const SMLoc &RHS) const { return RHS.Ptr != Ptr; }
+  constexpr bool operator==(SMLoc RHS) const { return RHS.Ptr == Ptr; }
+  constexpr bool operator!=(SMLoc RHS) const { return RHS.Ptr != Ptr; }
 
   constexpr const char *getPointer() const { return Ptr; }
 

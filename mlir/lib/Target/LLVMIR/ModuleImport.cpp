@@ -1374,7 +1374,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
                                     convertLinkageFromLLVM(alias->getLinkage()),
                                     alias->getName(),
-                                    /*dso_local=*/alias->isDSOLocal(),
+                                    /*dsoLocal=*/alias->isDSOLocal(),
                                     /*thread_local=*/alias->isThreadLocal(),
                                     /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
@@ -1507,8 +1507,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   GlobalOp globalOp = GlobalOp::create(
       builder, mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
-      valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
-      /*dso_local=*/globalVar->isDSOLocal(),
+      valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
+      /*dsoLocal=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
