@@ -236,7 +236,7 @@ class SPIRVEmitIntrinsics
 
   Instruction *buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP);
 
-  bool promoteEmbddedBitcodeMarker(Module &M) const;
+  bool promoteEmbeddedBitcodeMarkear(Module &M) const;
 
 public:
   static char ID;
@@ -3007,7 +3007,7 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
   }
 }
 
-bool SPIRVEmitIntrinsics::promoteEmbddedBitcodeMarker(Module &M) const {
+bool SPIRVEmitIntrinsics::promoteEmbeddedBitcodeMarkear(Module &M) const {
   const SPIRVSubtarget *STI = TM->getSubtargetImpl();
   if (STI->isShader())
     return false;
@@ -3016,18 +3016,18 @@ bool SPIRVEmitIntrinsics::promoteEmbddedBitcodeMarker(Module &M) const {
   if (!EmbeddedBitcode)
     return false;
 
-  ArrayType *AT = cast<ArrayType>(EmbeddedBitcode->getValueType());
-  if (AT->getNumElements() != 0)
+  ArrayType *ArrTy = cast<ArrayType>(EmbeddedBitcode->getValueType());
+  if (ArrTy->getNumElements() != 0)
     return false;
 
   // When compiling with -fembed-bitcode=marker, LLVM generates a [0 x i8]
   // zeroinitialized global variable containing the bitcode. This results in an
   // assert outside of shaders. As a workaround, we replace this global with a
   // zeroinitialized [1 x i8].
-  ArrayType *AT1 = ArrayType::get(AT->getElementType(), 1);
-  Constant *ZeroInit = Constant::getNullValue(AT1);
+  ArrayType *ArrTyOneElt = ArrayType::get(ArrTy->getElementType(), 1);
+  Constant *ZeroInit = Constant::getNullValue(ArrTyOneElt);
   GlobalVariable *NewEmbeddedBitcode = new GlobalVariable(
-      AT1, EmbeddedBitcode->isConstant(), EmbeddedBitcode->getLinkage(),
+      ArrTyOneElt, EmbeddedBitcode->isConstant(), EmbeddedBitcode->getLinkage(),
       ZeroInit, "", EmbeddedBitcode->getThreadLocalMode(),
       EmbeddedBitcode->getAddressSpace(),
       EmbeddedBitcode->isExternallyInitialized());
@@ -3043,7 +3043,7 @@ bool SPIRVEmitIntrinsics::promoteEmbddedBitcodeMarker(Module &M) const {
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
-  Changed |= promoteEmbddedBitcodeMarker(M);
+  Changed |= promoteEmbeddedBitcodeMarkear(M);
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
 
