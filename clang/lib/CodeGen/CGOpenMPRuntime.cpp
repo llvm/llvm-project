@@ -1542,7 +1542,7 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     SourceManager &SM = CGM.getContext().getSourceManager();
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
-    if (CGM.getFileSystem()->exists(PLoc.getFilename()))
+    if (!CGM.getFileSystem()->exists(PLoc.getFilename()))
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
 
     return std::pair<std::string, uint64_t>(PLoc.getFilename(), PLoc.getLine());

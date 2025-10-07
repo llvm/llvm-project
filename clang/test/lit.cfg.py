@@ -145,7 +145,7 @@ def run_clang_repl(args):
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
     if not clang_repl_exe:
-        return False
+        return ""
 
     try:
         clang_repl_cmd = subprocess.Popen(
@@ -153,7 +153,7 @@ def run_clang_repl(args):
         )
     except OSError:
         print("could not exec clang-repl")
-        return False
+        return ""
 
     clang_repl_out = clang_repl_cmd.stdout.read().decode("ascii")
     clang_repl_cmd.wait()
