@@ -1,6 +1,6 @@
 // Some assertions in this test use Linux style (/) file paths.
+// TODO: Use LIBPATH on AIX
 // UNSUPPORTED: system-windows, system-aix
-// FIXME: Use LIBPATH on AIX
 
 // RUN: bash -c env | grep LD_LIBRARY_PATH | sed -ne 's/^.*=//p' | tr -d '\n' > %t.ld_library_path
 // The PATH variable is heavily used when trying to find a linker.
