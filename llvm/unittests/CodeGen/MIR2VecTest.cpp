@@ -64,7 +64,8 @@ protected:
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
     if (!T) {
-      GTEST_SKIP();
+      GTEST_SKIP() << "x86_64-unknown-linux-gnu target triple not available; "
+                      "Skipping test";
       return;
     }
 
@@ -76,7 +77,7 @@ protected:
     TM = std::unique_ptr<TargetMachine>(
         T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt));
     if (!TM) {
-      GTEST_SKIP();
+      GTEST_SKIP() << "Failed to create X86 target machine; Skipping test";
       return;
     }
 
@@ -88,7 +89,7 @@ protected:
     // Get the target instruction info
     TII = TM->getSubtargetImpl(*F)->getInstrInfo();
     if (!TII) {
-      GTEST_SKIP();
+      GTEST_SKIP() << "Failed to get target instruction info; Skipping test";
       return;
     }
   }
