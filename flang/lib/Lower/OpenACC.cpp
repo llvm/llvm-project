@@ -2406,10 +2406,6 @@ static mlir::acc::LoopOp createLoopOp(
                    std::get_if<Fortran::parser::AccClause::Collapse>(
                        &clause.u)) {
       const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
-      const auto &force = std::get<bool>(arg.t);
-      if (force)
-        TODO(clauseLocation, "OpenACC collapse force modifier");
-
       const auto &intExpr =
           std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
       const auto *expr = Fortran::semantics::GetExpr(intExpr);

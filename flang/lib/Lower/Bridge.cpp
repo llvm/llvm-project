@@ -3190,15 +3190,39 @@ private:
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    // Determine collapse depth/force and loopCount
+    bool collapseForce = false;
+    uint64_t collapseDepth = 1;
+    uint64_t loopCount = 1;
+    auto parseCollapse = [&](const Fortran::parser::AccClauseList &cl)
+                             -> std::pair<bool, uint64_t> {
+      bool force = false;
+      uint64_t depth = 1;
+      for (const Fortran::parser::AccClause &clause : cl.v) {
+        if (const auto *collapseClause =
+                std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
+          const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
+          force = std::get<bool>(arg.t);
+          const auto &intExpr =
+              std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
+          if (const auto *expr = Fortran::semantics::GetExpr(intExpr)) {
+            if (auto v = Fortran::evaluate::ToInt64(*expr))
+              depth = *v;
+          }
+          break;
+        }
+      }
+      return {force, depth};
+    };
 
     if (accLoop || accCombined) {
-      uint64_t loopCount;
       if (accLoop) {
         const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
             std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
+        std::tie(collapseForce, collapseDepth) = parseCollapse(clauseList);
       } else if (accCombined) {
         const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
             std::get<Fortran::parser::AccBeginCombinedDirective>(
@@ -3206,6 +3230,7 @@ private:
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
+        std::tie(collapseForce, collapseDepth) = parseCollapse(clauseList);
       }
 
       if (curEval->lowerAsStructured()) {
@@ -3215,8 +3240,46 @@ private:
       }
     }
 
-    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-      genFIR(e);
+    // Collect prologue and tail (after-inner) statements if force
+    llvm::SmallVector<Fortran::lower::pft::Evaluation *> prologue, tail;
+    if (collapseForce && loopCount > 1 && getEval().lowerAsStructured()) {
+      auto hasKids = [](Fortran::lower::pft::Evaluation *ev) -> bool {
+        return ev && ev->hasNestedEvaluations();
+      };
+      Fortran::lower::pft::Evaluation *parent = &getEval();
+      uint64_t levelsToProcess = std::min<uint64_t>(collapseDepth, loopCount);
+      for (uint64_t lvl = 0; lvl + 1 < levelsToProcess; ++lvl) {
+        if (!hasKids(parent)) break;
+        Fortran::lower::pft::Evaluation *childLoop = nullptr;
+        tail.clear();
+        auto &kids = parent->getNestedEvaluations();
+        for (auto it = kids.begin(); it != kids.end(); ++it) {
+          if (it->getIf<Fortran::parser::DoConstruct>()) {
+            childLoop = &*it;
+            for (auto it2 = std::next(it); it2 != kids.end(); ++it2)
+              tail.push_back(&*it2);
+            break;
+          }
+          prologue.push_back(&*it);
+        }
+        if (!childLoop) break;
+        parent = childLoop;
+      }
+    }
+
+    // Prologue sink
+    for (auto *e : prologue)
+      genFIR(*e);
+
+    // Lower the loop body as usual
+    if (curEval && curEval->hasNestedEvaluations()) {
+      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
+        genFIR(e);
+    }
+
+    // Epilogue sink
+    for (auto *e : tail)
+      genFIR(*e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
