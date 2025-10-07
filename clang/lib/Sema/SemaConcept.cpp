@@ -1049,6 +1049,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   case NormalizedConstraint::ConstraintKind::Compound:
     return Evaluate(static_cast<const CompoundConstraint &>(Constraint), MLTAL);
   }
+  llvm_unreachable("Unknown ConstraintKind enum");
 }
 
 static bool CheckConstraintSatisfaction(
@@ -2141,6 +2142,7 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     return substitute(Compound.getRHS());
   }
   }
+  llvm_unreachable("Unknown ConstraintKind enum");
 }
 
 } // namespace
@@ -2561,7 +2563,6 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
   };
 
   switch (NC.getKind()) {
-
   case NormalizedConstraint::ConstraintKind::Atomic:
     return {{find(&static_cast<const AtomicConstraint &>(NC))}};
 
@@ -2601,6 +2602,7 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     return Res;
   }
   }
+  llvm_unreachable("Unknown ConstraintKind enum");
 }
 
 void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {

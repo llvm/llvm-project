@@ -310,21 +310,27 @@ func.func @test_identity(%arg0: tensor<13x21x3xi4>) -> tensor<13x21x3xi4> {
 }
 
 // -----
-func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
-  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
-  return
+
+  func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
+    %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
+    return
+  }
 }
 
 // -----
-func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
-  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
-  return
+
+  func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
+    tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
+    return
+  }
 }
 
 // -----

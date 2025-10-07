@@ -736,25 +736,6 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-/// rotateleft(value, amount)
-static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame,
-                                   const CallExpr *Call, bool Right) {
-  APSInt Amount = popToAPSInt(S, Call->getArg(1));
-  APSInt Value = popToAPSInt(S, Call->getArg(0));
-
-  APSInt Result;
-  if (Right)
-    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
-                    /*IsUnsigned=*/true);
-  else // Left.
-    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
-                    /*IsUnsigned=*/true);
-
-  pushInteger(S, Result, Call->getType());
-  return true;
-}
-
 static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame,
                                 const CallExpr *Call) {
@@ -2916,7 +2897,49 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   });
 
   Dst.initializeAllElements();
+  return true;
+}
 
+static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call, bool MaskZ) {
+  assert(Call->getNumArgs() == 5);
+
+  APInt U = popToAPSInt(S, Call->getArg(4));   // Lane mask
+  APInt Imm = popToAPSInt(S, Call->getArg(3)); // Ternary truth table
+  const Pointer &C = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned DstLen = A.getNumElems();
+  const QualType ElemQT = getElemType(A);
+  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
+  bool DstUnsigned = ElemQT->isUnsignedIntegerOrEnumerationType();
+
+  INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+    for (unsigned I = 0; I != DstLen; ++I) {
+      APInt ALane = A.elem<T>(I).toAPSInt();
+      APInt BLane = B.elem<T>(I).toAPSInt();
+      APInt CLane = C.elem<T>(I).toAPSInt();
+      APInt RLane(LaneWidth, 0);
+      if (U[I]) { // If lane not masked, compute ternary logic.
+        for (unsigned Bit = 0; Bit != LaneWidth; ++Bit) {
+          unsigned ABit = ALane[Bit];
+          unsigned BBit = BLane[Bit];
+          unsigned CBit = CLane[Bit];
+          unsigned Idx = (ABit << 2) | (BBit << 1) | (CBit);
+          RLane.setBitVal(Bit, Imm[Idx]);
+        }
+        Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
+      } else if (MaskZ) { // If zero masked, zero the lane.
+        Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
+      } else { // Just masked, put in A lane.
+        Dst.elem<T>(I) = static_cast<T>(APSInt(ALane, DstUnsigned));
+      }
+    }
+  });
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -3160,7 +3183,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotl:
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
-    return interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/false);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+          return Value.rotl(Amount);
+        });
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
@@ -3171,7 +3197,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
-    return interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/true);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+          return Value.rotr(Amount);
+        });
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
@@ -3773,6 +3802,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
 
+  case X86::BI__builtin_ia32_pternlogd128_mask:
+  case X86::BI__builtin_ia32_pternlogd256_mask:
+  case X86::BI__builtin_ia32_pternlogd512_mask:
+  case X86::BI__builtin_ia32_pternlogq128_mask:
+  case X86::BI__builtin_ia32_pternlogq256_mask:
+  case X86::BI__builtin_ia32_pternlogq512_mask:
+    return interp__builtin_ia32_pternlog(S, OpPC, Call, /*MaskZ=*/false);
+  case X86::BI__builtin_ia32_pternlogd128_maskz:
+  case X86::BI__builtin_ia32_pternlogd256_maskz:
+  case X86::BI__builtin_ia32_pternlogd512_maskz:
+  case X86::BI__builtin_ia32_pternlogq128_maskz:
+  case X86::BI__builtin_ia32_pternlogq256_maskz:
+  case X86::BI__builtin_ia32_pternlogq512_maskz:
+    return interp__builtin_ia32_pternlog(S, OpPC, Call, /*MaskZ=*/true);
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
