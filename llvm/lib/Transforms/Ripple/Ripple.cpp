@@ -692,13 +692,16 @@ NDLoadStoreAttr NDLoadStoreAttr::fromString(StringRef AttrName) {
 
 bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
                                            LinearSeries &AddressSeries,
-                                           BitVector &StrideDims) {
+                                           BitVector &StrideDims,
+                                           Instruction *I) {
 
   assert(PointerType::isValidElementType(ElementTy) &&
          "Internal type inference error");
   DataLayout const &DL = Mod.getDataLayout();
 
   uint64_t ElemByteSize = DL.getTypeAllocSize(ElementTy);
+
+  OptimizationRemarkEmitter &ORE = MyRipple.getORE();
 
   // Gather address tensor slice sizes, so we can compare them with slope sizes
   // 0-dimensional slice is one element, then one rod, plane, etc.
@@ -725,6 +728,24 @@ bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
     // If the stride comes from a collection of bases,
     // we assume that this match isn't happening.
     if (BaseShape[i] > 1) {
+      std::string BaseShapeStr;
+      {
+        raw_string_ostream RSOS(BaseShapeStr);
+        RSOS << BaseShape[i];
+      }
+      ORE.emit([&] {
+        OptimizationRemarkMissed R(DEBUG_TYPE, "AnalyzeCoalescing", I);
+        if (dyn_cast<LoadInst>(I)) {
+          R << "tensor access requires gather: ";
+          R << "base is a tensor with shape " << BaseShapeStr << "; ";
+          R << "cannot form contiguous loads" << "\n";
+        } else {
+          R << "tensor access requires scatter: ";
+          R << "base is a tensor with shape " << BaseShapeStr << "; ";
+          R << "cannot form contiguous stores" << "\n";
+        }
+        return R;
+      });
       Contiguous = false;
       continue;
     }
@@ -745,9 +766,37 @@ bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
       // is broken
       if (!Contiguous || ApSlope != ApSliceSize) {
         Contiguous = false;
+        ORE.emit([&] {
+          OptimizationRemarkMissed R(DEBUG_TYPE, "AnalyzeCoalescing", I);
+          if (dyn_cast<LoadInst>(I)) {
+            R << "tensor access requires gather: ";
+            R << "strided memory access along dimension " << std::to_string(i);
+            R << " prevents coalesced vector load" << "\n";
+          } else {
+            R << "tensor access requires scatter: ";
+            R << "strided memory access along dimension " << std::to_string(i);
+            R << " prevents coalesced vector store" << "\n";
+          }
+          return R;
+        });
         StrideDims.set(i);
       }
     } else { // non-constant slope
+      ORE.emit([&] {
+        // Instruction *I = dyn_cast<Instruction>(AddressSeries.getSlope(i));
+        OptimizationRemarkMissed R(DEBUG_TYPE, "AnalyzeCoalescing", I);
+
+        if (dyn_cast<LoadInst>(I)) {
+          R << "tensor access requires gather: ";
+          R << "non-constant stride along dimension " << std::to_string(i);
+          R << " prevents coalesced vector load" << "\n";
+        } else {
+          R << "tensor access requires scatter: ";
+          R << "non-constant stride along dimension " << std::to_string(i);
+          R << " prevents coalesced vector store" << "\n";
+        }
+        return R;
+      });
       Contiguous = false;
       StrideDims.set(i);
     }
@@ -770,6 +819,8 @@ std::string NDLoadStoreFactory::ndFunctionName(StringRef LoadOrStore, int nDims,
 
 Value *NDLoadStoreFactory::genUnstructuredLoad(LoadInst *Load, Value *Address,
                                                const TensorShape &ToShape) {
+  OptimizationRemarkEmitter &ORE = MyRipple.getORE();
+
   IrBuilder.SetInsertPoint(Load);
   if (ToShape.isScalar()) {
     // Base case, load
@@ -790,8 +841,18 @@ Value *NDLoadStoreFactory::genUnstructuredLoad(LoadInst *Load, Value *Address,
     return LoadVal;
   }
 
-  LLVM_DEBUG(dbgs() << "Generating gather"
-                    << " from addresses " << *Address << "\n");
+  if (ORE.enabled()) {
+    ORE.emit([&] {
+      OptimizationRemark R(DEBUG_TYPE, "UnstructuredLoadGen", Load);
+      R << "generating gather: ";
+      R << "gather instructions are typically expensive and may degrade "
+           "performance. ";
+      R << "improved data layout, access patterns, and loop structures ";
+      R << "can help reduce this cost." << "\n";
+      return R;
+    });
+  }
+
   Type *ElementTy = Load->getType();
   int NElements = ToShape.flatShape();
   assert(NElements > 1);
@@ -812,7 +873,8 @@ Value *NDLoadStoreFactory::genLoadNoSplat(LoadInst *Load,
   // TODO: With opaque types, I'm not sure this will always work. Check.
   Type *ElementTy = Load->getType();
   BitVector StrideDims(AddressSeries.rank());
-  bool Contiguous = analyzeCoalescing(ElementTy, AddressSeries, StrideDims);
+  bool Contiguous =
+      analyzeCoalescing(ElementTy, AddressSeries, StrideDims, Load);
   int NElements = ToShape.flatShape();
   Type *LoadTy = ToShape.isScalar() ? ElementTy
                                     : VectorType::get(ElementTy, NElements,
@@ -878,10 +940,21 @@ Value *NDLoadStoreFactory::genUnstructuredStore(StoreInst *Store, Value *Val,
   // No implicit broadcasts are expected here
   assertNumElements(Val, NElements);
   assertNumElements(Address, NElements);
-  LLVM_DEBUG(dbgs() << "Generating scatter w/ " << *Val << " to addresses "
-                    << *Address << "\n");
 
   MyRipple.analyzeTensorShape(ToShape, Store, Val, Address);
+  OptimizationRemarkEmitter &ORE = MyRipple.getORE();
+
+  if (ORE.enabled()) {
+    ORE.emit([&] {
+      OptimizationRemark R(DEBUG_TYPE, "UnstructuredStoreGen", Store);
+      R << "generating scatter: ";
+      R << "scatter instructions are typically expensive and may degrade "
+           "performance. ";
+      R << "improved data layout, access patterns, and loop structures ";
+      R << "can help reduce this cost." << "\n";
+      return R;
+    });
+  }
 
   IrBuilder.SetInsertPoint(Store);
   Value *StoredVal =
@@ -896,7 +969,8 @@ Value *NDLoadStoreFactory::genStore(StoreInst *Store, Value *Val,
                                     const TensorShape &ToShape) {
   Type *ElementTy = Store->getValueOperand()->getType();
   BitVector StrideDims(AddressSeries.rank());
-  bool Contiguous = analyzeCoalescing(ElementTy, AddressSeries, StrideDims);
+  bool Contiguous =
+      analyzeCoalescing(ElementTy, AddressSeries, StrideDims, Store);
   IrBuilder.SetInsertPoint(Store);
   Value *VectorStore;
   if (Contiguous) {
@@ -9162,6 +9236,8 @@ Error Ripple::checkBlockShapeUsage(const Function &F) {
   }
   return Error::success();
 }
+
+OptimizationRemarkEmitter &Ripple::getORE() { return Ripple::ORE; }
 
 bool Ripple::rippleVectorizeCall(const CallInst &CI) const {
   return none_of(CI.args(),
