@@ -95,9 +95,33 @@ static const std::string JSON_ASYNC_TYPE_KEY_NAME("type");
   std::setfill('\t') << std::setw((iword_idx)) << ""
 // Class to handle communications via gdb remote protocol.
 
-// Prototypes
+// If `ch` is a meta character as per the binary packet convention in the
+// gdb-remote protocol, quote it and write it into `stream`, otherwise write it
+// as is.
+static void binary_encode_char(std::ostringstream &stream, char ch) {
+  if (ch == '#' || ch == '$' || ch == '}' || ch == '*') {
+    stream.put('}');
+    stream.put(ch ^ 0x20);
+  } else {
+    stream.put(ch);
+  }
+}
 
-static std::string binary_encode_string(const std::string &s);
+// Equivalent to calling binary_encode_char for every element of `data`.
+static void binary_encode_data_vector(std::ostringstream &stream,
+                                      std::vector<uint8_t> data) {
+  for (auto ch : data)
+    binary_encode_char(stream, ch);
+}
+
+// Quote any meta characters in a std::string as per the binary
+// packet convention in the gdb-remote protocol.
+static std::string binary_encode_string(const std::string &s) {
+  std::ostringstream stream;
+  for (char ch : s)
+    binary_encode_char(stream, ch);
+  return stream.str();
+}
 
 // Decode a single hex character and return the hex value as a number or
 // -1 if "ch" is not a hex character.
@@ -1302,26 +1326,6 @@ std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
     bytes.push_back(c);
   }
   return bytes;
-}
-
-// Quote any meta characters in a std::string as per the binary
-// packet convention in the gdb-remote protocol.
-
-static std::string binary_encode_string(const std::string &s) {
-  std::string output;
-  const size_t s_size = s.size();
-  const char *s_chars = s.c_str();
-
-  for (size_t i = 0; i < s_size; i++) {
-    unsigned char ch = *(s_chars + i);
-    if (ch == '#' || ch == '$' || ch == '}' || ch == '*') {
-      output.push_back('}'); // 0x7d
-      output.push_back(ch ^ 0x20);
-    } else {
-      output.push_back(ch);
-    }
-  }
-  return output;
 }
 
 // If the value side of a key-value pair in JSON is a string,
@@ -3216,21 +3220,9 @@ rnb_err_t RNBRemote::HandlePacket_x(const char *p) {
     return SendErrorPacket("E80");
   }
 
-  std::vector<uint8_t> buf_quoted;
-  buf_quoted.reserve(bytes_read + 30);
-  for (nub_size_t i = 0; i < bytes_read; i++) {
-    if (buf[i] == '#' || buf[i] == '$' || buf[i] == '}' || buf[i] == '*') {
-      buf_quoted.push_back(0x7d);
-      buf_quoted.push_back(buf[i] ^ 0x20);
-    } else {
-      buf_quoted.push_back(buf[i]);
-    }
-  }
-  length = buf_quoted.size();
-
+  buf.resize(bytes_read);
   std::ostringstream ostrm;
-  for (unsigned long i = 0; i < length; i++)
-    ostrm << buf_quoted[i];
+  binary_encode_data_vector(ostrm, buf);
 
   return SendPacket(ostrm.str());
 }
