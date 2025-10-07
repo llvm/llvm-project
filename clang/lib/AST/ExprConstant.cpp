@@ -14356,7 +14356,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), Amt, Info))
       return false;
 
-    return Success(Val.rotl(Amt.urem(Val.getBitWidth())), E);
+    return Success(Val.rotl(Amt), E);
   }
 
   case Builtin::BI__builtin_rotateright8:
@@ -14373,7 +14373,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), Amt, Info))
       return false;
 
-    return Success(Val.rotr(Amt.urem(Val.getBitWidth())), E);
+    return Success(Val.rotr(Amt), E);
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
