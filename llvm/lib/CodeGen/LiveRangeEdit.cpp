@@ -274,6 +274,37 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     }
   }
 
+  // If the dest of MI is an original reg and MI is reMaterializable,
+  // don't delete the inst. Replace the dest with a new reg, and keep
+  // the inst for remat of other siblings. The inst is saved in
+  // LiveRangeEdit::DeadRemats and will be deleted after all the
+  // allocations of the func are done.  Note that if we keep the
+  // instruction with the original operands, that handles the physreg
+  // operand case (described just below) as well.
+  // However, immediately delete instructions which have unshrunk virtual
+  // register uses. That may provoke RA to split an interval at the KILL
+  // and later result in an invalid live segment end.
+  if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
+      TII.isReMaterializable(*MI)) {
+    LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
+    VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
+    VNInfo *VNI = NewLI.getNextValue(Idx, Alloc);
+    NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
+
+    if (DestSubReg) {
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      auto *SR =
+          NewLI.createSubRange(Alloc, TRI->getSubRegIndexLaneMask(DestSubReg));
+      SR->addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(),
+                                           SR->getNextValue(Idx, Alloc)));
+    }
+
+    pop_back();
+    DeadRemats->insert(MI);
+    const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+    MI->substituteRegister(Dest, NewLI.reg(), 0, TRI);
+    assert(MI->registerDefIsDead(NewLI.reg(), &TRI));
+  }
   // Currently, we don't support DCE of physreg live ranges. If MI reads
   // any unreserved physregs, don't erase the instruction, but turn it into
   // a KILL instead. This way, the physreg live ranges don't end up
@@ -281,7 +312,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   // FIXME: It would be better to have something like shrinkToUses() for
   // physregs. That could potentially enable more DCE and it would free up
   // the physreg. It would not happen often, though.
-  if (ReadsPhysRegs) {
+  else if (ReadsPhysRegs) {
     MI->setDesc(TII.get(TargetOpcode::KILL));
     // Remove all operands that aren't physregs.
     for (unsigned i = MI->getNumOperands(); i; --i) {
@@ -293,41 +324,11 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     MI->dropMemRefs(*MI->getMF());
     LLVM_DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
   } else {
-    // If the dest of MI is an original reg and MI is reMaterializable,
-    // don't delete the inst. Replace the dest with a new reg, and keep
-    // the inst for remat of other siblings. The inst is saved in
-    // LiveRangeEdit::DeadRemats and will be deleted after all the
-    // allocations of the func are done.
-    // However, immediately delete instructions which have unshrunk virtual
-    // register uses. That may provoke RA to split an interval at the KILL
-    // and later result in an invalid live segment end.
-    if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
-        TII.isReMaterializable(*MI)) {
-      LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
-      VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
-      VNInfo *VNI = NewLI.getNextValue(Idx, Alloc);
-      NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
-
-      if (DestSubReg) {
-        const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-        auto *SR = NewLI.createSubRange(
-            Alloc, TRI->getSubRegIndexLaneMask(DestSubReg));
-        SR->addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(),
-                                             SR->getNextValue(Idx, Alloc)));
-      }
-
-      pop_back();
-      DeadRemats->insert(MI);
-      const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-      MI->substituteRegister(Dest, NewLI.reg(), 0, TRI);
-      assert(MI->registerDefIsDead(NewLI.reg(), &TRI));
-    } else {
-      if (TheDelegate)
-        TheDelegate->LRE_WillEraseInstruction(MI);
-      LIS.RemoveMachineInstrFromMaps(*MI);
-      MI->eraseFromParent();
-      ++NumDCEDeleted;
-    }
+    if (TheDelegate)
+      TheDelegate->LRE_WillEraseInstruction(MI);
+    LIS.RemoveMachineInstrFromMaps(*MI);
+    MI->eraseFromParent();
+    ++NumDCEDeleted;
   }
 
   // Erase any virtregs that are now empty and unused. There may be <undef>
