@@ -1362,15 +1362,6 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   return Where;
 }
 
-static bool isCompatibleAlignSubReg(const TargetRegisterClass *RC, unsigned Idx,
-                                    const GCNSubtarget *STM,
-                                    const SIRegisterInfo *TRI) {
-  if (!STM->needsAlignedVGPRs() || !TRI->isVGPRClass(RC) ||
-      !TRI->isProperlyAlignedRC(*RC) || AMDGPU::getRegBitWidth(*RC) == 32)
-    return true;
-  return !(TRI->getChannelFromSubReg(Idx) & 0x1);
-}
-
 // Copy the merged load result from DestReg to the original dest regs of CI and
 // Paired.
 void SILoadStoreOptimizer::copyToDestRegs(
@@ -1419,23 +1410,34 @@ SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
   const auto *Src1 = TII->getNamedOperand(*Paired.I, OpName);
 
   // Make sure the generated REG_SEQUENCE has sensibly aligned registers.
-  if (isCompatibleAlignSubReg(Paired.DataRC, SubRegIdx1, STM, TRI)) {
-    BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-        .add(*Src0)
-        .addImm(SubRegIdx0)
-        .add(*Src1)
-        .addImm(SubRegIdx1);
-  } else {
-    auto BMI =
-        BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-            .add(*Src0)
-            .addImm(SubRegIdx0);
-    for (unsigned i = 0; i < Paired.Width; ++i) {
-      unsigned PreviousChannel = TRI->getChannelFromSubReg(SubRegIdx0);
-      BMI.addReg(Src1->getReg(), /*flags=*/0, TRI->getSubRegFromChannel(i))
-          .addImm(TRI->getSubRegFromChannel(PreviousChannel + i + 1));
-    }
-  }
+  const TargetRegisterClass *CompatRC0 =
+      TRI->getSubRegisterClass(SuperRC, SubRegIdx0);
+  const TargetRegisterClass *CompatRC1 =
+      TRI->getSubRegisterClass(SuperRC, SubRegIdx1);
+  assert(CompatRC0 && CompatRC1 &&
+         "Cannot find compatible TargetRegisterClass");
+
+  Register Src0Reg = CompatRC0 == CI.DataRC
+                         ? Src0->getReg()
+                         : MRI->createVirtualRegister(CompatRC0);
+  Register Src1Reg = CompatRC1 == Paired.DataRC
+                         ? Src1->getReg()
+                         : MRI->createVirtualRegister(CompatRC1);
+
+  if (CompatRC0 != CI.DataRC)
+    BuildMI(*MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Src0Reg)
+        .add(*Src0);
+
+  if (CompatRC1 != Paired.DataRC)
+    BuildMI(*MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Src1Reg)
+        .add(*Src1);
+
+  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+      .addReg(Src0Reg)
+      .addImm(SubRegIdx0)
+      .addReg(Src1Reg)
+      .addImm(SubRegIdx1);
+
   return SrcReg;
 }
 
