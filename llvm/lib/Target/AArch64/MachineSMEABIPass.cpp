@@ -22,7 +22,7 @@
 // To handle ZA state across control flow, we make use of edge bundling. This
 // assigns each block an "incoming" and "outgoing" edge bundle (representing
 // incoming and outgoing edges). Initially, these are unique to each block;
-// then, in the process of forming bundles, the outgoing block of a block is
+// then, in the process of forming bundles, the outgoing bundle of a block is
 // joined with the incoming bundle of all successors. The result is that each
 // bundle can be assigned a single ZA state, which ensures the state required by
 // all a blocks' successors is the same, and that each basic block will always

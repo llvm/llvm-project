@@ -440,10 +440,6 @@ protected:
     }
   }
 
-  static unsigned getHashValue(const KeyT &Val) {
-    return KeyInfoT::getHashValue(Val);
-  }
-
   template <typename LookupKeyT>
   static unsigned getHashValue(const LookupKeyT &Val) {
     return KeyInfoT::getHashValue(Val);

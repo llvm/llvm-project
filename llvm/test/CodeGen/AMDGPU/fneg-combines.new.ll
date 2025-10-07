@@ -4441,22 +4441,37 @@ define float @v_fneg_fabs_select_infloop_regression(float %arg, i1 %arg1) {
   ret float %i3
 }
 
-define float @v_fmul_0_fsub_0_infloop_regression(float %arg) {
-; GCN-SAFE-LABEL: v_fmul_0_fsub_0_infloop_regression:
+define float @v_fmul_0_fsub_0_safe_infloop_regression(float %arg) {
+; GCN-SAFE-LABEL: v_fmul_0_fsub_0_safe_infloop_regression:
 ; GCN-SAFE:       ; %bb.0: ; %bb
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SAFE-NEXT:    v_mul_f32_e32 v0, 0, v0
 ; GCN-SAFE-NEXT:    v_sub_f32_e32 v0, 0, v0
 ; GCN-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GCN-NSZ-LABEL: v_fmul_0_fsub_0_infloop_regression:
-; GCN-NSZ:       ; %bb.0: ; %bb
-; GCN-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
-; GCN-NSZ-NEXT:    s_setpc_b64 s[30:31]
+; SI-NSZ-LABEL: v_fmul_0_fsub_0_safe_infloop_regression:
+; SI-NSZ:       ; %bb.0: ; %bb
+; SI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NSZ-NEXT:    s_brev_b32 s4, 1
+; SI-NSZ-NEXT:    v_fma_f32 v0, v0, s4, 0
+; SI-NSZ-NEXT:    s_setpc_b64 s[30:31]
+; FIXME: utils/update_llc_test_checks.py will generate redundant VI
+; labels, remove them, they will cause test failure.
 bb:
   %i = fmul float %arg, 0.0
   %i1 = fsub float 0.0, %i
+  ret float %i1
+}
+
+define float @v_fmul_0_fsub_0_nsz_infloop_regression(float %arg) {
+; GCN-LABEL: v_fmul_0_fsub_0_nsz_infloop_regression:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %i = fmul float %arg, 0.0
+  %i1 = fsub nsz float 0.0, %i
   ret float %i1
 }
 

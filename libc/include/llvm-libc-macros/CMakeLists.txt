@@ -153,6 +153,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  netinet_in_macros
+  HDR
+    netinet-in-macros.h
+)
+
+add_macro_header(
   offsetof_macro
   HDR
     offsetof-macro.h

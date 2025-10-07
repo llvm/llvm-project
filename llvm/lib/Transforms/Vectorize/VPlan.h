@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
@@ -2977,7 +2978,8 @@ public:
 /// the expression is elevated to connect the non-expression recipe with the
 /// VPExpressionRecipe itself.
 class VPExpressionRecipe : public VPSingleDefRecipe {
-  /// Recipes included in this VPExpressionRecipe.
+  /// Recipes included in this VPExpressionRecipe. This could contain
+  /// duplicates.
   SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
 
   /// Temporary VPValues used for external operands of the expression, i.e.
@@ -2997,6 +2999,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// vector operands, performing a reduction.add on the result, and adding
     /// the scalar result to a chain.
     MulAccReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// extended vector operands, negating the multiplication, performing a
+    /// reduction.add on the result, and adding the scalar result to a chain.
+    ExtNegatedMulAccReduction,
   };
 
   /// Type of the expression.
@@ -3020,10 +3026,26 @@ public:
                      VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
+  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                     VPWidenRecipe *Mul, VPWidenRecipe *Sub,
+                     VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
+                           {Ext0, Ext1, Mul, Sub, Red}) {
+    assert(Mul->getOpcode() == Instruction::Mul && "Expected a mul");
+    assert(Red->getRecurrenceKind() == RecurKind::Add &&
+           "Expected an add reduction");
+    assert(getNumOperands() >= 3 && "Expected at least three operands");
+    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    assert(SubConst && SubConst->getValue() == 0 &&
+           Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
+  }
 
   ~VPExpressionRecipe() override {
-    for (auto *R : reverse(ExpressionRecipes))
-      delete R;
+    SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
+    for (auto *R : reverse(ExpressionRecipes)) {
+      if (ExpressionRecipesSeen.insert(R).second)
+        delete R;
+    }
     for (VPValue *T : LiveInPlaceholders)
       delete T;
   }

@@ -2383,15 +2383,38 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let summary = "loop construct";
 
   let description = [{
-    The "acc.loop" operation represents the OpenACC loop construct. The lower
-    and upper bounds specify a half-open range: the range includes the lower
-    bound but does not include the upper bound. If the `inclusive` attribute is
-    set then the upper bound is included.
+    The `acc.loop` operation represents the OpenACC loop construct and when
+    bounds are included, the associated source language loop iterators. The
+    lower and upper bounds specify a half-open range: the range includes the
+    lower bound but does not include the upper bound. If the `inclusive`
+    attribute is set then the upper bound is included.
+
+    In cases where the OpenACC loop directive needs to capture multiple
+    source language loops, such as in the case of `collapse` or `tile`,
+    the multiple induction arguments are used to capture each case. Having
+    such a representation makes sure no intermediate transformation such
+    as Loop Invariant Code Motion breaks the property requested by the
+    clause on the loop constructs.
+
+    Each `acc.loop` holds private and reduction operands which are the
+    ssa values from the corresponding `acc.private` or `acc.reduction`
+    operations. Additionally, firstprivate operands are supported to
+    represent cases where privatization is needed with initialization
+    from an original value. While the OpenACC specification does not
+    explicitly support firstprivate on loop constructs, this extension
+    enables representing privatization scenarios that arise from an
+    optimization and codegen pipeline operating on acc dialect.
+
+    The operation supports capturing information that it comes combined
+    constructs (e.g., `parallel loop`, `kernels loop`, `serial loop`)
+    through the `combined` attribute despite requiring the `acc.loop`
+    to be decomposed from the compute operation representing compute
+    construct.
 
     Example:
 
     ```mlir
-    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) = 
+    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) =
         (%c0, %c0, %c0 : index, index, index) to 
         (%c10, %c10, %c10 : index, index, index) step 
         (%c1, %c1, %c1 : index, index, index) {
@@ -2400,10 +2423,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     } attributes { collapse = [3] }
     ```
 
-    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
-    `tile` operands are supported with `device_type` information. They should
-    only be accessed by the extra provided getters. If modified, the
-    corresponding `device_type` attributes must be modified as well.
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto`,
+    `cache`, and `tile` operands are supported with `device_type`
+    information. These clauses should only be accessed through the provided
+    device-type-aware getter methods. When modifying these operands, the
+    corresponding `device_type` attributes must be updated to maintain
+    consistency between operands and their target device types.
   }];
 
   let arguments = (ins
@@ -2433,6 +2458,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
@@ -2589,6 +2616,10 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// Adds a private clause variable to this operation, including its recipe.
     void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
                           mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
     /// Adds a reduction clause variable to this operation, including its
     /// recipe.
     void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
@@ -2609,6 +2640,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
       | `private` `(` custom<SymOperandList>(
             $privateOperands, type($privateOperands), $privatizationRecipes) `)`
+      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
+            type($firstprivateOperands), $firstprivatizationRecipes) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
@@ -2665,6 +2698,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
           /*cacheOperands=*/{},
           /*privateOperands=*/{},
           /*privatizationRecipes=*/nullptr,
+          /*firstprivateOperands=*/{},
+          /*firstprivatizationRecipes=*/nullptr,
           /*reductionOperands=*/{},
           /*reductionRecipes=*/nullptr,
           /*combined=*/nullptr);
