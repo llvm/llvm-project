@@ -14,6 +14,10 @@ using namespace llvm;
 
 extern cl::opt<bool> AnnotateStaticDataSectionPrefix;
 
+bool llvm::IsReservedGlobalVariable(const GlobalVariable &GV) {
+  return GV.getName().starts_with("llvm.");
+}
+
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
   if (!Count) {
@@ -87,7 +91,8 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     // Module flag `HasDataAccessProf` is 1 -> empty section prefix means
     // unknown hotness except for string literals.
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
-        GV && !GV->getName().starts_with(".str")) {
+        GV && !IsReservedGlobalVariable(*GV) &&
+        !GV->getName().starts_with(".str")) {
       auto HotnessFromDAP = getSectionHotnessUsingDAP(GV->getSectionPrefix());
 
       if (!Count) {

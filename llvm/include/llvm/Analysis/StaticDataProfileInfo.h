@@ -10,6 +10,8 @@
 
 namespace llvm {
 
+bool IsReservedGlobalVariable(const GlobalVariable &GV);
+
 /// A class that holds the constants that represent static data and their
 /// profile information and provides methods to operate on them.
 class StaticDataProfileInfo {
