@@ -28,29 +28,6 @@
 #           | 5 |
 #           +---+
 
---- |
-  define void @small_num_sgprs_as_spill() "amdgpu-num-sgpr"="85" {
-    ret void
-  }
-  define void @small_num_vgprs_as_spill() "amdgpu-num-vgpr"="14" {
-    ret void
-  }
-  define void @dont_remat_waves_per_eu() "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-waves-per-eu"="7,7" {
-    ret void
-  }
-  define void @dont_remat_at_max_occ() "amdgpu-waves-per-eu"="8,8" {
-    ret void
-  }
-  define void @reduce_arch_and_acc_vgrp_spill() "amdgpu-waves-per-eu"="8,8" {
-    ret void
-  }
-  define void @reduce_spill_archvgpr_above_addressable_limit() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
-    ret void
-  }
-  define void @reduce_spill_agpr_above_addressable_limit() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
-    ret void
-  }
----
 # %32's defining and using region frequencies are identical therefore it is the
 # best register to rematerialize.
 name:            favor_same_frequency
