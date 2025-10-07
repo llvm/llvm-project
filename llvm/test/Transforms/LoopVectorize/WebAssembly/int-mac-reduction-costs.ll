@@ -6,9 +6,9 @@ target triple = "wasm32"
 define hidden i32 @i32_mac_s8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: 'i32_mac_s8'
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i8, ptr %arrayidx, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = sext i8 %0 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = sext i8 %0 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i8, ptr %arrayidx1, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = sext i8 %1 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv2 = sext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i32 %conv2, %conv
 
 ; CHECK: LV: Found an estimated cost of 3 for VF 2 For instruction:   %0 = load i8, ptr %arrayidx, align 1
@@ -50,9 +50,9 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden i32 @i32_mac_s16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: 'i32_mac_s16'
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = sext i16 %0 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = sext i16 %0 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = sext i16 %1 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv2 = sext i16 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i32 %conv2, %conv
 
 ; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
@@ -94,9 +94,9 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden i64 @i64_mac_s16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: 'i64_mac_s16'
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = sext i16 %0 to i64
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = sext i16 %0 to i64
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = sext i16 %1 to i64
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv2 = sext i16 %1 to i64
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i64 %conv2, %conv
 
 ; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
@@ -167,9 +167,9 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden i32 @i32_mac_u8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: 'i32_mac_u8'
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i8, ptr %arrayidx, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i8, ptr %arrayidx1, align 1
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = zext i8 %1 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv2 = zext i8 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
 
 ; CHECK: LV: Found an estimated cost of 3 for VF 2 For instruction:   %0 = load i8, ptr %arrayidx, align 1
@@ -211,9 +211,9 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden i32 @i32_mac_u16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: 'i32_mac_u16'
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i16 %0 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = zext i16 %0 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = zext i16 %1 to i32
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv2 = zext i16 %1 to i32
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nuw nsw i32 %conv2, %conv
 
 ; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2
@@ -255,9 +255,9 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden i64 @i64_mac_u16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: 'i64_mac_u16'
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i16, ptr %arrayidx, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i16 %0 to i64
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv = zext i16 %0 to i64
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i16, ptr %arrayidx1, align 2
-; CHECK: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv2 = zext i16 %1 to i64
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %conv2 = zext i16 %1 to i64
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nuw nsw i64 %conv2, %conv
 
 ; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %0 = load i16, ptr %arrayidx, align 2

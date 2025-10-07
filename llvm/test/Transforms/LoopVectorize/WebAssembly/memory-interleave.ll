@@ -629,7 +629,7 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 
 ; CHECK-LABEL: four_bytes_same_op
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4 
+; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 20.
 ; CHECK: LV: Vector loop of width 2 costs: 40.
@@ -690,7 +690,7 @@ define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %
 
 ; CHECK-LABEL: four_bytes_split_op
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4 
+; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 20.
 ; CHECK: LV: Vector loop of width 2 costs: 45.
@@ -755,7 +755,7 @@ define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly 
 
 ; CHECK-LABEL: four_bytes_interleave_op
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4 
+; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 20.
 ; CHECK: LV: Vector loop of width 2 costs: 40
@@ -1055,7 +1055,7 @@ define hidden void @eight_bytes_interleave_op(ptr noalias nocapture noundef writ
 }
 
 ; CHECK-LABEL: four_bytes_into_four_ints_same_op
-; CHECK: LV: Scalar loop costs: 28.
+; CHECK: LV: Scalar loop costs: 36.
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 14 for VF 2 For instruction: %17 = load i32
 ; CHECK: LV: Found an estimated cost of 14 for VF 2 For instruction: store i32
@@ -1127,7 +1127,7 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
 ; CHECK: Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 24 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: LV: Scalar loop costs: 21.
+; CHECK: LV: Scalar loop costs: 27.
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction: %11 = zext i8
 ; CHECK: LV: Found an estimated cost of 14 for VF 2 For instruction: store i32
