@@ -280,6 +280,11 @@ public:
     if (T->getDepth() >= TemplateArgs.getNumLevels())
       return true;
 
+    // There might not be a corresponding template argument before substituting
+    // into the parameter mapping, e.g. a sizeof... expression.
+    if (!TemplateArgs.hasTemplateArgument(T->getDepth(), T->getIndex()))
+      return true;
+
     TemplateArgument Arg = TemplateArgs(T->getDepth(), T->getIndex());
 
     if (T->isParameterPack() && SemaRef.ArgPackSubstIndex) {
