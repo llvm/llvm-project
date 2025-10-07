@@ -89,7 +89,7 @@ def testCustomPass():
 
         # test signal_pass_failure
         def custom_pass_that_fails(op, pass_):
-            print("hello from pass that fails")
+            print("hello from pass that fails", file=sys.stderr)
             pass_.signal_pass_failure()
 
         pm = PassManager("any")
@@ -99,4 +99,44 @@ def testCustomPass():
         try:
             pm.run(module)
         except Exception as e:
-            print(f"caught exception: {e}")
+            print(f"caught exception: {e}", file=sys.stderr)
+
+
+# CHECK-LABEL: TEST: testRegisterPass
+@run
+def testRegisterPass():
+    with Context():
+        pdl_module = make_pdl_module()
+        frozen = PDLModule(pdl_module).freeze()
+
+        module = ModuleOp.parse(
+            r"""
+            module {
+              func.func @add(%a: i64, %b: i64) -> i64 {
+                %sum = arith.addi %a, %b : i64
+                return %sum : i64
+              }
+            }
+        """
+        )
+
+        def custom_pass_3(op, pass_):
+            print("hello from pass 3!!!", file=sys.stderr)
+
+        def custom_pass_4(op, pass_):
+            apply_patterns_and_fold_greedily(op, frozen)
+
+        register_pass("custom-pass-one", custom_pass_3)
+        register_pass("custom-pass-two", custom_pass_4)
+
+        pm = PassManager("any")
+        pm.enable_ir_printing()
+
+        # CHECK: hello from pass 3!!!
+        # CHECK-LABEL: Dump After custom_pass_3
+        # CHECK-LABEL: Dump After custom_pass_4
+        # CHECK: arith.muli
+        # CHECK-LABEL: Dump After ArithToLLVMConversionPass
+        # CHECK: llvm.mul
+        pm.add("custom-pass-one, custom-pass-two, convert-arith-to-llvm")
+        pm.run(module)
