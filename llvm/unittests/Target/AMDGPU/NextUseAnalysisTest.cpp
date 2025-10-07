@@ -529,29 +529,29 @@ body: |
   bb.0:
     ; Create large register with all 32 sub-registers
     %0:vreg_1024 = IMPLICIT_DEF
-    
+
     ; Query point: %0 is now live and has upcoming sub-register uses
     %1:vgpr_32 = COPY $vgpr0      ; Query getSortedSubregUses here
-    
+
     ; Multiple sub-register accesses in reverse order (sub31 -> sub0)
     ; This creates different next-use distances for each sub-register
     %10:vgpr_32 = COPY %0.sub31   ; Distance = 1 (closest)
-    %11:vgpr_32 = COPY %0.sub30   ; Distance = 2  
+    %11:vgpr_32 = COPY %0.sub30   ; Distance = 2
     %12:vgpr_32 = COPY %0.sub29   ; Distance = 3
     %13:vgpr_32 = COPY %0.sub28   ; Distance = 4
-    
+
     ; Create REG_SEQUENCE with some of the copied values
     %20:vreg_128 = REG_SEQUENCE %13, %subreg.sub0, %12, %subreg.sub1, %11, %subreg.sub2, %10, %subreg.sub3
-    
+
     ; Continue with more sub-register accesses
     %14:vgpr_32 = COPY %0.sub3    ; Distance = 6
     %15:vgpr_32 = COPY %0.sub2    ; Distance = 7
     %16:vgpr_32 = COPY %0.sub1    ; Distance = 8
     %17:vgpr_32 = COPY %0.sub0    ; Distance = 9 (furthest)
-    
+
     ; Use the copied sub-registers
     %21:vreg_128 = REG_SEQUENCE %17, %subreg.sub0, %16, %subreg.sub1, %15, %subreg.sub2, %14, %subreg.sub3
-    
+
     ; Store to make them live
     GLOBAL_STORE_DWORDX4 undef %30:vreg_64, %20, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     GLOBAL_STORE_DWORDX4 undef %31:vreg_64, %21, 0, 0, implicit $exec :: (store (s128), addrspace 1)

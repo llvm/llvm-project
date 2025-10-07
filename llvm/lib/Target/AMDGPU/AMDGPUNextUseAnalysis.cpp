@@ -24,12 +24,6 @@ using namespace llvm;
 
 // namespace {
 
-// StoredVal is signed, relative to the block entry of the map it lives in.
-static inline int64_t materialize(int64_t storedVal, unsigned snapshotOffset) {
-  int64_t v = storedVal + (int64_t)snapshotOffset;
-  return v <= 0 ? 0 : v; // (clamp to 0; Infinity handled at call sites)
-}
-
 // Three-tier ranking system for spiller decisions
 unsigned NextUseResult::materializeForRank(int64_t stored, unsigned snapshotOffset) const {
   int64_t Mat64 = materialize(stored, snapshotOffset);
@@ -115,13 +109,18 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           // Clear out the Loop-Exiting weights.
           for (auto &P : SuccDist) {
             auto &Dists = P.second;
+            // Collect items that need to be updated to avoid iterator invalidation
+            SmallVector<std::pair<LaneBitmask, int64_t>, 4> ToUpdate;
             for (auto R : Dists) {
               if (R.second >= LoopTag) {
-                std::pair<LaneBitmask, int64_t> New = R;
-                New.second -= LoopTag;
-                Dists.erase(R);
-                Dists.insert(New);
+                ToUpdate.push_back(R);
               }
+            }
+            // Now apply the updates
+            for (auto R : ToUpdate) {
+              Dists.erase(R);
+              R.second -= LoopTag;
+              Dists.insert(R);
             }
           }
         }

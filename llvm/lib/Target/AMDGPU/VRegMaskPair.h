@@ -188,7 +188,7 @@ public:
 
   bool contains(const VRegMaskPair &VMP) const {
     auto It = SetStorage.find(VMP.VReg);
-    return It != SetStorage.end() && It->second.contains(VMP.LaneMask);
+    return It != SetStorage.end() && It->second.find(VMP.LaneMask) != It->second.end();
   }
 
   void clear() {
