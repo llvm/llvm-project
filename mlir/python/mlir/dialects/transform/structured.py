@@ -191,9 +191,7 @@ class FuseOp(FuseOp):
             static_tile_interchange,
             _,
         ) = _dispatch_dynamic_index_list(tile_interchange)
-        num_loops = (
-            1 if use_forall else sum(1 for v in static_tile_sizes if v != 0)
-        )
+        num_loops = 1 if use_forall else sum(1 for v in static_tile_sizes if v != 0)
 
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
