@@ -266,6 +266,8 @@ private:
       SymbolRef sym, parser::CharBlock source, std::string_view name);
   void CheckAtomicVariable(
       const evaluate::Expr<evaluate::SomeType> &, parser::CharBlock);
+  void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
+      parser::CharBlock, const evaluate::Assignment &);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
