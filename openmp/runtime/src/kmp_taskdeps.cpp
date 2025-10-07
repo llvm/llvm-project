@@ -329,12 +329,6 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
           if (!(__kmp_tdg_is_recording(tdg_status)) && task)
 #endif
             __kmp_track_dependence(gtid, dep, node, task);
-#if OMPX_TASKGRAPH
-          else if (KMP_TASK_TO_TASKDATA(dep->dn.task)->td_flags.onced) {
-            KMP_RELEASE_DEPNODE(gtid, dep);
-            continue;
-          }
-#endif
           dep->dn.successors = __kmp_add_node(thread, dep->dn.successors, node);
           KA_TRACE(40, ("__kmp_process_deps: T#%d adding dependence from %p to "
                         "%p\n",
