@@ -544,11 +544,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, EABI EABIVersion, "
-        "StringRef ABIName) {\n"
-        "  struct LibcallImplPair {\n"
-        "    RTLIB::Libcall Func;\n"
-        "    RTLIB::LibcallImpl Impl;\n"
-        "  };\n";
+        "StringRef ABIName) {\n";
+
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
 
@@ -703,7 +700,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       Funcs.erase(UniqueI, Funcs.end());
 
       OS << indent(IndentDepth + 2)
-         << "static const LibcallImplPair LibraryCalls";
+         << "static const RTLIB::LibcallImpl LibraryCalls";
       SubsetPredicate.emitTableVariableNameSuffix(OS);
       if (FuncsWithCC.CallingConv)
         OS << '_' << FuncsWithCC.CallingConv->getName();
@@ -711,18 +708,18 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
         OS << indent(IndentDepth + 6);
-        LibCallImpl->emitTableEntry(OS);
+        LibCallImpl->emitEnumEntry(OS);
+        OS << ", // " << LibCallImpl->getLibcallFuncName() << '\n';
       }
 
       OS << indent(IndentDepth + 2) << "};\n\n"
          << indent(IndentDepth + 2)
-         << "for (const auto [Func, Impl] : LibraryCalls";
+         << "for (const RTLIB::LibcallImpl Impl : LibraryCalls";
       SubsetPredicate.emitTableVariableNameSuffix(OS);
       if (FuncsWithCC.CallingConv)
         OS << '_' << FuncsWithCC.CallingConv->getName();
 
-      OS << ") {\n"
-         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+      OS << ") {\n" << indent(IndentDepth + 4) << "setAvailable(Impl);\n";
 
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
@@ -759,7 +756,7 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   emitGetInitRuntimeLibcallNames(OS);
 
   {
-    IfDefEmitter IfDef(OS, "GET_SET_TARGET_RUNTIME_LIBCALL_SETS");
+    IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO");
     emitSystemRuntimeLibrarySetCalls(OS);
   }
 }
