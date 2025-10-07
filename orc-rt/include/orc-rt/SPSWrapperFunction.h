@@ -63,6 +63,21 @@ private:
     }
   };
 
+  template <typename T> struct Serializable<Expected<T *>> {
+    typedef SPSSerializableExpected<ExecutorAddr> serializable_type;
+    static SPSSerializableExpected<ExecutorAddr> to(Expected<T *> Val) {
+      return SPSSerializableExpected<ExecutorAddr>(
+          Val ? Expected<ExecutorAddr>(ExecutorAddr::fromPtr(*Val))
+              : Expected<ExecutorAddr>(Val.takeError()));
+    }
+    static Expected<T *> from(SPSSerializableExpected<ExecutorAddr> Val) {
+      if (auto Tmp = Val.toExpected())
+        return Tmp->toPtr<T *>();
+      else
+        return Tmp.takeError();
+    }
+  };
+
   template <typename... Ts> struct DeserializableTuple;
 
   template <typename... Ts> struct DeserializableTuple<std::tuple<Ts...>> {
