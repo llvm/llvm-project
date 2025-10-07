@@ -254,6 +254,7 @@ class TypeSourceInfo;
     /// Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
     NonEquivalentDeclSet NonEquivalentDecls;
+    llvm::DenseSet<const Decl *> DeclTypeCycles;
 
     using FoundDeclsTy = SmallVector<NamedDecl *, 2>;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
