@@ -750,17 +750,17 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
       }
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
-        const auto toString = [](CallEventRef<> Call) -> std::string {
+        const auto toString = [](const CallEvent &Call) -> std::string {
           std::string Buf;
           llvm::raw_string_ostream OS(Buf);
-          Call->dump(OS);
+          Call.dump(OS);
           return Buf;
         };
         std::string AssertionMessage = llvm::formatv(
             "The '{0}' call has been already evaluated by the {1} checker, "
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
-            toString(UpdatedCall), evaluatorChecker,
+            toString(Call), evaluatorChecker,
             EvalCallChecker.Checker->getDebugTag());
         llvm_unreachable(AssertionMessage.c_str());
       }
