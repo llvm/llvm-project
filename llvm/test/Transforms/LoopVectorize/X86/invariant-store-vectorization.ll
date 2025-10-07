@@ -409,16 +409,6 @@ define void @test_store_of_final_reduction_value(i64 %x, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    store i64 [[TMP1]], ptr [[DST]], align 8
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV4:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED_NEXT]] = mul i64 [[RED]], [[X]]
-; CHECK-NEXT:    store i64 [[RED_NEXT]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV4]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV4]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

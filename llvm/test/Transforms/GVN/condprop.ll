@@ -321,6 +321,66 @@ different:
   ret i1 %cmp3
 }
 
+define i1 @test6_phi1(i1 %c, i32 %x, i32 %y) {
+; CHECK-LABEL: @test6_phi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[BB1]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp.not = icmp ne i32 %x, %y
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  %cmp = icmp eq i32 %x, %y
+  br i1 %cmp, label %bb2, label %bb3
+
+bb2:
+  %phi = phi i1 [ %cmp.not, %bb1 ], [ true, %entry ]
+  ret i1 %phi
+
+bb3:
+  ret i1 false
+}
+
+define i1 @test6_phi2(i1 %c, i32 %x, i32 %y) {
+; CHECK-LABEL: @test6_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP_NOT]], [[BB1]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  %cmp.not = icmp ne i32 %x, %y
+  %cmp = icmp eq i32 %x, %y
+  br i1 %cmp, label %bb2, label %bb3
+
+bb2:
+  %phi = phi i1 [ %cmp.not, %bb1 ], [ true, %entry ]
+  ret i1 %phi
+
+bb3:
+  ret i1 false
+}
+
 define i1 @test7(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/powf.h"
-#include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -15,10 +14,13 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
+#include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "src/__support/math/exp10f.h" // Speedup for powf(10, y) = exp10f(y)
+#include "src/__support/math/exp_constants.h"
 
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
@@ -28,6 +30,8 @@ using fputil::DoubleDouble;
 using fputil::TripleDouble;
 
 namespace {
+
+using namespace common_constants_internal;
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 alignas(16) constexpr DoubleDouble LOG2_R_DD[128] = {

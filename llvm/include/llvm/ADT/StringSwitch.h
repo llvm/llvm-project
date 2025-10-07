@@ -14,6 +14,7 @@
 #define LLVM_ADT_STRINGSWITCH_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstring>
 #include <optional>
@@ -180,10 +181,15 @@ public:
     return Value;
   }
 
-  [[nodiscard]] operator R() {
-    assert(Result && "Fell off the end of a string-switch");
-    return std::move(*Result);
+  /// Declare default as unreachable, making sure that all cases were handled.
+  [[nodiscard]] R DefaultUnreachable(
+      const char *Message = "Fell off the end of a string-switch") {
+    if (Result)
+      return std::move(*Result);
+    llvm_unreachable(Message);
   }
+
+  [[nodiscard]] operator R() { return DefaultUnreachable(); }
 
 private:
   // Returns true when `Str` matches the `S` argument, and stores the result.

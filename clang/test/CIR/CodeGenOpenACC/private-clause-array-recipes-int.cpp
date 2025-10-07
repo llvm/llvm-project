@@ -7,7 +7,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK: acc.private.recipe @privatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
   ;
@@ -26,7 +25,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_i : !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!s32i x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
   ;
@@ -47,7 +45,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT:acc.private.recipe @privatization__Bcnt3__ZTSA5_A5_A5_i : !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND3:.*]]: !acc.data_bounds_ty {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
   ;
@@ -61,7 +58,6 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_A5_i : !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!cir.array<!s32i x 5> x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
-// TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
   ;
