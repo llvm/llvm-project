@@ -25,7 +25,9 @@ def dup1 : RuntimeLibcallImpl<ANOTHER_DUP>;
 // func_a and func_b both provide SOME_FUNC.
 
 // CHECK: if (isTargetArchA()) {
-// CHECK-NEXT: setLibcallImpl(RTLIB::SOME_FUNC, RTLIB::impl_func_b); // func_b
+// CHECK-NEXT: static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:   {RTLIB::SOME_FUNC, RTLIB::impl_func_b}, // func_b
+// CHECK-NEXT: };
 
 // ERR: :[[@LINE+1]]:5: warning: conflicting implementations for libcall SOME_FUNC: func_b, func_a
 def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA,
@@ -33,8 +35,10 @@ def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA,
 >;
 
 // CHECK: if (isTargetArchB()) {
-// CHECK-NEXT: setLibcallImpl(RTLIB::OTHER_FUNC, RTLIB::impl_other_func); // other_func
-// CHECK-NEXT: setLibcallImpl(RTLIB::SOME_FUNC, RTLIB::impl_func_a); // func_a
+// CHECK-NEXT: static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:   {RTLIB::OTHER_FUNC, RTLIB::impl_other_func}, // other_func
+// CHECK-NEXT:  {RTLIB::SOME_FUNC, RTLIB::impl_func_a}, // func_a
+// CHECK-NEXT: };
 
 // ERR: :[[@LINE+1]]:5: warning: conflicting implementations for libcall SOME_FUNC: func_a, func_b
 def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB,
@@ -42,9 +46,11 @@ def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB,
 >;
 
 // CHECK: if (isTargetArchC()) {
-// CHECK-NEXT: setLibcallImpl(RTLIB::ANOTHER_DUP, RTLIB::impl_dup1); // dup1
-// CHECK-NEXT: setLibcallImpl(RTLIB::OTHER_FUNC, RTLIB::impl_other_func); // other_func
-// CHECK-NEXT: setLibcallImpl(RTLIB::SOME_FUNC, RTLIB::impl_func_a); // func_a
+// CHECK-NEXT: static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:   {RTLIB::ANOTHER_DUP, RTLIB::impl_dup1}, // dup1
+// CHECK-NEXT:   {RTLIB::OTHER_FUNC, RTLIB::impl_other_func}, // other_func
+// CHECK-NEXT:   {RTLIB::SOME_FUNC, RTLIB::impl_func_a}, // func_a
+// CHECK-NEXT: };
 
 // ERR: :[[@LINE+3]]:5: warning: conflicting implementations for libcall ANOTHER_DUP: dup1, dup0
 // ERR: :[[@LINE+2]]:5: warning: conflicting implementations for libcall SOME_FUNC: func_a, func_b
