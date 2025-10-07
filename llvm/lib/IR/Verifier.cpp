@@ -539,10 +539,11 @@ private:
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
   void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
-  void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
   void visitAccessGroupMetadata(const MDNode *MD);
+  void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
+  void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -5374,6 +5375,27 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
   }
 }
 
+void Verifier::visitCapturesMetadata(Instruction &I, const MDNode *Captures) {
+  static const char *ValidArgs[] = {"address_is_null", "address",
+                                    "read_provenance", "provenance"};
+
+  auto *SI = dyn_cast<StoreInst>(&I);
+  Check(SI, "!captures metadata can only be applied to store instructions", &I);
+  Check(SI->getValueOperand()->getType()->isPointerTy(),
+        "!captures metadata can only be applied to store with value operand of "
+        "pointer type",
+        &I);
+  Check(Captures->getNumOperands() != 0, "!captures metadata cannot be empty",
+        &I);
+
+  for (Metadata *Op : Captures->operands()) {
+    auto *Str = dyn_cast<MDString>(Op);
+    Check(Str, "!captures metadata must be a list of strings", &I);
+    Check(is_contained(ValidArgs, Str->getString()),
+          "invalid entry in !captures metadata", &I, Str);
+  }
+}
+
 void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!alloc_token should only exist on calls", &I);
   Check(MD->getNumOperands() == 1, "!alloc_token must have 1 operand", MD);
@@ -5606,6 +5628,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
+
+  if (MDNode *Captures = I.getMetadata(LLVMContext::MD_captures))
+    visitCapturesMetadata(I, Captures);
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alloc_token))
     visitAllocTokenMetadata(I, MD);

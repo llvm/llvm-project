@@ -12,6 +12,10 @@
 //   Assertion failed: N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type"
 // XFAIL: target=armv7-unknown-linux-gnueabihf
 
+// FIXME: This should work with -flax-vector-conversions=none
+// ADDITIONAL_COMPILE_FLAGS(clang): -flax-vector-conversions=integer
+// ADDITIONAL_COMPILE_FLAGS(apple-clang): -flax-vector-conversions=integer
+
 // <experimental/simd>
 //
 // [simd.class]

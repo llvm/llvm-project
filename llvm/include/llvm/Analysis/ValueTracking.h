@@ -613,6 +613,12 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+/// Returns true, if no instruction between \p Assume and \p CtxI may free
+/// memory and the function is marked as NoSync. The latter ensures the current
+/// function cannot arrange for another thread to free on its behalf.
+LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+                                 const Instruction *CtxI);
+
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
   AlwaysOverflowsLow,
