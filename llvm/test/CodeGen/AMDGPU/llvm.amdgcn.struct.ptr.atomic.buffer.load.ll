@@ -455,12 +455,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) 
 ; GFX11-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-TRUE16-NEXT:    buffer_load_b64 v[2:3], v1, s[0:3], 0 idxen offset:4 glc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
@@ -550,12 +548,10 @@ define amdgpu_kernel void @struct_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) 
 ; GFX12-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[2:3], v1, s[0:3], null idxen offset:4 th:TH_LOAD_NT
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
