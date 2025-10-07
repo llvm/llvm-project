@@ -4,7 +4,7 @@ RUN: lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 
 RUN: lldb-test symbols -find=block -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-BLOCK %s
 
 CHECK-FUNCTION: Found 1 functions:
-CHECK-FUNCTION: name = "{{.*}}", mangled = "{{_?}}main"
+CHECK-FUNCTION: name = "main"
 
 CHECK-BLOCK: Found 1 blocks:
 CHECK-BLOCK: Blocks: id = {{.*}}, range = {{.*}}

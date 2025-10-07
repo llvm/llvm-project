@@ -1258,8 +1258,9 @@ def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   HelpText<"Compression level for offload device binaries (HIP only)">;
 
 def offload_jobs_EQ : Joined<["--"], "offload-jobs=">,
-  HelpText<"Specify the number of threads to use for device offloading tasks"
-           " during compilation.">;
+  HelpText<"Specify the number of threads to use for device offloading tasks "
+           "during compilation. Can be a positive integer or the string "
+           "'jobserver' to use the make-style jobserver from the environment.">;
 
 defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   LangOpts<"OffloadViaLLVM">, DefaultFalse,
@@ -2750,6 +2751,9 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 defm reciprocal_math : BoolFOption<"reciprocal-math",
   LangOpts<"AllowRecip">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
@@ -7953,6 +7957,11 @@ def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
     HelpText<"Generate instrumented code to collect execution counts into "
              "<file> (overridden by LLVM_PROFILE_FILE env var)">,
     MarshallingInfoString<CodeGenOpts<"InstrProfileOutput">>;
+def fprofile_instrument_use_EQ : Joined<["-"], "fprofile-instrument-use=">,
+    HelpText<"Enable PGO use instrumentation">, Values<"none,clang,llvm,csllvm,sample-coldcov">,
+    NormalizedValuesScope<"llvm::driver::ProfileInstrKind">,
+    NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr", "ProfileIRSampleColdCov"]>,
+    MarshallingInfoEnum<CodeGenOpts<"ProfileUse">, "ProfileNone">;
 def fprofile_instrument_use_path_EQ :
     Joined<["-"], "fprofile-instrument-use-path=">,
     HelpText<"Specify the profile path in PGO use compilation">,
@@ -8729,8 +8738,7 @@ def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
   HelpText<"Incorporate CUDA device-side binary into host object file.">,
   MarshallingInfoString<CodeGenOpts<"CudaGpuBinaryFileName">>;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
-  HelpText<"Allow variadic functions in CUDA device code.">,
-  MarshallingInfoFlag<LangOpts<"CUDAAllowVariadicFunctions">>;
+  HelpText<"Deprecated; Allow variadic functions in CUDA device code.">;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,
   HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">,
   MarshallingInfoNegativeFlag<LangOpts<"CUDAHostDeviceConstexpr">>;

@@ -296,9 +296,8 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   }
 
   llvm::stable_sort(members);
-  // TODO: implement clipTailPadding once bitfields are implemented
-  assert(!cir::MissingFeatures::bitfields());
-  assert(!cir::MissingFeatures::recordZeroInit());
+  // TODO: Verify bitfield clipping
+  assert(!cir::MissingFeatures::checkBitfieldClipping());
 
   members.push_back(makeStorageInfo(size, getUIntNType(8)));
   determinePacked(nonVirtualBaseType);
@@ -319,9 +318,11 @@ void CIRRecordLowering::fillOutputFields() {
         fieldIdxMap[member.fieldDecl->getCanonicalDecl()] =
             fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
-      assert(!cir::MissingFeatures::bitfields());
-      if (!member.data)
+      if (!member.data) {
+        assert(member.fieldDecl &&
+               "member.data is a nullptr so member.fieldDecl should not be");
         setBitFieldInfo(member.fieldDecl, member.offset, fieldTypes.back());
+      }
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     } else if (member.kind == MemberInfo::InfoKind::VBase) {
@@ -697,12 +698,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
       (bool)lowering.zeroInitializable, (bool)lowering.zeroInitializableAsBase);
 
-  assert(!cir::MissingFeatures::recordZeroInit());
-
   rl->nonVirtualBases.swap(lowering.nonVirtualBases);
   rl->completeObjectVirtualBases.swap(lowering.virtualBases);
-
-  assert(!cir::MissingFeatures::bitfields());
 
   // Add all the field numbers.
   rl->fieldIdxMap.swap(lowering.fieldIdxMap);

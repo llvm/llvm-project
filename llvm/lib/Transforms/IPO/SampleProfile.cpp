@@ -116,6 +116,8 @@ STATISTIC(
     NumCSInlinedHitGrowthLimit,
     "Number of functions with FDO inline stopped due to growth size limit");
 
+namespace llvm {
+
 // Command line option to specify the file to read samples from. This is
 // mainly used for debugging.
 static cl::opt<std::string> SampleProfileFile(
@@ -198,7 +200,6 @@ static cl::opt<bool> DisableSampleLoaderInlining(
         "pass, and merge (or scale) profiles (as configured by "
         "--sample-profile-merge-inlinee)."));
 
-namespace llvm {
 cl::opt<bool>
     SortProfiledSCC("sort-profiled-scc-member", cl::init(true), cl::Hidden,
                     cl::desc("Sort profiled recursion by edge weights."));
