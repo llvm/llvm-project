@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
+#include <iterator>
 
 #define DEBUG_TYPE "format-token-breaker"
 
@@ -26,6 +27,218 @@ namespace clang {
 namespace format {
 
 static constexpr StringRef Blanks(" \t\v\f\r");
+static constexpr size_t BlockCommentOpenerLength = 2;
+static constexpr size_t BlockCommentCloserLength = 2;
+
+namespace {
+
+bool isWellFormedBlockCommentText(StringRef Text) {
+  return Text.size() >= BlockCommentOpenerLength + BlockCommentCloserLength &&
+         Text.starts_with("/*") && Text.ends_with("*/");
+}
+
+int countTrailingSpaces(StringRef Text) {
+  const size_t TrimmedSize = Text.rtrim(Blanks).size();
+  return static_cast<int>(Text.size() - TrimmedSize);
+}
+
+FormatStyle::CommentSpaceMode resolveCommentSpaceMode(
+    const FormatStyle &Style, const FormatToken &Tok,
+    FormatStyle::CommentSpaceMode FormatStyle::SpaceInCommentsOptions::*const
+        GeneralField,
+    FormatStyle::CommentSpaceMode FormatStyle::SpaceInCommentsOptions::*const
+        ParamOverrideField,
+    const bool ForceDocstringLeave) {
+  const FormatStyle::SpaceInCommentsOptions &Options = Style.SpaceInComments;
+  if (Tok.getBlockCommentKind() == CommentKind::Parameter) {
+    const FormatStyle::CommentSpaceMode Mode = Options.*ParamOverrideField;
+    if (Mode != FormatStyle::CommentSpaceMode::Leave)
+      return Mode;
+  }
+  if (ForceDocstringLeave &&
+      Tok.getBlockCommentKind() == CommentKind::Docstring) {
+    return FormatStyle::CommentSpaceMode::Leave;
+  }
+  return Options.*GeneralField;
+}
+
+StringRef getBlockCommentInterior(const FormatToken &Tok) {
+  const StringRef Text = Tok.TokenText;
+  if (!isWellFormedBlockCommentText(Text))
+    return {};
+  return Text.drop_front(BlockCommentOpenerLength)
+      .drop_back(BlockCommentCloserLength);
+}
+
+} // namespace
+
+FormatStyle::CommentSpaceMode getAfterOpeningSpaceMode(const FormatStyle &Style,
+                                                       const FormatToken &Tok) {
+  return resolveCommentSpaceMode(
+      Style, Tok, &FormatStyle::SpaceInCommentsOptions::AfterOpeningComment,
+      &FormatStyle::SpaceInCommentsOptions::AfterOpeningParamComment,
+      /*ForceDocstringLeave=*/true);
+}
+
+StringRef getSliceAfterOpening(const FormatToken &Tok) {
+  if (!isWellFormedBlockCommentText(Tok.TokenText))
+    return {};
+  return Tok.TokenText.drop_front(BlockCommentOpenerLength);
+}
+
+unsigned countLeadingHorizontalWhitespaceAfterOpening(const FormatToken &Tok) {
+  const StringRef Body = getSliceAfterOpening(Tok);
+  unsigned Count = 0;
+  while (Count < Body.size()) {
+    const char C = Body[Count];
+    if (C == '\n' || C == '\r')
+      break;
+    if (!isHorizontalWhitespace(static_cast<unsigned char>(C)))
+      break;
+    ++Count;
+  }
+  return Count;
+}
+
+FormatStyle::CommentSpaceMode
+getBeforeClosingSpaceMode(const FormatStyle &Style, const FormatToken &Tok) {
+  return resolveCommentSpaceMode(
+      Style, Tok, &FormatStyle::SpaceInCommentsOptions::BeforeClosingComment,
+      &FormatStyle::SpaceInCommentsOptions::BeforeClosingParamComment,
+      /*ForceDocstringLeave=*/false);
+}
+
+unsigned
+countTrailingHorizontalWhitespaceBeforeClosing(const FormatToken &Tok) {
+  const StringRef Body = getBlockCommentInterior(Tok);
+  size_t Pos = Body.size();
+  while (Pos > 0) {
+    const char C = Body[Pos - 1];
+    if (C == '\n' || C == '\r') {
+      --Pos;
+      continue;
+    }
+    break;
+  }
+
+  size_t Tail = Pos;
+  while (Tail > 0 &&
+         isHorizontalWhitespace(static_cast<unsigned char>(Body[Tail - 1]))) {
+    --Tail;
+  }
+  return Pos - Tail;
+}
+
+static unsigned countLogicalNewlines(StringRef Text) {
+  unsigned Count = 0;
+  const size_t End = Text.size();
+  for (size_t I = 0; I < End; ++I) {
+    if (Text[I] == '\r') {
+      ++Count;
+      if (I + 1 < End && Text[I + 1] == '\n')
+        ++I;
+    } else if (Text[I] == '\n') {
+      ++Count;
+    }
+  }
+  return Count;
+}
+
+void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
+                                          const FormatToken &Tok,
+                                          WhitespaceManager &Whitespaces,
+                                          bool InPPDirective) {
+  using CommentSpaceMode = FormatStyle::CommentSpaceMode;
+  if (!Tok.is(tok::comment) || !isWellFormedBlockCommentText(Tok.TokenText))
+    return;
+
+  const CommentSpaceMode Mode = getAfterOpeningSpaceMode(Style, Tok);
+  if (Mode == CommentSpaceMode::Leave)
+    return;
+
+  const StringRef Body = getSliceAfterOpening(Tok);
+  if (Body.empty())
+    return;
+
+  const StringRef Interior = getBlockCommentInterior(Tok);
+
+  const bool OnlyWhitespace =
+      Interior.find_first_not_of(" \t\r\n") == StringRef::npos;
+  const unsigned OpeningOffset = Tok.TokenText.size() - Body.size();
+  const unsigned LeadingSpaces =
+      countLeadingHorizontalWhitespaceAfterOpening(Tok);
+
+  if (Mode == CommentSpaceMode::Always && OnlyWhitespace && !Interior.empty()) {
+    const unsigned ReplaceChars = Interior.size();
+    if (Interior.contains('\n')) {
+      unsigned NewlineCount = countLogicalNewlines(Interior);
+      if (NewlineCount == 0)
+        NewlineCount = 1;
+      Whitespaces.replaceWhitespaceInToken(
+          Tok, OpeningOffset, ReplaceChars, /*PreviousPostfix=*/"",
+          /*CurrentPrefix=*/"", InPPDirective, /*Newlines=*/NewlineCount,
+          /*Spaces=*/0);
+    } else {
+      Whitespaces.replaceWhitespaceInToken(
+          Tok, OpeningOffset, ReplaceChars, /*PreviousPostfix=*/"",
+          /*CurrentPrefix=*/" ", InPPDirective, /*Newlines=*/0,
+          /*Spaces=*/0);
+    }
+    return;
+  }
+
+  if (Mode == CommentSpaceMode::Never) {
+    if (LeadingSpaces == 0)
+      return;
+    Whitespaces.replaceWhitespaceInToken(
+        Tok, OpeningOffset, LeadingSpaces, /*PreviousPostfix=*/"",
+        /*CurrentPrefix=*/"", InPPDirective, /*Newlines=*/0, /*Spaces=*/0);
+    return;
+  }
+
+  assert(Mode == CommentSpaceMode::Always && "Unexpected CommentSpaceMode");
+  if (LeadingSpaces == 1)
+    return;
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, OpeningOffset, LeadingSpaces, /*PreviousPostfix=*/"",
+      /*CurrentPrefix=*/" ", InPPDirective, /*Newlines=*/0, /*Spaces=*/0);
+}
+
+void applyBeforeClosingBlockCommentSpacing(const FormatStyle &Style,
+                                           const FormatToken &Tok,
+                                           WhitespaceManager &Whitespaces,
+                                           bool InPPDirective) {
+  using CommentSpaceMode = FormatStyle::CommentSpaceMode;
+  if (!Tok.is(tok::comment) || !isWellFormedBlockCommentText(Tok.TokenText))
+    return;
+
+  const CommentSpaceMode Mode = getBeforeClosingSpaceMode(Style, Tok);
+  if (Mode == CommentSpaceMode::Leave)
+    return;
+
+  const StringRef Text = Tok.TokenText;
+
+  const unsigned TrailingSpaces =
+      countTrailingHorizontalWhitespaceBeforeClosing(Tok);
+  const unsigned ReplaceOffset =
+      Text.size() - BlockCommentCloserLength - TrailingSpaces;
+
+  if (Mode == CommentSpaceMode::Never) {
+    if (TrailingSpaces == 0)
+      return;
+    Whitespaces.replaceWhitespaceInToken(
+        Tok, ReplaceOffset, TrailingSpaces, /*PreviousPostfix=*/"",
+        /*CurrentPrefix=*/"", InPPDirective, /*Newlines=*/0, /*Spaces=*/0);
+    return;
+  }
+
+  assert(Mode == CommentSpaceMode::Always && "Unexpected CommentSpaceMode");
+  if (TrailingSpaces == 1)
+    return;
+  Whitespaces.replaceWhitespaceInToken(
+      Tok, ReplaceOffset, TrailingSpaces, /*PreviousPostfix=*/"",
+      /*CurrentPrefix=*/" ", InPPDirective, /*Newlines=*/0, /*Spaces=*/0);
+}
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
@@ -475,7 +688,7 @@ BreakableBlockComment::BreakableBlockComment(
          "block comment section must start with a block comment");
 
   StringRef TokenText(Tok.TokenText);
-  assert(TokenText.starts_with("/*") && TokenText.ends_with("*/"));
+  assert(isWellFormedBlockCommentText(Tok.TokenText));
   TokenText.substr(2, TokenText.size() - 4)
       .split(Lines, UseCRLF ? "\r\n" : "\n");
 
@@ -775,50 +988,206 @@ void BreakableBlockComment::reflow(unsigned LineIndex,
 
 void BreakableBlockComment::adaptStartOfLine(
     unsigned LineIndex, WhitespaceManager &Whitespaces) const {
-  if (LineIndex == 0) {
-    if (DelimitersOnNewline) {
-      // Since we're breaking at index 1 below, the break position and the
-      // break length are the same.
-      // Note: this works because getCommentSplit is careful never to split at
-      // the beginning of a line.
-      size_t BreakLength = Lines[0].substr(1).find_first_not_of(Blanks);
-      if (BreakLength != StringRef::npos) {
-        insertBreak(LineIndex, 0, Split(1, BreakLength), /*ContentIndent=*/0,
-                    Whitespaces);
-      }
-    }
+  const FormatStyle::CommentSpaceMode BeforeClosingMode =
+      getBeforeClosingSpaceMode(Style, Tok);
+
+  if (isSingleLineBlockComment()) {
+    if (LineIndex == 0)
+      adaptSingleLineComment(Whitespaces, BeforeClosingMode);
     return;
   }
-  // Here no reflow with the previous line will happen.
-  // Fix the decoration of the line at LineIndex.
-  StringRef Prefix = Decoration;
-  if (Content[LineIndex].empty()) {
-    if (LineIndex + 1 == Lines.size()) {
-      if (!LastLineNeedsDecoration) {
-        // If the last line was empty, we don't need a prefix, as the */ will
-        // line up with the decoration (if it exists).
-        Prefix = "";
-      }
-    } else if (!Decoration.empty()) {
-      // For other empty lines, if we do have a decoration, adapt it to not
-      // contain a trailing whitespace.
-      Prefix = Prefix.substr(0, 1);
-    }
-  } else if (ContentColumn[LineIndex] == 1) {
-    // This line starts immediately after the decorating *.
-    Prefix = Prefix.substr(0, 1);
+
+  if (LineIndex == 0) {
+    adaptFirstLineOfMultiLineComment(Whitespaces, BeforeClosingMode);
+    return;
   }
-  // This is the offset of the end of the last line relative to the start of the
-  // token text in the token.
-  unsigned WhitespaceOffsetInToken = Content[LineIndex - 1].data() +
-                                     Content[LineIndex - 1].size() -
-                                     tokenAt(LineIndex).TokenText.data();
-  unsigned WhitespaceLength = Content[LineIndex].data() -
-                              tokenAt(LineIndex).TokenText.data() -
-                              WhitespaceOffsetInToken;
+
+  adaptIntermediateLineOfComment(LineIndex, Whitespaces, BeforeClosingMode);
+}
+
+void BreakableBlockComment::adaptSingleLineComment(
+    WhitespaceManager &Whitespaces,
+    FormatStyle::CommentSpaceMode BeforeClosingMode) const {
+  applyAfterOpeningBlockCommentSpacing(Style, Tok, Whitespaces, InPPDirective);
+  applyBeforeClosingBlockCommentSpacing(Style, Tok, Whitespaces, InPPDirective);
+
+  if (BeforeClosingMode == FormatStyle::CommentSpaceMode::Always &&
+      isWhitespaceOnlySingleLineBlockComment()) {
+    formatWhitespaceOnlySingleLineBlockComment(Whitespaces);
+  }
+}
+
+void BreakableBlockComment::adaptFirstLineOfMultiLineComment(
+    WhitespaceManager &Whitespaces,
+    FormatStyle::CommentSpaceMode BeforeClosingMode) const {
+  applyAfterOpeningBlockCommentSpacing(Style, Tok, Whitespaces, InPPDirective);
+
+  if (BeforeClosingMode == FormatStyle::CommentSpaceMode::Always) {
+    const bool TerminatorOnSeparateLine =
+        !Lines.empty() && Lines.back().ltrim(Blanks).empty();
+
+    if (!TerminatorOnSeparateLine && isWellFormedBlockComment() &&
+        Tok.NeedsSpaceBeforeClosingBlockComment &&
+        Tok.SpaceBeforeClosingBlockCommentOffset < Tok.TokenText.size()) {
+      Whitespaces.replaceWhitespaceInToken(
+          Tok, Tok.SpaceBeforeClosingBlockCommentOffset,
+          /*ReplaceChars=*/0, /*PreviousPostfix=*/"", /*CurrentPrefix=*/" ",
+          InPPDirective, /*Newlines=*/0, /*Spaces=*/0);
+    }
+  }
+
+  if (DelimitersOnNewline) {
+    // Since we're breaking at index 1 below, the break position and the break
+    // length are the same.
+    // Note: this works because getCommentSplit is careful never to split at the
+    // beginning of a line.
+    size_t LeadingWhitespaceLength =
+        Lines[0].substr(1).find_first_not_of(Blanks);
+    if (LeadingWhitespaceLength != StringRef::npos) {
+      insertBreak(/*LineIndex=*/0, /*TailOffset=*/0,
+                  Split(/*First=*/1, LeadingWhitespaceLength),
+                  /*ContentIndent=*/0, Whitespaces);
+    }
+  }
+}
+
+void BreakableBlockComment::adaptIntermediateLineOfComment(
+    unsigned LineIndex, WhitespaceManager &Whitespaces,
+    FormatStyle::CommentSpaceMode BeforeClosingMode) const {
+  assert(LineIndex > 0 && "First line should be handled separately.");
+
+  CommentLineInfo LineInfo;
+  LineInfo.IsEmpty = Content[LineIndex].empty();
+  LineInfo.IsLastLine = (LineIndex + 1 == Lines.size());
+  LineInfo.LastLineNeedsDecoration = LastLineNeedsDecoration;
+  LineInfo.StartsImmediatelyAfterDecoration = (ContentColumn[LineIndex] == 1);
+  LineInfo.Decoration = Decoration;
+
+  const StringRef Prefix = calculateLinePrefix(LineInfo);
+  const InterLineWhitespace Whitespace =
+      calculateInterLineWhitespace(LineIndex);
+  int Spaces = ContentColumn[LineIndex] - static_cast<int>(Prefix.size());
+  const bool IsTerminatorOnSeparateLine =
+      Content[LineIndex].ltrim(Blanks).empty();
+
+  if (LineInfo.IsLastLine && IsTerminatorOnSeparateLine) {
+    Spaces =
+        calculateTerminatorIndent(LineIndex, Prefix, BeforeClosingMode, Spaces);
+  }
+
+  Whitespaces.replaceWhitespaceInToken(tokenAt(LineIndex), Whitespace.Offset,
+                                       Whitespace.Length, "", Prefix,
+                                       InPPDirective, /*Newlines=*/1, Spaces);
+}
+
+StringRef
+BreakableBlockComment::calculateLinePrefix(const CommentLineInfo &Info) const {
+  if (Info.IsEmpty) {
+    if (Info.IsLastLine)
+      return Info.LastLineNeedsDecoration ? Info.Decoration : StringRef();
+    // For empty lines other than the last one, we only want the star,
+    // not the trailing space of the decoration.
+    if (!Info.Decoration.empty())
+      return Info.Decoration.substr(0, 1);
+    return {};
+  }
+
+  // If the content starts immediately after the decoration, it means the user
+  // has not put a space after the star. In that case, we should probably not
+  // add one either. We only add the star.
+  if (Info.StartsImmediatelyAfterDecoration && !Info.Decoration.empty())
+    return Info.Decoration.substr(0, 1);
+
+  return Info.Decoration;
+}
+
+BreakableBlockComment::InterLineWhitespace
+BreakableBlockComment::calculateInterLineWhitespace(unsigned LineIndex) const {
+  assert(LineIndex > 0 && "Expected a previous line to exist.");
+  const StringRef TokenText = tokenAt(LineIndex).TokenText;
+  const StringRef Previous = Content[LineIndex - 1];
+  const StringRef Current = Content[LineIndex];
+
+  const auto TokenBegin = TokenText.begin();
+  const auto TokenEnd = TokenText.end();
+  const auto PreviousEnd = Previous.end();
+  const auto CurrentBegin = Current.begin();
+
+  assert(TokenBegin <= PreviousEnd && PreviousEnd <= TokenEnd &&
+         "Previous line must be within the token text.");
+  assert(TokenBegin <= CurrentBegin && CurrentBegin <= TokenEnd &&
+         "Current line must be within the token text.");
+
+  InterLineWhitespace Result;
+  Result.Offset = static_cast<unsigned>(std::distance(TokenBegin, PreviousEnd));
+  Result.Length =
+      static_cast<unsigned>(std::distance(PreviousEnd, CurrentBegin));
+  return Result;
+}
+
+bool BreakableBlockComment::allPreviousLinesEmpty(unsigned LineIndex) const {
+  assert(LineIndex > 0 && "First line has no predecessors.");
+  return std::all_of(Content.begin(), Content.begin() + LineIndex,
+                     [](StringRef Line) { return Line.trim(Blanks).empty(); });
+}
+
+bool BreakableBlockComment::isWellFormedBlockComment() const {
+  return isWellFormedBlockCommentText(Tok.TokenText);
+}
+
+bool BreakableBlockComment::isSingleLineBlockComment() const {
+  // Treat long single-line JSDoc/JavaDoc (that request delimiter newlines)
+  // as multi-line to trigger the opening break after "/**".
+  return isWellFormedBlockComment() && Lines.size() == 1 &&
+         !DelimitersOnNewline;
+}
+
+bool BreakableBlockComment::isWhitespaceOnlySingleLineBlockComment() const {
+  if (!isSingleLineBlockComment())
+    return false;
+
+  const StringRef Body = getBlockCommentInterior(Tok);
+  return Body.trim(" \t").empty();
+}
+
+void BreakableBlockComment::formatWhitespaceOnlySingleLineBlockComment(
+    WhitespaceManager &Whitespaces) const {
+  const StringRef Body = getBlockCommentInterior(Tok);
+  const unsigned WhitespaceLength = Body.size();
   Whitespaces.replaceWhitespaceInToken(
-      tokenAt(LineIndex), WhitespaceOffsetInToken, WhitespaceLength, "", Prefix,
-      InPPDirective, /*Newlines=*/1, ContentColumn[LineIndex] - Prefix.size());
+      Tok, /*Offset=*/BlockCommentOpenerLength, WhitespaceLength,
+      /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+      /*Newlines=*/1, /*Spaces=*/0);
+}
+
+int BreakableBlockComment::calculateTerminatorIndent(
+    unsigned LineIndex, StringRef Prefix, FormatStyle::CommentSpaceMode Mode,
+    int BaseSpaces) const {
+  switch (Mode) {
+  case FormatStyle::CommentSpaceMode::Leave:
+    return BaseSpaces;
+  case FormatStyle::CommentSpaceMode::Never:
+    return 0;
+  case FormatStyle::CommentSpaceMode::Always:
+    break;
+  }
+
+  assert(Mode == FormatStyle::CommentSpaceMode::Always);
+
+  if (!Tok.NeedsSpaceBeforeClosingBlockComment) {
+    if (allPreviousLinesEmpty(LineIndex))
+      return 0;
+    return BaseSpaces;
+  }
+
+  if (BaseSpaces <= 0)
+    return allPreviousLinesEmpty(LineIndex) ? 0 : 1;
+
+  const int TrailingSpacesInPrefix = countTrailingSpaces(Prefix);
+  if (TrailingSpacesInPrefix == 0)
+    return BaseSpaces;
+
+  return std::max(0, BaseSpaces - TrailingSpacesInPrefix);
 }
 
 BreakableToken::Split

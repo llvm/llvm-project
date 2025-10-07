@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WhitespaceManager.h"
+#include "BreakableToken.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
@@ -61,6 +62,10 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                            Spaces, StartOfTokenColumn, Newlines, "", "",
                            IsAligned, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
+  if (Style.ReflowComments == FormatStyle::RCS_Never) {
+    applyAfterOpeningBlockCommentSpacing(Style, Tok, *this, InPPDirective);
+    applyBeforeClosingBlockCommentSpacing(Style, Tok, *this, InPPDirective);
+  }
 }
 
 void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,

@@ -19,10 +19,33 @@
 
 #include "Encoding.h"
 #include "WhitespaceManager.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang {
 namespace format {
+
+FormatStyle::CommentSpaceMode
+getBeforeClosingSpaceMode(const FormatStyle &Style, const FormatToken &Tok);
+
+FormatStyle::CommentSpaceMode getAfterOpeningSpaceMode(const FormatStyle &Style,
+                                                       const FormatToken &Tok);
+
+llvm::StringRef getBlockCommentBody(const FormatToken &Tok);
+
+unsigned countLeadingHorizontalWhitespaceAfterOpening(const FormatToken &Tok);
+
+unsigned countTrailingHorizontalWhitespaceBeforeClosing(const FormatToken &Tok);
+
+void applyAfterOpeningBlockCommentSpacing(const FormatStyle &Style,
+                                          const FormatToken &Tok,
+                                          WhitespaceManager &Whitespaces,
+                                          bool InPPDirective);
+
+void applyBeforeClosingBlockCommentSpacing(const FormatStyle &Style,
+                                           const FormatToken &Tok,
+                                           WhitespaceManager &Whitespaces,
+                                           bool InPPDirective);
 
 /// Checks if \p Token switches formatting, like /* clang-format off */.
 /// \p Token must be a comment.
@@ -434,6 +457,40 @@ public:
   static const llvm::StringSet<> ContentIndentingJavadocAnnotations;
 
 private:
+  struct CommentLineInfo {
+    bool IsEmpty = false;
+    bool IsLastLine = false;
+    bool LastLineNeedsDecoration = false;
+    bool StartsImmediatelyAfterDecoration = false;
+    StringRef Decoration;
+  };
+
+  struct InterLineWhitespace {
+    unsigned Offset = 0;
+    unsigned Length = 0;
+  };
+
+  void
+  adaptSingleLineComment(WhitespaceManager &Whitespaces,
+                         FormatStyle::CommentSpaceMode BeforeClosingMode) const;
+  void adaptFirstLineOfMultiLineComment(
+      WhitespaceManager &Whitespaces,
+      FormatStyle::CommentSpaceMode BeforeClosingMode) const;
+  void adaptIntermediateLineOfComment(
+      unsigned LineIndex, WhitespaceManager &Whitespaces,
+      FormatStyle::CommentSpaceMode BeforeClosingMode) const;
+  StringRef calculateLinePrefix(const CommentLineInfo &Info) const;
+  InterLineWhitespace calculateInterLineWhitespace(unsigned LineIndex) const;
+  bool allPreviousLinesEmpty(unsigned LineIndex) const;
+  bool isWellFormedBlockComment() const;
+  bool isSingleLineBlockComment() const;
+  bool isWhitespaceOnlySingleLineBlockComment() const;
+  void formatWhitespaceOnlySingleLineBlockComment(
+      WhitespaceManager &Whitespaces) const;
+  int calculateTerminatorIndent(unsigned LineIndex, StringRef Prefix,
+                                FormatStyle::CommentSpaceMode Mode,
+                                int BaseSpaces) const;
+
   // Rearranges the whitespace between Lines[LineIndex-1] and Lines[LineIndex].
   //
   // Updates Content[LineIndex-1] and Content[LineIndex] by stripping off
