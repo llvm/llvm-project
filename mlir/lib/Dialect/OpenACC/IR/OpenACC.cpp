@@ -2674,6 +2674,11 @@ LogicalResult acc::LoopOp::verify() {
           "privatizations", false)))
     return failure();
 
+  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
+          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+    return failure();
+
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
           "reductions", false)))
@@ -2737,7 +2742,8 @@ LogicalResult acc::LoopOp::verify() {
 }
 
 unsigned LoopOp::getNumDataOperands() {
-  return getReductionOperands().size() + getPrivateOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size();
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
@@ -3115,6 +3121,21 @@ void acc::LoopOp::addPrivatization(MLIRContext *context,
   recipes.push_back(
       mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
   setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
+void acc::LoopOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  getFirstprivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getFirstprivatizationRecipesAttr())
+    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::LoopOp::addReduction(MLIRContext *context, mlir::acc::ReductionOp op,

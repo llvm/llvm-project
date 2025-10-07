@@ -209,9 +209,10 @@ def CIR_CastOp : CIR_Op<"cast", [
     Example:
 
     ```mlir
-    %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+    %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
-    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    %x = cir.cast array_to_ptrdecay %0 
+       : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
     ```
   }];
 
@@ -219,8 +220,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $src `:` type($src) `)`
-    `,` type($result) attr-dict
+    $kind $src `:` type($src) `->` type($result) attr-dict
   }];
 
   // The input and output types should match the cast kind.
@@ -242,12 +242,13 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 ]> {
   let summary = "Pointer access with stride";
   let description = [{
-    Given a base pointer as first operand, provides a new pointer after applying
-    a stride (second operand).
+    The `cir.ptr_stride` operation computes a new pointer from a base pointer
+    and an integer stride, similar to a single-index `getelementptr` in LLVM IR.
+    It moves the pointer by `stride * sizeof(element_type)` bytes.
 
     ```mlir
     %3 = cir.const 0 : i32
-    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<i32>, i32) -> !cir.ptr<i32>
     ```
   }];
 
@@ -259,13 +260,12 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
-    `(` $base `:` qualified(type($base)) `,` $stride `:`
-    qualified(type($stride)) `)` `,` qualified(type($result)) attr-dict
+    $base`,` $stride `:` functional-type(operands, results) attr-dict
   }];
 
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
-    mlir::Type getElementTy() {
+    mlir::Type getElementType() {
       return getBase().getType().getPointee();
     }
   }];
@@ -1176,7 +1176,7 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
   ```mlir
     cir.scope {  // REGION #1
       %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      %3 = cir.cast int_to_bool %2 : !s32i -> !cir.bool
       cir.if %3 {
         cir.goto "label"
       }
@@ -2341,6 +2341,12 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    A compiler builtin function must be marked as `builtin` for further
+    processing when lowering from CIR.
+
+    The `coroutine` keyword is used to mark a coroutine function, which requires
+    at least one `cir.await` instruction to be used in its body.
+
     The `lambda` translates to a C++ `operator()` that implements a lambda, this
     allow callsites to make certain assumptions about the real function nature
     when writing analysis.
@@ -2362,11 +2368,22 @@ def CIR_FuncOp : CIR_Op<"func", [
     // Linkage information
     cir.func linkonce_odr @some_method(...)
     ```
+    // Builtin function
+    cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
+    // Coroutine
+    cir.func coroutine @_Z10silly_taskv() -> !CoroTask {
+      ...
+      cir.await(...)
+      ...
+    }
+    ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$builtin,
+                       UnitAttr:$coroutine,
                        UnitAttr:$lambda,
                        UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
@@ -3260,18 +3277,20 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
   let summary = "Extract the real part of a complex value";
   let description = [{
-    `cir.complex.real` operation takes an operand of `!cir.complex` type and
-    yields the real part of it.
+    `cir.complex.real` operation takes an operand of `!cir.complex`, `!cir.int`
+    or `!cir.float`. If the operand is `!cir.complex`, the real part of it will
+    be returned, otherwise the value returned unmodified. 
 
     Example:
 
     ```mlir
-    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %complex : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %scalar : !cir.float -> !cir.float
     ```
   }];
 
   let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let arguments = (ins CIR_AnyComplexOrIntOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))
@@ -3289,18 +3308,20 @@ def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
 def CIR_ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
   let summary = "Extract the imaginary part of a complex value";
   let description = [{
-    `cir.complex.imag` operation takes an operand of `!cir.complex` type and
-    yields the imaginary part of it.
+    `cir.complex.imag` operation takes an operand of `!cir.complex`, `!cir.int`
+    or `!cir.float`. If the operand is `!cir.complex`, the imag part of it will
+    be returned, otherwise a zero value will be returned.  
 
     Example:
 
     ```mlir
-    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    %imag = cir.complex.imag %complex : !cir.complex<!cir.float> -> !cir.float
+    %imag = cir.complex.imag %scalar : !cir.float -> !cir.float
     ```
   }];
 
   let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let arguments = (ins CIR_AnyComplexOrIntOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))
@@ -3994,9 +4015,9 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
 
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>)
+          -> !cir.ptr<!rec___va_list_tag>
     %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
     ```
@@ -4033,9 +4054,9 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
     cir.va_end %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
@@ -4068,9 +4089,9 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-          !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+            -> !cir.ptr<!rec___va_list_tag>
     cir.va.start %p : !cir.ptr<!rec___va_list_tag>
 
     // Fetch an `int` from the vararg list.

@@ -1099,15 +1099,17 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          b.create<cir::YieldOp>(loc, cgf.evaluateExprAsBool(e->getRHS()));
+          mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+          lexScope.forceCleanup();
+          cir::YieldOp::create(b, loc, res);
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          auto res = b.create<cir::ConstantOp>(loc, builder.getFalseAttr());
-          b.create<cir::YieldOp>(loc, res.getRes());
+          auto res = cir::ConstantOp::create(b, loc, builder.getFalseAttr());
+          cir::YieldOp::create(b, loc, res.getRes());
         });
     return maybePromoteBoolResult(resOp.getResult(), resTy);
   }
@@ -1143,15 +1145,17 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          auto res = b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
-          b.create<cir::YieldOp>(loc, res.getRes());
+          auto res = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
+          cir::YieldOp::create(b, loc, res.getRes());
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          b.create<cir::YieldOp>(loc, cgf.evaluateExprAsBool(e->getRHS()));
+          mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+          lexScope.forceCleanup();
+          cir::YieldOp::create(b, loc, res);
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
@@ -2151,22 +2155,24 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
   }
 
   if (e->getOpcode() == UO_Real) {
-    return promotionTy.isNull() ? Visit(op)
-                                : cgf.emitPromotedScalarExpr(op, promotionTy);
+    mlir::Value operand = promotionTy.isNull()
+                              ? Visit(op)
+                              : cgf.emitPromotedScalarExpr(op, promotionTy);
+    return builder.createComplexReal(loc, operand);
   }
 
   // __imag on a scalar returns zero. Emit the subexpr to ensure side
   // effects are evaluated, but not the actual value.
-  if (op->isGLValue())
-    cgf.emitLValue(op);
-  else if (!promotionTy.isNull())
-    cgf.emitPromotedScalarExpr(op, promotionTy);
-  else
-    cgf.emitScalarExpr(op);
-
-  mlir::Type valueTy =
-      cgf.convertType(promotionTy.isNull() ? e->getType() : promotionTy);
-  return builder.getNullValue(valueTy, loc);
+  mlir::Value operand;
+  if (op->isGLValue()) {
+    operand = cgf.emitLValue(op).getPointer();
+    operand = cir::LoadOp::create(builder, loc, operand);
+  } else if (!promotionTy.isNull()) {
+    operand = cgf.emitPromotedScalarExpr(op, promotionTy);
+  } else {
+    operand = cgf.emitScalarExpr(op);
+  }
+  return builder.createComplexImag(loc, operand);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

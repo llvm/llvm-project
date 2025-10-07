@@ -20,18 +20,8 @@ define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i16 [ [[VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = sub nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i16 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[LCSSA_1:%.*]] = phi i16 [ [[RES]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI1]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[LCSSA_2:%.*]] = phi i16 [ [[RES]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI1]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i16 [[LCSSA_2]]
+; CHECK-NEXT:    ret i16 [[VECTOR_RECUR_EXTRACT_FOR_PHI1]]
 ;
 entry:
   br label %loop

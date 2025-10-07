@@ -123,6 +123,9 @@ AST Dumping Potentially Breaking Changes
 
     ``__atomic_test_and_set(p, 0)``
 
+- Pretty-printing of templates with inherited (i.e. specified in a previous
+  redeclaration) default arguments has been fixed.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -159,6 +162,10 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now normalizes constraints before checking whether they are satisfied, as mandated by the standard.
+  As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
+  used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -245,6 +252,8 @@ Non-comprehensive list of changes in this release
   specifiers, it also must be used within a template context.
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
+
+- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
 New Compiler Flags
 ------------------
@@ -361,7 +370,7 @@ Bug Fixes in This Version
   first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
-- Fix crash on CTAD for alias template. (#GH131342)
+- Fix crash on CTAD for alias template. (#GH131342), (#GH131408)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
@@ -435,6 +444,9 @@ Bug Fixes to C++ Support
 - Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
 - Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
 - Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
+- Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
+- Fix for clang incorrectly rejecting the default construction of a union with
+  nontrivial member when another member has an initializer. (#GH81774)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -443,9 +455,11 @@ Bug Fixes to AST Handling
   legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
 - Fix unrecognized html tag causing undesirable comment lexing (#GH152944)
 - Fix comment lexing of special command names (#GH152943)
+- Use `extern` as a hint to continue parsing when recovering from a malformed declaration.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed missing diagnostics of ``diagnose_if`` on templates involved in initialization. (#GH160776)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -583,6 +597,7 @@ Moved checkers
 
 Sanitizers
 ----------
+- Improved documentation for legacy ``no_sanitize`` attributes.
 
 Python Binding Changes
 ----------------------

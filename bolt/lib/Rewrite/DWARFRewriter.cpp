@@ -1853,7 +1853,7 @@ void DWARFRewriter::writeDWOFiles(
   else if (!sys::fs::exists(CompDir))
     CompDir = ".";
   // Prevent failures when DWOName is already an absolute path.
-  sys::fs::make_absolute(CompDir, AbsolutePath);
+  sys::path::make_absolute(CompDir, AbsolutePath);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> TempOut =

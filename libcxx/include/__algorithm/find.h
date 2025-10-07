@@ -69,7 +69,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
 
     auto __orig_first = __first;
 
-    auto __values = static_cast<__simd_vector<_Up, __vec_size>>(__value); // broadcast the value
+    auto __values = static_cast<__simd_vector<_Tp, __vec_size>>(__value); // broadcast the value
     while (static_cast<size_t>(__last - __first) >= __unroll_count * __vec_size) [[__unlikely__]] {
       __vec __lhs[__unroll_count];
 
