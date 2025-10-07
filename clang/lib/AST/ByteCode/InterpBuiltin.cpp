@@ -2314,10 +2314,14 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     if (Ptr.isBaseClass())
       ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
                    computePointerOffset(ASTCtx, Ptr);
-    else
-      ByteOffset =
-          computePointerOffset(ASTCtx, Ptr) -
-          computePointerOffset(ASTCtx, Ptr.expand().atIndex(0).narrow());
+    else {
+      if (Ptr.inArray())
+        ByteOffset =
+            computePointerOffset(ASTCtx, Ptr) -
+            computePointerOffset(ASTCtx, Ptr.expand().atIndex(0).narrow());
+      else
+        ByteOffset = 0;
+    }
   } else
     ByteOffset = computePointerOffset(ASTCtx, Ptr);
 
