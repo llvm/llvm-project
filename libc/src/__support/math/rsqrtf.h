@@ -60,7 +60,7 @@ LIBC_INLINE static constexpr float rsqrtf(float x) {
 
   // TODO: add float based approximation when
   // LIBC_TARGET_CPU_HAS_FPU_DOUBLE is not defined
-  double result = 1.0f / fputil::sqrt<double>(fputil::cast<double>(x));
+  double result = 1.0 / fputil::sqrt<double>(fputil::cast<double>(x));
 
   return fputil::cast<float>(result);
 }
