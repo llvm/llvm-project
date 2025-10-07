@@ -14805,29 +14805,29 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     unsigned SourceLen = Source.getVectorLength();
     const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
-    const QualType ElemQT = VT->getElementType();
-    unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
+    QualType ElemQT = VT->getElementType();
+    unsigned ResultLen = Info.Ctx.getTypeSize(
+        E->getCallReturnType(Info.Ctx)); // Always 32-bit integer.
+    APInt Result(ResultLen, 0);
 
-    if (ElemQT->isIntegerType()) { // Get MSB of each byte of every lane
-      unsigned Byte = 8;
-      unsigned ResultLen = (LaneWidth * SourceLen) / Byte;
-      APInt Result(ResultLen, 0);
+    if (ElemQT->isIntegerType()) { // Get MSB of each byte of every lane.
+      unsigned BitsInAByte = 8;
+      unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
       unsigned ResultIdx = 0;
       for (unsigned I = 0; I != SourceLen; ++I) {
         APInt Lane = Source.getVectorElt(I).getInt();
-        for (unsigned J = 0; J != LaneWidth; J += Byte) {
+        for (unsigned J = 0; J != LaneWidth; J += BitsInAByte) {
           Result.setBitVal(ResultIdx++, Lane[J + 7]);
         }
       }
-      return Success(Result.getZExtValue(), E);
+      return Success(Result, E);
     }
-    if (ElemQT->isFloatingType()) { // Get sign bit of every lane
-      APInt Result(SourceLen, 0);
+    if (ElemQT->isRealFloatingType()) { // Get sign bit of every lane.
       for (unsigned I = 0; I != SourceLen; ++I) {
         APInt Lane = Source.getVectorElt(I).getFloat().bitcastToAPInt();
-        Result.setBitVal(I, Lane[LaneWidth - 1]);
+        Result.setBitVal(I, Lane.isNegative());
       }
-      return Success(Result.getZExtValue(), E);
+      return Success(Result, E);
     }
     return false;
   }
