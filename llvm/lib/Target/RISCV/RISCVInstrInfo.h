@@ -25,6 +25,9 @@
 
 namespace llvm {
 
+// If Value is of the form C1<<C2, where C1 = 3, 5 or 9,
+// returns log2(C1 - 1) and assigns Shift = C2.
+// Otherwise, returns 0.
 template <typename T> int isShifted359(T Value, int &Shift) {
   if (Value == 0)
     return 0;
