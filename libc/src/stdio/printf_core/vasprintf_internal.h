@@ -43,8 +43,9 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 
-LIBC_INLINE PrintfResult vasprintf_internal(char **ret, const char *__restrict format,
-                                   internal::ArgList args) {
+LIBC_INLINE PrintfResult vasprintf_internal(char **ret,
+                                            const char *__restrict format,
+                                            internal::ArgList args) {
   char init_buff_on_stack[DEFAULT_BUFFER_SIZE];
   printf_core::WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> wb(
       init_buff_on_stack, DEFAULT_BUFFER_SIZE, resize_overflow_hook);

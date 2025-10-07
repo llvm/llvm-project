@@ -23,7 +23,7 @@ namespace printf_core {
 
 template <WriteMode write_mode>
 PrintfResult printf_main(Writer<write_mode> *writer, const char *__restrict str,
-                internal::ArgList &args) {
+                         internal::ArgList &args) {
   Parser<internal::ArgList> parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
@@ -37,7 +37,7 @@ PrintfResult printf_main(Writer<write_mode> *writer, const char *__restrict str,
     if (result < 0)
       return {0, -result};
   }
-  
+
   return writer->get_chars_written();
 }
 

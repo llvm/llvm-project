@@ -40,8 +40,8 @@ LLVM_LIBC_FUNCTION(int, vsprintf,
   if (ret_val.value > cpp::numeric_limits<int>::max()) {
     libc_errno = EOVERFLOW;
     return -1;
-  } 
-  return static_cast<int>(ret_val.value);  
+  }
+  return static_cast<int>(ret_val.value);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

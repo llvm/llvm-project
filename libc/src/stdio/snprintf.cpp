@@ -39,13 +39,13 @@ LLVM_LIBC_FUNCTION(int, snprintf,
   }
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
     wb.buff[wb.buff_cur] = '\0';
-  
+
   if (ret_val.value > cpp::numeric_limits<int>::max()) {
     libc_errno = EOVERFLOW;
     return -1;
-  } 
-  
-  return static_cast<int>(ret_val.value);  
+  }
+
+  return static_cast<int>(ret_val.value);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

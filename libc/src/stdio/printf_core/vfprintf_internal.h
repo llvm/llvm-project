@@ -69,8 +69,8 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
 }
 
 LIBC_INLINE PrintfResult vfprintf_internal(::FILE *__restrict stream,
-                                  const char *__restrict format,
-                                  internal::ArgList &args) {
+                                           const char *__restrict format,
+                                           internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
   printf_core::WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value> wb(
