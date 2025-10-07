@@ -92,7 +92,7 @@ tools = [
     "clang-diff",
     "clang-format",
     "clang-repl",
-    "clang-offload-packager",
+    "llvm-offload-binary",
     "clang-tblgen",
     "clang-scan-deps",
     "clang-installapi",
