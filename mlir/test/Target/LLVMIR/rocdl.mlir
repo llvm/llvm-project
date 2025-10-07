@@ -884,6 +884,10 @@ llvm.func @rocdl.wmma(%arg0 : vector<8xf32>, %arg1 : vector<16 x f16>, %arg2 : v
   // CHECK: call <64 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v64i32.v4i32(i1 false, <4 x i32> %5, i1 false, <4 x i32> %5, <64 x i32> %15, i1 false, i1 false)
   %r8.gfx1250 = rocdl.wmma.i32.16x16x64.iu8 %zero, %arg5, %zero, %arg5, %arg15, %zero, %zero : (i1, vector<4xi32>, i1, vector<4xi32>, vector<64xi32>, i1, i1) -> vector<64xi32>
 
+  %r9.gfx1250 = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %zero_i32, %arg5, %zero_i32, %arg5, %zero_i16, %arg11, %zero_i32, %zero_i32, %arg16, %zero_i32, %zero_i32, %arg16, %zero, %zero : (i32, vector<4xi32>, i32, vector<4xi32>, i16, vector<4xf32>, i32, i32, i32, i32, i32, i32, i1, i1) -> vector<4xf32>
+  // %r7.gfx1250 = rocdl.wmma.scale16.f32.16x16x128.f8f6f4
+  // %r7.gfx1250 = rocdl.wmma.scale.f32.32x16x128.f4
+  // %r7.gfx1250 = rocdl.wmma.scale16.f32.32x16x128.f4
   // ---- Wave64 -----
 
   // f16 -> f32
