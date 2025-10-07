@@ -2597,17 +2597,24 @@ static bool interp__builtin_ia32_pmadd(
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned NumElems = VT->getNumElements();
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
   bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
 
+  unsigned DstElem = 0;
   for (unsigned I = 0; I != NumElems; I += 2) {
+    APSInt Result;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       APSInt LoLHS = LHS.elem<T>(I).toAPSInt();
       APSInt HiLHS = LHS.elem<T>(I + 1).toAPSInt();
       APSInt LoRHS = RHS.elem<T>(I).toAPSInt();
       APSInt HiRHS = RHS.elem<T>(I + 1).toAPSInt();
-      Dst.elem<T>(I) =
-          static_cast<T>(APSInt(Fn(LoLHS, HiLHS, LoRHS, HiRHS), DestUnsigned));
+      Result = APSInt(Fn(LoLHS, HiLHS, LoRHS, HiRHS), DestUnsigned);
     });
+
+    INT_TYPE_SWITCH_NO_BOOL(DestElemT,
+                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
   }
 
   Dst.initializeAllElements();
