@@ -306,7 +306,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
   if (beginName.v == llvm::omp::Directive::OMPD_fuse) {
     CheckLooprangeBounds(x);
-  }
+  } else
+    CheckNestedFuse(x);
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -421,7 +422,7 @@ void OmpStructureChecker::CheckDistLinear(
     // clauses.
     auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(x.t);
     for (auto &loopCons : loopConsList) {
-      std::int64_t collapseVal_ = collapseVal;
+      std::int64_t curCollapseVal{collapseVal};
       if (const auto &loopConstruct{
               std::get_if<parser::DoConstruct>(&loopCons)}) {
         for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
@@ -431,8 +432,8 @@ void OmpStructureChecker::CheckDistLinear(
               // Remove the symbol from the collected set
               indexVars.erase(&itrVal.symbol->GetUltimate());
             }
-            collapseVal_--;
-            if (collapseVal_ == 0) {
+            curCollapseVal--;
+            if (curCollapseVal == 0) {
               break;
             }
           }
@@ -466,7 +467,8 @@ void OmpStructureChecker::CheckLooprangeBounds(
           if (const auto count{GetIntValue(std::get<1>((lrClause->v).t))}) {
             auto &loopConsList =
                 std::get<std::list<parser::NestedConstruct>>(x.t);
-            if (loopConsList.size() < (unsigned)(*first + *count - 1)) {
+            if (*first > 0 && *count > 0 &&
+                loopConsList.size() < (unsigned)(*first + *count - 1)) {
               context_.Say(clause.source,
                   "The loop range indicated in the %s clause"
                   " must not be out of the bounds of the Loop Sequence"
@@ -476,6 +478,38 @@ void OmpStructureChecker::CheckLooprangeBounds(
           }
         }
         return;
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::CheckNestedFuse(
+    const parser::OpenMPLoopConstruct &x) {
+  auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(x.t);
+  for (auto &loopCons : loopConsList) {
+    if (const auto &ompConstruct{
+            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                &loopCons)}) {
+      const parser::OmpClauseList &clauseList =
+          ompConstruct->value().BeginDir().Clauses();
+      if (!clauseList.v.empty()) {
+        for (auto &clause : clauseList.v) {
+          if (const auto *lrClause{
+                  std::get_if<parser::OmpClause::Looprange>(&clause.u)}) {
+            if (const auto count{GetIntValue(std::get<1>((lrClause->v).t))}) {
+              auto &loopConsList = std::get<std::list<parser::NestedConstruct>>(
+                  ompConstruct->value().t);
+              if (loopConsList.size() > (unsigned)(*count)) {
+                context_.Say(x.BeginDir().DirName().source,
+                    "The loop sequence following the %s construct"
+                    " must be fully fused first."_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        x.BeginDir().DirName().source.ToString()));
+              }
+            }
+            return;
+          }
+        }
       }
     }
   }

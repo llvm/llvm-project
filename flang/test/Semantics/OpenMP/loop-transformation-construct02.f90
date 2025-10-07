@@ -17,7 +17,6 @@ subroutine loop_transformation_construct2
   !$omp do
   !ERROR: A DO loop must follow the FUSE directive
   !$omp fuse 
-  !ERROR: The END FUSE directive must follow the DO loop associated with the loop construct
   !$omp end fuse
 end subroutine
 
@@ -53,7 +52,6 @@ subroutine loop_transformation_construct4
   end do
   !ERROR: A DO loop must follow the FUSE directive
   !$omp fuse
-  !ERROR: The END FUSE directive must follow the DO loop associated with the loop construct
   !$omp end fuse
 end subroutine
 
@@ -83,7 +81,7 @@ subroutine loop_transformation_construct6
   integer :: v(i)
 
   !$omp do
-  !$omp fuse
+  !$omp fuse looprange(1,1)
   !$omp unroll partial(2)
   do x = 1, i
     v(x) = x(x) * 2

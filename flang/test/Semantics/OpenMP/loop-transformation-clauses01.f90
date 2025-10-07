@@ -9,7 +9,8 @@ subroutine loop_transformation_construct1
   integer :: x
   integer :: v(i)
 
-  !$omp fuse looprange(1,2)
+  !ERROR: At most one LOOPRANGE clause can appear on the FUSE directive
+  !$omp fuse looprange(1,2) looprange(1,2)
   do x = 1, i
     v(x) = x * 2
   end do
@@ -27,5 +28,24 @@ subroutine loop_transformation_construct1
     v(x) = x * 2
   end do
   !$omp end fuse
-end subroutine
 
+  !ERROR: The parameter of the LOOPRANGE clause must be a constant positive integer expression
+  !$omp fuse looprange(0,1)
+  do x = 1, i
+    v(x) = x * 2
+  end do
+  do x = 1, i
+    v(x) = x * 2
+  end do
+  !$omp end fuse
+
+  !ERROR: The parameter of the LOOPRANGE clause must be a constant positive integer expression
+  !$omp fuse looprange(1,-1)
+  do x = 1, i
+    v(x) = x * 2
+  end do
+  do x = 1, i
+    v(x) = x * 2
+  end do
+  !$omp end fuse
+end subroutine
