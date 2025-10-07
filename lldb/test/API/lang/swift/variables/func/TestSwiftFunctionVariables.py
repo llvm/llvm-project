@@ -32,6 +32,8 @@ class TestFunctionVariables(TestBase):
         # Get the function pointer variable from our frame
         func_ptr_value = self.frame().FindVariable('func_ptr')
         self.assertEqual(func_ptr_value.GetNumChildren(), 2)
+        self.assertEqual(func_ptr_value.GetChildAtIndex(0).GetNumChildren(), 0)
+        self.assertEqual(func_ptr_value.GetChildAtIndex(1).GetNumChildren(), 0)
 
         # Grab the function pointer value as an unsigned load address
         func_ptr_addr = func_ptr_value.GetValueAsUnsigned()
@@ -46,4 +48,3 @@ class TestFunctionVariables(TestBase):
         # Make sure the function pointer correctly resolved to our a.bar
         # function
         self.assertEqual('a.bar() -> ()', func_ptr_function.name)
-

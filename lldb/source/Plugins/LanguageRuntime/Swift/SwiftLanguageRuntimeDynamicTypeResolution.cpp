@@ -1077,6 +1077,10 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
     // Try the instance type metadata.
     if (!m_valobj) {
+      // Static builtin types have no children.
+      if (ts.IsBuiltinType(m_type))
+        return 0;
+
       LLDBTypeInfoProvider tip(m_runtime, ts);
       auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
           *tr, &tip, ts.GetDescriptorFinder());
