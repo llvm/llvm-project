@@ -30,14 +30,15 @@ class SRL_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
                     opcodestr, "$rs2, $rs1"> {
   let rd = 0;
 }
+
 multiclass LAQ_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def _AQ    : LAQ_r<1, 0, funct3, opcodestr # ".aq">;
-  def _AQ_RL : LAQ_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def _AQ   : LAQ_r<1, 0, funct3, opcodestr # ".aq">;
+  def _AQRL : LAQ_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 multiclass SRL_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def _RL    : SRL_r<0, 1, funct3, opcodestr # ".rl">;
-  def _AQ_RL : SRL_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def _RL   : SRL_r<0, 1, funct3, opcodestr # ".rl">;
+  def _AQRL : SRL_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 //===----------------------------------------------------------------------===//

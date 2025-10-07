@@ -49,10 +49,10 @@ class AMO_cas<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr,
 
 multiclass AMO_cas_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr,
                          DAGOperand RC> {
-  def ""     : AMO_cas<funct5, 0, 0, funct3, opcodestr, RC>;
-  def _AQ    : AMO_cas<funct5, 1, 0, funct3, opcodestr # ".aq", RC>;
-  def _RL    : AMO_cas<funct5, 0, 1, funct3, opcodestr # ".rl", RC>;
-  def _AQ_RL : AMO_cas<funct5, 1, 1, funct3, opcodestr # ".aqrl", RC>;
+  def ""    : AMO_cas<funct5, 0, 0, funct3, opcodestr, RC>;
+  def _AQ   : AMO_cas<funct5, 1, 0, funct3, opcodestr # ".aq", RC>;
+  def _RL   : AMO_cas<funct5, 0, 1, funct3, opcodestr # ".rl", RC>;
+  def _AQRL : AMO_cas<funct5, 1, 1, funct3, opcodestr # ".aqrl", RC>;
 }
 
 let Predicates = [HasStdExtZacas], IsSignExtendingOpW = 1 in {
@@ -86,11 +86,11 @@ multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
     def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (vt GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+              (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$addr, GPR:$new)>;
     def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+              (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$addr, GPR:$new)>;
   } // Predicates = !listconcat([HasStdExtZacas, NoStdExtZtso], ExtraPreds)
   let Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds) in {
     def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
