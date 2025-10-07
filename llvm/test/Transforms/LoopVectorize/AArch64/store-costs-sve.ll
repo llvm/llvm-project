@@ -88,16 +88,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP14]], true
 ; PRED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br label [[EXIT:%.*]]
-; PRED:       scalar.ph:
 ; PRED-NEXT:    br label [[LOOP:%.*]]
-; PRED:       loop:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; PRED-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
-; PRED-NEXT:    store i8 0, ptr [[GEP]], align 1
-; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;

@@ -201,9 +201,9 @@ def Tosa_PadOpQuantInfoBuilder : OpBuilder<
 // and optional initial value. The builder will extract var_shape and element type
 // attributes from variable type.
 def Tosa_VariableOpBuilder : OpBuilder<
-  (ins "StringRef":$name, "Type":$variable_type, "Attribute":$initial_value),
+  (ins "StringRef":$sym_name, "Type":$variable_type, "Attribute":$initial_value),
   [{
-    buildVariableOp($_builder, $_state, name, variable_type, initial_value);
+    buildVariableOp($_builder, $_state, sym_name, variable_type, initial_value);
   }]>;
 
 
