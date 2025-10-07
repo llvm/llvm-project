@@ -797,6 +797,7 @@ _mm_sign_pi32(__m64 __a, __m64 __b)
 }
 
 #undef __anyext128
+#undef __zext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_CONSTEXPR
