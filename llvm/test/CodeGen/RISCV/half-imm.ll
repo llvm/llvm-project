@@ -20,7 +20,6 @@
 ; RUN:   -target-abi lp64 < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN,RV64IZHINXMIN %s
 
-; TODO: constant pool shouldn't be necessary for RV32IZfh and RV64IZfh
 define half @half_imm() nounwind {
 ; CHECK-LABEL: half_imm:
 ; CHECK:       # %bb.0:

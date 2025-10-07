@@ -8,7 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64 | FileCheck --check-prefixes=CHECKZFINX,RV64ZFINX %s
 
-; TODO: constant pool shouldn't be necessary for RV64IF.
 define float @float_imm() nounwind {
 ; CHECK-LABEL: float_imm:
 ; CHECK:       # %bb.0:
