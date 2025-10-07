@@ -799,8 +799,10 @@ void AArch64PrologueEmitter::emitPrologue() {
                            NonSVELocalsSize);
     CFAOffset += AllocateAfterPPRs;
   } else {
-    // Note: With CalleeSavesAboveFrameRecord the SVE CS have already been
-    // allocated (and separate PPRLocals are not supported).
+    assert(SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord);
+    // Note: With CalleeSavesAboveFrameRecord, the SVE CS have already been
+    // allocated (and separate PPR locals are not supported, all SVE locals,
+    // both PPR and ZPR, are within the ZPR locals area).
     assert(!PPR.LocalsSize && "Unexpected PPR locals!");
     CFAOffset += SVECalleeSavesSize;
   }
@@ -1276,6 +1278,8 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
         StackOffset::getScalable(MFI.getObjectOffset(FI)) -
         StackOffset::getFixed(AFI->getCalleeSavedStackSize(MFI));
 
+    // The scalable vectors are below (lower address) the scalable predicates
+    // with split SVE objects, so we must subtract the size of the predicates.
     if (SVELayout == SVEStackLayout::Split &&
         MFI.getStackID(FI) == TargetStackID::ScalableVector)
       Offset -= PPRStackSize;
