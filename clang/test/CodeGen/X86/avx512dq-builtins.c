@@ -12,6 +12,23 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+// constexpr coverage for i32x8/f32x8 broadcasts (DQ)
+{
+  __m256i a = _mm256_set1_epi32(8);
+  TEST_CONSTEXPR(match_v16si(_mm512_mask_broadcast_i32x8(_mm512_setzero_si512(), 0xFFFF, a),
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8));
+}
+{
+  __m256 a = _mm256_set1_ps(5.0f);
+  TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x8(_mm512_setzero_ps(), 0xFFFF, a),
+    5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5));
+}
+{
+  __m256 a = _mm256_set1_ps(7.0f);
+  TEST_CONSTEXPR(match_m512(_mm512_maskz_broadcast_f32x8(0xFFFF, a),
+    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7));
+}
+
 __mmask8 test_knot_mask8(__mmask8 a) {
   // CHECK-LABEL: test_knot_mask8
   // CHECK: [[IN:%.*]] = bitcast i8 %{{.*}} to <8 x i1>

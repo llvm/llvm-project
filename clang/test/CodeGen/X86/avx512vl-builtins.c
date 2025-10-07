@@ -7,6 +7,86 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+// constexpr coverage for masked set1/broadcast/unpack/movehdup/moveldup (VL)
+TEST_CONSTEXPR(match_v4si(_mm_mask_set1_epi32(_mm_setzero_si128(), 0xF, 7), 7, 7, 7, 7));
+TEST_CONSTEXPR(match_v2di(_mm_mask_set1_epi64(_mm_setzero_si128(), 0x3, 9), 9, 9));
+
+TEST_CONSTEXPR(match_v8si(_mm256_mask_set1_epi32(_mm256_setzero_si256(), 0xFF, 5), 5, 5, 5, 5, 5, 5, 5, 5));
+TEST_CONSTEXPR(match_v4di(_mm256_mask_set1_epi64(_mm256_setzero_si256(), 0xF, 11), 11, 11, 11, 11));
+
+{
+  __m128i a = (__m128i)(__v4si){0,1,2,3};
+  TEST_CONSTEXPR(match_v4si(_mm_mask_broadcast_i32x2(_mm_setzero_si128(), 0xF, a), 0,1,0,1));
+}
+{
+  __m128 a = (__m128)(__v4sf){1.f,2.f,3.f,4.f};
+  TEST_CONSTEXPR(match_m256(_mm256_mask_broadcast_f32x2(_mm256_setzero_ps(), 0xFF, a), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
+}
+{
+  __m128 a = (__m128)(__v4sf){1.f,2.f,3.f,4.f};
+  TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x2(0xFF, a), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
+}
+{
+  __m128d a = (__m128d)(__v2df){1.0,2.0};
+  TEST_CONSTEXPR(match_m256d(_mm256_mask_broadcast_f64x2(_mm256_setzero_pd(), 0xFF, a), 1.0,2.0,1.0,2.0));
+}
+{
+  __m128d a = (__m128d)(__v2df){1.0,2.0};
+  TEST_CONSTEXPR(match_m256d(_mm256_maskz_broadcast_f64x2(0xFF, a), 1.0,2.0,1.0,2.0));
+}
+
+// i64x2 maskz
+{
+  __m128i a = (__m128i)(__v2di){1,2};
+  TEST_CONSTEXPR(match_v4di(_mm256_maskz_broadcast_i64x2(0xF, a), 1,2,1,2));
+}
+
+// i32x4/f32x4 maskz (VL)
+{
+  __m128i a = (__m128i)(__v4si){0,1,2,3};
+  TEST_CONSTEXPR(match_v8si(_mm256_maskz_broadcast_i32x4(0xFF, a), 0,1,2,3,0,1,2,3));
+}
+{
+  __m128 a = (__m128)(__v4sf){0,1,2,3};
+  TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x4(0xFF, a), 0,1,2,3,0,1,2,3));
+}
+
+// i32x2 maskz (128/256)
+{
+  __m128i a = (__m128i)(__v4si){0,1,2,3};
+  TEST_CONSTEXPR(match_v4si(_mm_maskz_broadcast_i32x2(0xF, a), 0,1,0,1));
+}
+{
+  __m128i a = (__m128i)(__v4si){0,1,2,3};
+  TEST_CONSTEXPR(match_v8si(_mm256_maskz_broadcast_i32x2(0xFF, a), 0,1,0,1,0,1,0,1));
+}
+
+// unpackhi/lo with full mask behaves like the underlying unpack
+{
+  __m128d a = (__m128d)(__v2df){1.0,2.0};
+  __m128d b = (__m128d)(__v2df){3.0,4.0};
+  TEST_CONSTEXPR(match_m128d(_mm_mask_unpackhi_pd(_mm_setzero_pd(), 0x3, a, b), 2.0,4.0));
+  TEST_CONSTEXPR(match_m128d(_mm_mask_unpacklo_pd(_mm_setzero_pd(), 0x3, a, b), 1.0,3.0));
+}
+{
+  __m256d a = (__m256d)(__v4df){1.0,2.0,3.0,4.0};
+  __m256d b = (__m256d)(__v4df){5.0,6.0,7.0,8.0};
+  TEST_CONSTEXPR(match_m256d(_mm256_mask_unpackhi_pd(_mm256_setzero_pd(), 0xFF, a, b), 2.0,6.0,4.0,8.0));
+  TEST_CONSTEXPR(match_m256d(_mm256_mask_unpacklo_pd(_mm256_setzero_pd(), 0xFF, a, b), 1.0,5.0,3.0,7.0));
+}
+
+// movehdup/moveldup with full mask equals the underlying *_move*dup
+{
+  __m128 a = (__m128)(__v4sf){1.f,2.f,3.f,4.f};
+  TEST_CONSTEXPR(match_m128(_mm_mask_movehdup_ps(_mm_setzero_ps(), 0xF, a), 2.f,2.f,4.f,4.f));
+  TEST_CONSTEXPR(match_m128(_mm_mask_moveldup_ps(_mm_setzero_ps(), 0xF, a), 1.f,1.f,3.f,3.f));
+}
+{
+  __m256 a = (__m256)(__v8sf){1,2,3,4,5,6,7,8};
+  TEST_CONSTEXPR(match_m256(_mm256_mask_movehdup_ps(_mm256_setzero_ps(), 0xFF, a), 2,2,4,4,6,6,8,8));
+  TEST_CONSTEXPR(match_m256(_mm256_mask_moveldup_ps(_mm256_setzero_ps(), 0xFF, a), 1,1,3,3,5,5,7,7));
+}
+
 __mmask8 test_mm_cmpeq_epu32_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: test_mm_cmpeq_epu32_mask
   // CHECK: icmp eq <4 x i32> %{{.*}}, %{{.*}}

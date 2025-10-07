@@ -11,6 +11,82 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+// constexpr coverage for masked set1/broadcast/unpack/move_ss/move_sd (F)
+TEST_CONSTEXPR(match_v16si(_mm512_mask_set1_epi32(_mm512_setzero_si512(), 0xFFFF, 13),
+  13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13));
+TEST_CONSTEXPR(match_v8di(_mm512_mask_set1_epi64(_mm512_setzero_si512(), 0xFF, 21),
+  21,21,21,21,21,21,21,21));
+
+{
+  __m128 a = (__m128)(__v4sf){1,2,3,4};
+  TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x4(_mm512_setzero_ps(), 0xFFFF, a),
+    1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4));
+}
+{
+  __m128 a = (__m128)(__v4sf){1,2,3,4};
+  TEST_CONSTEXPR(match_m512(_mm512_maskz_broadcast_f32x4(0xFFFF, a),
+    1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4));
+}
+{
+  __m128d a = (__m128d)(__v2df){1,2};
+  TEST_CONSTEXPR(match_m512d(_mm512_mask_broadcast_f64x2(_mm512_setzero_pd(), 0xFF, a),
+    1,2,1,2,1,2,1,2));
+}
+{
+  __m128d a = (__m128d)(__v2df){1,2};
+  TEST_CONSTEXPR(match_m512d(_mm512_maskz_broadcast_f64x2(0xFF, a),
+    1,2,1,2,1,2,1,2));
+}
+
+// additionally add i32x4/i32x8 z-forms
+{
+  __m128i a = (__m128i)(__v4si){0,1,2,3};
+  TEST_CONSTEXPR(match_v16si(_mm512_maskz_broadcast_i32x4(0xFFFF, a),
+    0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3));
+}
+{
+  __m256i a = _mm256_set1_epi32(9);
+  TEST_CONSTEXPR(match_v16si(_mm512_maskz_broadcast_i32x8(0xFFFF, a),
+    9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9));
+}
+
+// unpack and moves (512)
+{
+  __m512 a = _mm512_set_ps(16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1);
+  __m512 b = _mm512_set1_ps(0);
+  TEST_CONSTEXPR(match_m512(_mm512_mask_unpackhi_ps(_mm512_setzero_ps(), 0xFFFF, a, b),
+    15,0,13,0,11,0,9,0,7,0,5,0,3,0,1,0));
+}
+{
+  __m512 a = _mm512_set1_ps(1);
+  __m512 b = _mm512_set1_ps(2);
+  TEST_CONSTEXPR(match_m512(_mm512_mask_unpacklo_ps(_mm512_setzero_ps(), 0xFFFF, a, b),
+    1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2));
+}
+
+// move_ss/move_sd in constexpr masked form
+{
+  __m128 a = (__m128)(__v4sf){10,2,3,4};
+  __m128 b = (__m128)(__v4sf){20,6,7,8};
+  TEST_CONSTEXPR(match_m128(_mm_mask_move_ss(_mm_setzero_ps(), 0x1, a, b), 20,0,0,0));
+}
+{
+  __m128d a = (__m128d)(__v2df){10,2};
+  __m128d b = (__m128d)(__v2df){20,6};
+  TEST_CONSTEXPR(match_m128d(_mm_mask_move_sd(_mm_setzero_pd(), 0x1, a, b), 20,0));
+}
+// z-forms for movehdup/moveldup
+{
+  __m512 a = _mm512_set_ps(16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1);
+  TEST_CONSTEXPR(match_m512(_mm512_maskz_movehdup_ps(0xFFFF, a),
+    15,15,13,13,11,11,9,9,7,7,5,5,3,3,1,1));
+}
+{
+  __m512 a = _mm512_set_ps(16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1);
+  TEST_CONSTEXPR(match_m512(_mm512_maskz_moveldup_ps(0xFFFF, a),
+    16,16,14,14,12,12,10,10,8,8,6,6,4,4,2,2));
+}
+
 __m512d test_mm512_sqrt_pd(__m512d a)
 {
   // CHECK-LABEL: test_mm512_sqrt_pd
