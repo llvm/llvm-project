@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_PKEY_MPROTECT_H
 #define LLVM_LIBC_SRC_SYS_MMAN_PKEY_MPROTECT_H
 
-#include "src/__support/macros/config.h"
 #include "hdr/types/size_t.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
