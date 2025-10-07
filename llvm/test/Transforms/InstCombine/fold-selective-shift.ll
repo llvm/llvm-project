@@ -56,6 +56,23 @@ define i16 @selective_shift_16.range(i32 %mask, i32 %upper, i32 range(i32 0, 655
   ret i16 %trunc
 }
 
+define i16 @selective_shift_16.range.commute(i32 %mask, i32 %upper, i32 range(i32 0, 65536) %lower) {
+; CHECK-LABEL: define i16 @selective_shift_16.range.commute(
+; CHECK-SAME: i32 [[MASK:%.*]], i32 [[UPPER:%.*]], i32 range(i32 0, 65536) [[LOWER:%.*]]) {
+; CHECK-NEXT:    [[MASK_BIT:%.*]] = and i32 [[MASK]], 16
+; CHECK-NEXT:    [[MASK_BIT_Z:%.*]] = icmp eq i32 [[MASK_BIT]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[MASK_BIT_Z]], i32 [[LOWER]], i32 [[UPPER]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SEL]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+  %upper.shl = shl nuw i32 %upper, 16
+  %pack = or disjoint i32 %lower, %upper.shl
+  %mask.bit = and i32 %mask, 16
+  %sel = lshr i32 %pack, %mask.bit
+  %trunc = trunc i32 %sel to i16
+  ret i16 %trunc
+}
+
 define i32 @selective_shift_16.masked(i32 %mask, i16 %upper, i16 %lower) {
 ; CHECK-LABEL: define i32 @selective_shift_16.masked(
 ; CHECK-SAME: i32 [[MASK:%.*]], i16 [[UPPER:%.*]], i16 [[LOWER:%.*]]) {
@@ -69,6 +86,25 @@ define i32 @selective_shift_16.masked(i32 %mask, i16 %upper, i16 %lower) {
   %upper.shl = shl nuw i32 %upper.zext, 16
   %lower.zext = zext i16 %lower to i32
   %pack = or disjoint i32 %lower.zext, %upper.shl
+  %mask.bit = and i32 %mask, 16
+  %sel = lshr i32 %pack, %mask.bit
+  %sel.masked = and i32 %sel, 65535
+  ret i32 %sel.masked
+}
+
+define i32 @selective_shift_16.masked.commute(i32 %mask, i16 %upper, i16 %lower) {
+; CHECK-LABEL: define i32 @selective_shift_16.masked.commute(
+; CHECK-SAME: i32 [[MASK:%.*]], i16 [[UPPER:%.*]], i16 [[LOWER:%.*]]) {
+; CHECK-NEXT:    [[MASK_BIT:%.*]] = and i32 [[MASK]], 16
+; CHECK-NEXT:    [[MASK_BIT_Z:%.*]] = icmp eq i32 [[MASK_BIT]], 0
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[MASK_BIT_Z]], i16 [[LOWER]], i16 [[UPPER]]
+; CHECK-NEXT:    [[SEL:%.*]] = zext i16 [[SEL_V]] to i32
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %upper.zext = zext i16 %upper to i32
+  %upper.shl = shl nuw i32 %upper.zext, 16
+  %lower.zext = zext i16 %lower to i32
+  %pack = or disjoint i32 %upper.shl, %lower.zext
   %mask.bit = and i32 %mask, 16
   %sel = lshr i32 %pack, %mask.bit
   %sel.masked = and i32 %sel, 65535
@@ -262,6 +298,24 @@ define i32 @selective_shift_32(i64 %mask, i32 %upper, i32 %lower) {
   %upper.shl = shl nuw i64 %upper.zext, 32
   %lower.zext = zext i32 %lower to i64
   %pack = or disjoint i64 %upper.shl, %lower.zext
+  %mask.bit = and i64 %mask, 32
+  %sel = lshr i64 %pack, %mask.bit
+  %trunc = trunc i64 %sel to i32
+  ret i32 %trunc
+}
+
+define i32 @selective_shift_32.commute(i64 %mask, i32 %upper, i32 %lower) {
+; CHECK-LABEL: define i32 @selective_shift_32.commute(
+; CHECK-SAME: i64 [[MASK:%.*]], i32 [[UPPER:%.*]], i32 [[LOWER:%.*]]) {
+; CHECK-NEXT:    [[MASK_BIT:%.*]] = and i64 [[MASK]], 32
+; CHECK-NEXT:    [[MASK_BIT_Z:%.*]] = icmp eq i64 [[MASK_BIT]], 0
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[MASK_BIT_Z]], i32 [[LOWER]], i32 [[UPPER]]
+; CHECK-NEXT:    ret i32 [[SEL_V]]
+;
+  %upper.zext = zext i32 %upper to i64
+  %upper.shl = shl nuw i64 %upper.zext, 32
+  %lower.zext = zext i32 %lower to i64
+  %pack = or disjoint i64 %lower.zext, %upper.shl
   %mask.bit = and i64 %mask, 32
   %sel = lshr i64 %pack, %mask.bit
   %trunc = trunc i64 %sel to i32

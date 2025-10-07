@@ -810,7 +810,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       uint64_t ShlAmt;
       Value *Upper, *Lower;
       if (!match(I->getOperand(0),
-                 m_OneUse(m_DisjointOr(
+                 m_OneUse(m_c_DisjointOr(
                      m_OneUse(m_Shl(m_Value(Upper), m_ConstantInt(ShlAmt))),
                      m_Value(Lower)))))
         break;
@@ -833,7 +833,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       KnownBits KnownShrBits = computeKnownBits(ShrAmt, I, Depth);
       // Verify that ShrAmt is either exactly ShlAmt (which is a power of 2) or
       // zero.
-      if ((~KnownShrBits.Zero).getZExtValue() != ShlAmt)
+      if (~KnownShrBits.Zero != ShlAmt)
         break;
 
       Value *ShrAmtZ = Builder.CreateICmpEQ(
