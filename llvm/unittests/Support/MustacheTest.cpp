@@ -22,7 +22,7 @@ using namespace llvm::json;
 TEST(MustacheInterpolation, NoInterpolation) {
   // Mustache-free templates should render as-is.
   Value D = {};
-  auto T = Template("Hello from {Mustache}!\n");
+  Template T("Hello from {Mustache}!\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -32,7 +32,7 @@ TEST(MustacheInterpolation, NoInterpolation) {
 TEST(MustacheInterpolation, BasicInterpolation) {
   // Unadorned tags should interpolate content into the template.
   Value D = Object{{"subject", "World"}};
-  auto T = Template("Hello, {{subject}}!");
+  Template T("Hello, {{subject}}!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -42,7 +42,7 @@ TEST(MustacheInterpolation, BasicInterpolation) {
 TEST(MustacheInterpolation, NoReinterpolation) {
   // Interpolated tag output should not be re-interpolated.
   Value D = Object{{"template", "{{planet}}"}, {"planet", "Earth"}};
-  auto T = Template("{{template}}: {{planet}}");
+  Template T("{{template}}: {{planet}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -54,7 +54,7 @@ TEST(MustacheInterpolation, HTMLEscaping) {
   Value D = Object{
       {"forbidden", "& \" < >"},
   };
-  auto T = Template("These characters should be HTML escaped: {{forbidden}}\n");
+  Template T("These characters should be HTML escaped: {{forbidden}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -67,8 +67,7 @@ TEST(MustacheInterpolation, Ampersand) {
   Value D = Object{
       {"forbidden", "& \" < >"},
   };
-  auto T =
-      Template("These characters should not be HTML escaped: {{&forbidden}}\n");
+  Template T("These characters should not be HTML escaped: {{&forbidden}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -78,7 +77,7 @@ TEST(MustacheInterpolation, Ampersand) {
 TEST(MustacheInterpolation, BasicIntegerInterpolation) {
   // Integers should interpolate seamlessly.
   Value D = Object{{"mph", 85}};
-  auto T = Template("{{mph}} miles an hour!");
+  Template T("{{mph}} miles an hour!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -88,7 +87,7 @@ TEST(MustacheInterpolation, BasicIntegerInterpolation) {
 TEST(MustacheInterpolation, AmpersandIntegerInterpolation) {
   // Integers should interpolate seamlessly.
   Value D = Object{{"mph", 85}};
-  auto T = Template("{{&mph}} miles an hour!");
+  Template T("{{&mph}} miles an hour!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -98,7 +97,7 @@ TEST(MustacheInterpolation, AmpersandIntegerInterpolation) {
 TEST(MustacheInterpolation, BasicDecimalInterpolation) {
   // Decimals should interpolate seamlessly with proper significance.
   Value D = Object{{"power", 1.21}};
-  auto T = Template("{{power}} jiggawatts!");
+  Template T("{{power}} jiggawatts!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -108,7 +107,7 @@ TEST(MustacheInterpolation, BasicDecimalInterpolation) {
 TEST(MustacheInterpolation, BasicNullInterpolation) {
   // Nulls should interpolate as the empty string.
   Value D = Object{{"cannot", nullptr}};
-  auto T = Template("I ({{cannot}}) be seen!");
+  Template T("I ({{cannot}}) be seen!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -118,7 +117,7 @@ TEST(MustacheInterpolation, BasicNullInterpolation) {
 TEST(MustacheInterpolation, AmpersandNullInterpolation) {
   // Nulls should interpolate as the empty string.
   Value D = Object{{"cannot", nullptr}};
-  auto T = Template("I ({{&cannot}}) be seen!");
+  Template T("I ({{&cannot}}) be seen!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -128,7 +127,7 @@ TEST(MustacheInterpolation, AmpersandNullInterpolation) {
 TEST(MustacheInterpolation, BasicContextMissInterpolation) {
   // Failed context lookups should default to empty strings.
   Value D = Object{};
-  auto T = Template("I ({{cannot}}) be seen!");
+  Template T("I ({{cannot}}) be seen!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -138,7 +137,7 @@ TEST(MustacheInterpolation, BasicContextMissInterpolation) {
 TEST(MustacheInterpolation, DottedNamesBasicInterpolation) {
   // Dotted names should be considered a form of shorthand for sections.
   Value D = Object{{"person", Object{{"name", "Joe"}}}};
-  auto T = Template("{{person.name}} == {{#person}}{{name}}{{/person}}");
+  Template T("{{person.name}} == {{#person}}{{name}}{{/person}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -148,7 +147,7 @@ TEST(MustacheInterpolation, DottedNamesBasicInterpolation) {
 TEST(MustacheInterpolation, DottedNamesAmpersandInterpolation) {
   // Dotted names should be considered a form of shorthand for sections.
   Value D = Object{{"person", Object{{"name", "Joe"}}}};
-  auto T = Template("{{&person.name}} == {{#person}}{{&name}}{{/person}}");
+  Template T("{{&person.name}} == {{#person}}{{&name}}{{/person}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -163,7 +162,7 @@ TEST(MustacheInterpolation, DottedNamesArbitraryDepth) {
                Object{{"c",
                        Object{{"d",
                                Object{{"e", Object{{"name", "Phil"}}}}}}}}}}}};
-  auto T = Template("{{a.b.c.d.e.name}}");
+  Template T("{{a.b.c.d.e.name}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -173,7 +172,7 @@ TEST(MustacheInterpolation, DottedNamesArbitraryDepth) {
 TEST(MustacheInterpolation, DottedNamesBrokenChains) {
   // Any falsey value prior to the last part of the name should yield ''.
   Value D = Object{{"a", Object{}}};
-  auto T = Template("{{a.b.c}} == ");
+  Template T("{{a.b.c}} == ");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -184,7 +183,7 @@ TEST(MustacheInterpolation, DottedNamesBrokenChainResolution) {
   // Each part of a dotted name should resolve only against its parent.
   Value D =
       Object{{"a", Object{{"b", Object{}}}}, {"c", Object{{"name", "Jim"}}}};
-  auto T = Template("{{a.b.c.name}} == ");
+  Template T("{{a.b.c.name}} == ");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -201,7 +200,7 @@ TEST(MustacheInterpolation, DottedNamesInitialResolution) {
                     Object{{"d", Object{{"e", Object{{"name", "Phil"}}}}}}}}}}},
       {"b",
        Object{{"c", Object{{"d", Object{{"e", Object{{"name", "Wrong"}}}}}}}}}};
-  auto T = Template("{{#a}}{{b.c.d.e.name}}{{/a}}");
+  Template T("{{#a}}{{b.c.d.e.name}}{{/a}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -212,7 +211,7 @@ TEST(MustacheInterpolation, DottedNamesContextPrecedence) {
   // Dotted names should be resolved against former resolutions.
   Value D =
       Object{{"a", Object{{"b", Object{}}}}, {"b", Object{{"c", "ERROR"}}}};
-  auto T = Template("{{#a}}{{b.c}}{{/a}}");
+  Template T("{{#a}}{{b.c}}{{/a}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -222,7 +221,7 @@ TEST(MustacheInterpolation, DottedNamesContextPrecedence) {
 TEST(MustacheInterpolation, DottedNamesAreNotSingleKeys) {
   // Dotted names shall not be parsed as single, atomic keys
   Value D = Object{{"a.b", "c"}};
-  auto T = Template("{{a.b}}");
+  Template T("{{a.b}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -232,7 +231,7 @@ TEST(MustacheInterpolation, DottedNamesAreNotSingleKeys) {
 TEST(MustacheInterpolation, DottedNamesNoMasking) {
   // Dotted Names in a given context are unavailable due to dot splitting
   Value D = Object{{"a.b", "c"}, {"a", Object{{"b", "d"}}}};
-  auto T = Template("{{a.b}}");
+  Template T("{{a.b}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -242,7 +241,7 @@ TEST(MustacheInterpolation, DottedNamesNoMasking) {
 TEST(MustacheInterpolation, ImplicitIteratorsBasicInterpolation) {
   // Unadorned tags should interpolate content into the template.
   Value D = "world";
-  auto T = Template("Hello, {{.}}!\n");
+  Template T("Hello, {{.}}!\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -252,7 +251,7 @@ TEST(MustacheInterpolation, ImplicitIteratorsBasicInterpolation) {
 TEST(MustacheInterpolation, ImplicitIteratorsAmersand) {
   // Basic interpolation should be HTML escaped.
   Value D = "& \" < >";
-  auto T = Template("These characters should not be HTML escaped: {{&.}}\n");
+  Template T("These characters should not be HTML escaped: {{&.}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -262,7 +261,7 @@ TEST(MustacheInterpolation, ImplicitIteratorsAmersand) {
 TEST(MustacheInterpolation, ImplicitIteratorsInteger) {
   // Integers should interpolate seamlessly.
   Value D = 85;
-  auto T = Template("{{.}} miles an hour!\n");
+  Template T("{{.}} miles an hour!\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -272,7 +271,7 @@ TEST(MustacheInterpolation, ImplicitIteratorsInteger) {
 TEST(MustacheInterpolation, InterpolationSurroundingWhitespace) {
   // Interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  auto T = Template("| {{string}} |");
+  Template T("| {{string}} |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -282,7 +281,7 @@ TEST(MustacheInterpolation, InterpolationSurroundingWhitespace) {
 TEST(MustacheInterpolation, AmersandSurroundingWhitespace) {
   // Interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  auto T = Template("| {{&string}} |");
+  Template T("| {{&string}} |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -292,7 +291,7 @@ TEST(MustacheInterpolation, AmersandSurroundingWhitespace) {
 TEST(MustacheInterpolation, StandaloneInterpolationWithWhitespace) {
   // Standalone interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  auto T = Template("  {{string}}\n");
+  Template T("  {{string}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -302,7 +301,7 @@ TEST(MustacheInterpolation, StandaloneInterpolationWithWhitespace) {
 TEST(MustacheInterpolation, StandaloneAmpersandWithWhitespace) {
   // Standalone interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  auto T = Template("  {{&string}}\n");
+  Template T("  {{&string}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -312,7 +311,7 @@ TEST(MustacheInterpolation, StandaloneAmpersandWithWhitespace) {
 TEST(MustacheInterpolation, InterpolationWithPadding) {
   // Superfluous in-tag whitespace should be ignored.
   Value D = Object{{"string", "---"}};
-  auto T = Template("|{{ string }}|");
+  Template T("|{{ string }}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -322,7 +321,7 @@ TEST(MustacheInterpolation, InterpolationWithPadding) {
 TEST(MustacheInterpolation, AmpersandWithPadding) {
   // Superfluous in-tag whitespace should be ignored.
   Value D = Object{{"string", "---"}};
-  auto T = Template("|{{& string }}|");
+  Template T("|{{& string }}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -332,7 +331,7 @@ TEST(MustacheInterpolation, AmpersandWithPadding) {
 TEST(MustacheInterpolation, InterpolationWithPaddingAndNewlines) {
   // Superfluous in-tag whitespace should be ignored.
   Value D = Object{{"string", "---"}};
-  auto T = Template("|{{ string \n\n\n }}|");
+  Template T("|{{ string \n\n\n }}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -341,7 +340,7 @@ TEST(MustacheInterpolation, InterpolationWithPaddingAndNewlines) {
 
 TEST(MustacheSections, Truthy) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("{{#boolean}}This should be rendered.{{/boolean}}");
+  Template T("{{#boolean}}This should be rendered.{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -350,7 +349,7 @@ TEST(MustacheSections, Truthy) {
 
 TEST(MustacheSections, Falsey) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("{{#boolean}}This should not be rendered.{{/boolean}}");
+  Template T("{{#boolean}}This should not be rendered.{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -360,7 +359,7 @@ TEST(MustacheSections, Falsey) {
 TEST(MustacheInterpolation, IsFalseyNull) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", nullptr}};
-  auto T = Template("Hello, {{#boolean}}World{{/boolean}}");
+  Template T("Hello, {{#boolean}}World{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -370,7 +369,7 @@ TEST(MustacheInterpolation, IsFalseyNull) {
 TEST(MustacheInterpolation, IsFalseyArray) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", Array()}};
-  auto T = Template("Hello, {{#boolean}}World{{/boolean}}");
+  Template T("Hello, {{#boolean}}World{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -380,7 +379,7 @@ TEST(MustacheInterpolation, IsFalseyArray) {
 TEST(MustacheInterpolation, IsFalseyObject) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", Object{}}};
-  auto T = Template("Hello, {{#boolean}}World{{/boolean}}");
+  Template T("Hello, {{#boolean}}World{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -390,7 +389,7 @@ TEST(MustacheInterpolation, IsFalseyObject) {
 TEST(MustacheInterpolation, DoubleRendering) {
   // Mustache-free templates should render as-is.
   Value D1 = Object{{"subject", "World"}};
-  auto T = Template("Hello, {{subject}}!");
+  Template T("Hello, {{subject}}!");
   std::string Out1;
   raw_string_ostream OS1(Out1);
   T.render(D1, OS1);
@@ -404,7 +403,7 @@ TEST(MustacheInterpolation, DoubleRendering) {
 
 TEST(MustacheSections, NullIsFalsey) {
   Value D = Object{{"null", nullptr}};
-  auto T = Template("{{#null}}This should not be rendered.{{/null}}");
+  Template T("{{#null}}This should not be rendered.{{/null}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -413,7 +412,7 @@ TEST(MustacheSections, NullIsFalsey) {
 
 TEST(MustacheSections, Context) {
   Value D = Object{{"context", Object{{"name", "Joe"}}}};
-  auto T = Template("{{#context}}Hi {{name}}.{{/context}}");
+  Template T("{{#context}}Hi {{name}}.{{/context}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -425,7 +424,7 @@ TEST(MustacheSections, ParentContexts) {
                    {"b", "wrong"},
                    {"sec", Object{{"b", "bar"}}},
                    {"c", Object{{"d", "baz"}}}};
-  auto T = Template("{{#sec}}{{a}}, {{b}}, {{c.d}}{{/sec}}");
+  Template T("{{#sec}}{{a}}, {{b}}, {{c.d}}{{/sec}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -434,7 +433,7 @@ TEST(MustacheSections, ParentContexts) {
 
 TEST(MustacheSections, VariableTest) {
   Value D = Object{{"foo", "bar"}};
-  auto T = Template("{{#foo}}{{.}} is {{foo}}{{/foo}}");
+  Template T("{{#foo}}{{.}} is {{foo}}{{/foo}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -450,14 +449,14 @@ TEST(MustacheSections, ListContexts) {
             Array{Object{{"mname", "1"},
                          {"bottoms", Array{Object{{"bname", "x"}},
                                            Object{{"bname", "y"}}}}}}}}}}};
-  auto T = Template("{{#tops}}"
-                    "{{#middles}}"
-                    "{{tname.lower}}{{mname}}."
-                    "{{#bottoms}}"
-                    "{{tname.upper}}{{mname}}{{bname}}."
-                    "{{/bottoms}}"
-                    "{{/middles}}"
-                    "{{/tops}}");
+  Template T("{{#tops}}"
+             "{{#middles}}"
+             "{{tname.lower}}{{mname}}."
+             "{{#bottoms}}"
+             "{{tname.upper}}{{mname}}{{bname}}."
+             "{{/bottoms}}"
+             "{{/middles}}"
+             "{{/tops}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -469,7 +468,7 @@ TEST(MustacheSections, DeeplyNestedContexts) {
       {"a", Object{{"one", 1}}},
       {"b", Object{{"two", 2}}},
       {"c", Object{{"three", 3}, {"d", Object{{"four", 4}, {"five", 5}}}}}};
-  auto T = Template(
+  Template T(
       "{{#a}}\n{{one}}\n{{#b}}\n{{one}}{{two}}{{one}}\n{{#c}}\n{{one}}{{two}}{{"
       "three}}{{two}}{{one}}\n{{#d}}\n{{one}}{{two}}{{three}}{{four}}{{three}}{"
       "{two}}{{one}}\n{{#five}}\n{{one}}{{two}}{{three}}{{four}}{{five}}{{four}"
@@ -490,7 +489,7 @@ TEST(MustacheSections, DeeplyNestedContexts) {
 TEST(MustacheSections, List) {
   Value D = Object{{"list", Array{Object{{"item", 1}}, Object{{"item", 2}},
                                   Object{{"item", 3}}}}};
-  auto T = Template("{{#list}}{{item}}{{/list}}");
+  Template T("{{#list}}{{item}}{{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -499,7 +498,7 @@ TEST(MustacheSections, List) {
 
 TEST(MustacheSections, EmptyList) {
   Value D = Object{{"list", Array{}}};
-  auto T = Template("{{#list}}Yay lists!{{/list}}");
+  Template T("{{#list}}Yay lists!{{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -508,8 +507,8 @@ TEST(MustacheSections, EmptyList) {
 
 TEST(MustacheSections, Doubled) {
   Value D = Object{{"bool", true}, {"two", "second"}};
-  auto T = Template("{{#bool}}\n* first\n{{/bool}}\n* "
-                    "{{two}}\n{{#bool}}\n* third\n{{/bool}}\n");
+  Template T("{{#bool}}\n* first\n{{/bool}}\n* "
+             "{{two}}\n{{#bool}}\n* third\n{{/bool}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -518,7 +517,7 @@ TEST(MustacheSections, Doubled) {
 
 TEST(MustacheSections, NestedTruthy) {
   Value D = Object{{"bool", true}};
-  auto T = Template("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
+  Template T("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -527,7 +526,7 @@ TEST(MustacheSections, NestedTruthy) {
 
 TEST(MustacheSections, NestedFalsey) {
   Value D = Object{{"bool", false}};
-  auto T = Template("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
+  Template T("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -536,7 +535,7 @@ TEST(MustacheSections, NestedFalsey) {
 
 TEST(MustacheSections, ContextMisses) {
   Value D = Object{};
-  auto T = Template("[{{#missing}}Found key 'missing'!{{/missing}}]");
+  Template T("[{{#missing}}Found key 'missing'!{{/missing}}]");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -545,7 +544,7 @@ TEST(MustacheSections, ContextMisses) {
 
 TEST(MustacheSections, ImplicitIteratorString) {
   Value D = Object{{"list", Array{"a", "b", "c", "d", "e"}}};
-  auto T = Template("{{#list}}({{.}}){{/list}}");
+  Template T("{{#list}}({{.}}){{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -554,7 +553,7 @@ TEST(MustacheSections, ImplicitIteratorString) {
 
 TEST(MustacheSections, ImplicitIteratorInteger) {
   Value D = Object{{"list", Array{1, 2, 3, 4, 5}}};
-  auto T = Template("{{#list}}({{.}}){{/list}}");
+  Template T("{{#list}}({{.}}){{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -563,7 +562,7 @@ TEST(MustacheSections, ImplicitIteratorInteger) {
 
 TEST(MustacheSections, ImplicitIteratorArray) {
   Value D = Object{{"list", Array{Array{1, 2, 3}, Array{"a", "b", "c"}}}};
-  auto T = Template("{{#list}}({{#.}}{{.}}{{/.}}){{/list}}");
+  Template T("{{#list}}({{#.}}{{.}}{{/.}}){{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -572,7 +571,7 @@ TEST(MustacheSections, ImplicitIteratorArray) {
 
 TEST(MustacheSections, ImplicitIteratorHTMLEscaping) {
   Value D = Object{{"list", Array{"&", "\"", "<", ">"}}};
-  auto T = Template("{{#list}}({{.}}){{/list}}");
+  Template T("{{#list}}({{.}}){{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -581,7 +580,7 @@ TEST(MustacheSections, ImplicitIteratorHTMLEscaping) {
 
 TEST(MustacheSections, ImplicitIteratorAmpersand) {
   Value D = Object{{"list", Array{"&", "\"", "<", ">"}}};
-  auto T = Template("{{#list}}({{&.}}){{/list}}");
+  Template T("{{#list}}({{&.}}){{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -590,7 +589,7 @@ TEST(MustacheSections, ImplicitIteratorAmpersand) {
 
 TEST(MustacheSections, ImplicitIteratorRootLevel) {
   Value D = Array{Object{{"value", "a"}}, Object{{"value", "b"}}};
-  auto T = Template("{{#.}}({{value}}){{/.}}");
+  Template T("{{#.}}({{value}}){{/.}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -599,7 +598,7 @@ TEST(MustacheSections, ImplicitIteratorRootLevel) {
 
 TEST(MustacheSections, DottedNamesTruthy) {
   Value D = Object{{"a", Object{{"b", Object{{"c", true}}}}}};
-  auto T = Template("{{#a.b.c}}Here{{/a.b.c}} == Here");
+  Template T("{{#a.b.c}}Here{{/a.b.c}} == Here");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -608,7 +607,7 @@ TEST(MustacheSections, DottedNamesTruthy) {
 
 TEST(MustacheSections, DottedNamesFalsey) {
   Value D = Object{{"a", Object{{"b", Object{{"c", false}}}}}};
-  auto T = Template("{{#a.b.c}}Here{{/a.b.c}} == ");
+  Template T("{{#a.b.c}}Here{{/a.b.c}} == ");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -617,7 +616,7 @@ TEST(MustacheSections, DottedNamesFalsey) {
 
 TEST(MustacheSections, DottedNamesBrokenChains) {
   Value D = Object{{"a", Object{}}};
-  auto T = Template("{{#a.b.c}}Here{{/a.b.c}} == ");
+  Template T("{{#a.b.c}}Here{{/a.b.c}} == ");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -626,7 +625,7 @@ TEST(MustacheSections, DottedNamesBrokenChains) {
 
 TEST(MustacheSections, SurroundingWhitespace) {
   Value D = Object{{"boolean", true}};
-  auto T = Template(" | {{#boolean}}\t|\t{{/boolean}} | \n");
+  Template T(" | {{#boolean}}\t|\t{{/boolean}} | \n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -635,8 +634,7 @@ TEST(MustacheSections, SurroundingWhitespace) {
 
 TEST(MustacheSections, InternalWhitespace) {
   Value D = Object{{"boolean", true}};
-  auto T = Template(
-      " | {{#boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
+  Template T(" | {{#boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -645,8 +643,7 @@ TEST(MustacheSections, InternalWhitespace) {
 
 TEST(MustacheSections, IndentedInlineSections) {
   Value D = Object{{"boolean", true}};
-  auto T =
-      Template(" {{#boolean}}YES{{/boolean}}\n {{#boolean}}GOOD{{/boolean}}\n");
+  Template T(" {{#boolean}}YES{{/boolean}}\n {{#boolean}}GOOD{{/boolean}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -655,7 +652,7 @@ TEST(MustacheSections, IndentedInlineSections) {
 
 TEST(MustacheSections, StandaloneLines) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("| This Is\n{{#boolean}}\n|\n{{/boolean}}\n| A Line\n");
+  Template T("| This Is\n{{#boolean}}\n|\n{{/boolean}}\n| A Line\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -664,7 +661,7 @@ TEST(MustacheSections, StandaloneLines) {
 
 TEST(MustacheSections, IndentedStandaloneLines) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("| This Is\n  {{#boolean}}\n|\n  {{/boolean}}\n| A Line\n");
+  Template T("| This Is\n  {{#boolean}}\n|\n  {{/boolean}}\n| A Line\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -673,7 +670,7 @@ TEST(MustacheSections, IndentedStandaloneLines) {
 
 TEST(MustacheSections, StandaloneLineEndings) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("|\r\n{{#boolean}}\r\n{{/boolean}}\r\n|");
+  Template T("|\r\n{{#boolean}}\r\n{{/boolean}}\r\n|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -682,7 +679,7 @@ TEST(MustacheSections, StandaloneLineEndings) {
 
 TEST(MustacheSections, StandaloneWithoutPreviousLine) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("  {{#boolean}}\n#{{/boolean}}\n/");
+  Template T("  {{#boolean}}\n#{{/boolean}}\n/");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -691,7 +688,7 @@ TEST(MustacheSections, StandaloneWithoutPreviousLine) {
 
 TEST(MustacheSections, StandaloneWithoutNewline) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("#{{#boolean}}\n/\n  {{/boolean}}");
+  Template T("#{{#boolean}}\n/\n  {{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -700,7 +697,7 @@ TEST(MustacheSections, StandaloneWithoutNewline) {
 
 TEST(MustacheSections, Padding) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("|{{# boolean }}={{/ boolean }}|");
+  Template T("|{{# boolean }}={{/ boolean }}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -709,7 +706,7 @@ TEST(MustacheSections, Padding) {
 
 TEST(MustacheInvertedSections, Falsey) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("{{^boolean}}This should be rendered.{{/boolean}}");
+  Template T("{{^boolean}}This should be rendered.{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -718,7 +715,7 @@ TEST(MustacheInvertedSections, Falsey) {
 
 TEST(MustacheInvertedSections, Truthy) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("{{^boolean}}This should not be rendered.{{/boolean}}");
+  Template T("{{^boolean}}This should not be rendered.{{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -727,7 +724,7 @@ TEST(MustacheInvertedSections, Truthy) {
 
 TEST(MustacheInvertedSections, NullIsFalsey) {
   Value D = Object{{"null", nullptr}};
-  auto T = Template("{{^null}}This should be rendered.{{/null}}");
+  Template T("{{^null}}This should be rendered.{{/null}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -736,7 +733,7 @@ TEST(MustacheInvertedSections, NullIsFalsey) {
 
 TEST(MustacheInvertedSections, Context) {
   Value D = Object{{"context", Object{{"name", "Joe"}}}};
-  auto T = Template("{{^context}}Hi {{name}}.{{/context}}");
+  Template T("{{^context}}Hi {{name}}.{{/context}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -746,7 +743,7 @@ TEST(MustacheInvertedSections, Context) {
 TEST(MustacheInvertedSections, List) {
   Value D = Object{
       {"list", Array{Object{{"n", 1}}, Object{{"n", 2}}, Object{{"n", 3}}}}};
-  auto T = Template("{{^list}}{{n}}{{/list}}");
+  Template T("{{^list}}{{n}}{{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -755,7 +752,7 @@ TEST(MustacheInvertedSections, List) {
 
 TEST(MustacheInvertedSections, EmptyList) {
   Value D = Object{{"list", Array{}}};
-  auto T = Template("{{^list}}Yay lists!{{/list}}");
+  Template T("{{^list}}Yay lists!{{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -764,8 +761,8 @@ TEST(MustacheInvertedSections, EmptyList) {
 
 TEST(MustacheInvertedSections, Doubled) {
   Value D = Object{{"bool", false}, {"two", "second"}};
-  auto T = Template("{{^bool}}\n* first\n{{/bool}}\n* "
-                    "{{two}}\n{{^bool}}\n* third\n{{/bool}}\n");
+  Template T("{{^bool}}\n* first\n{{/bool}}\n* "
+             "{{two}}\n{{^bool}}\n* third\n{{/bool}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -774,7 +771,7 @@ TEST(MustacheInvertedSections, Doubled) {
 
 TEST(MustacheInvertedSections, NestedFalsey) {
   Value D = Object{{"bool", false}};
-  auto T = Template("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |");
+  Template T("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -783,7 +780,7 @@ TEST(MustacheInvertedSections, NestedFalsey) {
 
 TEST(MustacheInvertedSections, NestedTruthy) {
   Value D = Object{{"bool", true}};
-  auto T = Template("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |");
+  Template T("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -792,7 +789,7 @@ TEST(MustacheInvertedSections, NestedTruthy) {
 
 TEST(MustacheInvertedSections, ContextMisses) {
   Value D = Object{};
-  auto T = Template("[{{^missing}}Cannot find key 'missing'!{{/missing}}]");
+  Template T("[{{^missing}}Cannot find key 'missing'!{{/missing}}]");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -801,7 +798,7 @@ TEST(MustacheInvertedSections, ContextMisses) {
 
 TEST(MustacheInvertedSections, DottedNamesTruthy) {
   Value D = Object{{"a", Object{{"b", Object{{"c", true}}}}}};
-  auto T = Template("{{^a.b.c}}Not Here{{/a.b.c}} == ");
+  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == ");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -810,7 +807,7 @@ TEST(MustacheInvertedSections, DottedNamesTruthy) {
 
 TEST(MustacheInvertedSections, DottedNamesFalsey) {
   Value D = Object{{"a", Object{{"b", Object{{"c", false}}}}}};
-  auto T = Template("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here");
+  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -819,7 +816,7 @@ TEST(MustacheInvertedSections, DottedNamesFalsey) {
 
 TEST(MustacheInvertedSections, DottedNamesBrokenChains) {
   Value D = Object{{"a", Object{}}};
-  auto T = Template("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here");
+  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -828,7 +825,7 @@ TEST(MustacheInvertedSections, DottedNamesBrokenChains) {
 
 TEST(MustacheInvertedSections, SurroundingWhitespace) {
   Value D = Object{{"boolean", false}};
-  auto T = Template(" | {{^boolean}}\t|\t{{/boolean}} | \n");
+  Template T(" | {{^boolean}}\t|\t{{/boolean}} | \n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -837,8 +834,7 @@ TEST(MustacheInvertedSections, SurroundingWhitespace) {
 
 TEST(MustacheInvertedSections, InternalWhitespace) {
   Value D = Object{{"boolean", false}};
-  auto T = Template(
-      " | {{^boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
+  Template T(" | {{^boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -847,8 +843,7 @@ TEST(MustacheInvertedSections, InternalWhitespace) {
 
 TEST(MustacheInvertedSections, IndentedInlineSections) {
   Value D = Object{{"boolean", false}};
-  auto T =
-      Template(" {{^boolean}}NO{{/boolean}}\n {{^boolean}}WAY{{/boolean}}\n");
+  Template T(" {{^boolean}}NO{{/boolean}}\n {{^boolean}}WAY{{/boolean}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -857,7 +852,7 @@ TEST(MustacheInvertedSections, IndentedInlineSections) {
 
 TEST(MustacheInvertedSections, StandaloneLines) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("| This Is\n{{^boolean}}\n|\n{{/boolean}}\n| A Line\n");
+  Template T("| This Is\n{{^boolean}}\n|\n{{/boolean}}\n| A Line\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -866,7 +861,7 @@ TEST(MustacheInvertedSections, StandaloneLines) {
 
 TEST(MustacheInvertedSections, StandaloneIndentedLines) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("| This Is\n  {{^boolean}}\n|\n  {{/boolean}}\n| A Line\n");
+  Template T("| This Is\n  {{^boolean}}\n|\n  {{/boolean}}\n| A Line\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -875,7 +870,7 @@ TEST(MustacheInvertedSections, StandaloneIndentedLines) {
 
 TEST(MustacheInvertedSections, StandaloneLineEndings) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("|\r\n{{^boolean}}\r\n{{/boolean}}\r\n|");
+  Template T("|\r\n{{^boolean}}\r\n{{/boolean}}\r\n|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -884,7 +879,7 @@ TEST(MustacheInvertedSections, StandaloneLineEndings) {
 
 TEST(MustacheInvertedSections, StandaloneWithoutPreviousLine) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("  {{^boolean}}\n^{{/boolean}}\n/");
+  Template T("  {{^boolean}}\n^{{/boolean}}\n/");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -893,7 +888,7 @@ TEST(MustacheInvertedSections, StandaloneWithoutPreviousLine) {
 
 TEST(MustacheInvertedSections, StandaloneWithoutNewline) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("^{{^boolean}}\n/\n  {{/boolean}}");
+  Template T("^{{^boolean}}\n/\n  {{/boolean}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -902,7 +897,7 @@ TEST(MustacheInvertedSections, StandaloneWithoutNewline) {
 
 TEST(MustacheInvertedSections, Padding) {
   Value D = Object{{"boolean", false}};
-  auto T = Template("|{{^ boolean }}={{/ boolean }}|");
+  Template T("|{{^ boolean }}={{/ boolean }}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -911,7 +906,7 @@ TEST(MustacheInvertedSections, Padding) {
 
 TEST(MustachePartials, BasicBehavior) {
   Value D = Object{};
-  auto T = Template("{{>text}}");
+  Template T("{{>text}}");
   T.registerPartial("text", "from partial");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -921,7 +916,7 @@ TEST(MustachePartials, BasicBehavior) {
 
 TEST(MustachePartials, FailedLookup) {
   Value D = Object{};
-  auto T = Template("{{>text}}");
+  Template T("{{>text}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -930,7 +925,7 @@ TEST(MustachePartials, FailedLookup) {
 
 TEST(MustachePartials, Context) {
   Value D = Object{{"text", "content"}};
-  auto T = Template("{{>partial}}");
+  Template T("{{>partial}}");
   T.registerPartial("partial", "*{{text}}*");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -942,7 +937,7 @@ TEST(MustachePartials, Recursion) {
   Value D =
       Object{{"content", "X"},
              {"nodes", Array{Object{{"content", "Y"}, {"nodes", Array{}}}}}};
-  auto T = Template("{{>node}}");
+  Template T("{{>node}}");
   T.registerPartial("node", "{{content}}({{#nodes}}{{>node}}{{/nodes}})");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -952,7 +947,7 @@ TEST(MustachePartials, Recursion) {
 
 TEST(MustachePartials, Nested) {
   Value D = Object{{"a", "hello"}, {"b", "world"}};
-  auto T = Template("{{>outer}}");
+  Template T("{{>outer}}");
   T.registerPartial("outer", "*{{a}} {{>inner}}*");
   T.registerPartial("inner", "{{b}}!");
   std::string Out;
@@ -963,7 +958,7 @@ TEST(MustachePartials, Nested) {
 
 TEST(MustachePartials, SurroundingWhitespace) {
   Value D = Object{};
-  auto T = Template("| {{>partial}} |");
+  Template T("| {{>partial}} |");
   T.registerPartial("partial", "\t|\t");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -973,7 +968,7 @@ TEST(MustachePartials, SurroundingWhitespace) {
 
 TEST(MustachePartials, InlineIndentation) {
   Value D = Object{{"data", "|"}};
-  auto T = Template("  {{data}}  {{> partial}}\n");
+  Template T("  {{data}}  {{> partial}}\n");
   T.registerPartial("partial", "<\n<");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -983,7 +978,7 @@ TEST(MustachePartials, InlineIndentation) {
 
 TEST(MustachePartials, PaddingWhitespace) {
   Value D = Object{{"boolean", true}};
-  auto T = Template("|{{> partial }}|");
+  Template T("|{{> partial }}|");
   T.registerPartial("partial", "[]");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -992,18 +987,18 @@ TEST(MustachePartials, PaddingWhitespace) {
 }
 
 TEST(MustachePartials, StandaloneIndentation) {
-  Value D = Object{{"content", "<\n->"}};
-  auto T = Template("\\\n  {{>partial}}\n/\n");
+  mustache::Template T("\\\n {{>partial}}\n/\n");
   T.registerPartial("partial", "|\n{{{content}}}\n|\n");
-  std::string Out;
-  raw_string_ostream OS(Out);
-  T.render(D, OS);
-  EXPECT_EQ("\\\n  |\n  <\n  ->\n  |\n/\n", Out);
+  std::string O;
+  raw_string_ostream OS(O);
+  Value DataContext = Object{{"content", "<\n->"}};
+  T.render(DataContext, OS);
+  EXPECT_EQ("\\\n |\n <\n->\n |\n/\n", OS.str());
 }
 
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
-  auto T = Template("Hello, {{lambda}}!");
+  Template T("Hello, {{lambda}}!");
   Lambda L = []() -> llvm::json::Value { return "World"; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1014,7 +1009,7 @@ TEST(MustacheLambdas, BasicInterpolation) {
 
 TEST(MustacheLambdas, InterpolationExpansion) {
   Value D = Object{{"planet", "World"}};
-  auto T = Template("Hello, {{lambda}}!");
+  Template T("Hello, {{lambda}}!");
   Lambda L = []() -> llvm::json::Value { return "{{planet}}"; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1025,7 +1020,7 @@ TEST(MustacheLambdas, InterpolationExpansion) {
 
 TEST(MustacheLambdas, BasicMultipleCalls) {
   Value D = Object{};
-  auto T = Template("{{lambda}} == {{lambda}} == {{lambda}}");
+  Template T("{{lambda}} == {{lambda}} == {{lambda}}");
   int I = 0;
   Lambda L = [&I]() -> llvm::json::Value {
     I += 1;
@@ -1040,7 +1035,7 @@ TEST(MustacheLambdas, BasicMultipleCalls) {
 
 TEST(MustacheLambdas, Escaping) {
   Value D = Object{};
-  auto T = Template("<{{lambda}}{{&lambda}}");
+  Template T("<{{lambda}}{{&lambda}}");
   Lambda L = []() -> llvm::json::Value { return ">"; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1051,7 +1046,7 @@ TEST(MustacheLambdas, Escaping) {
 
 TEST(MustacheLambdas, Sections) {
   Value D = Object{};
-  auto T = Template("<{{#lambda}}{{x}}{{/lambda}}>");
+  Template T("<{{#lambda}}{{x}}{{/lambda}}>");
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
     if (Text == "{{x}}") {
       return "yes";
@@ -1069,7 +1064,7 @@ TEST(MustacheLambdas, SectionExpansion) {
   Value D = Object{
       {"planet", "Earth"},
   };
-  auto T = Template("<{{#lambda}}-{{/lambda}}>");
+  Template T("<{{#lambda}}-{{/lambda}}>");
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
     SmallString<128> Result;
     Result += Text;
@@ -1086,7 +1081,7 @@ TEST(MustacheLambdas, SectionExpansion) {
 
 TEST(MustacheLambdas, SectionsMultipleCalls) {
   Value D = Object{};
-  auto T = Template("{{#lambda}}FILE{{/lambda}} != {{#lambda}}LINE{{/lambda}}");
+  Template T("{{#lambda}}FILE{{/lambda}} != {{#lambda}}LINE{{/lambda}}");
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
     SmallString<128> Result;
     Result += "__";
@@ -1103,7 +1098,7 @@ TEST(MustacheLambdas, SectionsMultipleCalls) {
 
 TEST(MustacheLambdas, InvertedSections) {
   Value D = Object{{"static", "static"}};
-  auto T = Template("<{{^lambda}}{{static}}{{/lambda}}>");
+  Template T("<{{^lambda}}{{static}}{{/lambda}}>");
   SectionLambda L = [](StringRef Text) -> llvm::json::Value { return false; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1115,7 +1110,7 @@ TEST(MustacheLambdas, InvertedSections) {
 TEST(MustacheComments, Inline) {
   // Comment blocks should be removed from the template.
   Value D = {};
-  auto T = Template("12345{{! Comment Block! }}67890");
+  Template T("12345{{! Comment Block! }}67890");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1125,8 +1120,7 @@ TEST(MustacheComments, Inline) {
 TEST(MustacheComments, Multiline) {
   // Multiline comments should be permitted.
   Value D = {};
-  auto T =
-      Template("12345{{!\n  This is a\n  multi-line comment...\n}}67890\n");
+  Template T("12345{{!\n  This is a\n  multi-line comment...\n}}67890\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1136,7 +1130,7 @@ TEST(MustacheComments, Multiline) {
 TEST(MustacheComments, Standalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  auto T = Template("Begin.\n{{! Comment Block! }}\nEnd.\n");
+  Template T("Begin.\n{{! Comment Block! }}\nEnd.\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1146,7 +1140,7 @@ TEST(MustacheComments, Standalone) {
 TEST(MustacheComments, IndentedStandalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  auto T = Template("Begin.\n  {{! Indented Comment Block! }}\nEnd.\n");
+  Template T("Begin.\n  {{! Indented Comment Block! }}\nEnd.\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1156,7 +1150,7 @@ TEST(MustacheComments, IndentedStandalone) {
 TEST(MustacheComments, StandaloneLineEndings) {
   // "\r\n" should be considered a newline for standalone tags.
   Value D = {};
-  auto T = Template("|\r\n{{! Standalone Comment }}\r\n|");
+  Template T("|\r\n{{! Standalone Comment }}\r\n|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1166,7 +1160,7 @@ TEST(MustacheComments, StandaloneLineEndings) {
 TEST(MustacheComments, StandaloneWithoutPreviousLine) {
   // Standalone tags should not require a newline to precede them.
   Value D = {};
-  auto T = Template("  {{! I'm Still Standalone }}\n!");
+  Template T("  {{! I'm Still Standalone }}\n!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1176,7 +1170,7 @@ TEST(MustacheComments, StandaloneWithoutPreviousLine) {
 TEST(MustacheComments, StandaloneWithoutNewline) {
   // Standalone tags should not require a newline to follow them.
   Value D = {};
-  auto T = Template("!\n  {{! I'm Still Standalone }}");
+  Template T("!\n  {{! I'm Still Standalone }}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1186,7 +1180,7 @@ TEST(MustacheComments, StandaloneWithoutNewline) {
 TEST(MustacheComments, MultilineStandalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  auto T = Template("Begin.\n{{!\nSomething's going on here...\n}}\nEnd.\n");
+  Template T("Begin.\n{{!\nSomething's going on here...\n}}\nEnd.\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1196,8 +1190,7 @@ TEST(MustacheComments, MultilineStandalone) {
 TEST(MustacheComments, IndentedMultilineStandalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  auto T =
-      Template("Begin.\n  {{!\n    Something's going on here...\n  }}\nEnd.\n");
+  Template T("Begin.\n  {{!\n    Something's going on here...\n  }}\nEnd.\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1207,7 +1200,7 @@ TEST(MustacheComments, IndentedMultilineStandalone) {
 TEST(MustacheComments, IndentedInline) {
   // Inline comments should not strip whitespace.
   Value D = {};
-  auto T = Template("  12 {{! 34 }}\n");
+  Template T("  12 {{! 34 }}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1217,7 +1210,7 @@ TEST(MustacheComments, IndentedInline) {
 TEST(MustacheComments, SurroundingWhitespace) {
   // Comment removal should preserve surrounding whitespace.
   Value D = {};
-  auto T = Template("12345 {{! Comment Block! }} 67890");
+  Template T("12345 {{! Comment Block! }} 67890");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1228,7 +1221,7 @@ TEST(MustacheComments, VariableNameCollision) {
   // Comments must never render, even if a variable with the same name exists.
   Value D = Object{
       {"! comment", 1}, {"! comment ", 2}, {"!comment", 3}, {"comment", 4}};
-  auto T = Template("comments never show: >{{! comment }}<");
+  Template T("comments never show: >{{! comment }}<");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1241,7 +1234,7 @@ TEST(MustacheComments, VariableNameCollision) {
 // implemented, these assertions should be changed back to EXPECT_EQ.
 TEST(MustacheTripleMustache, Basic) {
   Value D = Object{{"subject", "<b>World</b>"}};
-  auto T = Template("Hello, {{{subject}}}!");
+  Template T("Hello, {{{subject}}}!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1250,7 +1243,7 @@ TEST(MustacheTripleMustache, Basic) {
 
 TEST(MustacheTripleMustache, IntegerInterpolation) {
   Value D = Object{{"mph", 85}};
-  auto T = Template("{{{mph}}} miles an hour!");
+  Template T("{{{mph}}} miles an hour!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1259,7 +1252,7 @@ TEST(MustacheTripleMustache, IntegerInterpolation) {
 
 TEST(MustacheTripleMustache, DecimalInterpolation) {
   Value D = Object{{"power", 1.21}};
-  auto T = Template("{{{power}}} jiggawatts!");
+  Template T("{{{power}}} jiggawatts!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1268,7 +1261,7 @@ TEST(MustacheTripleMustache, DecimalInterpolation) {
 
 TEST(MustacheTripleMustache, NullInterpolation) {
   Value D = Object{{"cannot", nullptr}};
-  auto T = Template("I ({{{cannot}}}) be seen!");
+  Template T("I ({{{cannot}}}) be seen!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1277,7 +1270,7 @@ TEST(MustacheTripleMustache, NullInterpolation) {
 
 TEST(MustacheTripleMustache, ContextMissInterpolation) {
   Value D = Object{};
-  auto T = Template("I ({{{cannot}}}) be seen!");
+  Template T("I ({{{cannot}}}) be seen!");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1286,7 +1279,7 @@ TEST(MustacheTripleMustache, ContextMissInterpolation) {
 
 TEST(MustacheTripleMustache, DottedNames) {
   Value D = Object{{"person", Object{{"name", "<b>Joe</b>"}}}};
-  auto T = Template("{{{person.name}}}");
+  Template T("{{{person.name}}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1295,7 +1288,7 @@ TEST(MustacheTripleMustache, DottedNames) {
 
 TEST(MustacheTripleMustache, ImplicitIterator) {
   Value D = Object{{"list", Array{"<a>", "<b>"}}};
-  auto T = Template("{{#list}}({{{.}}}){{/list}}");
+  Template T("{{#list}}({{{.}}}){{/list}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1304,7 +1297,7 @@ TEST(MustacheTripleMustache, ImplicitIterator) {
 
 TEST(MustacheTripleMustache, SurroundingWhitespace) {
   Value D = Object{{"string", "---"}};
-  auto T = Template("| {{{string}}} |");
+  Template T("| {{{string}}} |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1313,7 +1306,7 @@ TEST(MustacheTripleMustache, SurroundingWhitespace) {
 
 TEST(MustacheTripleMustache, Standalone) {
   Value D = Object{{"string", "---"}};
-  auto T = Template("  {{{string}}}\n");
+  Template T("  {{{string}}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1322,7 +1315,7 @@ TEST(MustacheTripleMustache, Standalone) {
 
 TEST(MustacheTripleMustache, WithPadding) {
   Value D = Object{{"string", "---"}};
-  auto T = Template("|{{{ string }}}|");
+  Template T("|{{{ string }}}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1331,7 +1324,7 @@ TEST(MustacheTripleMustache, WithPadding) {
 
 TEST(MustacheDelimiters, PairBehavior) {
   Value D = Object{{"text", "Hey!"}};
-  auto T = Template("{{=<% %>=}}(<%text%>)");
+  Template T("{{=<% %>=}}(<%text%>)");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1340,7 +1333,7 @@ TEST(MustacheDelimiters, PairBehavior) {
 
 TEST(MustacheDelimiters, SpecialCharacters) {
   Value D = Object{{"text", "It worked!"}};
-  auto T = Template("({{=[ ]=}}[text])");
+  Template T("({{=[ ]=}}[text])");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1375,7 +1368,7 @@ TEST(MustacheDelimiters, InvertedSections) {
 
 TEST(MustacheDelimiters, PartialInheritence) {
   Value D = Object{{"value", "yes"}};
-  auto T = Template("[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n");
+  Template T("[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n");
   T.registerPartial("include", ".{{value}}.");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -1385,7 +1378,7 @@ TEST(MustacheDelimiters, PartialInheritence) {
 
 TEST(MustacheDelimiters, PostPartialBehavior) {
   Value D = Object{{"value", "yes"}};
-  auto T = Template("[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n");
+  Template T("[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n");
   T.registerPartial("include", ".{{value}}. {{= | | =}} .|value|.");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -1395,7 +1388,7 @@ TEST(MustacheDelimiters, PostPartialBehavior) {
 
 TEST(MustacheDelimiters, SurroundingWhitespace) {
   Value D = Object{};
-  auto T = Template("| {{=@ @=}} |");
+  Template T("| {{=@ @=}} |");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1404,7 +1397,7 @@ TEST(MustacheDelimiters, SurroundingWhitespace) {
 
 TEST(MustacheDelimiters, OutlyingWhitespaceInline) {
   Value D = Object{};
-  auto T = Template(" | {{=@ @=}}\n");
+  Template T(" | {{=@ @=}}\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1413,7 +1406,7 @@ TEST(MustacheDelimiters, OutlyingWhitespaceInline) {
 
 TEST(MustacheDelimiters, StandaloneTag) {
   Value D = Object{};
-  auto T = Template("Begin.\n{{=@ @=}}\nEnd.\n");
+  Template T("Begin.\n{{=@ @=}}\nEnd.\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1422,7 +1415,7 @@ TEST(MustacheDelimiters, StandaloneTag) {
 
 TEST(MustacheDelimiters, IndentedStandaloneTag) {
   Value D = Object{};
-  auto T = Template("Begin.\n  {{=@ @=}}\nEnd.\n");
+  Template T("Begin.\n  {{=@ @=}}\nEnd.\n");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1431,7 +1424,7 @@ TEST(MustacheDelimiters, IndentedStandaloneTag) {
 
 TEST(MustacheDelimiters, StandaloneLineEndings) {
   Value D = Object{};
-  auto T = Template("|\r\n{{= @ @ =}}\r\n|");
+  Template T("|\r\n{{= @ @ =}}\r\n|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1440,7 +1433,7 @@ TEST(MustacheDelimiters, StandaloneLineEndings) {
 
 TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
   Value D = Object{};
-  auto T = Template("  {{=@ @=}}\n=");
+  Template T("  {{=@ @=}}\n=");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1449,7 +1442,7 @@ TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
 
 TEST(MustacheDelimiters, StandaloneWithoutNewline) {
   Value D = Object{};
-  auto T = Template("=\n  {{=@ @=}}");
+  Template T("=\n  {{=@ @=}}");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1458,7 +1451,7 @@ TEST(MustacheDelimiters, StandaloneWithoutNewline) {
 
 TEST(MustacheDelimiters, PairwithPadding) {
   Value D = Object{};
-  auto T = Template("|{{= @   @ =}}|");
+  Template T("|{{= @   @ =}}|");
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);

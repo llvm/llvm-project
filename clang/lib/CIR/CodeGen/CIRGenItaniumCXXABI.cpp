@@ -103,6 +103,9 @@ public:
                              const CXXRecordDecl *rd) override;
   void emitVirtualInheritanceTables(const CXXRecordDecl *rd) override;
 
+  mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
+                                          QualType ty) override;
+
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
     return true;
   }
@@ -111,6 +114,34 @@ public:
   getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
                             Address thisAddr, const CXXRecordDecl *classDecl,
                             const CXXRecordDecl *baseClassDecl) override;
+
+  /**************************** RTTI Uniqueness ******************************/
+protected:
+  /// Returns true if the ABI requires RTTI type_info objects to be unique
+  /// across a program.
+  virtual bool shouldRTTIBeUnique() const { return true; }
+
+public:
+  /// What sort of unique-RTTI behavior should we use?
+  enum RTTIUniquenessKind {
+    /// We are guaranteeing, or need to guarantee, that the RTTI string
+    /// is unique.
+    RUK_Unique,
+
+    /// We are not guaranteeing uniqueness for the RTTI string, so we
+    /// can demote to hidden visibility but must use string comparisons.
+    RUK_NonUniqueHidden,
+
+    /// We are not guaranteeing uniqueness for the RTTI string, so we
+    /// have to use string comparisons, but we also have to emit it with
+    /// non-hidden visibility.
+    RUK_NonUniqueVisible
+  };
+
+  /// Return the required visibility status for the given type and linkage in
+  /// the current ABI.
+  RTTIUniquenessKind
+  classifyRTTIUniqueness(QualType canTy, cir::GlobalLinkageKind linkage) const;
 };
 
 } // namespace
@@ -422,6 +453,1038 @@ void CIRGenItaniumCXXABI::emitVirtualInheritanceTables(
   CIRGenVTables &vtables = cgm.getVTables();
   cir::GlobalOp vtt = vtables.getAddrOfVTT(rd);
   vtables.emitVTTDefinition(vtt, cgm.getVTableLinkage(rd), rd);
+}
+
+namespace {
+class CIRGenItaniumRTTIBuilder {
+  CIRGenModule &cgm;                 // Per-module state.
+  const CIRGenItaniumCXXABI &cxxABI; // Per-module state.
+
+  /// The fields of the RTTI descriptor currently being built.
+  SmallVector<mlir::Attribute, 16> fields;
+
+  // Returns the mangled type name of the given type.
+  cir::GlobalOp getAddrOfTypeName(mlir::Location loc, QualType ty,
+                                  cir::GlobalLinkageKind linkage);
+
+  /// descriptor of the given type.
+  mlir::Attribute getAddrOfExternalRTTIDescriptor(mlir::Location loc,
+                                                  QualType ty);
+
+  /// Build the vtable pointer for the given type.
+  void buildVTablePointer(mlir::Location loc, const Type *ty);
+
+  /// Build an abi::__si_class_type_info, used for single inheritance, according
+  /// to the Itanium C++ ABI, 2.9.5p6b.
+  void buildSIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *rd);
+
+  /// Build an abi::__vmi_class_type_info, used for
+  /// classes with bases that do not satisfy the abi::__si_class_type_info
+  /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
+  void buildVMIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *rd);
+
+public:
+  CIRGenItaniumRTTIBuilder(const CIRGenItaniumCXXABI &abi, CIRGenModule &cgm)
+      : cgm(cgm), cxxABI(abi) {}
+
+  /// Build the RTTI type info struct for the given type, or
+  /// link to an existing RTTI descriptor if one already exists.
+  mlir::Attribute buildTypeInfo(mlir::Location loc, QualType ty);
+
+  /// Build the RTTI type info struct for the given type.
+  mlir::Attribute buildTypeInfo(mlir::Location loc, QualType ty,
+                                cir::GlobalLinkageKind linkage,
+                                mlir::SymbolTable::Visibility visibility);
+};
+} // namespace
+
+// TODO(cir): Will be removed after sharing them with the classical codegen
+namespace {
+
+// Pointer type info flags.
+enum {
+  /// PTI_Const - Type has const qualifier.
+  PTI_Const = 0x1,
+
+  /// PTI_Volatile - Type has volatile qualifier.
+  PTI_Volatile = 0x2,
+
+  /// PTI_Restrict - Type has restrict qualifier.
+  PTI_Restrict = 0x4,
+
+  /// PTI_Incomplete - Type is incomplete.
+  PTI_Incomplete = 0x8,
+
+  /// PTI_ContainingClassIncomplete - Containing class is incomplete.
+  /// (in pointer to member).
+  PTI_ContainingClassIncomplete = 0x10,
+
+  /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
+  // PTI_TransactionSafe = 0x20,
+
+  /// PTI_Noexcept - Pointee is noexcept function (C++1z).
+  PTI_Noexcept = 0x40,
+};
+
+// VMI type info flags.
+enum {
+  /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
+  VMI_NonDiamondRepeat = 0x1,
+
+  /// VMI_DiamondShaped - Class is diamond shaped.
+  VMI_DiamondShaped = 0x2
+};
+
+// Base class type info flags.
+enum {
+  /// BCTI_Virtual - Base class is virtual.
+  BCTI_Virtual = 0x1,
+
+  /// BCTI_Public - Base class is public.
+  BCTI_Public = 0x2
+};
+
+/// Given a builtin type, returns whether the type
+/// info for that type is defined in the standard library.
+/// TODO(cir): this can unified with LLVM codegen
+static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
+  // Itanium C++ ABI 2.9.2:
+  //   Basic type information (e.g. for "int", "bool", etc.) will be kept in
+  //   the run-time support library. Specifically, the run-time support
+  //   library should contain type_info objects for the types X, X* and
+  //   X const*, for every X in: void, std::nullptr_t, bool, wchar_t, char,
+  //   unsigned char, signed char, short, unsigned short, int, unsigned int,
+  //   long, unsigned long, long long, unsigned long long, float, double,
+  //   long double, char16_t, char32_t, and the IEEE 754r decimal and
+  //   half-precision floating point types.
+  //
+  // GCC also emits RTTI for __int128.
+  // FIXME: We do not emit RTTI information for decimal types here.
+
+  // Types added here must also be added to emitFundamentalRTTIDescriptors.
+  switch (ty->getKind()) {
+  case BuiltinType::WasmExternRef:
+  case BuiltinType::HLSLResource:
+    llvm_unreachable("NYI");
+  case BuiltinType::Void:
+  case BuiltinType::NullPtr:
+  case BuiltinType::Bool:
+  case BuiltinType::WChar_S:
+  case BuiltinType::WChar_U:
+  case BuiltinType::Char_U:
+  case BuiltinType::Char_S:
+  case BuiltinType::UChar:
+  case BuiltinType::SChar:
+  case BuiltinType::Short:
+  case BuiltinType::UShort:
+  case BuiltinType::Int:
+  case BuiltinType::UInt:
+  case BuiltinType::Long:
+  case BuiltinType::ULong:
+  case BuiltinType::LongLong:
+  case BuiltinType::ULongLong:
+  case BuiltinType::Half:
+  case BuiltinType::Float:
+  case BuiltinType::Double:
+  case BuiltinType::LongDouble:
+  case BuiltinType::Float16:
+  case BuiltinType::Float128:
+  case BuiltinType::Ibm128:
+  case BuiltinType::Char8:
+  case BuiltinType::Char16:
+  case BuiltinType::Char32:
+  case BuiltinType::Int128:
+  case BuiltinType::UInt128:
+    return true;
+
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
+  case BuiltinType::Id:
+#include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) case BuiltinType::Id:
+#include "clang/Basic/OpenCLExtensionTypes.def"
+  case BuiltinType::OCLSampler:
+  case BuiltinType::OCLEvent:
+  case BuiltinType::OCLClkEvent:
+  case BuiltinType::OCLQueue:
+  case BuiltinType::OCLReserveID:
+#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AArch64ACLETypes.def"
+#define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
+  case BuiltinType::ShortAccum:
+  case BuiltinType::Accum:
+  case BuiltinType::LongAccum:
+  case BuiltinType::UShortAccum:
+  case BuiltinType::UAccum:
+  case BuiltinType::ULongAccum:
+  case BuiltinType::ShortFract:
+  case BuiltinType::Fract:
+  case BuiltinType::LongFract:
+  case BuiltinType::UShortFract:
+  case BuiltinType::UFract:
+  case BuiltinType::ULongFract:
+  case BuiltinType::SatShortAccum:
+  case BuiltinType::SatAccum:
+  case BuiltinType::SatLongAccum:
+  case BuiltinType::SatUShortAccum:
+  case BuiltinType::SatUAccum:
+  case BuiltinType::SatULongAccum:
+  case BuiltinType::SatShortFract:
+  case BuiltinType::SatFract:
+  case BuiltinType::SatLongFract:
+  case BuiltinType::SatUShortFract:
+  case BuiltinType::SatUFract:
+  case BuiltinType::SatULongFract:
+  case BuiltinType::BFloat16:
+    return false;
+
+  case BuiltinType::Dependent:
+#define BUILTIN_TYPE(Id, SingletonId)
+#define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
+#include "clang/AST/BuiltinTypes.def"
+    llvm_unreachable("asking for RRTI for a placeholder type!");
+
+  case BuiltinType::ObjCId:
+  case BuiltinType::ObjCClass:
+  case BuiltinType::ObjCSel:
+    llvm_unreachable("FIXME: Objective-C types are unsupported!");
+  }
+
+  llvm_unreachable("Invalid BuiltinType Kind!");
+}
+
+static bool typeInfoIsInStandardLibrary(const PointerType *pointerTy) {
+  QualType pointeeTy = pointerTy->getPointeeType();
+  const auto *builtinTy = dyn_cast<BuiltinType>(pointeeTy);
+  if (!builtinTy)
+    return false;
+
+  // Check the qualifiers.
+  Qualifiers quals = pointeeTy.getQualifiers();
+  quals.removeConst();
+
+  if (!quals.empty())
+    return false;
+
+  return typeInfoIsInStandardLibrary(builtinTy);
+}
+
+/// IsStandardLibraryRTTIDescriptor - Returns whether the type
+/// information for the given type exists in the standard library.
+static bool isStandardLibraryRttiDescriptor(QualType ty) {
+  // Type info for builtin types is defined in the standard library.
+  if (const auto *builtinTy = dyn_cast<BuiltinType>(ty))
+    return typeInfoIsInStandardLibrary(builtinTy);
+
+  // Type info for some pointer types to builtin types is defined in the
+  // standard library.
+  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
+    return typeInfoIsInStandardLibrary(pointerTy);
+
+  return false;
+}
+
+/// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
+/// the given type exists somewhere else, and that we should not emit the type
+/// information in this translation unit.  Assumes that it is not a
+/// standard-library type.
+static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
+  ASTContext &context = cgm.getASTContext();
+
+  // If RTTI is disabled, assume it might be disabled in the
+  // translation unit that defines any potential key function, too.
+  if (!context.getLangOpts().RTTI)
+    return false;
+
+  if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
+    const CXXRecordDecl *rd =
+        cast<CXXRecordDecl>(recordTy->getOriginalDecl())->getDefinitionOrSelf();
+    if (!rd->hasDefinition())
+      return false;
+
+    if (!rd->isDynamicClass())
+      return false;
+
+    // FIXME: this may need to be reconsidered if the key function
+    // changes.
+    // N.B. We must always emit the RTTI data ourselves if there exists a key
+    // function.
+    bool isDLLImport = rd->hasAttr<DLLImportAttr>();
+
+    // Don't import the RTTI but emit it locally.
+    if (cgm.getTriple().isOSCygMing())
+      return false;
+
+    if (cgm.getVTables().isVTableExternal(rd)) {
+      if (cgm.getTarget().hasPS4DLLImportExport())
+        return true;
+
+      return !isDLLImport || cgm.getTriple().isWindowsItaniumEnvironment();
+    }
+
+    if (isDLLImport)
+      return true;
+  }
+
+  return false;
+}
+
+/// Contains virtual and non-virtual bases seen when traversing a class
+/// hierarchy.
+struct SeenBases {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> nonVirtualBases;
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> virtualBases;
+};
+
+/// Compute the value of the flags member in abi::__vmi_class_type_info.
+///
+static unsigned computeVmiClassTypeInfoFlags(const CXXBaseSpecifier *base,
+                                             SeenBases &bases) {
+
+  unsigned flags = 0;
+  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
+
+  if (base->isVirtual()) {
+    // Mark the virtual base as seen.
+    if (!bases.virtualBases.insert(baseDecl).second) {
+      // If this virtual base has been seen before, then the class is diamond
+      // shaped.
+      flags |= VMI_DiamondShaped;
+    } else {
+      if (bases.nonVirtualBases.count(baseDecl))
+        flags |= VMI_NonDiamondRepeat;
+    }
+  } else {
+    // Mark the non-virtual base as seen.
+    if (!bases.nonVirtualBases.insert(baseDecl).second) {
+      // If this non-virtual base has been seen before, then the class has non-
+      // diamond shaped repeated inheritance.
+      flags |= VMI_NonDiamondRepeat;
+    } else {
+      if (bases.virtualBases.count(baseDecl))
+        flags |= VMI_NonDiamondRepeat;
+    }
+  }
+
+  // Walk all bases.
+  for (const auto &bs : baseDecl->bases())
+    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
+
+  return flags;
+}
+
+static unsigned computeVmiClassTypeInfoFlags(const CXXRecordDecl *rd) {
+  unsigned flags = 0;
+  SeenBases bases;
+
+  // Walk all bases.
+  for (const auto &bs : rd->bases())
+    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
+
+  return flags;
+}
+
+// Return whether the given record decl has a "single,
+// public, non-virtual base at offset zero (i.e. the derived class is dynamic
+// iff the base is)", according to Itanium C++ ABI, 2.95p6b.
+// TODO(cir): this can unified with LLVM codegen
+static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
+  // Check the number of bases.
+  if (rd->getNumBases() != 1)
+    return false;
+
+  // Get the base.
+  CXXRecordDecl::base_class_const_iterator base = rd->bases_begin();
+
+  // Check that the base is not virtual.
+  if (base->isVirtual())
+    return false;
+
+  // Check that the base is public.
+  if (base->getAccessSpecifier() != AS_public)
+    return false;
+
+  // Check that the class is dynamic iff the base is.
+  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
+  return baseDecl->isEmpty() ||
+         baseDecl->isDynamicClass() == rd->isDynamicClass();
+}
+
+/// IsIncompleteClassType - Returns whether the given record type is incomplete.
+static bool isIncompleteClassType(const RecordType *recordTy) {
+  return !recordTy->getOriginalDecl()
+              ->getDefinitionOrSelf()
+              ->isCompleteDefinition();
+}
+
+/// Returns whether the given type contains an
+/// incomplete class type. This is true if
+///
+///   * The given type is an incomplete class type.
+///   * The given type is a pointer type whose pointee type contains an
+///     incomplete class type.
+///   * The given type is a member pointer type whose class is an incomplete
+///     class type.
+///   * The given type is a member pointer type whoise pointee type contains an
+///     incomplete class type.
+/// is an indirect or direct pointer to an incomplete class type.
+static bool containsIncompleteClassType(QualType ty) {
+  if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
+    if (isIncompleteClassType(recordTy))
+      return true;
+  }
+
+  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
+    return containsIncompleteClassType(pointerTy->getPointeeType());
+
+  if (const auto *memberPointerTy = dyn_cast<MemberPointerType>(ty)) {
+    // Check if the class type is incomplete.
+    if (!memberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
+      return true;
+
+    return containsIncompleteClassType(memberPointerTy->getPointeeType());
+  }
+
+  return false;
+}
+
+const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
+  // abi::__class_type_info.
+  static const char *const classTypeInfo =
+      "_ZTVN10__cxxabiv117__class_type_infoE";
+  // abi::__si_class_type_info.
+  static const char *const siClassTypeInfo =
+      "_ZTVN10__cxxabiv120__si_class_type_infoE";
+  // abi::__vmi_class_type_info.
+  static const char *const vmiClassTypeInfo =
+      "_ZTVN10__cxxabiv121__vmi_class_type_infoE";
+
+  switch (ty->getTypeClass()) {
+#define TYPE(Class, Base)
+#define ABSTRACT_TYPE(Class, Base)
+#define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base) case Type::Class:
+#define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
+#define DEPENDENT_TYPE(Class, Base) case Type::Class:
+#include "clang/AST/TypeNodes.inc"
+    llvm_unreachable("Non-canonical and dependent types shouldn't get here");
+
+  case Type::LValueReference:
+  case Type::RValueReference:
+    llvm_unreachable("References shouldn't get here");
+
+  case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
+    llvm_unreachable("Undeduced type shouldn't get here");
+
+  case Type::Pipe:
+    llvm_unreachable("Pipe types shouldn't get here");
+
+  case Type::ArrayParameter:
+    llvm_unreachable("Array Parameter types should not get here.");
+
+  case Type::Builtin:
+  case Type::BitInt:
+  // GCC treats vector and complex types as fundamental types.
+  case Type::Vector:
+  case Type::ExtVector:
+  case Type::ConstantMatrix:
+  case Type::Complex:
+  case Type::Atomic:
+  // FIXME: GCC treats block pointers as fundamental types?!
+  case Type::BlockPointer:
+    cgm.errorNYI("VTableClassNameForType: __fundamental_type_info");
+    break;
+  case Type::ConstantArray:
+  case Type::IncompleteArray:
+  case Type::VariableArray:
+    cgm.errorNYI("VTableClassNameForType: __array_type_info");
+    break;
+
+  case Type::FunctionNoProto:
+  case Type::FunctionProto:
+    cgm.errorNYI("VTableClassNameForType: __function_type_info");
+    break;
+
+  case Type::Enum:
+    cgm.errorNYI("VTableClassNameForType: Enum");
+    break;
+
+  case Type::Record: {
+    const CXXRecordDecl *rd =
+        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
+            ->getDefinitionOrSelf();
+
+    if (!rd->hasDefinition() || !rd->getNumBases()) {
+      return classTypeInfo;
+    }
+
+    if (canUseSingleInheritance(rd)) {
+      return siClassTypeInfo;
+    }
+
+    return vmiClassTypeInfo;
+  }
+
+  case Type::ObjCObject:
+    cgm.errorNYI("VTableClassNameForType: ObjCObject");
+    break;
+
+  case Type::ObjCInterface:
+    cgm.errorNYI("VTableClassNameForType: ObjCInterface");
+    break;
+
+  case Type::ObjCObjectPointer:
+  case Type::Pointer:
+    cgm.errorNYI("VTableClassNameForType: __pointer_type_info");
+    break;
+
+  case Type::MemberPointer:
+    cgm.errorNYI("VTableClassNameForType: __pointer_to_member_type_info");
+    break;
+
+  case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
+    llvm_unreachable("HLSL doesn't support virtual functions");
+  }
+
+  return nullptr;
+}
+} // namespace
+
+/// Return the linkage that the type info and type info name constants
+/// should have for the given type.
+static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
+                                                 QualType ty) {
+  //   In addition, it and all of the intermediate abi::__pointer_type_info
+  //   structs in the chain down to the abi::__class_type_info for the
+  //   incomplete class type must be prevented from resolving to the
+  //   corresponding type_info structs for the complete class type, possibly
+  //   by making them local static objects. Finally, a dummy class RTTI is
+  //   generated for the incomplete type that will not resolve to the final
+  //   complete class RTTI (because the latter need not exist), possibly by
+  //   making it a local static object.
+  if (containsIncompleteClassType(ty))
+    return cir::GlobalLinkageKind::InternalLinkage;
+
+  switch (ty->getLinkage()) {
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+
+  case Linkage::None:
+  case Linkage::Internal:
+  case Linkage::UniqueExternal:
+    return cir::GlobalLinkageKind::InternalLinkage;
+
+  case Linkage::VisibleNone:
+  case Linkage::Module:
+  case Linkage::External:
+    // RTTI is not enabled, which means that this type info struct is going
+    // to be used for exception handling. Give it linkonce_odr linkage.
+    if (!cgm.getLangOpts().RTTI)
+      return cir::GlobalLinkageKind::LinkOnceODRLinkage;
+
+    if (const RecordType *record = dyn_cast<RecordType>(ty)) {
+      const CXXRecordDecl *rd =
+          cast<CXXRecordDecl>(record->getOriginalDecl())->getDefinitionOrSelf();
+      if (rd->hasAttr<WeakAttr>())
+        return cir::GlobalLinkageKind::WeakODRLinkage;
+
+      if (cgm.getTriple().isWindowsItaniumEnvironment())
+        if (rd->hasAttr<DLLImportAttr>() &&
+            shouldUseExternalRttiDescriptor(cgm, ty))
+          return cir::GlobalLinkageKind::ExternalLinkage;
+
+      // MinGW always uses LinkOnceODRLinkage for type info.
+      if (rd->isDynamicClass() && !cgm.getASTContext()
+                                       .getTargetInfo()
+                                       .getTriple()
+                                       .isWindowsGNUEnvironment())
+        return cgm.getVTableLinkage(rd);
+    }
+
+    return cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  }
+
+  llvm_unreachable("Invalid linkage!");
+}
+
+cir::GlobalOp
+CIRGenItaniumRTTIBuilder::getAddrOfTypeName(mlir::Location loc, QualType ty,
+                                            cir::GlobalLinkageKind linkage) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  cgm.getCXXABI().getMangleContext().mangleCXXRTTIName(ty, out);
+
+  // We know that the mangled name of the type starts at index 4 of the
+  // mangled name of the typename, so we can just index into it in order to
+  // get the mangled name of the type.
+  mlir::Attribute init = builder.getString(
+      name.substr(4), cgm.convertType(cgm.getASTContext().CharTy),
+      std::nullopt);
+
+  CharUnits align =
+      cgm.getASTContext().getTypeAlignInChars(cgm.getASTContext().CharTy);
+
+  // builder.getString can return a #cir.zero if the string given to it only
+  // contains null bytes. However, type names cannot be full of null bytes.
+  // So cast Init to a ConstArrayAttr should be safe.
+  auto initStr = cast<cir::ConstArrayAttr>(init);
+
+  cir::GlobalOp gv = cgm.createOrReplaceCXXRuntimeVariable(
+      loc, name, initStr.getType(), linkage, align);
+  CIRGenModule::setInitializer(gv, init);
+  return gv;
+}
+
+mlir::Attribute
+CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
+                                                          QualType ty) {
+  // Mangle the RTTI name.
+  SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+
+  // Look for an existing global.
+  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(
+      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+
+  if (!gv) {
+    // Create a new global variable.
+    // From LLVM codegen => Note for the future: If we would ever like to do
+    // deferred emission of RTTI, check if emitting vtables opportunistically
+    // need any adjustment.
+    gv = CIRGenModule::createGlobalOp(cgm, loc, name, builder.getUInt8PtrTy(),
+                                      /*isConstant=*/true);
+    const CXXRecordDecl *rd = ty->getAsCXXRecordDecl();
+    cgm.setGVProperties(gv, rd);
+
+    // Import the typeinfo symbol when all non-inline virtual methods are
+    // imported.
+    if (cgm.getTarget().hasPS4DLLImportExport()) {
+      cgm.errorNYI("getAddrOfExternalRTTIDescriptor: hasPS4DLLImportExport");
+    }
+  }
+
+  return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
+}
+
+void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
+                                                  const Type *ty) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  const char *vTableName = vTableClassNameForType(cgm, ty);
+
+  // Check if the alias exists. If it doesn't, then get or create the global.
+  if (cgm.getItaniumVTableContext().isRelativeLayout()) {
+    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
+    return;
+  }
+
+  mlir::Type vtableGlobalTy = builder.getPointerTo(builder.getUInt8PtrTy());
+  llvm::Align align = cgm.getDataLayout().getABITypeAlign(vtableGlobalTy);
+  cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
+      loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
+      CharUnits::fromQuantity(align));
+
+  // The vtable address point is 2.
+  mlir::Attribute field{};
+  if (cgm.getItaniumVTableContext().isRelativeLayout()) {
+    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
+  } else {
+    SmallVector<mlir::Attribute, 4> offsets{
+        cgm.getBuilder().getI32IntegerAttr(2)};
+    auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
+    field = cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
+                                               vTable, indices);
+  }
+
+  assert(field && "expected attribute");
+  fields.push_back(field);
+}
+
+/// Build an abi::__si_class_type_info, used for single inheritance, according
+/// to the Itanium C++ ABI, 2.95p6b.
+void CIRGenItaniumRTTIBuilder::buildSIClassTypeInfo(mlir::Location loc,
+                                                    const CXXRecordDecl *rd) {
+  // Itanium C++ ABI 2.9.5p6b:
+  // It adds to abi::__class_type_info a single member pointing to the
+  // type_info structure for the base type,
+  mlir::Attribute baseTypeInfo =
+      CIRGenItaniumRTTIBuilder(cxxABI, cgm)
+          .buildTypeInfo(loc, rd->bases_begin()->getType());
+  fields.push_back(baseTypeInfo);
+}
+
+/// Build an abi::__vmi_class_type_info, used for
+/// classes with bases that do not satisfy the abi::__si_class_type_info
+/// constraints, according to the Itanium C++ ABI, 2.9.5p5c.
+void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
+                                                     const CXXRecordDecl *rd) {
+  mlir::Type unsignedIntLTy =
+      cgm.convertType(cgm.getASTContext().UnsignedIntTy);
+
+  // Itanium C++ ABI 2.9.5p6c:
+  //   __flags is a word with flags describing details about the class
+  //   structure, which may be referenced by using the __flags_masks
+  //   enumeration. These flags refer to both direct and indirect bases.
+  unsigned flags = computeVmiClassTypeInfoFlags(rd);
+  fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
+
+  // Itanium C++ ABI 2.9.5p6c:
+  //   __base_count is a word with the number of direct proper base class
+  //   descriptions that follow.
+  fields.push_back(cir::IntAttr::get(unsignedIntLTy, rd->getNumBases()));
+
+  if (!rd->getNumBases())
+    return;
+
+  // Now add the base class descriptions.
+
+  // Itanium C++ ABI 2.9.5p6c:
+  //   __base_info[] is an array of base class descriptions -- one for every
+  //   direct proper base. Each description is of the type:
+  //
+  //   struct abi::__base_class_type_info {
+  //   public:
+  //     const __class_type_info *__base_type;
+  //     long __offset_flags;
+  //
+  //     enum __offset_flags_masks {
+  //       __virtual_mask = 0x1,
+  //       __public_mask = 0x2,
+  //       __offset_shift = 8
+  //     };
+  //   };
+
+  // If we're in mingw and 'long' isn't wide enough for a pointer, use 'long
+  // long' instead of 'long' for __offset_flags. libstdc++abi uses long long on
+  // LLP64 platforms.
+  // FIXME: Consider updating libc++abi to match, and extend this logic to all
+  // LLP64 platforms.
+  QualType offsetFlagsTy = cgm.getASTContext().LongTy;
+  const TargetInfo &ti = cgm.getASTContext().getTargetInfo();
+  if (ti.getTriple().isOSCygMing() &&
+      ti.getPointerWidth(LangAS::Default) > ti.getLongWidth())
+    offsetFlagsTy = cgm.getASTContext().LongLongTy;
+  mlir::Type offsetFlagsLTy = cgm.convertType(offsetFlagsTy);
+
+  for (const CXXBaseSpecifier &base : rd->bases()) {
+    // The __base_type member points to the RTTI for the base type.
+    fields.push_back(CIRGenItaniumRTTIBuilder(cxxABI, cgm)
+                         .buildTypeInfo(loc, base.getType()));
+
+    CXXRecordDecl *baseDecl = base.getType()->castAsCXXRecordDecl();
+    int64_t offsetFlags = 0;
+
+    // All but the lower 8 bits of __offset_flags are a signed offset.
+    // For a non-virtual base, this is the offset in the object of the base
+    // subobject. For a virtual base, this is the offset in the virtual table of
+    // the virtual base offset for the virtual base referenced (negative).
+    CharUnits offset;
+    if (base.isVirtual())
+      offset = cgm.getItaniumVTableContext().getVirtualBaseOffsetOffset(
+          rd, baseDecl);
+    else {
+      const ASTRecordLayout &layout =
+          cgm.getASTContext().getASTRecordLayout(rd);
+      offset = layout.getBaseClassOffset(baseDecl);
+    }
+    offsetFlags = uint64_t(offset.getQuantity()) << 8;
+
+    // The low-order byte of __offset_flags contains flags, as given by the
+    // masks from the enumeration __offset_flags_masks.
+    if (base.isVirtual())
+      offsetFlags |= BCTI_Virtual;
+    if (base.getAccessSpecifier() == AS_public)
+      offsetFlags |= BCTI_Public;
+
+    fields.push_back(cir::IntAttr::get(offsetFlagsLTy, offsetFlags));
+  }
+}
+
+mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
+                                                        QualType ty) {
+  // We want to operate on the canonical type.
+  ty = ty.getCanonicalType();
+
+  // Check if we've already emitted an RTTI descriptor for this type.
+  SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
+
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
+      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+
+  if (oldGV && !oldGV.isDeclaration()) {
+    assert(!oldGV.hasAvailableExternallyLinkage() &&
+           "available_externally typeinfos not yet implemented");
+    return cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
+                                              oldGV);
+  }
+
+  // Check if there is already an external RTTI descriptor for this type.
+  if (isStandardLibraryRttiDescriptor(ty) ||
+      shouldUseExternalRttiDescriptor(cgm, ty))
+    return getAddrOfExternalRTTIDescriptor(loc, ty);
+
+  // Emit the standard library with external linkage.
+  cir::GlobalLinkageKind linkage = getTypeInfoLinkage(cgm, ty);
+
+  // Give the type_info object and name the formal visibility of the
+  // type itself.
+  assert(!cir::MissingFeatures::hiddenVisibility());
+  assert(!cir::MissingFeatures::protectedVisibility());
+
+  mlir::SymbolTable::Visibility symVisibility;
+  if (cir::isLocalLinkage(linkage))
+    // If the linkage is local, only default visibility makes sense.
+    symVisibility = mlir::SymbolTable::Visibility::Public;
+  else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
+           CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
+    cgm.errorNYI(
+        "buildTypeInfo: classifyRTTIUniqueness == RUK_NonUniqueHidden");
+    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
+  } else
+    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
+
+  return buildTypeInfo(loc, ty, linkage, symVisibility);
+}
+
+mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
+    mlir::Location loc, QualType ty, cir::GlobalLinkageKind linkage,
+    mlir::SymbolTable::Visibility visibility) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+
+  assert(!cir::MissingFeatures::setDLLStorageClass());
+
+  // Add the vtable pointer.
+  buildVTablePointer(loc, cast<Type>(ty));
+
+  // And the name.
+  cir::GlobalOp typeName = getAddrOfTypeName(loc, ty, linkage);
+  mlir::Attribute typeNameField;
+
+  // If we're supposed to demote the visibility, be sure to set a flag
+  // to use a string comparison for type_info comparisons.
+  CIRGenItaniumCXXABI::RTTIUniquenessKind rttiUniqueness =
+      cxxABI.classifyRTTIUniqueness(ty, linkage);
+  if (rttiUniqueness != CIRGenItaniumCXXABI::RUK_Unique) {
+    // The flag is the sign bit, which on ARM64 is defined to be clear
+    // for global pointers. This is very ARM64-specific.
+    cgm.errorNYI(
+        "buildTypeInfo: rttiUniqueness != CIRGenItaniumCXXABI::RUK_Unique");
+  } else {
+    typeNameField =
+        builder.getGlobalViewAttr(builder.getUInt8PtrTy(), typeName);
+  }
+
+  fields.push_back(typeNameField);
+
+  switch (ty->getTypeClass()) {
+#define TYPE(Class, Base)
+#define ABSTRACT_TYPE(Class, Base)
+#define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base) case Type::Class:
+#define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
+#define DEPENDENT_TYPE(Class, Base) case Type::Class:
+#include "clang/AST/TypeNodes.inc"
+    llvm_unreachable("Non-canonical and dependent types shouldn't get here");
+
+  // GCC treats vector types as fundamental types.
+  case Type::Builtin:
+  case Type::Vector:
+  case Type::ExtVector:
+  case Type::ConstantMatrix:
+  case Type::Complex:
+  case Type::BlockPointer:
+    // Itanium C++ ABI 2.9.5p4:
+    // abi::__fundamental_type_info adds no data members to std::type_info.
+    break;
+
+  case Type::LValueReference:
+  case Type::RValueReference:
+    llvm_unreachable("References shouldn't get here");
+
+  case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
+    llvm_unreachable("Undeduced type shouldn't get here");
+
+  case Type::Pipe:
+    break;
+
+  case Type::BitInt:
+    break;
+
+  case Type::ConstantArray:
+  case Type::IncompleteArray:
+  case Type::VariableArray:
+  case Type::ArrayParameter:
+    // Itanium C++ ABI 2.9.5p5:
+    // abi::__array_type_info adds no data members to std::type_info.
+    break;
+
+  case Type::FunctionNoProto:
+  case Type::FunctionProto:
+    // Itanium C++ ABI 2.9.5p5:
+    // abi::__function_type_info adds no data members to std::type_info.
+    break;
+
+  case Type::Enum:
+    // Itanium C++ ABI 2.9.5p5:
+    // abi::__enum_type_info adds no data members to std::type_info.
+    break;
+
+  case Type::Record: {
+    const auto *rd =
+        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
+            ->getDefinitionOrSelf();
+    if (!rd->hasDefinition() || !rd->getNumBases()) {
+      // We don't need to emit any fields.
+      break;
+    }
+
+    if (canUseSingleInheritance(rd)) {
+      buildSIClassTypeInfo(loc, rd);
+    } else {
+      buildVMIClassTypeInfo(loc, rd);
+    }
+
+    break;
+  }
+
+  case Type::ObjCObject:
+  case Type::ObjCInterface:
+    cgm.errorNYI("buildTypeInfo: ObjCObject & ObjCInterface");
+    break;
+
+  case Type::ObjCObjectPointer:
+    cgm.errorNYI("buildTypeInfo: ObjCObjectPointer");
+    break;
+
+  case Type::Pointer:
+    cgm.errorNYI("buildTypeInfo: Pointer");
+    break;
+
+  case Type::MemberPointer:
+    cgm.errorNYI("buildTypeInfo: MemberPointer");
+    break;
+
+  case Type::Atomic:
+    // No fields, at least for the moment.
+    break;
+
+  case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
+    llvm_unreachable("HLSL doesn't support RTTI");
+  }
+
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+  cir::TypeInfoAttr init = builder.getTypeInfo(builder.getArrayAttr(fields));
+
+  SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
+
+  // Create new global and search for an existing global.
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
+      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+
+  cir::GlobalOp gv =
+      CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
+                                   /*isConstant=*/true);
+
+  // Export the typeinfo in the same circumstances as the vtable is
+  // exported.
+  if (cgm.getTarget().hasPS4DLLImportExport()) {
+    cgm.errorNYI("buildTypeInfo: target hasPS4DLLImportExport");
+    return {};
+  }
+
+  // If there's already an old global variable, replace it with the new one.
+  if (oldGV) {
+    // Replace occurrences of the old variable if needed.
+    gv.setName(oldGV.getName());
+    if (!oldGV->use_empty()) {
+      cgm.errorNYI("buildTypeInfo: old GV !use_empty");
+      return {};
+    }
+    oldGV->erase();
+  }
+
+  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(gv.getLinkage())) {
+    assert(!cir::MissingFeatures::setComdat());
+    cgm.errorNYI("buildTypeInfo: supportsCOMDAT & isWeakForLinker");
+    return {};
+  }
+
+  CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
+      cgm.getTarget().getPointerAlign(LangAS::Default));
+  gv.setAlignmentAttr(cgm.getSize(align));
+
+  // The Itanium ABI specifies that type_info objects must be globally
+  // unique, with one exception: if the type is an incomplete class
+  // type or a (possibly indirect) pointer to one.  That exception
+  // affects the general case of comparing type_info objects produced
+  // by the typeid operator, which is why the comparison operators on
+  // std::type_info generally use the type_info name pointers instead
+  // of the object addresses.  However, the language's built-in uses
+  // of RTTI generally require class types to be complete, even when
+  // manipulating pointers to those class types.  This allows the
+  // implementation of dynamic_cast to rely on address equality tests,
+  // which is much faster.
+
+  // All of this is to say that it's important that both the type_info
+  // object and the type_info name be uniqued when weakly emitted.
+
+  mlir::SymbolTable::setSymbolVisibility(typeName, visibility);
+  assert(!cir::MissingFeatures::setDLLStorageClass());
+  assert(!cir::MissingFeatures::opGlobalPartition());
+  assert(!cir::MissingFeatures::setDSOLocal());
+
+  mlir::SymbolTable::setSymbolVisibility(gv, visibility);
+  assert(!cir::MissingFeatures::setDLLStorageClass());
+  assert(!cir::MissingFeatures::opGlobalPartition());
+  assert(!cir::MissingFeatures::setDSOLocal());
+
+  CIRGenModule::setInitializer(gv, init);
+  return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
+}
+
+mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                             QualType ty) {
+  return CIRGenItaniumRTTIBuilder(*this, cgm).buildTypeInfo(loc, ty);
+}
+
+/// What sort of uniqueness rules should we use for the RTTI for the
+/// given type?
+CIRGenItaniumCXXABI::RTTIUniquenessKind
+CIRGenItaniumCXXABI::classifyRTTIUniqueness(
+    QualType canTy, cir::GlobalLinkageKind linkage) const {
+  if (shouldRTTIBeUnique())
+    return RUK_Unique;
+
+  // It's only necessary for linkonce_odr or weak_odr linkage.
+  if (linkage != cir::GlobalLinkageKind::LinkOnceODRLinkage &&
+      linkage != cir::GlobalLinkageKind::WeakODRLinkage)
+    return RUK_Unique;
+
+  // It's only necessary with default visibility.
+  if (canTy->getVisibility() != DefaultVisibility)
+    return RUK_Unique;
+
+  // If we're not required to publish this symbol, hide it.
+  if (linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage)
+    return RUK_NonUniqueHidden;
+
+  // If we're required to publish this symbol, as we might be under an
+  // explicit instantiation, leave it with default visibility but
+  // enable string-comparisons.
+  assert(linkage == cir::GlobalLinkageKind::WeakODRLinkage);
+  return RUK_NonUniqueVisible;
 }
 
 void CIRGenItaniumCXXABI::emitDestructorCall(
