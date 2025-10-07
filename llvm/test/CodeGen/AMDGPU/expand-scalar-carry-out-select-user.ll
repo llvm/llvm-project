@@ -14,7 +14,6 @@ define i32 @s_add_co_select_user() {
 ; GFX7-NEXT:    s_add_u32 s7, s6, s6
 ; GFX7-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX7-NEXT:    s_or_b32 s4, s4, s5
-; GFX7-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX7-NEXT:    s_addc_u32 s8, s6, 0
 ; GFX7-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX7-NEXT:    s_and_b64 s[4:5], s[4:5], exec
@@ -104,7 +103,6 @@ define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX7-NEXT:    s_add_u32 s0, s2, s2
 ; GFX7-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
-; GFX7-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX7-NEXT:    s_addc_u32 s0, s2, 0
 ; GFX7-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX7-NEXT:    s_andn2_b64 vcc, exec, s[0:1]

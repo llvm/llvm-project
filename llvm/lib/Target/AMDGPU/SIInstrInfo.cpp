@@ -10577,6 +10577,73 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
+  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+                                  this]() -> bool {
+    if (CmpValue != 0)
+      return false;
+
+    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
+    if (!Def || Def->getParent() != CmpInstr.getParent())
+      return false;
+
+    if (!(Def->getOpcode() == AMDGPU::S_LSHL_B32 ||
+          Def->getOpcode() == AMDGPU::S_LSHL_B64 ||
+          Def->getOpcode() == AMDGPU::S_LSHR_B32 ||
+          Def->getOpcode() == AMDGPU::S_LSHR_B64 ||
+          Def->getOpcode() == AMDGPU::S_AND_B32 ||
+          Def->getOpcode() == AMDGPU::S_AND_B64 ||
+          Def->getOpcode() == AMDGPU::S_OR_B32 ||
+          Def->getOpcode() == AMDGPU::S_OR_B64 ||
+          Def->getOpcode() == AMDGPU::S_XOR_B32 ||
+          Def->getOpcode() == AMDGPU::S_XOR_B64 ||
+          Def->getOpcode() == AMDGPU::S_NAND_B32 ||
+          Def->getOpcode() == AMDGPU::S_NAND_B64 ||
+          Def->getOpcode() == AMDGPU::S_NOR_B32 ||
+          Def->getOpcode() == AMDGPU::S_NOR_B64 ||
+          Def->getOpcode() == AMDGPU::S_XNOR_B32 ||
+          Def->getOpcode() == AMDGPU::S_XNOR_B64 ||
+          Def->getOpcode() == AMDGPU::S_ANDN2_B32 ||
+          Def->getOpcode() == AMDGPU::S_ANDN2_B64 ||
+          Def->getOpcode() == AMDGPU::S_ORN2_B32 ||
+          Def->getOpcode() == AMDGPU::S_ORN2_B64 ||
+          Def->getOpcode() == AMDGPU::S_BFE_I32 ||
+          Def->getOpcode() == AMDGPU::S_BFE_I64 ||
+          Def->getOpcode() == AMDGPU::S_BFE_U32 ||
+          Def->getOpcode() == AMDGPU::S_BFE_U64 ||
+          Def->getOpcode() == AMDGPU::S_BCNT0_I32_B32 ||
+          Def->getOpcode() == AMDGPU::S_BCNT0_I32_B64 ||
+          Def->getOpcode() == AMDGPU::S_BCNT1_I32_B32 ||
+          Def->getOpcode() == AMDGPU::S_BCNT1_I32_B64 ||
+          Def->getOpcode() == AMDGPU::S_QUADMASK_B32 ||
+          Def->getOpcode() == AMDGPU::S_QUADMASK_B64 ||
+          Def->getOpcode() == AMDGPU::S_NOT_B32 ||
+          Def->getOpcode() == AMDGPU::S_NOT_B64 ||
+
+          ((Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+            Def->getOpcode() == AMDGPU::S_CSELECT_B64) &&
+           Def->getOperand(1).isImm() && Def->getOperand(1).getImm() &&
+           !Def->getOperand(2).isImm() && !Def->getOperand(2).getImm())))
+      return false;
+
+    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
+         I != E; ++I) {
+      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
+          I->killsRegister(AMDGPU::SCC, &RI))
+        return false;
+    }
+
+    if (!(Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+          Def->getOpcode() == AMDGPU::S_CSELECT_B64)) {
+      MachineOperand *SccDef =
+          Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
+      assert(SccDef && "Def instruction must define SCC");
+      SccDef->setIsDead(false);
+    }
+
+    CmpInstr.eraseFromParent();
+    return true;
+  };
+
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
                                      bool IsReversible, bool IsSigned) -> bool {
@@ -10704,7 +10771,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
   case AMDGPU::S_CMPK_LG_I32:
-    return optimizeCmpAnd(0, 32, true, false);
+    return optimizeCmpAnd(0, 32, true, false) || optimizeCmpSelect();
   case AMDGPU::S_CMP_GT_U32:
   case AMDGPU::S_CMPK_GT_U32:
     return optimizeCmpAnd(0, 32, false, false);
@@ -10712,7 +10779,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false);
+    return optimizeCmpAnd(0, 64, true, false) || optimizeCmpSelect();
   }
 
   return false;
