@@ -1451,24 +1451,6 @@ add_entrypoint_object(
     libc.src.__support.math.exp2
 )
 
-add_header_library(
-  exp2f_impl
-  HDRS
-    exp2f_impl.h
-  DEPENDS
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.exp10f_utils
-    libc.src.__support.common
-    libc.src.errno.errno
-)
-
 add_entrypoint_object(
   exp2f
   SRCS
@@ -1476,7 +1458,7 @@ add_entrypoint_object(
   HDRS
     ../exp2f.h
   DEPENDS
-    .exp2f_impl
+    libc.src.__support.math.exp2f
 )
 
 add_entrypoint_object(
@@ -1659,8 +1641,8 @@ add_entrypoint_object(
   HDRS
     ../powf.h
   DEPENDS
-    .exp2f_impl
     libc.src.__support.math.exp10f
+    libc.src.__support.math.exp2f
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
