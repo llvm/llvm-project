@@ -790,7 +790,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       for (int64_t r = 0; r < rows; ++r) {
         for (int64_t c = 0; c < cols; ++c) {
           int64_t idx = r * cols + c;
-          // Check column stride (skip first column)
+          // Check column stride
           if (c > 0 && cols > 1) {
             int64_t prevIdx = r * cols + (c - 1);
             int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
@@ -799,7 +799,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
               return rewriter.notifyMatchFailure(
                   op, "Non-constant column stride in constant op.");
           }
-          // Check row stride (skip first row)
+          // Check row stride
           if (r > 0 && rows > 1) {
             int64_t prevIdx = (r - 1) * cols + c;
             int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
