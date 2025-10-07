@@ -160,6 +160,26 @@ def testFuseOpParams(target):
 
 @run
 @create_sequence
+def testFuseOpHandles(target):
+    size1 = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    ichange1 = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(
+        target,
+        tile_sizes=[size1, 8],
+        tile_interchange=[ichange1, 1],
+    )
+    # CHECK-LABEL: TEST: testFuseOpHandles
+    # CHECK: transform.sequence
+    # CHECK: %[[H:.*]] = transform.structured.match
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse
+    # CHECK-SAME: tile_sizes [%[[H]], 8]
+    # CHECK-SAME: interchange [%[[I]], 1]
+    # CHECK-SAME: (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testFuseOpAttributes(target):
     attr = DenseI64ArrayAttr.get([4, 8])
     ichange = DenseI64ArrayAttr.get([0, 1])

@@ -759,14 +759,21 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
 }
 
 LogicalResult transform::FuseOp::verify() {
+  auto iterspace_dim = getStaticTileSizes().size();
   ArrayRef<int64_t> permutation = getStaticTileInterchange();
-  if (!llvm::any_of(permutation,
-                    [](int64_t v) { return ShapedType::isDynamic(v); })) {
-    auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, permutation.size()));
-    if (!std::is_permutation(sequence.begin(), sequence.end(),
-                             permutation.begin(), permutation.end())) {
-      return emitOpError() << "expects interchange to be a permutation, found "
-                           << getTileInterchange();
+  if (permutation.size() > iterspace_dim)
+    return emitOpError()
+           << "interchange length exceeds iteration space dimensions ("
+           << iterspace_dim << "), found " << getTileInterchange();
+  llvm::SmallDenseSet<int64_t, 4> seen;
+  for (int64_t v : permutation) {
+    if (!ShapedType::isDynamic(v)) {
+      if (v < 0 || v >= iterspace_dim)
+        return emitOpError() << "expects interchange values to be in range [0, "
+                             << iterspace_dim << "), found: " << v;
+      auto result = seen.insert(v);
+      if (!result.second)
+        return emitOpError() << "found duplicate interchange value: " << v;
     }
   }
 
@@ -780,37 +787,12 @@ LogicalResult transform::FuseOp::verify() {
 }
 
 SmallVector<OpFoldResult> transform::FuseOp::getMixedTileSizes() {
-  ValueRange dynamicValues = getTileSizes();
-  ArrayRef<int64_t> staticValues = getStaticTileSizes();
-  SmallVector<OpFoldResult> results;
-  results.reserve(staticValues.size());
-  unsigned dynamicPos = 0;
-  Builder builder(getContext());
-  for (int64_t size : staticValues) {
-    if (size == ShapedType::kDynamic) {
-      results.push_back(dynamicValues[dynamicPos++]);
-    } else {
-      results.push_back(builder.getIndexAttr(size));
-    }
-  }
-  return results;
+  return getMixedValues(getStaticTileSizes(), getTileSizes(), getContext());
 }
 
 SmallVector<OpFoldResult> transform::FuseOp::getMixedTileInterchange() {
-  ValueRange dynamicValues = getTileInterchange();
-  ArrayRef<int64_t> staticValues = getStaticTileInterchange();
-  SmallVector<OpFoldResult> results;
-  results.reserve(staticValues.size());
-  unsigned dynamicPos = 0;
-  Builder builder(getContext());
-  for (int64_t size : staticValues) {
-    if (size == ShapedType::kDynamic) {
-      results.push_back(dynamicValues[dynamicPos++]);
-    } else {
-      results.push_back(builder.getIndexAttr(size));
-    }
-  }
-  return results;
+  return getMixedValues(getStaticTileInterchange(), getTileInterchange(),
+                        getContext());
 }
 
 void transform::FuseOp::getEffects(
