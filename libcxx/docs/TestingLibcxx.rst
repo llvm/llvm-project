@@ -482,7 +482,7 @@ when running the benchmarks. For example,
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --show-all --param optimization=speed
 
 Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
@@ -504,7 +504,7 @@ more benchmarks, as usual:
 .. code-block:: bash
 
   $ cmake -S runtimes -B <build> [...]
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --param optimization=speed
 
 Then, get the consolidated benchmark output for that run using ``consolidate-benchmarks``:
 
@@ -530,6 +530,16 @@ Finally, use ``compare-benchmarks`` to compare both:
 
 The ``compare-benchmarks`` script provides some useful options like creating a chart to easily visualize
 differences in a browser window. Use ``compare-benchmarks --help`` for details.
+
+Additionally, adding a comment of the following form to a libc++ PR will cause the specified benchmarks to be run
+on our pre-commit CI infrastructure and the results to be reported in the PR by our CI system:
+
+.. code-block::
+
+    /libcxx-bot benchmark <path/to/benchmark1.bench.cpp> <path/to/benchmark2.bench.cpp> ...
+
+Note that this is currently experimental and the results should not be relied upon too strongly, since
+we do not have dedicated hardware to run the benchmarks on.
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
 

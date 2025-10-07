@@ -3230,14 +3230,15 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
           C2->getAPInt().isPowerOf2() &&
           C1V.logBase2() <= getMinTrailingZeros(D)) {
-        const SCEV *NewMul;
+        const SCEV *NewMul = nullptr;
         if (C1V.uge(C2->getAPInt())) {
           NewMul = getMulExpr(getUDivExpr(getConstant(C1V), C2), D);
-        } else {
+        } else if (C2->getAPInt().logBase2() <= getMinTrailingZeros(D)) {
           assert(C1V.ugt(1) && "C1 <= 1 should have been folded earlier");
           NewMul = getUDivExpr(D, getUDivExpr(C2, getConstant(C1V)));
         }
-        return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
+        if (NewMul)
+          return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
       }
     }
   }
@@ -3596,6 +3597,13 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
       }
     }
   }
+
+  // TODO: Generalize to handle any common factors.
+  // udiv (mul nuw a, vscale), (mul nuw b, vscale) --> udiv a, b
+  const SCEV *NewLHS, *NewRHS;
+  if (match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
+      match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
+    return getUDivExpr(NewLHS, NewRHS);
 
   // The Insertion Point (IP) might be invalid by now (due to UniqueSCEVs
   // changes). Make sure we get a new one.
@@ -10809,6 +10817,25 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
   if (Depth >= 3)
     return false;
 
+  const SCEV *NewLHS, *NewRHS;
+  if (match(LHS, m_scev_c_Mul(m_SCEV(NewLHS), m_SCEVVScale())) &&
+      match(RHS, m_scev_c_Mul(m_SCEV(NewRHS), m_SCEVVScale()))) {
+    const SCEVMulExpr *LMul = cast<SCEVMulExpr>(LHS);
+    const SCEVMulExpr *RMul = cast<SCEVMulExpr>(RHS);
+
+    // (X * vscale) pred (Y * vscale) ==> X pred Y
+    //     when both multiples are NSW.
+    // (X * vscale) uicmp/eq/ne (Y * vscale) ==> X uicmp/eq/ne Y
+    //     when both multiples are NUW.
+    if ((LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap()) ||
+        (LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap() &&
+         !ICmpInst::isSigned(Pred))) {
+      LHS = NewLHS;
+      RHS = NewRHS;
+      Changed = true;
+    }
+  }
+
   // Canonicalize a constant to the right side.
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS)) {
     // Check for both operands constant.
@@ -10983,7 +11010,7 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
   // Recursively simplify until we either hit a recursion limit or nothing
   // changes.
   if (Changed)
-    return SimplifyICmpOperands(Pred, LHS, RHS, Depth + 1);
+    (void)SimplifyICmpOperands(Pred, LHS, RHS, Depth + 1);
 
   return Changed;
 }
@@ -15184,15 +15211,20 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
     return;
   }
 
+  // Implication checks are quadratic in the number of predicates. Stop doing
+  // them if there are many predicates, as they should be too expensive to use
+  // anyway at that point.
+  bool CheckImplies = Preds.size() < 16;
+
   // Only add predicate if it is not already implied by this union predicate.
-  if (implies(N, SE))
+  if (CheckImplies && implies(N, SE))
     return;
 
   // Build a new vector containing the current predicates, except the ones that
   // are implied by the new predicate N.
   SmallVector<const SCEVPredicate *> PrunedPreds;
   for (auto *P : Preds) {
-    if (N->implies(P, SE))
+    if (CheckImplies && N->implies(P, SE))
       continue;
     PrunedPreds.push_back(P);
   }
@@ -15457,6 +15489,12 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     const BasicBlock *InBlock = Phi.getIncomingBlock(IncomingIdx);
     if (!VisitedBlocks.insert(InBlock).second)
       return {nullptr, scCouldNotCompute};
+
+    // Avoid analyzing unreachable blocks so that we don't get trapped
+    // traversing cycles with ill-formed dominance or infinite cycles
+    if (!SE.DT.isReachableFromEntry(InBlock))
+      return {nullptr, scCouldNotCompute};
+
     auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
     if (Inserted)
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
@@ -15511,6 +15549,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks, unsigned Depth) {
+
+  assert(SE.DT.isReachableFromEntry(Block) && SE.DT.isReachableFromEntry(Pred));
+
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,

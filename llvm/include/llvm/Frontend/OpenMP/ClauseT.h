@@ -663,13 +663,13 @@ struct GrainsizeT {
 // [6.0:438] `graph_id` clause
 template <typename T, typename I, typename E> //
 struct GraphIdT {
-  using EmptyTrait = std::true_type;
+  using IncompleteTrait = std::true_type;
 };
 
 // [6.0:438] `graph_reset` clause
 template <typename T, typename I, typename E> //
 struct GraphResetT {
-  using EmptyTrait = std::true_type;
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [5.4.9] `has_device_addr` clause
@@ -1046,6 +1046,12 @@ struct ReleaseT {
   using EmptyTrait = std::true_type;
 };
 
+// [6.0:440-441] `replayable` clause
+template <typename T, typename I, typename E> //
+struct ReplayableT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [8.2.1] `requirement` clauses
 template <typename T, typename I, typename E> //
 struct ReverseOffloadT {
@@ -1153,6 +1159,12 @@ struct ToT {
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
+// [6.0:440-441] `transparent` clause
+template <typename T, typename I, typename E> //
+struct TransparentT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [8.2.1] `requirement` clauses
 template <typename T, typename I, typename E> //
 struct UnifiedAddressT {
@@ -1256,6 +1268,15 @@ struct WriteT {
   using EmptyTrait = std::true_type;
 };
 
+// V6: [6.4.7] Looprange clause
+template <typename T, typename I, typename E> struct LoopRangeT {
+  using Begin = E;
+  using End = E;
+
+  using TupleTrait = std::true_type;
+  std::tuple<Begin, End> t;
+};
+
 // ---
 
 template <typename T, typename I, typename E>
@@ -1266,11 +1287,10 @@ using ExtensionClausesT =
 template <typename T, typename I, typename E>
 using EmptyClausesT = std::variant<
     AcqRelT<T, I, E>, AcquireT<T, I, E>, CaptureT<T, I, E>, CompareT<T, I, E>,
-    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, GraphIdT<T, I, E>,
-    GraphResetT<T, I, E>, InbranchT<T, I, E>, MergeableT<T, I, E>,
-    NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>, NoOpenmpT<T, I, E>,
-    NoParallelismT<T, I, E>, NotinbranchT<T, I, E>, NowaitT<T, I, E>,
-    ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
+    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, InbranchT<T, I, E>,
+    MergeableT<T, I, E>, NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>,
+    NoOpenmpT<T, I, E>, NoParallelismT<T, I, E>, NotinbranchT<T, I, E>,
+    NowaitT<T, I, E>, ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
     ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
     ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
@@ -1278,8 +1298,9 @@ using EmptyClausesT = std::variant<
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
-    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, MatchT<T, I, E>,
-                 OtherwiseT<T, I, E>, WhenT<T, I, E>>;
+    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, GraphIdT<T, I, E>,
+                 GraphResetT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
+                 ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =
@@ -1288,8 +1309,8 @@ using TupleClausesT =
                  DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
                  GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
                  InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
-                 MapT<T, I, E>, NumTasksT<T, I, E>, OrderT<T, I, E>,
-                 ReductionT<T, I, E>, ScheduleT<T, I, E>,
+                 LoopRangeT<T, I, E>, MapT<T, I, E>, NumTasksT<T, I, E>,
+                 OrderT<T, I, E>, ReductionT<T, I, E>, ScheduleT<T, I, E>,
                  TaskReductionT<T, I, E>, ToT<T, I, E>>;
 
 template <typename T, typename I, typename E>

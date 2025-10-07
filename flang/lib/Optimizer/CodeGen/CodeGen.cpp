@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/LLVMInsertChainFolder.h"
@@ -132,6 +133,8 @@ addLLVMOpBundleAttrs(mlir::ConversionPatternRewriter &rewriter,
 
 namespace {
 
+// Replaces an existing operation with an AddressOfOp or an AddrSpaceCastOp
+// depending on the existing address spaces of the type.
 mlir::Value replaceWithAddrOfOrASCast(mlir::ConversionPatternRewriter &rewriter,
                                       mlir::Location loc,
                                       std::uint64_t globalAS,
@@ -1844,6 +1847,18 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
+  if (val.getDefiningOp() &&
+      val.getDefiningOp()->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return false;
+  // Check if the global symbol is in the device module.
+  if (auto addr = mlir::dyn_cast_or_null<fir::AddrOfOp>(val.getDefiningOp()))
+    if (auto gpuMod =
+            addr->getParentOfType<mlir::ModuleOp>()
+                .lookupSymbol<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName))
+      if (gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol()) ||
+          gpuMod.lookupSymbol<fir::GlobalOp>(addr.getSymbol()))
+        return true;
+
   if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
     return isDeviceAllocation(loadOp.getMemref(), {});
   if (auto boxAddrOp =
@@ -3211,7 +3226,8 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 
     if (global.getDataAttr() &&
         *global.getDataAttr() == cuf::DataAttribute::Shared)
-      g.setAddrSpace(mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+      g.setAddrSpace(
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
 
     rewriter.eraseOp(global);
     return mlir::success();

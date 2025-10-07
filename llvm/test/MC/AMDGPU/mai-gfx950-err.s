@@ -7,7 +7,9 @@ v_mfma_ld_scale_b32 65, v0
 // CHECK: :[[@LINE-1]]:21: error: literal operands are not supported
 
 v_mfma_ld_scale_b32 65, 65
-// CHECK: :[[@LINE-1]]:25: error: literal operands are not supported
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_mfma_ld_scale_b32 65, 65
+// CHECK-NEXT:{{^}}                    ^
 
 v_mfma_ld_scale_b32 s0, s1
 // CHECK: :[[@LINE-1]]:25: error: invalid operand (violates constant bus restrictions)

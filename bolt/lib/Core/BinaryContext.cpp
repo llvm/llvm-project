@@ -33,6 +33,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <functional>
@@ -1623,20 +1624,45 @@ DWARFContext *BinaryContext::getDWOContext() const {
   return &DWOCUs.begin()->second->getContext();
 }
 
+bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
+  // Invalid DWARF unit with a DWOId but lacking a dwo_name.
+  if (DU.getDWOId() && !DU.isDWOUnit() &&
+      !DU.getUnitDIE().find(
+          {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name})) {
+    this->outs() << "BOLT-ERROR: broken DWARF found in CU at offset 0x"
+                 << Twine::utohexstr(DU.getOffset()) << " (DWOId=0x"
+                 << Twine::utohexstr(*(DU.getDWOId()))
+                 << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name)\n";
+    return false;
+  }
+  return true;
+}
+
 /// Handles DWO sections that can either be in .o, .dwo or .dwp files.
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
+    if (!isValidDwarfUnit(*DwarfUnit))
+      continue;
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       std::string DWOName = dwarf::toString(
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
           "");
-      SmallString<16> AbsolutePath;
+      SmallString<16> AbsolutePath(DWOName);
+      std::string DWOCompDir = DwarfUnit->getCompilationDir();
       if (!opts::CompDirOverride.empty()) {
-        sys::path::append(AbsolutePath, opts::CompDirOverride);
-        sys::path::append(AbsolutePath, DWOName);
+        DWOCompDir = opts::CompDirOverride;
+      } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
+        DWOCompDir = ".";
+        this->outs()
+            << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
+            << DWOName
+            << " does not exist. Relative path will be used to process .dwo "
+               "files.\n";
       }
+      // Prevent failures when DWOName is already an absolute path.
+      sys::path::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
@@ -1644,7 +1670,8 @@ void BinaryContext::preprocessDWODebugInfo() {
             << "BOLT-WARNING: Debug Fission: DWO debug information for "
             << DWOName
             << " was not retrieved and won't be updated. Please check "
-               "relative path.\n";
+               "relative path or use '--comp-dir-override' to specify the base "
+               "location.\n";
         continue;
       }
       DWOCUs[*DWOId] = DWOCU;
@@ -1878,6 +1905,9 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   case MCCFIInstruction::OpGnuArgsSize:
     OS << "OpGnuArgsSize";
     break;
+  case MCCFIInstruction::OpNegateRAState:
+    OS << "OpNegateRAState";
+    break;
   default:
     OS << "Op#" << Operation;
     break;
@@ -2044,7 +2074,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   if (MCSymbol *Label = MIB->getInstLabel(Instruction))
     OS << " # Label: " << *Label;
 
-  MIB->printAnnotations(Instruction, OS);
+  MIB->printAnnotations(Instruction, OS, PrintMemData || opts::PrintMemData);
 
   if (opts::PrintDebugInfo)
     printDebugInfo(OS, Instruction, Function, DwCtx.get());

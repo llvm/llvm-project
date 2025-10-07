@@ -540,7 +540,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (const auto *IL = dyn_cast<IntegerLiteral>(SubExpr)) {
       if (ToT != PT_IntAP && ToT != PT_IntAPS && FromT != PT_IntAP &&
           FromT != PT_IntAPS && !CE->getType()->isEnumeralType())
-        return this->emitConst(IL->getValue(), CE);
+        return this->emitConst(APSInt(IL->getValue(), !isSignedType(*FromT)),
+                               CE);
       if (!this->emitConst(IL->getValue(), SubExpr))
         return false;
     } else {
@@ -1787,7 +1788,12 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     return false;
   if (DiscardResult)
     return this->emitPopPtr(E);
-  return true;
+
+  if (E->isGLValue())
+    return true;
+
+  OptPrimType T = classifyPrim(E);
+  return this->emitLoadPop(*T, E);
 }
 
 template <class Emitter>
@@ -2378,13 +2384,8 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->visitDeclRef(Member, E);
   }
 
-  if (Initializing) {
-    if (!this->delegate(Base))
-      return false;
-  } else {
-    if (!this->visit(Base))
-      return false;
-  }
+  if (!this->visit(Base))
+    return false;
 
   // Base above gives us a pointer on the stack.
   const auto *FD = cast<FieldDecl>(Member);
@@ -2429,7 +2430,7 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   // and the RHS is our SubExpr.
   for (size_t I = 0; I != Size; ++I) {
     ArrayIndexScope<Emitter> IndexScope(this, I);
-    BlockScope<Emitter> BS(this);
+    LocalScope<Emitter> BS(this);
 
     if (!this->visitArrayElemInit(I, SubExpr, SubExprT))
       return false;
@@ -2934,8 +2935,9 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // For everyhing else, use local variables.
   if (SubExprT) {
     bool IsConst = SubExpr->getType().isConstQualified();
-    unsigned LocalIndex =
-        allocateLocalPrimitive(E, *SubExprT, IsConst, E->getExtendingDecl());
+    bool IsVolatile = SubExpr->getType().isVolatileQualified();
+    unsigned LocalIndex = allocateLocalPrimitive(
+        E, *SubExprT, IsConst, IsVolatile, E->getExtendingDecl());
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
@@ -3986,6 +3988,10 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  // FIXME: Unary shuffle with mask not currently supported.
+  if (E->getNumSubExprs() == 2)
+    return this->emitInvalid(E);
+
   assert(Initializing);
   assert(E->getNumSubExprs() > 2);
 
@@ -4140,7 +4146,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
-  BlockScope<Emitter> BS(this);
+  LocalScope<Emitter> BS(this);
   StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
@@ -4448,6 +4454,9 @@ bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
   if (!this->visit(LHS))
     return false;
 
+  if (LHS->getType().isVolatileQualified())
+    return this->emitInvalidStore(LHS->getType().getTypePtr(), E);
+
   // We don't support assignments in C.
   if (!Ctx.getLangOpts().CPlusPlus && !this->emitInvalid(E))
     return false;
@@ -4533,7 +4542,14 @@ bool Compiler<Emitter>::emitConst(T Value, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
                                   const Expr *E) {
-  return this->emitConst(static_cast<const APInt &>(Value), Ty, E);
+  if (Ty == PT_IntAPS)
+    return this->emitConstIntAPS(Value, E);
+  if (Ty == PT_IntAP)
+    return this->emitConstIntAP(Value, E);
+
+  if (Value.isSigned())
+    return this->emitConst(Value.getSExtValue(), Ty, E);
+  return this->emitConst(Value.getZExtValue(), Ty, E);
 }
 
 template <class Emitter>
@@ -4556,13 +4572,14 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 
 template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(
-    DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl,
-    ScopeKind SC, bool IsConstexprUnknown) {
+    DeclTy &&Src, PrimType Ty, bool IsConst, bool IsVolatile,
+    const ValueDecl *ExtendingDecl, ScopeKind SC, bool IsConstexprUnknown) {
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
-                                     IsConst, isa<const Expr *>(Src));
+                                     IsConst, isa<const Expr *>(Src),
+                                     /*IsMutable=*/false, IsVolatile);
   D->IsConstexprUnknown = IsConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
@@ -4714,7 +4731,8 @@ template <class Emitter>
 VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
                                               bool IsConstexprUnknown) {
 
-  auto R = this->visitVarDecl(VD, /*Toplevel=*/true, IsConstexprUnknown);
+  auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true,
+                              IsConstexprUnknown);
 
   if (R.notCreated())
     return R;
@@ -4740,14 +4758,12 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
 /// We get here from evaluateAsInitializer().
 /// We need to evaluate the initializer and return its value.
 template <class Emitter>
-bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
+bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                            bool ConstantContext) {
-
   // We only create variables if we're evaluating in a constant context.
   // Otherwise, just evaluate the initializer and return it.
   if (!ConstantContext) {
     DeclScope<Emitter> LS(this, VD);
-    const Expr *Init = VD->getInit();
     if (!this->visit(Init))
       return false;
     return this->emitRet(classify(Init).value_or(PT_Ptr), VD) &&
@@ -4755,7 +4771,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
   }
 
   LocalScope<Emitter> VDScope(this, VD);
-  if (!this->visitVarDecl(VD, /*Toplevel=*/true))
+  if (!this->visitVarDecl(VD, Init, /*Toplevel=*/true))
     return false;
 
   OptPrimType VarT = classify(VD->getType());
@@ -4802,9 +4818,9 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
-                                                 bool Toplevel,
-                                                 bool IsConstexprUnknown) {
+VarCreationState
+Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
+                                bool Toplevel, bool IsConstexprUnknown) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -4814,7 +4830,6 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
   if (!this->isActive())
     return VarCreationState::NotCreated();
 
-  const Expr *Init = VD->getInit();
   OptPrimType VarT = classify(VD->getType());
 
   if (Init && Init->isValueDependent())
@@ -4872,7 +4887,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
-        VD, *VarT, VD->getType().isConstQualified(), nullptr, ScopeKind::Block,
+        VD, *VarT, VD->getType().isConstQualified(),
+        VD->getType().isVolatileQualified(), nullptr, ScopeKind::Block,
         IsConstexprUnknown);
     if (Init) {
       // If this is a toplevel declaration, create a scope for the
@@ -5113,7 +5129,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  BlockScope<Emitter> CallScope(this, ScopeKind::Call);
+  LocalScope<Emitter> CallScope(this, ScopeKind::Call);
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   OptPrimType T = classify(ReturnType);
@@ -5477,7 +5493,7 @@ template <class Emitter> bool Compiler<Emitter>::visitStmt(const Stmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
-  BlockScope<Emitter> Scope(this);
+  LocalScope<Emitter> Scope(this);
   for (const auto *InnerStmt : S->body())
     if (!visitStmt(InnerStmt))
       return false;
@@ -5488,7 +5504,8 @@ template <class Emitter>
 bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
   if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
     for (auto *BD : DD->flat_bindings())
-      if (auto *KD = BD->getHoldingVar(); KD && !this->visitVarDecl(KD))
+      if (auto *KD = BD->getHoldingVar();
+          KD && !this->visitVarDecl(KD, KD->getInit()))
         return false;
   }
   return true;
@@ -5552,7 +5569,7 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
     const auto *VD = dyn_cast<VarDecl>(D);
     if (!VD)
       return false;
-    if (!this->visitVarDecl(VD))
+    if (!this->visitVarDecl(VD, VD->getInit()))
       return false;
 
     // Register decomposition decl holding vars.
@@ -6074,7 +6091,24 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
   assert(cast<CompoundStmt>(MD->getBody())->body_empty());
 
   const CXXRecordDecl *ClosureClass = MD->getParent();
-  const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
+  const FunctionDecl *LambdaCallOp;
+  assert(ClosureClass->captures().empty());
+  if (ClosureClass->isGenericLambda()) {
+    LambdaCallOp = ClosureClass->getLambdaCallOperator();
+    assert(MD->isFunctionTemplateSpecialization() &&
+           "A generic lambda's static-invoker function must be a "
+           "template specialization");
+    const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
+    FunctionTemplateDecl *CallOpTemplate =
+        LambdaCallOp->getDescribedFunctionTemplate();
+    void *InsertPos = nullptr;
+    const FunctionDecl *CorrespondingCallOpSpecialization =
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+    assert(CorrespondingCallOpSpecialization);
+    LambdaCallOp = CorrespondingCallOpSpecialization;
+  } else {
+    LambdaCallOp = ClosureClass->getLambdaCallOperator();
+  }
   assert(ClosureClass->captures().empty());
   const Function *Func = this->getFunction(LambdaCallOp);
   if (!Func)
@@ -6212,7 +6246,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   InitLinkScope<Emitter> InitScope(this, InitLink::This());
   for (const auto *Init : Ctor->inits()) {
     // Scope needed for the initializers.
-    BlockScope<Emitter> Scope(this);
+    LocalScope<Emitter> Scope(this);
 
     const Expr *InitExpr = Init->getInit();
     if (const FieldDecl *Member = Init->getMember()) {
@@ -7395,7 +7429,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
 
   if (!this->emitBitCastPrim(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
-                             ResultBitWidth, TargetSemantics, E))
+                             ResultBitWidth, TargetSemantics,
+                             ToType.getTypePtr(), E))
     return false;
 
   if (DiscardResult)

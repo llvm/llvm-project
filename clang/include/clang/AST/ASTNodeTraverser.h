@@ -533,11 +533,6 @@ public:
     for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
       dumpTemplateArgumentLoc(TL.getArgLoc(I));
   }
-  void VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc TL) {
-    for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
-      dumpTemplateArgumentLoc(TL.getArgLoc(I));
-  }
 
   void VisitTypedefDecl(const TypedefDecl *D) { Visit(D->getUnderlyingType()); }
 
@@ -621,6 +616,11 @@ public:
   void VisitCapturedDecl(const CapturedDecl *D) { Visit(D->getBody()); }
 
   void VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
+    for (const auto *E : D->varlist())
+      Visit(E);
+  }
+
+  void VisitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *D) {
     for (const auto *E : D->varlist())
       Visit(E);
   }

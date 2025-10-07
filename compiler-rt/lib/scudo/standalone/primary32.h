@@ -20,6 +20,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 
 namespace scudo {
 
@@ -1058,8 +1059,6 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Sci->Mutex) {
-  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
-
   const uptr BlockSize = getSizeByClassId(ClassId);
 
   DCHECK_GE(Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks);
@@ -1096,6 +1095,12 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
   // 2. Mark the free blocks and we can tell which pages are in-use by
   //    querying `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context = markFreeBlocks(Sci, ClassId, BlockSize, Base,
                                               NumberOfRegions, ReleaseType);
   if (!Context.hasBlockMarked())

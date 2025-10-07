@@ -1141,7 +1141,7 @@ def warn_cxx23_compat_binding_pack : Warning<
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
-  "%select{an attribute specifier sequence|%0}1 in this position "
+  "%select{an attribute specifier sequence|%1}0 in this position "
   "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
@@ -1497,6 +1497,8 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def err_omp_allocator_comma_separator :
+  Error<"',' not allowed as separator in 'uses_allocators' clause, use ';' instead">;
 def warn_omp_future_directive_spelling: Warning<
   "directive spelling '%0' is introduced in a later OpenMP version">,
   InGroup<OpenMPFuture>;

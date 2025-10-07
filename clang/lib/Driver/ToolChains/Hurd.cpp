@@ -34,6 +34,12 @@ std::string Hurd::getMultiarchTriple(const Driver &D,
   default:
     break;
 
+  case llvm::Triple::aarch64:
+    return "aarch64-gnu";
+
+  case llvm::Triple::riscv64:
+    return "riscv64-gnu";
+
   case llvm::Triple::x86:
     // We use the existence of '/lib/<triple>' as a directory to detect some
     // common hurd triples that don't quite match the Clang triple for both
@@ -142,6 +148,10 @@ Tool *Hurd::buildAssembler() const {
 
 std::string Hurd::getDynamicLinker(const ArgList &Args) const {
   switch (getArch()) {
+  case llvm::Triple::aarch64:
+    return "/lib/ld-aarch64.so.1";
+  case llvm::Triple::riscv64:
+    return "/lib/ld-riscv64-lp64.so.1";
   case llvm::Triple::x86:
     return "/lib/ld.so";
   case llvm::Triple::x86_64:

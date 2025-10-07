@@ -27,11 +27,11 @@ define hidden fastcc ptr @test(ptr %Search, ptr %ClauseList, i32 %Level, ptr noc
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    sub.w r7, r2, #32
-; CHECK-NEXT:    mov r8, r0
+; CHECK-NEXT:    sub.w r8, r2, #32
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    add.w r6, r0, r7, lsr #5
+; CHECK-NEXT:    add.w r7, r0, r8, lsr #5
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    b .LBB0_2
@@ -44,16 +44,16 @@ define hidden fastcc ptr @test(ptr %Search, ptr %ClauseList, i32 %Level, ptr noc
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    cmp r4, #31
 ; CHECK-NEXT:    ldr r0, [r1, #16]
-; CHECK-NEXT:    add.w r0, r0, r6, lsl #2
+; CHECK-NEXT:    add.w r0, r0, r7, lsl #2
 ; CHECK-NEXT:    ldr r0, [r0, #40]
 ; CHECK-NEXT:    it hi
-; CHECK-NEXT:    andhi r2, r7, #31
+; CHECK-NEXT:    andhi r2, r8, #31
 ; CHECK-NEXT:    lsrs r0, r2
 ; CHECK-NEXT:    lsls r0, r0, #31
 ; CHECK-NEXT:    beq .LBB0_1
 ; CHECK-NEXT:  @ %bb.3: @ %if.then
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    mov r0, r8
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    str.w r9, [r5, #4]
 ; CHECK-NEXT:    b .LBB0_1

@@ -123,3 +123,108 @@ loop:
 exit:
   ret void
 }
+
+declare void @use.i64(i64)
+
+define void @dividend_not_known_multiple_of_divisor(i64 %x) {
+; CHECK-LABEL: 'dividend_not_known_multiple_of_divisor'
+; CHECK-NEXT:  Classifying expressions for: @dividend_not_known_multiple_of_divisor
+; CHECK-NEXT:    %mul.2 = shl i64 %x, 1
+; CHECK-NEXT:    --> (2 * %x) U: [0,-1) S: [-9223372036854775808,9223372036854775807)
+; CHECK-NEXT:    %div.16 = lshr exact i64 %mul.2, 4
+; CHECK-NEXT:    --> ((2 * %x) /u 16) U: [0,1152921504606846976) S: [0,1152921504606846976)
+; CHECK-NEXT:    %m2 = and i64 %div.16, 1152921504606846974
+; CHECK-NEXT:    --> (2 * ((2 * %x) /u 32))<nuw><nsw> U: [0,1152921504606846975) S: [0,1152921504606846975)
+; CHECK-NEXT:    %m3 = mul i64 %div.16, 2
+; CHECK-NEXT:    --> (2 * ((2 * %x) /u 16))<nuw><nsw> U: [0,2305843009213693951) S: [0,2305843009213693951)
+; CHECK-NEXT:    %m4 = udiv i64 %m3, 4
+; CHECK-NEXT:    --> ((2 * ((2 * %x) /u 16))<nuw><nsw> /u 4) U: [0,576460752303423488) S: [0,576460752303423488)
+; CHECK-NEXT:  Determining loop execution counts for: @dividend_not_known_multiple_of_divisor
+;
+entry:
+  %mul.2 = shl i64 %x, 1
+  %div.16 = lshr exact i64 %mul.2, 4
+  %m2 = and i64 %div.16, 1152921504606846974
+  call void @use.i64(i64 %m2)
+
+  %m3 = mul i64 %div.16, 2
+  %m4 = udiv i64 %m3, 4
+  call void @use.i64(i64 %m4)
+  ret void
+}
+
+define void @btc_depends_on_div_mul(i64 %x) {
+; CHECK-LABEL: 'btc_depends_on_div_mul'
+; CHECK-NEXT:  Classifying expressions for: @btc_depends_on_div_mul
+; CHECK-NEXT:    %mul.2 = shl i64 %x, 1
+; CHECK-NEXT:    --> (2 * %x) U: [0,-1) S: [-9223372036854775808,9223372036854775807)
+; CHECK-NEXT:    %div.16 = lshr exact i64 %mul.2, 4
+; CHECK-NEXT:    --> ((2 * %x) /u 16) U: [0,1152921504606846976) S: [0,1152921504606846976)
+; CHECK-NEXT:    %masked = and i64 %div.16, 1152921504606846974
+; CHECK-NEXT:    --> (2 * ((2 * %x) /u 32))<nuw><nsw> U: [0,1152921504606846975) S: [0,1152921504606846975)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (-2 + (2 * ((2 * %x) /u 32))<nuw><nsw>)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 2
+; CHECK-NEXT:    --> {2,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 * ((2 * %x) /u 32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @btc_depends_on_div_mul
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (2 * ((2 * %x) /u 32))<nuw><nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-2 + (2 * ((2 * %x) /u 32))<nuw><nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %mul.2 = shl i64 %x, 1
+  %div.16 = lshr exact i64 %mul.2, 4
+  %masked = and i64 %div.16, 1152921504606846974
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  call void @use.i64(i64 %iv)
+  %iv.next = add i64 %iv, 2
+  %ec = icmp eq i64 %iv.next, %masked
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define noundef i64 @udiv_mul_common_vscale_factor(i64 %a, i64 %b) {
+; CHECK-LABEL: 'udiv_mul_common_vscale_factor'
+; CHECK-NEXT:  Classifying expressions for: @udiv_mul_common_vscale_factor
+; CHECK-NEXT:    %vs = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    --> vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    %a.vs = mul i64 %a, %vs
+; CHECK-NEXT:    --> (vscale * %a) U: full-set S: full-set
+; CHECK-NEXT:    %b.vs = mul i64 %b, %vs
+; CHECK-NEXT:    --> (vscale * %b) U: full-set S: full-set
+; CHECK-NEXT:    %div = udiv i64 %a.vs, %b.vs
+; CHECK-NEXT:    --> ((vscale * %a) /u (vscale * %b)) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_common_vscale_factor
+;
+  %vs = call i64 @llvm.vscale()
+  %a.vs = mul i64 %a, %vs
+  %b.vs = mul i64 %b, %vs
+  %div = udiv i64 %a.vs, %b.vs
+  ret i64 %div
+}
+
+define noundef i64 @udiv_mul_nuw_common_vscale_factor(i64 %a, i64 %b) {
+; CHECK-LABEL: 'udiv_mul_nuw_common_vscale_factor'
+; CHECK-NEXT:  Classifying expressions for: @udiv_mul_nuw_common_vscale_factor
+; CHECK-NEXT:    %vs = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    --> vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    %a.vs = mul nuw i64 %a, %vs
+; CHECK-NEXT:    --> (vscale * %a)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %b.vs = mul nuw i64 %b, %vs
+; CHECK-NEXT:    --> (vscale * %b)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %div = udiv i64 %a.vs, %b.vs
+; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_common_vscale_factor
+;
+  %vs = call i64 @llvm.vscale()
+  %a.vs = mul nuw i64 %a, %vs
+  %b.vs = mul nuw i64 %b, %vs
+  %div = udiv i64 %a.vs, %b.vs
+  ret i64 %div
+}

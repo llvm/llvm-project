@@ -1131,6 +1131,16 @@ public:
     return currentFunctionUnit;
   }
 
+  void checkCoarrayEnabled() override final {
+    if (!getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::Coarray))
+      fir::emitFatalError(
+          getCurrentLocation(),
+          "Not yet implemented: Multi-image features are experimental and are "
+          "disabled by default, use '-fcoarray' to enable.",
+          false);
+  }
+
   void registerTypeInfo(mlir::Location loc,
                         Fortran::lower::SymbolRef typeInfoSym,
                         const Fortran::semantics::DerivedTypeSpec &typeSpec,
@@ -2534,7 +2544,7 @@ private:
         auto loopOp = fir::DoLoopOp::create(
             *builder, loc, lowerValue, upperValue, stepValue,
             /*unordered=*/false,
-            /*finalCountValue=*/true,
+            /*finalCountValue=*/false,
             builder->createConvert(loc, loopVarType, lowerValue));
         info.loopOp = loopOp;
         builder->setInsertionPointToStart(loopOp.getBody());
@@ -2686,22 +2696,18 @@ private:
         // Decrement tripVariable.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
         builder->setInsertionPointToEnd(doLoopOp.getBody());
-        llvm::SmallVector<mlir::Value, 2> results;
-        results.push_back(mlir::arith::AddIOp::create(
-            *builder, loc, doLoopOp.getInductionVar(), doLoopOp.getStep(),
-            iofAttr));
         // Step loopVariable to help optimizations such as vectorization.
         // Induction variable elimination will clean up as necessary.
         mlir::Value step = builder->createConvert(
             loc, info.getLoopVariableType(), doLoopOp.getStep());
         mlir::Value loopVar =
             fir::LoadOp::create(*builder, loc, info.loopVariable);
-        results.push_back(
-            mlir::arith::AddIOp::create(*builder, loc, loopVar, step, iofAttr));
-        fir::ResultOp::create(*builder, loc, results);
+        mlir::Value loopVarInc =
+            mlir::arith::AddIOp::create(*builder, loc, loopVar, step, iofAttr);
+        fir::ResultOp::create(*builder, loc, loopVarInc);
         builder->setInsertionPointAfter(doLoopOp);
         // The loop control variable may be used after the loop.
-        fir::StoreOp::create(*builder, loc, doLoopOp.getResult(1),
+        fir::StoreOp::create(*builder, loc, doLoopOp.getResult(0),
                              info.loopVariable);
         continue;
       }
@@ -3176,7 +3182,7 @@ private:
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
-        *this, bridge.getSemanticsContext(), getEval(), acc);
+        *this, bridge.getSemanticsContext(), getEval(), acc, localSymbols);
 
     const Fortran::parser::OpenACCLoopConstruct *accLoop =
         std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);

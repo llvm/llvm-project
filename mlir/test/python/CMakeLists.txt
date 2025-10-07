@@ -13,7 +13,7 @@ add_subdirectory(lib)
 
 set(MLIR_PYTHON_TEST_DEPENDS MLIRPythonModules)
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_PYTHON_TEST_DEPENDS FileCheck count)
+  list(APPEND MLIR_PYTHON_TEST_DEPENDS FileCheck count not)
 endif()
 add_lit_testsuite(check-mlir-python "Running the MLIR Python regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}

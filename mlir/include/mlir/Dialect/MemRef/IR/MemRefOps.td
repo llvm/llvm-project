@@ -15,6 +15,7 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/MemOpInterfaces.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -145,7 +146,8 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
       Pure,
       ViewLikeOpInterface,
-      SameOperandsAndResultType
+      SameOperandsAndResultType,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
     ]> {
   let summary =
       "assumption that gives alignment information to the input memref";
@@ -153,7 +155,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       The `assume_alignment` operation takes a memref and an integer alignment
       value. It returns a new SSA value of the same memref type, but associated
       with the assumption that the underlying buffer is aligned to the given
-      alignment. 
+      alignment.
 
       If the buffer isn't aligned to the given alignment, its result is poison.
       This operation doesn't affect the semantics of a program where the
@@ -168,12 +170,47 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
   let extraClassDeclaration = [{
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
-    
+
     Value getViewSource() { return getMemref(); }
   }];
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DistinctObjectsOp
+//===----------------------------------------------------------------------===//
+
+def DistinctObjectsOp : MemRef_Op<"distinct_objects", [
+      Pure,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>
+      // ViewLikeOpInterface TODO: ViewLikeOpInterface only supports a single argument
+    ]> {
+  let summary = "assumption that acesses to specific memrefs will never alias";
+  let description = [{
+      The `distinct_objects` operation takes a list of memrefs and returns the same
+      memrefs, with the additional assumption that accesses to them will never
+      alias with each other. This means that loads and stores to different
+      memrefs in the list can be safely reordered.
+
+      If the memrefs do alias, the load/store behavior is undefined. This
+      operation doesn't affect the semantics of a valid program. It is
+      intended for optimization purposes, allowing the compiler to generate more
+      efficient code based on the non-aliasing assumption. The optimization is
+      best-effort.
+
+      Example:
+
+      ```mlir
+      %1, %2 = memref.distinct_objects %a, %b : memref<?xf32>, memref<?xf32>
+      ```
+  }];
+  let arguments = (ins Variadic<AnyMemRef>:$operands);
+  let results = (outs Variadic<AnyMemRef>:$results);
+
+  let assemblyFormat = "$operands attr-dict `:` type($operands)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -456,6 +493,7 @@ def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
 def MemRef_CastOp : MemRef_Op<"cast", [
       DeclareOpInterfaceMethods<CastOpInterface>,
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       MemRefsNormalizable,
       Pure,
       SameOperandsAndResultShape,
@@ -1163,7 +1201,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
                        MemRefTypeAttr:$type,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
-                       OptionalAttr<I64Attr>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let assemblyFormat = [{
        ($sym_visibility^)?
@@ -1194,6 +1232,7 @@ def LoadOp : MemRef_Op<"load",
                      "memref", "result",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "load operation";
@@ -1231,35 +1270,34 @@ def LoadOp : MemRef_Op<"load",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-                       ConfinedAttr<OptionalAttr<I64Attr>,
-                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>,
     OpBuilder<(ins "Type":$resultType,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>
   ];
 
@@ -1285,6 +1323,7 @@ def LoadOp : MemRef_Op<"load",
 def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
       DeclareOpInterfaceMethods<CastOpInterface>,
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      MemorySpaceCastOpInterface,
       MemRefsNormalizable,
       Pure,
       SameOperandsAndResultElementType,
@@ -1302,6 +1341,10 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
     The input and result must have the same shape, element type, rank, and layout.
 
     If the source and target address spaces are the same, this operation is a noop.
+
+    Finally, if the target memory-space is the generic/default memory-space,
+    then it is assumed this cast can be bubbled down safely. See the docs of
+    `MemorySpaceCastOpInterface` interface for more details.
 
     Example:
 
@@ -1322,6 +1365,27 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
 
   let extraClassDeclaration = [{
     Value getViewSource() { return getSource(); }
+
+    //===------------------------------------------------------------------===//
+    // MemorySpaceCastConsumerOpInterface
+    //===------------------------------------------------------------------===//
+    /// Returns the `source` memref.
+    TypedValue<PtrLikeTypeInterface> getSourcePtr();
+    /// Returns the `dest` memref.
+    TypedValue<PtrLikeTypeInterface> getTargetPtr();
+    /// Returns whether the memory-space cast is valid. Only casts between
+    /// memrefs are considered valid. Further, the `tgt` and `src` should only
+    /// differ on the memory-space parameter of the memref type.
+    bool isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
+                                PtrLikeTypeInterface src);
+    /// Clones the operation using a new target type and source value.
+    MemorySpaceCastOpInterface cloneMemorySpaceCastOp(
+        OpBuilder &b, PtrLikeTypeInterface tgt,
+        TypedValue<PtrLikeTypeInterface> src);
+    /// Returns whether the `source` value can be promoted by the
+    /// `MemorySpaceCastConsumerOpInterface::bubbleDownCasts` method. The only
+    /// casts the op recognizes as promotable are to the generic memory-space.
+    bool isSourcePromotable();
   }];
 
   let hasFolder = 1;
@@ -1377,6 +1441,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 def MemRef_ReinterpretCastOp
   : MemRef_OpWithOffsetSizesAndStrides<"reinterpret_cast", [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AttrSizedOperandSegments,
       MemRefsNormalizable,
       Pure,
@@ -1604,6 +1669,7 @@ def MemRef_RankOp : MemRef_Op<"rank", [Pure]> {
 
 def MemRef_ReshapeOp: MemRef_Op<"reshape", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     Pure,
     ViewLikeOpInterface]>  {
   let summary = "memref reshape operation";
@@ -1702,6 +1768,7 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
 def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
   let summary = "operation to produce a memref with a higher rank.";
   let description = [{
@@ -1823,7 +1890,9 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
 }
 
 def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+  ]> {
   let summary = "operation to produce a memref with a smaller rank.";
   let description = [{
     The `memref.collapse_shape` op produces a new view with a smaller rank
@@ -1930,6 +1999,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
                      "memref", "value",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "store operation";
@@ -1965,18 +2035,17 @@ def MemRef_StoreOp : MemRef_Op<"store",
                            [MemWrite]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-                       ConfinedAttr<OptionalAttr<I64Attr>,
-                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
     }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);
@@ -2008,6 +2077,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
 
 def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<ViewLikeOpInterface>,
     AttrSizedOperandSegments,
     OffsetSizeAndStrideOpInterface,
@@ -2283,6 +2353,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
 def MemRef_TransposeOp : MemRef_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     Pure]>,
     Arguments<(ins AnyStridedMemRef:$in, AffineMapAttr:$permutation)>,
     Results<(outs AnyStridedMemRef)> {
@@ -2318,6 +2389,7 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [
 
 def MemRef_ViewOp : MemRef_Op<"view", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<ViewLikeOpInterface>,
     Pure]> {
   let summary = "memref view operation";
@@ -2394,6 +2466,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
 //===----------------------------------------------------------------------===//
 
 def AtomicRMWOp : MemRef_Op<"atomic_rmw", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AllTypesMatch<["value", "result"]>,
       TypesMatchWith<"value type matches element type of memref",
                      "memref", "value",

@@ -57,10 +57,10 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given type is an LLVM type that can be loaded or stored.
-static bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
-                                 std::optional<int64_t> alignment,
-                                 const ::mlir::DataLayout *dataLayout,
-                                 function_ref<InFlightDiagnostic()> emitError) {
+bool LLVM::detail::isValidLoadStoreImpl(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) {
   if (!isLoadableType(type)) {
     if (emitError)
       emitError() << "type must be LLVM type with size, but got " << type;
@@ -87,14 +87,16 @@ bool AddressSpaceAttr::isValidLoad(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
     const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return isValidLoadStoreImpl(type, ordering, alignment, dataLayout, emitError);
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
 }
 
 bool AddressSpaceAttr::isValidStore(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
     const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return isValidLoadStoreImpl(type, ordering, alignment, dataLayout, emitError);
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
 }
 
 bool AddressSpaceAttr::isValidAtomicOp(

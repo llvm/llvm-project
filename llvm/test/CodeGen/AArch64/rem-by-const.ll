@@ -88,7 +88,7 @@ define i8 @ui8_7(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    sub w9, w0, w8
 ; CHECK-GI-NEXT:    ubfx w9, w9, #1, #7
 ; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    ubfx w8, w8, #2, #6
+; CHECK-GI-NEXT:    lsr w8, w8, #2
 ; CHECK-GI-NEXT:    lsl w9, w8, #3
 ; CHECK-GI-NEXT:    sub w8, w9, w8
 ; CHECK-GI-NEXT:    sub w0, w0, w8
@@ -207,7 +207,7 @@ define i16 @ui16_7(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    sub w9, w0, w8
 ; CHECK-GI-NEXT:    ubfx w9, w9, #1, #15
 ; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    ubfx w8, w8, #2, #14
+; CHECK-GI-NEXT:    lsr w8, w8, #2
 ; CHECK-GI-NEXT:    lsl w9, w8, #3
 ; CHECK-GI-NEXT:    sub w8, w9, w8
 ; CHECK-GI-NEXT:    sub w0, w0, w8
