@@ -8,6 +8,16 @@ import platform
 
 import generate_test_report_lib
 
+def compute_platform_title() -> str:
+    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
+    # On Linux the machine value is x86_64 on Windows it is AMD64.
+    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
+        arch = "x64"
+    else:
+        arch = platform.machine()
+    return f"{logo} {platform.system()} {arch} Test Results"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("return_code", help="The build's return code.", type=int)
@@ -16,15 +26,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
-    # On Linux the machine value is x86_64 on Windows it is AMD64.
-    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
-        arch = "x64"
-    else:
-        arch = platform.machine()
-    platform_title = f"{logo} {platform.system()} {arch} Test Results"
     report = generate_test_report_lib.generate_report_from_files(
-        platform_title, args.return_code, args.build_test_logs
+        compute_platform_title(), args.return_code, args.build_test_logs
     )
 
     print(report)
