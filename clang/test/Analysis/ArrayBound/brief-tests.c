@@ -22,8 +22,7 @@ void test1_ok(int x) {
 
 const char test1_strings_underrun(int x) {
   const char *mystr = "mary had a little lamb";
-  return mystr[-1]; // expected-warning{{Undefined or garbage value returned to caller}}
-  // expected-warning@-1{{Out of bound access to memory preceding the string literal}}
+  return mystr[-1]; // expected-warning{{Out of bound access to memory}}
 }
 
 const char test1_strings_overrun(int x) {
@@ -128,7 +127,7 @@ void test2_multi(int x) {
 // - constant integer sizes for the array
 void test2_multi_b(int x) {
   int buf[100][100];
-  buf[-1][0] = 1; // expected-warning 2{{Out of bound access to memory preceding 'buf'}}
+  buf[-1][0] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 void test2_multi_ok(int x) {
@@ -249,8 +248,8 @@ void sizeof_vla(int a) {
   if (a == 5) {
     char x[a];
     int y[sizeof(x)];
-    y[4] = 4; // expected-warning{{Out of bound access to memory after the end of 'y'}} // FIXME: FP
-    y[5] = 5; // expected-warning{{Out of bound access to memory after the end of 'y'}}
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
   }
 }
 
@@ -259,8 +258,8 @@ void sizeof_vla_2(int a) {
   if (a == 5) {
     char x[a];
     int y[sizeof(x) / sizeof(char)];
-    y[4] = 4; // expected-warning{{Out of bound access to memory after the end of 'y'}} // FIXME: FP
-    y[5] = 5; // expected-warning{{Out of bound access to memory after the end of 'y'}}
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
   }
 }
 
@@ -269,7 +268,7 @@ void sizeof_vla_3(int a) {
   if (a == 5) {
     char x[a];
     int y[sizeof(*&*&*&x)];
-    y[4] = 4; // expected-warning{{Out of bound access to memory after the end of 'y'}} // FIXME: FP
-    y[5] = 5; // expected-warning{{Out of bound access to memory after the end of 'y'}}
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
   }
 }

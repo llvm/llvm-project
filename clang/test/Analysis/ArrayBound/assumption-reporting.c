@@ -15,8 +15,8 @@ int TenElements[10];
 
 int irrelevantAssumptions(int arg) {
   int a = TenElements[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // Here the analyzer assumes that `arg` is in bounds, but doesn't report this
+  // because `arg` is not interesting for the bug.
   int b = TenElements[13];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at index 13, while it holds only 10 'int' elements}}
@@ -26,10 +26,8 @@ int irrelevantAssumptions(int arg) {
 
 int assumingBoth(int arg) {
   int a = TenElements[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
-  int b = TenElements[arg]; // expected-warning{{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-1 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming index is non-negative and less than 10, the number of 'int' elements in 'TenElements'}}
+  int b = TenElements[arg]; // no additional note, we already assumed that 'arg' is in bounds
   int c = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
@@ -41,11 +39,9 @@ int assumingBothPointerToMiddle(int arg) {
   // will speak about the "byte offset" measured from the beginning of the TenElements.
   int *p = TenElements + 2;
   int a = p[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming byte offset is non-negative and less than 40, the extent of 'TenElements'}}
 
-  int b = TenElements[arg]; // expected-warning{{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-1 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  int b = TenElements[arg]; // This is normal access, and only the lower bound is new.
   int c = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
@@ -66,16 +62,15 @@ int assumingLower(int arg) {
 }
 
 int assumingUpper(int arg) {
-  // expected-note@+2 2{{Assuming 'arg' is >= 0}}
-  // expected-note@+1 2{{Taking false branch}}
+  // expected-note@+2 {{Assuming 'arg' is >= 0}}
+  // expected-note@+1 {{Taking false branch}}
   if (arg < 0)
     return 0;
   int a = TenElements[arg];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[arg - 10];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -87,13 +82,12 @@ int assumingUpperIrrelevant(int arg) {
   // filter out assumptions that are logically irrelevant but "touch"
   // interesting symbols; eventually it would be good to add support for this.
 
-  // expected-note@+2 2{{Assuming 'arg' is >= 0}}
-  // expected-note@+1 2{{Taking false branch}}
+  // expected-note@+2 {{Assuming 'arg' is >= 0}}
+  // expected-note@+1 {{Taking false branch}}
   if (arg < 0)
     return 0;
   int a = TenElements[arg];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
@@ -102,11 +96,10 @@ int assumingUpperIrrelevant(int arg) {
 
 int assumingUpperUnsigned(unsigned arg) {
   int a = TenElements[arg];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[(int)arg - 10];
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -127,10 +120,8 @@ short assumingConvertedToCharP(int arg) {
   // result type of the subscript operator.
   char *cp = (char*)TenElements;
   char a = cp[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 40 'char' elements}}
-  char b = cp[arg]; // expected-warning{{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-1 {{Access of 'TenElements' at an overflowing index, while it holds only 40 'char' elements}}
+  // expected-note@-1 {{Assuming index is non-negative and less than 40, the number of 'char' elements in 'TenElements'}}
+  char b = cp[arg]; // no additional note, we already assumed that 'arg' is in bounds
   char c = cp[arg + 40];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 40 'char' elements}}
@@ -147,14 +138,14 @@ int assumingConvertedToIntP(struct foo f, int arg) {
   // When indices are reported, the note will use the element type that's the
   // result type of the subscript operator.
   int a = ((int*)(f.a))[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'f.a'}}
-  // expected-note@-2 {{Access of 'f.a' at a negative or overflowing index, while it holds only 2 'int' elements}}
+  // expected-note@-1 {{Assuming index is non-negative and less than 2, the number of 'int' elements in 'f.a'}}
+  // However, if the extent of the memory region is not divisible by the
+  // element size, the checker measures the offset and extent in bytes.
   int b = ((int*)(f.b))[arg];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'f.b'}}
-  // expected-note@-2 {{Access of 'f.b' at an overflowing byte offset, while it holds only 5 bytes}}
+  // expected-note@-1 {{Assuming byte offset is less than 5, the extent of 'f.b'}}
   int c = TenElements[arg-2];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b + c;
 }
 
@@ -163,14 +154,16 @@ int assumingPlainOffset(struct foo f, int arg) {
   // shorter "offset" instead of "byte offset" when it's irrelevant that the
   // offset is measured in bytes.
 
-  // expected-note@+2 2{{Assuming 'arg' is < 2}}
-  // expected-note@+1 2{{Taking false branch}}
+  // expected-note@+2 {{Assuming 'arg' is < 2}}
+  // expected-note@+1 {{Taking false branch}}
   if (arg >= 2)
     return 0;
 
   int b = ((int*)(f.b))[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'f.b'}}
-  // expected-note@-2 {{Access of 'f.b' at a negative or overflowing byte offset, while it holds only 5 bytes}}
+  // expected-note@-1 {{Assuming byte offset is non-negative and less than 5, the extent of 'f.b'}}
+  // FIXME: this should be {{Assuming offset is non-negative}}
+  // but the current simplification algorithm doesn't realize that arg <= 1
+  // implies that the byte offset arg*4 will be less than 5.
 
   int c = TenElements[arg+10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
@@ -188,14 +181,13 @@ int assumingExtent(int arg) {
   int *mem = (int*)malloc(arg);
 
   mem[12] = 123;
-  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
-  // expected-note@-2 {{Access of 'int' element in the heap area at index 12}}
+  // expected-note@-1 {{Assuming index '12' is less than the number of 'int' elements in the heap area}}
 
   free(mem);
 
   return TenElements[arg];
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
 }
 
 int *extentInterestingness(int arg) {
@@ -204,8 +196,7 @@ int *extentInterestingness(int arg) {
   int *mem = (int*)malloc(arg);
 
   TenElements[arg] = 123;
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming index is non-negative and less than 10, the number of 'int' elements in 'TenElements'}}
 
   return &mem[12];
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
@@ -217,7 +208,8 @@ int triggeredByAnyReport(int arg) {
   // not limited to ArrayBound reports but will appear on any bug report (that
   // marks the relevant symbol as interesting).
   TenElements[arg + 10] = 8;
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-note@-1 {{Assuming index is non-negative and less than 10, the number of 'int' elements in 'TenElements'}}
   return 1024 >> arg;
+  // expected-warning@-1 {{Right operand is negative in right shift}}
+  // expected-note@-2 {{The result of right shift is undefined because the right operand is negative}}
 }

@@ -103,14 +103,14 @@ void test2_multi(int x) {
 // of a multi-dimensional array
 void test2_multi_b(int x) {
   auto buf = new int[100][100];
-  buf[-1][0] = 1; // expected-warning 2{{Out of bound access to memory preceding the heap area}}
+  buf[-1][0] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests over-indexing
 // of a multi-dimensional array
 void test2_multi_c(int x) {
   auto buf = new int[100][100];
-  buf[100][0] = 1; // expected-warning 2{{Out of bound access to memory after the end of the heap area}}
+  buf[100][0] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests over-indexing
@@ -148,7 +148,7 @@ void test_non_array(int x) {
 //if the allocated area size is a runtime parameter
 void test_dynamic_size(int s) {
   int *buf = new int[s];
-  buf[0] = 1; // expected-warning{{Out of bound access to memory after the end of the heap area}} 
+  buf[0] = 1; // no-warning
 }
 //Tests complex arithmetic
 //in new expression
@@ -174,7 +174,7 @@ int test_reference_that_might_be_after_the_end(int idx) {
   // only introduced _after_ the creation of the reference ref.
   if (idx < 0 || idx > 10)
     return -2;
-  int &ref = array[idx];  // expected-warning{{Out of bound access to memory after the end of 'array'}}
+  int &ref = array[idx];
   if (idx == 10)
     return -1;
   return ref;

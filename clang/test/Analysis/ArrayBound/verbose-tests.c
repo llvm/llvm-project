@@ -78,14 +78,18 @@ int scanf(const char *fmt, ...);
 void taintedIndex(void) {
   int index;
   scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
   TenElements[index] = 5;
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be negative or too large}}
 }
 
 void taintedIndexNonneg(void) {
   int index;
   scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
 
   // expected-note@+2 {{Assuming 'index' is >= 0}}
   // expected-note@+1 {{Taking false branch}}
@@ -93,17 +97,19 @@ void taintedIndexNonneg(void) {
     return;
 
   TenElements[index] = 5;
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
 }
 
 void taintedIndexUnsigned(void) {
   unsigned index;
   scanf("%u", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
 
   TenElements[index] = 5;
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
 }
 
 int *taintedIndexAfterTheEndPtr(void) {
@@ -115,6 +121,8 @@ int *taintedIndexAfterTheEndPtr(void) {
   // &TenElements[index].
   int index;
   scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
   if (index < 0 || index > 10)
     return TenElements;
   // expected-note@-2 {{Assuming 'index' is >= 0}}
@@ -122,17 +130,19 @@ int *taintedIndexAfterTheEndPtr(void) {
   // expected-note@-4 {{Assuming 'index' is <= 10}}
   // expected-note@-5 {{Taking false branch}}
   return &TenElements[index];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
 }
 
 void taintedOffset(void) {
   int index;
   scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
   int *p = TenElements + index;
   p[0] = 5;
-  // expected-warning@-1 {{Out of bound access to memory around 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative or overflowing index, while it holds only 10 'int' elements}}
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted offset}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted offset that may be negative or too large}}
 }
 
 void arrayOverflow(void) {
@@ -362,8 +372,6 @@ int allocaRegion(void) {
   // expected-warning@-1 {{Out of bound access to memory after the end of the memory returned by 'alloca'}}
   // expected-note@-2 {{Access of the memory returned by 'alloca' at index 3, while it holds only 2 'int' elements}}
   return *mem;
-  // expected-warning@-1 {{Undefined or garbage value returned to caller}}
-  // expected-note@-2 {{Undefined or garbage value returned to caller}}
 }
 
 int *symbolicExtent(int arg) {
@@ -373,9 +381,27 @@ int *symbolicExtent(int arg) {
     return 0;
   int *mem = (int*)malloc(arg);
 
+  // TODO: without the following reference to 'arg', the analyzer would discard
+  // the range information about (the symbolic value of) 'arg'. This is
+  // incorrect because while the variable itself is inaccessible, it becomes
+  // the symbolic extent of 'mem', so we still want to reason about its
+  // potential values.
+  (void)arg;
+
   mem[8] = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 8}}
+  return mem;
+}
+
+int *symbolicExtentDiscardedRangeInfo(int arg) {
+  // This is a copy of the case 'symbolicExtent' without the '(void)arg' hack.
+  // TODO: if the analyzer can detect the out-of-bounds access within this
+  // testcase, then remove this and the `(void)arg` hack from `symbolicExtent`.
+  if (arg >= 5)
+    return 0;
+  int *mem = (int*)malloc(arg);
+  mem[8] = -2;
   return mem;
 }
 
@@ -389,18 +415,20 @@ void symbolicIndex(int arg) {
 }
 
 int *nothingIsCertain(int x, int y) {
-  // expected-note@+2{{Assuming 'x' is < 2}}
-  // expected-note@+1{{Taking false branch}}
   if (x >= 2)
     return 0;
   int *mem = (int*)malloc(x);
 
-  // expected-note@+2 {{Taking true branch}}
-  // expected-note@+1 {{Assuming 'y' is >= 8}}
   if (y >= 8)
     mem[y] = -2;
-    // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
-    // expected-note@-2 {{Access of the heap area at an overflowing index}}
+  // FIXME: this should produce
+  //   {{Out of bound access to memory after the end of the heap area}}
+  //   {{Access of 'int' element in the heap area at an overflowing index}}
+  // but apparently the analyzer isn't smart enough to deduce this.
+
+  // Keep constraints alive. (Without this, the overeager garbage collection of
+  // constraints would _also_ prevent the intended behavior in this testcase.)
+  (void)x;
 
   return mem;
 }
