@@ -716,8 +716,30 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
       return getAttrs().getAs<ArrayAttr>("stride");
     }
 
+    ArrayAttr getBlockAttr() {
+      return getAttrs().getAs<ArrayAttr>("block");
+    }
+
   }];
 
+}
+
+def RowOriented : I32EnumAttrCase<"ROW", 0, "row">;
+def ColOriented : I32EnumAttrCase<"COL", 1, "col">;
+def MatrixAccessDirection : 
+    I32EnumAttr<"MatrixAccessDirection", 
+    "Matrix elements/vectors can have row or column direction", [
+    RowOriented, ColOriented
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+def MatrixAccessDirectionAttr : 
+    EnumAttr<XeGPU_Dialect, 
+    MatrixAccessDirection, 
+    "matrix_access_direction">{
+  let summary = [{Describe the direction of memory access for load_matrix and store_matrix.}];
+  let assemblyFormat = "`<` $value `>`";
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

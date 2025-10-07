@@ -1062,9 +1062,12 @@ LogicalResult LoadMatrixOp::verify() {
 
   ArrayRef<int64_t> valueShape = resTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-  if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
-                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("result shape must not exceed mem_desc shape.");
+
+  if (valueShape.size() != 1) {
+    if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
+                     [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+      return emitOpError("result shape must not exceed mem_desc shape.");
+  }
   return success();
 }
 
@@ -1092,10 +1095,11 @@ LogicalResult StoreMatrixOp::verify() {
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-  if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
-                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("data shape must not exceed mem_desc shape.");
-
+  if (dataShape.size() != 1) {
+    if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
+                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+      return emitOpError("data shape must not exceed mem_desc shape.");
+  }
   return success();
 }
 
@@ -1127,7 +1131,7 @@ LogicalResult MemDescSubviewOp::verify() {
           [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
     return emitOpError("result shape must not exceed source shape.");
 
-  if (srcTy.getStrides() != resTy.getStrides())
+  if (srcTy.getStridesAttr() != resTy.getStridesAttr())
     return emitOpError("result must inherit the source strides.");
 
   return success();
