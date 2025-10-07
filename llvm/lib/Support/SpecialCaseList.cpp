@@ -21,6 +21,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
+#include <limits>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -170,9 +171,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     return false;
   }
 
-  for (line_iterator LineIt(*MB, /*SkipBlanks=*/
-                            true,
-                            /*CommentMarker=*/'#');
+  for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
     unsigned LineNo = LineIt.line_number();
     StringRef Line = LineIt->trim();
