@@ -1,6 +1,35 @@
-// RUN: llvm-mc -triple i686-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
+// RUN: llvm-mc -triple i686-unknown-unknown -x86-asm-syntax=intel --show-encoding %s | FileCheck %s
 
 // CHECK: leaw	(%bp,%si), %ax
+// CHECK: encoding: [0x67,0x66,0x8d,0x02]
 lea ax, [bp+si]
 // CHECK: leaw	(%bp,%si), %ax
+// CHECK: encoding: [0x67,0x66,0x8d,0x02]
 lea ax, [si+bp]
+
+// CHECK: encoding: [0x66,0x6a,0x08]
+          data16 push 8
+
+// CHECK: encoding: [0x6a,0x08]
+          push 8
+
+// CHECK: encoding: [0x66,0xcb]
+          data16 retf
+
+// CHECK: encoding: [0xcb]
+          retf
+
+// CHECK: encoding: [0x66,0x9a,0xcd,0xab,0xce,0x7a]
+          data16 call 0x7ace, 0xabcd
+
+// CHECK: encoding: [0x9a,0xcd,0xab,0x00,0x00,0xce,0x7a]
+          call 0x7ace, 0xabcd
+
+// CHECK: encoding: [0xe8,A,A,A,A]
+          call a
+
+// CHECK: encoding: [0x66,0xea,0xcd,0xab,0xce,0x7a]
+          data16 ljmp 0x7ace, 0xabcd
+
+// CHECK: encoding: [0xea,0xcd,0xab,0x00,0x00,0xce,0x7a]
+          ljmp 0x7ace, 0xabcd
