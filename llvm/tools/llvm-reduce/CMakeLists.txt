@@ -39,6 +39,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceGlobalValues.cpp
   deltas/ReduceGlobalVarInitializers.cpp
   deltas/ReduceGlobalVars.cpp
+  deltas/ReduceInlineCallSites.cpp
   deltas/ReduceInstructions.cpp
   deltas/ReduceInstructionFlags.cpp
   deltas/ReduceInvokes.cpp
