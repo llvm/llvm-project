@@ -17,6 +17,7 @@
 #include <linux/auxvec.h> // For AT_ macros
 #include <linux/mman.h>   // For mmap flags
 #include <linux/prctl.h>  // For prctl
+#include <sys/syscall.h>  // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
 
