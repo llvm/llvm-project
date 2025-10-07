@@ -21,6 +21,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -224,14 +225,37 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
 }
 
 void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
-  // TODO:
-  // - review other data structure wrt. possible issues related to removal
-  //   of a machine instruction during instruction selection.
+  // Other maps that may hold MachineInstr*:
+  // - VRegToTypeMap: Clearing would require a linear search. If we are deleting
+  // type, then no registers remaining in the code should have this type. Should
+  // be safe to leave as is.
+  // - FunctionToInstr & FunctionToInstrRev: At this point, we should not be
+  // deleting functions. No need to update.
+  // - AliasInstMDMap: Would require a linear search, and the Intel Alias
+  // instruction are not instructions instruction selection will be able to
+  // remove.
+
+  const SPIRVSubtarget &ST = MI->getMF()->getSubtarget<SPIRVSubtarget>();
+  const SPIRVInstrInfo *TII = ST.getInstrInfo();
+  assert(!TII->isAliasingInstr(*MI) &&
+         "Cannot invalidate aliasing instructions.");
+  assert(MI->getOpcode() != SPIRV::OpFunction &&
+         "Cannot invalidate OpFunction.");
+
+  if (MI->getOpcode() == SPIRV::OpFunctionCall) {
+    if (const auto *F = dyn_cast<Function>(MI->getOperand(2).getGlobal())) {
+      auto It = ForwardCalls.find(F);
+      if (It != ForwardCalls.end()) {
+        It->second.erase(MI);
+        if (It->second.empty())
+          ForwardCalls.erase(It);
+      }
+    }
+  }
+
   const MachineFunction *MF = MI->getMF();
   auto It = LastInsertedTypeMap.find(MF);
-  if (It == LastInsertedTypeMap.end())
-    return;
-  if (It->second == MI)
+  if (It != LastInsertedTypeMap.end() && It->second == MI)
     LastInsertedTypeMap.erase(MF);
   // remove from the duplicate tracker to avoid incorrect reuse
   erase(MI);
