@@ -87,6 +87,7 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   bool isConsecutiveRegPair(Register First, Register Second);
   void splitLdSdIntoTwo(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator &MBBI, bool IsLoad);
+  int64_t getLoadStoreOffset(const MachineInstr &MI);
 
 private:
   AliasAnalysis *AA;
@@ -427,10 +428,27 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
 // Post reg-alloc zilsd pass implementation
 //===----------------------------------------------------------------------===//
 
+// Helper function to extract offset from load/store operands
+int64_t RISCVLoadStoreOpt::getLoadStoreOffset(const MachineInstr &MI) {
+  const MachineOperand &OffsetOp = MI.getOperand(2);
+
+  // Handle immediate offset
+  if (OffsetOp.isImm())
+    return OffsetOp.getImm();
+
+  // Handle symbolic operands with MO_LO flag (from MergeBaseOffset)
+  if (OffsetOp.getTargetFlags() & RISCVII::MO_LO)
+    if (OffsetOp.isGlobal() || OffsetOp.isCPI() || OffsetOp.isBlockAddress() ||
+        OffsetOp.isSymbol())
+      return OffsetOp.getOffset();
+
+  return 0;
+}
+
 bool RISCVLoadStoreOpt::isConsecutiveRegPair(Register First, Register Second) {
-  // Special case: both registers are zero register - this is valid for storing
+  // Special case: First register can not be zero
   // zeros
-  if (First == RISCV::X0 && Second == RISCV::X0)
+  if (First == RISCV::X0)
     return true;
 
   // Check if registers form a valid even/odd pair for Zilsd
@@ -450,7 +468,15 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
   Register FirstReg = MI->getOperand(0).getReg();
   Register SecondReg = MI->getOperand(1).getReg();
   Register BaseReg = MI->getOperand(2).getReg();
-  int Offset = MI->getOperand(3).getImm();
+
+  // Handle both immediate and symbolic operands for offset
+  const MachineOperand &OffsetOp = MI->getOperand(3);
+  int BaseOffset;
+  if (OffsetOp.isImm())
+    BaseOffset = OffsetOp.getImm();
+  else
+    // For symbolic operands, extract the embedded offset
+    BaseOffset = OffsetOp.getOffset();
 
   unsigned Opc = IsLoad ? RISCV::LW : RISCV::SW;
 
@@ -458,13 +484,37 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
   if (IsLoad) {
     auto MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
                     .addReg(FirstReg, RegState::Define)
-                    .addReg(BaseReg)
-                    .addImm(Offset);
+                    .addReg(BaseReg);
 
     auto MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
                     .addReg(SecondReg, RegState::Define)
-                    .addReg(BaseReg)
-                    .addImm(Offset + 4);
+                    .addReg(BaseReg);
+
+    // Add offset operands - preserve symbolic references
+    if (OffsetOp.isImm()) {
+      MIB1.addImm(BaseOffset);
+      MIB2.addImm(BaseOffset + 4);
+    } else if (OffsetOp.isGlobal()) {
+      MIB1.addGlobalAddress(OffsetOp.getGlobal(), BaseOffset,
+                            OffsetOp.getTargetFlags());
+      MIB2.addGlobalAddress(OffsetOp.getGlobal(), BaseOffset + 4,
+                            OffsetOp.getTargetFlags());
+    } else if (OffsetOp.isCPI()) {
+      MIB1.addConstantPoolIndex(OffsetOp.getIndex(), BaseOffset,
+                                OffsetOp.getTargetFlags());
+      MIB2.addConstantPoolIndex(OffsetOp.getIndex(), BaseOffset + 4,
+                                OffsetOp.getTargetFlags());
+    } else if (OffsetOp.isSymbol()) {
+      MIB1.addExternalSymbol(OffsetOp.getSymbolName(),
+                             OffsetOp.getTargetFlags());
+      MIB2.addExternalSymbol(OffsetOp.getSymbolName(),
+                             OffsetOp.getTargetFlags());
+    } else if (OffsetOp.isBlockAddress()) {
+      MIB1.addBlockAddress(OffsetOp.getBlockAddress(), BaseOffset,
+                           OffsetOp.getTargetFlags());
+      MIB2.addBlockAddress(OffsetOp.getBlockAddress(), BaseOffset + 4,
+                           OffsetOp.getTargetFlags());
+    }
 
     // Copy memory operands if the original instruction had them
     // FIXME: This is overly conservative; the new instruction accesses 4 bytes,
@@ -477,15 +527,37 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
     ++NumLD2LW;
     LLVM_DEBUG(dbgs() << "Split LD back to two LW instructions\n");
   } else {
-    auto MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                    .addReg(FirstReg)
-                    .addReg(BaseReg)
-                    .addImm(Offset);
+    auto MIB1 =
+        BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(FirstReg).addReg(BaseReg);
 
-    auto MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                    .addReg(SecondReg)
-                    .addReg(BaseReg)
-                    .addImm(Offset + 4);
+    auto MIB2 =
+        BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(SecondReg).addReg(BaseReg);
+
+    // Add offset operands - preserve symbolic references
+    if (OffsetOp.isImm()) {
+      MIB1.addImm(BaseOffset);
+      MIB2.addImm(BaseOffset + 4);
+    } else if (OffsetOp.isGlobal()) {
+      MIB1.addGlobalAddress(OffsetOp.getGlobal(), BaseOffset,
+                            OffsetOp.getTargetFlags());
+      MIB2.addGlobalAddress(OffsetOp.getGlobal(), BaseOffset + 4,
+                            OffsetOp.getTargetFlags());
+    } else if (OffsetOp.isCPI()) {
+      MIB1.addConstantPoolIndex(OffsetOp.getIndex(), BaseOffset,
+                                OffsetOp.getTargetFlags());
+      MIB2.addConstantPoolIndex(OffsetOp.getIndex(), BaseOffset + 4,
+                                OffsetOp.getTargetFlags());
+    } else if (OffsetOp.isSymbol()) {
+      MIB1.addExternalSymbol(OffsetOp.getSymbolName(),
+                             OffsetOp.getTargetFlags());
+      MIB2.addExternalSymbol(OffsetOp.getSymbolName(),
+                             OffsetOp.getTargetFlags());
+    } else if (OffsetOp.isBlockAddress()) {
+      MIB1.addBlockAddress(OffsetOp.getBlockAddress(), BaseOffset,
+                           OffsetOp.getTargetFlags());
+      MIB2.addBlockAddress(OffsetOp.getBlockAddress(), BaseOffset + 4,
+                           OffsetOp.getTargetFlags());
+    }
 
     // Copy memory operands if the original instruction had them
     // FIXME: This is overly conservative; the new instruction accesses 4 bytes,
@@ -526,8 +598,15 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
 
   // Registers are valid, convert to real LD/SD instruction
   Register BaseReg = MI->getOperand(2).getReg();
-  int Offset = MI->getOperand(3).getImm();
   DebugLoc DL = MI->getDebugLoc();
+  // Handle both immediate and symbolic operands for offset
+  const MachineOperand &OffsetOp = MI->getOperand(3);
+  int BaseOffset;
+  if (OffsetOp.isImm())
+    BaseOffset = OffsetOp.getImm();
+  else
+    // For symbolic operands, extract the embedded offset
+    BaseOffset = OffsetOp.getOffset();
 
   unsigned RealOpc = IsLoad ? RISCV::LD_RV32 : RISCV::SD_RV32;
 
@@ -545,7 +624,22 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
     MIB.addReg(RegPair);
   }
 
-  MIB.addReg(BaseReg).addImm(Offset);
+  MIB.addReg(BaseReg);
+
+  // Add offset operand - preserve symbolic references
+  if (OffsetOp.isImm())
+    MIB.addImm(BaseOffset);
+  else if (OffsetOp.isGlobal())
+    MIB.addGlobalAddress(OffsetOp.getGlobal(), BaseOffset,
+                         OffsetOp.getTargetFlags());
+  else if (OffsetOp.isCPI())
+    MIB.addConstantPoolIndex(OffsetOp.getIndex(), BaseOffset,
+                             OffsetOp.getTargetFlags());
+  else if (OffsetOp.isSymbol())
+    MIB.addExternalSymbol(OffsetOp.getSymbolName(), OffsetOp.getTargetFlags());
+  else if (OffsetOp.isBlockAddress())
+    MIB.addBlockAddress(OffsetOp.getBlockAddress(), BaseOffset,
+                        OffsetOp.getTargetFlags());
 
   // Copy memory operands if the original instruction had them
   if (MI->memoperands_begin() != MI->memoperands_end())

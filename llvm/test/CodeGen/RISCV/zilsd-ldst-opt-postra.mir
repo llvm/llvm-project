@@ -38,6 +38,12 @@
     store i32 0, ptr %2, align 8
     ret void
   }
+
+  @global_array = external global [100 x i32]
+
+  define i32 @expand_pseudold_invalid_symbolic() {
+    ret i32 0
+  }
 ...
 ---
 # Valid consecutive even/odd register pair - should expand to LD_RV32
@@ -133,5 +139,27 @@ body: |
     ; CHECK-NEXT: PseudoRET
     PseudoSD_RV32_OPT $x0, $x0, $x10, 0
     PseudoRET
+
+...
+---
+# Test invalid register pair with symbolic operands - should split back to LW
+name: expand_pseudold_invalid_symbolic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; PseudoLD_RV32_OPT with symbolic operand and non-consecutive registers (x11, x14)
+    ; Should decompose back to two LW instructions preserving symbolic references
+    ; CHECK-LABEL: name: expand_pseudold_invalid_symbolic
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x11 = LW $x10, target-flags(riscv-lo) @global_array
+    ; CHECK-NEXT: $x14 = LW $x10, target-flags(riscv-lo) @global_array + 4
+    ; CHECK-NEXT: $x10 = ADD killed $x11, killed $x14
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    $x11, $x14 = PseudoLD_RV32_OPT $x10, target-flags(riscv-lo) @global_array
+    $x10 = ADD killed $x11, killed $x14
+    PseudoRET implicit $x10
 
 ...

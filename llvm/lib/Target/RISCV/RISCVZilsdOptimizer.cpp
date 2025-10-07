@@ -144,11 +144,22 @@ bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
 int RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case RISCV::LW:
-  case RISCV::SW:
+  case RISCV::SW: {
     // For LW/SW, the offset is in operand 2
-    if (MI.getOperand(2).isImm())
-      return MI.getOperand(2).getImm();
+    const MachineOperand &OffsetOp = MI.getOperand(2);
+
+    // Handle immediate offset
+    if (OffsetOp.isImm())
+      return OffsetOp.getImm();
+
+    // Handle symbolic operands with MO_LO flag (from MergeBaseOffset)
+    if (OffsetOp.getTargetFlags() & RISCVII::MO_LO)
+      if (OffsetOp.isGlobal() || OffsetOp.isCPI() ||
+          OffsetOp.isBlockAddress() || OffsetOp.isSymbol())
+        return OffsetOp.getOffset();
+
     break;
+  }
   default:
     break;
   }
@@ -176,6 +187,46 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
 
   if (!Op0->hasOneMemOperand() || !Op1->hasOneMemOperand())
     return false;
+
+  // Check if operands are compatible for merging
+  const MachineOperand &OffsetOp0 = Op0->getOperand(2);
+  const MachineOperand &OffsetOp1 = Op1->getOperand(2);
+
+  // Both must be the same type
+  if (OffsetOp0.getType() != OffsetOp1.getType())
+    return false;
+
+  // If they're symbolic, they must reference the same symbol
+  if (!OffsetOp0.isImm()) {
+    // Check if both have MO_LO flag
+    if ((OffsetOp0.getTargetFlags() & RISCVII::MO_LO) !=
+        (OffsetOp1.getTargetFlags() & RISCVII::MO_LO))
+      return false;
+
+    // For global addresses, must be the same global
+    if (OffsetOp0.isGlobal()) {
+      if (!OffsetOp1.isGlobal() ||
+          OffsetOp0.getGlobal() != OffsetOp1.getGlobal())
+        return false;
+    }
+    // For constant pool indices, must be the same index
+    else if (OffsetOp0.isCPI()) {
+      if (!OffsetOp1.isCPI() || OffsetOp0.getIndex() != OffsetOp1.getIndex())
+        return false;
+    }
+    // For symbols, must be the same symbol name
+    else if (OffsetOp0.isSymbol()) {
+      if (!OffsetOp1.isSymbol() ||
+          strcmp(OffsetOp0.getSymbolName(), OffsetOp1.getSymbolName()) != 0)
+        return false;
+    }
+    // For block addresses, must be the same block
+    else if (OffsetOp0.isBlockAddress()) {
+      if (!OffsetOp1.isBlockAddress() ||
+          OffsetOp0.getBlockAddress() != OffsetOp1.getBlockAddress())
+        return false;
+    }
+  }
 
   // Get offsets and check they are consecutive
   int Offset0 = getMemoryOpOffset(*Op0);
@@ -355,19 +406,37 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(NewOpc))
                 .addReg(FirstReg, RegState::Define)
                 .addReg(SecondReg, RegState::Define)
-                .addReg(BaseReg)
-                .addImm(Offset);
+                .addReg(BaseReg);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(NewOpc))
                 .addReg(FirstReg)
                 .addReg(SecondReg)
-                .addReg(BaseReg)
-                .addImm(Offset);
+                .addReg(BaseReg);
       ++NumSDFormed;
       LLVM_DEBUG(dbgs() << "Formed SD: " << *MIB << "\n");
     }
+
+    // Add the offset operand - preserve symbolic references
+    const MachineOperand &OffsetOp = (Offset == getMemoryOpOffset(*Op0))
+                                         ? Op0->getOperand(2)
+                                         : Op1->getOperand(2);
+
+    if (OffsetOp.isImm())
+      MIB.addImm(Offset);
+    else if (OffsetOp.isGlobal())
+      MIB.addGlobalAddress(OffsetOp.getGlobal(), Offset,
+                           OffsetOp.getTargetFlags());
+    else if (OffsetOp.isCPI())
+      MIB.addConstantPoolIndex(OffsetOp.getIndex(), Offset,
+                               OffsetOp.getTargetFlags());
+    else if (OffsetOp.isSymbol())
+      MIB.addExternalSymbol(OffsetOp.getSymbolName(),
+                            OffsetOp.getTargetFlags());
+    else if (OffsetOp.isBlockAddress())
+      MIB.addBlockAddress(OffsetOp.getBlockAddress(), Offset,
+                          OffsetOp.getTargetFlags());
 
     // Copy memory operands
     MIB.cloneMergedMemRefs({Op0, Op1});

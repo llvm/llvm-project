@@ -219,6 +219,38 @@
     ret i32 %8
   }
 
+  define i32 @distance_exceeds_max(ptr %0, i32 %1) {
+    %3 = load i32, ptr %0, align 4
+    %4 = add i32 %3, %1
+    %5 = add i32 %4, %1
+    %6 = add i32 %5, %1
+    %7 = add i32 %6, %1
+    %8 = add i32 %7, %1
+    %9 = add i32 %8, %1
+    %10 = add i32 %9, %1
+    %11 = add i32 %10, %1
+    %12 = add i32 %11, %1
+    %13 = add i32 %12, %1
+    %14 = add i32 %13, %1
+    %15 = getelementptr inbounds i32, ptr %0, i32 1
+    %16 = load i32, ptr %15, align 4
+    %17 = add i32 %14, %16
+    ret i32 %17
+  }
+
+  @global_var = external global [100 x i32]
+
+  define i32 @symbolic_operands_global() {
+    ret i32 0
+  }
+
+  define i32 @symbolic_operands_different_globals() {
+    ret i32 0
+  }
+
+  define i32 @symbolic_operands_constantpool() {
+    ret i32 0
+  }
 ---
 # Basic case: two consecutive 32-bit loads that can be combined into LD
 name: basic_load_combine
@@ -1062,4 +1094,184 @@ body: |
     %4:gpr = ADD %1, %2
     %5:gpr = ADD %4, %3
     PseudoRET
+...
+---
+# Test where distance between loads exceeds MaxRescheduleDistance
+name: distance_exceeds_max
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+  - { reg: '$x11', virtual-reg: '%1' }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: distance_exceeds_max
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[ADD]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:gpr = ADD [[ADD1]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD3:%[0-9]+]]:gpr = ADD [[ADD2]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD4:%[0-9]+]]:gpr = ADD [[ADD3]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD5:%[0-9]+]]:gpr = ADD [[ADD4]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD6:%[0-9]+]]:gpr = ADD [[ADD5]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD7:%[0-9]+]]:gpr = ADD [[ADD6]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD8:%[0-9]+]]:gpr = ADD [[ADD7]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD9:%[0-9]+]]:gpr = ADD [[ADD8]], [[COPY1]]
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: distance_exceeds_max
+    ; CHECK-4BYTE: liveins: $x10, $x11
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-4BYTE-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[ADD]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD2:%[0-9]+]]:gpr = ADD [[ADD1]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD3:%[0-9]+]]:gpr = ADD [[ADD2]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD4:%[0-9]+]]:gpr = ADD [[ADD3]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD5:%[0-9]+]]:gpr = ADD [[ADD4]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD6:%[0-9]+]]:gpr = ADD [[ADD5]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD7:%[0-9]+]]:gpr = ADD [[ADD6]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD8:%[0-9]+]]:gpr = ADD [[ADD7]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[ADD9:%[0-9]+]]:gpr = ADD [[ADD8]], [[COPY1]]
+    ; CHECK-4BYTE-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = COPY $x11
+    %2:gpr = LW %0, 0 :: (load (s32))
+    ; Insert 11 instructions between the two loads
+    ; This makes the distance > MaxRescheduleDistance (10)
+    %3:gpr = ADD %2, %1
+    %4:gpr = ADD %3, %1
+    %5:gpr = ADD %4, %1
+    %6:gpr = ADD %5, %1
+    %7:gpr = ADD %6, %1
+    %8:gpr = ADD %7, %1
+    %9:gpr = ADD %8, %1
+    %10:gpr = ADD %9, %1
+    %11:gpr = ADD %10, %1
+    %12:gpr = ADD %11, %1
+    ; Second load at offset 4 - too far from first load
+    %14:gpr = LW %0, 4 :: (load (s32))
+    PseudoRET
+...
+---
+# Test combining loads with symbolic operands (global address)
+name: symbolic_operands_global
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: symbolic_operands_global
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: symbolic_operands_global
+    ; CHECK-4BYTE: liveins: $x10
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    ; Two consecutive loads with symbolic global address operands
+    %1:gpr = LW %0, target-flags(riscv-lo) @global_var :: (load (s32))
+    %2:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32))
+    %3:gpr = ADD %1, %2
+    PseudoRET
+
+...
+---
+# Test that loads with different global symbols are not combined
+name: symbolic_operands_different_globals
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+stack:
+  - { id: 0, offset: -4, size: 4 }
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: symbolic_operands_different_globals
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], %stack.0 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: symbolic_operands_different_globals
+    ; CHECK-4BYTE: liveins: $x10
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], %stack.0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    ; Should not combine - different symbol types
+    %1:gpr = LW %0, target-flags(riscv-lo) @global_var :: (load (s32))
+    %2:gpr = LW %0, %stack.0 :: (load (s32))
+    %3:gpr = ADD %1, %2
+    PseudoRET
+
+...
+---
+# Test combining loads with constant pool operands
+name: symbolic_operands_constantpool
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+constants:
+  - id:              0
+    value:           'double 3.140000e+00'
+    alignment:       8
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: symbolic_operands_constantpool
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) %const.0 :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) %const.0 + 4 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: symbolic_operands_constantpool
+    ; CHECK-4BYTE: liveins: $x10
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], target-flags(riscv-lo) %const.0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    ; Two consecutive loads with constant pool operands
+    %1:gpr = LW %0, target-flags(riscv-lo) %const.0 :: (load (s32))
+    %2:gpr = LW %0, target-flags(riscv-lo) %const.0 + 4 :: (load (s32))
+    %3:gpr = ADD %1, %2
+    PseudoRET
+
 ...
