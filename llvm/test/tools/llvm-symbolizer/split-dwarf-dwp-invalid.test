@@ -20,8 +20,8 @@ that skips the null entries, keeping those only as an implementation detail?) -
 or perhaps just have a separate list of offsets that have failed to parse
 previously?
 
-CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-5
-CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-5
+CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-6
+CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-6
 
 CHECK: other()
 CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}other.cpp:1:16
