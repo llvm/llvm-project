@@ -26,6 +26,7 @@ public:
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 } // end anonymous namespace
@@ -33,12 +34,33 @@ private:
 
 ABIArgInfo
 SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
+  if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
   if (Ty->isAnyComplexType()) {
-    return ABIArgInfo::getDirect();
+    auto AI = ABIArgInfo::getDirect();
+    AI.setInReg(true);
+    return AI;
   }
-  else {
-    return DefaultABIInfo::classifyReturnType(Ty);
-  }
+
+  return DefaultABIInfo::classifyReturnType(Ty);
+}
+
+ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
+  const BuiltinType *BT = Ty->getAs<BuiltinType>();
+  bool IsF128 = false;
+
+  if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128)
+    IsF128 = true;
+
+  // FIXME not sure if redundant
+  if (BT && BT->getKind() == BuiltinType::LongDouble)
+    IsF128 = true;
+
+  if (IsF128)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 void SparcV8ABIInfo::computeInfo(CGFunctionInfo &FI) const {

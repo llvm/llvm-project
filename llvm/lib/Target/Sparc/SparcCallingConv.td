@@ -24,8 +24,8 @@ def CC_Sparc32 : CallingConv<[
   // As are v2i32 arguments (this would be the default behavior for
   // v2i32 if it wasn't allocated to the IntPair register-class)
   CCIfType<[v2i32], CCCustom<"CC_Sparc_Assign_Split_64">>,
-
-
+  // f128 arguments are passed indirectly.
+  CCIfType<[f128], CCPassIndirect<i32>>,
   // Alternatively, they are assigned to the stack in 4-byte aligned units.
   CCAssignToStack<4, 4>
 ]>;
