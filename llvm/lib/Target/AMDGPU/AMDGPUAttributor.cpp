@@ -1245,7 +1245,6 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
 
     for (StringRef Code : CI.Codes) {
       unsigned RegCount = 0;
-
       if (Code.starts_with("a")) {
         // Virtual register, compute number of registers based on the type.
         //
@@ -1257,21 +1256,27 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
         auto [Kind, RegIdx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Code);
         if (Kind == 'a') {
           RegCount = NumRegs;
-
-          // Apply physreg alignment requirement
-          //
-          // TODO: This is more conservative than necessary.
-          MaxPhysReg = alignTo(MaxPhysReg, NumRegs);
           MaxPhysReg = std::max(MaxPhysReg, std::min(RegIdx + NumRegs, 256u));
         }
+
+        continue;
       }
 
       if (CI.Type == InlineAsm::isOutput) {
+        // Apply tuple alignment requirement
+        //
+        // TODO: This is more conservative than necessary.
+        AGPRDefCount = alignTo(AGPRDefCount, RegCount);
+
         AGPRDefCount += RegCount;
-        if (CI.isEarlyClobber)
+        if (CI.isEarlyClobber) {
+          AGPRUseCount = alignTo(AGPRUseCount, RegCount);
           AGPRUseCount += RegCount;
-      } else
+        }
+      } else {
+        AGPRUseCount = alignTo(AGPRUseCount, RegCount);
         AGPRUseCount += RegCount;
+      }
     }
   }
 
