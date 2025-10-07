@@ -32,23 +32,9 @@ using lldb_private::FileSystem;
 using lldb_private::MainLoop;
 using lldb_private::Pipe;
 
-Expected<MainLoop::ReadHandleUP>
-TestTransport::RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) {
-  Expected<lldb::FileUP> dummy_file = FileSystem::Instance().Open(
-      FileSpec(FileSystem::DEV_NULL), File::eOpenOptionReadWrite);
-  if (!dummy_file)
-    return dummy_file.takeError();
-  m_dummy_file = std::move(*dummy_file);
-  lldb_private::Status status;
-  auto handle = loop.RegisterReadObject(
-      m_dummy_file, [](lldb_private::MainLoopBase &) {}, status);
-  if (status.Fail())
-    return status.takeError();
-  return handle;
-}
+void TransportBase::SetUp() {
+  std::tie(to_client, to_server) = TestDAPTransport::createPair();
 
-void DAPTestBase::SetUp() {
-  TransportBase::SetUp();
   std::error_code EC;
   log = std::make_unique<Log>("-", EC);
   dap = std::make_unique<DAP>(
@@ -57,16 +43,30 @@ void DAPTestBase::SetUp() {
       /*pre_init_commands=*/std::vector<std::string>(),
       /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
-      /*transport=*/*transport, /*loop=*/loop);
+      /*transport=*/*to_client, /*loop=*/loop);
+
+  auto server_handle = to_server->RegisterMessageHandler(loop, *dap.get());
+  EXPECT_THAT_EXPECTED(server_handle, Succeeded());
+  handles[0] = std::move(*server_handle);
+
+  auto client_handle = to_client->RegisterMessageHandler(loop, client);
+  EXPECT_THAT_EXPECTED(client_handle, Succeeded());
+  handles[1] = std::move(*client_handle);
 }
 
+void TransportBase::Run() {
+  loop.AddPendingCallback(
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+}
+
+void DAPTestBase::SetUp() { TransportBase::SetUp(); }
+
 void DAPTestBase::TearDown() {
-  if (core) {
+  if (core)
     ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  }
-  if (binary) {
+  if (binary)
     ASSERT_THAT_ERROR(binary->discard(), Succeeded());
-  }
 }
 
 void DAPTestBase::SetUpTestSuite() {

@@ -3,6 +3,7 @@
 # C/Users/ContainerAdministrator/AppData/Local/Temp.
 # UNSUPPORTED: target={{.*(windows).*}}
 # REQUIRES: non-shared-libs-build
+# REQUIRES: bindings-python
 
 # RUN: export CMAKE_BUILD_TYPE=%cmake_build_type
 # RUN: export CMAKE_CXX_COMPILER=%host_cxx

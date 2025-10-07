@@ -19,6 +19,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -52,6 +53,7 @@
 #include <utility>
 
 using namespace clang;
+using namespace clang::hlsl;
 using RegisterType = HLSLResourceBindingAttr::RegisterType;
 
 static CXXRecordDecl *createHostLayoutStruct(Sema &S,
@@ -1808,6 +1810,13 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.RawBuffer = true;
       break;
+    case attr::HLSLIsCounter:
+      if (ResAttrs.IsCounter) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.IsCounter = true;
+      break;
     case attr::HLSLContainedType: {
       const HLSLContainedTypeAttr *CTAttr = cast<HLSLContainedTypeAttr>(A);
       QualType Ty = CTAttr->getType();
@@ -1898,6 +1907,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLRawBuffer:
     A = HLSLRawBufferAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsCounter:
+    A = HLSLIsCounterAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -3799,19 +3812,8 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
 
-  // Gather resource binding information from attributes.
-  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  HLSLVkBindingAttr *VkBinding = VD->getAttr<HLSLVkBindingAttr>();
-  std::optional<uint32_t> RegisterSlot;
-  uint32_t SpaceNo = 0;
-  if (VkBinding) {
-    RegisterSlot = VkBinding->getBinding();
-    SpaceNo = VkBinding->getSet();
-  } else if (RBA) {
-    if (RBA->hasRegisterSlot())
-      RegisterSlot = RBA->getSlotNumber();
-    SpaceNo = RBA->getSpaceNumber();
-  }
+  // Gather resource binding attributes.
+  ResourceBindingAttrs Binding(VD);
 
   // Find correct initialization method and create its arguments.
   QualType ResourceTy = VD->getType();
@@ -3819,21 +3821,21 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   CXXMethodDecl *CreateMethod = nullptr;
   llvm::SmallVector<Expr *> Args;
 
-  if (RegisterSlot.has_value()) {
+  if (Binding.isExplicit()) {
     // The resource has explicit binding.
     CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding",
                                 VD->getLocation());
-    IntegerLiteral *RegSlot = IntegerLiteral::Create(
-        AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
-        SourceLocation());
+    IntegerLiteral *RegSlot =
+        IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, Binding.getSlot()),
+                               AST.UnsignedIntTy, SourceLocation());
     Args.push_back(RegSlot);
   } else {
     // The resource has implicit binding.
     CreateMethod =
         lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding",
                      VD->getLocation());
-    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
-                           ? RBA->getImplicitBindingOrderID()
+    uint32_t OrderID = (Binding.hasImplicitOrderID())
+                           ? Binding.getImplicitOrderID()
                            : getNextImplicitBindingOrderID();
     IntegerLiteral *OrderId =
         IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, OrderID),
@@ -3848,7 +3850,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     return false;
 
   IntegerLiteral *Space =
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, Binding.getSpace()),
                              AST.UnsignedIntTy, SourceLocation());
   Args.push_back(Space);
 

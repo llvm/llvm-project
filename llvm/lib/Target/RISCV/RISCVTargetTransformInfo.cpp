@@ -3139,8 +3139,8 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     bool IsVPSplat = match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
                                    m_Value(), m_Value(), m_Value()));
     if (!IsVPSplat &&
-        !match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
-                             m_Undef(), m_ZeroMask())))
+        !match(Op, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                             m_Value(), m_ZeroMask())))
       continue;
 
     // Don't sink i1 splats.
