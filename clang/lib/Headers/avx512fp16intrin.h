@@ -193,17 +193,17 @@ _mm512_castsi512_ph(__m512i __a) {
   return (__m512h)__a;
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS256
+static __inline__ __m128h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_castph256_ph128(__m256h __a) {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS512
+static __inline__ __m128h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castph512_ph128(__m512h __a) {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS512
+static __inline__ __m256h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castph512_ph256(__m512h __a) {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
                                  12, 13, 14, 15);

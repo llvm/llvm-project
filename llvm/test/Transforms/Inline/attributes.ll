@@ -26,6 +26,10 @@ define i32 @sanitize_memtag_callee(i32 %i) sanitize_memtag {
   ret i32 %i
 }
 
+define i32 @sanitize_alloc_token_callee(i32 %i) sanitize_alloc_token {
+  ret i32 %i
+}
+
 define i32 @safestack_callee(i32 %i) safestack {
   ret i32 %i
 }
@@ -55,6 +59,10 @@ define i32 @alwaysinline_sanitize_memory_callee(i32 %i) alwaysinline sanitize_me
 }
 
 define i32 @alwaysinline_sanitize_memtag_callee(i32 %i) alwaysinline sanitize_memtag {
+  ret i32 %i
+}
+
+define i32 @alwaysinline_sanitize_alloc_token_callee(i32 %i) alwaysinline sanitize_alloc_token {
   ret i32 %i
 }
 
@@ -182,6 +190,39 @@ define i32 @test_sanitize_memtag(i32 %arg) sanitize_memtag {
 ; CHECK-LABEL: @test_sanitize_memtag(
 ; CHECK-NEXT: @noattr_callee
 ; CHECK-NEXT: ret i32
+}
+
+; ---------------------------------------------------------------------------- ;
+
+; Can inline sanitize_alloc_token functions into a noattr function. The
+; attribute is *not* viral, otherwise may break code.
+define i32 @test_no_sanitize_alloc_token(i32 %arg) {
+; CHECK-LABEL: @test_no_sanitize_alloc_token(
+; CHECK-SAME: ) {
+; CHECK-NOT: call
+; CHECK: ret i32
+entry:
+  %x1 = call i32 @noattr_callee(i32 %arg)
+  %x2 = call i32 @sanitize_alloc_token_callee(i32 %x1)
+  %x3 = call i32 @alwaysinline_callee(i32 %x2)
+  %x4 = call i32 @alwaysinline_sanitize_alloc_token_callee(i32 %x3)
+  ret i32 %x4
+}
+
+; Can inline noattr functions into a sanitize_alloc_token function. If
+; inlinable noattr functions cannot be instrumented, they should be marked with
+; explicit noinline.
+define i32 @test_sanitize_alloc_token(i32 %arg) sanitize_alloc_token {
+; CHECK-LABEL: @test_sanitize_alloc_token(
+; CHECK-SAME: ) [[SANITIZE_ALLOC_TOKEN:.*]] {
+; CHECK-NOT: call
+; CHECK: ret i32
+entry:
+  %x1 = call i32 @noattr_callee(i32 %arg)
+  %x2 = call i32 @sanitize_alloc_token_callee(i32 %x1)
+  %x3 = call i32 @alwaysinline_callee(i32 %x2)
+  %x4 = call i32 @alwaysinline_sanitize_alloc_token_callee(i32 %x3)
+  ret i32 %x4
 }
 
 define i32 @test_safestack(i32 %arg) safestack {
@@ -639,6 +680,7 @@ define i32 @loader_replaceable_caller() {
   ret i32 %1
 }
 
+; CHECK: attributes [[SANITIZE_ALLOC_TOKEN]] = { sanitize_alloc_token }
 ; CHECK: attributes [[SLH]] = { speculative_load_hardening }
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }

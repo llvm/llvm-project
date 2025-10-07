@@ -543,8 +543,11 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, EABI EABIVersion, "
-        "StringRef ABIName) {\n";
-
+        "StringRef ABIName) {\n"
+        "  struct LibcallImplPair {\n"
+        "    RTLIB::Libcall Func;\n"
+        "    RTLIB::LibcallImpl Impl;\n"
+        "  };\n";
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
 
@@ -669,20 +672,36 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       Funcs.erase(UniqueI, Funcs.end());
 
-      StringRef CCEnum;
+      OS << indent(IndentDepth + 2)
+         << "static const LibcallImplPair LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
       if (FuncsWithCC.CallingConv)
-        CCEnum = FuncsWithCC.CallingConv->getValueAsString("CallingConv");
+        OS << '_' << FuncsWithCC.CallingConv->getName();
 
+      OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 2);
-        LibCallImpl->emitSetImplCall(OS);
-
-        if (FuncsWithCC.CallingConv) {
-          OS << indent(IndentDepth + 2) << "setLibcallImplCallingConv(";
-          LibCallImpl->emitEnumEntry(OS);
-          OS << ", " << CCEnum << ");\n";
-        }
+        OS << indent(IndentDepth + 6);
+        LibCallImpl->emitTableEntry(OS);
       }
+
+      OS << indent(IndentDepth + 2) << "};\n\n"
+         << indent(IndentDepth + 2)
+         << "for (const auto [Func, Impl] : LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << ") {\n"
+         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+
+      if (FuncsWithCC.CallingConv) {
+        StringRef CCEnum =
+            FuncsWithCC.CallingConv->getValueAsString("CallingConv");
+        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+           << CCEnum << ");\n";
+      }
+
+      OS << indent(IndentDepth + 2) << "}\n";
       OS << '\n';
 
       if (!SubsetPredicate.isAlwaysAvailable()) {

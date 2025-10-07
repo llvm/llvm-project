@@ -3031,6 +3031,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                       K->getContext(), MDNode::toCaptureComponents(JMD) |
                                            MDNode::toCaptureComponents(KMD)));
         break;
+      case LLVMContext::MD_alloc_token:
+        // Preserve !alloc_token if both K and J have it, and they are equal.
+        if (KMD == JMD)
+          K->setMetadata(Kind, JMD);
+        else
+          K->setMetadata(Kind, nullptr);
+        break;
       }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
