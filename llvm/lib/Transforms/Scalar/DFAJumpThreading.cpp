@@ -820,11 +820,14 @@ struct TransformDFA {
       : SwitchPaths(SwitchPaths), DT(DT), AC(AC), TTI(TTI), ORE(ORE),
         EphValues(EphValues) {}
 
-  void run() {
+  bool run() {
+    bool MadeChange = false;
     if (isLegalAndProfitableToTransform()) {
       createAllExitPaths();
+      MadeChange = true;
       NumTransforms++;
     }
+    return MadeChange;
   }
 
 private:
@@ -1426,9 +1429,8 @@ bool DFAJumpThreading::run(Function &F) {
 
   for (AllSwitchPaths SwitchPaths : ThreadableLoops) {
     TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
-    Transform.run();
-    MadeChanges = true;
-    LoopInfoBroken = true;
+    if (Transform.run())
+      MadeChanges = LoopInfoBroken = true;
   }
 
 #ifdef EXPENSIVE_CHECKS
