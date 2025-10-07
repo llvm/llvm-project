@@ -44,6 +44,9 @@
 #  define __ptrauth_scan_results_landingpad                                                                            \
     __ptrauth(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
 
+// `__ptrauth_restricted_intptr` is a feature of apple clang that predates
+// support for direct application of `__ptrauth` to integer types. This
+// guard is necessary to support compilation with those compiler.
 #  if __has_extension(ptrauth_restricted_intptr_qualifier)
 #    define __ptrauth_scan_results_landingpad_intptr                                                                   \
       __ptrauth_restricted_intptr(__ptrauth_scan_results_landingpad_key, 1, __ptrauth_scan_results_landingpad_disc)
@@ -594,13 +597,13 @@ namespace {
 // __ptrauth_nop_cast cannot be used here as the authentication schemas include
 // address diversification.
 template <typename PtrType>
-void set_landing_pad_as_ptr(scan_results& results, const PtrType& out) {
+void set_landing_pad_as_ptr(scan_results& results, const PtrType& landingPad) {
   union {
     landing_pad_t* as_landing_pad;
     landing_pad_ptr_t* as_pointer;
   } u;
   u.as_landing_pad = &results.landingPad;
-  *u.as_pointer = out;
+  *u.as_pointer = landingPad;
 }
 
 static const landing_pad_ptr_t& get_landing_pad_as_ptr(const scan_results& results) {

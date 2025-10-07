@@ -33,6 +33,9 @@ EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
 #if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
 
+// `__ptrauth_restricted_intptr` is a feature of apple clang that predates
+// support for direct application of `__ptrauth` to integer types. This
+// guard is necessary to support compilation with those compiler.
 #if __has_feature(ptrauth_restricted_intptr_qualifier)
 #define __ptrauth_gcc_personality_intptr(key, addressDiscriminated,            \
                                          discriminator)                        \
