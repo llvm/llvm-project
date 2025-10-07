@@ -22,7 +22,7 @@ using namespace lldb;
 class BreakpointClearConditionTest : public ::testing::Test {
 public:
   void SetUp() override {
-    m_sb_debugger = SBDebugger::Create(/*source_init_files=*/ false);
+    m_sb_debugger = SBDebugger::Create(/*source_init_files=*/false);
   };
 
   void TearDown() override { SBDebugger::Destroy(m_sb_debugger); }
@@ -30,8 +30,7 @@ public:
   SubsystemRAII<lldb::SBDebugger> subsystems;
 };
 
-template<typename T>
-void test_condition(T sb_object) {
+template <typename T> void test_condition(T sb_object) {
   const char *in_cond_str = "Here is a condition";
   sb_object.SetCondition(in_cond_str);
   // Make sure we set the condition correctly:
@@ -44,27 +43,26 @@ void test_condition(T sb_object) {
     out_cond_str = sb_object.GetCondition();
     // And make sure an unset condition returns nullptr:
     EXPECT_EQ(nullptr, out_cond_str);
-  }  
+  }
 }
 
 TEST_F(BreakpointClearConditionTest, BreakpointClearConditionTest) {
   // Create target
   SBTarget sb_target;
   SBError error;
-  sb_target = m_sb_debugger.CreateTarget("", "x86_64-apple-macosx-", "remote-macosx",
-       /*add_dependent=*/ false, error);
+  sb_target =
+      m_sb_debugger.CreateTarget("", "x86_64-apple-macosx-", "remote-macosx",
+                                 /*add_dependent=*/false, error);
 
   EXPECT_EQ(sb_target.IsValid(), true);
 
   // Create breakpoint
-  SBBreakpoint sb_breakpoint =
-      sb_target.BreakpointCreateByAddress(0xDEADBEEF);
+  SBBreakpoint sb_breakpoint = sb_target.BreakpointCreateByAddress(0xDEADBEEF);
   test_condition(sb_breakpoint);
-  
+
   // Address breakpoints always have one location, so we can also use this
   // to test the location:
   SBBreakpointLocation sb_loc = sb_breakpoint.GetLocationAtIndex(0);
   EXPECT_EQ(sb_loc.IsValid(), true);
   test_condition(sb_loc);
-  
 }
