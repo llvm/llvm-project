@@ -38,7 +38,7 @@ MatchFinder::collectMatches(Operation *root, DynMatcher matcher) const {
 
 void MatchFinder::printMatch(llvm::raw_ostream &os, QuerySession &qs,
                              Operation *op) const {
-  if (auto fileLoc = dyn_cast<FileLineColLoc>(op->getLoc())) {
+  if (auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>()) {
     SMLoc smloc = qs.getSourceManager().FindLocForLineAndColumn(
         qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
     llvm::SMDiagnostic diag =
@@ -49,7 +49,7 @@ void MatchFinder::printMatch(llvm::raw_ostream &os, QuerySession &qs,
 
 void MatchFinder::printMatch(llvm::raw_ostream &os, QuerySession &qs,
                              Operation *op, const std::string &binding) const {
-  if (auto fileLoc = dyn_cast<FileLineColLoc>(op->getLoc())) {
+  if (auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>()) {
     auto smloc = qs.getSourceManager().FindLocForLineAndColumn(
         qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
     qs.getSourceManager().PrintMessage(os, smloc, llvm::SourceMgr::DK_Note,
