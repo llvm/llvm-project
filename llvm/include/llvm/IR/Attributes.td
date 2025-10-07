@@ -402,6 +402,9 @@ def MarkedForWindowsSecureHotPatching
 def AllowDirectAccessInHotPatchFunction
     : StrBoolAttr<"allow_direct_access_in_hot_patch_function">;
 
+/// Function should not be shrinkwrapped
+def NoShrinkWrap : EnumAttr<"noshrinkwrap", IntersectPreserve, [FnAttr]>;
+
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;

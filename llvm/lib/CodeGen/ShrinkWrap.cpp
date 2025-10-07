@@ -1019,6 +1019,9 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
 bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
+  if (MF.getFunction().hasFnAttribute(Attribute::NoShrinkWrap))
+    return false;
+
   switch (EnableShrinkWrapOpt) {
   case cl::BOU_UNSET:
     return TFI->enableShrinkWrapping(MF) &&
