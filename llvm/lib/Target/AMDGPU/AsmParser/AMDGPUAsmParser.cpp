@@ -1944,6 +1944,7 @@ public:
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
   void cvtVINTERP(MCInst &Inst, const OperandVector &Operands);
+  void cvtOpSelHelper(MCInst &Inst, unsigned OpSel);
 
   bool parseDimId(unsigned &Encoding);
   ParseStatus parseDim(OperandVector &Operands);
@@ -9239,6 +9240,33 @@ static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
                                    MCOI::OperandConstraint::TIED_TO) == -1;
 }
 
+void AMDGPUAsmParser::cvtOpSelHelper(MCInst &Inst, unsigned OpSel) {
+  unsigned Opc = Inst.getOpcode();
+  constexpr AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                    AMDGPU::OpName::src2};
+  constexpr AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
+                                       AMDGPU::OpName::src1_modifiers,
+                                       AMDGPU::OpName::src2_modifiers};
+  for (int J = 0; J < 3; ++J) {
+    int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
+    if (OpIdx == -1)
+      // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but
+      // no src1. So continue instead of break.
+      continue;
+
+    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
+    uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
+
+    if ((OpSel & (1 << J)) != 0)
+      ModVal |= SISrcMods::OP_SEL_0;
+    // op_sel[3] is encoded in src0_modifiers.
+    if (ModOps[J] == AMDGPU::OpName::src0_modifiers && (OpSel & (1 << 3)) != 0)
+      ModVal |= SISrcMods::DST_OP_SEL;
+
+    Inst.getOperand(ModIdx).setImm(ModVal);
+  }
+}
+
 void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
 {
   OptionalImmIndexMap OptionalIdx;
@@ -9275,6 +9303,16 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyOModSI);
+
+  // Some v_interp instructions use op_sel[3] for dst.
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyOpSel);
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+
+    cvtOpSelHelper(Inst, OpSel);
+  }
 }
 
 void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
@@ -9310,31 +9348,10 @@ void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
   if (OpSelIdx == -1)
     return;
 
-  const AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
-                                AMDGPU::OpName::src2};
-  const AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
-                                   AMDGPU::OpName::src1_modifiers,
-                                   AMDGPU::OpName::src2_modifiers};
-
   unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
-
-  for (int J = 0; J < 3; ++J) {
-    int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
-    if (OpIdx == -1)
-      break;
-
-    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
-    uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
-
-    if ((OpSel & (1 << J)) != 0)
-      ModVal |= SISrcMods::OP_SEL_0;
-    if (ModOps[J] == AMDGPU::OpName::src0_modifiers &&
-        (OpSel & (1 << 3)) != 0)
-      ModVal |= SISrcMods::DST_OP_SEL;
-
-    Inst.getOperand(ModIdx).setImm(ModVal);
-  }
+  cvtOpSelHelper(Inst, OpSel);
 }
+
 void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
                                     const OperandVector &Operands) {
   OptionalImmIndexMap OptionalIdx;
