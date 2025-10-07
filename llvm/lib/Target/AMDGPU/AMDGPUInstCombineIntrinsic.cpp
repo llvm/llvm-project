@@ -1323,7 +1323,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<PoisonValue>(Arg))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
-    // For Wave32 targets, convert i64 ballot to i32 ballot + zext
+    if (auto *Src = dyn_cast<ConstantInt>(Arg)) {
+      if (Src->isZero()) {
+        // amdgcn.ballot(i1 0) is zero.
+        return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+      }
+    }
     if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {
       // %b64 = call i64 ballot.i64(...)
       // =>
@@ -1336,15 +1341,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           II.getType());
       Call->takeName(&II);
       return IC.replaceInstUsesWith(II, Call);
-    }
-
-    if (auto *Src = dyn_cast<ConstantInt>(Arg)) {
-      if (Src->isZero()) {
-        // amdgcn.ballot(i1 0) is zero.
-        return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
-      }
-      // Note: ballot(true) is NOT constant folded because the result depends
-      // on the active lanes in the wavefront, not just the condition value.
     }
     break;
   }

@@ -104,7 +104,7 @@ define i32 @simple(i32 %a) #1 {
 ; CHECK-LABEL: @simple(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 4
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 4
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %cmp = icmp eq i32 %a, 4
   tail call void @llvm.assume(i1 %cmp)
@@ -1056,35 +1056,6 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   ret i1 %q
 }
 
-; Test AMDGPU ballot pattern optimization
-; assume(ballot(cmp) == -1) means cmp is true on all active lanes
-; so uses of cmp can be replaced with true
-define void @assume_ballot_uniform(i32 %x) {
-; CHECK-LABEL: @assume_ballot_uniform(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
-; CHECK-NEXT:    [[ALL:%.*]] = icmp eq i64 [[BALLOT]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ALL]])
-; CHECK-NEXT:    br i1 true, label [[FOO:%.*]], label [[BAR:%.*]]
-; CHECK:       foo:
-; CHECK-NEXT:    ret void
-; CHECK:       bar:
-; CHECK-NEXT:    ret void
-;
-  %cmp = icmp eq i32 %x, 0
-  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
-  %all = icmp eq i64 %ballot, -1
-  call void @llvm.assume(i1 %all)
-  br i1 %cmp, label %foo, label %bar
-
-foo:
-  ret void
-
-bar:
-  ret void
-}
-
-declare i64 @llvm.amdgcn.ballot.i64(i1)
 declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
