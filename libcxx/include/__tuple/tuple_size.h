@@ -12,11 +12,7 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__fwd/tuple.h>
-#include <__tuple/tuple_types.h>
-#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_volatile.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,18 +28,14 @@ template <class _Tp, class...>
 using __enable_if_tuple_size_imp _LIBCPP_NODEBUG = _Tp;
 
 template <class _Tp>
-struct tuple_size<
-    __enable_if_tuple_size_imp<const _Tp, __enable_if_t<!is_volatile<_Tp>::value>, decltype(tuple_size<_Tp>::value)>>
-    : public integral_constant<size_t, tuple_size<_Tp>::value> {};
+struct tuple_size<__enable_if_tuple_size_imp<const _Tp, decltype(tuple_size<_Tp>::value)>> : tuple_size<_Tp> {};
 
 template <class _Tp>
-struct tuple_size<
-    __enable_if_tuple_size_imp<volatile _Tp, __enable_if_t<!is_const<_Tp>::value>, decltype(tuple_size<_Tp>::value)>>
-    : public integral_constant<size_t, tuple_size<_Tp>::value> {};
+struct tuple_size<__enable_if_tuple_size_imp<volatile _Tp, decltype(tuple_size<_Tp>::value)>> : tuple_size<_Tp> {};
 
 template <class _Tp>
-struct tuple_size<__enable_if_tuple_size_imp<const volatile _Tp, decltype(tuple_size<_Tp>::value)>>
-    : public integral_constant<size_t, tuple_size<_Tp>::value> {};
+struct tuple_size<__enable_if_tuple_size_imp<const volatile _Tp, decltype(tuple_size<_Tp>::value)>> : tuple_size<_Tp> {
+};
 
 #else
 template <class _Tp>
