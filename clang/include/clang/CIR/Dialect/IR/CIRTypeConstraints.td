@@ -178,6 +178,12 @@ def CIR_AnyComplexOrIntOrBoolOrFloatType
 }
 
 //===----------------------------------------------------------------------===//
+// Record Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyRecordType : CIR_TypeBase<"::cir::RecordType", "record type">;
+
+//===----------------------------------------------------------------------===//
 // Array Type predicates
 //===----------------------------------------------------------------------===//
 
@@ -233,6 +239,8 @@ class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
 def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
+
+def CIR_PtrToRecordType : CIR_PtrToType<CIR_AnyRecordType>;
 
 def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
