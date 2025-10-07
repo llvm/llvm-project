@@ -1899,9 +1899,8 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   }
 }
 
-static void shrinkIntervalAndRemoveDeadMI(MachineOperand &MO,
-                                          LiveIntervals *LIS,
-                                          const TargetInstrInfo *TII) {
+static void shrinkInterval(MachineOperand &MO, LiveIntervals *LIS,
+                           const TargetInstrInfo *TII) {
   Register Reg = MO.getReg();
   MO.setReg(RISCV::NoRegister);
   MO.setIsKill(false);
@@ -1917,13 +1916,6 @@ static void shrinkIntervalAndRemoveDeadMI(MachineOperand &MO,
   // TODO: Enable this once needVSETVLIPHI is supported.
   // SmallVector<LiveInterval *> SplitLIs;
   // LIS->splitSeparateComponents(LI, SplitLIs);
-
-  for (MachineInstr *DeadMI : DeadMIs) {
-    if (!TII->isAddImmediate(*DeadMI, Reg))
-      continue;
-    LIS->RemoveMachineInstrFromMaps(*DeadMI);
-    DeadMI->eraseFromParent();
-  }
 }
 
 bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
@@ -1959,7 +1951,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
 
     assert(OpNum && Opcode && "Invalid OpNum or Opcode");
 
-    const MachineOperand &Op = MI.getOperand(OpNum);
+    MachineOperand &Op = MI.getOperand(OpNum);
 
     auto TmpMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opcode))
                      .addReg(RISCV::X0, RegState::Define | RegState::Dead)
@@ -1971,7 +1963,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
     if (LIS)
       LIS->InsertMachineInstrInMaps(*TmpMI);
 
-    shrinkIntervalAndRemoveDeadMI(MI.getOperand(OpNum), LIS, TII);
+    shrinkInterval(Op, LIS, TII);
   }
   return Changed;
 }
