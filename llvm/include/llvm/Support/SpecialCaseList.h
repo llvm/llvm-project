@@ -153,6 +153,11 @@ protected:
     SectionEntries Entries;
     std::string SectionStr;
     unsigned FileIdx;
+
+    // Helper method to search by Prefix, Query, and Category. Returns
+    // 1-based line number on which rule is defined, or 0 if there is no match.
+    LLVM_ABI unsigned getLastMatch(StringRef Prefix, StringRef Query,
+                                   StringRef Category) const;
   };
 
   std::vector<Section> Sections;
@@ -164,12 +169,6 @@ protected:
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
                       std::string &Error);
-
-  // Helper method for derived classes to search by Prefix, Query, and Category
-  // once they have already resolved a section entry.
-  LLVM_ABI unsigned inSectionBlame(const SectionEntries &Entries,
-                                   StringRef Prefix, StringRef Query,
-                                   StringRef Category) const;
 };
 
 } // namespace llvm
