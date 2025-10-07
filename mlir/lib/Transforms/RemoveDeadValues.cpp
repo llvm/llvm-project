@@ -237,20 +237,25 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
 
 // Remove the dead functions from moduleOp.
 static void deleteDeadFunction(Operation *module) {
-  bool walkContinue = true;
-  while (walkContinue) {
-    walkContinue = false;
-    module->walk([&](FunctionOpInterface funcOp) {
+  auto functions = module->getRegion(0).getOps<FunctionOpInterface>();
+  llvm::DenseSet<FunctionOpInterface> tasks(functions.begin(), functions.end());
+  while (!tasks.empty()) {
+    llvm::DenseSet<FunctionOpInterface> nextTasks;
+    for (FunctionOpInterface funcOp : tasks) {
       if (funcOp.isPublic() || funcOp.isExternal())
         return;
-
       SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
       auto callSites = funcOp.getFunctionBody().getOps<CallOpInterface>();
-      if (uses.empty())
+      if (uses.empty() && !callSites.empty()) {
+        for (CallOpInterface callOp : callSites) {
+          nextTasks.insert(cast<FunctionOpInterface>(callOp.resolveCallable()));
+        }
+      }
+
+      if (uses.empty() && !nextTasks.contains(funcOp))
         funcOp.erase();
-      if (uses.empty() && !callSites.empty())
-        walkContinue = true;
-    });
+    }
+    tasks = nextTasks;
   }
 }
 
