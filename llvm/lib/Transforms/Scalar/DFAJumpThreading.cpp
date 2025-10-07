@@ -288,7 +288,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, BlockFrequencyInfo *BFI,
     // Update BPI if exists.
     if (BPI && !SIProbs.empty())
       BPI->setEdgeProbability(StartBlock, SIProbs);
-    // Update the block frequency of both NewBlock.
+    // Update the block frequency of NewBlock.
     if (BFI)
       BFI->setBlockFreq(NewBlock, BFI->getBlockFreq(StartBlock) * FalseProb);
   } else {
@@ -367,7 +367,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, BlockFrequencyInfo *BFI,
     // Update BPI if exists.
     if (BPI && !SIProbs.empty())
       BPI->setEdgeProbability(NewBlockT, SIProbs);
-    // Update the block frequency of both NewBB and EndBB.
+    // Update the block frequency of both NewBlockT and NewBlockF.
     if (BFI) {
       assert(BPI && "BPI should be valid if BFI exists");
       auto NewBlockTFreq = BFI->getBlockFreq(StartBlock) *
