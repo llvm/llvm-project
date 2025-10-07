@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_VFPRINTF_INTERNAL_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_VFPRINTF_INTERNAL_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
@@ -63,7 +64,7 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   size_t written = internal::fwrite_unlocked(new_str.data(), sizeof(char),
                                              new_str.size(), target_file);
   if (written != new_str.size() || internal::ferror_unlocked(target_file))
-    return FILE_WRITE_ERROR;
+    return -EIO;
   return WRITE_OK;
 }
 

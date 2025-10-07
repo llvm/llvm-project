@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
@@ -29,7 +30,7 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
   if (new_buff == nullptr) {
     if (wb->buff != wb->init_buff)
       free(wb->buff);
-    return printf_core::ALLOCATION_ERROR;
+    return -ENOMEM;
   }
   if (isBuffOnStack)
     inline_memcpy(new_buff, wb->buff, wb->buff_cur);
@@ -57,7 +58,7 @@ LIBC_INLINE int vasprintf_internal(char **ret, const char *__restrict format,
   if (wb.buff == init_buff_on_stack) {
     *ret = static_cast<char *>(malloc(ret_val + 1));
     if (ret == nullptr)
-      return printf_core::ALLOCATION_ERROR;
+      return -ENOMEM;
     inline_memcpy(*ret, wb.buff, ret_val);
   } else {
     *ret = wb.buff;

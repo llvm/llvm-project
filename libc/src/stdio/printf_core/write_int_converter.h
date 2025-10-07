@@ -12,6 +12,7 @@
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
+#include "hdr/errno_macros.h"
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -26,7 +27,7 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   // This is an additional check added by LLVM-libc.
   if (to_conv.conv_val_ptr == nullptr)
-    return NULLPTR_WRITE_ERROR;
+    return -EINVAL;
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   size_t written = writer->get_chars_written();
