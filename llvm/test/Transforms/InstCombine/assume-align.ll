@@ -247,6 +247,16 @@ define ptr @redundant_assume_align_8_via_asume(ptr %p) {
   ret ptr %p
 }
 
+@g2 = external constant i128, align 8
+
+define void @redundant_assume_align_global_eq() {
+; CHECK-LABEL: @redundant_assume_align_global_eq(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr @g2, i64 8) ]
+  ret void
+}
+
 define ptr @assume_align_1(ptr %p) {
 ; CHECK-LABEL: @assume_align_1(
 ; CHECK-NEXT:    call void @foo(ptr [[P:%.*]])
