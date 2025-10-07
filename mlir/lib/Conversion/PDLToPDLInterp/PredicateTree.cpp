@@ -284,9 +284,9 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
     // If this is an input value that has been visited in the tree, add a
     // constraint to ensure that both instances refer to the same value.
     if (!inserted) {
-      Position *first = pos;
+      Position *first = constraintPos;
       Position *second = it->second;
-      if (comparePosDepth(second, first))
+      if (comparePosDepth(second, pos))
         std::tie(second, first) = std::make_pair(first, second);
 
       predList.emplace_back(second, builder.getEqualTo(first));
