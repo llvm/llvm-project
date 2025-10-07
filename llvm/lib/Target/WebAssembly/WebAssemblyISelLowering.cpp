@@ -1797,17 +1797,14 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
       // global (i32 or i64) then truncate or extend as needed
 
       // Modify the MMO to load the full global
-      MachineMemOperand *OldMMO = LN->getMemOperand();
-      MachineMemOperand *NewMMO = DAG.getMachineFunction().getMachineMemOperand(
-          OldMMO->getPointerInfo(), OldMMO->getFlags(),
-          LLT(PromotedGT.getSimpleVT()), OldMMO->getBaseAlign(),
-          OldMMO->getAAInfo(), OldMMO->getRanges(), OldMMO->getSyncScopeID(),
-          OldMMO->getSuccessOrdering(), OldMMO->getFailureOrdering());
+      // This is assumed to be safe without copy/dup, as the original load will be removed
+      MachineMemOperand *MMO = LN->getMemOperand();
+      MMO->setType(LLT(PromotedGT.getSimpleVT()));
 
       SDVTList Tys = DAG.getVTList(PromotedGT, MVT::Other);
       SDValue Ops[] = {LN->getChain(), Base};
       SDValue GlobalGetNode = DAG.getMemIntrinsicNode(
-          WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops, PromotedGT, NewMMO);
+          WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops, PromotedGT, MMO);
 
       if (ResultType.bitsEq(PromotedGT)) {
         return GlobalGetNode;
@@ -1847,15 +1844,12 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
       EVT NewLoadType = getTypeToTransformTo(*DAG.getContext(), OldLoadType);
 
       // Modify the MMO to load a whole WASM "register"'s worth
-      MachineMemOperand *OldMMO = LN->getMemOperand();
-      MachineMemOperand *NewMMO = DAG.getMachineFunction().getMachineMemOperand(
-          OldMMO->getPointerInfo(), OldMMO->getFlags(),
-          LLT(NewLoadType.getSimpleVT()), OldMMO->getBaseAlign(),
-          OldMMO->getAAInfo(), OldMMO->getRanges(), OldMMO->getSyncScopeID(),
-          OldMMO->getSuccessOrdering(), OldMMO->getFailureOrdering());
+      // This is assumed to be safe without copy/dup, as the original load will be removed
+      MachineMemOperand *MMO = LN->getMemOperand();
+      MMO->setType(LLT(NewLoadType.getSimpleVT()));
 
       SDValue Result =
-          DAG.getLoad(NewLoadType, DL, LN->getChain(), Base, NewMMO);
+          DAG.getLoad(NewLoadType, DL, LN->getChain(), Base, MMO);
 
       if (NewLoadType != ResultType) {
         SDValue ValRes = DAG.getNode(ISD::ANY_EXTEND, DL, ResultType, Result);
