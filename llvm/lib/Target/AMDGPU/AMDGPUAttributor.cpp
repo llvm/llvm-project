@@ -162,16 +162,12 @@ public:
 
   /// Check if the subtarget has aperture regs.
   bool hasApertureRegs(Function &F) {
-    if (!TM.getTargetTriple().isAMDGCN())
-      return false;
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.hasApertureRegs();
   }
 
   /// Check if the subtarget supports GetDoorbellID.
   bool supportsGetDoorbellID(Function &F) {
-    if (!TM.getTargetTriple().isAMDGCN())
-      return false;
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.supportsGetDoorbellID();
   }
@@ -186,18 +182,18 @@ public:
 
   std::pair<unsigned, unsigned>
   getDefaultFlatWorkGroupSize(const Function &F) const {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getDefaultFlatWorkGroupSize(F.getCallingConv());
   }
 
   std::pair<unsigned, unsigned>
   getMaximumFlatWorkGroupRange(const Function &F) {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
   }
 
   SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getMaxNumWorkGroups(F);
   }
 
@@ -210,7 +206,7 @@ public:
   std::pair<unsigned, unsigned>
   getWavesPerEU(const Function &F,
                 std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
   }
 
@@ -221,7 +217,7 @@ public:
     if (!Val)
       return std::nullopt;
     if (!Val->second) {
-      const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
       Val->second = ST.getMaxWavesPerEU();
     }
     return std::make_pair(Val->first, *(Val->second));
@@ -231,13 +227,13 @@ public:
   getEffectiveWavesPerEU(const Function &F,
                          std::pair<unsigned, unsigned> WavesPerEU,
                          std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
                                      getLDSSize(F));
   }
 
   unsigned getMaxWavesPerEU(const Function &F) {
-    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getMaxWavesPerEU();
   }
 
@@ -1515,11 +1511,9 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     }
 
-    if (TM.getTargetTriple().isAMDGCN()) {
-      const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
-      if (!F->isDeclaration() && ST.hasClusters())
-        A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
-    }
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
+    if (!F->isDeclaration() && ST.hasClusters())
+      A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;
