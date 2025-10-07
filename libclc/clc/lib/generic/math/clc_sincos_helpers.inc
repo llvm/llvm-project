@@ -97,9 +97,19 @@ _CLC_DEF _CLC_OVERLOAD void __clc_fullMulS(private __CLC_FLOATN *hi,
                                            private __CLC_FLOATN *lo,
                                            __CLC_FLOATN a, __CLC_FLOATN b,
                                            __CLC_FLOATN bh, __CLC_FLOATN bt) {
-  __CLC_FLOATN ph = a * b;
-  *hi = ph;
-  *lo = __clc_fma(a, b, -ph);
+  if (__CLC_HAVE_HW_FMA32()) {
+    __CLC_FLOATN ph = a * b;
+    *hi = ph;
+    *lo = __clc_fma(a, b, -ph);
+  } else {
+    __CLC_FLOATN ah = __CLC_AS_FLOATN(__CLC_AS_UINTN(a) & 0xfffff000U);
+    __CLC_FLOATN at = a - ah;
+    __CLC_FLOATN ph = a * b;
+    __CLC_FLOATN pt = __clc_mad(
+        at, bt, __clc_mad(at, bh, __clc_mad(ah, bt, __clc_mad(ah, bh, -ph))));
+    *hi = ph;
+    *lo = pt;
+  }
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_removePi2S(private __CLC_FLOATN *hi,
@@ -270,8 +280,20 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   const __CLC_FLOATN pio2t = (__CLC_FLOATN)0xa22168 / 0x1.0p+47f;
 
   __CLC_FLOATN rh, rt;
-  rh = q1 * pio2h;
-  rt = __clc_fma(q0, pio2h, __clc_fma(q1, pio2t, __clc_fma(q1, pio2h, -rh)));
+
+  if (__CLC_HAVE_HW_FMA32()) {
+    rh = q1 * pio2h;
+    rt = __clc_fma(q0, pio2h, __clc_fma(q1, pio2t, __clc_fma(q1, pio2h, -rh)));
+  } else {
+    __CLC_FLOATN q1h = __CLC_AS_FLOATN(__CLC_AS_UINTN(q1) & 0xfffff000);
+    __CLC_FLOATN q1t = q1 - q1h;
+    rh = q1 * pio2h;
+    rt = __clc_mad(
+        q1t, pio2ht,
+        __clc_mad(q1t, pio2hh,
+                  __clc_mad(q1h, pio2ht, __clc_mad(q1h, pio2hh, -rh))));
+    rt = __clc_mad(q0, pio2h, __clc_mad(q1, pio2t, rt));
+  }
 
   __CLC_FLOATN t = rh + rt;
   rt = rt - (t - rh);
