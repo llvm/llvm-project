@@ -511,6 +511,10 @@ MachineSMEABI::findStateChangeInsertionPoint(
   if (Inst == Block.Insts.begin())
     PrevStateChangeI = MBB.begin();
   else
+    // Note: `std::prev(Inst)` is the previous InstInfo. We only create an
+    // InstInfo object for instructions that require a specific ZA state, so the
+    // InstInfo is the site of the previous state change in the block (which can
+    // be several MIs earlier).
     PrevStateChangeI = std::prev(Inst)->InsertPt;
   // Note: LiveUnits will only accurately track X0 and NZCV.
   LiveRegUnits LiveUnits(*TRI);
