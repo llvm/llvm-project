@@ -221,7 +221,7 @@ void caller() {
 } // no-warning: No potential memory leak here, because that's been already reported.
 } // namespace symbol_reaper_lifetime
 
-// Check that we do not report false positives in automaticall generated
+// Check that we do not report false positives in automatically generated
 // protobuf code that passes dynamically allocated memory to a certain function
 // named GetOwnedMessageInternal.
 namespace protobuf_leak {
