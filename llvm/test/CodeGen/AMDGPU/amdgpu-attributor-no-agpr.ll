@@ -665,6 +665,42 @@ define amdgpu_kernel void @physreg_tuple_alignment_raises_limit() {
   ret void
 }
 
+define amdgpu_kernel void @align3_virtreg() {
+; CHECK-LABEL: define amdgpu_kernel void @align3_virtreg(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0, $1", "a,a"(<3 x i32> poison, <3 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @align3_align4_virtreg() {
+; CHECK-LABEL: define amdgpu_kernel void @align3_align4_virtreg(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0, $1", "a,a"(<3 x i32> poison, <4 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @align2_align4_virtreg() {
+; CHECK-LABEL: define amdgpu_kernel void @align2_align4_virtreg(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0, $1", "a,a"(<2 x i32> poison, <4 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }

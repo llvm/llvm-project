@@ -1221,7 +1221,6 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   unsigned MaxPhysReg = 0;
   const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
 
-  // TODO: Underestimates due to not accounting for tuple alignment requirements
   // TODO: Overestimates due to not accounting for tied operands
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     Type *Ty = nullptr;
@@ -1258,6 +1257,11 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
         auto [Kind, RegIdx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Code);
         if (Kind == 'a') {
           RegCount = NumRegs;
+
+          // Apply physreg alignment requirement
+          //
+          // TODO: This is more conservative than necessary.
+          MaxPhysReg = alignTo(MaxPhysReg, NumRegs);
           MaxPhysReg = std::max(MaxPhysReg, std::min(RegIdx + NumRegs, 256u));
         }
       }
@@ -1272,7 +1276,11 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   }
 
   unsigned MaxVirtReg = std::max(AGPRUseCount, AGPRDefCount);
-  return std::min(std::max(MaxVirtReg, MaxPhysReg), 256u);
+
+  // TODO: This is overly conservative. If there are any physical registers,
+  // allocate any virtual registers after them so we don't have to solve optimal
+  // packing.
+  return std::min(MaxVirtReg + MaxPhysReg, 256u);
 }
 
 // TODO: Migrate to range merge of amdgpu-agpr-alloc.
