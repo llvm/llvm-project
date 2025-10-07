@@ -147,7 +147,7 @@ macOS 10.13+          i386, x86_64, arm64
 FreeBSD 12+           i386, x86_64, arm
 Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 Android 5.0+          i386, x86_64, arm, arm64
-Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
+Windows               i386, x86_64, arm64       Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
 AIX 7.2TL5+           powerpc, powerpc64
 Embedded (picolibc)   arm
 ===================== ========================= ============================
