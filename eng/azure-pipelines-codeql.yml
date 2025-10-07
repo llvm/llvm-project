@@ -64,7 +64,7 @@ stages:
             echo '#!/bin/sh' > which-shim/which
             echo 'command -v "$@"' >> which-shim/which
             chmod +x which-shim/which
-            PATH=$PWD/which-shim:$PATH
+            echo "##vso[task.prependpath]$PWD/which-shim"
           displayName: 'Add a which shim for CodeQL'
 
         - task: CodeQL3000Init@0
