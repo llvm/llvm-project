@@ -15,7 +15,7 @@ define amdgpu_kernel void @rsq_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-REAL16-NEXT:    v_rsq_bf16_e32 v0.l, s2
-; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rsq_bf16:
@@ -38,7 +38,7 @@ define amdgpu_kernel void @rsq_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-NEXT:    v_rsq_bf16_e32 v0.l, 4.0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rsq_bf16_constant_4:
@@ -61,7 +61,7 @@ define amdgpu_kernel void @rsq_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-NEXT:    v_rsq_bf16_e32 v0.l, 0x42c8
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rsq_bf16_constant_100:

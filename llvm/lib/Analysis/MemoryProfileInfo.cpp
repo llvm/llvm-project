@@ -54,6 +54,10 @@ cl::opt<unsigned> MinPercentMaxColdSize(
     "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
     cl::desc("Min percent of max cold bytes for critical cold context"));
 
+LLVM_ABI cl::opt<bool> MemProfUseAmbiguousAttributes(
+    "memprof-ambiguous-attributes", cl::init(true), cl::Hidden,
+    cl::desc("Apply ambiguous memprof attribute to ambiguous allocations"));
+
 } // end namespace llvm
 
 bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
@@ -133,6 +137,8 @@ void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {
 }
 
 void llvm::memprof::addAmbiguousAttribute(CallBase *CB) {
+  if (!MemProfUseAmbiguousAttributes)
+    return;
   // We may have an existing ambiguous attribute if we are reanalyzing
   // after inlining.
   if (CB->hasFnAttr("memprof")) {

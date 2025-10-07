@@ -917,9 +917,6 @@ void RewriteInstance::discoverFileObjects() {
     bool IsData = false;
     uint64_t LastAddr = 0;
     for (const auto &SymInfo : SortedSymbols) {
-      if (LastAddr == SymInfo.Address) // don't repeat markers
-        continue;
-
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
 
       // Treat ST_Function as code.
@@ -929,8 +926,14 @@ void RewriteInstance::discoverFileObjects() {
         if (IsData) {
           Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
           consumeError(NameOrError.takeError());
-          BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
-                     << " lacks code marker\n";
+          if (LastAddr == SymInfo.Address) {
+            BC->errs() << "BOLT-WARNING: ignoring data marker conflicting with "
+                          "function symbol "
+                       << *NameOrError << '\n';
+          } else {
+            BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                       << " lacks code marker\n";
+          }
         }
         MarkerType = MarkerSymType::CODE;
       }
@@ -2113,6 +2116,13 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (opts::SplitEH && !BC->HasRelocations) {
     BC->errs() << "BOLT-WARNING: disabling -split-eh in non-relocation mode\n";
     opts::SplitEH = false;
+  }
+
+  if (BC->isAArch64() && !opts::CompactCodeModel &&
+      opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
+    BC->errs() << "BOLT-ERROR: CDSplit is not supported with LongJmp. Try with "
+                  "'--compact-code-model'\n";
+    exit(1);
   }
 
   if (opts::StrictMode && !BC->HasRelocations) {
@@ -3331,6 +3341,8 @@ void RewriteInstance::initializeMetadataManager() {
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
+
+  MetadataManager.registerRewriter(createGNUPropertyRewriter(*BC));
 }
 
 void RewriteInstance::processSectionMetadata() {
