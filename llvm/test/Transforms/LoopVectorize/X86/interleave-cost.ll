@@ -38,36 +38,6 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[L_0:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[IV_MUL:%.*]] = shl i64 [[IV]], 2
-; CHECK-NEXT:    [[GEP_DST_19:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[IV_MUL]]
-; CHECK-NEXT:    store float [[L_0]], ptr [[GEP_DST_19]], align 4
-; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[ADD_1:%.*]] = or disjoint i64 [[IV_MUL]], 1
-; CHECK-NEXT:    [[GEP_DST_119:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[ADD_1]]
-; CHECK-NEXT:    store float [[L_1]], ptr [[GEP_DST_119]], align 4
-; CHECK-NEXT:    [[ADD_2:%.*]] = or disjoint i64 [[IV_MUL]], 2
-; CHECK-NEXT:    [[GEP_DST_129:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[ADD_2]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_129]], align 4
-; CHECK-NEXT:    [[ADD_3:%.*]] = or disjoint i64 [[IV_MUL]], 3
-; CHECK-NEXT:    [[GEP_DST_140:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[ADD_3]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_140]], align 4
-; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[GEP_DST_247:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[IV_MUL]]
-; CHECK-NEXT:    store float [[L_2]], ptr [[GEP_DST_247]], align 4
-; CHECK-NEXT:    [[GEP_DST_255:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_1]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_255]], align 4
-; CHECK-NEXT:    [[GEP_DST_265:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_2]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_265]], align 4
-; CHECK-NEXT:    [[GEP_DST_276:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_3]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_276]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -504,17 +474,6 @@ define void @interleave_store_double_i64(ptr %dst) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr { double, i64 }, ptr [[DST]], i64 [[IV]], i32 1
-; CHECK-NEXT:    store i64 [[IV]], ptr [[GEP_1]], align 8
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr { double, i64 }, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_0]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -616,17 +575,6 @@ define void @interleave_store_i64_double_2(ptr %dst) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr { i64, double }, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i64 [[IV]], ptr [[GEP_0]], align 8
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr { i64, double }, ptr [[DST]], i64 [[IV]], i32 1
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_1]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
