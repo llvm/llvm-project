@@ -111,6 +111,7 @@ namespace {
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
     void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *TTP);
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
+    void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
@@ -1189,12 +1190,7 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
     } else if (auto NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
       VisitNonTypeTemplateParmDecl(NTTP);
     } else if (auto TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
-      VisitTemplateDecl(TTPD);
-      if (TTPD->hasDefaultArgument() && !TTPD->defaultArgumentWasInherited()) {
-        Out << " = ";
-        TTPD->getDefaultArgument().getArgument().print(Policy, Out,
-                                                       /*IncludeType=*/false);
-      }
+      VisitTemplateTemplateParmDecl(TTPD);
     }
   }
 
@@ -1916,6 +1912,16 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
   if (NTTP->hasDefaultArgument() && !NTTP->defaultArgumentWasInherited()) {
     Out << " = ";
     NTTP->getDefaultArgument().getArgument().print(Policy, Out,
+                                                   /*IncludeType=*/false);
+  }
+}
+
+void DeclPrinter::VisitTemplateTemplateParmDecl(
+    const TemplateTemplateParmDecl *TTPD) {
+  VisitTemplateDecl(TTPD);
+  if (TTPD->hasDefaultArgument() && !TTPD->defaultArgumentWasInherited()) {
+    Out << " = ";
+    TTPD->getDefaultArgument().getArgument().print(Policy, Out,
                                                    /*IncludeType=*/false);
   }
 }
