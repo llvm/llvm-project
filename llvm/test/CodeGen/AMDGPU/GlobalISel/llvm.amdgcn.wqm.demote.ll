@@ -885,6 +885,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; SI-NEXT:    s_mov_b64 s[0:1], exec
 ; SI-NEXT:    s_wqm_b64 exec, exec
 ; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; SI-NEXT:    s_mov_b32 s4, 0
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; SI-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
@@ -893,11 +894,10 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
 ; SI-NEXT:    s_cbranch_scc0 .LBB7_9
 ; SI-NEXT:  ; %bb.2: ; %.demote0
-; SI-NEXT:    s_wqm_b64 s[4:5], s[0:1]
-; SI-NEXT:    s_and_b64 exec, exec, s[4:5]
+; SI-NEXT:    s_wqm_b64 s[6:7], s[0:1]
+; SI-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; SI-NEXT:  .LBB7_3: ; %.continue0.preheader
 ; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
-; SI-NEXT:    s_mov_b32 s4, 0
 ; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_branch .LBB7_5
@@ -951,6 +951,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX9-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
@@ -959,11 +960,10 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX9-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB7_9
 ; GFX9-NEXT:  ; %bb.2: ; %.demote0
-; GFX9-NEXT:    s_wqm_b64 s[4:5], s[0:1]
-; GFX9-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_wqm_b64 s[6:7], s[0:1]
+; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:  .LBB7_3: ; %.continue0.preheader
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX9-NEXT:    s_mov_b32 s4, 0
 ; GFX9-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_branch .LBB7_5
@@ -1080,6 +1080,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX10-64-NEXT:    s_wqm_b64 exec, exec
 ; GFX10-64-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX10-64-NEXT:    s_mov_b32 s4, 0
 ; GFX10-64-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX10-64-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
@@ -1088,12 +1089,11 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-64-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
 ; GFX10-64-NEXT:    s_cbranch_scc0 .LBB7_9
 ; GFX10-64-NEXT:  ; %bb.2: ; %.demote0
-; GFX10-64-NEXT:    s_wqm_b64 s[4:5], s[0:1]
-; GFX10-64-NEXT:    s_and_b64 exec, exec, s[4:5]
+; GFX10-64-NEXT:    s_wqm_b64 s[6:7], s[0:1]
+; GFX10-64-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX10-64-NEXT:  .LBB7_3: ; %.continue0.preheader
 ; GFX10-64-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX10-64-NEXT:    s_mov_b32 s2, 0
-; GFX10-64-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-64-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX10-64-NEXT:    s_branch .LBB7_5
 ; GFX10-64-NEXT:  .LBB7_4: ; %.continue1

@@ -1299,25 +1299,32 @@ void PreRARematStage::printTargetRegions(bool PrintAll) const {
     dbgs() << REMAT_PREFIX << "  [" << I << "] " << RPTargets[I] << '\n';
 }
 
-void PreRARematStage::RematReg::print(
-    const DenseMap<MachineInstr *, unsigned> &MIRegion) const {
-  dbgs() << REMAT_PREFIX << "  [" << MIRegion.at(DefMI) << "] " << *DefMI;
+void PreRARematStage::RematReg::print() const {
+  dbgs() << REMAT_PREFIX << "  [" << DefRegion << "] " << *DefMI;
   dbgs() << REMAT_PREFIX << "    -> used in [" << UseRegion << "] " << *UseMI;
-  const unsigned NumRegions = Live.size();
   dbgs() << REMAT_PREFIX << "    Guaranteed RP reduction in:";
-  for (unsigned I = 0; I < NumRegions; ++I) {
-    if (isBeneficialRegion(I))
+  for (unsigned I : Live.set_bits()) {
+    if (isUnusedLiveThrough(I))
       dbgs() << " [" << I << "]";
   }
   dbgs() << '\n';
   dbgs() << REMAT_PREFIX << "    Possible RP reduction in:";
-  for (unsigned I = 0; I < NumRegions; ++I) {
-    if (isMaybeBeneficialRegion(I))
+  for (unsigned I : Live.set_bits()) {
+    if (!isUnusedLiveThrough(I))
       dbgs() << " [" << I << "]";
   }
   dbgs() << '\n';
 }
 
+void PreRARematStage::ScoredRemat::print() const {
+  ScoreTy ShiftScore = Score;
+  ScoreTy RegionImpact = ShiftScore & ((1 << RegionImpactWidth) - 1);
+  ShiftScore >>= RegionImpactWidth;
+  ScoreTy FreqDiff = ShiftScore & ((1 << FreqDiffWidth) - 1);
+  ShiftScore >>= FreqDiffWidth;
+  ScoreTy MaxFreq = ShiftScore;
+  dbgs() << '(' << MaxFreq << ", " << FreqDiff << ", " << RegionImpact << ')';
+}
 #endif
 
 bool PreRARematStage::initGCNSchedStage() {
@@ -1328,6 +1335,11 @@ bool PreRARematStage::initGCNSchedStage() {
 
   if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() <= 1)
     return false;
+
+  // Maps all MIs (except lone terminators, which are not part of any region) to
+  // their parent region. Non-lone terminators are considered part of the region
+  // they delimitate.
+  DenseMap<MachineInstr *, unsigned> MIRegion(MF.getInstructionCount());
 
   // Before performing any IR modification record the parent region of each MI
   // and the parent MBB of each region.
@@ -1342,15 +1354,19 @@ bool PreRARematStage::initGCNSchedStage() {
     RegionBB.push_back(ParentMBB);
   }
 
-  setObjective();
+  // Set an objective for the stage based on current RP in each region.
   REMAT_DEBUG({
     dbgs() << "Analyzing ";
     MF.getFunction().printAsOperand(dbgs(), false);
     dbgs() << ": ";
-    if (TargetRegions.none()) {
-      dbgs() << "no objective to achieve, occupancy is maximal at "
-             << MFI.getMaxWavesPerEU() << '\n';
-    } else if (TargetOcc) {
+  });
+  if (!setObjective()) {
+    LLVM_DEBUG(dbgs() << "no objective to achieve, occupancy is maximal at "
+                      << MFI.getMaxWavesPerEU() << '\n');
+    return false;
+  }
+  LLVM_DEBUG({
+    if (TargetOcc) {
       dbgs() << "increase occupancy from " << *TargetOcc - 1 << '\n';
     } else {
       dbgs() << "reduce spilling (minimum target occupancy is "
@@ -1365,12 +1381,14 @@ bool PreRARematStage::initGCNSchedStage() {
   assert(DAG.MLI && "MLI not defined in DAG");
   MachineBranchProbabilityInfo MBPI;
   MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
-  uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
-  if (EntryFreq) {
-    for (const MachineBasicBlock *MBB : RegionBB)
-      RegionFreq.push_back(MBFI.getBlockFreq(MBB).getFrequency() / EntryFreq);
-  } else {
-    RegionFreq.insert(RegionFreq.end(), RegionBB.size(), 0);
+  uint64_t MinFreq = MBFI.getEntryFreq().getFrequency(), MaxFreq = 0;
+  for (const MachineBasicBlock *MBB : RegionBB) {
+    uint64_t BlockFreq = MBFI.getBlockFreq(MBB).getFrequency();
+    RegionFreq.push_back(BlockFreq);
+    if (BlockFreq < MinFreq)
+      MinFreq = BlockFreq;
+    else if (BlockFreq > MaxFreq)
+      MaxFreq = BlockFreq;
   }
   REMAT_DEBUG({
     dbgs() << "Region frequencies:\n";
@@ -1384,43 +1402,27 @@ bool PreRARematStage::initGCNSchedStage() {
     }
   });
 
-  if (!collectRematRegs(RegionFreq)) {
+  if (!collectRematRegs(MIRegion, RegionFreq)) {
     REMAT_DEBUG(dbgs() << "No rematerializable registers\n");
     return false;
   }
-
   REMAT_DEBUG({
     dbgs() << "Rematerializable registers:\n";
     for (const RematReg &Remat : RematRegs)
-      Remat.print(MIRegion);
+      Remat.print();
   });
 
-  // Start by rematerializing always beneficial registers. These should never
-  // be rollbacked. All other rematerialization candidates get added to list of
-  // rematerializations that will be scored.
-  REMAT_DEBUG(dbgs() << "==== ALWAYS BENEFICIAL ====\n");
   SmallVector<ScoredRemat> ScoredRemats;
+  for (const RematReg &Remat : RematRegs)
+    ScoredRemats.emplace_back(&Remat, MinFreq, MaxFreq, DAG);
   BitVector RecomputeRP(NumRegions);
-  for (const RematReg &Remat : RematRegs) {
-    if (Remat.isAlwaysBeneficial()) {
-      REMAT_DEBUG(dbgs() << "[" << MIRegion[Remat.DefMI]
-                         << "] REMAT (always) | " << *Remat.DefMI);
-      rematerialize(Remat, RecomputeRP);
-    } else {
-      ScoredRemats.emplace_back(&Remat, DAG);
-    }
-  }
-  unsetSatisifedRPTargets(RescheduleRegions);
 
-  LLVM_DEBUG(printTargetRegions());
+// Rematerialize registers in successive rounds until all RP targets are
+// satisifed or until we run out of rematerialization candidates.
 #ifndef NDEBUG
   unsigned RoundNum = 0;
 #endif
-
-  // Rematerialize registers in successive rounds until all RP targets are
-  // satisifed or until we run out of rematerialization candidates.
-  while ((updateAndVerifyRPTargets(RecomputeRP) || TargetRegions.any()) &&
-         !ScoredRemats.empty()) {
+  do {
     // (Re-)Score and (re-)sort all remats in increasing score order.
     for (ScoredRemat &Remat : ScoredRemats)
       Remat.update(TargetRegions, RPTargets, RegionFreq, !TargetOcc);
@@ -1429,27 +1431,26 @@ bool PreRARematStage::initGCNSchedStage() {
     REMAT_DEBUG({
       dbgs() << "==== ROUND " << RoundNum << " ====\n";
       for (const ScoredRemat &SRemat : ScoredRemats) {
-        dbgs() << REMAT_PREFIX << "*" << SRemat.getScore() << "* | "
-               << *SRemat.Remat->DefMI;
+        dbgs() << REMAT_PREFIX;
+        SRemat.print();
+        dbgs() << " | " << *SRemat.Remat->DefMI;
       }
+      printTargetRegions();
     });
 
     RecomputeRP.reset();
     int RematIdx = ScoredRemats.size() - 1;
 
-    // Rematerialize registers in decreasing score order until we estimate that
-    // all RP targets are satisfied or until rematerialization candidates are no
-    // longer useful to decrease RP.
+    // Rematerialize registers in decreasing score order until we estimate
+    // that all RP targets are satisfied or until rematerialization candidates
+    // are no longer useful to decrease RP.
     for (; RematIdx >= 0 && TargetRegions.any(); --RematIdx) {
       const RematReg &Remat = *ScoredRemats[RematIdx].Remat;
-      int Score = ScoredRemats[RematIdx].getScore();
-
-      // Stop when scores become negative. Since scores monotonically decrease
-      // as remats are performed, we know there is nothing useful left to do in
-      // such cases.
-      if (Score <= 0) {
-        REMAT_DEBUG(dbgs() << "Stop remats on non-positive score | "
-                           << *Remat.DefMI);
+      // Stop on null score. Since scores monotonically decrease as we
+      // rematerialize, we know there is nothing useful left to do in such
+      // cases.
+      if (ScoredRemats[RematIdx].hasNullScore()) {
+        REMAT_DEBUG(dbgs() << "*** Stop on null score | " << *Remat.DefMI);
         RematIdx = -1;
         break;
       }
@@ -1460,33 +1461,40 @@ bool PreRARematStage::initGCNSchedStage() {
       // reality, in which case we interrupt this round and re-score. This also
       // ensures that every rematerialization we perform is possibly impactful
       // in at least one target region.
-      if (!Remat.intersectWithTarget(TargetRegions)) {
-        REMAT_DEBUG(dbgs() << "Stop round on stale score | " << *Remat.DefMI);
+      if (!Remat.maybeBeneficial(TargetRegions, RPTargets)) {
+        REMAT_DEBUG(dbgs() << "*** Stop round on stale score | "
+                           << *Remat.DefMI);
         break;
       }
 
-      REMAT_DEBUG(dbgs() << "[" << MIRegion[Remat.DefMI] << "] REMAT *" << Score
-                         << "* | " << *Remat.DefMI);
-      MachineInstr *RematMI = rematerialize(Remat, RecomputeRP);
+      REMAT_DEBUG(dbgs() << "*** REMAT [" << Remat.DefRegion << " -> "
+                         << Remat.UseRegion << "] | " << *Remat.DefMI);
       // Every rematerialization we do here is likely to move the instruction
       // into a higher frequency region, increasing the total sum latency of the
       // instruction itself. This is acceptable if we are eliminating a spill in
       // the process, but when the goal is increasing occupancy we get nothing
       // out of rematerialization if occupancy is not increased in the end; in
       // such cases we want to roll back the rematerialization.
-      if (TargetOcc)
-        Rollbackable.push_back({RematMI, &Remat});
+      RollbackInfo *Rollback =
+          TargetOcc ? &Rollbacks.emplace_back(&Remat) : nullptr;
+      rematerialize(Remat, RecomputeRP, Rollback);
       unsetSatisifedRPTargets(Remat.Live);
     }
 
-    LLVM_DEBUG(printTargetRegions());
 #ifndef NDEBUG
     ++RoundNum;
 #endif
+    REMAT_DEBUG({
+      if (!TargetRegions.any())
+        dbgs() << "*** Stop round on all targets achieved\n";
+      else if (RematIdx == -1)
+        dbgs() << "*** Stop round on exhausted remat opportunities\n";
+    });
 
     // Peel off registers we already rematerialized from the vector's tail.
     ScoredRemats.truncate(RematIdx + 1);
-  }
+  } while ((updateAndVerifyRPTargets(RecomputeRP) || TargetRegions.any()) &&
+           !ScoredRemats.empty());
   if (RescheduleRegions.none())
     return false;
 
@@ -2045,7 +2053,7 @@ void GCNSchedStage::revertScheduling() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
 }
 
-void PreRARematStage::setObjective() {
+bool PreRARematStage::setObjective() {
   const Function &F = MF.getFunction();
 
   // Set up "spilling targets" for all regions.
@@ -2075,9 +2083,13 @@ void PreRARematStage::setObjective() {
         TargetRegions.set(I);
     }
   }
+
+  return TargetRegions.any();
 }
 
-bool PreRARematStage::collectRematRegs(ArrayRef<uint64_t> RegionFreq) {
+bool PreRARematStage::collectRematRegs(
+    const DenseMap<MachineInstr *, unsigned> &MIRegion,
+    ArrayRef<uint64_t> RegionFreq) {
   assert(RegionFreq.size() == DAG.Regions.size());
 
   // We need up-to-date live-out info. to query live-out register masks in
@@ -2087,14 +2099,14 @@ bool PreRARematStage::collectRematRegs(ArrayRef<uint64_t> RegionFreq) {
   // Set of registers already marked for potential remterialization; used to
   // avoid rematerialization chains.
   SmallSet<Register, 4> RematRegSet;
-  auto IsMORematable = [&RematRegSet](const MachineOperand &MO) -> bool {
+  auto IsMarkedForRemat = [&RematRegSet](const MachineOperand &MO) -> bool {
     return MO.isReg() && RematRegSet.contains(MO.getReg());
   };
 
   // Identify rematerializable instructions in the function.
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-    auto Region = DAG.Regions[I];
-    for (auto MI = Region.first; MI != Region.second; ++MI) {
+    RegionBoundaries Bounds = DAG.Regions[I];
+    for (auto MI = Bounds.first; MI != Bounds.second; ++MI) {
       // The instruction must be rematerializable.
       MachineInstr &DefMI = *MI;
       if (!isReMaterializable(DefMI))
@@ -2125,7 +2137,8 @@ bool PreRARematStage::collectRematRegs(ArrayRef<uint64_t> RegionFreq) {
       // deferring the MBB RP walk until the entire chain has been
       // rematerialized.
       const MachineOperand &UseMO = UseMI->getOperand(0);
-      if (IsMORematable(UseMO) || llvm::any_of(DefMI.operands(), IsMORematable))
+      if (IsMarkedForRemat(UseMO) ||
+          llvm::any_of(DefMI.operands(), IsMarkedForRemat))
         continue;
 
       // Do not rematerialize an instruction it it uses registers that aren't
@@ -2149,13 +2162,13 @@ PreRARematStage::RematReg::RematReg(
     MachineInstr *DefMI, MachineInstr *UseMI, GCNScheduleDAGMILive &DAG,
     const DenseMap<MachineInstr *, unsigned> &MIRegion,
     ArrayRef<uint64_t> RegionFreq)
-    : DefMI(DefMI), UseMI(UseMI), UseRegion(MIRegion.at(UseMI)),
-      LiveIn(DAG.Regions.size()), LiveOut(DAG.Regions.size()),
-      Live(DAG.Regions.size()), DefFrequency(RegionFreq[MIRegion.at(DefMI)]),
-      UseFrequency(RegionFreq[MIRegion.at(UseMI)]) {
+    : DefMI(DefMI), UseMI(UseMI), LiveIn(DAG.Regions.size()),
+      LiveOut(DAG.Regions.size()), Live(DAG.Regions.size()),
+      DefRegion(MIRegion.at(DefMI)), UseRegion(MIRegion.at(UseMI)),
+      DefFrequency(RegionFreq[DefRegion]), UseFrequency(RegionFreq[UseRegion]) {
 
   // Mark regions in which the rematerializable register is live.
-  Register Reg = DefMI->getOperand(0).getReg();
+  Register Reg = getReg();
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     auto LiveInIt = DAG.LiveIns[I].find(Reg);
     if (LiveInIt != DAG.LiveIns[I].end() && LiveInIt->second.any())
@@ -2174,16 +2187,31 @@ PreRARematStage::RematReg::RematReg(
                 : DAG.MRI.getMaxLaneMaskForVReg(Reg);
 }
 
-MachineInstr *
-PreRARematStage::RematReg::insertMI(unsigned RegionIdx,
-                                    MachineBasicBlock::iterator InsertPos,
-                                    GCNScheduleDAGMILive &DAG) const {
-  MachineInstr *NewMI = &*std::prev(InsertPos);
-  DAG.updateRegionBoundaries(DAG.Regions[RegionIdx], InsertPos, NewMI);
-  DAG.LIS->InsertMachineInstrInMaps(*NewMI);
-  DAG.LIS->createAndComputeVirtRegInterval(NewMI->getOperand(0).getReg());
-  return NewMI;
+bool PreRARematStage::RematReg::maybeBeneficial(
+    const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets) const {
+  Register Reg = getReg();
+  for (unsigned I : TargetRegions.set_bits()) {
+    if (Live[I] && RPTargets[I].isSaveBeneficial(Reg))
+      return true;
+  }
+  return false;
 }
+
+void PreRARematStage::RematReg::insertMI(unsigned RegionIdx,
+                                         MachineInstr *RematMI,
+                                         GCNScheduleDAGMILive &DAG) const {
+  RegionBoundaries &Bounds = DAG.Regions[RegionIdx];
+  if (Bounds.first == std::next(MachineBasicBlock::iterator(RematMI)))
+    Bounds.first = RematMI;
+  DAG.LIS->InsertMachineInstrInMaps(*RematMI);
+  DAG.LIS->createAndComputeVirtRegInterval(RematMI->getOperand(0).getReg());
+}
+
+PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
+                                          uint64_t MinFreq, uint64_t MaxFreq,
+                                          const GCNScheduleDAGMILive &DAG)
+    : Remat(Remat), NumRegs(getNumRegs(DAG)),
+      FreqDiff(getFreqDiff(MinFreq, MaxFreq)) {}
 
 unsigned PreRARematStage::ScoredRemat::getNumRegs(
     const GCNScheduleDAGMILive &DAG) const {
@@ -2192,92 +2220,61 @@ unsigned PreRARematStage::ScoredRemat::getNumRegs(
   // registers involved. This is acceptable since this is purely used for the
   // scoring heuristic, but we should find a way to compute the number of
   // registers actually covered by the register/subregister pair.
-  Register Reg = Remat->DefMI->getOperand(0).getReg();
-  const TargetRegisterClass &RC = *DAG.MRI.getRegClass(Reg);
+  const TargetRegisterClass &RC = *DAG.MRI.getRegClass(Remat->getReg());
   return divideCeil(DAG.TRI->getRegSizeInBits(RC), 32);
 }
 
-unsigned PreRARematStage::ScoredRemat::getLatencyGain(
-    const GCNScheduleDAGMILive &DAG) const {
-  if (hasUnknownLatencyGain())
-    return 0;
-
-  const TargetSchedModel &SchedModel = DAG.ST.getInstrInfo()->getSchedModel();
-
-  // Rematerializing the register to its using region changes the number of
-  // times we will execute it in total.
-  unsigned FreqDiff = Remat->UseFrequency - Remat->DefFrequency;
-  int RematLatDiff = FreqDiff * SchedModel.computeInstrLatency(Remat->DefMI);
-
-  // We assume that spilling the register means we have to insert a save in its
-  // defining region and a restore in its using region. Spill instruction
-  // opcodes do not have corresponding scheduling models so we cannot accurately
-  // estimate their latency. Since this is just meant as a heuristic, use the
-  // default high latency from the MC scheduling model.
-  int SpillLatDiff = SchedModel.getMCSchedModel()->DefaultHighLatency *
-                     (Remat->DefFrequency + Remat->UseFrequency);
-
-  return SpillLatDiff - RematLatDiff;
-}
-
-PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
-                                          const GCNScheduleDAGMILive &DAG)
-    : Remat(Remat), NumRegs(getNumRegs(DAG)),
-      RematLatencyGainOverSpill(getLatencyGain(DAG)) {
-  resetScore();
+uint64_t PreRARematStage::ScoredRemat::getFreqDiff(uint64_t MinFreq,
+                                                   uint64_t MaxFreq) const {
+  uint64_t DefOrMin = Remat->DefFrequency ? Remat->DefFrequency : MinFreq;
+  uint64_t UseOrMax = Remat->UseFrequency ? Remat->UseFrequency : MaxFreq;
+  uint64_t MaxDiff = MaxFreq - MinFreq;
+  // This is equivalent to (2 * MaxDiff) / 2^NumBitsLatency.
+  uint64_t RescaleDenom = MaxDiff >> (FreqDiffWidth - 1);
+  RescaleDenom = std::max(RescaleDenom, (uint64_t)1);
+  // The difference between defining and using frequency is in the range
+  // [-MaxDiff, MaxDiff], shift it to [0,2 x MaxDiff] to stay in the positive
+  // range, then rescale to [0, 2^NumBitsLatency - 1]
+  return (MaxDiff + (DefOrMin - UseOrMax)) / RescaleDenom;
 }
 
 void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
                                           ArrayRef<GCNRPTarget> RPTargets,
                                           ArrayRef<uint64_t> RegionFreq,
                                           bool ReduceSpill) {
-  // Exit early if no target region intersects with the registers's live
-  // regions.
-  if (!Remat->intersectWithTarget(TargetRegions))
-    return setUselessRemat();
-  resetScore();
+  setNullScore();
+  if (!Remat->maybeBeneficial(TargetRegions, RPTargets))
+    return;
 
-  // When the stage is trying to reduce spilling, we want to pick
-  // rematerialization candidates that will be beneficial to latency. When it is
-  // trying to increase occupancy, we are fine increasing latency to try to
-  // reduce RP.
-  // FIXME: In the increasing occupancy case, we should be able to incorporate
-  // the latency loss induced by rematerializations into the final score. It
-  // seems possible to very roughly estimate the overall kernel latency upside
-  // we get by increasing occupancy and compare it to the latency hit each wave
-  // will be subjected to.
-  if (ReduceSpill) {
-    // If we don't know the latency gain, we still consider the
-    // rematerialization potentially beneficial because we don't want to miss
-    // rematerialization opportunities and rematerializing is in most cases
-    // cheaper than spilling. We still give a bonus to remats for which we are
-    // able to do the calculation.
-    if (!hasUnknownLatencyGain()) {
-      if (RematLatencyGainOverSpill < 0)
-        return setUselessRemat();
-      setKnownLatencyGain();
+  Register Reg = Remat->getReg();
+  uint64_t MaxFreq = 0;
+  ScoreTy NumBenefitingRegions = 0;
+  for (unsigned I : TargetRegions.set_bits()) {
+    if (!Remat->Live[I] || !RPTargets[I].isSaveBeneficial(Reg))
+      continue;
+    bool UnusedLT = Remat->isUnusedLiveThrough(I);
+
+    // Regions in which RP is guaranteed to decrease have more weight.
+    NumBenefitingRegions += UnusedLT ? 2 : 1;
+
+    if (ReduceSpill) {
+      uint64_t Freq = RegionFreq[I];
+      if (!UnusedLT) {
+        // Apply a frequency penalty in regions in which we are not sure that RP
+        // will decrease.
+        Freq /= 2;
+      }
+      MaxFreq = std::max(MaxFreq, Freq);
     }
   }
-
-  // The estimated RP reduction is proportional to the total frequency in target
-  // regions where the register is live.
-  Register Reg = Remat->DefMI->getOperand(0).getReg();
-  ScoreTy RPScore = 0;
-  for (unsigned I : TargetRegions.set_bits()) {
-    unsigned Freq = std::max(RegionFreq[I], static_cast<uint64_t>(1));
-    if (Remat->isBeneficialRegion(I))
-      Score += WeightRP * RPTargets[I].isSaveBeneficial(Reg) * Freq;
-    else if (Remat->isMaybeBeneficialRegion(I))
-      Score += WeightRPMaybe * RPTargets[I].isSaveBeneficial(Reg) * Freq;
-  }
-
-  // The estimated RP reduction is directly proportional to the size of the
-  // rematerializable register.
-  setRPScore(RPScore * NumRegs);
+  setMaxFreqScore(MaxFreq);
+  setFreqDiffScore(FreqDiff);
+  setRegionImpactScore(NumBenefitingRegions * NumRegs);
 }
 
-MachineInstr *PreRARematStage::rematerialize(const RematReg &Remat,
-                                             BitVector &RecomputeRP) {
+void PreRARematStage::rematerialize(const RematReg &Remat,
+                                    BitVector &RecomputeRP,
+                                    RollbackInfo *Rollback) {
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
   MachineInstr &DefMI = *Remat.DefMI;
   Register Reg = DefMI.getOperand(0).getReg();
@@ -2287,8 +2284,11 @@ MachineInstr *PreRARematStage::rematerialize(const RematReg &Remat,
   MachineBasicBlock::iterator InsertPos = Remat.UseMI;
   TII->reMaterialize(*InsertPos->getParent(), InsertPos, NewReg, 0, DefMI,
                      *DAG.TRI);
+  MachineInstr *RematMI = &*std::prev(InsertPos);
   Remat.UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
-  MachineInstr *NewMI = Remat.insertMI(Remat.UseRegion, InsertPos, DAG);
+  Remat.insertMI(Remat.UseRegion, RematMI, DAG);
+  if (Rollback)
+    Rollback->RematMI = RematMI;
 
   // Remove the register from all regions where it is a live-in or live-out
   // and adjust RP targets.
@@ -2324,41 +2324,39 @@ MachineInstr *PreRARematStage::rematerialize(const RematReg &Remat,
     }
 #endif
 
-    // This save is exact in beneficial regions but optimistic in all other
-    // regions where the register is live.
+    // This save is guaranteed in regions in which the register is live-through
+    // and unused but optimistic in all other regions where the register is
+    // live.
     RPTargets[I].saveReg(Reg, Remat.Mask, DAG.MRI);
     DAG.LiveIns[I].erase(Reg);
     DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).erase(Reg);
-    if (!Remat.isBeneficialRegion(I))
+    if (!Remat.isUnusedLiveThrough(I))
       RecomputeRP.set(I);
   }
 
-  DAG.deleteMI(MIRegion.at(&DefMI), &DefMI);
+  DAG.deleteMI(Remat.DefRegion, &DefMI);
   RescheduleRegions |= Remat.Live;
-  return NewMI;
 }
 
-void PreRARematStage::rollback(const RollbackReg &Rollback) const {
+void PreRARematStage::rollback(const RollbackInfo &Rollback,
+                               BitVector &RecomputeRP) const {
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
-  auto &[RematMI, Remat] = Rollback;
-
-  // Recreate the original MI from the first rematerialization. Any
-  // rematerialization could do, this is just a simple way to do this.
-  unsigned DefRegion = MIRegion.at(Remat->DefMI);
-  MachineBasicBlock *MBB = RegionBB[DefRegion];
+  auto &[Remat, RematMI] = Rollback;
+  MachineBasicBlock *MBB = RegionBB[Remat->DefRegion];
   Register Reg = RematMI->getOperand(0).getReg();
   Register NewReg = DAG.MRI.cloneVirtualRegister(Reg);
 
   // Re-rematerialize MI in its original region. Note that it may not be
   // rematerialized exactly in the same position as originally within the
   // region, but it should not matter much.
-  MachineBasicBlock::iterator InsertPos(DAG.Regions[DefRegion].second);
+  MachineBasicBlock::iterator InsertPos(DAG.Regions[Remat->DefRegion].second);
   TII->reMaterialize(*MBB, InsertPos, NewReg, 0, *RematMI, *DAG.TRI);
-  REMAT_DEBUG(dbgs() << '[' << DefRegion << "] Re-rematerialized as "
-                     << *std::prev(InsertPos));
+  MachineInstr *ReRematMI = &*std::prev(InsertPos);
+  REMAT_DEBUG(dbgs() << '[' << Remat->DefRegion << "] Re-rematerialized as "
+                     << *ReRematMI);
   Remat->UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
   DAG.deleteMI(Remat->UseRegion, RematMI);
-  Remat->insertMI(DefRegion, InsertPos, DAG);
+  Remat->insertMI(Remat->DefRegion, ReRematMI, DAG);
 
   // Re-add the register as a live-in/live-out in all regions it used to be
   // one in.
@@ -2367,6 +2365,7 @@ void PreRARematStage::rollback(const RollbackReg &Rollback) const {
     DAG.LiveIns[I].insert(LiveReg);
   for (unsigned I : Remat->LiveOut.set_bits())
     DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).insert(LiveReg);
+  RecomputeRP |= Remat->Live;
 }
 
 void PreRARematStage::unsetSatisifedRPTargets(const BitVector &Regions) {
@@ -2427,41 +2426,20 @@ void PreRARematStage::finalizeGCNSchedStage() {
 
   // Rollback, then recompute pressure in all affected regions.
   REMAT_DEBUG(dbgs() << "==== ROLLBACK ====\n");
-  BitVector ImpactedRegions(DAG.Regions.size());
-  for (const RollbackReg &Rollback : Rollbackable) {
-    rollback(Rollback);
-    ImpactedRegions |= Rollback.second->Live;
-  }
-  for (unsigned I : ImpactedRegions.set_bits())
+  BitVector RecomputeRP(DAG.Regions.size());
+  for (const RollbackInfo &Rollback : Rollbacks)
+    rollback(Rollback, RecomputeRP);
+  for (unsigned I : RecomputeRP.set_bits())
     DAG.Pressure[I] = DAG.getRealRegPressure(I);
 
   GCNSchedStage::finalizeGCNSchedStage();
 }
 
-void GCNScheduleDAGMILive::updateRegionBoundaries(
-    RegionBoundaries &RegionBounds, MachineBasicBlock::iterator MI,
-    MachineInstr *NewMI) {
-  assert((!NewMI || NewMI != RegionBounds.second) &&
-         "cannot remove at region end");
-
-  if (RegionBounds.first == RegionBounds.second) {
-    assert(NewMI && "cannot remove from an empty region");
-    RegionBounds.first = NewMI;
-    return;
-  }
-
-  // We only care for modifications at the beginning of a non-empty region since
-  // the upper region boundary is exclusive.
-  if (MI != RegionBounds.first)
-    return;
-  if (!NewMI)
-    RegionBounds.first = std::next(MI); // Removal
-  else
-    RegionBounds.first = NewMI; // Insertion
-}
-
 void GCNScheduleDAGMILive::deleteMI(unsigned RegionIdx, MachineInstr *MI) {
-  updateRegionBoundaries(Regions[RegionIdx], MI, nullptr);
+  // It's not possible for the deleted instruction to be upper region boundary
+  // since we don't delete region terminators.
+  if (Regions[RegionIdx].first == MI)
+    Regions[RegionIdx].first = std::next(MachineBasicBlock::iterator(MI));
   LIS->removeInterval(MI->getOperand(0).getReg());
   LIS->RemoveMachineInstrFromMaps(*MI);
   MI->eraseFromParent();

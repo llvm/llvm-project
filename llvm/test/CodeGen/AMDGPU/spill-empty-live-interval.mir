@@ -57,9 +57,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub2:vreg_128 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_1:%[0-9]+]].sub2:vreg_128 = V_MOV_B32_e32 1786773504, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_1:%[0-9]+]].sub2:vreg_128 = V_MOV_B32_e32 1786773504, implicit $exec
   ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_1]].sub2
   ; CHECK-NEXT:   S_NOP 0, implicit undef [[V_MOV_B32_e32_]].sub0
   ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]].sub2

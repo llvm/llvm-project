@@ -849,7 +849,7 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b96 s[36:38], s[4:5], 0x0
 ; GFX1250-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX1250-NEXT:    v_mov_b32_e32 v31, v0
+; GFX1250-NEXT:    v_dual_mov_b32 v42, 0 :: v_dual_mov_b32 v31, v0
 ; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 12
 ; GFX1250-NEXT:    s_mov_b64 s[12:13], void_func_void@abs64
@@ -862,8 +862,8 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    ds_load_b32 v0, v40 offset:4
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v41, v0
-; GFX1250-NEXT:    global_store_b32 v1, v0, s[36:37]
+; GFX1250-NEXT:    v_add_nc_u32_e32 v0, v41, v0
+; GFX1250-NEXT:    global_store_b32 v42, v0, s[36:37]
 ; GFX1250-NEXT:    s_endpgm
   %x = call i32 @llvm.amdgcn.workitem.id.x()
   %arrayidx0 = getelementptr i32, ptr addrspace(3) %arg, i32 %x

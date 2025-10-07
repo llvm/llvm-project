@@ -85,9 +85,9 @@ define amdgpu_kernel void @call_no_wait_after_call(ptr addrspace(1) %ptr, i32) #
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 s32, 0
+; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    global_store_dword v0, v0, s[34:35]
+; GCN-NEXT:    global_store_dword v40, v40, s[34:35]
 ; GCN-NEXT:    s_endpgm
   call void @func(i32 0)
   store i32 0, ptr addrspace(1) %ptr
@@ -108,9 +108,9 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(ptr addrspace(1) %
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 s32, 0
+; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    global_store_dword v1, v0, s[34:35]
+; GCN-NEXT:    global_store_dword v40, v0, s[34:35]
 ; GCN-NEXT:    s_endpgm
   %rv = call i32 @func.return(i32 0)
   store i32 %rv, ptr addrspace(1) %ptr

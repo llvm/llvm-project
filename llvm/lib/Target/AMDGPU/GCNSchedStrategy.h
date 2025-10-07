@@ -302,14 +302,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
 
-  /// If necessary, updates a region's boundaries following insertion ( \p NewMI
-  /// != nullptr) or removal ( \p NewMI == nullptr) of a \p MI in the region.
-  /// For an MI removal, this must be called before the MI is actually erased
-  /// from its parent MBB.
-  void updateRegionBoundaries(RegionBoundaries &RegionBounds,
-                              MachineBasicBlock::iterator MI,
-                              MachineInstr *NewMI);
-
   void runSchedStages();
 
   std::unique_ptr<GCNSchedStage> createSchedStage(GCNSchedStageID SchedStageID);
@@ -481,73 +473,49 @@ private:
     MachineInstr *DefMI;
     /// Single user of the rematerializable register.
     MachineInstr *UseMI;
-    /// Using region.
-    unsigned UseRegion;
     /// Regions in which the register is live-in/live-out/live anywhere.
     BitVector LiveIn, LiveOut, Live;
     /// The rematerializable register's lane bitmask.
     LaneBitmask Mask;
-    /// Frequency of region defining/using the register. 0 when unknown.
-    unsigned DefFrequency, UseFrequency;
+    /// Defining and using regions.
+    unsigned DefRegion, UseRegion;
+    /// Frequency of defining/using regions. 0 when unknown.
+    uint64_t DefFrequency, UseFrequency;
 
     RematReg(MachineInstr *DefMI, MachineInstr *UseMI,
              GCNScheduleDAGMILive &DAG,
              const DenseMap<MachineInstr *, unsigned> &MIRegion,
              ArrayRef<uint64_t> RegionFreq);
 
-    /// Returns whether the regions at which the register is live intersects
-    /// with the \p Target regions.
-    bool intersectWithTarget(BitVector Target) const {
-      Target &= Live;
-      return Target.any();
-    }
+    /// Returns the rematerializable register. Do not call after deleting the
+    /// original defining instruction.
+    Register getReg() const { return DefMI->getOperand(0).getReg(); }
 
-    /// Returns whether is is always beneficial to rematerialize this register.
-    /// These are rematerializations that never move instructions into higher
-    /// frequency regions and at least shorten live intervals, so they are
-    /// always useful irrespective of RP targets.
-    bool isAlwaysBeneficial() const {
-      // When the using region is executed a single time, we know
-      // rematerializing will be beneficial whatever the defining region's
-      // frequency.
-      if (UseFrequency == 1)
-        return true;
-      // When there is uncertainty on the defining or using frequency, we err on
-      // the conservative side and do not consider the rematerialization always
-      // beneficial.
-      if (!DefFrequency || !UseFrequency)
-        return false;
-      return UseFrequency <= DefFrequency;
-    }
+    /// Determines whether this rematerialization may be beneficial in at least
+    /// one target region.
+    bool maybeBeneficial(const BitVector &TargetRegions,
+                         ArrayRef<GCNRPTarget> RPTargets) const;
 
-    /// Determines whether rematerializing the register is guaranteed to reduce
-    /// pressure in the region.
-    bool isBeneficialRegion(unsigned I) const {
+    /// Determines if the register is both unused and live-through in region \p
+    /// I. This guarantees that rematerializing it will reduce RP in the region.
+    bool isUnusedLiveThrough(unsigned I) const {
       assert(I < Live.size() && "region index out of range");
       return LiveIn[I] && LiveOut[I] && I != UseRegion;
-    }
-
-    /// Determines whether rematerializing the register can but is not
-    /// guaranteed to reduce pressure in the region.
-    bool isMaybeBeneficialRegion(unsigned I) const {
-      assert(I < Live.size() && "region index out of range");
-      return Live[I] && !isBeneficialRegion(I);
     }
 
     /// Updates internal structures following a MI rematerialization. Part of
     /// the stage instead of the DAG because it makes assumptions that are
     /// specific to the rematerialization process.
-    MachineInstr *insertMI(unsigned RegionIdx,
-                           MachineBasicBlock::iterator InsertPos,
-                           GCNScheduleDAGMILive &DAG) const;
+    void insertMI(unsigned RegionIdx, MachineInstr *RematMI,
+                  GCNScheduleDAGMILive &DAG) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void print(const DenseMap<MachineInstr *, unsigned> &MIRegion) const;
+    void print() const;
 #endif
   };
 
   /// A scored rematerializable register. Higher scores indicate more beneficial
-  /// rematerializations. Non-positive scores indicate the rematerialization is
+  /// rematerializations. A null score indicate the rematerialization is
   /// not helpful to reduce RP in target regions.
   struct ScoredRemat {
     /// The rematerializable register under consideration.
@@ -555,14 +523,16 @@ private:
 
     /// This only initializes state-independent characteristics of \p Remat, not
     /// the actual score.
-    ScoredRemat(const RematReg *Remat, const GCNScheduleDAGMILive &DAG);
+    ScoredRemat(const RematReg *Remat, uint64_t MinFreq, uint64_t MaxFreq,
+                const GCNScheduleDAGMILive &DAG);
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
     /// \p RegionFreq indicates the frequency of each region
     void update(const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets,
                 ArrayRef<uint64_t> RegionFreq, bool ReduceSpill);
 
-    int getScore() const { return Score; }
+    /// Returns whether the current score is null.
+    bool hasNullScore() const { return !Score; }
 
     bool operator<(const ScoredRemat &O) const {
       // Break ties using pointer to rematerializable register. Since
@@ -573,49 +543,68 @@ private:
       return Score < O.Score;
     }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    void print() const;
+#endif
+
   private:
-    /// Per-region contribution weights to RP score depending on whether RP is
-    /// guaranteed or only likely to be reduced in the region. Only their
-    /// relative value w.r.t. one another matter.
-    static constexpr int WeightRP = 2, WeightRPMaybe = 1;
+    /// Bitwidths for score components.
+    static constexpr unsigned MaxFreqWidth = 32, FreqDiffWidth = 16,
+                              RegionImpactWidth = 16;
 
     /// Number of 32-bit registers this rematerialization covers.
     const unsigned NumRegs;
-    /// Latency gain induced by rematerializing the register over spilling its
-    /// defining instruction.
-    const int RematLatencyGainOverSpill;
+    /// Frequency difference between defining and using regions, normalized to
+    /// the maximum possible difference and rescaled to the representable range
+    /// in the score.
+    const uint64_t FreqDiff;
 
-    /// Whether we can estimate the latency gain of rematerialazing over
-    /// spilling; this requires knowing defining/using region frequencies.
-    bool hasUnknownLatencyGain() const {
-      return !Remat->DefFrequency || !Remat->UseFrequency;
-    }
-
-    using ScoreTy = int32_t;
+    using ScoreTy = uint64_t;
     /// Overall rematerialization score. Scoring components are mapped to bit
     /// ranges in the overall score.
     ///
-    /// [31:1] :   estimated RP reduction score
-    /// [0]    :   known latency gain
-    ScoreTy Score;
+    /// [63:32] : maximum frequency in benefiting target region (spilling only)
+    /// [31:16] : frequency difference between defining and using region
+    /// [15: 0] : number of benefiting regions times register size
+    ScoreTy Score = 0;
 
-    void resetScore() { Score = 0; }
+    void setNullScore() { Score = 0; }
 
-    void setUselessRemat() { Score = std::numeric_limits<ScoreTy>::min(); }
+    void setMaxFreqScore(ScoreTy MaxFreq) {
+      MaxFreq = std::min(
+          static_cast<ScoreTy>(std::numeric_limits<uint32_t>::max()), MaxFreq);
+      Score |= MaxFreq << (FreqDiffWidth + RegionImpactWidth);
+    }
 
-    void setKnownLatencyGain() { Score |= 1; }
+    void setFreqDiffScore(ScoreTy FreqDiff) {
+      FreqDiff = std::min(
+          static_cast<ScoreTy>(std::numeric_limits<uint16_t>::max()), FreqDiff);
+      Score |= FreqDiff << RegionImpactWidth;
+    }
 
-    void setRPScore(ScoreTy RPScore) { Score |= RPScore << 1; }
+    void setRegionImpactScore(ScoreTy RegionImpact) {
+      RegionImpact =
+          std::min(static_cast<ScoreTy>(std::numeric_limits<uint16_t>::max()),
+                   RegionImpact);
+      Score |= RegionImpact;
+    }
 
     unsigned getNumRegs(const GCNScheduleDAGMILive &DAG) const;
 
-    unsigned getLatencyGain(const GCNScheduleDAGMILive &DAG) const;
+    uint64_t getFreqDiff(uint64_t MinFreq, uint64_t MaxFreq) const;
   };
 
-  /// Maps all MIs (except lone terminators, which are not part of any region)
-  /// to their parent region. Non-lone terminators are considered part of the
-  /// region they delimitate.
-  DenseMap<MachineInstr *, unsigned> MIRegion;
+  /// Holds enough information to rollback a rematerialization decision post
+  /// re-scheduling.
+  struct RollbackInfo {
+    /// The rematerializable register under consideration.
+    const RematReg *Remat;
+    /// The rematerialized MI replacing the original defining MI.
+    MachineInstr *RematMI;
+
+    RollbackInfo(const RematReg *Remat) : Remat(Remat) {}
+  };
+
   /// Parent MBB to each region, in region order.
   SmallVector<MachineBasicBlock *> RegionBB;
 
@@ -632,13 +621,9 @@ private:
 
   /// List of rematerializable registers.
   SmallVector<RematReg, 16> RematRegs;
-
-  using RollbackReg = std::pair<MachineInstr *, const RematReg *>;
   /// List of rematerializations to rollback if rematerialization does not end
-  /// up being beneficial. Each element pairs the MI created during
-  /// rematerialization to the original rematerializable register.
-  SmallVector<RollbackReg> Rollbackable;
-
+  /// up being beneficial.
+  SmallVector<RollbackInfo> Rollbacks;
   /// After successful stage initialization, indicates which regions should be
   /// rescheduled.
   BitVector RescheduleRegions;
@@ -646,8 +631,8 @@ private:
   /// Determines the stage's objective (increasing occupancy or reducing
   /// spilling, set in \ref TargetOcc). Defines \ref RPTargets in all regions to
   /// achieve that objective and mark those that don't achieve it in \ref
-  /// TargetRegions.
-  void setObjective();
+  /// TargetRegions. Returns whether there is any target region.
+  bool setObjective();
 
   /// Unsets target regions in \p Regions whose RP target has been reached.
   void unsetSatisifedRPTargets(const BitVector &Regions);
@@ -658,20 +643,26 @@ private:
   bool updateAndVerifyRPTargets(const BitVector &Regions);
 
   /// Collects all rematerializable registers and appends them to \ref
-  /// RematRegs. \p RegionFreq contains the frequency of each region, 0
-  /// indicating an unknown frequency. Returns whether any rematerializable
-  /// register was found.
-  bool collectRematRegs(ArrayRef<uint64_t> RegionFreq);
+  /// RematRegs. \p MIRegion maps MIs to their region and \p RegionFreq contains
+  /// the frequency of each region, 0 indicating an unknown frequency. Returns
+  /// whether any rematerializable register was found.
+  bool collectRematRegs(const DenseMap<MachineInstr *, unsigned> &MIRegion,
+                        ArrayRef<uint64_t> RegionFreq);
 
   /// Rematerializes \p Remat. This removes the rematerialized register from
   /// live-in/out lists in the DAG and updates RP targets in all affected
   /// regions, which are also marked in \ref RescheduleRegions. Regions in which
-  /// RP savings are not guaranteed are set in \p RecomputeRP. Returns the newly
-  /// created MI.
-  MachineInstr *rematerialize(const RematReg &Remat, BitVector &RecomputeRP);
+  /// RP savings are not guaranteed are set in \p RecomputeRP. When \p Rollback
+  /// is non-null, fills it with required information to be able to rollback the
+  /// rematerialization post-rescheduling.
+  void rematerialize(const RematReg &Remat, BitVector &RecomputeRP,
+                     RollbackInfo *Rollback);
 
-  /// Rollbacks rematerialization \p Rollback.
-  void rollback(const RollbackReg &Rollback) const;
+  /// Rollbacks the rematerialization decision represented by \p Rollback. This
+  /// update live-in/out lists in the DAG but does not update cached register
+  /// pressures. Regions in which RP may be impacted are marked in \ref
+  /// RecomputeRP.
+  void rollback(const RollbackInfo &Rollback, BitVector &RecomputeRP) const;
 
   /// Whether the MI is rematerializable
   bool isReMaterializable(const MachineInstr &MI);
@@ -697,7 +688,6 @@ public:
     const unsigned NumRegions = DAG.Regions.size();
     RPTargets.reserve(NumRegions);
     RegionBB.reserve(NumRegions);
-    MIRegion.reserve(MF.getInstructionCount());
   }
 };
 

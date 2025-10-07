@@ -28,14 +28,37 @@
 #           | 5 |
 #           +---+
 
-# Rematerializing %32 is always beneficial because the defining and using
-# regions have the same frequency. It should be rematerialized first.
-name:            favor_always_benef
+--- |
+  define void @small_num_sgprs_as_spill() "amdgpu-num-sgpr"="85" {
+    ret void
+  }
+  define void @small_num_vgprs_as_spill() "amdgpu-num-vgpr"="14" {
+    ret void
+  }
+  define void @dont_remat_waves_per_eu() "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-waves-per-eu"="7,7" {
+    ret void
+  }
+  define void @dont_remat_at_max_occ() "amdgpu-waves-per-eu"="8,8" {
+    ret void
+  }
+  define void @reduce_arch_and_acc_vgrp_spill() "amdgpu-waves-per-eu"="8,8" {
+    ret void
+  }
+  define void @reduce_spill_archvgpr_above_addressable_limit() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
+    ret void
+  }
+  define void @reduce_spill_agpr_above_addressable_limit() "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" {
+    ret void
+  }
+---
+# %32's defining and using region frequencies are identical therefore it is the
+# best register to rematerialize.
+name:            favor_same_frequency
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
-  ; CHECK-LABEL: name: favor_always_benef
+  ; CHECK-LABEL: name: favor_same_frequency
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
@@ -193,15 +216,14 @@ body:             |
     S_ENDPGM 0
 ...
 ---
-# Rematerializing registers used in bb.2 is more beneficial than rematerializing
-# registers in bb.4 since they are live-through in higher frequency regions
-# (bb.4), which contribute more to the score.
-name:            favor_live_through_in_high_freq_region
+# bb.2's frequency is lesser than bb.4's therefore it is preferable to
+# rematerialize registers in bb.2 instead of bb.4.
+name:            favor_lower_frequency
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
-  ; CHECK-LABEL: name: favor_live_through_in_high_freq_region
+  ; CHECK-LABEL: name: favor_lower_frequency
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
@@ -211,8 +233,6 @@ body:             |
   ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound, implicit $exec
-  ; CHECK-NEXT:   %loop_counter:sreg_32 = COPY %mem_data.sub1
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_3:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_4:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode
@@ -234,14 +254,9 @@ body:             |
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_20:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_22:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_24:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_25:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 32, implicit $exec, implicit $mode, implicit-def $m0
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 32, implicit $exec, implicit $mode, implicit-def $m0
+  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound, implicit $exec
+  ; CHECK-NEXT:   %loop_counter:sreg_32 = COPY %mem_data.sub1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
@@ -255,8 +270,15 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_31]], implicit [[V_CVT_I32_F64_e32_23]], implicit [[V_CVT_I32_F64_e32_24]], implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_27]], implicit [[V_CVT_I32_F64_e32_28]], implicit [[V_CVT_I32_F64_e32_29]]
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_24:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_25:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_24]], implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_27]], implicit [[V_CVT_I32_F64_e32_28]], implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]], implicit [[V_CVT_I32_F64_e32_31]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x7c000000), %bb.5(0x04000000)
@@ -276,7 +298,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_30]]
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_23]]
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -360,12 +382,12 @@ body:             |
 ...
 ---
 # Rematerializing registers used in bb.4 is the only option.
-name:            use_only_region_possible
+name:            remat_in_only_possible_region
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
-  ; CHECK-LABEL: name: use_only_region_possible
+  ; CHECK-LABEL: name: remat_in_only_possible_region
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1

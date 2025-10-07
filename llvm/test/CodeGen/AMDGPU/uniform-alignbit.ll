@@ -11,11 +11,11 @@ define amdgpu_kernel void @uniform_build_vector(i64 %in, ptr addrspace(1) %out) 
 ; GCN-NEXT:    s_mov_b32 s6, s5
 ; GCN-NEXT:    s_mov_b32 s7, s5
 ; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
-; GCN-NEXT:    ; sched_barrier mask(0x00000000)
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    ; sched_barrier mask(0x00000000)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
