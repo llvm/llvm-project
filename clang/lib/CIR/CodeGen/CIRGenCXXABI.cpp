@@ -22,6 +22,20 @@ using namespace clang::CIRGen;
 
 CIRGenCXXABI::~CIRGenCXXABI() {}
 
+CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
+    CIRGenFunction &cgf, const CXXConstructorDecl *d, CXXCtorType type,
+    bool forVirtualBase, bool delegating, CallArgList &args) {
+  AddedStructorArgs addedArgs =
+      getImplicitConstructorArgs(cgf, d, type, forVirtualBase, delegating);
+  for (auto [idx, prefixArg] : llvm::enumerate(addedArgs.prefix))
+    args.insert(args.begin() + 1 + idx,
+                CallArg(RValue::get(prefixArg.value), prefixArg.type));
+  for (const auto &arg : addedArgs.suffix)
+    args.add(RValue::get(arg.value), arg.type);
+  return AddedStructorArgCounts(addedArgs.prefix.size(),
+                                addedArgs.suffix.size());
+}
+
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
                                   FunctionArgList &params) {
   const auto *md = cast<CXXMethodDecl>(cgf.curGD.getDecl());

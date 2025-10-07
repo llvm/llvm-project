@@ -167,9 +167,8 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   default:
     llvm_unreachable("Unexpected opcode");
   case Instruction::Or:
-    // TODO: We'd be better off creating disjoint or here, but we don't yet
-    // have an IRBuilder API for that.
-    [[fallthrough]];
+    Start = Builder.CreateOr(Start, Splat, "", /*IsDisjoint=*/true);
+    break;
   case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
     break;
@@ -562,7 +561,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
     EVL = Builder.CreateElementCount(
         Builder.getInt32Ty(), cast<VectorType>(DataType)->getElementCount());
 
-  CallInst *Call;
+  Value *Call;
 
   if (!StoreVal) {
     Call = Builder.CreateIntrinsic(
@@ -572,8 +571,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
 
     // Merge llvm.masked.gather's passthru
     if (II->getIntrinsicID() == Intrinsic::masked_gather)
-      Call = Builder.CreateIntrinsic(Intrinsic::vp_select, {DataType},
-                                     {Mask, Call, II->getArgOperand(3), EVL});
+      Call = Builder.CreateSelect(Mask, Call, II->getArgOperand(3));
   } else
     Call = Builder.CreateIntrinsic(
         Intrinsic::experimental_vp_strided_store,

@@ -96,8 +96,25 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
+// HwModes Pattern Stuff
+//===----------------------------------------------------------------------===//
+
+defvar SPARC32 = DefaultMode;
+def SPARC64 : HwMode<[Is64Bit]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
+
+def sparc_ptr_rc : RegClassByHwMode<
+  [SPARC32, SPARC64],
+  [IntRegs, I64Regs]>;
+
+// Both cases can use the same decoder method, so avoid the dispatch
+// by hwmode by setting an explicit DecoderMethod
+def ptr_op : RegisterOperand<sparc_ptr_rc> {
+  let DecoderMethod = "DecodeIntRegsRegisterClass";
+}
 
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
@@ -178,12 +195,12 @@ def simm13Op : Operand<iPTR> {
 
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc);
+  let MIOperandInfo = (ops ptr_op, ptr_op);
   let ParserMatchClass = SparcMEMrrAsmOperand;
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm13Op);
+  let MIOperandInfo = (ops ptr_op, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -1785,22 +1802,22 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
 // as inline assembler-supported instructions.
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
   def SMACrr :  F3_1<2, 0b111111,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "smac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def SMACri :  F3_2<2, 0b111111,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "smac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 
   def UMACrr :  F3_1<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "umac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def UMACri :  F3_2<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "umac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 }

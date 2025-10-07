@@ -1,4 +1,4 @@
-//===--- AvoidBindCheck.cpp - clang-tidy-----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -585,7 +585,7 @@ static bool emitCapture(llvm::StringSet<> &CaptureSet, StringRef Delimiter,
     return false;
 
   // This capture has already been emitted.
-  if (CaptureSet.count(Identifier) != 0)
+  if (CaptureSet.contains(Identifier))
     return false;
 
   Stream << Delimiter;

@@ -164,10 +164,9 @@ def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
 def ARMWrapperJT     : SDNode<"ARMISD::WrapperJT",   SDTIntUnaryOp>;
 
 def ARMcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARMCallSeqStart,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOutGlue]>;
 def ARMcallseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARMCallSeqEnd,
-                              [SDNPHasChain, SDNPSideEffect,
-                               SDNPOptInGlue, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def ARMcopystructbyval : SDNode<"ARMISD::COPY_STRUCT_BYVAL" ,
                                 SDT_ARMStructByVal,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
@@ -766,7 +765,6 @@ class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
 class MVEVectorIndex<int NumLanes> : Operand<i32> {
   let PrintMethod = "printVectorIndex";
   let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // shift_imm: An integer that encodes a shift amount and the type of shift
@@ -1182,7 +1180,6 @@ def PostIdxImm8AsmOperand : AsmOperandClass { let Name = "PostIdxImm8"; }
 def postidx_imm8 : MemOperand {
   let PrintMethod = "printPostIdxImm8Operand";
   let ParserMatchClass = PostIdxImm8AsmOperand;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // postidx_imm8s4 := +/- [0,1020]
@@ -5189,12 +5186,6 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
 }
 
 let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-  // Pseudo instruction that combines movs + predicated rsbmi
-  // to implement integer ABS
-  def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
-}
-
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -6448,7 +6439,7 @@ def : ARMInstAlias<"neg${s}${p} $Rd, $Rm",
                    (RSBri GPR:$Rd, GPR:$Rm, 0, pred:$p, cc_out:$s)>;
 
 // Pre-v6, 'mov r0, r0' was used as a NOP encoding.
-def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, zero_reg), 0>,
+def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, (cc_out zero_reg)), 0>,
          Requires<[IsARM, NoV6]>;
 
 // MUL/UMLAL/SMLAL/UMULL/SMULL are available on all arches, but

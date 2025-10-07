@@ -36,6 +36,7 @@ struct PassRemarksOpt {
     }
   }
 };
+} // namespace
 
 static PassRemarksOpt PassRemarksPassedOptLoc;
 static PassRemarksOpt PassRemarksMissedOptLoc;
@@ -66,7 +67,6 @@ static cl::opt<PassRemarksOpt, true, cl::parser<std::string>>
             "Enable optimization analysis remarks from passes whose name match "
             "the given regular expression"),
         cl::Hidden, cl::location(PassRemarksAnalysisOptLoc), cl::ValueRequired);
-}
 
 bool DiagnosticHandler::isAnalysisRemarkEnabled(StringRef PassName) const {
   return (PassRemarksAnalysisOptLoc.Pattern &&

@@ -130,6 +130,8 @@ namespace std {
       size_type copy(charT* s, size_type n, size_type pos = 0) const;  // constexpr in C++20
 
       constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const;
+      constexpr basic_string_view subview(size_type pos = 0,
+                                          size_type n = npos) const;      // freestanding-deleted, since C++26
       constexpr int compare(basic_string_view s) const noexcept;
       constexpr int compare(size_type pos1, size_type n1, basic_string_view s) const;
       constexpr int compare(size_type pos1, size_type n1,
@@ -320,7 +322,7 @@ public:
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI basic_string_view(const _CharT* __s, size_type __len) _NOEXCEPT
       _LIBCPP_DIAGNOSE_NULLPTR_IF(__len != 0 && __s == nullptr, " if len is not zero")
       : __data_(__s), __size_(__len) {
-#  if _LIBCPP_STD_VER >= 14
+#  if !defined(_LIBCPP_CXX03_LANG) && (!defined(_LIBCPP_COMPILER_GCC) || _LIBCPP_STD_VER >= 14)
     // Allocations must fit in `ptrdiff_t` for pointer arithmetic to work. If `__len` exceeds it, the input
     // range could not have been valid. Most likely the caller underflowed some arithmetic and inadvertently
     // passed in a negative length.
@@ -460,10 +462,17 @@ public:
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI basic_string_view substr(size_type __pos = 0, size_type __n = npos) const {
     // Use the `__assume_valid` form of the constructor to avoid an unnecessary check. Any substring of a view is a
     // valid view. In particular, `size()` is known to be smaller than `numeric_limits<difference_type>::max()`, so the
-    // new size is also smaller. See also https://github.com/llvm/llvm-project/issues/91634.
+    // new size is also smaller. See also https://llvm.org/PR91634.
     return __pos > size() ? (__throw_out_of_range("string_view::substr"), basic_string_view())
                           : basic_string_view(__assume_valid(), data() + __pos, std::min(__n, size() - __pos));
   }
+
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view subview(size_type __pos = 0, size_type __n = npos) const {
+    return substr(__pos, __n);
+  }
+#  endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX14 int compare(basic_string_view __sv) const _NOEXCEPT {
     size_type __rlen = std::min(size(), __sv.size());
@@ -502,7 +511,6 @@ public:
   // find
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI size_type
   find(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT {
-    _LIBCPP_ASSERT_NON_NULL(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
     return std::__str_find<value_type, size_type, traits_type, npos>(data(), size(), __s.data(), __pos, __s.size());
   }
 
@@ -527,7 +535,6 @@ public:
   // rfind
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI size_type
   rfind(basic_string_view __s, size_type __pos = npos) const _NOEXCEPT {
-    _LIBCPP_ASSERT_NON_NULL(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
     return std::__str_rfind<value_type, size_type, traits_type, npos>(data(), size(), __s.data(), __pos, __s.size());
   }
 
@@ -553,7 +560,6 @@ public:
   // find_first_of
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI size_type
   find_first_of(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT {
-    _LIBCPP_ASSERT_NON_NULL(__s.size() == 0 || __s.data() != nullptr, "string_view::find_first_of(): received nullptr");
     return std::__str_find_first_of<value_type, size_type, traits_type, npos>(
         data(), size(), __s.data(), __pos, __s.size());
   }
@@ -580,7 +586,6 @@ public:
   // find_last_of
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI size_type
   find_last_of(basic_string_view __s, size_type __pos = npos) const _NOEXCEPT {
-    _LIBCPP_ASSERT_NON_NULL(__s.size() == 0 || __s.data() != nullptr, "string_view::find_last_of(): received nullptr");
     return std::__str_find_last_of<value_type, size_type, traits_type, npos>(
         data(), size(), __s.data(), __pos, __s.size());
   }
@@ -607,8 +612,6 @@ public:
   // find_first_not_of
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI size_type
   find_first_not_of(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT {
-    _LIBCPP_ASSERT_NON_NULL(
-        __s.size() == 0 || __s.data() != nullptr, "string_view::find_first_not_of(): received nullptr");
     return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>(
         data(), size(), __s.data(), __pos, __s.size());
   }
@@ -635,8 +638,6 @@ public:
   // find_last_not_of
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI size_type
   find_last_not_of(basic_string_view __s, size_type __pos = npos) const _NOEXCEPT {
-    _LIBCPP_ASSERT_NON_NULL(
-        __s.size() == 0 || __s.data() != nullptr, "string_view::find_last_not_of(): received nullptr");
     return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>(
         data(), size(), __s.data(), __pos, __s.size());
   }

@@ -1133,9 +1133,6 @@ static bool
 optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
                          const DataLayout &DL,
                          function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  // Ignore no-op GEPs and bitcasts.
-  StoredOnceVal = StoredOnceVal->stripPointerCasts();
-
   // If we are dealing with a pointer global that is initialized to null and
   // only has one (non-null) value stored into it, then we can optimize any
   // users of the loaded value (often calls and loads) that would trap if the
@@ -1683,7 +1680,9 @@ processGlobal(GlobalValue &GV,
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Fast);
 }
 
 static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
@@ -1769,10 +1768,12 @@ isValidCandidateForColdCC(Function &F,
     return false;
 
   for (User *U : F.users()) {
-    CallBase &CB = cast<CallBase>(*U);
-    Function *CallerFunc = CB.getParent()->getParent();
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(CB, CallerBFI))
+    if (!isColdCallSite(*CB, CallerBFI))
       return false;
     if (!llvm::is_contained(AllCallsCold, CallerFunc))
       return false;
@@ -1782,7 +1783,9 @@ isValidCandidateForColdCC(Function &F,
 
 static void changeCallSitesToColdCC(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Cold);
 }
 
 // This function iterates over all the call instructions in the input Function
@@ -2529,7 +2532,7 @@ static bool OptimizeNonTrivialIFuncs(
   bool Changed = false;
 
   // Cache containing the mask constructed from a function's target features.
-  DenseMap<Function *, uint64_t> FeatureMask;
+  DenseMap<Function *, APInt> FeatureMask;
 
   for (GlobalIFunc &IF : M.ifuncs()) {
     if (IF.isInterposable())
@@ -2554,7 +2557,8 @@ static bool OptimizeNonTrivialIFuncs(
         }))
       continue;
 
-    assert(!Callees.empty() && "Expecting successful collection of versions");
+    if (Callees.empty())
+      continue;
 
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << Resolver->getName() << "\n");
@@ -2568,7 +2572,7 @@ static bool OptimizeNonTrivialIFuncs(
 
     // Sort the callee versions in decreasing priority order.
     sort(Callees, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS] > FeatureMask[RHS];
+      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
     });
 
     // Find the callsites and cache the feature mask for each caller.
@@ -2591,10 +2595,10 @@ static bool OptimizeNonTrivialIFuncs(
 
     // Sort the caller versions in decreasing priority order.
     sort(Callers, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS] > FeatureMask[RHS];
+      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
     });
 
-    auto implies = [](uint64_t A, uint64_t B) { return (A & B) == B; };
+    auto implies = [](APInt A, APInt B) { return B.isSubsetOf(A); };
 
     // Index to the highest priority candidate.
     unsigned I = 0;
@@ -2603,8 +2607,8 @@ static bool OptimizeNonTrivialIFuncs(
       assert(I < Callees.size() && "Found callers of equal priority");
 
       Function *Callee = Callees[I];
-      uint64_t CallerBits = FeatureMask[Caller];
-      uint64_t CalleeBits = FeatureMask[Callee];
+      APInt CallerBits = FeatureMask[Caller];
+      APInt CalleeBits = FeatureMask[Callee];
 
       // In the case of FMV callers, we know that all higher priority callers
       // than the current one did not get selected at runtime, which helps

@@ -353,6 +353,37 @@ def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ClampFOp
+//===----------------------------------------------------------------------===//
+
+def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
+  let summary = "floating point clamping operation";
+  let description = [{
+    The `clampf` operation takes three operands and returns one result, each of
+    these is required to be the same type. Operands must be of floating point type
+    (i.e., scalar, tensor or vector).
+
+    The semantics of the operation are described by:
+    ```
+      clampf(value, min, max) = maxf(minf(value, min), max)
+    ```
+
+    Example:
+
+    ```mlir
+    %d = math.clampf %value to [%min, %max] : f64
+    ```
+  }];
+  let arguments = (ins FloatLike:$value, FloatLike:$min, FloatLike:$max,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let assemblyFormat = [{
+    $value `to` ` ` `[` $min `,` $max `]` (`fastmath` `` $fastmath^)?
+    attr-dict `:` type($result)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CopySignOp
 //===----------------------------------------------------------------------===//
 
@@ -477,6 +508,43 @@ def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
     ```
   }];
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SinCosOp
+//===----------------------------------------------------------------------===//
+
+def Math_SincosOp : Math_Op<"sincos",
+    [SameOperandsAndResultShape,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
+     AllTypesMatch<["operand", "sin", "cos"]>]> {
+  let summary = "sine and cosine of the specified value";
+  let description = [{
+    The `sincos` operation computes both the sine and cosine of a given value
+    simultaneously. It takes one operand of floating point type (i.e., scalar,
+    tensor or vector) and returns two results of the same type. This operation
+    can be more efficient than computing sine and cosine separately when both
+    values are needed.
+
+    Example:
+
+    ```mlir
+    // Scalar sine and cosine values.
+    %sin, %cos = math.sincos %input : f64
+    ```
+  }];
+
+  let arguments = (ins FloatLike:$operand,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let results = (outs FloatLike:$sin, FloatLike:$cos);
+
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($operand) }];
+
+  let extraClassDeclaration = [{
+    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
 }
 
 //===----------------------------------------------------------------------===//

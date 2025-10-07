@@ -118,7 +118,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         VariadicOuts = true;
       isVariadic = true;
       continue;
-    } else if (Rec->isSubClassOf("RegisterClass")) {
+    } else if (Rec->isSubClassOf("RegisterClassLike")) {
       OperandType = "OPERAND_REGISTER";
     } else if (!Rec->isSubClassOf("PointerLikeRegClass") &&
                !Rec->isSubClassOf("unknown_class")) {
@@ -143,12 +143,20 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
         MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
-      if (SubArgDag->getNumArgs() != NumOps) {
+      if (!MIOpInfo) {
         PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                          "', operand #" + Twine(i) + " has " +
                                          Twine(SubArgDag->getNumArgs()) +
-                                         " sub-arg names, expected " +
-                                         Twine(NumOps) + ".");
+                                         " sub-arg names, but no sub-operands");
+      }
+
+      unsigned NumSubArgs = SubArgDag->getNumArgs();
+      unsigned NumSubOps = MIOpInfo->getNumArgs();
+      if (NumSubArgs != NumSubOps) {
+        PrintFatalError(R->getLoc(),
+                        "In instruction '" + R->getName() + "', operand #" +
+                            Twine(i) + " has " + Twine(NumSubArgs) +
+                            " sub-arg names, expected " + Twine(NumSubOps));
       }
 
       for (unsigned j = 0; j < NumOps; ++j) {
@@ -183,8 +191,6 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
       OpInfo.EncoderMethodNames[0] = EncoderMethod;
-      OpInfo.DoNotEncode.set();
-      OpInfo.DoNotEncode[0] = false;
     }
 
     MIOperandNo += NumOps;
@@ -227,7 +233,7 @@ CGIOperandList::findSubOperandAlias(StringRef Name) const {
 }
 
 std::pair<unsigned, unsigned>
-CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
+CGIOperandList::parseOperandName(StringRef Op, bool AllowWholeOp) const {
   if (!Op.starts_with("$"))
     PrintFatalError(TheDef->getLoc(),
                     TheDef->getName() + ": Illegal operand name: '" + Op + "'");
@@ -307,7 +313,7 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
                       "Illegal format for @earlyclobber constraint in '" +
                           Rec->getName() + "': '" + CStr + "'");
     Name = Name.substr(wpos);
-    std::pair<unsigned, unsigned> Op = Ops.ParseOperandName(Name, false);
+    std::pair<unsigned, unsigned> Op = Ops.parseOperandName(Name, false);
 
     // Build the string for the operand
     if (!Ops[Op.first].Constraints[Op.second].isNone())
@@ -335,7 +341,7 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
                     "Illegal format for tied-to constraint in '" +
                         Rec->getName() + "': '" + CStr + "'");
   StringRef LHSOpName = CStr.substr(start, wpos - start);
-  std::pair<unsigned, unsigned> LHSOp = Ops.ParseOperandName(LHSOpName, false);
+  std::pair<unsigned, unsigned> LHSOp = Ops.parseOperandName(LHSOpName, false);
 
   wpos = CStr.find_first_not_of(" \t", pos + 1);
   if (wpos == StringRef::npos)
@@ -343,7 +349,7 @@ static void ParseConstraint(StringRef CStr, CGIOperandList &Ops,
                     "Illegal format for tied-to constraint: '" + CStr + "'");
 
   StringRef RHSOpName = CStr.substr(wpos);
-  std::pair<unsigned, unsigned> RHSOp = Ops.ParseOperandName(RHSOpName, false);
+  std::pair<unsigned, unsigned> RHSOp = Ops.parseOperandName(RHSOpName, false);
 
   // Sort the operands into order, which should put the output one
   // first. But keep the original order, for use in diagnostics.
@@ -403,21 +409,6 @@ static void ParseConstraints(StringRef CStr, CGIOperandList &Ops,
 
     ParseConstraint(CStr.substr(bidx, eidx - bidx), Ops, Rec);
     bidx = CStr.find_first_not_of(delims, eidx);
-  }
-}
-
-void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
-  while (true) {
-    StringRef OpName;
-    std::tie(OpName, DisableEncoding) = getToken(DisableEncoding, " ,\t");
-    if (OpName.empty())
-      break;
-
-    // Figure out which operand this is.
-    std::pair<unsigned, unsigned> Op = ParseOperandName(OpName, false);
-
-    // Mark the operand as not-to-be encoded.
-    OperandList[Op.first].DoNotEncode[Op.second] = true;
   }
 }
 
@@ -489,9 +480,6 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
 
   // Parse Constraints.
   ParseConstraints(R->getValueAsString("Constraints"), Operands, R);
-
-  // Parse the DisableEncoding field.
-  Operands.ProcessDisableEncoding(R->getValueAsString("DisableEncoding"));
 
   // First check for a ComplexDeprecationPredicate.
   if (R->getValue("ComplexDeprecationPredicate")) {

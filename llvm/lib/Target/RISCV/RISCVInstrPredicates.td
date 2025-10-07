@@ -49,6 +49,7 @@ def isSelectPseudo
                    MCReturnStatement<
                      CheckOpcode<[
                        Select_GPR_Using_CC_GPR,
+                       Select_GPR_Using_CC_Imm5_Zibi,
                        Select_GPR_Using_CC_SImm5_CV,
                        Select_GPRNoX0_Using_CC_SImm5NonZero_QC,
                        Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
@@ -146,6 +147,14 @@ def isNonZeroLoadImmediate
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
+                   ]>>>;
+
+def isLPAD
+    : TIIPredicate<"isLPAD",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[AUIPC]>,
+                     CheckIsRegOperand<0>,
+                     CheckRegOperand<0, X0>,
                    ]>>>;
 
 def ignoresVXRM

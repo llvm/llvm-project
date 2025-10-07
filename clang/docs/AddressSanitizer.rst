@@ -297,7 +297,7 @@ Instrumentation code outlining
 
 By default AddressSanitizer inlines the instrumentation code to improve the
 run-time performance, which leads to increased binary size. Using the
-(clang flag ``-fsanitize-address-outline-instrumentation` default: ``false``)
+(clang flag ``-fsanitize-address-outline-instrumentation`` default: ``false``)
 flag forces all code instrumentation to be outlined, which reduces the size
 of the generated code, but also reduces the run-time performance.
 

@@ -7,7 +7,7 @@
 /// Check whether an invalid OpenMP target is specified:
 // RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=aaa-bbb-ccc-ddd %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-INVALID-TARGET %s
-// CHK-INVALID-TARGET: error: OpenMP target is invalid: 'aaa-bbb-ccc-ddd'
+// CHK-INVALID-TARGET: error: invalid or unsupported offload target: 'aaa-bbb-ccc-ddd'
 
 /// ###########################################################################
 
@@ -15,15 +15,6 @@
 // RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=  %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-EMPTY-OMPTARGETS %s
 // CHK-EMPTY-OMPTARGETS: warning: joined argument expects additional value: '-fopenmp-targets='
-
-/// ###########################################################################
-
-/// Check error for no -fopenmp option
-// RUN:   not %clang -### -fopenmp-targets=powerpc64le-ibm-linux-gnu  %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-NO-FOPENMP %s
-// RUN:   not %clang -### -fopenmp=libgomp -fopenmp-targets=powerpc64le-ibm-linux-gnu  %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-NO-FOPENMP %s
-// CHK-NO-FOPENMP: error: '-fopenmp-targets' must be used in conjunction with a '-fopenmp' option compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5'
 
 /// ###########################################################################
 

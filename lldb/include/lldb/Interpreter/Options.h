@@ -85,10 +85,10 @@ public:
 
   void OutputFormattedUsageText(Stream &strm,
                                 const OptionDefinition &option_def,
-                                uint32_t output_max_columns);
+                                uint32_t output_max_columns, bool use_color);
 
   void GenerateOptionUsage(Stream &strm, CommandObject &cmd,
-                           uint32_t screen_width);
+                           uint32_t screen_width, bool use_color);
 
   bool SupportsLongOption(const char *long_option);
 

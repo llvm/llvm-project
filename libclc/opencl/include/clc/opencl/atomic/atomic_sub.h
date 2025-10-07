@@ -11,7 +11,7 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION atomic_sub
+#define __CLC_FUNCTION atomic_sub
 #include <clc/opencl/atomic/atomic_decl_legacy.inc>
 
 #endif // __CLC_OPENCL_ATOMIC_ATOMIC_SUB_H__

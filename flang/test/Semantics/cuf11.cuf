@@ -16,7 +16,7 @@ subroutine sub1()
   real, device :: adev(10), bdev(10)
   real :: ahost(10)
 
-!ERROR: More than one reference to a CUDA object on the right hand side of the assigment
+!ERROR: More than one reference to a CUDA object on the right hand side of the assignment
   ahost = adev + bdev
 
   ahost = adev + adev

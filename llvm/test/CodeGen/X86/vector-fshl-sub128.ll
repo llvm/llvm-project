@@ -250,7 +250,7 @@ define <2 x i32> @var_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %amt) 
 define <2 x i32> @splatvar_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %amt) nounwind {
 ; SSE2-LABEL: splatvar_funnnel_v2i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,1,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,0,0]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [31,31,31,31]
 ; SSE2-NEXT:    movdqa %xmm3, %xmm5
 ; SSE2-NEXT:    pandn %xmm4, %xmm5
@@ -286,7 +286,7 @@ define <2 x i32> @splatvar_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %
 ;
 ; SSE41-LABEL: splatvar_funnnel_v2i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm3 = [31,31,31,31]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm4
 ; SSE41-NEXT:    pandn %xmm3, %xmm4
@@ -316,7 +316,7 @@ define <2 x i32> @splatvar_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %
 ;
 ; AVX1-LABEL: splatvar_funnnel_v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [31,31,31,31]
 ; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm4[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -423,7 +423,7 @@ define <2 x i32> @splatvar_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %
 ;
 ; XOPAVX1-LABEL: splatvar_funnnel_v2i32:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [31,31,31,31]
 ; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; XOPAVX1-NEXT:    vpshld %xmm4, %xmm0, %xmm0
@@ -450,7 +450,7 @@ define <2 x i32> @splatvar_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %
 ;
 ; X86-SSE2-LABEL: splatvar_funnnel_v2i32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,1,1]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,0,0]
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [31,31,31,31]
 ; X86-SSE2-NEXT:    movdqa %xmm3, %xmm5
 ; X86-SSE2-NEXT:    pandn %xmm4, %xmm5
