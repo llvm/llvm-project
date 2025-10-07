@@ -253,13 +253,14 @@ static cl::opt<PGOKind>
                            clEnumValN(SampleUse, "pgo-sample-use-pipeline",
                                       "Use sampled profile to guide PGO.")));
 
-// Function to set PGO options on TargetMachine based on command line flags
+// Function to set PGO options on TargetMachine based on command line flags.
 static void setPGOOptions(TargetMachine &TM) {
   std::optional<PGOOptions> PGOOpt;
 
   switch (PGOKindFlag) {
   case SampleUse:
-    // Use default values for other PGOOptions parameters
+    // Use default values for other PGOOptions parameters. This parameter
+    // is used to test that PGO data is preserved at -O0.
     PGOOpt = PGOOptions("", "", "", "", PGOOptions::SampleUse,
                         PGOOptions::NoCSAction);
     break;

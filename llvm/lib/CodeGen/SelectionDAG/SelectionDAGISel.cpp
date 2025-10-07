@@ -237,7 +237,7 @@ static bool shouldRegisterPGOPasses(const TargetMachine &TM,
     const PGOOptions &Options = *TM.getPGOOption();
     return Options.Action == PGOOptions::PGOAction::IRUse ||
            Options.Action == PGOOptions::PGOAction::SampleUse ||
-           Options.CSAction != PGOOptions::CSPGOAction::CSIRUse;
+           Options.CSAction != PGOOptions::CSPGOAction::NoCSAction;
   }
   return false;
 }
