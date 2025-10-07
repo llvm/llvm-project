@@ -17,9 +17,7 @@ namespace test {
 void registerTestPointerLikeTypeInterfacePass();
 
 // Unified registration function for all OpenACC tests
-void registerTestOpenACC() {
-  registerTestPointerLikeTypeInterfacePass();
-}
+void registerTestOpenACC() { registerTestPointerLikeTypeInterfacePass(); }
 
 } // namespace test
 } // namespace mlir

@@ -26,7 +26,7 @@ namespace {
 
 struct OperationTracker : public OpBuilder::Listener {
   SmallVector<Operation *> insertedOps;
-  
+
   void notifyOperationInserted(Operation *op,
                                OpBuilder::InsertPoint previous) override {
     insertedOps.push_back(op);
@@ -72,8 +72,9 @@ private:
                        OpBuilder &builder);
   void testGenFree(Operation *op, Value result, PointerLikeType pointerType,
                    OpBuilder &builder);
-  void testGenCopy(Operation *srcOp, Operation *destOp, Value srcResult, Value destResult,
-                   PointerLikeType pointerType, OpBuilder &builder);
+  void testGenCopy(Operation *srcOp, Operation *destOp, Value srcResult,
+                   Value destResult, PointerLikeType pointerType,
+                   OpBuilder &builder);
 
   struct PointerCandidate {
     Operation *op;
@@ -144,7 +145,8 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
     // Try copying from each source to each destination
     for (const auto &src : sources) {
       for (const auto &dest : destinations) {
-        testGenCopy(src.op, dest.op, src.result, dest.result, src.pointerType, builder);
+        testGenCopy(src.op, dest.op, src.result, dest.result, src.pointerType,
+                    builder);
       }
     }
   }
@@ -253,12 +255,9 @@ void TestPointerLikeTypeInterfacePass::testGenFree(Operation *op, Value result,
   }
 }
 
-void TestPointerLikeTypeInterfacePass::testGenCopy(Operation *srcOp,
-                                                   Operation *destOp,
-                                                   Value srcResult,
-                                                   Value destResult,
-                                                   PointerLikeType pointerType,
-                                                   OpBuilder &builder) {
+void TestPointerLikeTypeInterfacePass::testGenCopy(
+    Operation *srcOp, Operation *destOp, Value srcResult, Value destResult,
+    PointerLikeType pointerType, OpBuilder &builder) {
   Location loc = destOp->getLoc();
 
   // Create a new builder with the listener and set insertion point

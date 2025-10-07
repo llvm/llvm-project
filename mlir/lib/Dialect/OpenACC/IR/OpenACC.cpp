@@ -84,8 +84,8 @@ struct MemRefPointerLikeModel
       return true;
     }
 
-    // For dynamic memrefs, extract sizes from the original variable if provided.
-    // Otherwise they cannot be handled.
+    // For dynamic memrefs, extract sizes from the original variable if
+    // provided. Otherwise they cannot be handled.
     if (originalVar && originalVar.getType() == memrefTy &&
         memrefTy.hasRank()) {
       SmallVector<Value> dynamicSizes;
@@ -103,7 +103,6 @@ struct MemRefPointerLikeModel
       memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
       return true;
     }
-
 
     // TODO: Unranked not yet supported.
     return false;
