@@ -652,6 +652,19 @@ define amdgpu_kernel void @physreg_raises_limit() {
   ret void
 }
 
+; FIXME: This should require 9. We cannot allocate an a128 at a0.
+define amdgpu_kernel void @physreg_tuple_alignment_raises_limit() {
+; CHECK-LABEL: define amdgpu_kernel void @physreg_tuple_alignment_raises_limit(
+; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0, $1", "a,{a[1:4]}"(<4 x i32> poison, <4 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
