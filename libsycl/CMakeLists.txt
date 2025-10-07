@@ -31,6 +31,12 @@ endif()
 option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl project" OFF)
 option(LIBSYCL_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 
+# If LIBSYCL_ENABLE_BACKENDS is undefined, we default to enabling OpenCL and Level
+# Zero backends.
+if (NOT DEFINED LIBSYCL_ENABLE_BACKENDS)
+  set(LIBSYCL_ENABLE_BACKENDS "opencl;level_zero" CACHE STRING "Backends enabled for SYCL")
+endif()
+
 #===============================================================================
 # Configure System
 #===============================================================================
@@ -76,6 +82,14 @@ set(LIBSYCL_ABI_NAMESPACE "__V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
 if (NOT LIBSYCL_ABI_NAMESPACE MATCHES "__V.*")
    message(FATAL_ERROR "LIBSYCL_ABI_NAMESPACE must be a reserved identifier, got '${LIBSYCL_ABI_NAMESPACE}'.")
 endif()
+
+#===============================================================================
+# Dependencies
+#===============================================================================
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+# Download & build dependency for kernel offloading
+include(FetchUnifiedRuntime)
 
 #===============================================================================
 # Setup build & install rules
