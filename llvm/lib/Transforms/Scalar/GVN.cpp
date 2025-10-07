@@ -54,6 +54,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -2204,6 +2205,23 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
         uint32_t RVN = VN.lookupOrAdd(CmpRHS);
         if (LVN < RVN)
           std::swap(CmpLHS, CmpRHS);
+      }
+
+      // Optimize AMDGPU ballot pattern: assume(ballot(cmp) == -1) or
+      // assume(ballot(cmp) == exec_mask). This implies cmp is true on all
+      // active lanes and hence can be replaced with true.
+      if (isa<IntrinsicInst>(CmpLHS) && isa<Constant>(CmpRHS)) {
+        auto *IntrCall = cast<IntrinsicInst>(CmpLHS);
+        // Check if CmpLHS is a ballot intrinsic
+        if (IntrCall->getIntrinsicID() ==
+            Intrinsic::AMDGCNIntrinsics::amdgcn_ballot) {
+          Value *BallotArg = IntrCall->getArgOperand(0);
+          if (BallotArg->getType()->isIntegerTy(1) &&
+              (match(CmpRHS, m_AllOnes()) || !isa<Constant>(CmpRHS))) {
+            CmpLHS = BallotArg;
+            CmpRHS = ConstantInt::getTrue(BallotArg->getType());
+          }
+        }
       }
 
       // Handle degenerate case where we either haven't pruned a dead path or a
