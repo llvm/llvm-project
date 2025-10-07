@@ -12,38 +12,26 @@
 # CHECK-NOT: UNREACHABLE
 
 // Now BOLT throws a warning and does not crash.
-# CHECK: BOLT-WARNING: symbol [[SYM:.*]]  is in data region of function 0x{{.*}}.
+# CHECK: BOLT-WARNING: symbol third_block/1  is in data region of function first_block(0x{{[0-9a-f]+}}).
 
 .text
 .global main
 main:
-        stp     x14, x15, [sp, -8]!
-        mov     x14, sp
-        adrp    x1, .test
-        add     x0, x1, :lo12:.test
+        add     x0, x1, x1
         bl      first_block
         ret
 
 .global first_block
 $d:
 first_block:
-        stp     x14, x15, [sp, -8]!
-        mov     x14, sp
+        add     x0, x1, x1
         bl      second_block
         ret
 second_block:
-        stp     x14, x15, [sp, -8]!
-        mov     x14, sp
+        add     x0, x1, x1
         bl      third_block
         ret
 $x:
 third_block:
-        stp     x14, x15, [sp, -8]!
-        mov     x14, sp
-        adrp    x1, .data
-        add     x0, x1, :lo12:.test
+        add     x0, x1, x1
         ret
-
-.data
-.test:
-        .string "test"
