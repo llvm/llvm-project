@@ -1049,8 +1049,11 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  // Call the generated builder with all parameters (including optional ones as
+  // nullptr/empty)
   build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
-        layout);
+        /*vec_length=*/nullptr, /*vec_direction=*/nullptr,
+        /*subgroupBlockIO=*/nullptr, layout);
 }
 
 LogicalResult LoadMatrixOp::verify() {
@@ -1097,7 +1100,7 @@ LogicalResult StoreMatrixOp::verify() {
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
   if (dataShape.size() != 1) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
-                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+                     [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitOpError("data shape must not exceed mem_desc shape.");
   }
   return success();

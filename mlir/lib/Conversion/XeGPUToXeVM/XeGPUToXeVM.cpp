@@ -371,7 +371,8 @@ static Value addOffset(ConversionPatternRewriter &rewriter, Location loc,
                        Value baseAddr, Value offset, int64_t elemByteSize) {
   Value byteSize = arith::ConstantIntOp::create(
       rewriter, loc, rewriter.getI64Type(), elemByteSize);
-  offset = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(), offset);
+  offset = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(),
+                                        offset);
   Value byteOffset = arith::MulIOp::create(rewriter, loc, offset, byteSize);
   Value newAddr = arith::AddIOp::create(rewriter, loc, baseAddr, byteOffset);
   return newAddr;
@@ -513,29 +514,36 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
 // on Xe2 and Xe3 operate on 32-bit or 64-bit units, all data types smaller than
 // 32 bits will be converted to 32 bits.
 class CreateMemDescOpPattern final
-  : public OpConversionPattern<xegpu::CreateMemDescOp> {
+    : public OpConversionPattern<xegpu::CreateMemDescOp> {
 public:
   using OpConversionPattern<xegpu::CreateMemDescOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
-          ConversionPatternRewriter &rewriter) const override {
-  // DEBUG: Print operation and types
-  LLVM_DEBUG(llvm::dbgs() << "[XeGPUToXeVM] Lowering CreateMemDescOp: " << op << "\n");
-  TypedValue<MemRefType> src = op.getSource();
-  auto resTy = cast<xegpu::MemDescType>(op.getResult().getType());
- 
-  // Create the result MemRefType with the same shape, element type, and memory space
-  auto newResTy = getTypeConverter()->convertType<MemRefType>(resTy);
-  
-  LLVM_DEBUG(llvm::dbgs() << "[XeGPUToXeVM] Source MemRefType: " << src.getType() << "\n");
-  LLVM_DEBUG(llvm::dbgs() << "[XeGPUToXeVM] Result MemDescType: " << resTy << "\n");
-  LLVM_DEBUG(llvm::dbgs() << "[XeGPUToXeVM] Converted MemRefType: " << newResTy << "\n");
-  Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
-  auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy, Value(src), zero,
-                        ValueRange());
-  rewriter.replaceOp(op, viewOp);
-  LLVM_DEBUG(llvm::dbgs() << "[XeGPUToXeVM] Replaced CreateMemDescOp with memref::ViewOp\n");
-  return success();
+                  ConversionPatternRewriter &rewriter) const override {
+    // DEBUG: Print operation and types
+    LLVM_DEBUG(llvm::dbgs()
+               << "[XeGPUToXeVM] Lowering CreateMemDescOp: " << op << "\n");
+    TypedValue<MemRefType> src = op.getSource();
+    auto resTy = cast<xegpu::MemDescType>(op.getResult().getType());
+
+    // Create the result MemRefType with the same shape, element type, and
+    // memory space
+    auto newResTy = getTypeConverter()->convertType<MemRefType>(resTy);
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "[XeGPUToXeVM] Source MemRefType: " << src.getType() << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "[XeGPUToXeVM] Result MemDescType: " << resTy << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "[XeGPUToXeVM] Converted MemRefType: " << newResTy << "\n");
+    Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
+    auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy,
+                                         Value(src), zero, ValueRange());
+    rewriter.replaceOp(op, viewOp);
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << "[XeGPUToXeVM] Replaced CreateMemDescOp with memref::ViewOp\n");
+    return success();
   }
 };
 
@@ -550,7 +558,6 @@ public:
         op, "MemDescSubviewOp are not supported on Xe2/Xe3 architecture.");
   }
 };
-
 
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
@@ -577,7 +584,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       data = adaptor.getData();
     VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
 
-    int64_t elemBitWidth = valOrResVecTy.getElementType().getIntOrFloatBitWidth();
+    int64_t elemBitWidth =
+        valOrResVecTy.getElementType().getIntOrFloatBitWidth();
     // Element type must be multiple of 8 bits.
     if (elemBitWidth % 8 != 0)
       return rewriter.notifyMatchFailure(
@@ -589,14 +597,17 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::SLM));
 
     auto mdescTy = cast<xegpu::MemDescType>(mdescVal.getType());
-    
-    Value basePtrLLVM = memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, basePtrStruct);
+
+    Value basePtrLLVM = memref::ExtractAlignedPointerAsIndexOp::create(
+        rewriter, loc, basePtrStruct);
 
     // Convert base pointer (ptr) to i64
-    Value basePtrI64 = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(), basePtrLLVM);
+    Value basePtrI64 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI64Type(), basePtrLLVM);
 
     Value linearOffset = mdescTy.getLinearOffsets(rewriter, loc, offsets);
-    basePtrI64 = addOffset(rewriter, loc, basePtrI64, linearOffset, elemByteSize);
+    basePtrI64 =
+        addOffset(rewriter, loc, basePtrI64, linearOffset, elemByteSize);
 
     // convert base pointer (i64) to LLVM pointer type
     basePtrLLVM =

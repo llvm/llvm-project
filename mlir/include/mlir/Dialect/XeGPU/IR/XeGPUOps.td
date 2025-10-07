@@ -1302,6 +1302,9 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   let arguments = (ins XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<I32Attr>:$vec_length,
+    OptionalAttr<MatrixAccessDirectionAttr>:$vec_direction,
+    OptionalAttr<UnitAttr>:$subgroupBlockIO,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let results = (outs XeGPU_ValueType:$res);
