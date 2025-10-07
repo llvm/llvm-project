@@ -33,7 +33,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
   SmallString<256> CurrentPath;
   sys::fs::current_path(CurrentPath);
-  sys::fs::make_absolute(CurrentPath, FileName);
+  sys::path::make_absolute(CurrentPath, FileName);
 
   // Mount the VFS file itself on the path 'virtual.file'. Makes this test
   // a bit shorter than creating a new dummy file just for this purpose.
