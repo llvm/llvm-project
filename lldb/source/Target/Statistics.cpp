@@ -541,7 +541,12 @@ void TargetStats::SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread) {
 
     // Add the time it took to load and index the module.
     elapsed_time += module_sp->GetSymtabParseTime().get().count();
-    elapsed_time += module_sp->GetSymtabParseTime().get().count();
+
+    // Walk over all the symbol locators and add their time. A symbol locator
+    // could have been called and no symbol was found.
+    for (const auto &entry : module_sp->GetSymbolLocatorStatistics().map) {
+      elapsed_time += entry.second;
+    }
 
     // Add the time it took to load and index the debug info. Can create
     // false is very important here. We don't want this call to have any side
@@ -551,12 +556,6 @@ void TargetStats::SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread) {
       continue;
 
     elapsed_time += sym_file->GetDebugInfoParseTime().count();
-    elapsed_time += sym_file->GetDebugInfoIndexTime().count();
-
-    // Lastly, walk over all the symbol locators and add their time.
-    for (const auto &entry : module_sp->GetSymbolLocatorStatistics().map) {
-      elapsed_time += entry.second;
-    }
   }
 
   // Process should be valid if we've already generated a backtrace.
