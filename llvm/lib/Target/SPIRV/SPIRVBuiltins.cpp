@@ -2432,8 +2432,9 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   // Memory operand is optional and is literal.
   if (ArgSz > 3)
-    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[/*Literal index*/ 3], MRI));
-  
+    ImmArgs.push_back(
+        getConstFromIntrinsic(Call->Arguments[/*Literal index*/ 3], MRI));
+
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
   return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                             IsSet ? TypeReg : Register(0), ImmArgs);
