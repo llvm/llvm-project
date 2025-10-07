@@ -2026,7 +2026,9 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcast from i32, v2i16, and v4i8 to v32i1.
   // Splat the input into a 32-element i32 vector, then AND each element
   // with a unique bitmask to isolate individual bits.
-  auto toV32i1Fromi32 = [&](SDValue Val32) {
+  auto bitcastI32ToV32I1 = [&](SDValue Val32) {
+    assert(Val32.getValueType().getSizeInBits() == 32 &&
+           "Input must be 32 bits");
     MVT VecTy = MVT::getVectorVT(MVT::i32, 32);
     SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Val32);
     SmallVector<SDValue, 32> Mask;
@@ -2044,7 +2046,7 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
     SDValue Val32 = Val;
     if (ValTy == MVT::v2i16 || ValTy == MVT::v4i8)
       Val32 = DAG.getNode(ISD::BITCAST, dl, MVT::i32, Val);
-    return toV32i1Fromi32(Val32);
+    return bitcastI32ToV32I1(Val32);
   }
   // === Case: v64i1 ===
   if (ResTy == MVT::v64i1 && ValTy == MVT::i64 && Subtarget.useHVX128BOps()) {
@@ -2055,8 +2057,8 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
     SDValue Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, HiShifted);
 
     // Reuse the same 32-bit logic twice.
-    SDValue LoRes = toV32i1Fromi32(Lo);
-    SDValue HiRes = toV32i1Fromi32(Hi);
+    SDValue LoRes = bitcastI32ToV32I1(Lo);
+    SDValue HiRes = bitcastI32ToV32I1(Hi);
 
     // Concatenate into a v64i1 predicate.
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, LoRes, HiRes);

@@ -1,6 +1,6 @@
 ; RUN: llc --mtriple=hexagon -mattr=+hvxv79,+hvx-length128b < %s | FileCheck %s
-; CHECK-DAG: [[REG0:(r[0-9]+):[0-9]+]] = combine(##.LCPI0_0,#-1)
-; CHECK-DAG: [[VREG1:v([0-9]+)]] = vmem(r{{[0-9]+}}+#0)
+; CHECK-DAG: r[[REGH:([0-9]+)]]:[[REGL:([0-9]+)]] = combine(##.LCPI0_0,#-1)
+; CHECK-DAG: [[VREG1:v([0-9]+)]] = vmem(r[[REGH]]+#0)
 ; CHECK-DAG: [[REG1:(r[0-9]+)]] = memw(r{{[0-9]+}}+#4)
 ; CHECK-DAG: [[VREG2:v([0-9]+)]] = vsplat([[REG1]])
 ; CHECK-DAG: [[REG2:(r[0-9]+)]] = memw(r{{[0-9]+}}+#0)
