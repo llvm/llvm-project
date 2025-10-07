@@ -41,8 +41,10 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -647,6 +649,45 @@ StringRef CGDebugInfo::getCurrentDirname() {
   return CGM.getCodeGenOpts().DebugCompilationDir;
 }
 
+static llvm::DISourceLanguageName
+GetDISourceLanguageName(const CodeGenModule &CGM) {
+  const CodeGenOptions &CGO = CGM.getCodeGenOpts();
+  const LangOptions &LO = CGM.getLangOpts();
+
+  llvm::dwarf::SourceLanguage LangTag;
+  if (LO.CPlusPlus) {
+    if (LO.ObjC)
+      LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
+    else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
+    else if (LO.CPlusPlus14)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
+    else if (LO.CPlusPlus11)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
+    else
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
+  } else if (LO.ObjC) {
+    LangTag = llvm::dwarf::DW_LANG_ObjC;
+  } else if (LO.OpenCL && (!CGO.DebugStrictDwarf || CGO.DwarfVersion >= 5)) {
+    LangTag = llvm::dwarf::DW_LANG_OpenCL;
+  } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
+    LangTag = llvm::dwarf::DW_LANG_C11;
+  } else if (LO.C99) {
+    LangTag = llvm::dwarf::DW_LANG_C99;
+  } else {
+    LangTag = llvm::dwarf::DW_LANG_C89;
+  }
+
+  // FIXME: for some languages that don't have a DW_LNAME_* we would fall back
+  // to emitting a DW_LANG_. Which is technically obsolete starting with
+  // DWARFv6.
+  if (CGO.DwarfVersion >= 6)
+    if (auto LName = llvm::dwarf::toDW_LNAME(LangTag))
+      return llvm::DISourceLanguageName(LName->first, LName->second);
+
+  return llvm::DISourceLanguageName(LangTag);
+}
+
 void CGDebugInfo::CreateCompileUnit() {
   SmallString<64> Checksum;
   std::optional<llvm::DIFile::ChecksumKind> CSKind;
@@ -700,31 +741,6 @@ void CGDebugInfo::CreateCompileUnit() {
     } else {
       CSKind = computeChecksum(SM.getMainFileID(), Checksum);
     }
-  }
-
-  llvm::dwarf::SourceLanguage LangTag;
-  if (LO.CPlusPlus) {
-    if (LO.ObjC)
-      LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
-    else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
-    else if (LO.CPlusPlus14)
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
-    else if (LO.CPlusPlus11)
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
-    else
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
-  } else if (LO.ObjC) {
-    LangTag = llvm::dwarf::DW_LANG_ObjC;
-  } else if (LO.OpenCL && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
-                           CGM.getCodeGenOpts().DwarfVersion >= 5)) {
-    LangTag = llvm::dwarf::DW_LANG_OpenCL;
-  } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
-      LangTag = llvm::dwarf::DW_LANG_C11;
-  } else if (LO.C99) {
-    LangTag = llvm::dwarf::DW_LANG_C99;
-  } else {
-    LangTag = llvm::dwarf::DW_LANG_C89;
   }
 
   std::string Producer = getClangFullVersion();
@@ -787,7 +803,7 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
-      llvm::DISourceLanguageName(LangTag), CUFile,
+      GetDISourceLanguageName(CGM), CUFile,
       CGOpts.EmitVersionIdentMetadata ? Producer : "",
       CGOpts.OptimizationLevel != 0 || CGOpts.PrepareForLTO ||
           CGOpts.PrepareForThinLTO,
@@ -1231,18 +1247,44 @@ llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
                                Ty->getPointeeType(), Unit);
 }
 
-/// \return whether a C++ mangling exists for the type defined by TD.
-static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
-  switch (TheCU->getSourceLanguage().getUnversionedName()) {
+static bool hasCXXMangling(llvm::dwarf::SourceLanguage Lang, bool IsTagDecl) {
+  switch (Lang) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
     return true;
   case llvm::dwarf::DW_LANG_ObjC_plus_plus:
-    return isa<CXXRecordDecl>(TD) || isa<EnumDecl>(TD);
+    return IsTagDecl;
   default:
     return false;
   }
+}
+
+static bool hasCXXMangling(llvm::dwarf::SourceLanguageName Lang,
+                           bool IsTagDecl) {
+  switch (Lang) {
+  case llvm::dwarf::DW_LNAME_C_plus_plus:
+    return true;
+  case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
+    return IsTagDecl;
+  default:
+    return false;
+  }
+}
+
+/// \return whether a C++ mangling exists for the type defined by TD.
+static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
+  const bool IsTagDecl = isa<CXXRecordDecl>(TD) || isa<EnumDecl>(TD);
+
+  if (llvm::DISourceLanguageName SourceLang = TheCU->getSourceLanguage();
+      SourceLang.hasVersionedName())
+    return hasCXXMangling(
+        static_cast<llvm::dwarf::SourceLanguageName>(SourceLang.getName()),
+        IsTagDecl);
+  else
+    return hasCXXMangling(
+        static_cast<llvm::dwarf::SourceLanguage>(SourceLang.getName()),
+        IsTagDecl);
 }
 
 // Determines if the debug info for this tag declaration needs a type
