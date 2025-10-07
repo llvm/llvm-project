@@ -359,6 +359,8 @@ HexagonTargetLowering::initializeHVXLowering() {
   setCondCodeAction(ISD::SETULE, MVT::v64f16, Expand);
   setCondCodeAction(ISD::SETUGE, MVT::v64f16, Expand);
   setCondCodeAction(ISD::SETULT, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETUO, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETO, MVT::v64f16, Expand);
 
   setCondCodeAction(ISD::SETNE,  MVT::v32f32, Expand);
   setCondCodeAction(ISD::SETLE,  MVT::v32f32, Expand);
@@ -372,6 +374,8 @@ HexagonTargetLowering::initializeHVXLowering() {
   setCondCodeAction(ISD::SETULE, MVT::v32f32, Expand);
   setCondCodeAction(ISD::SETUGE, MVT::v32f32, Expand);
   setCondCodeAction(ISD::SETULT, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETUO, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETO, MVT::v32f32, Expand);
 
   // Boolean vectors.
 

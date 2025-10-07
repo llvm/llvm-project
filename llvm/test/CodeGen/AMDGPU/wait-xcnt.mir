@@ -945,6 +945,46 @@ body: |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
 
+# FIXME: Missing S_WAIT_XCNT before overwriting vgpr0.
+---
+name: wait_kmcnt_with_outstanding_vmem_2
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  ; GCN-LABEL: name: wait_kmcnt_with_outstanding_vmem_2
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+  ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   liveins: $sgpr2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_WAIT_KMCNT 0
+  ; GCN-NEXT:   $sgpr2 = S_MOV_B32 $sgpr2
+  ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  bb.0:
+    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+  bb.1:
+    liveins: $vgpr0_vgpr1, $sgpr2
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  bb.2:
+    liveins: $sgpr2
+    $sgpr2 = S_MOV_B32 $sgpr2
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+...
+
 ---
 name: wait_loadcnt_with_outstanding_smem
 tracksRegLiveness: true

@@ -1894,7 +1894,7 @@ void DeclPrinter::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *TTP) {
       Out << TTP->getDeclName();
   }
 
-  if (TTP->hasDefaultArgument()) {
+  if (TTP->hasDefaultArgument() && !TTP->defaultArgumentWasInherited()) {
     Out << " = ";
     TTP->getDefaultArgument().getArgument().print(Policy, Out,
                                                   /*IncludeType=*/false);
@@ -1909,7 +1909,7 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
         Policy.CleanUglifiedParameters ? II->deuglifiedName() : II->getName();
   printDeclType(NTTP->getType(), Name, NTTP->isParameterPack());
 
-  if (NTTP->hasDefaultArgument()) {
+  if (NTTP->hasDefaultArgument() && !NTTP->defaultArgumentWasInherited()) {
     Out << " = ";
     NTTP->getDefaultArgument().getArgument().print(Policy, Out,
                                                    /*IncludeType=*/false);

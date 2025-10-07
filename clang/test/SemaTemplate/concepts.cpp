@@ -1333,4 +1333,75 @@ static_assert(__cpp17_iterator<not_move_constructible>); \
 // expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
 }
 
+namespace case4 {
+
+template<bool b>
+concept bool_ = b;
+
+template<typename... Ts>
+concept unary = bool_<sizeof...(Ts) == 1>;
+
+static_assert(!unary<>);
+static_assert(unary<void>);
+
+}
+
+namespace case5 {
+
+template<int size>
+concept true1 = size == size;
+
+template<typename... Ts>
+concept true2 = true1<sizeof...(Ts)>;
+
+template<typename... Ts>
+concept true3 = true2<Ts...>;
+
+static_assert(true3<void>);
+
+}
+
+namespace case6 {
+
+namespace std {
+template <int __v>
+struct integral_constant {
+  static const int value = __v;
+};
+
+template <class _Tp, class... _Args>
+constexpr bool is_constructible_v = __is_constructible(_Tp, _Args...);
+
+template <class _From, class _To>
+constexpr bool is_convertible_v = __is_convertible(_From, _To);
+
+template <class>
+struct tuple_size;
+
+template <class _Tp>
+constexpr decltype(sizeof(int)) tuple_size_v = tuple_size<_Tp>::value;
+}  // namespace std
+
+template <int N, int X>
+concept FixedExtentConstructibleFromExtent = X == N;
+
+template <int Extent>
+struct span {
+  int static constexpr extent = Extent;
+  template <typename R, int N = std::tuple_size_v<R>>
+    requires(FixedExtentConstructibleFromExtent<extent, N>)
+  span(R);
+};
+
+template <class, int>
+struct array {};
+
+template <class _Tp, decltype(sizeof(int)) _Size>
+struct std::tuple_size<array<_Tp, _Size>> : integral_constant<_Size> {};
+
+static_assert(std::is_convertible_v<array<int, 3>, span<3>>);
+static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
+
+}
+
 }
