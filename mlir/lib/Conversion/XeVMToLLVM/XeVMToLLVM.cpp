@@ -641,16 +641,21 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     // https://registry.khronos.org/OpenCL/extensions/
     //         intel/cl_intel_subgroup_local_block_io.html
     std::string funcName{"intel_sub_group_block_"};
-    funcName += isStore ? "write_u" : "read_u";
-    VectorType vecType;
-    if constexpr (isStore)
-      vecType = op.getVal().getType();
-    else
-      vecType = op.getType();
-    Type elemType = vecType.getElementType();
+    // Value or Result type can be vector or scalar
+    Type valOrResTy;
+    if constexpr (isStore) {
+      funcName += "write_u";
+      valOrResTy = op.getVal().getType();
+    } else {
+      funcName += "read_u";
+      valOrResTy = op.getType();
+    }
+    // Get element type of the vector/scalar
+    VectorType vecTy = dyn_cast<VectorType>(valOrResTy);
+    Type elemType = vecTy ? vecTy.getElementType() : valOrResTy;
     funcName += getTypeMangling(elemType);
-    if (vecType.getNumElements() > 1)
-      funcName += std::to_string(vecType.getNumElements());
+    if (vecTy)
+      funcName += std::to_string(vecTy.getNumElements());
     SmallVector<Type, 2> argTypes{};
     // XeVM BlockLoad/StoreOp always use signless integer types
     // but OpenCL builtins expect unsigned types
@@ -670,19 +675,14 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
       isUnsigned.push_back(true);
       retType = LLVM::LLVMVoidType::get(rewriter.getContext());
     } else {
-      /*
-      retType = VectorType::get(vecType.getShape(),
-                                rewriter.getIntegerType(elemType.getIntOrFloatBitWidth(),
-                                                        false));
-                                                        */
-      retType = vecType;
+      retType = valOrResTy;
     }
     funcName = std::string("_Z") + std::to_string(funcName.size()) + funcName +
                "PU3AS" +
                std::to_string(op.getPtr().getType().getAddressSpace());
     funcName += getTypeMangling(elemType, /*isUnsigned=*/true);
     if constexpr (isStore)
-      funcName += getTypeMangling(vecType, /*isUnsigned=*/true);
+      funcName += getTypeMangling(valOrResTy, /*isUnsigned=*/true);
     LLVMFuncAttributeOptions funcAttr{noUnwindWillReturnAttrs};
 
     LLVM::CallOp call =
