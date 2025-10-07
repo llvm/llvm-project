@@ -719,6 +719,8 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
   PrimType AmountT = *S.getContext().classify(Call->getArg(1)->getType());
   PrimType ValueT = *S.getContext().classify(Call->getArg(0)->getType());
 
+  uint64_t N = Value.countr_zero();
+  pushInteger(S, N == Value.getBitWidth() ? 0 : N + 1, Call->getType());
   APSInt Amount = popToAPSInt(S.Stk, AmountT);
   APSInt Value = popToAPSInt(S.Stk, ValueT);
 
