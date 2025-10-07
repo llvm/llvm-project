@@ -328,7 +328,7 @@ void NormalizePass::foldOperation(mlir::Operation* op) {
   auto opName = split(Stream.str(), '=')[0];
   if(!starts_with(opName, "%op")) return;
 
-  SmallVector<SmallString<64>, 4> Operands;
+  SmallVector<std::string, 4> Operands;
 
   for (mlir::Value operand : op->getOperands()) {
     if (mlir::Operation *defOp = operand.getDefiningOp()) {
@@ -341,9 +341,9 @@ void NormalizePass::foldOperation(mlir::Operation* op) {
       bool hasNormalName = (starts_with(name, "%op") || starts_with(name, "%vl"));
 
       if(hasNormalName) {
-        Operands.push_back(StringRef(name.substr(1, 7)));
+        Operands.push_back(name.substr(1, 7));
       } else {
-        Operands.push_back(StringRef(name));
+        Operands.push_back(name);
       }
     }
   }
