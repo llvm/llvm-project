@@ -49,20 +49,21 @@ cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
 //===----------------------------------------------------------------------===//
 
 MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeEntries,
-                             const TargetInstrInfo *TII) {
+                             const TargetInstrInfo *TII)
+    : TII(*TII) {
   // Fixme: Use static factory methods for creating vocabularies instead of
   // public constructors
   // Early return for invalid inputs - creates empty/invalid vocabulary
   if (!TII || OpcodeEntries.empty())
     return;
 
-  buildCanonicalOpcodeMapping(*TII);
+  buildCanonicalOpcodeMapping();
 
   unsigned CanonicalOpcodeCount = UniqueBaseOpcodeNames.size();
   assert(CanonicalOpcodeCount > 0 &&
          "No canonical opcodes found for target - invalid vocabulary");
   Layout.OperandBase = CanonicalOpcodeCount;
-  generateStorage(OpcodeEntries, *TII);
+  generateStorage(OpcodeEntries);
   Layout.TotalEntries = Storage.size();
 }
 
@@ -105,6 +106,12 @@ unsigned MIRVocabulary::getCanonicalIndexForBaseName(StringRef BaseName) const {
   return std::distance(UniqueBaseOpcodeNames.begin(), It);
 }
 
+unsigned MIRVocabulary::getCanonicalOpcodeIndex(unsigned Opcode) const {
+  assert(isValid() && "MIR2Vec Vocabulary is invalid");
+  auto BaseOpcode = extractBaseOpcodeName(TII.getName(Opcode));
+  return getCanonicalIndexForBaseName(BaseOpcode);
+}
+
 std::string MIRVocabulary::getStringKey(unsigned Pos) const {
   assert(isValid() && "MIR2Vec Vocabulary is invalid");
   assert(Pos < Layout.TotalEntries && "Position out of bounds in vocabulary");
@@ -121,8 +128,7 @@ std::string MIRVocabulary::getStringKey(unsigned Pos) const {
   return "";
 }
 
-void MIRVocabulary::generateStorage(const VocabMap &OpcodeMap,
-                                    const TargetInstrInfo &TII) {
+void MIRVocabulary::generateStorage(const VocabMap &OpcodeMap) {
 
   // Helper for handling missing entities in the vocabulary.
   // Currently, we use a zero vector. In the future, we will throw an error to
@@ -168,7 +174,7 @@ void MIRVocabulary::generateStorage(const VocabMap &OpcodeMap,
   Storage = ir2vec::VocabStorage(std::move(Sections));
 }
 
-void MIRVocabulary::buildCanonicalOpcodeMapping(const TargetInstrInfo &TII) {
+void MIRVocabulary::buildCanonicalOpcodeMapping() {
   // Check if already built
   if (!UniqueBaseOpcodeNames.empty())
     return;
