@@ -68,9 +68,7 @@ std::string getTypeMangling(Type ty, bool isUnsigned = false) {
           llvm_unreachable("unhandled integer type");
         }
       })
-      .Default([](Type) -> std::string {
-        llvm_unreachable("unhandled type for mangling");
-      });
+      .DefaultUnreachable("unhandled type for mangling");
 }
 
 std::string mangle(StringRef baseName, ArrayRef<Type> types,

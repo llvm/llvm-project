@@ -46,6 +46,12 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
     return dest;
   }
 
+  void ensureDest(mlir::Location loc, QualType ty) {
+    if (!dest.isIgnored())
+      return;
+    dest = cgf.createAggTemp(ty, loc, "agg.tmp.ensured");
+  }
+
 public:
   AggExprEmitter(CIRGenFunction &cgf, AggValueSlot dest)
       : cgf(cgf), dest(dest) {}
@@ -96,10 +102,22 @@ public:
     Visit(die->getExpr());
   }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
-    assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
+    // Ensure that we have a slot, but if we already do, remember
+    // whether it was externally destructed.
+    bool wasExternallyDestructed = dest.isExternallyDestructed();
+    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+
+    // We're going to push a destructor if there isn't already one.
+    dest.setExternallyDestructed();
+
     Visit(e->getSubExpr());
+
+    // Push that destructor we promised.
+    if (!wasExternallyDestructed)
+      cgf.emitCXXTemporary(e->getTemporary(), e->getType(), dest.getAddress());
   }
   void VisitLambdaExpr(LambdaExpr *e);
+  void VisitExprWithCleanups(ExprWithCleanups *e);
 
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
@@ -133,8 +151,7 @@ public:
   }
   void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
-    cgf.cgm.errorNYI(ge->getSourceRange(),
-                     "AggExprEmitter: VisitGenericSelectionExpr");
+    Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
@@ -145,10 +162,7 @@ public:
   void VisitUnaryCoawait(UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
   }
-  void VisitUnaryExtension(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitUnaryExtension");
-  }
+  void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
@@ -185,7 +199,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinAssign");
   }
   void VisitBinComma(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinComma");
+    cgf.emitIgnoredExpr(e->getLHS());
+    Visit(e->getRHS());
   }
   void VisitBinCmp(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
@@ -204,8 +219,10 @@ public:
   }
 
   void VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitDesignatedInitUpdateExpr");
+    AggValueSlot dest = ensureSlot(cgf.getLoc(e->getExprLoc()), e->getType());
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    emitInitializationToLValue(e->getBase(), destLV);
+    VisitInitListExpr(e->getUpdater());
   }
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -213,9 +230,11 @@ public:
   }
   void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXParenListInitExpr");
+    visitCXXParenListOrInitListExpr(e, e->getInitExprs(),
+                                    e->getInitializedFieldInUnion(),
+                                    e->getArrayFiller());
   }
+
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
                               llvm::Value *outerBegin = nullptr) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -239,11 +258,6 @@ public:
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXStdInitializerListExpr");
-  }
-
-  void VisitExprWithCleanups(ExprWithCleanups *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitExprWithCleanups");
   }
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -585,6 +599,11 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
             curField->getType().isDestructedType())
       cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
   }
+}
+
+void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
+  CIRGenFunction::RunCleanupsScope cleanups(cgf);
+  Visit(e->getSubExpr());
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
