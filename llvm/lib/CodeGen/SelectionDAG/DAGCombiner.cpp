@@ -25203,6 +25203,29 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
       return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V);
     }
 
+  // build_vector(build_pair(x,y)) -> bitcast(build_pair(x,y))
+  if (N->getNumOperands() == 1 &&
+      N->getOperand(0).getOpcode() == ISD::BUILD_PAIR)
+    return DAG.getBitcast(VT, N->getOperand(0));
+
+  // build_vector(build_pair(x,y),build_pair(z,w),...)
+  // --> bitcast(build_vector(x,y,z,w,...))
+  if (VT.isInteger() && !cast<BuildVectorSDNode>(N)->getSplatValue() &&
+      all_of(N->ops(),
+             [](SDValue Op) { return Op.getOpcode() == ISD::BUILD_PAIR; })) {
+    EVT PairSVT = N->getOperand(0).getOperand(0).getValueType();
+    EVT PairVT = EVT::getVectorVT(*DAG.getContext(), PairSVT,
+                                  VT.getVectorElementCount() * 2);
+    unsigned Lo = DAG.getDataLayout().isBigEndian() ? 1 : 0;
+    unsigned Hi = 1 - Lo;
+    SmallVector<SDValue, 4> PairOps;
+    for (SDValue Op : N->ops()) {
+      PairOps.push_back(Op.getOperand(Lo));
+      PairOps.push_back(Op.getOperand(Hi));
+    }
+    return DAG.getBitcast(VT, DAG.getBuildVector(PairVT, SDLoc(N), PairOps));
+  }
+
   return SDValue();
 }
 
