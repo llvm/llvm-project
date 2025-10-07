@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify=expected,cxx20 %s
+// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -verify=expected %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -1404,4 +1405,42 @@ static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
 
 }
 
+}
+
+
+namespace GH162125 {
+template<typename, int size>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<void, sizeof...(Ts)>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<void, Ts...[0]{1}>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+void(*test)(int) = &s<bool>::f<int>;
+}
+
+namespace GH162125_reversed {
+template<int size, typename>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<sizeof...(Ts), void>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<Ts...[0]{1}, void>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+
+void(*test)(int) = &s<bool>::f<int>;
 }
