@@ -8,6 +8,8 @@ add_llvm_component_library(LLVMCAS
   ObjectStore.cpp
   OnDiskCommon.cpp
   OnDiskDataAllocator.cpp
+  OnDiskGraphDB.cpp
+  OnDiskKeyValueDB.cpp
   OnDiskTrieRawHashMap.cpp
 
   ADDITIONAL_HEADER_DIRS
