@@ -2926,6 +2926,14 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
       return RADD;
 
+    // (X + Y) + X --> Y + (X + X)
+    SDValue X, Y;
+    if (sd_match(N, m_AddLike(m_OneUse(m_AddLike(m_Value(X), m_Value(Y))),
+                              m_Deferred(X))))
+      if (X != Y)
+        return DAG.getNode(ISD::ADD, DL, VT, Y,
+                           DAG.getNode(ISD::ADD, DL, VT, X, X));
+
     // Reassociate (add (or x, c), y) -> (add add(x, y), c)) if (or x, c) is
     // equivalent to (add x, c).
     // Reassociate (add (xor x, c), y) -> (add add(x, y), c)) if (xor x, c) is
