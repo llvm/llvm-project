@@ -1,7 +1,7 @@
 ; RUN: llc -O3 -mcpu=gfx942 < %s | FileCheck %s
 ; CHECK: v_add_f32_e32
 ; CHECK-NEXT: ;;#ASMSTART
-; CHECK-NEXT: v_add_f32_e32
+; CHECK-NEXT: v_mfma_f64
 ; CHECK-NEXT: ;;#ASMEND
 ; CHECK: v_add_f32_e32
 ; ModuleID = '<stdin>'
