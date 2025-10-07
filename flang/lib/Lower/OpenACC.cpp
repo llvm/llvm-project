@@ -2144,8 +2144,23 @@ static void processDoLoopBounds(
         locs.push_back(converter.genLocation(
             Fortran::parser::FindSourceLocation(outerDoConstruct)));
       } else {
-        auto *doCons = crtEval->getIf<Fortran::parser::DoConstruct>();
-        assert(doCons && "expect do construct");
+        // Safely locate the next inner DoConstruct within this eval.
+        const Fortran::parser::DoConstruct *doCons = nullptr;
+        if (crtEval && crtEval->hasNestedEvaluations()) {
+          for (Fortran::lower::pft::Evaluation &child :
+               crtEval->getNestedEvaluations()) {
+            if (auto *cand = child.getIf<Fortran::parser::DoConstruct>()) {
+              doCons = cand;
+              // Prepare to descend for the next iteration
+              crtEval = &child;
+              break;
+            }
+          }
+        }
+        if (!doCons) {
+          // No deeper loop; stop collecting collapsed bounds.
+          break;
+        }
         loopControl = &*doCons->GetLoopControl();
         locs.push_back(converter.genLocation(
             Fortran::parser::FindSourceLocation(*doCons)));
@@ -2172,8 +2187,7 @@ static void processDoLoopBounds(
 
       inclusiveBounds.push_back(true);
 
-      if (i < loopsToProcess - 1)
-        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+      // crtEval already updated when descending; no blind increment here.
     }
   }
 }
