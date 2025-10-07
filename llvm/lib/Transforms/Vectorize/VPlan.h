@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
@@ -2262,8 +2263,7 @@ public:
   /// debug location \p DL.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
-        Name(Name.str()) {
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, {}, Phi, DL), Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }
@@ -2977,7 +2977,8 @@ public:
 /// the expression is elevated to connect the non-expression recipe with the
 /// VPExpressionRecipe itself.
 class VPExpressionRecipe : public VPSingleDefRecipe {
-  /// Recipes included in this VPExpressionRecipe.
+  /// Recipes included in this VPExpressionRecipe. This could contain
+  /// duplicates.
   SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
 
   /// Temporary VPValues used for external operands of the expression, i.e.
@@ -3039,8 +3040,11 @@ public:
   }
 
   ~VPExpressionRecipe() override {
-    for (auto *R : reverse(ExpressionRecipes))
-      delete R;
+    SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
+    for (auto *R : reverse(ExpressionRecipes)) {
+      if (ExpressionRecipesSeen.insert(R).second)
+        delete R;
+    }
     for (VPValue *T : LiveInPlaceholders)
       delete T;
   }

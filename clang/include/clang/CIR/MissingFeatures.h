@@ -37,6 +37,11 @@ struct MissingFeatures {
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
   static bool opGlobalUsedOrCompilerUsed() { return false; }
+  static bool opGlobalAnnotations() { return false; }
+  static bool opGlobalDtorLowering() { return false; }
+  static bool opGlobalCtorAttr() { return false; }
+  static bool opGlobalCtorPriority() { return false; }
+  static bool opGlobalCtorList() { return false; }
   static bool setDSOLocal() { return false; }
   static bool setComdat() { return false; }
 
@@ -133,9 +138,15 @@ struct MissingFeatures {
   // RecordType
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
-  static bool recordZeroInit() { return false; }
   static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
+
+  // Coroutines
+  static bool coroAllocBuiltinCall() { return false; }
+  static bool coroBeginBuiltinCall() { return false; }
+  static bool coroEndBuiltinCall() { return false; }
+  static bool coroSizeBuiltinCall() { return false; }
+  static bool coroutineFrame() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -192,6 +203,7 @@ struct MissingFeatures {
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool cgFPOptionsRAII() { return false; }
+  static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupsToDeactivate() { return false; }
@@ -209,6 +221,7 @@ struct MissingFeatures {
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
+  static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
@@ -248,7 +261,6 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
-  static bool needsGlobalCtorDtor() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }

@@ -1209,6 +1209,15 @@ parser::Message *AttachDeclaration(
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
         unhosted->name(), GetUsedModule(*use).name());
+  } else if (const auto *common{
+                 unhosted->detailsIf<semantics::CommonBlockDetails>()}) {
+    parser::CharBlock at{unhosted->name()};
+    if (at.empty()) { // blank COMMON, with or without //
+      at = common->sourceLocation();
+    }
+    if (!at.empty()) {
+      message.Attach(at, "Declaration of /%s/"_en_US, unhosted->name());
+    }
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
@@ -1950,7 +1959,7 @@ bool IsVarSubexpressionOf(
   return VariableFinder{sub}(super);
 }
 
-std::optional<int> DerivedTypeDepth(const semantics::Scope &scope) {
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
   if (scope.IsDerivedType()) {
     for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
       const Symbol &symbol{*iter->second};
@@ -1962,7 +1971,7 @@ std::optional<int> DerivedTypeDepth(const semantics::Scope &scope) {
               parent = derived->typeSymbol().scope();
             }
             if (parent) {
-              if (auto parentDepth{DerivedTypeDepth(*parent)}) {
+              if (auto parentDepth{CountDerivedTypeAncestors(*parent)}) {
                 return 1 + *parentDepth;
               }
             }
