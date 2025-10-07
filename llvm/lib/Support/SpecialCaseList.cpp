@@ -150,7 +150,7 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
                             std::string &Error) {
-  unsigned long long Version = std::numeric_limits<unsigned long long>::max();
+  unsigned long long Version = 2;
 
   StringRef Header = MB->getBuffer();
   if (Header.consume_front("#!special-case-list-v"))
