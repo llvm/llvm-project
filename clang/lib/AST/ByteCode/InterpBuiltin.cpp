@@ -727,17 +727,6 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame,
-                                const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Value = popToAPSInt(S.Stk, ArgT);
-
-  uint64_t N = Value.countr_zero();
-  pushInteger(S, N == Value.getBitWidth() ? 0 : N + 1, Call->getType());
-  return true;
-}
-
 static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
@@ -3057,7 +3046,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll:
-    return interp__builtin_ffs(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(S, OpPC, Call, [](const APSInt& Val){ return APInt(Val.getBitWidth(), (Val.countTrailingZeros()==Val.getBitWidth()) ? 0u : (Val.countTrailingZeros()+1u)); });
 
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
