@@ -13889,7 +13889,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned DstNumElems = DstVTy->getNumElements();
     QualType DstElemTy = DstVTy->getElementType();
 
-    const llvm::fltSemantics &HalfSem = Info.Ctx.getFloatTypeSemantics(Info.Ctx.HalfTy);
+    const llvm::fltSemantics &HalfSem =
+        Info.Ctx.getFloatTypeSemantics(Info.Ctx.HalfTy);
 
     int ImmVal = Imm.getZExtValue();
     bool UseMXCSR = (ImmVal & 4) != 0;
@@ -13897,11 +13898,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     llvm::RoundingMode RM;
     if (!UseMXCSR) {
       switch (ImmVal & 3) {
-      case 0: RM = llvm::RoundingMode::NearestTiesToEven; break;
-      case 1: RM = llvm::RoundingMode::TowardNegative; break;
-      case 2: RM = llvm::RoundingMode::TowardPositive; break;
-      case 3: RM = llvm::RoundingMode::TowardZero; break;
-      default: llvm_unreachable("Invalid immediate rounding mode");
+      case 0:
+        RM = llvm::RoundingMode::NearestTiesToEven;
+        break;
+      case 1:
+        RM = llvm::RoundingMode::TowardNegative;
+        break;
+      case 2:
+        RM = llvm::RoundingMode::TowardPositive;
+        break;
+      case 3:
+        RM = llvm::RoundingMode::TowardZero;
+        break;
+      default:
+        llvm_unreachable("Invalid immediate rounding mode");
       }
     } else {
       RM = llvm::RoundingMode::NearestTiesToEven;
@@ -13912,7 +13922,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     for (unsigned I = 0; I < SrcNumElems; ++I) {
       APFloat SrcVal = SrcVec.getVectorElt(I).getFloat();
-      
+
       bool LostInfo;
       APFloat::opStatus St = SrcVal.convert(HalfSem, RM, &LostInfo);
 
@@ -13920,7 +13930,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
         return false;
       }
-      
+
       APSInt DstInt(SrcVal.bitcastToAPInt(),
                     DstElemTy->isUnsignedIntegerOrEnumerationType());
       ResultElements.push_back(APValue(DstInt));

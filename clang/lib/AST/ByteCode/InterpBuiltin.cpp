@@ -3558,11 +3558,20 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
   llvm::RoundingMode RM;
   if (!UseMXCSR) {
     switch (ImmVal & 3) {
-    case 0: RM = llvm::RoundingMode::NearestTiesToEven; break;
-    case 1: RM = llvm::RoundingMode::TowardNegative; break;
-    case 2: RM = llvm::RoundingMode::TowardPositive; break;
-    case 3: RM = llvm::RoundingMode::TowardZero; break;
-    default: llvm_unreachable("Invalid immediate rounding mode");
+    case 0:
+      RM = llvm::RoundingMode::NearestTiesToEven;
+      break;
+    case 1:
+      RM = llvm::RoundingMode::TowardNegative;
+      break;
+    case 2:
+      RM = llvm::RoundingMode::TowardPositive;
+      break;
+    case 3:
+      RM = llvm::RoundingMode::TowardZero;
+      break;
+    default:
+      llvm_unreachable("Invalid immediate rounding mode");
     }
   } else {
     // For MXCSR, we must check for exactness. We can use any rounding mode
@@ -3582,7 +3591,8 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
     APFloat::opStatus St = DstVal.convert(HalfSem, RM, &LostInfo);
 
     if (UseMXCSR && St != APFloat::opOK) {
-      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_dynamic_rounding);
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_dynamic_rounding);
       return false;
     }
 
@@ -3597,12 +3607,10 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
   // (e.g., vcvtps2ph converting 4 floats to 8 shorts).
   if (DstNumElems > SrcNumElems) {
     for (unsigned I = SrcNumElems; I < DstNumElems; ++I) {
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-        Dst.elem<T>(I) = T::from(0);
-      });
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, { Dst.elem<T>(I) = T::from(0); });
     }
   }
- 
+
   Dst.initializeAllElements();
   return true;
 }
@@ -4973,7 +4981,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vinsertf128_si256:
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
-  
+
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256:
     return interp__builtin_ia32_vcvtps2ph(S, OpPC, Call);
