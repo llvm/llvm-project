@@ -45,7 +45,7 @@ multiclass SRL_r_aq_rl<bits<3> funct3, string opcodestr> {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZalasr] in {
+let Predicates = [HasStdExtZalasr], IsSignExtendingOpW = 1 in {
 defm LB : LAQ_r_aq_rl<0b000, "lb">;
 defm LH : LAQ_r_aq_rl<0b001, "lh">;
 defm LW : LAQ_r_aq_rl<0b010, "lw">;

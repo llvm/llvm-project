@@ -140,7 +140,7 @@ def WRS_STO : WRSInst<0b000000011101, "wrs.sto">, Sched<[]>;
 // Zabha (Byte and Halfword Atomic Memory Operations)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZabha] in {
+let Predicates = [HasStdExtZabha], IsSignExtendingOpW = 1 in {
 defm AMOSWAP_B  : AMO_rr_aq_rl<0b00001, 0b000, "amoswap.b">,
                   Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
 defm AMOADD_B   : AMO_rr_aq_rl<0b00000, 0b000, "amoadd.b">,
@@ -181,7 +181,7 @@ defm AMOMAXU_H  : AMO_rr_aq_rl<0b11100, 0b001, "amomaxu.h">,
 }
 
 // If Zacas extension is also implemented, Zabha further provides AMOCAS.[B|H].
-let Predicates = [HasStdExtZabha, HasStdExtZacas] in {
+let Predicates = [HasStdExtZabha, HasStdExtZacas], IsSignExtendingOpW = 1 in {
 defm AMOCAS_B : AMO_cas_aq_rl<0b00101, 0b000, "amocas.b", GPR>;
 defm AMOCAS_H : AMO_cas_aq_rl<0b00101, 0b001, "amocas.h", GPR>;
 }
