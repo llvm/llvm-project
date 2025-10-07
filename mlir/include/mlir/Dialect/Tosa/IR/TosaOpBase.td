@@ -245,6 +245,19 @@ def Tosa_NONE : I32EnumAttrCase<"none", 0>;
 def Tosa_PRO_INT   : I32EnumAttrCase<"pro_int", 1>;
 def Tosa_PRO_FP   : I32EnumAttrCase<"pro_fp", 2>;
 
+def Tosa_ProfileAttr
+    : Tosa_I32EnumAttr<"Profile", "supported TOSA profiles", "prof",
+                       [Tosa_PRO_INT, Tosa_PRO_FP, Tosa_NONE]> {
+  let extraClassDeclaration = [{
+    static llvm::SmallVector<Profile, 2> getAllValues() {
+      return {Profile::pro_int, Profile::pro_fp};
+    }
+  }];
+}
+
+def Tosa_ProfileArrayAttr
+    : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
+
 def Tosa_EXT_NONE         : I32EnumAttrCase<"none", 0>;
 def Tosa_EXT_INT16        : I32EnumAttrCase<"int16", 1>;
 def Tosa_EXT_INT4         : I32EnumAttrCase<"int4", 2>;
@@ -264,17 +277,27 @@ def Tosa_ExtensionAttr
       Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
       Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
       Tosa_EXT_DYNAMIC
-    ]>;
+    ]> {
+  let extraClassDeclaration = [{
+    static llvm::SmallVector<Extension, 11> getAllValues() {
+      return {
+        Extension::int16, Extension::int4, Extension::bf16,
+        Extension::fp8e4m3, Extension::fp8e5m2, Extension::fft,
+        Extension::variable, Extension::controlflow, Extension::doubleround,
+        Extension::inexactround, Extension::dynamic
+      };
+    }
+  }];
+}
 
 def Tosa_ExtensionArrayAttr
     : TypedArrayAttrBase<Tosa_ExtensionAttr, "TOSA extension array attribute">;
 
-def Tosa_ProfileAttr
-    : Tosa_I32EnumAttr<"Profile", "supported TOSA profiles", "prof",
-                       [Tosa_PRO_INT, Tosa_PRO_FP, Tosa_NONE]>;
+def Tosa_LVL_NONE : I32EnumAttrCase<"none", 0>;
+def Tosa_LVL_8K   : I32EnumAttrCase<"eightK", 1, "8k">;
 
-def Tosa_ProfileArrayAttr
-    : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
+def Tosa_LevelAttr
+    : Tosa_I32EnumAttr<"Level", "supported TOSA levels", "level", [Tosa_LVL_NONE, Tosa_LVL_8K]>;
 
 // The base class for defining op availability dimensions.
 class Availability {
@@ -379,6 +402,21 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
       "ref(exts, std::size(exts));");
 
   let instance = "ref";
+}
+
+//===----------------------------------------------------------------------===//
+// TOSA target environment.
+//===----------------------------------------------------------------------===//
+def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
+  let summary = "Target environment information.";
+  let parameters = ( ins
+    "Level": $level,
+    ArrayRefParameter<"Profile">: $profiles,
+    ArrayRefParameter<"Extension">: $extensions
+  );
+
+  let assemblyFormat = "`<` `level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
+                       "`extensions` `=` `[` $extensions `]` `>`";
 }
 
 //===----------------------------------------------------------------------===//
