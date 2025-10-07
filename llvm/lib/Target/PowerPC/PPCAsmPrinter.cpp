@@ -2892,6 +2892,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
       static_cast<MCSymbolXCOFF *>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
+  // An Ifunc doesn't have a corresponding machine function.
   if (MF)
     for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
       OutStreamer->emitLabel(getSymbol(Alias));
@@ -2917,6 +2918,7 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
   if (!TM.getFunctionSections() || (MF && MF->getFunction().hasSection()))
     PPCAsmPrinter::emitFunctionEntryLabel();
 
+  // an ifunc does not have an associated MachineFunction
   if (!MF)
     return;
 

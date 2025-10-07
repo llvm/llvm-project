@@ -71,7 +71,7 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
   LLVMContext &Ctx = M.getContext();
   auto *PtrTy = PointerType::getUnqual(Ctx);
   StringRef IFuncUpdatePrefix = "__update_";
-  StringRef IFuncUpdateSectionName = "ifunc_sec";
+  StringRef IFuncUpdateSectionName = "__ifunc_sec";
   StructType *IFuncPairType = StructType::get(PtrTy, PtrTy);
 
   StringRef IFuncConstructorName = "__init_ifuncs";
@@ -83,7 +83,7 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
 
   for (GlobalIFunc &IFunc : M.ifuncs()) {
     NumIFuncs++;
-    LLVM_DEBUG(dbgs() << "doing ifunc " << IFunc.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "expanding ifunc " << IFunc.getName() << "\n");
     // @__update_foo = private global { ptr @foo, ptr @foo_resolver },
     //   section "ifunc_sec"
     std::string Name = (Twine(IFuncUpdatePrefix) + IFunc.getName()).str();
