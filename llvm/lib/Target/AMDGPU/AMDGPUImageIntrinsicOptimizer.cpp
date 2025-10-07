@@ -281,7 +281,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
 }
 
 static bool imageIntrinsicOptimizerImpl(Function &F, const TargetMachine *TM) {
-  if (!TM || !TM->getTargetTriple().isAMDGCN())
+  if (!TM)
     return false;
 
   // This optimization only applies to GFX11 and beyond.
