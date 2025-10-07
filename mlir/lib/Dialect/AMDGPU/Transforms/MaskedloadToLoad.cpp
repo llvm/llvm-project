@@ -88,13 +88,13 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     if (failed(baseInBufferAddrSpace(rewriter, maskedOp))) {
       return failure();
     }
+    Value load = createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(),
+                                               maskedOp, /*passthru=*/true);
 
     // Check if this is either a full inbounds load or an empty, oob load. If
     // so, take the fast path and don't generate an if condition, because we
     // know doing the oob load is always safe.
     if (succeeded(matchFullMask(rewriter, maskedOp.getMask()))) {
-      Value load = createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(),
-                                                 maskedOp, /*passthru=*/true);
       rewriter.replaceOp(maskedOp, load);
       return success();
     }
@@ -156,9 +156,7 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     };
 
     auto elseBuilder = [&](OpBuilder &builder, Location loc) {
-      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp,
-                                                /*passthru=*/true);
-      scf::YieldOp::create(rewriter, loc, res);
+      scf::YieldOp::create(rewriter, loc, load);
     };
 
     auto ifOp =
