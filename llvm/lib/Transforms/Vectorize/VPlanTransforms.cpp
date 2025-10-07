@@ -1979,16 +1979,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
               VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
             [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-        .Case<VPPredInstPHIRecipe>([](auto *I) {
-          // Treat VPPredInstPHIRecipe as Instruction::PHI for CSE. This is only
-          // safe, if they are in the same block and hence share the same
-          // predicate.
-          return std::make_pair(false, Instruction::PHI);
-        })
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
         })
-        .Case<VPVectorPointerRecipe>([](auto *I) {
+        .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
           // For recipes that do not directly map to LLVM IR instructions,
           // assign opcodes after the last VPInstruction opcode (which is also
           // after the last IR Instruction opcode), based on the VPDefID.
