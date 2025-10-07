@@ -8,7 +8,7 @@
 ; CHECK:   %mul.1 = mul
 ; CHECK:   %mul.2 = mul
 ; CHECK:   %mul.3 = mul
-; CHECK:   br i1 %niter.ncmp.7, label %loop.end.unr-lcssa.loopexit, label %loop, !prof [[PROF0:![0-9]+]]
+; CHECK:   br i1 %niter.ncmp.7, label %loop.end.unr-lcssa, label %loop, !prof [[PROF0:![0-9]+]]
 ; CHECK: loop.epil:
 ; CHECK:   br i1 %epil.iter.cmp, label %loop.epil, label %loop.end.epilog-lcssa, !prof [[PROF1:![0-9]+]], !llvm.loop {{![0-9]+}}
 define i32 @bar_prof(ptr noalias nocapture readonly %src, i64 %c) !prof !1 {
