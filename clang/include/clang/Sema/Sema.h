@@ -13173,8 +13173,10 @@ public:
     CodeSynthesisContext()
         : Kind(TemplateInstantiation),
           SavedInNonInstantiationSFINAEContext(false),
-          InConstraintSubstitution(false), Entity(nullptr), Template(nullptr),
-          TemplateArgs(nullptr), NumTemplateArgs(0), DeductionInfo(nullptr) {}
+          InConstraintSubstitution(false),
+          InParameterMappingSubstitution(false), Entity(nullptr),
+          Template(nullptr), TemplateArgs(nullptr), NumTemplateArgs(0),
+          DeductionInfo(nullptr) {}
 
     /// Determines whether this template is an actual instantiation
     /// that should be counted toward the maximum instantiation depth.

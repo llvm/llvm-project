@@ -824,7 +824,7 @@ struct WgToSgStoreScatterOpWithOffset
       return failure();
 
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getValue());
+        xegpu::getDistributeLayoutAttr(op.getOperand(0));
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -844,12 +844,19 @@ struct WgToSgStoreScatterOpWithOffset
     auto chunkSizeAttr = rewriter.getI64IntegerAttr(chunkSize);
     for (auto [val, offs, mask] : llvm::zip(
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
-      xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
-                                    mask, chunkSizeAttr, op.getL1HintAttr(),
-                                    op.getL2HintAttr(), op.getL3HintAttr());
+      auto store = xegpu::StoreScatterOp::create(
+          rewriter, loc, val, op.getDest(), offs, mask, chunkSizeAttr,
+          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
       // Update the layout attribute to drop sg_layout and sg_data.
-      if (auto newLayout = layout.dropSgLayoutAndData())
-        op->setAttr("layout", newLayout);
+      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+          !layout.getEffectiveInstDataAsInt().empty()) {
+        for (OpOperand &operand : store->getOpOperands()) {
+          // Skip for operand one (memref)
+          if (operand.getOperandNumber() == 1)
+            continue;
+          xegpu::setDistributeLayoutAttr(operand, layout.dropSgLayoutAndData());
+        }
+      }
     }
     rewriter.eraseOp(op);
     return success();
@@ -1247,10 +1254,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::StoreScatterOp>(
       [=](xegpu::StoreScatterOp op) -> bool {
-        // Check if the layout attribute is present on the result.
-        auto layout = op->getAttrOfType<xegpu::LayoutAttr>("layout");
-        if (!layout)
-          return true;
+        auto layout = xegpu::getDistributeLayoutAttr(op.getOperand(0));
         return isLegal(layout);
       });
 
