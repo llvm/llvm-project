@@ -30,7 +30,7 @@ namespace Fortran::semantics {
 // - any variable from common blocks except
 //   - 1-element arrays being single member of COMMON
 // - avy variable from module except
-//   - having attribute PARAMETER
+//   - having attribute PARAMETER or PRIVATE
 //   - being arrays having 1-D rank and is not having ALLOCATABLE or POINTER or
 //       VOLATILE attributes
 static void CheckPassGlobalVariable(
@@ -71,7 +71,8 @@ static void CheckPassGlobalVariable(
       const Scope *module{FindModuleContaining(owner)};
       ownerType = "MODULE";
       ownerName = module->GetName()->ToString();
-      if (actualFirstSymbol->attrs().test(Attr::PARAMETER)) {
+      if (actualFirstSymbol->attrs().test(Attr::PARAMETER) ||
+          actualFirstSymbol->attrs().test(Attr::PRIVATE)) {
         warn |= false;
       } else if (actualFirstSymbol->Rank() != 1) {
         warn |= true;
