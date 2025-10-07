@@ -2017,7 +2017,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register Src2 = MI.getOperand(2).getReg();
     unsigned Src2NumSignBits =
         computeNumSignBits(Src2, DemandedElts, Depth + 1);
-    if (Src2NumSignBits == 1)
+    if (Src2NumSignBits <= 2)
       return 1; // Early out.
 
     Register Src1 = MI.getOperand(1).getReg();
