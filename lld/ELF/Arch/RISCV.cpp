@@ -38,6 +38,8 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  void writeTableJumpHeader(uint8_t *buf) const override;
+  void writeTableJumpEntry(uint8_t *buf, const uint64_t symbol) const override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -70,8 +72,10 @@ public:
 #define INTERNAL_R_RISCV_GPREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
+#define INTERNAL_R_RISCV_TBJAL   260
 
 const uint64_t dtpOffset = 0x800;
+const uint32_t jvtAlign  = 64;
 
 namespace {
 enum Op {
@@ -267,6 +271,20 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 4, itype(ctx.arg.is64 ? LD : LW, X_T3, X_T3, lo12(offset)));
   write32le(buf + 8, itype(JALR, X_T1, X_T3, 0));
   write32le(buf + 12, itype(ADDI, 0, 0, 0));
+}
+
+void RISCV::writeTableJumpHeader(uint8_t *buf) const {
+  if (ctx.arg.is64)
+    write64le(buf, ctx.mainPart->dynamic->getVA());
+  else
+    write32le(buf, ctx.mainPart->dynamic->getVA());
+}
+
+void RISCV::writeTableJumpEntry(uint8_t *buf, const uint64_t address) const {
+  if (ctx.arg.is64)
+    write64le(buf, address);
+  else
+    write32le(buf, address);
 }
 
 RelType RISCV::getDynRel(RelType type) const {
@@ -489,6 +507,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32le(loc, insn);
     return;
   }
+
+  case INTERNAL_R_RISCV_TBJAL:
+    return;
 
   case R_RISCV_ADD8:
     *loc += val;
@@ -737,6 +758,30 @@ void elf::initSymbolAnchors(Ctx &ctx) {
       });
     }
   }
+}
+
+static bool relaxTableJump(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
+                           Relocation &r, uint32_t &remove) {
+  if (!ctx.in.riscvTableJumpSection || !ctx.in.riscvTableJumpSection->isFinalized)
+    return false;
+
+  const auto jalr = sec.contentMaybeDecompress().data()[r.offset + 4];
+  const uint8_t rd = extractBits(jalr, 11, 7);
+  int tblEntryIndex = -1;
+  if (rd == 0) {
+    tblEntryIndex = ctx.in.riscvTableJumpSection->getCMJTEntryIndex(r.sym);
+  } else if (rd == X_RA) {
+    tblEntryIndex = ctx.in.riscvTableJumpSection->getCMJALTEntryIndex(r.sym);
+  }
+
+  if (tblEntryIndex >= 0) {
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_TBJAL;
+    sec.relaxAux->writes.push_back(0xA002 |
+                                   (tblEntryIndex << 2)); // cm.jt or cm.jalt
+    remove = 6;
+    return true;
+  }
+  return false;
 }
 
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
@@ -1148,6 +1193,8 @@ void RISCV::finalizeRelax(int passes) const {
           case R_RISCV_JAL:
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
+            break;
+          case R_RISCV_64:
             break;
           case R_RISCV_32:
             // Used by relaxTlsLe to write a uint32_t then suppress the handling
