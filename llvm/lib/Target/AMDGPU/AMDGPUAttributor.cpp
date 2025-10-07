@@ -1221,6 +1221,8 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   unsigned MaxPhysReg = 0;
   const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
 
+  // TODO: Underestimates due to not accounting for tuple alignment requirements
+  // TODO: Overestimates due to not accounting for tied operands
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     Type *Ty = nullptr;
     switch (CI.Type) {
