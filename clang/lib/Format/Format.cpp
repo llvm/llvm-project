@@ -44,6 +44,14 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeNoexceptSpecifierStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::CommentSpaceMode> {
+  static void enumeration(IO &IO, FormatStyle::CommentSpaceMode &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::CommentSpaceMode::Leave);
+    IO.enumCase(Value, "Always", FormatStyle::CommentSpaceMode::Always);
+    IO.enumCase(Value, "Never", FormatStyle::CommentSpaceMode::Never);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
   static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::AlignConsecutiveStyle({}));
@@ -91,6 +99,16 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                    Value.AlignFunctionDeclarations);
     IO.mapOptional("AlignFunctionPointers", Value.AlignFunctionPointers);
     IO.mapOptional("PadOperators", Value.PadOperators);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::SpaceInCommentsOptions> {
+  static void mapping(IO &IO, FormatStyle::SpaceInCommentsOptions &Value) {
+    IO.mapOptional("AfterOpeningComment", Value.AfterOpeningComment);
+    IO.mapOptional("BeforeClosingComment", Value.BeforeClosingComment);
+    IO.mapOptional("AfterOpeningParamComment", Value.AfterOpeningParamComment);
+    IO.mapOptional("BeforeClosingParamComment",
+                   Value.BeforeClosingParamComment);
   }
 };
 
@@ -1228,6 +1246,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeRangeBasedForLoopColon);
     IO.mapOptional("SpaceBeforeSquareBrackets",
                    Style.SpaceBeforeSquareBrackets);
+    IO.mapOptional("SpaceInComments", Style.SpaceInComments);
     IO.mapOptional("SpaceInEmptyBraces", Style.SpaceInEmptyBraces);
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);

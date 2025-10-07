@@ -332,6 +332,397 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
   verifyNoCrash(StringRef("/*\\\0\n/", 6));
 }
 
+TEST_F(FormatTestComments, InsertsSpaceAfterOpeningBlockComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("foo(/* comment */);", "foo(/*comment */);", Style);
+  verifyFormat("/* comment */", "/*comment */", Style);
+  verifyFormat("/* comment before code */\n"
+               "int x;",
+               "/*comment before code */\n"
+               "int x;",
+               Style);
+  verifyFormat("/* \n"
+               "comment */",
+               "/*\n"
+               "comment */",
+               Style);
+  verifyFormat("/* \ncomment */\n"
+               "int x;",
+               "/*\ncomment */\n"
+               "int x;",
+               Style);
+  verifyFormat("/* \n"
+               "comment line\n"
+               "*/",
+               "/*\n"
+               "comment line\n"
+               "*/",
+               Style);
+  verifyFormat("/* \n"
+               " * comment star\n"
+               "*/",
+               "/*\n"
+               " * comment star\n"
+               "*/",
+               Style);
+  verifyFormat("/* comment line\n"
+               "next */",
+               "/*comment line\n"
+               "next */",
+               Style);
+  verifyFormat("/* */", "/* */", Style);
+  verifyFormat("/*\n*/", "/*\n*/", Style);
+  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/* This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line. */",
+               "/*This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line. */",
+               Style);
+  verifyFormat("/* \n"
+               " * Another multi line comment\n"
+               " * this is the next line. */",
+               "/*\n"
+               " * Another multi line comment\n"
+               " * this is the next line. */",
+               Style);
+}
+
+TEST_F(FormatTestComments, AfterOpeningCommentModes) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("foo(/* comment */);", "foo(/*comment */);", Style);
+  verifyFormat("foo(/* comment */);", "foo(/*  comment */);", Style);
+  verifyFormat("/* \n"
+               "comment */",
+               "/*\n"
+               "comment */",
+               Style);
+  verifyFormat("/* */", "/*   */", Style);
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/* FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Never;
+
+  verifyFormat("foo(/*comment */);", "foo(/* comment */);", Style);
+  verifyFormat("/*\n"
+               "comment */",
+               "/*  \n"
+               "comment */",
+               Style);
+  verifyFormat("/*\n"
+               "comment */",
+               "/*\n"
+               "comment */",
+               Style);
+  verifyFormat("/**/", "/*   */", Style);
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /* FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+}
+
+TEST_F(FormatTestComments, AfterOpeningParamCommentOverrides) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningParamComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("/*comment*/", "/*comment*/", Style);
+  verifyFormat("call(/* Arg=*/value);", "call(/*Arg=*/value);", Style);
+
+  Style.SpaceInComments.AfterOpeningParamComment =
+      FormatStyle::CommentSpaceMode::Never;
+
+  verifyFormat("/*comment*/", "/*comment*/", Style);
+  verifyFormat("call(/*Arg=*/value);", "call(/* Arg=*/value);", Style);
+}
+
+TEST_F(FormatTestComments, InsertsSpaceBeforeClosingBlockComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("foo(/* comment */);", "foo(/* comment*/);", Style);
+  verifyFormat("/* comment */", Style);
+  verifyFormat("/* comment before code */\n"
+               "int x;",
+               "/* comment before code*/\n"
+               "int x;",
+               Style);
+  verifyFormat("/* comment\n"
+               " */",
+               "/* comment\n"
+               "*/",
+               Style);
+  verifyFormat("/* comment\n"
+               " */\n"
+               "int x;",
+               "/* comment\n"
+               "*/\n"
+               "int x;",
+               Style);
+  verifyFormat("/*\n"
+               "comment line\n"
+               " */",
+               "/*\n"
+               "comment line\n"
+               "*/",
+               Style);
+  verifyFormat("/*\n"
+               " * comment star\n"
+               " */",
+               "/*\n"
+               " * comment star\n"
+               "*/",
+               Style);
+  verifyFormat("/* comment line\n"
+               "next */",
+               "/* comment line\n"
+               "next*/",
+               Style);
+  verifyFormat("/* */", "/* */", Style);
+  verifyFormat("/*\n*/", "/*\n*/", Style);
+  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/*This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line. */",
+               "/*This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line.*/",
+               Style);
+  verifyFormat("/*\n"
+               " * Another multi line comment\n"
+               " * this is the next line. */",
+               "/*\n"
+               " * Another multi line comment\n"
+               " * this is the next line.*/",
+               Style);
+}
+
+TEST_F(FormatTestComments, BeforeClosingCommentModes) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("foo(/* comment */);", "foo(/* comment*/);", Style);
+  verifyFormat("foo(/* comment */);", "foo(/* comment  */);", Style);
+  verifyFormat("/* comment\n"
+               " */",
+               "/* comment\n"
+               "*/",
+               Style);
+  verifyFormat("/* */", "/*   */", Style);
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/*FALLTHROUGH */ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Never;
+
+  verifyFormat("foo(/* comment*/);", "foo(/* comment */);", Style);
+  verifyFormat("/* comment\n"
+               "*/",
+               "/* comment\n"
+               "  */",
+               Style);
+  verifyFormat("/* comment\n"
+               "*/",
+               "/* comment\n"
+               "*/",
+               Style);
+  verifyFormat("/**/", "/*   */", Style);
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /*FALLTHROUGH */ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+}
+
+TEST_F(FormatTestComments, CommentSpacesAlwaysAtBothEnds) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("foo(/* comment */);", "foo(/*comment*/);", Style);
+  verifyFormat("/* comment */", "/*comment*/", Style);
+  verifyFormat("/* comment before code */\n"
+               "int x;",
+               "/*comment before code*/\n"
+               "int x;",
+               Style);
+  verifyFormat("/* comment\n"
+               " */",
+               "/*comment\n"
+               "*/",
+               Style);
+  verifyFormat("/* comment\n"
+               " */\n"
+               "int x;",
+               "/*comment\n"
+               "*/\n"
+               "int x;",
+               Style);
+  verifyFormat("/* \n"
+               "comment line\n"
+               " */",
+               "/*\n"
+               "comment line\n"
+               "*/",
+               Style);
+  verifyFormat("/* \n"
+               " * comment star\n"
+               " */",
+               "/*\n"
+               " * comment star\n"
+               "*/",
+               Style);
+  verifyFormat("/* comment line\n"
+               "next */",
+               "/*comment line\n"
+               "next*/",
+               Style);
+  verifyFormat("/* */", "/* */", Style);
+  verifyFormat("/*\n*/", "/*\n*/", Style);
+  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/* This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line. */",
+               "/*This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line.*/",
+               Style);
+  verifyFormat("/* \n"
+               " * Another multi line comment\n"
+               " * this is the next line. */",
+               "/*\n"
+               " * Another multi line comment\n"
+               " * this is the next line.*/",
+               Style);
+}
+
+TEST_F(FormatTestComments, BeforeClosingParamCommentOverrides) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.BeforeClosingParamComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("/*comment*/", "/*comment*/", Style);
+  verifyFormat("call(/*Arg= */value);", "call(/*Arg=*/value);", Style);
+
+  Style.SpaceInComments.BeforeClosingParamComment =
+      FormatStyle::CommentSpaceMode::Never;
+
+  verifyFormat("/*comment*/", "/*comment*/", Style);
+  verifyFormat("call(/*Arg=*/value);", "call(/*Arg= */value);", Style);
+}
+
+TEST_F(FormatTestComments, DocstringCommentsRespectLeaveAfterOpening) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Leave;
+
+  verifyFormat("/**doc*/", "/**doc*/", Style);
+  verifyFormat("int value; /**doc*/", "int value; /**doc*/", Style);
+
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Leave;
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Always;
+  verifyFormat("/**doc */", "/**doc*/", Style);
+}
+
+TEST_F(FormatTestComments, BlockCommentDoesNotForceBreakBeforeFollowingToken) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Leave;
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Always;
+
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/*FALLTHROUGH */ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.SpaceInComments.AfterOpeningComment =
+      FormatStyle::CommentSpaceMode::Always;
+  Style.SpaceInComments.BeforeClosingComment =
+      FormatStyle::CommentSpaceMode::Leave;
+
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/* FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+}
+
 TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
   EXPECT_EQ("SomeFunction(a,\n"
             "             b, // comment\n"

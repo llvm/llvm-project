@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TokenAnnotator.h"
+#include "BreakableToken.h"
 #include "FormatToken.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -4821,7 +4822,16 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Left.is(TT_BlockComment)) {
     // No whitespace in x(/*foo=*/1), except for JavaScript.
-    return Style.isJavaScript() || !Left.TokenText.ends_with("=*/");
+    const StringRef Trimmed = Left.TokenText.rtrim(" \t");
+    bool EndsWithAssignmentComment = Trimmed.ends_with("=*/");
+    const FormatStyle::CommentSpaceMode BeforeClosingMode =
+        getBeforeClosingSpaceMode(Style, Left);
+    if (!EndsWithAssignmentComment && Trimmed.ends_with("= */") &&
+        (BeforeClosingMode == FormatStyle::CommentSpaceMode::Always ||
+         BeforeClosingMode == FormatStyle::CommentSpaceMode::Never)) {
+      EndsWithAssignmentComment = true;
+    }
+    return Style.isJavaScript() || !EndsWithAssignmentComment;
   }
 
   // Space between template and attribute.

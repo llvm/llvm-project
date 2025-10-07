@@ -315,6 +315,19 @@ class AnnotatedLine;
 
 /// A wrapper around a \c Token storing information about the
 /// whitespace characters preceding it.
+
+// Describes the kind of a block comment.
+enum class CommentKind {
+  // A plain comment, i.e. /* ... */.
+  Plain,
+  // A comment that starts with /*! or /**.
+  DocString,
+  // A comment that looks like a parameter, e.g. /*param=*/.
+  Parameter,
+  // A comment that is a sentinel, e.g. /*FALLTHROUGH*/.
+  Sentinel,
+};
+
 struct FormatToken {
   FormatToken()
       : HasUnescapedNewline(false), IsMultiline(false), IsFirst(false),
@@ -324,9 +337,10 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
-        Type(TT_Unknown) {}
+        NeedsSpaceBeforeClosingBlockComment(false), BlockKind(BK_Unknown),
+        BlockCommentKind(static_cast<unsigned>(CommentKind::Plain)),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -402,9 +416,15 @@ struct FormatToken {
   /// \c true if this token ends a group of C++ attributes.
   unsigned EndsCppAttributeGroup : 1;
 
+  /// \c true if clang-format should insert a space before the closing '*/'.
+  unsigned NeedsSpaceBeforeClosingBlockComment : 1;
+
 private:
   /// Contains the kind of block if this token is a brace.
   unsigned BlockKind : 2;
+
+  /// Kind of block comment.
+  unsigned BlockCommentKind : 2;
 
 public:
   BraceBlockKind getBlockKind() const {
@@ -413,6 +433,14 @@ public:
   void setBlockKind(BraceBlockKind BBK) {
     BlockKind = BBK;
     assert(getBlockKind() == BBK && "BraceBlockKind overflow!");
+  }
+
+  CommentKind getBlockCommentKind() const {
+    return static_cast<CommentKind>(BlockCommentKind);
+  }
+  void setBlockCommentKind(CommentKind Kind) {
+    BlockCommentKind = static_cast<unsigned>(Kind);
+    assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
   }
 
 private:
@@ -504,6 +532,11 @@ public:
   /// Contains the width in columns of the last line of a multi-line
   /// token.
   unsigned LastLineColumnWidth = 0;
+
+  /// Offset (from the start of the token) where a space should be inserted
+  /// before the closing '*/' when \c NeedsSpaceBeforeClosingBlockComment is
+  /// set.
+  unsigned SpaceBeforeClosingBlockCommentOffset = 0;
 
   /// The number of spaces that should be inserted before this token.
   unsigned SpacesRequiredBefore = 0;

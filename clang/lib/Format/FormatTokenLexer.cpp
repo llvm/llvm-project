@@ -18,10 +18,65 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang {
 namespace format {
+
+namespace {
+
+CommentKind classifyBlockComment(StringRef Text) {
+  if (!Text.starts_with("/*") || !Text.ends_with("*/"))
+    return CommentKind::Plain;
+  if (Text.starts_with("/**") || Text.starts_with("/*!"))
+    return CommentKind::DocString;
+  const StringRef Content = Text.drop_front(2).drop_back(2).trim();
+  if (Content.empty())
+    return CommentKind::Plain;
+
+  // Allow '$' in identifiers. This is required for languages like JavaScript
+  // which clang-format supports, to correctly classify parameter/sentinel
+  // comments such as /*$scope=*/ or /*$FALLTHROUGH*/.
+  const auto IsIdentifierStart = [](char C) {
+    return llvm::isAlpha(C) || C == '_' || C == '$';
+  };
+  const auto IsIdentifierBody = [](char C) {
+    return llvm::isAlnum(C) || C == '_' || C == '$';
+  };
+  const auto IsIdentifierLike = [&](StringRef Value) {
+    if (Value.empty())
+      return false;
+    if (!IsIdentifierStart(Value.front()))
+      return false;
+    for (char C : Value.drop_front())
+      if (!IsIdentifierBody(C))
+        return false;
+    return true;
+  };
+  const auto IsUppercaseWord = [](StringRef Value) {
+    if (Value.empty())
+      return false;
+    for (char C : Value) {
+      if (llvm::isUpper(C) || llvm::isDigit(C) || C == '_' || C == '$')
+        continue;
+      return false;
+    }
+    return true;
+  };
+  const bool HasWhitespace =
+      Content.find_first_of(" \t\n\v\f\r") != StringRef::npos;
+
+  if (!HasWhitespace && IsUppercaseWord(Content))
+    return CommentKind::Sentinel;
+  if (Content.ends_with('=')) {
+    const StringRef MaybeIdentifier = Content.drop_back().rtrim();
+    if (IsIdentifierLike(MaybeIdentifier))
+      return CommentKind::Parameter;
+  }
+  return CommentKind::Plain;
+}
+} // namespace
 
 FormatTokenLexer::FormatTokenLexer(
     const SourceManager &SourceMgr, FileID ID, unsigned Column,
@@ -1386,6 +1441,23 @@ FormatToken *FormatTokenLexer::getNextToken() {
     StringRef UntrimmedText = FormatTok->TokenText;
     FormatTok->TokenText = FormatTok->TokenText.rtrim(" \t\v\f");
     TrailingWhitespace = UntrimmedText.size() - FormatTok->TokenText.size();
+    FormatTok->setBlockCommentKind(classifyBlockComment(FormatTok->TokenText));
+
+    if (FormatTok->TokenText.starts_with("/*") &&
+        FormatTok->TokenText.ends_with("*/") &&
+        FormatTok->TokenText.size() >= 4) {
+      const StringRef Content =
+          FormatTok->TokenText.drop_front(2).drop_back(2).rtrim("\r\n");
+      if (!Content.empty()) {
+        const unsigned char LastChar =
+            static_cast<unsigned char>(Content.back());
+        if (!isHorizontalWhitespace(LastChar)) {
+          FormatTok->NeedsSpaceBeforeClosingBlockComment = true;
+          FormatTok->SpaceBeforeClosingBlockCommentOffset =
+              FormatTok->TokenText.size() - 2;
+        }
+      }
+    }
   } else if (FormatTok->is(tok::raw_identifier)) {
     IdentifierInfo &Info = IdentTable.get(FormatTok->TokenText);
     FormatTok->Tok.setIdentifierInfo(&Info);

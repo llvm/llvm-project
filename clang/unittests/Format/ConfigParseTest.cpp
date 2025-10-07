@@ -699,6 +699,31 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpaceInEmptyBlock: true", SpaceInEmptyBraces,
               FormatStyle::SIEB_Block);
 
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Always", SpaceInComments,
+                           AfterOpeningComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Never", SpaceInComments,
+                           AfterOpeningComment,
+                           FormatStyle::CommentSpaceMode::Never);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Always", SpaceInComments,
+                           BeforeClosingComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Never", SpaceInComments,
+                           BeforeClosingComment,
+                           FormatStyle::CommentSpaceMode::Never);
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Always", SpaceInComments,
+                           AfterOpeningParamComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Never", SpaceInComments,
+                           AfterOpeningParamComment,
+                           FormatStyle::CommentSpaceMode::Never);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Always", SpaceInComments,
+                           BeforeClosingParamComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Never", SpaceInComments,
+                           BeforeClosingParamComment,
+                           FormatStyle::CommentSpaceMode::Never);
+
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;
   Style.SpacesInParensOptions = {};
