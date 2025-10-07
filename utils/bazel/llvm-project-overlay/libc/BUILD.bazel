@@ -4513,7 +4513,6 @@ libc_math_function(
     name = "rsqrtf16",
     additional_deps = [
         ":__support_math_rsqrtf16",
-        ":errno",
     ],
 )
 
