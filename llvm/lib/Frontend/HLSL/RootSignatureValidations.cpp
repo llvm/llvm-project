@@ -116,7 +116,6 @@ bool verifyStaticSamplerFlags(uint32_t Version,
   if (Version <= 2)
     return Flags == dxbc::StaticSamplerFlags::None;
 
-
   dxbc::StaticSamplerFlags Mask =
       dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
       dxbc::StaticSamplerFlags::UintBorderColor |
