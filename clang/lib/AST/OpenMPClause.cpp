@@ -2570,9 +2570,9 @@ template <typename T> void OMPClausePrinter::VisitOMPMotionClause(T *Node) {
     OS << '(';
     for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
       if (Node->getMotionModifier(I) != OMPC_MOTION_MODIFIER_unknown) {
-        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator) {
           PrintIterator(OS, Node, Policy);
-        else {
+        } else {
           OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
                                               Node->getMotionModifier(I));
           if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)

@@ -1561,4 +1561,59 @@ void foo(int arg) {
 }
 
 #endif
+// RUN: %clang_cc1 -DCK26 -verify -Wno-vla -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK26 --check-prefix CK26-64
+// RUN: %clang_cc1 -DCK26 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s  --check-prefix CK26 --check-prefix CK26-64
+// RUN: %clang_cc1 -DCK26 -fopenmp-version=51 -verify -Wno-vla -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK26 --check-prefix CK26-32
+// RUN: %clang_cc1 -DCK26 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s  --check-prefix CK26 --check-prefix CK26-32
+
+// RUN: %clang_cc1 -DCK26 -verify -Wno-vla -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK26 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK26 -verify -Wno-vla -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK26 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK26
+// CK26: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, ptr }
+// CK26: @[[ITER:[a-zA-Z0-9_]+]] = internal global i32 0, align 4
+void foo(){
+int a[10];
+#pragma omp target update to(iterator(int it = 0:10) : a[it])
+// CHECK: define dso_local void @_Z4testv()
+// CHECK-NEXT:   %[[A1:.*]] = alloca \[10 x i32\], align 16
+// CHECK-NEXT:   %[[A2:.*]] = alloca \[1 x ptr\], align 8
+// CHECK-NEXT:   %[[A3:.*]] = alloca \[1 x ptr\], align 8
+// CHECK-NEXT:   %[[A4:.*]] = alloca \[1 x ptr\], align 8
+// CHECK-NEXT:   %[[A5:.*]] = alloca \[1 x ptr\], align 8
+// CHECK-NEXT:   %[[A6:.*]] = alloca \[1 x ptr\], align 8
+// CHECK-NEXT:   %[[A7:.*]] = alloca \[1 x ptr\], align 8
+// CHECK:     %[[LOAD1:.*]] = load i32, ptr @_ZZ4testvE16iteratorvariable, align 4
+// CHECK:     %[[SEXT1:.*]] = sext i32 %[[LOAD1]] to i64
+// CHECK:     %[[GEP1:.*]] = getelementptr inbounds \[10 x i32\], ptr %[[A1]], i64 0, i64 %[[SEXT1]]
+// CHECK:     %[[GEP2:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A2]], i32 0, i32 0
+// CHECK:     store ptr %[[A1]], ptr %[[GEP2]], align 8
+// CHECK:     %[[GEP3:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A3]], i32 0, i32 0
+// CHECK:     store ptr %[[GEP1]], ptr %[[GEP3]], align 8
+// CHECK:     %[[GEP4:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A4]], i64 0, i64 0
+// CHECK:     store ptr null, ptr %[[GEP4]], align 8
+// CHECK:     %[[GEP5:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A2]], i32 0, i32 0
+// CHECK:     %[[GEP6:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A3]], i32 0, i32 0
+// CHECK:     call void @__tgt_target_data_update_mapper(ptr @2, i64 -1, i32 1, ptr %[[GEP5]], ptr %[[GEP6]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:     %[[LOAD2:.*]] = load i32, ptr @[[ITER]], align 4
+// CHECK:     %[[SEXT2:.*]] = sext i32 %[[LOAD2]] to i64
+// CHECK:     %[[GEP7:.*]] = getelementptr inbounds \[10 x i32\], ptr %[[A1]], i64 0, i64 %[[SEXT2]]
+// CHECK:     %[[GEP8:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A5]], i32 0, i32 0
+// CHECK:     store ptr %[[A1]], ptr %[[GEP8]], align 8
+// CHECK:     %[[GEP9:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A6]], i32 0, i32 0
+// CHECK:     store ptr %[[GEP7]], ptr %[[GEP9]], align 8
+// CHECK:     %[[GEP10:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A7]], i64 0, i64 0
+// CHECK:     store ptr null, ptr %[[GEP10]], align 8
+// CHECK:     %[[GEP11:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A5]], i32 0, i32 0
+// CHECK:     %[[GEP12:.*]] = getelementptr inbounds \[1 x ptr\], ptr %[[A6]], i32 0, i32 0
+// CHECK:     call void @__tgt_target_data_update_mapper(ptr @4, i64 -1, i32 1, ptr %[[GEP11]], ptr %[[GEP12]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
+// CHECK:     ret void
+}
+#endif
 #endif

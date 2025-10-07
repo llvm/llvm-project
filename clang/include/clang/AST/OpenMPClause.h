@@ -7614,7 +7614,7 @@ public:
            "Requested modifier exceeds the total number of modifiers.");
     return MotionModifiers[Cnt];
   }
-  Expr *getIteratorModifier() {
+  Expr *getIteratorModifier() const {
     return getTrailingObjects<Expr *>()[2 * varlist_size()];
   }
   /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
@@ -7819,7 +7819,7 @@ public:
            "Requested modifier exceeds the total number of modifiers.");
     return MotionModifiers[Cnt];
   }
-  Expr *getIteratorModifier() {
+  Expr *getIteratorModifier() const {
     return getTrailingObjects<Expr *>()[2 * varlist_size()];
   }
   /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
