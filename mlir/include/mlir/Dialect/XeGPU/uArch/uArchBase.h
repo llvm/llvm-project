@@ -78,6 +78,7 @@ enum class RegisterFileType : uint8_t { GRF, ARF };
 // A struct to represent register file information
 struct RegisterFileInfo {
   // Constructor
+  RegisterFileInfo() = default;
   RegisterFileInfo(uint32_t size,
                    const llvm::SmallVector<RegisterFileMode, 4> &mode,
                    const llvm::SmallVector<uint32_t, 4> &numRegs)
@@ -107,6 +108,7 @@ enum class CacheHierarchyLevel { L1 = 1, L2 = 2, L3 = 3 };
 // A struct to represent cache information
 struct CacheInfo {
   // Constructor
+  CacheInfo() = default;
   CacheInfo(uint32_t size, uint32_t line_size,
             CacheHierarchyLevel hierarchy_level)
       : size(size), line_size(line_size), hierarchy_level(hierarchy_level) {}
