@@ -186,7 +186,7 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
 bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,
                                        bool allowOverwrite) {
   const ASTContext &astContext = cgm.getASTContext();
-  const uint64_t charWidth = cgm.getASTContext().getCharWidth();
+  const uint64_t charWidth = astContext.getCharWidth();
   mlir::Type charTy = cgm.getBuilder().getUIntNTy(charWidth);
 
   // Offset of where we want the first bit to go within the bits of the
