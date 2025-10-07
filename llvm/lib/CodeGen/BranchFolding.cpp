@@ -1574,17 +1574,24 @@ ReoptimizeBlock:
             (MBB == PredTBB && (PredHasHotSuccessor ? IsEdgeCold : true));
 
         // When we have PGO (or equivalent) information, we want to fold the
-        // fallthrough if it's cold. Folding a fallthrough puts it behind a
-        // conditional branch which isn't desirable if it's hot. When there
-        // isn't any PGO information available we want to fold the taken block
-        // if it's possible and we never want to fold the fallthrough as we
-        // don't know if that is desirable.
+        // fallthrough if it's cold.
+        // Alternatively if the taken block is cold we want to fold that.
+        // Folding a block puts it behind a conditional branch which isn't
+        // desirable if it's hot.
+        //
+        // When there isn't any PGO information available we want to fold the
+        // taken block if it's possible and we never want to fold the
+        // fallthrough as we don't know if that is desirable.
         if (PredAnalyzable && !PredCond.empty() && PredTBB != PredFBB &&
             (CanFoldTakenBlock || CanFoldFallThrough)) {
-          SmallVector<MachineOperand, 4> ReversedCond(PredCond);
           if (CanFoldFallThrough) {
+            SmallVector<MachineOperand, 4> ReversedCond(PredCond);
             DebugLoc Dl = MBB->findBranchDebugLoc();
             TII->reverseBranchCondition(ReversedCond);
+
+            if (!TII->canMakeTailCallConditional(ReversedCond, TailCall))
+              continue;
+
             TII->removeBranch(*Pred);
             TII->insertBranch(*Pred, MBB, PredTBB, ReversedCond, Dl);
           }
