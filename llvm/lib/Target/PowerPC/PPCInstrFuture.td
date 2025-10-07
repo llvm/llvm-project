@@ -11,6 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+class XForm_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                list<dag> pattern> : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> RS;
+
+  let Pattern = pattern;
+  let Inst{6...10} = RS;
+  let Inst{21...30} = xo;
+}
+
 class XOForm_RTAB5_L1<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
                       string asmstr, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -294,6 +303,10 @@ let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
                                  "$RT, $L, $RA, $RB", []>;
+  def TLBSYNCIO
+      : XForm_RS5<31, 564, (outs), (ins g8rc:$RS), "tlbsyncio $RS", []>;
+  def PTESYNCIO
+      : XForm_RS5<31, 596, (outs), (ins g8rc:$RS), "ptesyncio $RS", []>;
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {
