@@ -341,6 +341,7 @@ declare i1 @test11a()
 define i1 @test11() {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @test11a()
 ; CHECK-NEXT:    br i1 [[B]], label [[ONE:%.*]], label [[TWO:%.*]]
 ; CHECK:       one:
@@ -350,6 +351,9 @@ define i1 @test11() {
 ; CHECK-NEXT:    [[D:%.*]] = call i1 @test11a()
 ; CHECK-NEXT:    br i1 [[D]], label [[ONE]], label [[END]]
 ; CHECK:       end:
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[G:%.*]] = inttoptr i64 [[I]] to ptr
+; CHECK-NEXT:    store i32 10, ptr [[G]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = call i1 @test11a()
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
@@ -841,6 +845,7 @@ declare i1 @test25a()
 define i1 @test25() {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @test25a()
 ; CHECK-NEXT:    br i1 [[B]], label [[ONE:%.*]], label [[TWO:%.*]]
 ; CHECK:       one:
@@ -850,6 +855,9 @@ define i1 @test25() {
 ; CHECK-NEXT:    [[D:%.*]] = call i1 @test25a()
 ; CHECK-NEXT:    br i1 [[D]], label [[ONE]], label [[END]]
 ; CHECK:       end:
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[G:%.*]] = inttoptr i64 [[I]] to ptr
+; CHECK-NEXT:    store i32 10, ptr [[G]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = call i1 @test25a()
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
@@ -938,6 +946,7 @@ declare i1 @test26a()
 define i1 @test26(i32 %n) {
 ; CHECK-LABEL: @test26(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @test26a()
 ; CHECK-NEXT:    br label [[ONE:%.*]]
 ; CHECK:       one:
@@ -956,6 +965,9 @@ define i1 @test26(i32 %n) {
 ; CHECK-NEXT:    [[E:%.*]] = call i1 @test26a()
 ; CHECK-NEXT:    br i1 [[E]], label [[ONE]], label [[TWO]]
 ; CHECK:       end:
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[G:%.*]] = inttoptr i64 [[I]] to ptr
+; CHECK-NEXT:    store i32 10, ptr [[G]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = call i1 @test26a()
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
