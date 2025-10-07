@@ -477,12 +477,6 @@ void TokenLexer::ExpandFunctionArguments() {
           if (Tok.is(tok::hashhash))
             Tok.setKind(tok::unknown);
 
-        if(ExpandLocStart.isValid()) {
-          updateLocForMacroArgTokens(CurTok.getLocation(),
-                                     ResultToks.begin()+FirstResult,
-                                     ResultToks.end());
-        }
-
         // If any tokens were substituted from the argument, the whitespace
         // before the first token should match the whitespace of the arg
         // identifier.
@@ -532,11 +526,6 @@ void TokenLexer::ExpandFunctionArguments() {
                                          ResultToks.end())) {
         if (Tok.is(tok::hashhash))
           Tok.setKind(tok::unknown);
-      }
-
-      if (ExpandLocStart.isValid()) {
-        updateLocForMacroArgTokens(CurTok.getLocation(),
-                                   ResultToks.end()-NumToks, ResultToks.end());
       }
 
       // Transfer the leading whitespace information from the token
@@ -600,6 +589,23 @@ void TokenLexer::ExpandFunctionArguments() {
     assert(!OwnsTokens && "This would leak if we already own the token list");
     // This is deleted in the dtor.
     NumTokens = ResultToks.size();
+
+    // Set StartOfLine flags for all tokens based on their line numbers. This
+    // ensures HandleWhitespaceBeforeTok calls MoveToLine for tokens on
+    // different lines.
+    SourceManager &SM = PP.getSourceManager();
+    unsigned PrevLine = 0;
+    for (size_t i = 0; i < ResultToks.size(); ++i) {
+      Token &Tok = ResultToks[i];
+      SourceLocation Loc = Tok.getLocation();
+      unsigned CurLine = SM.getPresumedLoc(Loc).getLine();
+      if (i == 0 || (CurLine != PrevLine && CurLine > 0)) {
+        // First token or token on different line - mark as start of line
+        Tok.setFlag(Token::StartOfLine);
+      }
+      PrevLine = CurLine;
+    }
+
     // The tokens will be added to Preprocessor's cache and will be removed
     // when this TokenLexer finishes lexing them.
     Tokens = PP.cacheMacroExpandedTokens(this, ResultToks);
@@ -678,7 +684,31 @@ bool TokenLexer::Lex(Token &Tok) {
                                       ExpandLocEnd,
                                       Tok.getLength());
     } else {
-      instLoc = getExpansionLocForMacroDefLoc(Tok.getLocation());
+      // Check if this token is from a macro argument.
+      // Macro argument tokens have FileID locations (not MacroID) because we
+      // skipped remapping in updateLocForMacroArgTokens. We need to check if
+      // the token is from the macro definition or from an argument.
+      if (SM.isInSLocAddrSpace(Tok.getLocation(), MacroDefStart,
+                               MacroDefLength)) {
+        // Token is from macro definition - remap to expansion location
+        instLoc = getExpansionLocForMacroDefLoc(Tok.getLocation());
+      } else {
+        // Token is from macro argument - wrap FileID in MacroID for diagnostic
+        // suppression while preserving line numbers. Use self-referencing
+        // createMacroArgExpansionLoc where both spelling and expansion point
+        // to the same FileID. This ensures isMacroID() returns true (for
+        // diagnostic suppression) while getDecomposedExpansionLoc() resolves
+        // to the original FileID (for line number preservation).
+        instLoc = SM.createMacroArgExpansionLoc(
+            Tok.getLocation(), Tok.getLocation(), Tok.getLength());
+
+        // Clear the StartOfLine flag for macro argument tokens. These tokens
+        // are being inserted into a macro expansion context, and their original
+        // line position from the source is not relevant. Keeping this flag
+        // would cause incorrect spacing during stringification (e.g., "a/ b"
+        // instead of "a/b").
+        Tok.clearFlag(Token::StartOfLine);
+      }
     }
 
     Tok.setLocation(instLoc);
@@ -687,12 +717,15 @@ bool TokenLexer::Lex(Token &Tok) {
   // If this is the first token, set the lexical properties of the token to
   // match the lexical properties of the macro identifier.
   if (isFirstToken) {
-    Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
+    // Preserve StartOfLine flag if already set (e.g., for macro arguments)
+    if (!Tok.isAtStartOfLine()) {
+      Tok.setFlagValue(Token::StartOfLine, AtStartOfLine);
+    }
     Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
   } else {
     // If this is not the first token, we may still need to pass through
     // leading whitespace if we've expanded a macro.
-    if (AtStartOfLine) Tok.setFlag(Token::StartOfLine);
+    if (AtStartOfLine || Tok.isAtStartOfLine()) Tok.setFlag(Token::StartOfLine);
     if (HasLeadingSpace) Tok.setFlag(Token::LeadingSpace);
   }
   AtStartOfLine = false;
@@ -900,15 +933,32 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   // expanded from the full ## expression. Pull this information together into
   // a new SourceLocation that captures all of this.
   SourceManager &SM = PP.getSourceManager();
-  if (StartLoc.isFileID())
+  // Only convert FileID to expansion loc if it's from the macro definition.
+  // Macro argument tokens have FileID locations that are NOT from
+  // MacroDefStart.
+  if (StartLoc.isFileID() &&
+      SM.isInSLocAddrSpace(StartLoc, MacroDefStart, MacroDefLength))
     StartLoc = getExpansionLocForMacroDefLoc(StartLoc);
-  if (EndLoc.isFileID())
+  if (EndLoc.isFileID() &&
+      SM.isInSLocAddrSpace(EndLoc, MacroDefStart, MacroDefLength))
     EndLoc = getExpansionLocForMacroDefLoc(EndLoc);
   FileID MacroFID = SM.getFileID(MacroExpansionStart);
-  while (SM.getFileID(StartLoc) != MacroFID)
+  // Only walk expansion ranges for MacroID locations.
+  // FileID locations (from macro arguments) don't have expansion ranges.
+  // Must check isMacroID() in the loop condition because
+  // getImmediateExpansionRange might return a FileID location, which would fail
+  // on the next iteration.
+  while (StartLoc.isMacroID() && SM.getFileID(StartLoc) != MacroFID)
     StartLoc = SM.getImmediateExpansionRange(StartLoc).getBegin();
-  while (SM.getFileID(EndLoc) != MacroFID)
+  while (EndLoc.isMacroID() && SM.getFileID(EndLoc) != MacroFID)
     EndLoc = SM.getImmediateExpansionRange(EndLoc).getEnd();
+
+  // If we exited the loop with FileID locations (from macro arguments),
+  // fall back to using MacroExpansionStart.
+  if (StartLoc.isFileID() && SM.getFileID(StartLoc) != MacroFID)
+    StartLoc = MacroExpansionStart;
+  if (EndLoc.isFileID() && SM.getFileID(EndLoc) != MacroFID)
+    EndLoc = MacroExpansionStart;
 
   LHSTok.setLocation(SM.createExpansionLoc(LHSTok.getLocation(), StartLoc, EndLoc,
                                         LHSTok.getLength()));
@@ -983,118 +1033,6 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
   SourceLocation::UIntTy relativeOffset = 0;
   SM.isInSLocAddrSpace(loc, MacroDefStart, MacroDefLength, &relativeOffset);
   return MacroExpansionStart.getLocWithOffset(relativeOffset);
-}
-
-/// Finds the tokens that are consecutive (from the same FileID)
-/// creates a single SLocEntry, and assigns SourceLocations to each token that
-/// point to that SLocEntry. e.g for
-///   assert(foo == bar);
-/// There will be a single SLocEntry for the "foo == bar" chunk and locations
-/// for the 'foo', '==', 'bar' tokens will point inside that chunk.
-///
-/// \arg begin_tokens will be updated to a position past all the found
-/// consecutive tokens.
-static void updateConsecutiveMacroArgTokens(SourceManager &SM,
-                                            SourceLocation ExpandLoc,
-                                            Token *&begin_tokens,
-                                            Token * end_tokens) {
-  assert(begin_tokens + 1 < end_tokens);
-  SourceLocation BeginLoc = begin_tokens->getLocation();
-  llvm::MutableArrayRef<Token> All(begin_tokens, end_tokens);
-  llvm::MutableArrayRef<Token> Partition;
-
-  auto NearLast = [&, Last = BeginLoc](SourceLocation Loc) mutable {
-    // The maximum distance between two consecutive tokens in a partition.
-    // This is an important trick to avoid using too much SourceLocation address
-    // space!
-    static constexpr SourceLocation::IntTy MaxDistance = 50;
-    auto Distance = Loc.getRawEncoding() - Last.getRawEncoding();
-    Last = Loc;
-    return Distance <= MaxDistance;
-  };
-
-  // Partition the tokens by their FileID.
-  // This is a hot function, and calling getFileID can be expensive, the
-  // implementation is optimized by reducing the number of getFileID.
-  if (BeginLoc.isFileID()) {
-    // Consecutive tokens not written in macros must be from the same file.
-    // (Neither #include nor eof can occur inside a macro argument.)
-    Partition = All.take_while([&](const Token &T) {
-      return T.getLocation().isFileID() && NearLast(T.getLocation());
-    });
-  } else {
-    // Call getFileID once to calculate the bounds, and use the cheaper
-    // sourcelocation-against-bounds comparison.
-    FileID BeginFID = SM.getFileID(BeginLoc);
-    SourceLocation Limit =
-        SM.getComposedLoc(BeginFID, SM.getFileIDSize(BeginFID));
-    Partition = All.take_while([&](const Token &T) {
-      // NOTE: the Limit is included! The lexer recovery only ever inserts a
-      // single token past the end of the FileID, specifically the ) when a
-      // macro-arg containing a comma should be guarded by parentheses.
-      //
-      // It is safe to include the Limit here because SourceManager allocates
-      // FileSize + 1 for each SLocEntry.
-      //
-      // See https://github.com/llvm/llvm-project/issues/60722.
-      return T.getLocation() >= BeginLoc && T.getLocation() <= Limit
-         &&  NearLast(T.getLocation());
-    });
-  }
-  assert(!Partition.empty());
-
-  // For the consecutive tokens, find the length of the SLocEntry to contain
-  // all of them.
-  SourceLocation::UIntTy FullLength =
-      Partition.back().getEndLoc().getRawEncoding() -
-      Partition.front().getLocation().getRawEncoding();
-  // Create a macro expansion SLocEntry that will "contain" all of the tokens.
-  SourceLocation Expansion =
-      SM.createMacroArgExpansionLoc(BeginLoc, ExpandLoc, FullLength);
-
-#ifdef EXPENSIVE_CHECKS
-  assert(llvm::all_of(Partition.drop_front(),
-                      [&SM, ID = SM.getFileID(Partition.front().getLocation())](
-                          const Token &T) {
-                        return ID == SM.getFileID(T.getLocation());
-                      }) &&
-         "Must have the same FIleID!");
-#endif
-  // Change the location of the tokens from the spelling location to the new
-  // expanded location.
-  for (Token& T : Partition) {
-    SourceLocation::IntTy RelativeOffset =
-        T.getLocation().getRawEncoding() - BeginLoc.getRawEncoding();
-    T.setLocation(Expansion.getLocWithOffset(RelativeOffset));
-  }
-  begin_tokens = &Partition.back() + 1;
-}
-
-/// Creates SLocEntries and updates the locations of macro argument
-/// tokens to their new expanded locations.
-///
-/// \param ArgIdSpellLoc the location of the macro argument id inside the macro
-/// definition.
-void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
-                                            Token *begin_tokens,
-                                            Token *end_tokens) {
-  SourceManager &SM = PP.getSourceManager();
-
-  SourceLocation ExpandLoc =
-      getExpansionLocForMacroDefLoc(ArgIdSpellLoc);
-
-  while (begin_tokens < end_tokens) {
-    // If there's only one token just create a SLocEntry for it.
-    if (end_tokens - begin_tokens == 1) {
-      Token &Tok = *begin_tokens;
-      Tok.setLocation(SM.createMacroArgExpansionLoc(Tok.getLocation(),
-                                                    ExpandLoc,
-                                                    Tok.getLength()));
-      return;
-    }
-
-    updateConsecutiveMacroArgTokens(SM, ExpandLoc, begin_tokens, end_tokens);
-  }
 }
 
 void TokenLexer::PropagateLineStartLeadingSpaceInfo(Token &Result) {

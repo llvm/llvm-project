@@ -222,14 +222,6 @@ private:
   /// macro expansion source location entry.
   SourceLocation getExpansionLocForMacroDefLoc(SourceLocation loc) const;
 
-  /// Creates SLocEntries and updates the locations of macro argument
-  /// tokens to their new expanded locations.
-  ///
-  /// \param ArgIdSpellLoc the location of the macro argument id inside the
-  /// macro definition.
-  void updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
-                                  Token *begin_tokens, Token *end_tokens);
-
   /// Remove comma ahead of __VA_ARGS__, if present, according to compiler
   /// dialect settings.  Returns true if the comma is removed.
   bool MaybeRemoveCommaBeforeVaArgs(SmallVectorImpl<Token> &ResultToks,

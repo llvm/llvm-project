@@ -306,7 +306,7 @@ bool PrintPPOutputPPCallbacks::MoveToLine(unsigned LineNo,
     *OS << '\n';
     StartedNewLine = true;
   } else if (!DisableLineMarkers) {
-    if (LineNo - CurLine <= 8) {
+    if (LineNo >= CurLine && LineNo - CurLine <= 8) {
       const char *NewLines = "\n\n\n\n\n\n\n\n";
       OS->write(NewLines, LineNo - CurLine);
     } else {

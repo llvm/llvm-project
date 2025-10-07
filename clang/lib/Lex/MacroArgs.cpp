@@ -65,8 +65,16 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
                   "assume trivial copyability if copying into the "
                   "uninitialized array (as opposed to reusing a cached "
                   "MacroArgs)");
-    std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(),
-              Result->getTrailingObjects());
+    Token *Tokens = Result->getTrailingObjects();
+    std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(), Tokens);
+
+    // Clear StartOfLine flag on all argument tokens. These tokens are being
+    // used in a macro expansion context where their original line position
+    // is not relevant. Keeping this flag causes incorrect spacing during
+    // stringification (e.g., "a/ b" instead of "a/b").
+    for (unsigned i = 0; i < UnexpArgTokens.size(); ++i) {
+      Tokens[i].clearFlag(Token::StartOfLine);
+    }
   }
 
   return Result;
