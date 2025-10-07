@@ -11,13 +11,27 @@
 
 #include "fp_test.h"
 
+// By default this test uses compareResultF to check the returned floats, which
+// accepts any returned NaN if the expected result is the canonical NaN value
+// 0x7fc00000. For the Thumb1 assembler FP implementation, which commits to a
+// more detailed handling of NaNs, we tighten up the check and include some
+// extra test cases specific to that NaN policy.
+#if __thumb__ && !__thumb2__
+#  define EXPECT_EXACT_RESULTS
+#  define ARM_NAN_HANDLING
+#endif
+
 // Returns: a + b
 COMPILER_RT_ABI float __addsf3(float a, float b);
 
 int test__addsf3(uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
   float x = __addsf3(a, b);
+#ifdef EXPECT_EXACT_RESULTS
+  int ret = toRep32(x) == expected_rep;
+#else
   int ret = compareResultF(x, expected_rep);
+#endif
 
   if (ret) {
     printf("error in test__addsf3(%08" PRIx32 ", %08" PRIx32 ") = %08" PRIx32
@@ -275,10 +289,23 @@ int main() {
   status |= test__addsf3(0xbbebe66d, 0x3b267c1f, 0xbb98a85e);
   status |= test__addsf3(0x01f5b166, 0x81339a37, 0x019be44a);
 
-#if __thumb__ && !__thumb2__
-  // These tests depend on Arm-specific IEEE 754 implementation choices
-  // regarding NaNs, which are satisfied by arm/addsf3.S but not guaranteed by
-  // other implementations:
+  // Test that the result of an operation is a NaN at all when it should be.
+  //
+  // In most configurations these tests' results are checked compared using
+  // compareResultF, so we set all the answers to the canonical NaN 0x7fc00000,
+  // which causes compareResultF to accept any NaN encoding. We also use the
+  // same value as the input NaN in tests that have one, so that even in
+  // EXPECT_EXACT_RESULTS mode these tests should pass, because 0x7fc00000 is
+  // still the exact expected NaN.
+  status |= test__addsf3(0x7f800000, 0xff800000, 0x7fc00000);
+  status |= test__addsf3(0xff800000, 0x7f800000, 0x7fc00000);
+  status |= test__addsf3(0x3f800000, 0x7fc00000, 0x7fc00000);
+  status |= test__addsf3(0x7fc00000, 0x3f800000, 0x7fc00000);
+  status |= test__addsf3(0x7fc00000, 0x7fc00000, 0x7fc00000);
+
+#ifdef ARM_NAN_HANDLING
+  // Tests specific to the NaN handling of Arm hardware, mimicked by
+  // arm/addsf3.S:
   //
   //  - a quiet NaN is distinguished by the top mantissa bit being 1
   //
@@ -290,7 +317,10 @@ int main() {
   //    from the first operand
   //
   //  - if both operands are quiet NaNs then the output NaN is the first
-  //    operand.
+  //    operand
+  //
+  //  - invalid operations not involving an input NaN return the quiet
+  //    NaN with fewest bits set, 0x7fc00000.
 
   status |= test__addsf3(0x00000000, 0x7fad4be3, 0x7fed4be3);
   status |= test__addsf3(0x00000000, 0x7fdf48c7, 0x7fdf48c7);
@@ -346,7 +376,7 @@ int main() {
   status |= test__addsf3(0xff800000, 0x7f800000, 0x7fc00000);
   status |= test__addsf3(0xff800000, 0x7f857fdc, 0x7fc57fdc);
   status |= test__addsf3(0xff800000, 0x7fde0397, 0x7fde0397);
-#endif // __arm__
+#endif // ARM_NAN_HANDLING
 
   return status;
 }
