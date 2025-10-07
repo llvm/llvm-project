@@ -129,7 +129,6 @@ static cl::opt<double> MaxClonedRate(
     cl::Hidden, cl::init(7.5));
 
 namespace {
-
 class SelectInstToUnfold {
   SelectInst *SI;
   PHINode *SIUse;
@@ -142,10 +141,6 @@ public:
 
   explicit operator bool() const { return SI && SIUse; }
 };
-
-void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
-            std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-            std::vector<BasicBlock *> *NewBBs);
 
 class DFAJumpThreading {
 public:
@@ -176,16 +171,18 @@ private:
     }
   }
 
+  static void unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                     SelectInstToUnfold SIToUnfold,
+                     std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                     std::vector<BasicBlock *> *NewBBs);
+
   AssumptionCache *AC;
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
 };
-
-} // end anonymous namespace
-
-namespace {
+} // namespace
 
 /// Unfold the select instruction held in \p SIToUnfold by replacing it with
 /// control flow.
@@ -194,9 +191,10 @@ namespace {
 /// created basic blocks into \p NewBBs.
 ///
 /// TODO: merge it with CodeGenPrepare::optimizeSelectInst() if possible.
-void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
-            std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-            std::vector<BasicBlock *> *NewBBs) {
+void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                              SelectInstToUnfold SIToUnfold,
+                              std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                              std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
   assert(SI->hasOneUse());
@@ -351,10 +349,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   SI->eraseFromParent();
 }
 
+namespace {
 struct ClonedBlock {
   BasicBlock *BB;
   APInt State; ///< \p State corresponds to the next value of a switch stmnt.
 };
+} // namespace
 
 typedef std::deque<BasicBlock *> PathType;
 typedef std::vector<PathType> PathsType;
@@ -384,6 +384,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   return OS;
 }
 
+namespace {
 /// ThreadingPath is a path in the control flow of a loop that can be threaded
 /// by cloning necessary basic blocks and replacing conditional branches with
 /// unconditional ones. A threading path includes a list of basic blocks, the
@@ -1366,6 +1367,7 @@ private:
   SmallPtrSet<const Value *, 32> EphValues;
   std::vector<ThreadingPath> TPaths;
 };
+} // namespace
 
 bool DFAJumpThreading::run(Function &F) {
   LLVM_DEBUG(dbgs() << "\nDFA Jump threading: " << F.getName() << "\n");
@@ -1443,8 +1445,6 @@ bool DFAJumpThreading::run(Function &F) {
 
   return MadeChanges;
 }
-
-} // end anonymous namespace
 
 /// Integrate with the new Pass Manager
 PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
