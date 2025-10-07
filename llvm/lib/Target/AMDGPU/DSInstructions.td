@@ -951,6 +951,11 @@ class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat
   (inst $ptr, Offset:$offset, (i1 gds))
 >;
 
+class DSReadPat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (EXTRACT_SUBREG (inst $ptr, Offset:$offset, (i1 gds)), lo16)
+>;
+
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
 
   let OtherPredicates = [LDSRequiresM0Init] in {
@@ -968,13 +973,14 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
     def : DSReadPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    let True16Predicate = NotUseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-    }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-    }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
+    def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
