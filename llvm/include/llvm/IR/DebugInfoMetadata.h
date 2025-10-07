@@ -73,35 +73,40 @@ enum Tag : uint16_t;
 /// DISourceLanguageName may hold either of these.
 ///
 class DISourceLanguageName {
+  /// Language version. The version scheme is language
+  /// dependent.
+  uint32_t Version = 0;
+
   /// Language name.
-  /// If \ref Version is not std::nullopt, then this name
+  /// If \ref HasVersion is \c true, then this name
   /// is version independent (i.e., doesn't include the language
   /// version in its name).
   uint16_t Name;
 
-  /// Language version. The version scheme is language
-  /// dependent.
-  std::optional<uint32_t> Version;
+  /// If \c true, then \ref Version is interpretable and \ref Name
+  /// is a version independent name.
+  bool HasVersion;
 
 public:
-  bool hasVersionedName() const { return Version.has_value(); }
+  bool hasVersionedName() const { return HasVersion; }
 
   /// Returns a versioned or unversioned language name.
   uint16_t getName() const { return Name; }
 
-  // Transitional API for cases where we do not yet support
-  // versioned source language names. Use \ref getName instead.
-  //
-  // FIXME: remove once all callers of this API account for versioned
-  // names.
+  /// Transitional API for cases where we do not yet support
+  /// versioned source language names. Use \ref getName instead.
+  ///
+  /// FIXME: remove once all callers of this API account for versioned
+  /// names.
   uint16_t getUnversionedName() const {
     assert(!hasVersionedName());
     return Name;
   }
 
   DISourceLanguageName(uint16_t Lang, uint32_t Version)
-      : Name(Lang), Version(Version) {};
-  DISourceLanguageName(uint16_t Lang) : Name(Lang), Version(std::nullopt) {};
+      : Version(Version), Name(Lang), HasVersion(true) {};
+  DISourceLanguageName(uint16_t Lang)
+      : Version(0), Name(Lang), HasVersion(false) {};
 };
 
 class DbgVariableRecord;
