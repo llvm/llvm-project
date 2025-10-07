@@ -242,6 +242,30 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentSerializationPointers) {
   EXPECT_EQ(P, &X);
 }
 
+static void
+expected_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                 orc_rt_WrapperFunctionReturn Return,
+                                 orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      [](move_only_function<void(Expected<int32_t *>)> Return, int32_t *P) {
+        Return(P);
+      });
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TransparentSerializationExpectedPointers) {
+  int X = 42;
+  int *P = nullptr;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::call(
+      DirectCaller(nullptr, expected_int_pointer_sps_wrapper),
+      [&](Expected<Expected<int32_t *>> R) {
+        P = cantFail(cantFail(std::move(R)));
+      },
+      &X);
+
+  EXPECT_EQ(P, &X);
+}
+
 template <size_t N> struct SPSOpCounter {};
 
 namespace orc_rt {
