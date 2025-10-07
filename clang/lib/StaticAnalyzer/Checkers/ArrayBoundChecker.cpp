@@ -706,8 +706,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
           // ...but it's tainted, so report an error.
 
           // Diagnostic detail: saying "tainted offset" is always correct, but
-          // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
-          // nicer to say "tainted index".
+          // the common case is that 'idx' is tainted in 'arr[idx]' and then
+          // it's nicer to say "tainted index".
           const char *OffsetName = "offset";
           if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
             if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
@@ -851,9 +851,8 @@ bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
 
 void ento::registerArrayBoundChecker(CheckerManager &mgr) {
   ArrayBoundChecker *checker = mgr.registerChecker<ArrayBoundChecker>();
-  checker->IsAggressive =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          checker, "AggressiveReport");
+  checker->IsAggressive = mgr.getAnalyzerOptions().getCheckerBooleanOption(
+      checker, "AggressiveReport");
 }
 
 bool ento::shouldRegisterArrayBoundChecker(const CheckerManager &mgr) {
