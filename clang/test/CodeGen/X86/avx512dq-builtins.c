@@ -12,22 +12,6 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
-// constexpr coverage for i32x8/f32x8 broadcasts (DQ)
-
-  
-  TEST_CONSTEXPR(match_v16si(_mm512_mask_broadcast_i32x8(_mm512_setzero_si512(), 0xFFFF, _mm256_set1_epi32(8)),
-    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8));
-
-
-  
-  TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x8(_mm512_setzero_ps(), 0xFFFF, _mm256_set1_ps(5.0f)),
-    5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5));
-
-
-  TEST_CONSTEXPR(match_m512(_mm512_maskz_broadcast_f32x8(0xFFFF, _mm256_set1_ps(7.0f)),
-    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7));
-
-
 __mmask8 test_knot_mask8(__mmask8 a) {
   // CHECK-LABEL: test_knot_mask8
   // CHECK: [[IN:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -1321,6 +1305,7 @@ __m512 test_mm512_mask_broadcast_f32x8(__m512 __O, __mmask16 __M, float const* _
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_broadcast_f32x8(__O, __M, _mm256_loadu_ps(__A)); 
 }
+TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x8(_mm512_setzero_ps(), 0xFFFF, _mm256_set1_ps(5.0f)), 5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5));
 
 __m512 test_mm512_maskz_broadcast_f32x8(__mmask16 __M, float const* __A) {
   // CHECK-LABEL: test_mm512_maskz_broadcast_f32x8
@@ -1328,6 +1313,7 @@ __m512 test_mm512_maskz_broadcast_f32x8(__mmask16 __M, float const* __A) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_broadcast_f32x8(__M, _mm256_loadu_ps(__A)); 
 }
+TEST_CONSTEXPR(match_m512(_mm512_maskz_broadcast_f32x8(0xFFFF, _mm256_set1_ps(7.0f)), 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7));
 
 __m512d test_mm512_broadcast_f64x2(double const* __A) {
   // CHECK-LABEL: test_mm512_broadcast_f64x2
@@ -1384,6 +1370,7 @@ __m512i test_mm512_mask_broadcast_i32x8(__m512i __O, __mmask16 __M, __m256i cons
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_broadcast_i32x8(__O, __M, _mm256_loadu_si256(__A)); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_mask_broadcast_i32x8(_mm512_setzero_si512(), 0xFFFF, _mm256_set1_epi32(8)), 8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8));
 
 __m512i test_mm512_maskz_broadcast_i32x8(__mmask16 __M, __m256i const* __A) {
   // CHECK-LABEL: test_mm512_maskz_broadcast_i32x8

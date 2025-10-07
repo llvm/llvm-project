@@ -11,27 +11,13 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
-// constexpr coverage for masked set1/broadcast/unpack/move_ss/move_sd (F)
-TEST_CONSTEXPR(match_v16si(_mm512_mask_set1_epi32(_mm512_setzero_si512(), 0xFFFF, 13),
-  13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13));
-TEST_CONSTEXPR(match_v8di(_mm512_mask_set1_epi64(_mm512_setzero_si512(), 0xFF, 21),
-  21,21,21,21,21,21,21,21));
-
-TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x4(_mm512_setzero_ps(), 0xFFFF, (__m128)(__v4sf){1,2,3,4}),
-  1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4));
-
-TEST_CONSTEXPR(match_m512(_mm512_maskz_broadcast_f32x4(0xFFFF, (__m128)(__v4sf){1,2,3,4}),
-  1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4));
-
+// Constexpr coverage for DQ broadcast features (f64x2/i32x8) that don't have test functions in this file.
+// The corresponding test_mm512_*_broadcast_* functions are in avx512dq-builtins.c.
 TEST_CONSTEXPR(match_m512d(_mm512_mask_broadcast_f64x2(_mm512_setzero_pd(), 0xFF, (__m128d)(__v2df){1,2}),
   1,2,1,2,1,2,1,2));
 
 TEST_CONSTEXPR(match_m512d(_mm512_maskz_broadcast_f64x2(0xFF, (__m128d)(__v2df){1,2}),
   1,2,1,2,1,2,1,2));
-
-// additionally add i32x4/i32x8 z-forms
-TEST_CONSTEXPR(match_v16si(_mm512_maskz_broadcast_i32x4(0xFFFF, (__m128i)(__v4si){0,1,2,3}),
-  0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3));
 
 TEST_CONSTEXPR(match_v16si(_mm512_maskz_broadcast_i32x8(0xFFFF, _mm256_set1_epi32(9)),
   9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9));
@@ -6861,12 +6847,16 @@ __m512 test_mm512_mask_broadcast_f32x4(__m512 __O, __mmask16 __M, float const* _
   return _mm512_mask_broadcast_f32x4(__O, __M, _mm_loadu_ps(__A)); 
 }
 
+TEST_CONSTEXPR(match_m512(_mm512_mask_broadcast_f32x4(_mm512_setzero_ps(), 0xFFFF, (__m128)(__v4sf){1,2,3,4}), 1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4));
+
 __m512 test_mm512_maskz_broadcast_f32x4(__mmask16 __M, float const* __A) {
   // CHECK-LABEL: test_mm512_maskz_broadcast_f32x4
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_broadcast_f32x4(__M, _mm_loadu_ps(__A)); 
 }
+
+TEST_CONSTEXPR(match_m512(_mm512_maskz_broadcast_f32x4(0xFFFF, (__m128)(__v4sf){1,2,3,4}), 1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4));
 
 __m512d test_mm512_broadcast_f64x4(double const* __A) {
   // CHECK-LABEL: test_mm512_broadcast_f64x4
@@ -6909,6 +6899,8 @@ __m512i test_mm512_maskz_broadcast_i32x4(__mmask16 __M, __m128i const* __A) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_broadcast_i32x4(__M, _mm_loadu_si128(__A)); 
 }
+
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_broadcast_i32x4(0xFFFF, (__m128i)(__v4si){0,1,2,3}), 0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3));
 
 __m512i test_mm512_broadcast_i64x4(__m256i const* __A) {
   // CHECK-LABEL: test_mm512_broadcast_i64x4
@@ -10928,6 +10920,8 @@ __m512i test_mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
   return _mm512_mask_set1_epi32 ( __O, __M, __A);
 }
 
+TEST_CONSTEXPR(match_v16si(_mm512_mask_set1_epi32(_mm512_setzero_si512(), 0xFFFF, 13), 13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13));
+
 __m512i test_mm512_maskz_set1_epi32(__mmask16 __M, int __A)
 {     
   // CHECK-LABEL: test_mm512_maskz_set1_epi32
@@ -11169,6 +11163,8 @@ __m512i test_mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_set1_epi64 (__O, __M, __A);
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_mask_set1_epi64(_mm512_setzero_si512(), 0xFF, 21), 21,21,21,21,21,21,21,21));
 
 __m512i test_mm512_maskz_set1_epi64 (__mmask8 __M, long long __A)
 {

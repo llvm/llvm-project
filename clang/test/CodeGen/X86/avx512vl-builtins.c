@@ -7,45 +7,19 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
-// constexpr coverage for masked set1/broadcast/unpack/movehdup/moveldup (VL)
-TEST_CONSTEXPR(match_v4si(_mm_mask_set1_epi32(_mm_setzero_si128(), 0xF, 7), 7, 7, 7, 7));
-TEST_CONSTEXPR(match_v2di(_mm_mask_set1_epi64(_mm_setzero_si128(), 0x3, 9), 9, 9));
+// Constexpr coverage for VLDQ broadcast features (i32x2/f32x2/f64x2/i64x2) that don't have test functions in this file.
+// The corresponding test_mm*_*_broadcast_* functions are in avx512vldq-builtins.c.
+TEST_CONSTEXPR(match_v4si(_mm_mask_broadcast_i32x2(_mm_setzero_si128(), 0xF, (__m128i)(__v4si){0,1,2,3}), 0,1,0,1));
 
-TEST_CONSTEXPR(match_v8si(_mm256_mask_set1_epi32(_mm256_setzero_si256(), 0xFF, 5), 5, 5, 5, 5, 5, 5, 5, 5));
-TEST_CONSTEXPR(match_v4di(_mm256_mask_set1_epi64(_mm256_setzero_si256(), 0xF, 11), 11, 11, 11, 11));
+TEST_CONSTEXPR(match_m256(_mm256_mask_broadcast_f32x2(_mm256_setzero_ps(), 0xFF, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
 
+TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x2(0xFF, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
 
-  
-  TEST_CONSTEXPR(match_v4si(_mm_mask_broadcast_i32x2(_mm_setzero_si128(), 0xF, (__m128i)(__v4si){0,1,2,3}), 0,1,0,1));
+TEST_CONSTEXPR(match_m256d(_mm256_mask_broadcast_f64x2(_mm256_setzero_pd(), 0xFF, (__m128d)(__v2df){1.0,2.0}), 1.0,2.0,1.0,2.0));
 
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_broadcast_f64x2(0xFF, (__m128d)(__v2df){1.0,2.0}), 1.0,2.0,1.0,2.0));
 
-  
-  TEST_CONSTEXPR(match_m256(_mm256_mask_broadcast_f32x2(_mm256_setzero_ps(), 0xFF, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
-
-
-  TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x2(0xFF, (__m128)(__v4sf){1.f,2.f,3.f,4.f}), 1.f,2.f,1.f,2.f,1.f,2.f,1.f,2.f));
-
-
-  TEST_CONSTEXPR(match_m256d(_mm256_mask_broadcast_f64x2(_mm256_setzero_pd(), 0xFF, (__m128d)(__v2df){1.0,2.0}), 1.0,2.0,1.0,2.0));
-
-
-  
-  TEST_CONSTEXPR(match_m256d(_mm256_maskz_broadcast_f64x2(0xFF, (__m128d)(__v2df){1.0,2.0}), 1.0,2.0,1.0,2.0));
-
-
-// i64x2 maskz
-
-  TEST_CONSTEXPR(match_v4di(_mm256_maskz_broadcast_i64x2(0xF, (__m128i)(__v2di){1,2}), 1,2,1,2));
-
-
-// i32x4/f32x4 maskz (VL)
-
-  
-  TEST_CONSTEXPR(match_v8si(_mm256_maskz_broadcast_i32x4(0xFF, (__m128i)(__v4si){0,1,2,3}), 0,1,2,3,0,1,2,3));
-
-
-  
-  TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x4(0xFF, (__m128)(__v4sf){0,1,2,3}), 0,1,2,3,0,1,2,3));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_broadcast_i64x2(0xF, (__m128i)(__v2di){1,2}), 1,2,1,2));
 
 
 // i32x2 maskz (128/256)
@@ -7271,6 +7245,8 @@ __m128i test_mm_mask_set1_epi32(__m128i __O, __mmask8 __M) {
   return _mm_mask_set1_epi32(__O, __M, 5); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_mask_set1_epi32(_mm_setzero_si128(), 0xF, 7), 7, 7, 7, 7));
+
 __m128i test_mm_maskz_set1_epi32(__mmask8 __M) {
   // CHECK-LABEL: test_mm_maskz_set1_epi32
   // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
@@ -7296,6 +7272,8 @@ __m256i test_mm256_mask_set1_epi32(__m256i __O, __mmask8 __M) {
   return _mm256_mask_set1_epi32(__O, __M, 5); 
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_mask_set1_epi32(_mm256_setzero_si256(), 0xFF, 5), 5, 5, 5, 5, 5, 5, 5, 5));
+
 __m256i test_mm256_maskz_set1_epi32(__mmask8 __M) {
   // CHECK-LABEL: test_mm256_maskz_set1_epi32
   // CHECK:  insertelement <8 x i32> poison, i32 %{{.*}}, i32 0
@@ -7319,6 +7297,8 @@ __m128i test_mm_mask_set1_epi64(__m128i __O, __mmask8 __M, long long __A) {
   return _mm_mask_set1_epi64(__O, __M, __A); 
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_mask_set1_epi64(_mm_setzero_si128(), 0x3, 9), 9, 9));
+
 __m128i test_mm_maskz_set1_epi64(__mmask8 __M, long long __A) {
   // CHECK-LABEL: test_mm_maskz_set1_epi64
   // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 0
@@ -7338,6 +7318,8 @@ __m256i test_mm256_mask_set1_epi64(__m256i __O, __mmask8 __M, long long __A) {
   // CHECK:  select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_set1_epi64(__O, __M, __A); 
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_mask_set1_epi64(_mm256_setzero_si256(), 0xF, 11), 11, 11, 11, 11));
 
 __m256i test_mm256_maskz_set1_epi64(__mmask8 __M, long long __A) {
   // CHECK-LABEL: test_mm256_maskz_set1_epi64
@@ -9067,6 +9049,8 @@ __m256 test_mm256_maskz_broadcast_f32x4(__mmask8 __M, __m128 __A) {
   return _mm256_maskz_broadcast_f32x4(__M, __A); 
 }
 
+TEST_CONSTEXPR(match_m256(_mm256_maskz_broadcast_f32x4(0xFF, (__m128)(__v4sf){0,1,2,3}), 0,1,2,3,0,1,2,3));
+
 __m256i test_mm256_broadcast_i32x4(__m128i const* __A) {
   // CHECK-LABEL: test_mm256_broadcast_i32x4
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -9087,6 +9071,8 @@ __m256i test_mm256_maskz_broadcast_i32x4(__mmask8 __M, __m128i const* __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_broadcast_i32x4(__M, _mm_loadu_si128(__A)); 
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_broadcast_i32x4(0xFF, (__m128i)(__v4si){0,1,2,3}), 0,1,2,3,0,1,2,3));
 
 __m256d test_mm256_mask_broadcastsd_pd(__m256d __O, __mmask8 __M, __m128d __A) {
   // CHECK-LABEL: test_mm256_mask_broadcastsd_pd
