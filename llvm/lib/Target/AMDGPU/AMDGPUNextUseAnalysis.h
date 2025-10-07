@@ -93,7 +93,7 @@ class NextUseResult {
       if (NextUseMap.contains(VMP.getVReg())) {
         SortedRecords &Dists = NextUseMap[VMP.getVReg()];
 
-        if (!Dists.contains(R)) {
+        if (Dists.find(R) == Dists.end()) {
           SmallVector<SortedRecords::iterator, 4> ToErase;
 
           for (auto It = Dists.begin(); It != Dists.end(); ++It) {
@@ -141,9 +141,14 @@ class NextUseResult {
     void clear(VRegMaskPair VMP) {
       if (NextUseMap.contains(VMP.getVReg())) {
         auto &Dists = NextUseMap[VMP.getVReg()];
-        std::erase_if(Dists, [&](Record R) {
-          return (R.first &= ~VMP.getLaneMask()).none();
-        });
+        for (auto It = Dists.begin(); It != Dists.end(); ) {
+          LaneBitmask Masked = It->first & ~VMP.getLaneMask();
+          if (Masked.none()) {
+            It = Dists.erase(It);
+          } else {
+            ++It;
+          }
+        }
         if (Dists.empty())
           NextUseMap.erase(VMP.getVReg());
       }
