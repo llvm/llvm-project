@@ -5483,6 +5483,20 @@ defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
 defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
+def amdgpu_use_experimental_spirv_backend
+    : Flag<["-"], "amdgpu-use-experimental-spirv-backend">,
+      Group<m_amdgpu_Features_Group>,
+      Flags<[HelpHidden]>,
+      Visibility<[ClangOption]>,
+      HelpText<"Use experimental SPIRV backend for AMDGPU compilation (AMDGPU "
+               "only)">;
+def no_amdgpu_use_experimental_spirv_backend
+    : Flag<["-"], "no-amdgpu-use-experimental-spirv-backend">,
+      Group<m_amdgpu_Features_Group>,
+      Flags<[HelpHidden]>,
+      Visibility<[ClangOption]>,
+      HelpText<"Do not use experimental SPIRV backend for AMDGPU compilation "
+               "(AMDGPU only)">;
 
 def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Alias<fatomic_ignore_denormal_mode>;

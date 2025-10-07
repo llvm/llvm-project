@@ -175,15 +175,33 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
 
   constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
-  // Emit SPIR-V binary.
-  llvm::opt::ArgStringList TrArgs{
-      "--spirv-max-version=1.6",
-      "--spirv-ext=+all",
-      "--spirv-allow-unknown-intrinsics",
-      "--spirv-lower-const-expr",
-      "--spirv-preserve-auxdata",
-      "--spirv-debug-info-version=nonsemantic-shader-200"};
-  SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile, TrArgs);
+  bool UseSPIRVBackend = Args.hasFlag(
+      options::OPT_amdgpu_use_experimental_spirv_backend,
+      options::OPT_no_amdgpu_use_experimental_spirv_backend, /*Default=*/false);
+
+  // Emit SPIR-V binary either using the SPIRV backend or the translator.
+  if (UseSPIRVBackend) {
+    llvm::opt::ArgStringList CmdArgs;
+    const char *Triple =
+        C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
+    CmdArgs.append({"-cc1", Triple, "-emit-obj", LinkedBCFile.getFilename(),
+                    "-o", Output.getFilename()});
+    const char *Exec = getToolChain().getDriver().getClangProgramPath();
+    C.addCommand(std::make_unique<Command>(JA, *this,
+                                           ResponseFileSupport::None(), Exec,
+                                           CmdArgs, LinkedBCFile, Output));
+  } else {
+    // Use the SPIRV translator for code gen.
+    llvm::opt::ArgStringList TrArgs{
+        "--spirv-max-version=1.6",
+        "--spirv-ext=+all",
+        "--spirv-allow-unknown-intrinsics",
+        "--spirv-lower-const-expr",
+        "--spirv-preserve-auxdata",
+        "--spirv-debug-info-version=nonsemantic-shader-200"};
+    SPIRV::constructTranslateCommand(C, *this, JA, Output, LinkedBCFile,
+                                     TrArgs);
+  }
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is
