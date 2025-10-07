@@ -873,7 +873,7 @@ def EmitC_IncludeOp
   let hasCustomAssemblyFormat = 1;
 }
 
-def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
+def EmitC_LiteralOp : EmitC_Op<"literal", [Pure, CExpressionInterface]> {
   let summary = "Literal operation";
   let description = [{
     The `emitc.literal` operation produces an SSA value equal to some constant
@@ -896,6 +896,12 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
 
   let hasVerifier = 1;
   let assemblyFormat = "$value attr-dict `:` type($result)";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+  }];
 }
 
 def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {
