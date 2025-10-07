@@ -67,3 +67,16 @@ TEST_F(LanguageTest, SourceLanguage_AsLanguageType) {
   EXPECT_EQ(SourceLanguage(eLanguageTypeUnknown).AsLanguageType(),
             eLanguageTypeUnknown);
 }
+
+TEST_F(LanguageTest, SourceLanguage_LastStandardLanguage) {
+  // eLanguageTypeLastStandardLanguage should be treated as a standard DWARF
+  // language.
+  SourceLanguage lang(eLanguageTypeLastStandardLanguage);
+  EXPECT_TRUE(lang);
+
+  // It should have a valid description (not "Unknown").
+  EXPECT_NE(lang.GetDescription(), "Unknown");
+
+  // It should convert to the correct language type.
+  EXPECT_EQ(lang.AsLanguageType(), eLanguageTypeLastStandardLanguage);
+}
