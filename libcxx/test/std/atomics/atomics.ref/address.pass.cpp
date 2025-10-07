@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <memory>
 
 #include "atomic_helpers.h"
 #include "test_macros.h"
