@@ -55,7 +55,9 @@ public:
     Data = 1,
     Pointer = 2,
     Allocatable = 3,
-    Automatic = 4
+    Automatic = 4,
+    PointerDevice = 5,
+    AllocatableDevice = 6
   };
 
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }

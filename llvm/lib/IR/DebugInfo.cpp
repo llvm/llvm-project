@@ -36,6 +36,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <optional>
@@ -374,6 +375,38 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   return true;
 }
 
+/// Recursively handle DILocations in followup metadata etc.
+///
+/// TODO: If for example a followup loop metadata would refence itself this
+/// function would go into infinite recursion. We do not expect such cycles in
+/// the loop metadata (except for the self-referencing first element
+/// "LoopID"). However, we could at least handle such situations more gracefully
+/// somehow (e.g. by keeping track of visited nodes and dropping metadata).
+static Metadata *updateLoopMetadataDebugLocationsRecursive(
+    Metadata *MetadataIn, function_ref<Metadata *(Metadata *)> Updater) {
+  const MDTuple *M = dyn_cast_or_null<MDTuple>(MetadataIn);
+  // The loop metadata options should start with a MDString.
+  if (!M || M->getNumOperands() < 1 || !isa<MDString>(M->getOperand(0)))
+    return MetadataIn;
+
+  bool Updated = false;
+  SmallVector<Metadata *, 4> MDs{M->getOperand(0)};
+  for (Metadata *MD : llvm::drop_begin(M->operands())) {
+    if (!MD) {
+      MDs.push_back(nullptr);
+      continue;
+    }
+    Metadata *NewMD =
+        Updater(updateLoopMetadataDebugLocationsRecursive(MD, Updater));
+    if (NewMD)
+      MDs.push_back(NewMD);
+    Updated |= NewMD != MD;
+  }
+
+  assert(!M->isDistinct() && "M should not be distinct.");
+  return Updated ? MDNode::get(M->getContext(), MDs) : MetadataIn;
+}
+
 static MDNode *updateLoopMetadataDebugLocationsImpl(
     MDNode *OrigLoopID, function_ref<Metadata *(Metadata *)> Updater) {
   assert(OrigLoopID && OrigLoopID->getNumOperands() > 0 &&
@@ -384,11 +417,11 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   // Save space for the self-referential LoopID.
   SmallVector<Metadata *, 4> MDs = {nullptr};
 
-  for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
-    Metadata *MD = OrigLoopID->getOperand(i);
+  for (Metadata *MD : llvm::drop_begin(OrigLoopID->operands())) {
     if (!MD)
       MDs.push_back(nullptr);
-    else if (Metadata *NewMD = Updater(MD))
+    else if (Metadata *NewMD = Updater(
+                 updateLoopMetadataDebugLocationsRecursive(MD, Updater)))
       MDs.push_back(NewMD);
   }
 
@@ -563,6 +596,7 @@ bool llvm::stripDebugInfo(Function &F) {
 }
 
 bool llvm::StripDebugInfo(Module &M) {
+  llvm::TimeTraceScope timeScope("Strip debug info");
   bool Changed = false;
 
   for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {

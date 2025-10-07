@@ -39,15 +39,9 @@ typedef short __v8hi __attribute__((__vector_size__(16)));
 typedef char __v16qi __attribute__((__vector_size__(16)));
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS_SSE2                                                \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS_SSE2                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2 constexpr
@@ -71,9 +65,9 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
 ///
 /// This intrinsic corresponds to the <c> EMMS </c> instruction.
 ///
-static __inline__ void __attribute__((__always_inline__, __nodebug__,
-                                      __target__("mmx,no-evex512")))
-_mm_empty(void) {
+static __inline__ void
+    __attribute__((__always_inline__, __nodebug__, __target__("mmx")))
+    _mm_empty(void) {
   __builtin_ia32_emms();
 }
 
@@ -162,11 +156,10 @@ _mm_cvtm64_si64(__m64 __m)
 ///    written to the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the converted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_packs_pi16(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_packsswb128(
-        (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_packs_pi16(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_packsswb128(
+      (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
 }
 
 /// Converts, with saturation, 32-bit signed integers from both 64-bit integer
@@ -188,11 +181,10 @@ _mm_packs_pi16(__m64 __m1, __m64 __m2)
 ///    written to the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the converted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_packs_pi32(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_packssdw128(
-        (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_packs_pi32(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_packssdw128(
+      (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
 }
 
 /// Converts, with saturation, 16-bit signed integers from both 64-bit integer
@@ -214,11 +206,10 @@ _mm_packs_pi32(__m64 __m1, __m64 __m2)
 ///    written to the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the converted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_packs_pu16(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_packuswb128(
-        (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_packs_pu16(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_packuswb128(
+      (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of [8 x i8]

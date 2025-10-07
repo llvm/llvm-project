@@ -10,7 +10,7 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF1-LABEL: define void @fixed_wide_active_lane_mask(
 ; CHECK-UF1-SAME: ptr noalias [[DST:%.*]], ptr noalias readonly [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-UF1-NEXT:  entry:
-; CHECK-UF1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; CHECK-UF1-NEXT:    br label [[ENTRY:%.*]]
 ; CHECK-UF1:       vector.ph:
 ; CHECK-UF1-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], 4
 ; CHECK-UF1-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[N]], 4
@@ -35,7 +35,7 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF4-LABEL: define void @fixed_wide_active_lane_mask(
 ; CHECK-UF4-SAME: ptr noalias [[DST:%.*]], ptr noalias readonly [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-UF4-NEXT:  entry:
-; CHECK-UF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; CHECK-UF4-NEXT:    br label [[ENTRY:%.*]]
 ; CHECK-UF4:       vector.ph:
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], 16
 ; CHECK-UF4-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[N]], 16

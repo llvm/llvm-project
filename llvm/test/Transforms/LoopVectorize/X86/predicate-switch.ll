@@ -461,8 +461,8 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], zeroinitializer
 ; COST-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP7]], splat (i1 true)
 ; COST-NEXT:    [[TMP11:%.*]] = xor <4 x i1> [[TMP8]], splat (i1 true)
-; COST-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
-; COST-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP12]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; COST-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP11]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; COST-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
 ; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP13]])
 ; COST-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP14]])
@@ -540,10 +540,10 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED-NEXT:    [[TMP16:%.*]] = xor <4 x i1> [[TMP10]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP17:%.*]] = xor <4 x i1> [[TMP11]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP18:%.*]] = xor <4 x i1> [[TMP12]], splat (i1 true)
-; FORCED-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP20]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP17]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP18]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP19]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP20]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP21]])
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[TMP8]], i32 1, <4 x i1> [[TMP22]])
 ; FORCED-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer

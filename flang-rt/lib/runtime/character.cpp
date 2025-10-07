@@ -789,7 +789,7 @@ void RTDEF(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
 
 std::size_t RTDEF(Scan1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Scan>(x, xLen, set, setLen, back);
+  return ScanVerify<false>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Scan2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
@@ -873,7 +873,7 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
 
 std::size_t RTDEF(Verify1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Verify>(x, xLen, set, setLen, back);
+  return ScanVerify<true>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Verify2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {

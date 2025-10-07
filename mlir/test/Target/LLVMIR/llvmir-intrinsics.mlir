@@ -146,6 +146,11 @@ llvm.func @trig_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.intr.tan(%arg0) : (f32) -> f32
   // CHECK: call <8 x float> @llvm.tan.v8f32
   llvm.intr.tan(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call { float, float } @llvm.sincos.f32
+  llvm.intr.sincos(%arg0) : (f32) -> !llvm.struct<(f32, f32)>
+  // CHECK: call { <8 x float>, <8 x float> } @llvm.sincos.v8f32
+  llvm.intr.sincos(%arg1) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, vector<8xf32>)>
   llvm.return
 }
 
@@ -460,10 +465,11 @@ llvm.func @assume_without_opbundles(%cond: i1) {
 }
 
 // CHECK-LABEL: @assume_with_opbundles
-llvm.func @assume_with_opbundles(%cond: i1, %p: !llvm.ptr) {
+llvm.func @assume_with_opbundles(%p: !llvm.ptr) {
+  %true = llvm.mlir.constant(true) : i1
   %0 = llvm.mlir.constant(8 : i32) : i32
-  // CHECK: call void @llvm.assume(i1 %{{.+}}) [ "align"(ptr %{{.+}}, i32 8) ]
-  llvm.intr.assume %cond ["align"(%p, %0 : !llvm.ptr, i32)] : i1
+  // CHECK: call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i32 8) ]
+  llvm.intr.assume %true ["align"(%p, %0 : !llvm.ptr, i32)] : i1
   llvm.return
 }
 
@@ -607,6 +613,13 @@ llvm.func @trap_intrinsics() {
   "llvm.intr.debugtrap"() : () -> ()
   // CHECK: call void @llvm.ubsantrap(i8 1)
   "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+
+  // CHECK: call void @llvm.trap()
+  llvm.intr.trap
+  // CHECK: call void @llvm.debugtrap()
+  llvm.intr.debugtrap
+  // CHECK: call void @llvm.ubsantrap(i8 1)
+  llvm.intr.ubsantrap <{failureKind = 1 : i8}>
   llvm.return
 }
 
@@ -839,8 +852,8 @@ llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
   %none = llvm.mlir.none : !llvm.token
-  // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> i1
+  // CHECK: call void @llvm.coro.end
+  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> !llvm.void
   llvm.return
 }
 
@@ -1294,6 +1307,8 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.cos.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
+// CHECK-DAG: declare { float, float } @llvm.sincos.f32(float)
+// CHECK-DAG: declare { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
 // CHECK-DAG: declare float @llvm.rint.f32(float)
 // CHECK-DAG: declare double @llvm.rint.f64(double)
@@ -1367,7 +1382,7 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
+// CHECK-DAG: declare void @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr readonly captures(none))
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare ptr @llvm.coro.promise(ptr captures(none), i32, i1)

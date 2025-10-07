@@ -20,6 +20,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
 
 // A helper class to run the full lifetime analysis on a piece of code
@@ -29,7 +30,13 @@ public:
   LifetimeTestRunner(llvm::StringRef Code) {
     std::string FullCode = R"(
       #define POINT(name) void("__lifetime_test_point_" #name)
+
       struct MyObj { ~MyObj() {} int i; };
+
+      struct [[gsl::Pointer()]] View { 
+        View(const MyObj&);
+        View();
+      };
     )";
     FullCode += Code.str();
 
@@ -61,6 +68,7 @@ public:
 
   LifetimeSafetyAnalysis &getAnalysis() { return *Analysis; }
   ASTContext &getASTContext() { return *ASTCtx; }
+  AnalysisDeclContext &getAnalysisContext() { return *AnalysisCtx; }
 
   ProgramPoint getProgramPoint(llvm::StringRef Annotation) {
     auto It = AnnotationToPointMap.find(Annotation);
@@ -96,21 +104,18 @@ public:
     return OID;
   }
 
-  std::optional<LoanID> getLoanForVar(llvm::StringRef VarName) {
+  std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
     auto *VD = findDecl<VarDecl>(VarName);
-    if (!VD)
-      return std::nullopt;
+    if (!VD) {
+      ADD_FAILURE() << "Failed to find VarDecl for '" << VarName << "'";
+      return {};
+    }
     std::vector<LoanID> LID = Analysis.getLoanIDForVar(VD);
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
-      return std::nullopt;
+      return {};
     }
-    // TODO: Support retrieving more than one loans to a var.
-    if (LID.size() > 1) {
-      ADD_FAILURE() << "More than 1 loans found for '" << VarName;
-      return std::nullopt;
-    }
-    return LID[0];
+    return LID;
   }
 
   std::optional<LoanSet> getLoansAtPoint(OriginID OID,
@@ -121,21 +126,29 @@ public:
     return Analysis.getLoansAtPoint(OID, PP);
   }
 
-  std::optional<llvm::DenseSet<LoanID>>
+  std::optional<std::vector<LoanID>>
   getExpiredLoansAtPoint(llvm::StringRef Annotation) {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    auto Expired = Analysis.getExpiredLoansAtPoint(PP);
-    return llvm::DenseSet<LoanID>{Expired.begin(), Expired.end()};
+    return Analysis.getExpiredLoansAtPoint(PP);
   }
 
 private:
   template <typename DeclT> DeclT *findDecl(llvm::StringRef Name) {
     auto &Ctx = Runner.getASTContext();
-    auto Results = match(valueDecl(hasName(Name)).bind("v"), Ctx);
+    const auto *TargetFunc = Runner.getAnalysisContext().getDecl();
+    auto Results =
+        match(valueDecl(hasName(Name),
+                        hasAncestor(functionDecl(equalsNode(TargetFunc))))
+                  .bind("v"),
+              Ctx);
     if (Results.empty()) {
       ADD_FAILURE() << "Declaration '" << Name << "' not found in AST.";
+      return nullptr;
+    }
+    if (Results.size() > 1) {
+      ADD_FAILURE() << "Multiple declarations found for '" << Name << "'";
       return nullptr;
     }
     return const_cast<DeclT *>(selectFirst<DeclT>("v", Results));
@@ -197,12 +210,26 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
 
   std::vector<LoanID> ExpectedLoans;
   for (const auto &LoanVar : LoanVars) {
-    std::optional<LoanID> ExpectedLIDOpt = Info.Helper.getLoanForVar(LoanVar);
-    if (!ExpectedLIDOpt) {
+    std::vector<LoanID> ExpectedLIDs = Info.Helper.getLoansForVar(LoanVar);
+    if (ExpectedLIDs.empty()) {
       *result_listener << "could not find loan for var '" << LoanVar << "'";
       return false;
     }
-    ExpectedLoans.push_back(*ExpectedLIDOpt);
+    ExpectedLoans.insert(ExpectedLoans.end(), ExpectedLIDs.begin(),
+                         ExpectedLIDs.end());
+  }
+  std::sort(ExpectedLoans.begin(), ExpectedLoans.end());
+  std::sort(ActualLoans.begin(), ActualLoans.end());
+  if (ExpectedLoans != ActualLoans) {
+    *result_listener << "Expected: ";
+    for (const auto &LoanID : ExpectedLoans) {
+      *result_listener << LoanID.Value << ", ";
+    }
+    *result_listener << "Actual: ";
+    for (const auto &LoanID : ActualLoans) {
+      *result_listener << LoanID.Value << ", ";
+    }
+    return false;
   }
 
   return ExplainMatchResult(UnorderedElementsAreArray(ExpectedLoans),
@@ -221,17 +248,17 @@ MATCHER_P(AreExpiredAt, Annotation, "") {
                      << Annotation << "'";
     return false;
   }
-  std::vector<LoanID> ActualExpiredLoans(ActualExpiredSetOpt->begin(),
-                                         ActualExpiredSetOpt->end());
+  std::vector<LoanID> ActualExpiredLoans = *ActualExpiredSetOpt;
   std::vector<LoanID> ExpectedExpiredLoans;
   for (const auto &VarName : Info.LoanVars) {
-    auto LoanIDOpt = Helper.getLoanForVar(VarName);
-    if (!LoanIDOpt) {
+    auto LoanIDs = Helper.getLoansForVar(VarName);
+    if (LoanIDs.empty()) {
       *result_listener << "could not find a loan for variable '" << VarName
                        << "'";
       return false;
     }
-    ExpectedExpiredLoans.push_back(*LoanIDOpt);
+    ExpectedExpiredLoans.insert(ExpectedExpiredLoans.end(), LoanIDs.begin(),
+                                LoanIDs.end());
   }
   return ExplainMatchResult(UnorderedElementsAreArray(ExpectedExpiredLoans),
                             ActualExpiredLoans, result_listener);
@@ -730,5 +757,422 @@ TEST_F(LifetimeAnalysisTest, ReassignedPointerThenOriginalExpires) {
   EXPECT_THAT(LoansTo({"s1", "s2"}), AreExpiredAt("p_after_s1_expires"));
 }
 
+TEST_F(LifetimeAnalysisTest, NoDuplicateLoansForImplicitCastToConst) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      const MyObj* p = &a;
+      const MyObj* q = &a;
+      POINT(at_end);
+    }
+  )");
+  EXPECT_THAT(Helper->getLoansForVar("a"), SizeIs(2));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerSimpleLoan) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = a;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConstructFromOwner) {
+  SetupTest(R"(
+    void target() {
+      MyObj al, bl, cl, dl, el, fl;
+      View a = View(al);
+      View b = View{bl};
+      View c = View(View(View(cl)));
+      View d = View{View(View(dl))};
+      View e = View{View{View{el}}};
+      View f = {fl};
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("a"), HasLoansTo({"al"}, "p1"));
+  EXPECT_THAT(Origin("b"), HasLoansTo({"bl"}, "p1"));
+  EXPECT_THAT(Origin("c"), HasLoansTo({"cl"}, "p1"));
+  EXPECT_THAT(Origin("d"), HasLoansTo({"dl"}, "p1"));
+  EXPECT_THAT(Origin("e"), HasLoansTo({"el"}, "p1"));
+  EXPECT_THAT(Origin("f"), HasLoansTo({"fl"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConstructFromView) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = View(a);
+      View y = View{x};
+      View z = View(View(View(y)));
+      View p = View{View(View(x))};
+      View q = {x};
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("q"), HasLoansTo({"a"}, "p1"));
+}
+
+// FIXME: Handle loans in ternary operator!
+TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
+  SetupTest(R"(
+    void target(bool cond) {
+      MyObj a, b;
+      View v = cond ? a : b;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+}
+
+// FIXME: Handle temporaries.
+TEST_F(LifetimeAnalysisTest, ViewFromTemporary) {
+  SetupTest(R"(
+    MyObj temporary();
+    void target() {
+      View v = temporary();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerWithConstAndAuto) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      const View v1 = a;
+      auto v2 = v1;
+      const auto& v3 = v2;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerPropagation) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = a;
+      POINT(p1);
+
+      View y = x; // Propagation via copy-construction
+      POINT(p2);
+
+      View z;
+      z = x;       // Propagation via copy-assignment
+      POINT(p3);
+    }
+  )");
+
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p2"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerLoanExpiration) {
+  SetupTest(R"(
+    void target() {
+      View x;
+      {
+        MyObj a;
+        x = a;
+        POINT(before_expiry);
+      } // `a` is destroyed here.
+      POINT(after_expiry);
+    }
+  )");
+
+  EXPECT_THAT(NoLoans(), AreExpiredAt("before_expiry"));
+  EXPECT_THAT(LoansTo({"a"}), AreExpiredAt("after_expiry"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerReassignment) {
+  SetupTest(R"(
+    void target() {
+      MyObj safe;
+      View v;
+      v = safe;
+      POINT(p1);
+      {
+        MyObj unsafe;
+        v = unsafe;
+        POINT(p2);
+      } // `unsafe` expires here.
+      POINT(p3);
+    }
+  )");
+
+  EXPECT_THAT(Origin("v"), HasLoansTo({"safe"}, "p1"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p2"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p3"));
+  EXPECT_THAT(LoansTo({"unsafe"}), AreExpiredAt("p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConversionOperator) {
+  SetupTest(R"(
+    struct String;
+
+    struct [[gsl::Pointer()]] StringView {
+      StringView() = default;
+    };
+
+    struct String {
+      ~String() {}
+      operator StringView() const;
+    };
+
+    void target() {
+      String xl, yl;
+      StringView x = xl;
+      StringView y;
+      y = yl;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"xl"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"yl"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundSimple) {
+  SetupTest(R"(
+    View Identity(View v [[clang::lifetimebound]]);
+    void target() {
+      MyObj a, b;
+      View v1 = a;
+      POINT(p1);
+
+      View v2 = Identity(v1);
+      View v3 = Identity(b);
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+  // The origin of v2 should now contain the loan to 'o' from v1.
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p2"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"b"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundMemberFunction) {
+  SetupTest(R"(
+    struct [[gsl::Pointer()]] MyView {
+      MyView(const MyObj& o) {}
+      MyView pass() [[clang::lifetimebound]] { return *this; }
+    };
+    void target() {
+      MyObj o;
+      MyView v1 = o;
+      POINT(p1);
+      MyView v2 = v1.pass();
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"o"}, "p1"));
+  // The call v1.pass() is bound to 'v1'. The origin of v2 should get the loans
+  // from v1.
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"o"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundMultipleArgs) {
+  SetupTest(R"(
+    View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
+    void target() {
+      MyObj o1, o2;
+      View v1 = o1;
+      View v2 = o2;
+      POINT(p1);
+
+      View v3 = Choose(true, v1, v2);
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"o1"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"o2"}, "p2"));
+  // v3 should have loans from both v1 and v2, demonstrating the union of
+  // loans.
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"o1", "o2"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundMixedArgs) {
+  SetupTest(R"(
+    View Choose(bool cond, View a [[clang::lifetimebound]], View b);
+    void target() {
+      MyObj o1, o2;
+      View v1 = o1;
+      View v2 = o2;
+      POINT(p1);
+
+      View v3 = Choose(true, v1, v2);
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"o1"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"o2"}, "p1"));
+  // v3 should only have loans from v1, as v2 is not lifetimebound.
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"o1"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundChainOfViews) {
+  SetupTest(R"(
+    View Identity(View v [[clang::lifetimebound]]);
+    View DoubleIdentity(View v [[clang::lifetimebound]]);
+
+    void target() {
+      MyObj obj;
+      View v1 = obj;
+      POINT(p1);
+      View v2 = DoubleIdentity(Identity(v1));
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"obj"}, "p1"));
+  // v2 should inherit the loan from v1 through the chain of calls.
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"obj"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundRawPointerParameter) {
+  SetupTest(R"(
+    View ViewFromPtr(const MyObj* p [[clang::lifetimebound]]);
+    MyObj* PtrFromPtr(const MyObj* p [[clang::lifetimebound]]);
+    MyObj* PtrFromView(View v [[clang::lifetimebound]]);
+
+    void target() {
+      MyObj a;
+      View v = ViewFromPtr(&a);
+      POINT(p1);
+
+      MyObj b;
+      MyObj* ptr1 = PtrFromPtr(&b);
+      MyObj* ptr2 = PtrFromPtr(PtrFromPtr(PtrFromPtr(ptr1)));
+      POINT(p2);
+
+      MyObj c;
+      View v2 = ViewFromPtr(PtrFromView(c));
+      POINT(p3);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("ptr1"), HasLoansTo({"b"}, "p2"));
+  EXPECT_THAT(Origin("ptr2"), HasLoansTo({"b"}, "p2"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"c"}, "p3"));
+}
+
+// FIXME: This can be controversial and may be revisited in the future.
+TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefViewParameter) {
+  SetupTest(R"(
+    View Identity(const View& v [[clang::lifetimebound]]);
+    void target() {
+      MyObj o;
+      View v1 = o;
+      View v2 = Identity(v1);
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"o"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefObjParam) {
+  SetupTest(R"(
+    View Identity(const MyObj& o [[clang::lifetimebound]]);
+    void target() {
+      MyObj a;
+      View v1 = Identity(a);
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundReturnReference) {
+  SetupTest(R"(
+    const MyObj& Identity(View v [[clang::lifetimebound]]);
+    void target() {
+      MyObj a;
+      View v1 = a;
+      POINT(p1);
+
+      View v2 = Identity(v1);
+      
+      const MyObj& b = Identity(v1);
+      View v3 = Identity(b);
+      POINT(p2);
+
+      MyObj c;
+      View v4 = Identity(c);
+      POINT(p3);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p2"));
+
+  // FIXME: Handle reference types. 'v3' should have loan to 'a' instead of 'b'.
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"b"}, "p2"));
+
+  EXPECT_THAT(Origin("v4"), HasLoansTo({"c"}, "p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunction) {
+  SetupTest(R"(
+    template <typename T>
+    const T& Identity(T&& v [[clang::lifetimebound]]);
+    void target() {
+      MyObj a;
+      View v1 = Identity(a);
+      POINT(p1);
+
+      View v2 = Identity(v1);
+      const View& v3 = Identity(v1);
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p2"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateClass) {
+  SetupTest(R"(
+    template<typename T>
+    struct [[gsl::Pointer()]] MyTemplateView {
+      MyTemplateView(const T& o) {}
+      MyTemplateView pass() [[clang::lifetimebound]] { return *this; }
+    };
+    void target() {
+      MyObj o;
+      MyTemplateView<MyObj> v1 = o;
+      POINT(p1);
+      MyTemplateView<MyObj> v2 = v1.pass();
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"o"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"o"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundConversionOperator) {
+  SetupTest(R"(
+    struct MyOwner {
+      MyObj o;
+      operator View() const [[clang::lifetimebound]];
+    };
+
+    void target() {
+      MyOwner owner;
+      View v = owner;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({"owner"}, "p1"));
+}
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

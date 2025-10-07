@@ -809,7 +809,7 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
       RISCVISAInfo::parseArchString("rv64im_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
-              ElementsAre("+m", "+zmmul", "+experimental-zalasr"));
+              ElementsAre("+i", "+m", "+zmmul", "+experimental-zalasr"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
       "rv32e_zalasr_xventanacondops", true, false);
@@ -822,7 +822,7 @@ TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
   auto MaybeISAInfo =
       RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo)->toFeatures(), ElementsAre("+m"));
+  EXPECT_THAT((*MaybeISAInfo)->toFeatures(), ElementsAre("+i", "+m"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreKeptIfIgnoreUnknownIsFalse) {
@@ -830,7 +830,7 @@ TEST(ToFeatures, UnsupportedExtensionsAreKeptIfIgnoreUnknownIsFalse) {
       RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   EXPECT_THAT((*MaybeISAInfo)->toFeatures(false, false),
-              ElementsAre("+m", "+xmadeup"));
+              ElementsAre("+i", "+m", "+xmadeup"));
 }
 
 TEST(ToFeatures, AddAllExtensionsAddsNegativeExtensions) {
@@ -838,10 +838,11 @@ TEST(ToFeatures, AddAllExtensionsAddsNegativeExtensions) {
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
 
   auto Features = (*MaybeISAInfo)->toFeatures(true);
-  EXPECT_GT(Features.size(), 1UL);
-  EXPECT_EQ(Features.front(), "+m");
+  EXPECT_GT(Features.size(), 2UL);
+  EXPECT_EQ(Features[0], "+i");
+  EXPECT_EQ(Features[1], "+m");
   // Every feature after should be a negative feature
-  for (auto &NegativeExt : llvm::drop_begin(Features))
+  for (auto &NegativeExt : llvm::drop_begin(Features, 2))
     EXPECT_TRUE(NegativeExt.substr(0, 1) == "-");
 }
 
@@ -1136,6 +1137,7 @@ R"(All available -march extensions for RISC-V
     xandesvbfhcvt        5.0
     xandesvdot           5.0
     xandesvpackfph       5.0
+    xandesvsinth         5.0
     xandesvsintload      5.0
     xcvalu               1.0
     xcvbi                1.0
@@ -1183,11 +1185,13 @@ R"(All available -march extensions for RISC-V
 
 Experimental extensions
     p                    0.15
+    zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zalasr               0.1
     zvbc32e              0.7
     zvfbfa               0.1
+    zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
     svukte               0.3

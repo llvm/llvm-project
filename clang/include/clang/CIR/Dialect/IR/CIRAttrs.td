@@ -602,6 +602,33 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// TargetAddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
+                                         "target_address_space"> {
+  let summary = "Represents a target-specific numeric address space";
+  let description = [{
+    The TargetAddressSpaceAttr represents a target-specific numeric address space,
+    corresponding to the LLVM IR `addressspace` qualifier and the clang
+     `address_space` attribute.
+    
+    A value of zero represents the default address space. The semantics of non-zero
+    address spaces are target-specific.
+
+    Example:
+    ```mlir
+    // Target-specific numeric address spaces
+    !cir.ptr<!s32i, addrspace(target<1>)>
+    !cir.ptr<!s32i, addrspace(target<10>)>
+    ```
+  }];
+
+  let parameters = (ins "mlir::IntegerAttr":$value);
+  let assemblyFormat = "`<` `target` `<` $value `>` `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
@@ -776,6 +803,58 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
 
   let assemblyFormat = [{
     `<` struct($index, $offset) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
+  let summary = "Represents a typeinfo used for RTTI";
+  let description = [{
+    The typeinfo data for a given class is stored into an ArrayAttr. The
+    layout is determined by the C++ ABI used (clang only implements
+    itanium on CIRGen).
+
+    The verifier enforces that the output type is always a `!cir.record`,
+    and that the ArrayAttr element types match the equivalent member type
+    for the resulting record, i.e, a GlobalViewAttr for symbol reference or
+    an IntAttr for flags.
+
+    Example:
+
+    ```
+    cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE
+      : !cir.ptr<i32>
+
+    !rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>,
+      !cir.ptr<!u8i>}>
+
+    cir.global constant external @type_info = #cir.typeinfo<{
+      #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2 : i32]>
+      : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>,
+      #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}> : !rec_anon_struct
+    ```
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    CIR_IntOrGlobalViewArrayAttr:$data
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
+    }]>
+  ];
+
+  // Checks record element types should match the array for every equivalent
+  // element type.
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` custom<RecordMembers>($data) `>`
   }];
 }
 
