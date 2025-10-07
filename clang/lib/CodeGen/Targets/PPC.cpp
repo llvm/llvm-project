@@ -136,8 +136,7 @@ public:
                                raw_ostream &Out) const override;
 };
 
-void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
-                                         unsigned Index,
+void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
                                          raw_ostream &Out) const {
   appendAttributeMangling(Attr->getFeatureStr(Index), Out);
 }
@@ -159,7 +158,7 @@ void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
     return TI.getFMVPriority({LHS.substr(1)})
-            .ugt(TI.getFMVPriority({RHS.substr(1)}));
+        .ugt(TI.getFMVPriority({RHS.substr(1)}));
   });
 
   bool IsFirst = true;

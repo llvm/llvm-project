@@ -2094,7 +2094,8 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
 
 // On certain platforms, a declared (but not defined) FMV shall be treated
 // like a regular non-FMV function.
-static bool IgnoreFMVOnADeclaration(const llvm::Triple &Triple, const FunctionDecl *FD) {
+static bool IgnoreFMVOnADeclaration(const llvm::Triple &Triple,
+                                    const FunctionDecl *FD) {
   if (!FD->isMultiVersion())
     return false;
 
@@ -2156,7 +2157,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
 
   if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
     if (FD->isMultiVersion() && !OmitMultiVersionMangling &&
-         !IgnoreFMVOnADeclaration(CGM.getTriple(), FD)) {
+        !IgnoreFMVOnADeclaration(CGM.getTriple(), FD)) {
       switch (FD->getMultiVersionKind()) {
       case MultiVersionKind::CPUDispatch:
       case MultiVersionKind::CPUSpecific:
@@ -3023,8 +3024,9 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     // While we populated the feature map above, we still need to
     // get and parse the target attribute so we can get the cpu for
     // the function.
-    StringRef FeatureStr = TD ? TD->getFeaturesStr() :
-                          (TC ? TC->getFeatureStr(GD.getMultiVersionIndex()) : StringRef());
+    StringRef FeatureStr =
+        TD ? TD->getFeaturesStr()
+           : (TC ? TC->getFeatureStr(GD.getMultiVersionIndex()) : StringRef());
     if (!FeatureStr.empty()) {
       ParsedTargetAttr ParsedAttr = Target.parseTargetAttr(FeatureStr);
       if (!ParsedAttr.CPU.empty() &&
@@ -4725,8 +4727,7 @@ getFMVPriority(const TargetInfo &TI,
 static llvm::GlobalValue::LinkageTypes
 getMultiversionLinkage(CodeGenModule &CGM, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  if (FD->getFormalLinkage() == Linkage::Internal ||
-      CGM.getTriple().isOSAIX())
+  if (FD->getFormalLinkage() == Linkage::Internal || CGM.getTriple().isOSAIX())
     return llvm::GlobalValue::InternalLinkage;
   return llvm::GlobalValue::WeakODRLinkage;
 }
@@ -4813,7 +4814,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
       ResolverConstant = IFunc->getResolver();
       if (FD->isTargetClonesMultiVersion() &&
           !getTarget().getTriple().isAArch64() &&
-		  !getTarget().getTriple().isOSAIX()) {
+          !getTarget().getTriple().isOSAIX()) {
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         if (!GetGlobalValue(MangledName + ".ifunc")) {
@@ -5080,11 +5081,11 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
         MangledName + ".resolver", ResolverType, GlobalDecl{},
         /*ForVTable=*/false);
 
-    auto Linkage = getTriple().isOSAIX() ? getFunctionLinkage(GD) : getMultiversionLinkage(*this, GD);
+    auto Linkage = getTriple().isOSAIX() ? getFunctionLinkage(GD)
+                                         : getMultiversionLinkage(*this, GD);
 
-    llvm::GlobalIFunc *GIF =
-        llvm::GlobalIFunc::create(DeclTy, AS, Linkage,
-                                  "", Resolver, &getModule());
+    llvm::GlobalIFunc *GIF = llvm::GlobalIFunc::create(DeclTy, AS, Linkage, "",
+                                                       Resolver, &getModule());
     GIF->setName(ResolverName);
     SetCommonAttributes(FD, GIF);
     if (ResolverGV)
@@ -5104,7 +5105,9 @@ void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
                                                       GlobalDecl GD) {
   const NamedDecl *D = dyn_cast_or_null<NamedDecl>(GD.getDecl());
 
-  auto ResolverLinkage = getTriple().isOSAIX() ? llvm::GlobalValue::InternalLinkage : getMultiversionLinkage(*this, GD);
+  auto ResolverLinkage = getTriple().isOSAIX()
+                             ? llvm::GlobalValue::InternalLinkage
+                             : getMultiversionLinkage(*this, GD);
   Resolver->setLinkage(ResolverLinkage);
 
   // Function body has to be emitted before calling setGlobalVisibility
@@ -6649,7 +6652,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   setFunctionLinkage(GD, Fn);
 
   if (getTriple().isOSAIX() && D->isTargetClonesMultiVersion())
-      Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
+    Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
   setGVProperties(Fn, GD);

@@ -70,8 +70,9 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
   return CI;
 }
 
-Value *CodeGenFunction::EmitPPCBuiltinCpu(
-    unsigned BuiltinID, llvm::Type *ReturnType, StringRef CPUStr) {
+Value *CodeGenFunction::EmitPPCBuiltinCpu(unsigned BuiltinID,
+                                          llvm::Type *ReturnType,
+                                          StringRef CPUStr) {
 
 #include "llvm/TargetParser/PPCTargetParser.def"
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
@@ -159,8 +160,7 @@ Value *CodeGenFunction::EmitPPCBuiltinCpu(
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_is");
     return Builder.CreateICmpEQ(TheCall,
                                 llvm::ConstantInt::get(Int32Ty, LinuxIDValue));
-  }
-  else if (BuiltinID == Builtin::BI__builtin_cpu_supports) {
+  } else if (BuiltinID == Builtin::BI__builtin_cpu_supports) {
     llvm::Triple Triple = getTarget().getTriple();
     if (Triple.isOSAIX()) {
       typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
@@ -197,8 +197,7 @@ Value *CodeGenFunction::EmitPPCBuiltinCpu(
 #undef PPC_FAWORD_HWCAP
 #undef PPC_FAWORD_HWCAP2
 #undef PPC_FAWORD_CPUID
-  }
-  else
+  } else
     assert(0 && "unexpected builtin");
 }
 
@@ -219,7 +218,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
   switch (BuiltinID) {
-  default: return nullptr;
+  default:
+    return nullptr;
 
   case Builtin::BI__builtin_cpu_is:
   case Builtin::BI__builtin_cpu_supports: {

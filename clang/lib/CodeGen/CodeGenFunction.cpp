@@ -3036,7 +3036,8 @@ void CodeGenFunction::EmitMultiVersionResolver(
     }
     [[fallthrough]];
   default:
-    assert(false && "Only implemented for x86, AArch64, RISC-V, and PowerPC targets");
+    assert(false &&
+           "Only implemented for x86, AArch64, RISC-V, and PowerPC targets");
   }
 }
 
@@ -3049,7 +3050,7 @@ void CodeGenFunction::EmitMultiVersionResolver(
  *  return ((int (*)(int)) foo_desc)(a);
  */
 void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
-		llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
 
   llvm::PointerType *PtrTy = Builder.getPtrTy();
   // entry:
@@ -3063,7 +3064,8 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
       // if.default:
       //   %fmv.default = call ptr @getEntryPoint(ptr noundef @foo_default)
       //   br label %resolver_exit
-      assert(&RO == Options.end() - 1 && "Default or Generic case must be last");
+      assert(&RO == Options.end() - 1 &&
+             "Default or Generic case must be last");
       Builder.CreateRet(RO.Function);
       break;
     }
@@ -3074,12 +3076,16 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
     // if.version_n:
     //   %fmv.version.n = call ptr @getEntryPoint(ptr noundef @foo_version_n)
     //   br label %resolver_exit
-    assert(RO.Features.size() == 1 && "for now one feature requirement per version");
+    assert(RO.Features.size() == 1 &&
+           "for now one feature requirement per version");
     llvm::Value *Condition;
     if (RO.Features[0].starts_with("cpu=")) {
-      Condition = EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_is, Builder.getInt1Ty(), RO.Features[0].split("=").second.trim());
+      Condition =
+          EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_is, Builder.getInt1Ty(),
+                            RO.Features[0].split("=").second.trim());
     } else {
-      Condition = EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_supports, Builder.getInt1Ty(), RO.Features[0]);
+      Condition = EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_supports,
+                                    Builder.getInt1Ty(), RO.Features[0]);
     }
     llvm::BasicBlock *ThenBlock = createBasicBlock("if.version", Resolver);
     CurBlock = createBasicBlock("if.else", Resolver);
@@ -3090,14 +3096,13 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
   }
 
   // If no generic/default, emit an unreachable.
-//  Builder.SetInsertPoint(CurBlock);
-//  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
-//  TrapCall->setDoesNotReturn();
-//  TrapCall->setDoesNotThrow();
-//  Builder.CreateUnreachable();
-//  Builder.ClearInsertionPoint();
+  //  Builder.SetInsertPoint(CurBlock);
+  //  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
+  //  TrapCall->setDoesNotReturn();
+  //  TrapCall->setDoesNotThrow();
+  //  Builder.CreateUnreachable();
+  //  Builder.ClearInsertionPoint();
 }
-
 
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
