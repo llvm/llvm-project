@@ -4813,7 +4813,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   addDebugPrefixMapArg(D, TC, Args, CmdArgs);
 
   // Add the output path to the object file for CodeView debug infos.
-  if (EmitCodeView && Output.isFilename())
+  // Skip this for temp depscan reponse file name.
+  if (EmitCodeView && Output.isFilename() &&
+      Output.getType() != types::TY_ResponseFile)
     addDebugObjectName(Args, CmdArgs, DebugCompilationDir,
                        Output.getFilename());
 }
