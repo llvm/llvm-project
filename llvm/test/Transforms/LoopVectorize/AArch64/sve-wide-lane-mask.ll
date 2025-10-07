@@ -27,10 +27,10 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF1-NEXT:    [[TMP6:%.*]] = mul <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], splat (i8 3)
 ; CHECK-UF1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP6]], ptr [[TMP13]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP12]]
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-UF1-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-UF1-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP14]], true
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP12]]
 ; CHECK-UF1-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF1:       middle.block:
 ;
@@ -102,7 +102,6 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP26]], ptr [[TMP39]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK6]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP27]], ptr [[TMP42]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK7]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP28]], ptr [[TMP45]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK8]])
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP62]]
 ; CHECK-UF4-NEXT:    [[TMP46:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP47:%.*]] = shl nuw i64 [[TMP46]], 4
 ; CHECK-UF4-NEXT:    [[TMP48:%.*]] = add i64 [[INDEX]], [[TMP47]]
@@ -122,6 +121,7 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT14:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[TMP54]], i64 [[TMP9]])
 ; CHECK-UF4-NEXT:    [[TMP59:%.*]] = extractelement <vscale x 16 x i1> [[TMP55]], i32 0
 ; CHECK-UF4-NEXT:    [[TMP60:%.*]] = xor i1 [[TMP59]], true
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP62]]
 ; CHECK-UF4-NEXT:    br i1 [[TMP60]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;
@@ -169,11 +169,11 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF1-NEXT:    [[TMP3:%.*]] = fmul <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 3.000000e+00)
 ; CHECK-UF1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP3]], ptr [[TMP8]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP13]])
 ; CHECK-UF1-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-UF1-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP7]], true
-; CHECK-UF1-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
+; CHECK-UF1-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-UF1:       middle.block:
 ;
 ; CHECK-UF4-LABEL: define void @scalable_wide_active_lane_mask_double(
@@ -247,7 +247,6 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP17]], ptr [[TMP34]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK6]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP18]], ptr [[TMP37]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK7]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP19]], ptr [[TMP40]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK8]])
-; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-UF4-NEXT:    [[TMP41:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF4-NEXT:    [[TMP42:%.*]] = shl nuw i64 [[TMP41]], 1
 ; CHECK-UF4-NEXT:    [[TMP43:%.*]] = add i64 [[INDEX]], [[TMP42]]
@@ -267,7 +266,8 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT14:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP49]], i64 [[WIDE_TRIP_COUNT]])
 ; CHECK-UF4-NEXT:    [[TMP54:%.*]] = extractelement <vscale x 2 x i1> [[TMP50]], i32 0
 ; CHECK-UF4-NEXT:    [[TMP55:%.*]] = xor i1 [[TMP54]], true
-; CHECK-UF4-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-UF4-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-UF4:       middle.block:
 ;
 entry:
