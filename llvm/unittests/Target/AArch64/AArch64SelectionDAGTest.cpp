@@ -235,6 +235,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADD) {
   auto N0 = DAG->getConstant(0x00, Loc, IntVT);
   auto N1 = DAG->getConstant(0x01, Loc, IntVT);
   auto N5 = DAG->getConstant(0x05, Loc, IntVT);
+  auto N8 = DAG->getConstant(0x08, Loc, IntVT);
   auto Nsign1 = DAG->getConstant(0x55, Loc, IntVT);
   auto UnknownOp = DAG->getRegister(0, IntVT);
   auto Mask = DAG->getConstant(0x1e, Loc, IntVT);
@@ -256,6 +257,12 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADD) {
   // Nneg1 = 11111111
   auto OpNegOne = DAG->getNode(ISD::ADD, Loc, IntVT, N1, Nneg1);
   EXPECT_EQ(DAG->ComputeNumSignBits(OpNegOne), 8u);
+
+  // ADD 8 -1
+  // N8    = 00001000
+  // Nneg1 = 11111111
+  auto OpSeven = DAG->getNode(ISD::ADD, Loc, IntVT, N8, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpSeven), 5u);
 
   // Non negative
   // Nsign3 = 000????0

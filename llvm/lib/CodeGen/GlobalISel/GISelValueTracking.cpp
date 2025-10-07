@@ -2037,8 +2037,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
       // If we are subtracting one from a positive number, there is no carry
       // out of the result.
-      if (Known1.isNonNegative())
-        return Src1NumSignBits;
+      if (Known1.isNonNegative()) {
+        FirstAnswer = Src1NumSignBits;
+        break;
+      }
 
       // Otherwise, we treat this like an ADD.
     }
