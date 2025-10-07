@@ -555,20 +555,19 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
       continue;
     }
 
-    int FI = MF.getFrameInfo().CreateFixedObject(4,
-                                                 Offset,
-                                                 true);
-    SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
-    SDValue Load ;
+    int FI;
     if (VA.getValVT() == MVT::i32 || VA.getValVT() == MVT::f32) {
-      Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr, MachinePointerInfo());
+      FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
     } else if (VA.getValVT() == MVT::f128) {
-      report_fatal_error("SPARCv8 does not handle f128 in calls; "
-                         "pass indirectly");
+      FI = MF.getFrameInfo().CreateFixedObject(16, Offset, false);
     } else {
       // We shouldn't see any other value types here.
       llvm_unreachable("Unexpected ValVT encountered in frame lowering.");
     }
+
+    SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
+    SDValue Load =
+        DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr, MachinePointerInfo());
     InVals.push_back(Load);
   }
 
@@ -914,7 +913,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
-    case CCValAssign::Full: break;
+    case CCValAssign::Full:
+    case CCValAssign::Indirect:
+      break;
     case CCValAssign::SExt:
       Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
       break;
