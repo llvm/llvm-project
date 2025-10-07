@@ -14,11 +14,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/Support/Alignment.h"
-#include "llvm/Support/TypeSize.h"
 
 namespace cir {
 
@@ -88,13 +84,13 @@ public:
   llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
 
   llvm::TypeSize getPointerTypeSizeInBits(mlir::Type ty) const {
-    assert(mlir::isa<cir::PointerType>(Ty) &&
+    assert(mlir::isa<cir::PointerType>(ty) &&
            "This should only be called with a pointer type");
-    return layout.getTypeSizeInBits(Ty);
+    return layout.getTypeSizeInBits(ty);
   }
 
-  mlir::Type getIntPtrType(mlir::Type Ty) const {
-    assert(mlir::isa<cir::PointerType>(Ty) && "Expected pointer type");
+  mlir::Type getIntPtrType(mlir::Type ty) const {
+    assert(mlir::isa<cir::PointerType>(ty) && "Expected pointer type");
     return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty), false);
   }
 };
