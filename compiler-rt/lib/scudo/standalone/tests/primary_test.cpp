@@ -150,6 +150,28 @@ template <typename SizeClassMapT> struct TestConfig5 {
   };
 };
 
+// Enable `ZeroOnDealloc`
+template <typename SizeClassMapT> struct TestConfig6 {
+  static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+    static const scudo::uptr RegionSizeLog = 23U;
+    static const scudo::uptr GroupSizeLog = 20U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const bool EnableZeroOnDealloc = true;
+    static const scudo::s32 DefaultZeroOnDeallocMaxSize = 1 << 12;
+  };
+};
+
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct Config : public BaseConfig<SizeClassMapT> {};
 
@@ -191,7 +213,8 @@ struct ScudoPrimaryTest : public Test {};
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig6)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -296,6 +319,54 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   Allocator.unmapTestOnly();
 }
 
+TEST(ScudoPrimaryTest, ZeroOnDeallocFlagLimit) {
+  for (scudo::s32 flag_value :
+       {INT_MAX, INT_MAX - 1, 1 << 12, 1 << 10,
+        static_cast<scudo::s32>(
+            scudo::DefaultSizeClassMap::getSizeByClassId(6)),
+        static_cast<scudo::s32>(
+            scudo::DefaultSizeClassMap::getSizeByClassId(6) - 1)}) {
+    // Override the flag value.
+    scudo::getFlags()->zero_on_dealloc_max_size = flag_value;
+    // INT_MAX flag_value stands for unset, then the static parameter is used.
+    const scudo::uptr threshold =
+        flag_value == INT_MAX ? TestConfig6<scudo::DefaultSizeClassMap>::
+                                    Primary::DefaultZeroOnDeallocMaxSize
+                              : static_cast<scudo::uptr>(flag_value);
+
+    using Primary = TestAllocator<TestConfig6, scudo::DefaultSizeClassMap>;
+    Primary Allocator;
+    Allocator.init(/*ReleaseToOsInterval=*/-1);
+    typename Primary::SizeClassAllocatorT SizeClassAllocator;
+    scudo::GlobalStats Stats;
+    Stats.init();
+    SizeClassAllocator.init(&Stats, &Allocator);
+    for (scudo::uptr ClassId = 1;
+         ClassId < Primary::SizeClassMap::LargestClassId; ClassId++) {
+      void *Ptr = SizeClassAllocator.allocate(ClassId);
+      EXPECT_NE(Ptr, nullptr);
+      const scudo::uptr Size = Primary::getSizeByClassId(ClassId);
+      memset(Ptr, 'B', Size);
+
+      SizeClassAllocator.deallocate(ClassId, Ptr);
+      if (Size <= threshold) {
+        // Verify the block is full of zeros.
+        for (scudo::uptr I = 1; I < Size; ++I) {
+          ASSERT_TRUE(static_cast<char *>(Ptr)[I] == 0);
+        }
+      } else {
+        // Verify the block is full of data.
+        for (scudo::uptr I = 1; I < Size; ++I) {
+          ASSERT_TRUE(static_cast<char *>(Ptr)[I] != 0);
+        }
+      }
+    }
+    SizeClassAllocator.destroy(nullptr);
+    Allocator.releaseToOS(scudo::ReleaseToOS::Force);
+    Allocator.unmapTestOnly();
+  }
+}
+
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
@@ -334,7 +405,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
-  using Primary = TestAllocator<TypeParam, scudo::Config::Primary::SizeClassMap>;
+  using Primary =
+      TestAllocator<TypeParam, scudo::Config::Primary::SizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   std::mutex Mutex;

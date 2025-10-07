@@ -32,6 +32,11 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
            "Terminate on a size mismatch between a sized-delete and the actual "
            "size of a chunk (as provided to new/new[]).")
 
+SCUDO_FLAG(int, zero_on_dealloc_max_size, INT_MAX,
+           "Only chunks smaller or equal to this threshold will be zeroed on "
+           "deallocation. Requires zero on dealloc to be enabled on the "
+           "primary allocator, and has precedence on primary allocator limit.")
+
 SCUDO_FLAG(bool, zero_contents, false, "Zero chunk contents on allocation.")
 
 SCUDO_FLAG(bool, pattern_fill_contents, false,

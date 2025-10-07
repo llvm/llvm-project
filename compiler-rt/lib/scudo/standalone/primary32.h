@@ -44,6 +44,7 @@ namespace scudo {
 
 template <typename Config> class SizeClassAllocator32 {
 public:
+  using ConfigType = Config;
   typedef typename Config::CompactPtrT CompactPtrT;
   typedef typename Config::SizeClassMap SizeClassMap;
   static const uptr GroupSizeLog = Config::getGroupSizeLog();
