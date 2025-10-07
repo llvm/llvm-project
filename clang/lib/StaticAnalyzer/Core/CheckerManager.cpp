@@ -742,7 +742,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
           UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getLocationContext(), EvalCallChecker.Checker);
       bool evaluated = false;
-      { // CheckerContext generates transitions(populates checkDest) on
+      { // CheckerContext generates transitions (populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly
         // populated.
         CheckerContext C(B, Eng, Pred, L);
