@@ -3,7 +3,7 @@
 
 define i32 @f(i1 %cond1) #0 !prof !0 {
 ; CHECK-LABEL: define i32 @f
-; CHECK-SAME: (i1 [[COND1:%.*]]) !prof [[PROF0:![0-9]+]] {
+; CHECK-SAME: (i1 [[COND1:%.*]]) {{.*}}{
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1_PEEL_BEGIN:%.*]]
 ; CHECK:       loop1.peel.begin:
@@ -19,7 +19,7 @@ define i32 @f(i1 %cond1) #0 !prof !0 {
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    br i1 [[COND1]], label [[LOOP1]], label [[EXIT1_LOOPEXIT:%.*]], !prof [[PROF2:![0-9]+]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND1]], label [[LOOP1]], label [[EXIT1_LOOPEXIT:%.*]], !prof [[PROF1]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit1.loopexit:
 ; CHECK-NEXT:    [[LD_LCSSA_PH:%.*]] = phi i64 [ [[LD]], [[LOOP1]] ]
 ; CHECK-NEXT:    br label [[EXIT1]]
