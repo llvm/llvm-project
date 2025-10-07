@@ -698,6 +698,8 @@ __concatenate_strings(const _Allocator& __alloc,
                       __type_identity_t<basic_string_view<_CharT, _Traits> > __str1,
                       __type_identity_t<basic_string_view<_CharT, _Traits> > __str2);
 
+// This is true if we know for a fact that dereferencing the iterator won't access any part of the `string` we're
+// modifying if __addr_in_range(*it) returns false.
 template <class _Iter>
 inline const bool __string_is_trivial_iterator_v = false;
 
@@ -1413,24 +1415,16 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(size_type __n, value_type __c);
 
-  template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
-  append(_InputIterator __first, _InputIterator __last) {
-    const basic_string __temp(__first, __last, __alloc_);
-    append(__temp.data(), __temp.size());
-    return *this;
-  }
-
-  template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
+  template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
-  append(_ForwardIterator __first, _ForwardIterator __last) {
-    size_type __sz  = size();
-    size_type __cap = capacity();
-    size_type __n   = static_cast<size_type>(std::distance(__first, __last));
-    if (__n == 0)
-      return *this;
+  append(_InputIterator __first, _InputIterator __last) {
+    if (__string_is_trivial_iterator_v<_InputIterator> && !__addr_in_range(*__first)) {
+      size_type __sz  = size();
+      size_type __cap = capacity();
+      size_type __n   = static_cast<size_type>(std::distance(__first, __last));
+      if (__n == 0)
+        return *this;
 
-    if (__string_is_trivial_iterator_v<_ForwardIterator> && !__addr_in_range(*__first)) {
       if (__cap - __sz < __n)
         __grow_by_without_replace(__cap, __sz + __n - __cap, __sz, __sz, 0);
       __annotate_increase(__n);
@@ -1540,17 +1534,10 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* _LIBCPP_DIAGNOSE_NULLPTR __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(size_type __n, value_type __c);
 
-  template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
+  template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   assign(_InputIterator __first, _InputIterator __last) {
-    __assign_with_sentinel(__first, __last);
-    return *this;
-  }
-
-  template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
-  assign(_ForwardIterator __first, _ForwardIterator __last) {
-    if (__string_is_trivial_iterator_v<_ForwardIterator>) {
+    if _LIBCPP_CONSTEXPR (__string_is_trivial_iterator_v<_InputIterator>) {
       size_type __n = static_cast<size_type>(std::distance(__first, __last));
       __assign_trivial(__first, __last, __n);
     } else {
@@ -1563,8 +1550,7 @@ public:
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_CharT> _Range>
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string& assign_range(_Range&& __range) {
-    if constexpr (__string_is_trivial_iterator_v<ranges::iterator_t<_Range>> &&
-                  (ranges::forward_range<_Range> || ranges::sized_range<_Range>)) {
+    if constexpr (__string_is_trivial_iterator_v<ranges::iterator_t<_Range>>) {
       size_type __n = static_cast<size_type>(ranges::distance(__range));
       __assign_trivial(ranges::begin(__range), ranges::end(__range), __n);
 

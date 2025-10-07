@@ -11,13 +11,14 @@
 // template<class InputIterator>
 //   basic_string& append(InputIterator first, InputIterator last); // constexpr since C++20
 
-#include <string>
 #include <cassert>
+#include <string>
+#include <vector>
 
-#include "test_macros.h"
-#include "test_iterators.h"
-#include "min_allocator.h"
 #include "asan_testing.h"
+#include "min_allocator.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 template <class S, class It>
 TEST_CONSTEXPR_CXX20 void test(S s, It first, It last, S expected) {
@@ -220,6 +221,12 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     S s;
     s.append(MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
     assert(s == "ABCD");
+  }
+  {
+    std::vector<char> buffer(5, 'a');
+    S s;
+    s.append(single_pass_iterator<std::vector<char>>(buffer), single_pass_iterator<std::vector<char> >());
+    assert(s == "aaaaa");
   }
 }
 
