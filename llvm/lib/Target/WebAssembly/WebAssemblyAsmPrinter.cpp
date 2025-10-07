@@ -469,28 +469,33 @@ void WebAssemblyAsmPrinter::emitBranchHintSection() const {
   OutStreamer->switchSection(BranchHintsSection);
   OutStreamer->emitULEB128IntValue(NumFunctionHints);
 
-  const auto &AssemblerSymbols = OutStreamer->getAssemblerPtr()->getSymbols();
-  for (const auto &Sym : AssemblerSymbols) {
-    if (auto FuncEntry = BranchHints.find(Sym);
-        FuncEntry != BranchHints.end()) {
-      assert(!FuncEntry->second.empty());
-      // emit relocatable function index for the function symbol
-      OutStreamer->emitULEB128Value(
-          MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext));
-      // emit the number of hints for this function (is constant -> does not
-      // need handling by target streamer for reloc)
-      OutStreamer->emitULEB128IntValue(FuncEntry->second.size());
-      for (const auto &[instrSym, hint] : FuncEntry->second) {
-        assert(static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
-                   wasm::WasmCodeMetadataBranchHint::LIKELY ||
-               static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
-                   wasm::WasmCodeMetadataBranchHint::UNLIKELY);
-        // offset from function start
-        OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
-            instrSym, WebAssembly::S_DEBUG_REF, OutContext));
-        OutStreamer->emitULEB128IntValue(1); // hint size
-        OutStreamer->emitULEB128IntValue(hint);
+  auto EmitFunc = [this](const MCSymbol* Sym, const BranchHintRecord& Hints) {
+    assert(!Hints.empty());
+    // emit relocatable function index for the function symbol
+    OutStreamer->emitULEB128Value(
+        MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext));
+    // emit the number of hints for this function (is constant -> does not
+    // need handling by target streamer for reloc)
+    OutStreamer->emitULEB128IntValue(Hints.size());
+    for (const auto &[instrSym, hint] : Hints) {
+      // offset from function start
+      OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
+          instrSym, WebAssembly::S_DEBUG_REF, OutContext));
+      OutStreamer->emitULEB128IntValue(1); // hint size
+      OutStreamer->emitULEB128IntValue(hint);
+    }
+  };
+
+  if (MCAssembler* AssemblerPtr = OutStreamer->getAssemblerPtr()) {
+    const auto &AssemblerSymbols = AssemblerPtr->getSymbols();
+    for (const auto &Sym : AssemblerSymbols) {
+      if (auto FuncEntry = BranchHints.find(Sym); FuncEntry != BranchHints.end()) {
+        EmitFunc(Sym, FuncEntry->second);
       }
+    }
+  } else {
+    for (const auto &FuncEntry : BranchHints) {
+      EmitFunc(FuncEntry.first, FuncEntry.second);
     }
   }
   OutStreamer->popSection();
