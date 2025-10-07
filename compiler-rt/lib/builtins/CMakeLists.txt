@@ -426,17 +426,19 @@ option(COMPILER_RT_ARM_OPTIMIZED_FP
   "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
-  set(arm_or_thumb2_base_SOURCES
+  set(assembly_files
     arm/mulsf3.S
-    arm/divsf3.S
+    arm/divsf3.S)
+  set_source_files_properties(${assembly_files}
+    PROPERTIES COMPILE_OPTIONS "-Wa,-mimplicit-it=always")
+  set(arm_or_thumb2_base_SOURCES
+    ${assembly_files}
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
     ${arm_or_thumb2_base_SOURCES}
   )
 endif()
-set_source_files_properties(arm/mulsf3.S arm/divsf3.S
-  PROPERTIES COMPILE_OPTIONS "-Wa,-mimplicit-it=always")
 
 set(arm_sync_SOURCES
   arm/sync_fetch_and_add_4.S

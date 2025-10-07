@@ -13,6 +13,11 @@
 // On input, a and b are floating-point numbers in IEEE 754 encoding, and at
 // least one of them must be a NaN. The return value is the correct output NaN.
 //
+// A signalling NaN in the input (with bit 22 clear) takes priority over any
+// quiet NaN, and is adjusted on return by setting bit 22 to make it quiet. If
+// both inputs are the same type of NaN then the first input takes priority:
+// the input a is used instead of b.
+//
 //===----------------------------------------------------------------------===//
 
 #include <stdint.h>
