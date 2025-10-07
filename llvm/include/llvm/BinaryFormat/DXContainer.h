@@ -248,6 +248,12 @@ enum class StaticBorderColor : uint32_t {
 
 bool isValidBorderColor(uint32_t V);
 
+bool isValidRootDesciptorFlags(uint32_t V);
+
+bool isValidDescriptorRangeFlags(uint32_t V);
+
+bool isValidStaticSamplerFlags(uint32_t V);
+
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);

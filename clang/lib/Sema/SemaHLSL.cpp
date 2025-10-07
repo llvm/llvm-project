@@ -1289,8 +1289,8 @@ bool SemaHLSL::handleRootSignatureElements(
       VerifyRegister(Loc, Descriptor->Reg.Number);
       VerifySpace(Loc, Descriptor->Space);
 
-      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(
-              Version, llvm::to_underlying(Descriptor->Flags)))
+      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(Version,
+                                                         Descriptor->Flags))
         ReportFlagError(Loc);
     } else if (const auto *Constants =
                    std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
