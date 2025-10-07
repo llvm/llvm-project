@@ -89,6 +89,7 @@ STATISTIC(NumTransforms, "Number of transformations done");
 STATISTIC(NumCloned, "Number of blocks cloned");
 STATISTIC(NumPaths, "Number of individual paths threaded");
 
+namespace llvm {
 static cl::opt<bool>
     ClViewCfgBefore("dfa-jump-view-cfg-before",
                     cl::desc("View the CFG before DFA Jump Threading"),
@@ -119,6 +120,7 @@ static cl::opt<unsigned>
     CostThreshold("dfa-cost-threshold",
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
+} // namespace llvm
 
 static cl::opt<double> MaxClonedRate(
     "dfa-max-cloned-rate",
