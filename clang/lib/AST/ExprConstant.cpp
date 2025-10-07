@@ -13766,44 +13766,40 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
-  auto EvalTestOp =
-      [&](llvm::function_ref<bool(const APInt &, const APInt &)> Fn) {
-        APValue SourceLHS, SourceRHS;
-        if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
-            !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
-          return false;
+  auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
+                            Fn) {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
 
-        unsigned SourceLen = SourceLHS.getVectorLength();
-        const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
-        QualType ElemQT = VT->getElementType();
-        unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
 
-        APInt AWide(LaneWidth * SourceLen, 0);
-        APInt BWide(LaneWidth * SourceLen, 0);
+    APInt AWide(LaneWidth * SourceLen, 0);
+    APInt BWide(LaneWidth * SourceLen, 0);
 
-        for (unsigned I = 0; I != SourceLen; ++I) {
-          APInt ALane;
-          APInt BLane;
-          if (ElemQT->isIntegerType()) { // Get value.
-            ALane = SourceLHS.getVectorElt(I).getInt();
-            BLane = SourceRHS.getVectorElt(I).getInt();
-          } else if (ElemQT->isFloatingType()) { // Get only sign bit.
-            ALane = SourceLHS.getVectorElt(I)
-                        .getFloat()
-                        .bitcastToAPInt()
-                        .isNegative();
-            BLane = SourceRHS.getVectorElt(I)
-                        .getFloat()
-                        .bitcastToAPInt()
-                        .isNegative();
-          } else { // Must be integer or floating type.
-            return false;
-          }
-          AWide.insertBits(ALane, I * LaneWidth);
-          BWide.insertBits(BLane, I * LaneWidth);
-        }
-        return Success(Fn(AWide, BWide), E);
-      };
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APInt ALane;
+      APInt BLane;
+      if (ElemQT->isIntegerType()) { // Get value.
+        ALane = SourceLHS.getVectorElt(I).getInt();
+        BLane = SourceRHS.getVectorElt(I).getInt();
+      } else if (ElemQT->isFloatingType()) { // Get only sign bit.
+        ALane =
+            SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt().isNegative();
+        BLane =
+            SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt().isNegative();
+      } else { // Must be integer or floating type.
+        return false;
+      }
+      AWide.insertBits(ALane, I * LaneWidth);
+      BWide.insertBits(BLane, I * LaneWidth);
+    }
+    return Success(Fn(AWide, BWide), E);
+  };
 
   auto HandleMaskBinOp =
       [&](llvm::function_ref<APSInt(const APSInt &, const APSInt &)> Fn)
