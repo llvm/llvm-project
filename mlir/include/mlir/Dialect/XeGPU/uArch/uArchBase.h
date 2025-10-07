@@ -30,7 +30,7 @@ namespace xegpu {
 namespace uArch {
 
 // An enum class to represent the scope of an instruction
-enum class InstructionScope { WorkItem, Subgroup, Workgroup, Cluster };
+enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
   DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
         // multiply-add operation
@@ -66,8 +66,9 @@ struct Instruction {
   InstructionScope getScope() { return scope; }
 
 protected:
-  InstructionKind instKind;
-  InstructionScope scope;
+  InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
+  InstructionScope scope;   // scope of the instruction (e.g., lane, subgroup,
+                            // workgroup, cluster)
   // @TODO: Add more fields as needed
 };
 
