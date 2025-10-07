@@ -102,7 +102,7 @@ extractEnumValue(MDNode *Node, unsigned int OpId, StringRef ErrText,
       return makeRSError(formatv("Invalid value for {0}: {1}", ErrText, Val));
     return static_cast<T>(*Val);
   }
-  return makeRSError(formatv("Invalid value for ShaderVisibility"));
+  return makeRSError(formatv("Invalid value for {0}:", ErrText));
 }
 
 MDNode *MetadataBuilder::BuildRootSignature() {
@@ -374,13 +374,13 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   else if (*ElementText == "Sampler")
     Range.RangeType = dxil::ResourceClass::Sampler;
   else
-    return makeRSError(formatv("Invalid Descriptor Range type. \n {0}",
+    return makeRSError(formatv("Invalid Descriptor Range type.\n{0}",
                                FmtMDNode{RangeDescriptorNode}));
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
   else
-    return makeRSError(formatv("Invalid number of Descriptor in Range. \n {0}",
+    return makeRSError(formatv("Invalid number of Descriptor in Range.\n{0}",
                                FmtMDNode{RangeDescriptorNode}));
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 2))
@@ -425,7 +425,7 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
   for (unsigned int I = 2; I < NumOperands; I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
     if (Element == nullptr)
-      return makeRSError(formatv("Missing Root Element Metadata Node.\n {0}",
+      return makeRSError(formatv("Missing Root Element Metadata Node.\n{0}",
                                  FmtMDNode{DescriptorTableNode}));
 
     if (auto Err = parseDescriptorRange(Table, Element))
@@ -571,7 +571,7 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
     return parseStaticSampler(RSD, Element);
   case RootSignatureElementKind::Error:
     return makeRSError(
-        formatv("Invalid Root Signature Element\n {0}", FmtMDNode{Element}));
+        formatv("Invalid Root Signature Element\n{0}", FmtMDNode{Element}));
   }
 
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
