@@ -768,7 +768,7 @@ LogicalResult transform::FuseOp::verify() {
   llvm::SmallDenseSet<int64_t, 4> seen;
   for (int64_t v : permutation) {
     if (!ShapedType::isDynamic(v)) {
-      if (v < 0 || v >= iterspace_dim)
+      if (v < 0 || v >= static_cast<int64_t>(iterspace_dim))
         return emitOpError() << "expects interchange values to be in range [0, "
                              << iterspace_dim << "), found: " << v;
       auto result = seen.insert(v);
