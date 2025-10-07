@@ -362,7 +362,7 @@ SVEFrameSizes AArch64PrologueEpilogueCommon::getSVEStackFrameSizes() const {
       StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
   StackOffset PPRLocalsSize = AFL.getPPRStackSize(MF) - PPRCalleeSavesSize;
   StackOffset ZPRLocalsSize = AFL.getZPRStackSize(MF) - ZPRCalleeSavesSize;
-  if (AFI->hasSplitSVEObjects())
+  if (SVELayout == SVEStackLayout::Split)
     return {{PPRCalleeSavesSize, PPRLocalsSize},
             {ZPRCalleeSavesSize, ZPRLocalsSize}};
   // For simplicity, attribute all locals to ZPRs when split SVE is disabled.
@@ -765,9 +765,8 @@ void AArch64PrologueEmitter::emitPrologue() {
     emitWindowsStackProbe(AfterGPRSavesI, DL, NumBytes, RealignmentPadding);
 
   auto [PPR, ZPR] = getSVEStackFrameSizes();
-
-  StackOffset NonSVELocalsSize = StackOffset::getFixed(NumBytes);
   StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
+  StackOffset NonSVELocalsSize = StackOffset::getFixed(NumBytes);
   StackOffset CFAOffset =
       StackOffset::getFixed(MFI.getStackSize()) - NonSVELocalsSize;
 
@@ -1439,10 +1438,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
   auto [PPR, ZPR] = getSVEStackFrameSizes();
-  StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
-  StackOffset SVEStackSize =
-      SVECalleeSavesSize + PPR.LocalsSize + ZPR.LocalsSize;
-
   auto [PPRRange, ZPRRange] = partitionSVECS(
       MBB,
       SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
@@ -1450,6 +1445,9 @@ void AArch64EpilogueEmitter::emitEpilogue() {
           : FirstGPRRestoreI,
       PPR.CalleeSavesSize, ZPR.CalleeSavesSize, /*IsEpilogue=*/true);
 
+  StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
+  StackOffset SVEStackSize =
+      SVECalleeSavesSize + PPR.LocalsSize + ZPR.LocalsSize;
   MachineBasicBlock::iterator RestoreBegin = ZPRRange.Begin;
   MachineBasicBlock::iterator RestoreEnd = PPRRange.End;
 
@@ -1489,7 +1487,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     if (SVECalleeSavesSize && BaseForSVEDealloc == AArch64::FP) {
       // TODO: Support stack realigment and variable-sized objects.
       assert(
-          !AFI->hasSplitSVEObjects() &&
+          SVELayout != SVEStackLayout::Split &&
           "unexpected stack realignment or variable sized objects with split "
           "SVE stack objects");
 
