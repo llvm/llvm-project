@@ -54,9 +54,9 @@ private:
   void nameAsInitialOperation(mlir::Operation* op);
   void nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
   bool hasOnlyImmediateOperands(mlir::Operation* op);
-  void SetDeterministicNames(Block &block);
   llvm::SetVector<int> getOutputFootprint(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
   void foldOperation(mlir::Operation* op);
+  void reorderOperationOperandsByName(mlir::Operation* op);
   mlir::OpPrintingFlags flags{};
 };
 } // namespace
@@ -81,18 +81,11 @@ void NormalizePass::runOnOperation() {
       for (Block &block : region)
         for (Operation &innerOp : block)
           foldOperation(&innerOp);
-  }
-}
 
-void NormalizePass::SetDeterministicNames(Block &block) {
-  static size_t VarCounter = 0;
-
-  for (Operation &innerOp : block) {
-    mlir::OpBuilder b(innerOp.getContext());
-    mlir::StringAttr sat =
-        b.getStringAttr(llvm::formatv("v{0}", VarCounter++).str());
-    mlir::Location newLoc = mlir::NameLoc::get(sat, innerOp.getLoc());
-    innerOp.setLoc(newLoc);
+    for (Region& region : op.getRegions())
+      for (Block &block : region)
+        for (Operation &innerOp : block)
+          reorderOperationOperandsByName(&innerOp);
   }
 }
 
@@ -366,6 +359,30 @@ void NormalizePass::foldOperation(mlir::Operation* op) {
   mlir::StringAttr sat = b.getStringAttr(Name);
   mlir::Location newLoc = mlir::NameLoc::get(sat, op->getLoc());
   op->setLoc(newLoc);
+}
+
+void NormalizePass::reorderOperationOperandsByName(mlir::Operation* op) {
+  if(op->getNumOperands() == 0) return;
+
+  SmallVector<std::pair<std::string, mlir::Value>, 4> Operands;
+
+  for (mlir::Value operand : op->getOperands()) {
+    std::string TextRepresentation;
+    llvm::raw_string_ostream Stream(TextRepresentation);
+    operand.printAsOperand(Stream, flags);
+    Operands.push_back({Stream.str(), operand});
+  }
+
+  if (op->hasTrait<OpTrait::IsCommutative>()) {
+    llvm::sort(Operands.begin(), Operands.end(),
+                [](const auto &a, const auto &b) {
+                  return llvm::StringRef(a.first).compare_insensitive(b.first) < 0;
+                });
+  }
+
+  for(size_t i = 0; i < Operands.size(); i++) {
+    op->setOperand(i, Operands[i].second);
+  }
 }
 
 void NormalizePass::reorderOperations(SmallVector<Operation *, 16> &Outputs) {
