@@ -2826,32 +2826,32 @@ static bool interp__builtin_ia32_movmsk_op(InterpState &S, CodePtr OpPC,
   unsigned SourceLen = Source.getNumElems();
   QualType ElemQT = getElemType(Source);
   OptPrimType ElemPT = S.getContext().classify(ElemQT);
-  unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
+  unsigned ResultLen =
+      S.getASTContext().getTypeSize(Call->getType()); // Always 32-bit integer.
+  APInt Result(ResultLen, 0);
 
   if (ElemQT->isIntegerType()) {
-    unsigned Byte = 8;
-    unsigned ResultLen = (LaneWidth * SourceLen) / Byte;
-    APInt Result(ResultLen, 0);
+    unsigned BitsInAByte = 8;
+    unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
     unsigned ResultIdx = 0;
-    for (unsigned I = 0; I != SourceLen; ++I) {
-      APInt Lane;
-      INT_TYPE_SWITCH_NO_BOOL(*ElemPT,
-                              { Lane = Source.elem<T>(I).toAPSInt(); });
-      for (unsigned J = 0; J != LaneWidth; J += Byte) {
-        Result.setBitVal(ResultIdx++, Lane[J + 7]);
+    INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+      for (unsigned I = 0; I != SourceLen; ++I) {
+        APInt Lane = Source.elem<T>(I).toAPSInt();
+        for (unsigned J = 0; J != LaneWidth; J += BitsInAByte) {
+          Result.setBitVal(ResultIdx++, Lane[J + 7]);
+        }
       }
-    }
-    pushInteger(S, Result.getZExtValue(), Call->getType());
+    });
+    pushInteger(S, Result, Call->getType());
     return true;
   }
-  if (ElemQT->isFloatingType()) {
-    APInt Result(SourceLen, 0);
+  if (ElemQT->isRealFloatingType()) {
     using T = PrimConv<PT_Float>::T;
     for (unsigned I = 0; I != SourceLen; ++I) {
       APInt Lane = Source.elem<T>(I).getAPFloat().bitcastToAPInt();
-      Result.setBitVal(I, Lane[LaneWidth - 1]);
+      Result.setBitVal(I, Lane.isNegative());
     }
-    pushInteger(S, Result.getZExtValue(), Call->getType());
+    pushInteger(S, Result, Call->getType());
     return true;
   }
   return false;
