@@ -803,6 +803,7 @@ enum AttributeKindCodes {
   ATTR_KIND_SANITIZE_TYPE = 101,
   ATTR_KIND_CAPTURES = 102,
   ATTR_KIND_DEAD_ON_RETURN = 103,
+  ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
 
   // TODO: Get rid of this.
   // There really shouldn't be incompatible bitcode changes specific to AMD
