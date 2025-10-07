@@ -135,7 +135,7 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
   Sections.emplace_back(SectionStr, FileNo);
   auto &Section = Sections.back();
 
-  if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
+  if (auto Err = Section.SectionMatcher.insert(SectionStr, LineNo, UseGlobs)) {
     return createStringError(errc::invalid_argument,
                              "malformed section at line " + Twine(LineNo) +
                                  ": '" + SectionStr +
@@ -218,7 +218,7 @@ std::pair<unsigned, unsigned>
 SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
   for (const auto &S : reverse(Sections)) {
-    if (S.SectionMatcher->match(Section)) {
+    if (S.SectionMatcher.match(Section)) {
       unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)
         return {S.FileIdx, Blame};
