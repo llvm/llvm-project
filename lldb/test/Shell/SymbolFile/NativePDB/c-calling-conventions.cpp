@@ -1,5 +1,5 @@
 // clang-format off
-// REQUIRES: lld, x86
+// REQUIRES: lld, (target-x86 || target-x86_64)
 
 // RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t-32.exe %s
 // RUN: lldb-test symbols %t-32.exe | FileCheck --check-prefixes CHECK-32,CHECK-BOTH %s
