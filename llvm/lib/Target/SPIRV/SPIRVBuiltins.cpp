@@ -2428,15 +2428,12 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
 
   bool IsSet = Opcode != SPIRV::OpPredicatedStoreINTEL;
   unsigned ArgSz = Call->Arguments.size();
-  unsigned LiteralIdx = 0;
-  if (ArgSz > 3) {
-    LiteralIdx = 3;
-  }
-
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  if (LiteralIdx > 0)
-    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
+  // Memory operand is optional and is literal.
+  if (ArgSz > 3)
+    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[/*Literal index*/ 3], MRI));
+  
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
   return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                             IsSet ? TypeReg : Register(0), ImmArgs);
