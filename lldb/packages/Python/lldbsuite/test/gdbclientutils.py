@@ -309,8 +309,9 @@ class MockGDBServerResponder:
         # SIGINT is 2, return type is 2 digit hex string
         return "S02"
 
-    def qXferRead(self, obj: str, annex: str, offset: int,
-                  length: int) -> tuple[str | None, bool]:
+    def qXferRead(
+        self, obj: str, annex: str, offset: int, length: int
+    ) -> tuple[str | None, bool]:
         return None, False
 
     def _qXferResponse(self, data, has_more):
