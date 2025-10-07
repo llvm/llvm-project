@@ -204,6 +204,12 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SUB) {
   auto OpNegOne = DAG->getNode(ISD::SUB, Loc, IntVT, N0, N1);
   EXPECT_EQ(DAG->ComputeNumSignBits(OpNegOne), 8u);
 
+  // Neg 5
+  // N0 = 00000000
+  // N5 = 00000101
+  auto OpNegFive = DAG->getNode(ISD::SUB, Loc, IntVT, N0, N5);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNegFive), 5u);
+
   // Non negative
   // N0     = 00000000
   // Nsign3 = 000????0

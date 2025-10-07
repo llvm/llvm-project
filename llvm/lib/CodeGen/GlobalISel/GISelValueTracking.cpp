@@ -1977,9 +1977,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         return TyBits;
 
       // If the input is known to be positive (the sign bit is known clear),
-      // the output of the NEG has the same number of sign bits as the input.
-      if (Known2.isNonNegative())
-        return Src2NumSignBits;
+      // the output of the NEG has, at worst, the same number of sign bits as
+      // the input.
+      if (Known2.isNonNegative()) {
+        FirstAnswer = Src2NumSignBits;
+        break;
+      }
 
       // Otherwise, we treat this like a SUB.
     }
