@@ -148,9 +148,10 @@ struct __cpu_parallel_transform_reduce_binary {
                          __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
       return __pstl::__simd_transform_reduce<_Backend>(
-          __last1 - __first1, std::move(__init), std::move(__reduce), [&](__iter_diff_t<_ForwardIterator1> __i) {
-            return __transform(__first1[__i], __first2[__i]);
-          });
+          __last1 - __first1,
+          std::move(__init),
+          std::move(__reduce),
+          [&](__iterator_difference_type<_ForwardIterator1> __i) { return __transform(__first1[__i], __first2[__i]); });
     } else {
       return std::transform_reduce(
           std::move(__first1),
@@ -200,7 +201,7 @@ struct __cpu_parallel_transform_reduce {
           __last - __first,
           std::move(__init),
           std::move(__reduce),
-          [=, &__transform](__iter_diff_t<_ForwardIterator> __i) { return __transform(__first[__i]); });
+          [=, &__transform](__iterator_difference_type<_ForwardIterator> __i) { return __transform(__first[__i]); });
     } else {
       return std::transform_reduce(
           std::move(__first), std::move(__last), std::move(__init), std::move(__reduce), std::move(__transform));

@@ -99,9 +99,9 @@ struct __static_bounded_iter {
 
   template <class _OtherIterator,
             __enable_if_t<
-                _And< is_convertible<const _OtherIterator&, _Iterator>,
-                      _Or<is_same<reference, __iter_reference<_OtherIterator> >,
-                          is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
+                _And<is_convertible<const _OtherIterator&, _Iterator>,
+                     _Or<is_same<reference, __iterator_reference<_OtherIterator> >,
+                         is_same<reference, __make_const_lvalue_ref<__iterator_reference<_OtherIterator> > > > >::value,
                 int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
   __static_bounded_iter(__static_bounded_iter<_OtherIterator, _Size> const& __other) _NOEXCEPT

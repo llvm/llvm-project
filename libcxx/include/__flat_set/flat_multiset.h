@@ -718,15 +718,15 @@ template <class _KeyContainer, class _Compare, class _Allocator>
 flat_multiset(sorted_equivalent_t, _KeyContainer, _Compare, _Allocator)
     -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
-template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
+template <class _InputIterator, class _Compare = less<__iterator_value_type<_InputIterator>>>
   requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_multiset(_InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_multiset<__iter_value_type<_InputIterator>, _Compare>;
+    -> flat_multiset<__iterator_value_type<_InputIterator>, _Compare>;
 
-template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
+template <class _InputIterator, class _Compare = less<__iterator_value_type<_InputIterator>>>
   requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_multiset(sorted_equivalent_t, _InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_multiset<__iter_value_type<_InputIterator>, _Compare>;
+    -> flat_multiset<__iterator_value_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
           class _Compare   = less<ranges::range_value_t<_Range>>,

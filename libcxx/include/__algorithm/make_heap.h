@@ -33,10 +33,10 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare&& __comp) {
   __comp_ref_type<_Compare> __comp_ref = __comp;
 
-  using __diff_t     = __iter_diff_t<_RandomAccessIterator>;
+  using __diff_t     = __iterator_difference_type<_RandomAccessIterator>;
   const __diff_t __n = __last - __first;
 
-  const bool __assume_both_children = is_arithmetic<__iter_value_type<_RandomAccessIterator> >::value;
+  const bool __assume_both_children = is_arithmetic<__iterator_value_type<_RandomAccessIterator> >::value;
 
   // While it would be correct to always assume we have both children, in practice we observed this to be a performance
   // improvement only for arithmetic types.
