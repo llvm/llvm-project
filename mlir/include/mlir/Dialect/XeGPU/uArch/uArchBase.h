@@ -1,4 +1,4 @@
-//===--- uArch.h ------------------------------------------------*- C++ -*-===//
+//===- uArch.h --------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ enum class InstructionScope { WorkItem, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
   DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
         // multiply-add operation
-  // Add more instructions as needed
+  // @TODO: Add more instructions as needed
 };
 
 llvm::StringRef toString(InstructionKind name) {
@@ -51,24 +51,12 @@ std::optional<InstructionKind> parseInstructionKind(llvm::StringRef str) {
   return std::nullopt;
 }
 
-// A struct to represent basic information about an instruction
-// This struct is used to represent the information about an instruction in the
-// uArch The information includes:
-// - the name of the instruction,
-// - the description of the instruction
-// - the scope of the instruction,
-//
-// The information is represented as strings
-// For example, the information about an instruction can be represented as:
-// Instruction instr = {"dpas", "Dot Product Accumulate Systolic  (DPAS) is a
-// matrix multiply-add operation", "subgroup"};
-
+// A struct to represent basic information about an instruction.
 // The primary purpose of the Instruction struct is to provide a generic way to
 // represent information about an instruction and to use this information to
 // generate the uArch. Specifc instruction in a uArch can inherit from this
-// struct and add more fields as needed
+// struct and add more fields as needed.
 struct Instruction {
-  // @TODO: Add more fields as needed
   Instruction(InstructionKind kind, InstructionScope scope)
       : instKind(kind), scope(scope) {}
 
@@ -79,8 +67,8 @@ struct Instruction {
 
 protected:
   InstructionKind instKind;
-  std::string description;
   InstructionScope scope;
+  // @TODO: Add more fields as needed
 };
 
 enum class RegisterFileMode : uint8_t { Small, Large };
@@ -89,16 +77,18 @@ enum class RegisterFileType : uint8_t { GRF, ARF };
 // A struct to represent register file information
 struct RegisterFileInfo {
   // Constructor
-  RegisterFileInfo() = default;
   RegisterFileInfo(uint32_t size,
                    const llvm::SmallVector<RegisterFileMode, 4> &mode,
                    const llvm::SmallVector<uint32_t, 4> &numRegs)
       : size(size), mode(mode), numRegsPerThreadPerMode(numRegs) {}
 
+  // Get methods
   uint32_t getSize() const { return size; }
+
   const llvm::SmallVector<RegisterFileMode, 4> &getModes() const {
     return mode;
   }
+
   const llvm::SmallVector<uint32_t, 4> &getNumRegsPerThreadPerMode() const {
     return numRegsPerThreadPerMode;
   }
@@ -137,25 +127,17 @@ protected:
 };
 
 // A struct to represent the uArch
-// This struct is used to represent the microarchitecture of a target device
-// The uArch includes:
-// - the name of the uArch,
-// - the description of the uArch,
-// - uArch hierarchy
-// - Register File information
-// - Cache information
-// - the set of instructions supported by the uArch,
+// This struct is used to represent the microarchitecture of a target device.
 struct uArch {
   // Constructor
-  uArch() = default;
-  uArch(const std::string &name, const std::string &description,
-        const std::map<RegisterFileType, RegisterFileInfo> &register_file_info =
-            {},
-        const llvm::SmallVector<CacheInfo, 4> &cache_info = {},
-        const std::map<InstructionKind, std::shared_ptr<Instruction>>
-            &instructions = {})
+  uArch(
+      const std::string &name, const std::string &description,
+      const std::map<RegisterFileType, RegisterFileInfo> &registerFileInfo = {},
+      const llvm::SmallVector<CacheInfo, 4> &cacheInfo = {},
+      const std::map<InstructionKind, std::shared_ptr<Instruction>>
+          &instructions = {})
       : name(name), description(description),
-        registerFileInfo(register_file_info), cacheInfo(cache_info),
+        registerFileInfo(registerFileInfo), cacheInfo(cacheInfo),
         instructions(instructions) {}
 
   // Get methods
@@ -193,11 +175,12 @@ struct uArch {
   }
 
 protected:
-  std::string name; // Similar to target triple
+  std::string name; // Name of the uArch, similar to target triple
   std::string description;
   std::map<RegisterFileType, RegisterFileInfo> registerFileInfo;
   llvm::SmallVector<CacheInfo, 4> cacheInfo;
-  std::map<InstructionKind, std::shared_ptr<Instruction>> instructions;
+  std::map<InstructionKind, std::shared_ptr<Instruction>>
+      instructions; // set of instructions supported by the uArch
 };
 
 // A struct to represent shared memory information
@@ -206,7 +189,7 @@ struct SharedMemory {
   SharedMemory(uint32_t size, uint32_t alignment)
       : size(size), alignment(alignment) {}
 
-  // Getters
+  // Get methods
   uint32_t getSize() const { return size; }
   uint32_t getAlignment() const { return alignment; }
 
@@ -214,6 +197,19 @@ protected:
   uint32_t size;      // in bytes
   uint32_t alignment; // in bytes
   // @TODO: Add more fields as needed (e.g., latency, throughput, bandwidth)
+};
+
+struct XeCoreInfo {
+  uint32_t num_threads;
+  SharedMemory shared_memory;
+  uint32_t num_vector_units;
+  uint32_t num_matrix_units;
+
+  XeCoreInfo(uint32_t num_threads, const SharedMemory &shared_memory,
+             uint32_t num_vector_units, uint32_t num_matrix_units)
+      : num_threads(num_threads), shared_memory(shared_memory),
+        num_vector_units(num_vector_units), num_matrix_units(num_matrix_units) {
+  }
 };
 
 //===----------------------------------------------------------------------===//

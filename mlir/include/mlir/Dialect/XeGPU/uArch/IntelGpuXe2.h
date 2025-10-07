@@ -31,21 +31,9 @@ using namespace mlir::xegpu::uArch;
 namespace mlir {
 namespace xegpu {
 namespace uArch {
-struct XeCoreInfo {
-  uint32_t num_threads;
-  SharedMemory shared_memory;
-  uint32_t num_vector_units;
-  uint32_t num_matrix_units;
-
-  XeCoreInfo(uint32_t num_threads, const SharedMemory &shared_memory,
-             uint32_t num_vector_units, uint32_t num_matrix_units)
-      : num_threads(num_threads), shared_memory(shared_memory),
-        num_vector_units(num_vector_units), num_matrix_units(num_matrix_units) {
-  }
-};
 
 struct Xe2Plus : public uArch {
-  XeCoreInfo xe_core;
+  XeCoreInfo xeCore;
   Xe2Plus(const std::string &archName, const std::string &archDescription,
           const XeCoreInfo &xeCore,
           const std::map<RegisterFileType, RegisterFileInfo> &regInfo = {},
@@ -53,7 +41,7 @@ struct Xe2Plus : public uArch {
           const std::map<InstructionKind, std::shared_ptr<Instruction>>
               &instrs = {})
       : uArch(archName, archDescription, regInfo, cacheInfo, instrs),
-        xe_core(xeCore) {}
+        xeCore(xeCore) {}
 };
 
 // struct to represent DPAS instruction
@@ -91,9 +79,9 @@ struct PVCuArch : public Xe2Plus {
       : Xe2Plus("pvc",                        // archName
                 "Ponte Vecchio Architecture", // archDescription
                 XeCoreInfo(8, SharedMemory(512 * 1024, 4), 8, 8), // xeCore
-                {/* register_file_info */}, // Optional: empty
-                {/* cache_info */},         // Optional: empty
-                {/* instructions */}        // Optional: empty
+                {/* registerFileInfo */}, // Optional: empty
+                {/* cacheInfo */},        // Optional: empty
+                {/* instructions */}      // Optional: empty
         ) {
     // Intialize register file info
     // GRF
@@ -126,9 +114,9 @@ struct BMGuArch : public Xe2Plus {
       : Xe2Plus("bmg",                     // archName
                 "Battlemage Architecture", // archDescription
                 XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8), // xeCore
-                {/* register_file_info */}, // Optional: empty
-                {/* cache_info */},         // Optional: empty
-                {/* instructions */}        // Optional: empty)
+                {/* registerFileInfo */}, // Optional: empty
+                {/* cacheInfo */},        // Optional: empty
+                {/* instructions */}      // Optional: empty
         ) {
     // Intialize register file info
     // GRF
