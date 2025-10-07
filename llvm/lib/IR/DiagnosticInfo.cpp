@@ -275,7 +275,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
                                                    BranchProbability P)
-: Key(std::string(Key)) {
+    : Key(std::string(Key)) {
   raw_string_ostream OS(Val);
   P.print(OS);
 }

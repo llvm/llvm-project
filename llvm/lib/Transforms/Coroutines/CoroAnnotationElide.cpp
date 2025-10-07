@@ -154,8 +154,8 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
       bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
       if (IsCallerPresplitCoroutine && HasAttr) {
         static BranchProbability MinBranchProbability(
-          static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
-          MinBlockCounterExecution);
+            static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
+            MinBlockCounterExecution);
 
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*Caller);
 
@@ -165,11 +165,14 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
 
         if (Prob < MinBranchProbability) {
           ORE.emit([&]() {
-            return OptimizationRemarkMissed(DEBUG_TYPE, "CoroAnnotationElideUnlikely", Caller)
-                  << "'" << ore::NV("callee", Callee->getName())
-                  << "' not elided in '" << ore::NV("caller", Caller->getName())
-                  << "' because of low probability: " << ore::NV("probability", Prob)
-                  << " (threshold: " << ore::NV("threshold", MinBranchProbability) << ")";
+            return OptimizationRemarkMissed(
+                       DEBUG_TYPE, "CoroAnnotationElideUnlikely", Caller)
+                   << "'" << ore::NV("callee", Callee->getName())
+                   << "' not elided in '"
+                   << ore::NV("caller", Caller->getName())
+                   << "' because of low probability: "
+                   << ore::NV("probability", Prob) << " (threshold: "
+                   << ore::NV("threshold", MinBranchProbability) << ")";
           });
           continue;
         }
