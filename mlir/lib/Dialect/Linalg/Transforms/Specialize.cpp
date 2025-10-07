@@ -237,6 +237,39 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
+/// Utility to match block body for linalg.pool* ops.
+template <typename... OpTypes>
+static bool bodyMatcherForPoolOps(Value yieldVal, Block *body) {
+  Operation *defOp = yieldVal.getDefiningOp();
+  // if (!defOp) return false;
+  if (!(isa_and_present<OpTypes>(defOp) || ...)) return false;
+
+  BlockArgument lhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(0));
+  BlockArgument rhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(1));
+  if (!lhsArg || !rhsArg) return false;
+  return true;
+}
+
+static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxSIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinSIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForSumPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::AddIOp, arith::AddFOp>(yieldVal, body);
+}
+
 static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
                                         uint32_t mapIndex, uint32_t dimIndex) {
   auto affineMap = cast<AffineMapAttr>(indexingMaps[mapIndex]).getValue();
@@ -279,6 +312,39 @@ static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
   if ((getAffineMapDim(indexingMaps, iIndex, 0) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 0))) &&
       (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 1))))
     return "linalg.conv_2d";
+  
+  Block *body = genericOp.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  // pooling_ncw_max
+  // pooling_ncw_sum
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 2)))) {
+    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_ncw_max";
+    if (bodyMatcherForSumPoolOps(yieldVal, body))
+      return "linalg.pooling_ncw_sum";
+  }
+  // pooling_nwc_max
+  // pooling_nwc_min
+  // pooling_nwc_sum
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 2))) {
+    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nwc_max";
+    if (bodyMatcherForMinSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nwc_min";
+    if (bodyMatcherForSumPoolOps(yieldVal, body))
+      return "linalg.pooling_nwc_sum";
+  }
   return "";
 }
 
@@ -346,6 +412,55 @@ static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
       (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
       (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 2))))
     return "linalg.conv_3d";
+
+  Block *body = genericOp.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  // pooling_nchw_max
+  // pooling_nchw_sum
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2 + d4, d3 + d5)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 1)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 3)))) {
+    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nchw_max";
+    if (bodyMatcherForSumPoolOps(yieldVal, body))
+      return "linalg.pooling_nchw_sum";
+  }
+  // pooling_nhwc_max
+  // pooling_nhwc_min
+  // pooling_nhwc_sum
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, oIndex, 3))) {
+    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nhwc_max";
+    if (bodyMatcherForMinSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nhwc_min";
+    if (bodyMatcherForSumPoolOps(yieldVal, body))
+      return "linalg.pooling_nhwc_sum";
+  }
+  // pooling_nhwc_max_unsigned
+  // pooling_nhwc_min_unsigned
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == getAffineMapDim(indexingMaps, oIndex, 3))) {
+    if (bodyMatcherForMaxUnsignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nhwc_max_unsigned";
+    if (bodyMatcherForMinUnsignedPoolOps(yieldVal, body))
+      return "linalg.pooling_nhwc_max_unsigned";
+  }
   return "";
 }
 
@@ -510,6 +625,28 @@ static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
       (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
       (getAffineMapDim(indexingMaps, iIndex, 4) == getAffineMapDim(indexingMaps, fIndex, 3) && getAffineMapDim(indexingMaps, iIndex, 4) == getAffineMapDim(indexingMaps, oIndex, 4)))
     return "linalg.depthwise_conv_3d_ndhwc_dhwc";
+
+  Block *body = genericOp.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  // pooling_ndhwc_max
+  // pooling_ndhwc_min
+  // pooling_ndhwc_sum
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  if ((getAffineMapDim(indexingMaps, iIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 0)) &&
+      (getAffineMapDim(indexingMaps, iIndex, 1) == (getAffineMapDim(indexingMaps, fIndex, 0) + getAffineMapDim(indexingMaps, oIndex, 1))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 2) == (getAffineMapDim(indexingMaps, fIndex, 1) + getAffineMapDim(indexingMaps, oIndex, 2))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 3) == (getAffineMapDim(indexingMaps, fIndex, 2) + getAffineMapDim(indexingMaps, oIndex, 3))) &&
+      (getAffineMapDim(indexingMaps, iIndex, 4) == getAffineMapDim(indexingMaps, oIndex, 4))) {
+    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_ndhwc_max";
+    if (bodyMatcherForMinSignedPoolOps(yieldVal, body))
+      return "linalg.pooling_ndhwc_min";
+    if (bodyMatcherForSumPoolOps(yieldVal, body))
+      return "linalg.pooling_ndhwc_sum";
+  }
   return "";
 }
 
@@ -639,6 +776,36 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv3DNcdhwCdhwOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_3d_ndhwc_dhwc") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv3DNdhwcDhwcOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nchw_max") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNchwMaxOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nchw_sum") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNchwSumOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nhwc_max") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nhwc_min") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMinOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nhwc_sum") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcSumOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nhwc_max_unsigned") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxUnsignedOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nhwc_min_unsigned") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMinUnsignedOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_ncw_max") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNcwMaxOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_ncw_sum") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNcwSumOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nwc_max") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNwcMaxOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nwc_min") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNwcMinOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_nwc_sum") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNwcSumOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_ndhwc_max") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNdhwcMaxOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_ndhwc_min") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNdhwcMinOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.pooling_ndhwc_sum") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::PoolingNdhwcSumOp>(genericOp, resultTypes, inputs, outputs);
   }
   return namedOp;
 
