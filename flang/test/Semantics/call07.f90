@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Wno-pass-global-variable
 ! Test 15.5.2.7 constraints and restrictions for POINTER dummy arguments.
 
 module m
