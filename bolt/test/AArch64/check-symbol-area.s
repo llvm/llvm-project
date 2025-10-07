@@ -1,6 +1,5 @@
-// This test checks that when looking for a function
-// corresponding to a symbol, BOLT is not looking 
-// through a data area (constant island).
+// This test checks that when looking for a function corresponding to a
+// symbol, BOLT is not looking through a data area (constant island).
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
