@@ -275,6 +275,9 @@ static cl::opt<bool>
     DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
                       cl::desc("Disable elimination of dead PHI nodes."));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 namespace {
 
 enum ExtType {
@@ -7647,7 +7650,12 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   BinaryOperator::BinaryOps Opcode = Shift->getOpcode();
   Value *NewTVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), TVal);
   Value *NewFVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), FVal);
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Value *NewSel =
+      Builder.CreateSelect(Cond, NewTVal, NewFVal, /*Name=*/"",
+                           /*MDFrom=*/
+                           ProfcheckDisableMetadataFixes
+                               ? nullptr
+                               : dyn_cast<Instruction>(Shift->getOperand(1)));
   replaceAllUsesWith(Shift, NewSel, FreshBBs, IsHugeFunc);
   Shift->eraseFromParent();
   return true;
@@ -7682,7 +7690,12 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   Value *X = Fsh->getOperand(0), *Y = Fsh->getOperand(1);
   Value *NewTVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, TVal});
   Value *NewFVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, FVal});
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Value *NewSel =
+      Builder.CreateSelect(Cond, NewTVal, NewFVal, /*Name=*/"",
+                           /*MDFrom=*/
+                           ProfcheckDisableMetadataFixes
+                               ? nullptr
+                               : dyn_cast<Instruction>(Fsh->getOperand(2)));
   replaceAllUsesWith(Fsh, NewSel, FreshBBs, IsHugeFunc);
   Fsh->eraseFromParent();
   return true;
