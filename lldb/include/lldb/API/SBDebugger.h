@@ -359,7 +359,7 @@ public:
   lldb::SBTarget FindTargetWithFileAndArch(const char *filename,
                                            const char *arch);
 
-  /// Find a target with the specified unique ID
+  /// Find a target with the specified unique ID.
   lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id);
 
   /// Get the number of targets in the debugger.

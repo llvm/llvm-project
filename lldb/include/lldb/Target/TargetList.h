@@ -159,7 +159,7 @@ public:
 
   lldb::TargetSP FindTargetWithProcess(lldb_private::Process *process) const;
 
-  /// Find the target that has a globally unique ID that matches ID \a id
+  /// Find the target that has a globally unique ID that matches ID \a id.
   ///
   /// \param[in] id
   ///     The globally unique target ID to search our target list for.
