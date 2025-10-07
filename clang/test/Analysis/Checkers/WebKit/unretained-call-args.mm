@@ -398,12 +398,18 @@ namespace call_with_cf_constant {
   void baz(const NSDictionary *);
   void boo(NSNumber *);
   void boo(CFTypeRef);
-  void foo() {
+
+  struct Details {
+    int value;
+  };
+
+  void foo(Details* details) {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
     boo(@YES);
     boo(@NO);
+    boo(@(details->value));
   }
 }
 

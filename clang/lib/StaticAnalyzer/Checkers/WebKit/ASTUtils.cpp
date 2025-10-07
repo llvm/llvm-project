@@ -208,6 +208,8 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
+      if (StopAtFirstRefCountedObj)
+        return callback(BoxedExpr, true);
       E = BoxedExpr->getSubExpr();
       continue;
     }
