@@ -9,8 +9,8 @@
 // This file describes the RISC-V instructions from the standard atomic 'Za*'
 // extensions:
 //   - Zawrs (v1.0) : Wait-on-Reservation-Set.
-//   - Zacas (v1.0-rc1) : Atomic Compare-and-Swap.
-//   - Zabha (v1.0-rc1) : Byte and Halfword Atomic Memory Operations.
+//   - Zacas (v1.0) : Atomic Compare-and-Swap.
+//   - Zabha (v1.0) : Byte and Halfword Atomic Memory Operations.
 //
 //===----------------------------------------------------------------------===//
 
