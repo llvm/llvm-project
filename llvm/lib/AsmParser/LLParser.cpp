@@ -5836,9 +5836,12 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return tokError("missing 'distinct', required for !DICompileUnit");
 
+  LocTy Loc = Lex.getLoc();
+
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  REQUIRED(language, DwarfLangField, );                                        \
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
+  OPTIONAL(language, DwarfLangField, );                                        \
+  OPTIONAL(sourceLanguageName, MDUnsignedField, );                             \
   OPTIONAL(producer, MDStringField, );                                         \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(flags, MDStringField, );                                            \
@@ -5860,12 +5863,19 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  if (!language.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "missing one of 'language' or 'sourceLanguageName', "
+                      "required for !DICompileUnit");
+
   Result = DICompileUnit::getDistinct(
-      Context, DISourceLanguageName(language.Val), file.Val, producer.Val,
-      isOptimized.Val, flags.Val, runtimeVersion.Val, splitDebugFilename.Val,
-      emissionKind.Val, enums.Val, retainedTypes.Val, globals.Val, imports.Val,
-      macros.Val, dwoId.Val, splitDebugInlining.Val, debugInfoForProfiling.Val,
-      nameTableKind.Val, rangesBaseAddress.Val, sysroot.Val, sdk.Val);
+      Context,
+      language.Seen ? DISourceLanguageName(language.Val)
+                    : DISourceLanguageName(sourceLanguageName.Val, 0),
+      file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
+      splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
+      globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
+      debugInfoForProfiling.Val, nameTableKind.Val, rangesBaseAddress.Val,
+      sysroot.Val, sdk.Val);
   return false;
 }
 

@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ModuleDebugInfoPrinter.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -43,13 +44,17 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
   // filenames), so just print a few useful things.
   for (DICompileUnit *CU : Finder.compile_units()) {
     O << "Compile unit: ";
-    auto Lang =
-        dwarf::LanguageString(CU->getSourceLanguage().getUnversionedName());
-    if (!Lang.empty())
-      O << Lang;
+
+    DISourceLanguageName Lang = CU->getSourceLanguage().getUnversionedName();
+    auto LangStr =
+        Lang.hasVersionedName()
+            ? dwarf::LanguageString(Lang.getName())
+            : dwarf::LanguageDescription(
+                  static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()));
+    if (!LangStr.empty())
+      O << LangStr;
     else
-      O << "unknown-language(" << CU->getSourceLanguage().getUnversionedName()
-        << ")";
+      O << "unknown-language(" << CU->getSourceLanguage().getName() << ")";
     printFile(O, CU->getFilename(), CU->getDirectory());
     O << '\n';
   }

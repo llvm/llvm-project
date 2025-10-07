@@ -2370,10 +2370,16 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Out << "!DICompileUnit(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  Printer.printDwarfEnum("language",
-                         N->getSourceLanguage().getUnversionedName(),
-                         dwarf::LanguageString,
-                         /* ShouldSkipZero */ false);
+  auto Lang = N->getSourceLanguage();
+  if (Lang.hasVersionedName())
+    Printer.printDwarfEnum(
+        "sourceLanguageName",
+        static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()),
+        dwarf::LanguageDescription,
+        /* ShouldSkipZero */ false);
+  else
+    Printer.printDwarfEnum("language", Lang.getName(), dwarf::LanguageString,
+                           /* ShouldSkipZero */ false);
 
   Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
   Printer.printString("producer", N->getProducer());

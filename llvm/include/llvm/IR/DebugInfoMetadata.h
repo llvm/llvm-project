@@ -88,6 +88,10 @@ public:
 
   /// Returns a versioned or unversioned language name.
   uint16_t getName() const { return Name; }
+  uint32_t getVersion() const {
+    assert(hasVersionedName() && "Tried getting version on unversioned name");
+    return *Version;
+  }
 
   // Transitional API for cases where we do not yet support
   // versioned source language names. Use \ref getName instead.
