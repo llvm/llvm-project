@@ -549,9 +549,9 @@ Linalg's various forms also carry information, and that
 information should be preserved as much as possible during the progressive
 lowering. A `matmul` operation is a special case of a `contract` operation,
 which in turn is a special case of a `generic` operation. Transformations on
-the more special forms should not be converted to the more generic ones
-unnecessarily, in the same way that they should not be broken down into
-loops + arithmetic if they can still be represented as a Linalg op.
+Linalg operations (in any form) should avoid breaking down into
+loops + arithmetic if they can still be represented as a Linalg operation,
+preferably in their original form.
 
 #### Canonical Forms<a name="canonical_forms"></a>
 
