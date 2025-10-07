@@ -247,9 +247,8 @@ _mm512_broadcastq_epi64(__m128i __A) {
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_broadcastq_epi64(__m512i __O, __mmask8 __M, __m128i __A) {
-  return (__m512i)__builtin_ia32_selectq_512(__M,
-                                             (__v8di) _mm512_broadcastq_epi64(__A),
-                                             (__v8di) __O);
+  return (__m512i)__builtin_ia32_selectq_512(
+      __M, (__v8di)_mm512_broadcastq_epi64(__A), (__v8di)__O);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
