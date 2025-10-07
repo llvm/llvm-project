@@ -1983,16 +1983,16 @@ def int_experimental_vector_match : DefaultAttrsIntrinsic<
                              [ llvm_anyvector_ty,
                                llvm_anyvector_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],  // Mask
-                             [ IntrNoMem ]>;
+                             [ IntrNoMem, IntrSpeculatable ]>;
 
 // Extract based on mask bits
 def int_experimental_vector_extract_last_active:
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
               [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-               LLVMVectorElementType<0>], [IntrNoMem]>;
+               LLVMVectorElementType<0>], [IntrNoMem, IntrSpeculatable]>;
 
 // Operators
-let IntrProperties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   // Integer arithmetic
   def int_vp_add : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
@@ -2390,7 +2390,7 @@ let IntrProperties = [IntrNoMem] in {
                                    llvm_i32_ty]>;
 }
 
-let IntrProperties = [IntrNoMem, ImmArg<ArgIndex<1>>] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {
   def int_vp_ctlz : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                llvm_i1_ty,
@@ -2433,7 +2433,7 @@ def int_experimental_get_vector_length:
 def int_experimental_cttz_elts:
   DefaultAttrsIntrinsic<[llvm_anyint_ty],
             [llvm_anyvector_ty, llvm_i1_ty],
-            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 def int_experimental_vp_splice:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2442,21 +2442,21 @@ def int_experimental_vp_splice:
              llvm_i32_ty,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
              llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 def int_experimental_vp_reverse:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>,
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                          llvm_i32_ty],
-                        [IntrNoMem]>;
+                        [IntrNoMem, IntrSpeculatable]>;
 
 def int_experimental_vp_splat:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMVectorElementType<0>,
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                          llvm_i32_ty],
-                        [IntrNoMem]>;
+                        [IntrNoMem, IntrSpeculatable]>;
 
 def int_vp_is_fpclass:
       DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
