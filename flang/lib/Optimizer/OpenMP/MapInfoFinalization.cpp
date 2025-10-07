@@ -383,9 +383,21 @@ class MapInfoFinalizationPass
       return mapTypeFlag;
 
     mapFlags flags = mapFlags::OMP_MAP_TO |
-                     (mapFlags(mapTypeFlag) &
-                      (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_CLOSE |
-                       mapFlags::OMP_MAP_ALWAYS));
+                     (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
+
+    // Descriptors for objects will always be copied. This is because the
+    // descriptor can be rematerialized by the compiler, and so the address
+    // of the descriptor for a given object at one place in the code may
+    // differ from that address in another place. The contents of the
+    // descriptor (the base address in particular) will remain unchanged
+    // though.
+    // TODO/FIXME: We currently cannot have MAP_CLOSE and MAP_ALWAYS on
+    // the descriptor at once, these are mutually exclusive and when
+    // both are applied the runtime will fail to map.
+    flags |= ((mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_CLOSE) ==
+              mapFlags::OMP_MAP_CLOSE)
+                 ? mapFlags::OMP_MAP_CLOSE
+                 : mapFlags::OMP_MAP_ALWAYS;
     return llvm::to_underlying(flags);
   }
 
