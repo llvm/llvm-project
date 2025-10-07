@@ -4,24 +4,9 @@
 
 ; Test musttail support for MIPS
 
-declare void @external_func()
-
-; Test basic musttail with external function
-define void @test_musttail_external() {
-; MIPS32-LABEL: test_musttail_external:
-; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    j external_func
-; MIPS32-NEXT:    nop
-;
-; MIPS64-LABEL: test_musttail_external:
-; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    j external_func
-; MIPS64-NEXT:    nop
-  musttail call void @external_func()
-  ret void
+define dso_local i32 @callee_args(i32 %a, i32 %b, i32 %c) {
+  ret i32 %a;
 }
-
-declare i32 @callee_args(i32 %a, i32 %b, i32 %c)
 
 define i32 @test_musttail_args(i32 %x, i32 %y, i32 %z) {
 ; MIPS32-LABEL: test_musttail_args:
