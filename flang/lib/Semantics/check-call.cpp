@@ -56,28 +56,44 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
-    if (const Symbol * base{GetFirstSymbol(*expr)};
-        base && IsFunctionResult(*base)) {
-      context.NoteDefinedSymbol(*base);
+    if (const Symbol *base{GetFirstSymbol(*expr)}) {
+      const Symbol &symbol{GetAssociationRoot(*base)};
+      if (IsFunctionResult(symbol)) {
+        context.NoteDefinedSymbol(symbol);
+      }
     }
     if (IsBOZLiteral(*expr)) {
-      messages.Say("BOZ argument requires an explicit interface"_err_en_US);
+      messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
+          expr->AsFortran());
     } else if (evaluate::IsNullPointerOrAllocatable(expr)) {
       messages.Say(
-          "Null pointer argument requires an explicit interface"_err_en_US);
+          "Null pointer argument '%s' requires an explicit interface"_err_en_US,
+          expr->AsFortran());
     } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
-      const Symbol &symbol{named->GetLastSymbol()};
-      if (IsAssumedRank(symbol)) {
+      const Symbol &resolved{ResolveAssociations(named->GetLastSymbol())};
+      if (IsAssumedRank(resolved)) {
         messages.Say(
-            "Assumed rank argument requires an explicit interface"_err_en_US);
+            "Assumed rank argument '%s' requires an explicit interface"_err_en_US,
+            expr->AsFortran());
       }
+      const Symbol &symbol{GetAssociationRoot(resolved)};
       if (symbol.attrs().test(Attr::ASYNCHRONOUS)) {
         messages.Say(
-            "ASYNCHRONOUS argument requires an explicit interface"_err_en_US);
+            "ASYNCHRONOUS argument '%s' requires an explicit interface"_err_en_US,
+            expr->AsFortran());
       }
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Say(
-            "VOLATILE argument requires an explicit interface"_err_en_US);
+            "VOLATILE argument '%s' requires an explicit interface"_err_en_US,
+            expr->AsFortran());
+      }
+      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (object->cudaDataAttr()) {
+          messages.Warn(/*inModuleFile=*/false, context.languageFeatures(),
+              common::UsageWarning::CUDAUsage,
+              "Actual argument '%s' with CUDA data attributes should be passed via an explicit interface"_warn_en_US,
+              expr->AsFortran());
+        }
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
                    "actual argument", *expr, context.foldingContext(),
@@ -811,7 +827,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // General implementation of F'23 15.5.2.5 note 5
   // Adds a less specific error message for any copy-out that could overwrite
   // a unread value in the actual argument.
-  // Occurences of volatileOrAsyncNeedsTempDiagnosticIssued = true indicate a
+  // Occurences of `volatileOrAsyncNeedsTempDiagnosticIssued = true` indicate a
   // more specific error message has already been issued. We might be able to
   // clean this up by switching the coding style of MayNeedCopy to be more like
   // WhyNotDefinable.
@@ -828,8 +844,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // If there are any cases where we don't need a copy and some other compiler
   // does, we issue a portability warning here.
   if (context.ShouldWarn(common::UsageWarning::Portability)) {
-    // Nag, GFortran, and NVFortran all error on this case, even though it is
-    // ok, prossibly as an over-restriction of F'23 C1548.
+    // 3 other compilers error on this case even though it is ok.
+    // Possibly as an over-restriction of F'23 C1548.
     if (!copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued &&
         (!dummyIsValue && (dummyIsAsynchronous || dummyIsVolatile)) &&
         !(actualIsAsynchronous || actualIsVolatile) &&
@@ -842,7 +858,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           actual.AsFortran(), dummyName,
           dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
     }
-    // Probably an over-restriction of F'23 15.5.2.5 note 5
+    // Possibly an over-restriction of F'23 15.5.2.5 note 5
     if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
       if ((dummyIsVolatile && !actualIsVolatile && !actualIsAsynchronous) ||
           (dummyIsAsynchronous && !actualIsVolatile && !actualIsAsynchronous)) {
@@ -1537,6 +1553,10 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
           if (IsAssumedSizeArray(*wholeSymbol)) {
             evaluate::SayWithDeclaration(messages, *wholeSymbol,
                 "Whole assumed-size array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
+                wholeSymbol->name());
+          } else if (IsAssumedRank(*wholeSymbol)) {
+            evaluate::SayWithDeclaration(messages, *wholeSymbol,
+                "Assumed-rank array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
                 wholeSymbol->name());
           }
         }
@@ -2383,44 +2403,51 @@ bool CheckArguments(const characteristics::Procedure &proc,
   evaluate::FoldingContext foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   bool allowArgumentConversions{true};
+  parser::Messages implicitBuffer;
   if (!explicitInterface || treatingExternalAsImplicit) {
-    parser::Messages buffer;
     {
-      auto restorer{messages.SetMessages(buffer)};
+      auto restorer{messages.SetMessages(implicitBuffer)};
       for (auto &actual : actuals) {
         if (actual) {
           CheckImplicitInterfaceArg(*actual, messages, context);
         }
       }
     }
-    if (!buffer.empty()) {
+    if (implicitBuffer.AnyFatalError()) {
       if (auto *msgs{messages.messages()}) {
-        msgs->Annex(std::move(buffer));
+        msgs->Annex(std::move(implicitBuffer));
       }
       return false; // don't pile on
     }
     allowArgumentConversions = false;
   }
   if (explicitInterface) {
-    auto buffer{CheckExplicitInterface(proc, actuals, context, &scope,
+    auto explicitBuffer{CheckExplicitInterface(proc, actuals, context, &scope,
         intrinsic, allowArgumentConversions,
         /*extentErrors=*/true, ignoreImplicitVsExplicit)};
-    if (!buffer.empty()) {
+    if (!explicitBuffer.empty()) {
       if (treatingExternalAsImplicit) {
-        if (auto *msg{foldingContext.Warn(
+        // Combine all messages into one warning
+        if (auto *warning{messages.Warn(/*inModuleFile=*/false,
+                context.languageFeatures(),
                 common::UsageWarning::KnownBadImplicitInterface,
                 "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
-          buffer.AttachTo(*msg, parser::Severity::Because);
-        } else {
-          buffer.clear();
+          explicitBuffer.AttachTo(*warning, parser::Severity::Because);
         }
+      } else if (auto *msgs{messages.messages()}) {
+        msgs->Annex(std::move(explicitBuffer));
       }
-      if (auto *msgs{messages.messages()}) {
-        msgs->Annex(std::move(buffer));
-      }
+      // These messages override any in implicitBuffer.
       return false;
     }
   }
-  return true;
+  if (!implicitBuffer.empty()) {
+    if (auto *msgs{messages.messages()}) {
+      msgs->Annex(std::move(implicitBuffer));
+    }
+    return false;
+  } else {
+    return true; // no messages
+  }
 }
 } // namespace Fortran::semantics

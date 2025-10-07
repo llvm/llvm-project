@@ -950,12 +950,18 @@ Each builtin accesses memory according to a provided boolean mask. These are
 provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
 argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
 takes an optional third vector argument that will be used for the result of the
-masked-off lanes. These builtins assume the memory is always aligned.
+masked-off lanes. These builtins assume the memory is unaligned, use
+``__builtin_assume_aligned`` if alignment is desired.
 
 The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
 builtins have the same interface but store the result in consecutive indices.
 Effectively this performs the ``if (mask[i]) val[i] = ptr[j++]`` and ``if
 (mask[i]) ptr[j++] = val[i]`` pattern respectively.
+
+The ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` builtins handle
+non-sequential memory access for vector types. These use a base pointer and a
+vector of integer indices to gather memory into a vector type or scatter it to
+separate indices.
 
 Example:
 
@@ -964,18 +970,26 @@ Example:
     using v8b = bool [[clang::ext_vector_type(8)]];
     using v8i = int [[clang::ext_vector_type(8)]];
 
-    v8i load(v8b mask, v8i *ptr) { return __builtin_masked_load(mask, ptr); }
+    v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
     
-    v8i load_expand(v8b mask, v8i *ptr) {
+    v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
     
-    void store(v8b mask, v8i val, v8i *ptr) {
+    void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
     
-    void store_compress(v8b mask, v8i val, v8i *ptr) {
+    void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
+    }
+
+    v8i gather(v8b mask, v8i idx, int *ptr) {
+      return __builtin_masked_gather(mask, idx, ptr);
+    }
+
+    void scatter(v8b mask, v8i val, v8i idx, int *ptr) {
+      __builtin_masked_scatter(mask, idx, val, ptr);
     }
 
 
@@ -2051,9 +2065,9 @@ The following type trait primitives are supported by Clang. Those traits marked
     Returns true if a reference ``T`` can be copy-initialized from a temporary of type
     a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
-* ``__builtin_lt_synthesises_from_spaceship``, ``__builtin_gt_synthesises_from_spaceship``,
-  ``__builtin_le_synthesises_from_spaceship``, ``__builtin_ge_synthesises_from_spaceship`` (Clang):
-  These builtins can be used to determine whether the corresponding operator is synthesised from a spaceship operator.
+* ``__builtin_lt_synthesizes_from_spaceship``, ``__builtin_gt_synthesizes_from_spaceship``,
+  ``__builtin_le_synthesizes_from_spaceship``, ``__builtin_ge_synthesizes_from_spaceship`` (Clang):
+  These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
 
 In addition, the following expression traits are supported:
 

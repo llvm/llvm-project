@@ -61,7 +61,8 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   return DICompileUnitAttr::get(
       context, getOrCreateDistinctID(node), node->getSourceLanguage(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value(), nameTableKind.value());
+      node->isOptimized(), emissionKind.value(), nameTableKind.value(),
+      getStringAttrOrNull(node->getRawSplitDebugFilename()));
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {

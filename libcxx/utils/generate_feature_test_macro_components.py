@@ -1114,6 +1114,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_indices",
+            "values": {"c++26": 202506},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
@@ -1333,6 +1338,11 @@ feature_test_macros = [
             "name": "__cpp_lib_string_resize_and_overwrite",
             "values": {"c++23": 202110},
             "headers": ["string"],
+        },
+        {
+            "name": "__cpp_lib_string_subview",
+            "values": {"c++26": 202506},
+            "headers": ["string", "string_view"],
         },
         {
             "name": "__cpp_lib_string_udls",

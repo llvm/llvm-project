@@ -764,9 +764,7 @@ void Generator::generate(Operation *op, ByteCodeWriter &writer) {
             pdl_interp::SwitchOperandCountOp, pdl_interp::SwitchOperationNameOp,
             pdl_interp::SwitchResultCountOp>(
           [&](auto interpOp) { this->generate(interpOp, writer); })
-      .Default([](Operation *) {
-        llvm_unreachable("unknown `pdl_interp` operation");
-      });
+      .DefaultUnreachable("unknown `pdl_interp` operation");
 }
 
 void Generator::generate(pdl_interp::ApplyConstraintOp op,
@@ -913,9 +911,7 @@ void Generator::generate(pdl_interp::ExtractOp op, ByteCodeWriter &writer) {
           .Case([](pdl::OperationType) { return OpCode::ExtractOp; })
           .Case([](pdl::ValueType) { return OpCode::ExtractValue; })
           .Case([](pdl::TypeType) { return OpCode::ExtractType; })
-          .Default([](Type) -> OpCode {
-            llvm_unreachable("unsupported element type");
-          });
+          .DefaultUnreachable("unsupported element type");
   writer.append(opCode, op.getRange(), op.getIndex(), op.getResult());
 }
 void Generator::generate(pdl_interp::FinalizeOp op, ByteCodeWriter &writer) {

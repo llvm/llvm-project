@@ -100,6 +100,7 @@ STATISTIC(OnlySecondCandidateIsGuarded,
           "The second candidate is guarded while the first one is not");
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
+STATISTIC(NumDA, "DA checks passed");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -1371,6 +1372,47 @@ private:
                           << "\n");
       }
 #endif
+      unsigned Levels = DepResult->getLevels();
+      unsigned SameSDLevels = DepResult->getSameSDLevels();
+      unsigned CurLoopLevel = FC0.L->getLoopDepth();
+
+      // Check if DA is missing info regarding the current loop level
+      if (CurLoopLevel > Levels + SameSDLevels)
+        return false;
+
+      // Iterating over the outer levels.
+      for (unsigned Level = 1; Level <= std::min(CurLoopLevel - 1, Levels);
+           ++Level) {
+        unsigned Direction = DepResult->getDirection(Level, false);
+
+        // Check if the direction vector does not include equality. If an outer
+        // loop has a non-equal direction, outer indicies are different and it
+        // is safe to fuse.
+        if (!(Direction & Dependence::DVEntry::EQ)) {
+          LLVM_DEBUG(dbgs() << "Safe to fuse due to non-equal acceses in the "
+                               "outer loops\n");
+          NumDA++;
+          return true;
+        }
+      }
+
+      assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
+
+      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+
+      // Check if the direction vector does not include greater direction. In
+      // that case, the dependency is not a backward loop-carried and is legal
+      // to fuse. For example here we have a forward dependency
+      //    for (int i = 0; i < n; i++)
+      //        A[i] = ...;
+      //    for (int i = 0; i < n; i++)
+      //        ... = A[i-1];
+      if (!(CurDir & Dependence::DVEntry::GT)) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse with no backward loop-carried "
+                             "dependency\n");
+        NumDA++;
+        return true;
+      }
 
       if (DepResult->getNextPredecessor() || DepResult->getNextSuccessor())
         LLVM_DEBUG(

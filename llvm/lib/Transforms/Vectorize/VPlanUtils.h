@@ -102,6 +102,10 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+unsigned getVFScaleFactor(VPRecipeBase *R);
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in

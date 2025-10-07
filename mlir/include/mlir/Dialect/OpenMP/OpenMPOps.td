@@ -358,44 +358,6 @@ def SingleOp : OpenMP_Op<"single", traits = [
 }
 
 //===---------------------------------------------------------------------===//
-// OpenMP Canonical Loop Info Type
-//===---------------------------------------------------------------------===//
-
-def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
-  let summary = "Type for representing a reference to a canonical loop";
-  let description = [{
-    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
-    canonical loop in the same function. Values of this type are not
-    available at runtime and therefore cannot be used by the program itself,
-    i.e. an opaque type. It is similar to the transform dialect's
-    `!transform.interface` type, but instead of implementing an interface
-    for each transformation, the OpenMP dialect itself defines possible
-    operations on this type.
-
-    A value of type CanonicalLoopInfoType (in the following: CLI) value can be
-
-    1. created by omp.new_cli.
-    2. passed to omp.canonical_loop to associate the loop to that CLI. A CLI
-       can only be associated once.
-    3. passed to an omp loop transformation operation that modifies the loop
-       associated with the CLI. The CLI is the "applyee" and the operation is
-       the consumer. A CLI can only be consumed once.
-    4. passed to an omp loop transformation operation to associate the cli with
-       a result of that transformation. The CLI is the "generatee" and the
-       operation is the generator.
-
-    A CLI cannot
-
-    1. be returned from a function.
-    2. be passed to operations that are not specifically designed to take a
-       CanonicalLoopInfoType, including AnyType.
-
-    A CLI directly corresponds to an object of
-    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
-  }];
-}
-
-//===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Info Creation
 //===---------------------------------------------------------------------===//
 
@@ -561,6 +523,31 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
   ];
 
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMP tile operation
+//===----------------------------------------------------------------------===//
+
+def TileOp : OpenMPTransformBase_Op<"tile",
+                                clauses = [OpenMP_SizesClause]> {
+  let summary = "OpenMP tile operation";
+  let description = [{
+    Represents the OpenMP tile directive introduced in OpenMP 5.1.
+
+    The construct partitions the logical iteration space of the affected loops
+    into equally-sized tiles, then creates two sets of nested loops. The outer
+    loops, called the grid loops, iterate over all tiles. The inner loops,
+    called the intratile loops, iterate over the logical iterations of a tile.
+    The sizes clause determines the size of a tile.
+
+    Currently, the affected loops must be rectangular (the tripcount of the
+    inner loop must not depend on any iv of an surrounding affected loop) and
+    perfectly nested (except for the innermost affected loop, no operations
+    other than the nested loop and the terminator in the loop body).
+  }] # clausesDescription;
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

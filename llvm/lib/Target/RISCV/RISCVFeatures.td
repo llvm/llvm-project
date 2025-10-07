@@ -1421,7 +1421,7 @@ def HasVendorXMIPSCMov
     : Predicate<"Subtarget->hasVendorXMIPSCMov()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
-def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+def UseMIPSCCMovInsn : Predicate<"Subtarget->useMIPSCCMovInsn()">;
 
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
@@ -1647,6 +1647,14 @@ def HasVendorXAndesVBFHCvt
     : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
+
+def FeatureVendorXAndesVSIntH
+    : RISCVExtension<5, 0, "Andes Vector Small INT Handling Extension",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXAndesVSIntH
+    : Predicate<"Subtarget->hasVendorXAndesVSIntH()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntH),
+                         "'XAndesVSIntH' (Andes Vector Small INT Handling Extension)">;
 
 def FeatureVendorXAndesVSIntLoad
     : RISCVExtension<5, 0, "Andes Vector INT4 Load Extension",

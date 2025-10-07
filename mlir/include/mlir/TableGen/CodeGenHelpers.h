@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +21,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
+#include <utility>
 
 namespace llvm {
 class RecordKeeper;
@@ -36,46 +39,17 @@ std::string strfmt(const char *fmt, Parameters &&...parameters) {
   return llvm::formatv(fmt, std::forward<Parameters>(parameters)...).str();
 }
 
-// Simple RAII helper for defining ifdef-undef-endif scopes.
-class IfDefScope {
+// A helper RAII class to emit nested namespaces for a dialect.
+class DialectNamespaceEmitter {
 public:
-  IfDefScope(llvm::StringRef name, llvm::raw_ostream &os)
-      : name(name.str()), os(os) {
-    os << "#ifdef " << name << "\n"
-       << "#undef " << name << "\n\n";
-  }
-  ~IfDefScope() { os << "\n#endif  // " << name << "\n\n"; }
-
-private:
-  std::string name;
-  llvm::raw_ostream &os;
-};
-
-// A helper RAII class to emit nested namespaces for this op.
-class NamespaceEmitter {
-public:
-  NamespaceEmitter(raw_ostream &os, const Dialect &dialect) : os(os) {
+  DialectNamespaceEmitter(raw_ostream &os, const Dialect &dialect) {
     if (!dialect)
       return;
-    emitNamespaceStarts(os, dialect.getCppNamespace());
-  }
-  NamespaceEmitter(raw_ostream &os, StringRef cppNamespace) : os(os) {
-    emitNamespaceStarts(os, cppNamespace);
-  }
-
-  ~NamespaceEmitter() {
-    for (StringRef ns : llvm::reverse(namespaces))
-      os << "} // namespace " << ns << "\n";
+    nsEmitter.emplace(os, dialect.getCppNamespace());
   }
 
 private:
-  void emitNamespaceStarts(raw_ostream &os, StringRef cppNamespace) {
-    llvm::SplitString(cppNamespace, namespaces, "::");
-    for (StringRef ns : namespaces)
-      os << "namespace " << ns << " {\n";
-  }
-  raw_ostream &os;
-  SmallVector<StringRef, 2> namespaces;
+  std::optional<llvm::NamespaceEmitter> nsEmitter;
 };
 
 /// This class deduplicates shared operation verification code by emitting

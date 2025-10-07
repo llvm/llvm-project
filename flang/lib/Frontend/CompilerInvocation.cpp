@@ -160,6 +160,12 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.DwarfVersion =
         getLastArgIntValue(args, clang::driver::options::OPT_dwarf_version_EQ,
                            /*Default=*/0, diags);
+    if (const llvm::opt::Arg *a =
+            args.getLastArg(clang::driver::options::OPT_split_dwarf_file))
+      opts.SplitDwarfFile = a->getValue();
+    if (const llvm::opt::Arg *a =
+            args.getLastArg(clang::driver::options::OPT_split_dwarf_output))
+      opts.SplitDwarfOutput = a->getValue();
   }
   return true;
 }
@@ -1418,6 +1424,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.NoSignedZeros = true;
     opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
+
+  if (args.hasArg(clang::driver::options::OPT_fno_fast_real_mod))
+    opts.NoFastRealMod = true;
 
   return true;
 }

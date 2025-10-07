@@ -64,7 +64,8 @@ TEST(RecordOpsTest, CopyRecord) {
   runDataflow(
       Code,
       [](QualType Ty) -> llvm::StringMap<QualType> {
-        if (Ty.getAsString() != "S")
+        std::string TypeAsString = Ty.getAsString();
+        if (TypeAsString != "S" && TypeAsString != "struct S")
           return {};
         QualType IntTy =
             getFieldNamed(Ty->getAsRecordDecl(), "outer_int")->getType();
@@ -123,7 +124,8 @@ TEST(RecordOpsTest, RecordsEqual) {
   runDataflow(
       Code,
       [](QualType Ty) -> llvm::StringMap<QualType> {
-        if (Ty.getAsString() != "S")
+        std::string TypeAsString = Ty.getAsString();
+        if (TypeAsString != "S" && TypeAsString != "struct S")
           return {};
         QualType IntTy =
             getFieldNamed(Ty->getAsRecordDecl(), "outer_int")->getType();
@@ -213,9 +215,10 @@ TEST(RecordOpsTest, CopyRecordBetweenDerivedAndBase) {
   )";
   auto SyntheticFieldCallback = [](QualType Ty) -> llvm::StringMap<QualType> {
     CXXRecordDecl *ADecl = nullptr;
-    if (Ty.getAsString() == "A")
+    std::string TypeAsString = Ty.getAsString();
+    if (TypeAsString == "A" || TypeAsString == "struct A")
       ADecl = Ty->getAsCXXRecordDecl();
-    else if (Ty.getAsString() == "B")
+    else if (TypeAsString == "B" || TypeAsString == "struct B")
       ADecl = Ty->getAsCXXRecordDecl()
                   ->bases_begin()
                   ->getType()

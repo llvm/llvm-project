@@ -1929,6 +1929,37 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_square, TT_ObjCMethodExpr);
   EXPECT_TOKEN(Tokens[15], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("a = @selector(name:);");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_ObjCSelector);
+
+  Tokens =
+      annotate("[object respondsToSelector:@selector(name:param1:param2:)\n"
+               "        respondsToSelector:@selector(name:param1:param2:)];");
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[8], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[10], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[12], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[13], tok::r_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[15], tok::colon, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[18], tok::l_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[20], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[22], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[24], tok::colon, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[25], tok::r_paren, TT_ObjCSelector);
+  EXPECT_TOKEN(Tokens[26], tok::r_square, TT_ObjCMethodExpr);
+
+  Tokens = annotate("[a b:c];");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_ObjCMethodExpr);
+  EXPECT_TOKEN(Tokens[5], tok::r_square, TT_ObjCMethodExpr);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodDecl) {
@@ -2237,6 +2268,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("SomeFunction({[]() -> int *[] { return {}; }});");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_LambdaDefinitionLParen);
+  EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
@@ -4159,7 +4196,15 @@ TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
   EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
-TEST_F(TokenAnnotatorTest, KeywordedFunctionLikeMacro) {
+TEST_F(TokenAnnotatorTest, ArrowAfterSubscript) {
+  auto Tokens =
+      annotate("return (getStructType()->getElements())[eIdx]->getName();");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  // Not TT_LambdaArrow.
+  EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, QtProperty) {
   auto Style = getLLVMStyle();
   Style.AllowBreakBeforeQtProperty = true;
 
