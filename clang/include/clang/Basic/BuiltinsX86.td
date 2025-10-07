@@ -116,15 +116,10 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     }
   }
 
-  let Features = "sse3",
-      Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  let Features = "sse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
     foreach Op = ["hadd", "hsub"] in {
-      def Op#ps
-          : X86Builtin<
-                "_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-      def Op#pd
-          : X86Builtin<
-                "_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+      def Op#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+      def Op#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
     }
   }
 
@@ -318,15 +313,11 @@ let Features = "ssse3", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] 
   def palignr128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Constant int)">;
 }
 
-let Features = "ssse3",
-    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+let Features = "ssse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   foreach Op = ["phadd", "phsub"] in {
-    def Op#w128
-        : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
-    def Op#sw128
-        : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
-    def Op#d128
-        : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
+    def Op#w128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
+    def Op#sw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
+    def Op#d128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
   }
 }
 
@@ -523,11 +514,8 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def vinsertf128_si256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<4, int>, _Constant int)">;
 
   foreach Op = ["hadd", "hsub"] in {
-    def Op#pd256
-        : X86Builtin<
-              "_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
-    def Op#ps256
-        : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
+    def Op#pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
+    def Op#ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
   }
 }
 
@@ -600,8 +588,7 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
 
 let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
-  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, "
-                              "_Vector<32, char>, _Constant int)">;
+  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant int)">;
   def pmaddubsw256 : X86Builtin<"_Vector<16, short>(_Vector<32, char>, _Vector<32, char>)">;
   def pmaddwd256 : X86Builtin<"_Vector<8, int>(_Vector<16, short>, _Vector<16, short>)">;
   def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
@@ -669,22 +656,13 @@ let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def packssdw256 : X86Builtin<"_Vector<16, short>(_Vector<8, int>, _Vector<8, int>)">;
   def packuswb256 : X86Builtin<"_Vector<32, char>(_Vector<16, short>, _Vector<16, short>)">;
 
-  def phaddw256
-      : X86Builtin<
-            "_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
-  def phaddd256
-      : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
-  def phaddsw256
-      : X86Builtin<
-            "_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
-  def phsubw256
-      : X86Builtin<
-            "_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
-  def phsubd256
-      : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
-  def phsubsw256
-      : X86Builtin<
-            "_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
+  def phaddw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
+  def phaddd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
+  def phaddsw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
+  def phsubw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
+  def phsubd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
+  def phsubsw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
+  
   def pshuflw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int)">;
   def pshufhw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int)">;
   def pshufd256  : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int)">;
