@@ -259,7 +259,7 @@ void HIPAMDToolChain::addClangTargetOptions(
     // For SPIR-V we embed the command-line into the generated binary, in order
     // to retrieve it at JIT time and be able to do target specific compilation
     // with options that match the user-supplied ones.
-    if (!DriverArgs.hasArg(options::OPT_fembed_bitcode_marker))
+    if (!DriverArgs.hasArg(options::OPT_fembed_bitcode_EQ))
       CC1Args.push_back("-fembed-bitcode=marker");
     // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
     // optimizations might lose structure / information that is necessary for
