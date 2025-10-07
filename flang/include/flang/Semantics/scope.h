@@ -11,11 +11,11 @@
 
 #include "attr.h"
 #include "symbol.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <map>
 #include <optional>
@@ -188,7 +188,7 @@ public:
   void add_crayPointer(const SourceName &, Symbol &);
   mapType &commonBlocks() { return commonBlocks_; }
   const mapType &commonBlocks() const { return commonBlocks_; }
-  Symbol &MakeCommonBlock(const SourceName &);
+  Symbol &MakeCommonBlock(SourceName, SourceName location);
   Symbol *FindCommonBlock(const SourceName &) const;
 
   /// Make a Symbol but don't add it to the scope.

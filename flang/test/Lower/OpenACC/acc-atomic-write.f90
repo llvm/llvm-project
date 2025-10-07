@@ -2,7 +2,7 @@
 
 ! This test checks the lowering of atomic write
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "acc_atomic_write_test"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "ACC_ATOMIC_WRITE_TEST"} {
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[VAR_X]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[VAR_Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
@@ -10,7 +10,7 @@
 !CHECK: %[[CONST_7:.*]] = arith.constant 7 : i32
 !CHECK: {{.*}} = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[VAR_7y:.*]] = arith.muli %[[CONST_7]], {{.*}} : i32
-!CHECK: acc.atomic.write %[[X_DECL]]#1 = %[[VAR_7y]] : !fir.ref<i32>, i32
+!CHECK: acc.atomic.write %[[X_DECL]]#0 = %[[VAR_7y]] : !fir.ref<i32>, i32
 !CHECK: return
 !CHECK: }
 
@@ -49,7 +49,7 @@ end subroutine
 !CHECK: %[[R2:.*]] = fir.alloca f32 {bindc_name = "r2", uniq_name = "{{.*}}r2"}
 !CHECK: %[[R2_DECL:.*]]:2 = hlfir.declare %[[R2]] {uniq_name = "_QFatomic_write_typed_assignEr2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-!CHECK: acc.atomic.write %[[R2_DECL]]#1 = %[[CST]]   : !fir.ref<f32>, f32
+!CHECK: acc.atomic.write %[[R2_DECL]]#0 = %[[CST]]   : !fir.ref<f32>, f32
 
 subroutine atomic_write_typed_assign
   real :: r2

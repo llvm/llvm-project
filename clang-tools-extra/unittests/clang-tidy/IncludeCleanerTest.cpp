@@ -71,10 +71,12 @@ TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
 
   std::vector<ClangTidyError> Errors;
   ClangTidyOptions Opts;
-  Opts.CheckOptions["IgnoreHeaders"] = llvm::StringRef{llvm::formatv(
-      "bar.h;{0};{1};vector;<list>;",
-      llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"})),
-      llvm::Regex::escape(appendPathFileSystemIndependent({"baz", "qux"})))};
+  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = llvm::StringRef{
+      llvm::formatv("bar.h;{0};{1};vector;<list>;",
+                    llvm::Regex::escape(
+                        appendPathFileSystemIndependent({"foo", "qux.h"})),
+                    llvm::Regex::escape(
+                        appendPathFileSystemIndependent({"baz", "qux"})))};
   EXPECT_EQ(
       PostCode,
       runCheckOnCode<IncludeCleanerCheck>(
@@ -139,7 +141,7 @@ int BarResult2 = $diag2^bar();)");
   {
     std::vector<ClangTidyError> Errors;
     ClangTidyOptions Opts;
-    Opts.CheckOptions.insert({"DeduplicateFindings", "false"});
+    Opts.CheckOptions["test-check-0.DeduplicateFindings"] = "false";
     runCheckOnCode<IncludeCleanerCheck>(Code.code(), &Errors, "file.cpp", {},
                                         Opts,
                                         {{"baz.h", R"(#pragma once
@@ -170,7 +172,7 @@ std::vector x;
 )";
 
   ClangTidyOptions Opts;
-  Opts.CheckOptions["IgnoreHeaders"] = llvm::StringRef{
+  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = llvm::StringRef{
       "public.h;<vector>;baz.h;" +
       llvm::Regex::escape(appendPathFileSystemIndependent({"foo", "qux.h"}))};
   std::vector<ClangTidyError> Errors;
@@ -312,6 +314,64 @@ DECLARE {
                            R"(#pragma once
                      #define DECLARE void myfunc()
                   )"}}));
+}
+
+TEST(IncludeCleanerCheckTest, UnusedIncludes) {
+  const char *PreCode = R"(
+#include "bar.h")";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
+                                        {{"bar.h", "#pragma once"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "included header bar.h is not used directly");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.UnusedIncludes"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {}, Opts,
+                                        {{"bar.h", "#pragma once"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
+}
+
+TEST(IncludeCleanerCheckTest, MissingIncludes) {
+  const char *PreCode = R"(
+#include "baz.h" // IWYU pragma: keep
+
+int BarResult1 = bar();)";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
+                                        {{"baz.h", R"(#pragma once
+                                          #include "bar.h"
+                                       )"},
+                                         {"bar.h", R"(#pragma once
+                                          int bar();
+                                       )"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "no header providing \"bar\" is directly included");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.MissingIncludes"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {}, Opts,
+                                        {{"baz.h", R"(#pragma once
+                                          #include "bar.h"
+                                       )"},
+                                         {"bar.h", R"(#pragma once
+                                          int bar();
+                                       )"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
 }
 
 } // namespace

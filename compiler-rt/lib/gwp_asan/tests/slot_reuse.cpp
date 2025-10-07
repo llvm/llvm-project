@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <set>
+
 #include "gwp_asan/tests/harness.h"
 
-#include <set>
+namespace {
 
 void singleByteGoodAllocDealloc(gwp_asan::GuardedPoolAllocator *GPA) {
   void *Ptr = GPA->allocate(1);
@@ -72,3 +74,5 @@ TEST_F(CustomGuardedPoolAllocator, NoReuseBeforeNecessary129) {
   InitNumSlots(kPoolSize);
   runNoReuseBeforeNecessary(&GPA, kPoolSize);
 }
+
+} // namespace

@@ -93,7 +93,7 @@ ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCRegister R) const {
 
   sort(Aliases);
   Aliases.erase(unique(Aliases), Aliases.end());
-  assert(none_of(Aliases, [&](auto &Cur) { return R == Cur; }) &&
+  assert(!llvm::is_contained(Aliases, R) &&
          "MCRegAliasIteratorImpl includes Self!");
 
   // Always put "self" at the end, so the iterator can choose to ignore it.
@@ -218,5 +218,12 @@ bool MCRegisterInfo::regsOverlap(MCRegister RegA, MCRegister RegB) const {
     if (*IA == *IB)
       return true;
   } while (*IA < *IB ? ++IA != EA : ++IB != EB);
+  return false;
+}
+
+bool MCRegisterInfo::isArtificialRegUnit(unsigned Unit) const {
+  for (MCRegUnitRootIterator Root(Unit, this); Root.isValid(); ++Root)
+    if (isArtificial(*Root))
+      return true;
   return false;
 }

@@ -195,15 +195,12 @@ class StringAttributeImpl final
 
   unsigned KindSize;
   unsigned ValSize;
-  size_t numTrailingObjects(OverloadToken<char>) const {
-    return KindSize + 1 + ValSize + 1;
-  }
 
 public:
   StringAttributeImpl(StringRef Kind, StringRef Val = StringRef())
       : AttributeImpl(StringAttrEntry), KindSize(Kind.size()),
         ValSize(Val.size()) {
-    char *TrailingString = getTrailingObjects<char>();
+    char *TrailingString = getTrailingObjects();
     // Some users rely on zero-termination.
     llvm::copy(Kind, TrailingString);
     TrailingString[KindSize] = '\0';
@@ -212,10 +209,10 @@ public:
   }
 
   StringRef getStringKind() const {
-    return StringRef(getTrailingObjects<char>(), KindSize);
+    return StringRef(getTrailingObjects(), KindSize);
   }
   StringRef getStringValue() const {
-    return StringRef(getTrailingObjects<char>() + KindSize + 1, ValSize);
+    return StringRef(getTrailingObjects() + KindSize + 1, ValSize);
   }
 
   static size_t totalSizeToAlloc(StringRef Kind, StringRef Val) {
@@ -250,25 +247,22 @@ class ConstantRangeListAttributeImpl final
   friend TrailingObjects;
 
   unsigned Size;
-  size_t numTrailingObjects(OverloadToken<ConstantRange>) const { return Size; }
 
 public:
   ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
                                  ArrayRef<ConstantRange> Val)
       : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
     assert(Size > 0);
-    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    std::uninitialized_copy(Val.begin(), Val.end(), TrailingCR);
+    llvm::uninitialized_copy(Val, getTrailingObjects());
   }
 
   ~ConstantRangeListAttributeImpl() {
-    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    for (unsigned I = 0; I != Size; ++I)
-      TrailingCR[I].~ConstantRange();
+    for (ConstantRange &CR : getTrailingObjects(Size))
+      CR.~ConstantRange();
   }
 
   ArrayRef<ConstantRange> getConstantRangeListValue() const {
-    return ArrayRef(getTrailingObjects<ConstantRange>(), Size);
+    return getTrailingObjects(Size);
   }
 
   static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
@@ -346,13 +340,14 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp) const;
   Type *getAttributeType(Attribute::AttrKind Kind) const;
 
   using iterator = const Attribute *;
 
-  iterator begin() const { return getTrailingObjects<Attribute>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrs; }
 
   void Profile(FoldingSetNodeID &ID) const {
@@ -382,9 +377,6 @@ private:
   /// Union of enum attributes available at any index.
   AttributeBitSet AvailableSomewhereAttrs;
 
-  // Helper fn for TrailingObjects class.
-  size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
-
 public:
   AttributeListImpl(ArrayRef<AttributeSet> Sets);
 
@@ -406,7 +398,7 @@ public:
 
   using iterator = const AttributeSet *;
 
-  iterator begin() const { return getTrailingObjects<AttributeSet>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrSets; }
 
   void Profile(FoldingSetNodeID &ID) const;

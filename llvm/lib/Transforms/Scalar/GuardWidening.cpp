@@ -52,7 +52,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -643,9 +642,9 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
     return FI;
   }
 
-  SmallSet<Value *, 16> Visited;
+  SmallPtrSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
-  SmallSet<Instruction *, 16> DropPoisonFlags;
+  SmallPtrSet<Instruction *, 16> DropPoisonFlags;
   SmallVector<Value *, 16> NeedFreeze;
   DenseMap<Value *, FreezeInst *> CacheOfFreezes;
 
@@ -666,8 +665,8 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
       CacheOfFreezes[Def] = FI;
     }
 
-    if (CacheOfFreezes.count(Def))
-      U.set(CacheOfFreezes[Def]);
+    if (auto It = CacheOfFreezes.find(Def); It != CacheOfFreezes.end())
+      U.set(It->second);
     return true;
   };
 
@@ -728,7 +727,7 @@ GuardWideningImpl::mergeChecks(SmallVectorImpl<Value *> &ChecksToHoist,
     // L >u C0 && L >u C1  ->  L >u max(C0, C1)
     ConstantInt *RHS0, *RHS1;
     Value *LHS;
-    ICmpInst::Predicate Pred0, Pred1;
+    CmpPredicate Pred0, Pred1;
     // TODO: Support searching for pairs to merge from both whole lists of
     // ChecksToHoist and ChecksToWiden.
     if (ChecksToWiden.size() == 1 && ChecksToHoist.size() == 1 &&

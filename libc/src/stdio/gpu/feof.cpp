@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/feof.h"
-#include "file.h"
-#include "src/__support/macros/config.h"
 
+#include "file.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, feof, (::FILE * stream)) {
   int ret;
-  rpc::Client::Port port = rpc::client.open<RPC_FEOF>();
+  rpc::Client::Port port = rpc::client.open<LIBC_FEOF>();
   port.send_and_recv(
       [=](rpc::Buffer *buffer, uint32_t) {
         buffer->data[0] = file::from_stream(stream);

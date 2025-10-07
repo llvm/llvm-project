@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_AVAILABILITY_H
-#define _LIBCPP___CONFIGURATION_AVAILABILITY_H
+#ifndef _LIBCPP___CXX03___CONFIGURATION_AVAILABILITY_H
+#define _LIBCPP___CXX03___CONFIGURATION_AVAILABILITY_H
 
-#include <__configuration/compiler.h>
-#include <__configuration/language.h>
+#include <__cxx03/__configuration/compiler.h>
+#include <__cxx03/__configuration/language.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -397,4 +397,4 @@
 #  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
 #endif
 
-#endif // _LIBCPP___CONFIGURATION_AVAILABILITY_H
+#endif // _LIBCPP___CXX03___CONFIGURATION_AVAILABILITY_H

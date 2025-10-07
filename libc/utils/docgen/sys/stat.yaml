@@ -1,0 +1,118 @@
+macros:
+  S_IFMT:
+    in-latest-posix: ''
+  S_IFBLK:
+    in-latest-posix: ''
+  S_IFCHR:
+    in-latest-posix: ''
+  S_IFIFO:
+    in-latest-posix: ''
+  S_IFREG:
+    in-latest-posix: ''
+  S_IFDIR:
+    in-latest-posix: ''
+  S_IFLNK:
+    in-latest-posix: ''
+  S_IFSOCK:
+    in-latest-posix: ''
+  st_atime:
+    in-latest-posix: ''
+  st_ctime:
+    in-latest-posix: ''
+  st_mtime:
+    in-latest-posix: ''
+  UTIME_NOW:
+    in-latest-posix: ''
+  UTIME_OMIT:
+    in-latest-posix: ''
+
+  S_IRWXU:
+    in-latest-posix: ''
+  S_IRUSR:
+    in-latest-posix: ''
+  S_IWUSR:
+    in-latest-posix: ''
+  S_IXUSR:
+    in-latest-posix: ''
+  S_IRWXG:
+    in-latest-posix: ''
+  S_IRGRP:
+    in-latest-posix: ''
+  S_IWGRP:
+    in-latest-posix: ''
+  S_IXGRP:
+    in-latest-posix: ''
+
+  S_IRWXO:
+    in-latest-posix: ''
+  S_IROTH:
+    in-latest-posix: ''
+  S_IWOTH:
+    in-latest-posix: ''
+  S_IXOTH:
+    in-latest-posix: ''
+  S_ISUID:
+    in-latest-posix: ''
+  S_ISGID:
+    in-latest-posix: ''
+  S_ISVTX:
+    in-latest-posix: ''
+
+  S_ISBLK:
+    in-latest-posix: ''
+  S_ISCHR:
+    in-latest-posix: ''
+  S_ISDIR:
+    in-latest-posix: ''
+  S_ISFIFO:
+    in-latest-posix: ''
+  S_ISREG:
+    in-latest-posix: ''
+  S_ISLNK:
+    in-latest-posix: ''
+  S_ISSOCK:
+    in-latest-posix: ''
+
+  S_TYPEISMQ:
+    in-latest-posix: ''
+  S_TYPEISSEM:
+    in-latest-posix: ''
+  S_TYPEISSHM:
+    in-latest-posix: ''
+
+  S_TYPEISTMO:
+    in-latest-posix: ''
+
+functions:
+  chmod:
+    in-latest-posix: ''
+  fchmod:
+    in-latest-posix: ''
+  fchmodat:
+    in-latest-posix: ''
+  fstat:
+    in-latest-posix: ''
+  fstatat:
+    in-latest-posix: ''
+  futimens:
+    in-latest-posix: ''
+  lstat:
+    in-latest-posix: ''
+  mkdir:
+    in-latest-posix: ''
+  mkdirat:
+    in-latest-posix: ''
+  mkfifo:
+    in-latest-posix: ''
+  mkfifoat:
+    in-latest-posix: ''
+  mknod:
+    in-latest-posix: ''
+  mknodat:
+    in-latest-posix: ''
+  stat:
+    in-latest-posix: ''
+  umask:
+    in-latest-posix: ''
+  utimensat:
+    in-latest-posix: ''

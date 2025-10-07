@@ -9,6 +9,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -37,6 +38,7 @@
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
+#include "RegisterContextPOSIXCore_riscv32.h"
 #include "RegisterContextPOSIXCore_riscv64.h"
 #include "RegisterContextPOSIXCore_s390x.h"
 #include "RegisterContextPOSIXCore_x86_64.h"
@@ -50,8 +52,8 @@ using namespace lldb_private;
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
-      m_signo(td.signo), m_code(td.code), m_gpregset_data(td.gpregset),
-      m_notes(td.notes) {}
+      m_gpregset_data(td.gpregset), m_notes(td.notes),
+      m_siginfo_bytes(std::move(td.siginfo_bytes)), m_signo(td.signo) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -94,6 +96,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
         reg_interface = new RegisterContextFreeBSD_powerpc32(arch);
         break;
       case llvm::Triple::ppc64:
+      case llvm::Triple::ppc64le:
         reg_interface = new RegisterContextFreeBSD_powerpc64(arch);
         break;
       case llvm::Triple::mips64:
@@ -173,7 +176,8 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
         arch.GetMachine() != llvm::Triple::arm &&
         arch.GetMachine() != llvm::Triple::loongarch64 &&
-        arch.GetMachine() != llvm::Triple::riscv64) {
+        arch.GetMachine() != llvm::Triple::riscv64 &&
+        arch.GetMachine() != llvm::Triple::riscv32) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
       assert(false && "Architecture or OS not supported");
@@ -191,6 +195,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       break;
     case llvm::Triple::loongarch64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_loongarch64::Create(
+          *this, arch, m_gpregset_data, m_notes);
+      break;
+    case llvm::Triple::riscv32:
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv32::Create(
           *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::riscv64:
@@ -241,13 +249,34 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
   return reg_ctx_sp;
 }
 
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+ThreadElfCore::GetSiginfo(size_t max_size) const {
+  if (m_siginfo_bytes.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no siginfo note");
+
+  return llvm::MemoryBuffer::getMemBufferCopy(m_siginfo_bytes,
+                                              "siginfo note bytes");
+}
+
 bool ThreadElfCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (!process_sp)
     return false;
 
-  SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, m_signo, /*description=*/nullptr, m_code));
+  PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
+  if (platform_sp) {
+    lldb::StopInfoSP stopinfo_sp = platform_sp->GetStopInfoFromSiginfo(*this);
+    // The platform SP can optionally handle creating the stop info from the
+    // siginfo value however it's not guaraunteed to be implemented on every
+    // platform, so if we fall through this case, we create from just the signo.
+    if (stopinfo_sp) {
+      SetStopInfo(std::move(stopinfo_sp));
+      return true;
+    }
+  }
+
+  SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   return true;
 }
 
@@ -263,9 +292,9 @@ size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
   if (arch.IsMIPS()) {
     std::string abi = arch.GetTargetABI();
     assert(!abi.empty() && "ABI is not set");
-    if (!abi.compare("n64"))
+    if (abi == "n64")
       return sizeof(ELFLinuxPrStatus);
-    else if (!abi.compare("o32"))
+    else if (abi == "o32")
       return mips_linux_pr_status_size_o32;
     // N32 ABI
     return mips_linux_pr_status_size_n32;
@@ -527,41 +556,4 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
   }
   *(psargs - 1) = '\0';
   return prpsinfo;
-}
-
-// Parse SIGINFO from NOTE entry
-ELFLinuxSigInfo::ELFLinuxSigInfo() { memset(this, 0, sizeof(ELFLinuxSigInfo)); }
-
-size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
-  if (arch.IsMIPS())
-    return sizeof(ELFLinuxSigInfo);
-  switch (arch.GetCore()) {
-  case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-    return sizeof(ELFLinuxSigInfo);
-  case lldb_private::ArchSpec::eCore_s390x_generic:
-  case lldb_private::ArchSpec::eCore_x86_32_i386:
-  case lldb_private::ArchSpec::eCore_x86_32_i486:
-    return 12;
-  default:
-    return 0;
-  }
-}
-
-Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
-  Status error;
-  if (GetSize(arch) > data.GetByteSize()) {
-    error = Status::FromErrorStringWithFormat(
-        "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
-        GetSize(arch), data.GetByteSize());
-    return error;
-  }
-
-  // Parsing from a 32 bit ELF core file, and populating/reusing the structure
-  // properly, because the struct is for the 64 bit version
-  offset_t offset = 0;
-  si_signo = data.GetU32(&offset);
-  si_errno = data.GetU32(&offset);
-  si_code = data.GetU32(&offset);
-
-  return error;
 }

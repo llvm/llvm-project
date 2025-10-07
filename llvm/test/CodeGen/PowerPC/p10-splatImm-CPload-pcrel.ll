@@ -105,9 +105,8 @@ define dso_local <2 x double> @testDoubleToDoubleNaNFail() local_unnamed_addr {
 ;
 ; CHECK-NOPREFIX-LABEL: testDoubleToDoubleNaNFail:
 ; CHECK-NOPREFIX:       # %bb.0: # %entry
-; CHECK-NOPREFIX-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
-; CHECK-NOPREFIX-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-NOPREFIX-NEXT:    lxv vs34, 0(r3)
+; CHECK-NOPREFIX-NEXT:    vspltisw v2, -16
+; CHECK-NOPREFIX-NEXT:    vupklsw v2, v2
 ; CHECK-NOPREFIX-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleToDoubleNaNFail:

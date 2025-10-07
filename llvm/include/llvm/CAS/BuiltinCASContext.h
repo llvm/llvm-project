@@ -54,6 +54,7 @@ namespace llvm::cas::builtin {
 using HasherT = BLAKE3;
 using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
 
+/// CASContext for LLVM builtin CAS using BLAKE3 hash type.
 class BuiltinCASContext : public CASContext {
   void printIDImpl(raw_ostream &OS, const CASID &ID) const final;
   void anchor() override;

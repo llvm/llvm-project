@@ -5,7 +5,7 @@
 
 // SPMDize.  There is no main thread, so there's no issue.
 //
-// RUN: %libomptarget-compile-generic -O2 -Rpass=openmp-opt > %t.spmd 2>&1
+// RUN: %libomptarget-compile-generic -O2 -foffload-lto -Rpass=openmp-opt > %t.spmd 2>&1
 // RUN: %fcheck-nvptx64-nvidia-cuda -check-prefix=SPMD -input-file=%t.spmd
 // RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=SPMD -input-file=%t.spmd
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
@@ -15,7 +15,8 @@
 // Use the custom state machine, which must avoid the same barrier problem as
 // the generic state machine.
 //
-// RUN: %libomptarget-compile-generic -O2 -Rpass=openmp-opt \
+// RUN: %libomptarget-compile-generic -O2 -foffload-lto -Rpass=openmp-opt \
+// RUN:   -Xoffload-linker -mllvm=-openmp-opt-disable-spmdization \
 // RUN:   -mllvm -openmp-opt-disable-spmdization > %t.custom 2>&1
 // RUN: %fcheck-nvptx64-nvidia-cuda -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=CUSTOM -input-file=%t.custom
@@ -24,7 +25,9 @@
 // Repeat with reduction clause, which has managed to break the custom state
 // machine in the past.
 //
-// RUN: %libomptarget-compile-generic -O2 -Rpass=openmp-opt -DADD_REDUCTION \
+// RUN: %libomptarget-compile-generic -O2 -foffload-lto -Rpass=openmp-opt \
+// RUN:   -DADD_REDUCTION \
+// RUN:   -Xoffload-linker -mllvm=-openmp-opt-disable-spmdization \
 // RUN:   -mllvm -openmp-opt-disable-spmdization > %t.custom 2>&1
 // RUN: %fcheck-nvptx64-nvidia-cuda -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=CUSTOM -input-file=%t.custom

@@ -1,29 +1,13 @@
-source_set("llvm-min-tblgen-sources") {
-  sources = [
-    "ARMTargetDefEmitter.cpp",
-    "Attributes.cpp",
-    "DirectiveEmitter.cpp",
-    "IntrinsicEmitter.cpp",
-    "RISCVTargetDefEmitter.cpp",
-    "TableGen.cpp",
-    "VTEmitter.cpp",
-  ]
+executable("llvm-min-tblgen") {
+  sources = [ "llvm-min-tblgen.cpp" ]
   deps = [
     "Basic",
     "//llvm/lib/Support",
   ]
 }
 
-executable("llvm-min-tblgen") {
-  deps = [
-    ":llvm-min-tblgen-sources",
-    "Basic",
-  ]
-}
-
 executable("llvm-tblgen") {
   deps = [
-    ":llvm-min-tblgen-sources",
     "Basic",
     "Common",
     "//llvm/include/llvm/Config:llvm-config",
@@ -48,6 +32,8 @@ executable("llvm-tblgen") {
     "DFAPacketizerEmitter.cpp",
     "DXILEmitter.cpp",
     "DecoderEmitter.cpp",
+    "DecoderTableEmitter.cpp",
+    "DecoderTree.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
@@ -61,6 +47,7 @@ executable("llvm-tblgen") {
     "PseudoLoweringEmitter.cpp",
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
+    "SDNodeInfoEmitter.cpp",
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
@@ -70,5 +57,6 @@ executable("llvm-tblgen") {
     "X86MnemonicTables.cpp",
     "X86ModRMFilters.cpp",
     "X86RecognizableInstr.cpp",
+    "llvm-tblgen.cpp",
   ]
 }

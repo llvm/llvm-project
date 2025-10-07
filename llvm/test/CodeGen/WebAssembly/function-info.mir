@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling,+multivalue,+simd128 -run-pass wasm-cfg-sort -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -wasm-enable-sjlj -mattr=+exception-handling,+multivalue,+simd128 -run-pass wasm-cfg-sort -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
 --- |
   target triple = "wasm32-unknown-unknown"

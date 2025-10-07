@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_BASE_H
-#define _LIBCPP___ATOMIC_ATOMIC_BASE_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_BASE_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_BASE_H
 
-#include <__atomic/atomic_sync.h>
-#include <__atomic/check_memory_order.h>
-#include <__atomic/cxx_atomic_impl.h>
-#include <__atomic/is_always_lock_free.h>
-#include <__atomic/memory_order.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_same.h>
-#include <version>
+#include <__cxx03/__atomic/atomic_sync.h>
+#include <__cxx03/__atomic/check_memory_order.h>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__atomic/is_always_lock_free.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,10 +31,6 @@ template <class _Tp, bool = is_integral<_Tp>::value && !is_same<_Tp, bool>::valu
 struct __atomic_base // false
 {
   mutable __cxx_atomic_impl<_Tp> __a_;
-
-#if _LIBCPP_STD_VER >= 17
-  static constexpr bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
-#endif
 
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
     return __cxx_atomic_is_lock_free(sizeof(__cxx_atomic_impl<_Tp>));
@@ -118,13 +114,9 @@ struct __atomic_base // false
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT { std::__atomic_notify_all(*this); }
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
-#else
   _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
-#endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
+  _LIBCPP_HIDE_FROM_ABI __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
 
   __atomic_base(const __atomic_base&) = delete;
 };
@@ -135,9 +127,9 @@ template <class _Tp>
 struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   using __base = __atomic_base<_Tp, false>;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __atomic_base() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
+  _LIBCPP_HIDE_FROM_ABI __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);
@@ -218,4 +210,4 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_BASE_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_BASE_H

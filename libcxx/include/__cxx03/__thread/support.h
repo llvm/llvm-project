@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_SUPPORT_H
-#define _LIBCPP___THREAD_SUPPORT_H
+#ifndef _LIBCPP___CXX03___THREAD_SUPPORT_H
+#define _LIBCPP___CXX03___THREAD_SUPPORT_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
@@ -107,17 +107,17 @@ _LIBCPP_END_NAMESPACE_STD
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
 #  if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
-#    include <__thread/support/external.h>
+#    include <__cxx03/__thread/support/external.h>
 #  elif defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
-#    include <__thread/support/pthread.h>
+#    include <__cxx03/__thread/support/pthread.h>
 #  elif defined(_LIBCPP_HAS_THREAD_API_C11)
-#    include <__thread/support/c11.h>
+#    include <__cxx03/__thread/support/c11.h>
 #  elif defined(_LIBCPP_HAS_THREAD_API_WIN32)
-#    include <__thread/support/windows.h>
+#    include <__cxx03/__thread/support/windows.h>
 #  else
 #    error "No threading API was selected"
 #  endif
 
 #endif // !_LIBCPP_HAS_NO_THREADS
 
-#endif // _LIBCPP___THREAD_SUPPORT_H
+#endif // _LIBCPP___CXX03___THREAD_SUPPORT_H

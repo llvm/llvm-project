@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_TO_GCC_ORDER_H
-#define _LIBCPP___ATOMIC_TO_GCC_ORDER_H
+#ifndef _LIBCPP___CXX03___ATOMIC_TO_GCC_ORDER_H
+#define _LIBCPP___CXX03___ATOMIC_TO_GCC_ORDER_H
 
-#include <__atomic/memory_order.h>
-#include <__config>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if defined(__ATOMIC_RELAXED) && defined(__ATOMIC_CONSUME) && defined(__ATOMIC_ACQUIRE) &&                             \
     defined(__ATOMIC_RELEASE) && defined(__ATOMIC_ACQ_REL) && defined(__ATOMIC_SEQ_CST)
 
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_order(memory_order __order) {
+_LIBCPP_HIDE_FROM_ABI inline int __to_gcc_order(memory_order __order) {
   // Avoid switch statement to make this a constexpr.
   return __order == memory_order_relaxed
            ? __ATOMIC_RELAXED
@@ -34,7 +34,7 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_order(memory_order _
                                 : (__order == memory_order_acq_rel ? __ATOMIC_ACQ_REL : __ATOMIC_CONSUME))));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_failure_order(memory_order __order) {
+_LIBCPP_HIDE_FROM_ABI inline int __to_gcc_failure_order(memory_order __order) {
   // Avoid switch statement to make this a constexpr.
   return __order == memory_order_relaxed
            ? __ATOMIC_RELAXED
@@ -51,4 +51,4 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR int __to_gcc_failure_order(memory
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_TO_GCC_ORDER_H
+#endif // _LIBCPP___CXX03___ATOMIC_TO_GCC_ORDER_H

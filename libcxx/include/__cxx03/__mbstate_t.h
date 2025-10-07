@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MBSTATE_T_H
-#define _LIBCPP___MBSTATE_T_H
+#ifndef _LIBCPP___CXX03___MBSTATE_T_H
+#define _LIBCPP___CXX03___MBSTATE_T_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +22,7 @@
 // or <wchar.h>, hence the #include_next of those headers instead of #include.
 // (e.g. if <wchar.h> isn't present in the C library, the libc++ <wchar.h>
 // will include this header. This header needs to not turn around and cyclically
-// include <wchar.h>, but fall through to <uchar.h>.)
+// include <__cxx03/wchar.h>, but fall through to <uchar.h>.)
 //
 // This does not define std::mbstate_t -- this only brings in the declaration
 // in the global namespace.
@@ -51,4 +51,4 @@
 #  error "We don't know how to get the definition of mbstate_t without <wchar.h> on your platform."
 #endif
 
-#endif // _LIBCPP___MBSTATE_T_H
+#endif // _LIBCPP___CXX03___MBSTATE_T_H

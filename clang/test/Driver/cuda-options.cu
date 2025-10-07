@@ -2,13 +2,13 @@
 
 // Simple compilation case. Compile device-side to PTX assembly and make sure
 // we use it on the host side.
-// RUN: %clang -### -target x86_64-linux-gnu -c -nogpulib -nogpuinc %s 2>&1 \
+// RUN: %clang -### --cuda-include-ptx=all -target x86_64-linux-gnu -c -nogpulib -nogpuinc %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix NOLINK %s
 
 // Typical compilation + link case.
-// RUN: %clang -### -target x86_64-linux-gnu -nogpulib -nogpuinc %s 2>&1 \
+// RUN: %clang -### --cuda-include-ptx=all -target x86_64-linux-gnu -nogpulib -nogpuinc %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
@@ -33,7 +33,7 @@
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu --cuda-compile-host-device \
-// RUN:    --cuda-host-only -nogpulib -nogpuinc %s 2>&1 \
+// RUN:    --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
@@ -47,13 +47,13 @@
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
-// RUN: %clang -### --target=x86_64-linux-gnu --cuda-host-only \
+// RUN: %clang -### --cuda-include-ptx=all --target=x86_64-linux-gnu --cuda-host-only \
 // RUN:   -nogpulib -nogpuinc --cuda-compile-host-device %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
 
-// RUN: %clang -### --target=x86_64-linux-gnu --cuda-device-only \
+// RUN: %clang -### --cuda-include-ptx=all --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   -nogpulib -nogpuinc --cuda-compile-host-device %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
@@ -61,14 +61,14 @@
 
 // Verify that --cuda-gpu-arch option passes the correct GPU architecture to
 // device compilation.
-// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c %s 2>&1 \
+// RUN: %clang -### -nogpulib -nogpuinc --cuda-include-ptx=all --target=x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix DEVICE-SM52 -check-prefix HOST \
 // RUN:    -check-prefix INCLUDES-DEVICE -check-prefix NOLINK %s
 
 // Verify that there is one device-side compilation per --cuda-gpu-arch args
 // and that all results are included on the host side.
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --cuda-include-ptx=all --target=x86_64-linux-gnu \
 // RUN:   -nogpulib -nogpuinc --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,DEVICE2 \
 // RUN:             -check-prefixes DEVICE-SM52,DEVICE2-SM60 \
@@ -128,9 +128,9 @@
 // f) --no-cuda-gpu-arch=all negates all preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
 // RUN:   -nogpulib -nogpuinc --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
-// RUN:   --no-cuda-gpu-arch=all \
+// RUN:   --no-cuda-version-check --no-cuda-gpu-arch=all \
 // RUN:   --cuda-gpu-arch=sm_70 \
-// RUN:   -c -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   -c --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes NOARCH-SM52,NOARCH-SM60,ARCH-SM70 %s
 
 // g) There's no --cuda-gpu-arch=all
@@ -141,9 +141,9 @@
 
 
 // Verify that --[no-]cuda-include-ptx arguments are handled correctly.
-// a) by default we're including PTX for all GPUs.
+// a) by default we're not including PTX for all GPUs.
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
-// RUN:   --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
+// RUN:   --cuda-include-ptx=all --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM60,PTX-SM52 %s
 
@@ -157,12 +157,12 @@
 // c) --no-cuda-include-ptx=sm_XX disables PTX inclusion for that GPU only.
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
 // RUN:   --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
-// RUN:   --no-cuda-include-ptx=sm_60 \
+// RUN:   --no-cuda-include-ptx=sm_60 --cuda-include-ptx=sm_52 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,NOPTX-SM60,PTX-SM52 %s
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
 // RUN:   --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
-// RUN:   --no-cuda-include-ptx=sm_52 \
+// RUN:   --no-cuda-include-ptx=sm_52 --cuda-include-ptx=sm_60 \
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM60,NOPTX-SM52 %s
 
@@ -183,8 +183,8 @@
 // Verify -flto=thin -fwhole-program-vtables handling. This should result in
 // both options being passed to the host compilation, with neither passed to
 // the device compilation.
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc -c -flto=thin -fwhole-program-vtables %s 2>&1 \
-// RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,HOST,INCLUDES-DEVICE,NOLINK,THINLTOWPD %s
+// RUN: %clang -### --cuda-include-ptx=sm_60 --target=x86_64-linux-gnu -nogpulib -nogpuinc -c -flto=thin -fwhole-program-vtables %s 2>&1 \
+// RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,HOST,NOLINK,THINLTOWPD %s
 // THINLTOWPD-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 
 // ARCH-SM52: "-cc1"{{.*}}"-target-cpu" "sm_52"
@@ -243,10 +243,10 @@
 
 // INCLUDES-DEVICE:fatbinary
 // INCLUDES-DEVICE-DAG: "--create" "[[FATBINARY:[^"]*]]"
-// INCLUDES-DEVICE-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE]]"
-// INCLUDES-DEVICE-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE]]"
-// INCLUDES-DEVICE2-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE2]]"
-// INCLUDES-DEVICE2-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE2]]"
+// INCLUDES-DEVICE-DAG: "--image3=kind=elf,sm={{[0-9]+}},file=[[CUBINFILE]]"
+// INCLUDES-DEVICE-DAG: "--image3=kind=ptx,sm={{[0-9]+}},file=[[PTXFILE]]"
+// INCLUDES-DEVICE2-DAG: "--image3=kind=elf,sm={{[0-9]+}},file=[[CUBINFILE2]]"
+// INCLUDES-DEVICE2-DAG: "--image3=kind=ptx,sm={{[0-9]+}},file=[[PTXFILE2]]"
 
 // Match host-side preprocessor job with -save-temps.
 // HOST-SAVE: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -288,9 +288,9 @@
 
 // FATBIN-COMMON:fatbinary
 // FATBIN-COMMON: "--create" "[[FATBINARY:[^"]*]]"
-// FATBIN-COMMON: "--image=profile=sm_52,file=
-// PTX-SM52: "--image=profile=compute_52,file=
-// NOPTX-SM52-NOT: "--image=profile=compute_52,file=
-// FATBIN-COMMON: "--image=profile=sm_60,file=
-// PTX-SM60: "--image=profile=compute_60,file=
-// NOPTX-SM60-NOT: "--image=profile=compute_60,file=
+// FATBIN-COMMON: "--image3=kind=elf,sm=52,file=
+// PTX-SM52: "--image3=kind=ptx,sm=52,file=
+// NOPTX-SM52-NOT: "--image3=kind=ptx,sm=52,file=
+// FATBIN-COMMON: "--image3=kind=elf,sm=60,file=
+// PTX-SM60: "--image3=kind=ptx,sm=60,file=
+// NOPTX-SM60-NOT: "--image3=kind=ptx,sm=60,file=

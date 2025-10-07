@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_DECLVAL_H
-#define _LIBCPP___UTILITY_DECLVAL_H
+#ifndef _LIBCPP___CXX03___UTILITY_DECLVAL_H
+#define _LIBCPP___CXX03___UTILITY_DECLVAL_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,4 +35,4 @@ _LIBCPP_HIDE_FROM_ABI decltype(std::__declval<_Tp>(0)) declval() _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_DECLVAL_H
+#endif // _LIBCPP___CXX03___UTILITY_DECLVAL_H

@@ -73,3 +73,30 @@ func.func @outline_empty_if_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8
   }
   return
 }
+
+// -----
+
+// This test checks scf utils can work on llvm func.
+
+//      CHECK: func @outlined_then0() {
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+//      CHECK: func @outlined_else0(%{{.*}}: i1, %{{.*}}: i32) {
+// CHECK-NEXT:   "some_op"(%{{.*}}, %{{.*}}) : (i1, i32) -> ()
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+//      CHECK: llvm.func @llvm_func(%{{.*}}: i1, %{{.*}}: i32) {
+// CHECK-NEXT:   scf.if %{{.*}} {
+// CHECK-NEXT:     func.call @outlined_then0() : () -> ()
+// CHECK-NEXT:   } else {
+// CHECK-NEXT:     func.call @outlined_else0(%{{.*}}, %{{.*}}) : (i1, i32) -> ()
+// CHECK-NEXT:   }
+// CHECK-NEXT:   llvm.return
+// CHECK-NEXT: }
+llvm.func @llvm_func(%cond: i1, %a: i32) {
+  scf.if %cond {
+  } else {
+    "some_op"(%cond, %a) : (i1, i32) -> ()
+  }
+  llvm.return
+}

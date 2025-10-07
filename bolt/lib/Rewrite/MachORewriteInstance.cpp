@@ -20,6 +20,7 @@
 #include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/Support/Errc.h"
@@ -32,9 +33,8 @@ namespace opts {
 
 using namespace llvm;
 extern cl::opt<unsigned> AlignText;
-//FIXME! Upstream change
-//extern cl::opt<bool> CheckOverlappingElements;
-extern cl::opt<bool> ForcePatch;
+// FIXME! Upstream change
+// extern cl::opt<bool> CheckOverlappingElements;
 extern cl::opt<bool> Instrument;
 extern cl::opt<bool> InstrumentCalls;
 extern cl::opt<bolt::JumpTableSupportLevel> JumpTables;
@@ -74,7 +74,8 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
   ErrorAsOutParameter EAO(&Err);
   Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      InputFile->makeTriple(), InputFile->getFileName(), nullptr,
+      InputFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+      InputFile->getFileName(), nullptr,
       /* IsPIC */ true, DWARFContext::create(*InputFile),
       {llvm::outs(), llvm::errs()});
   if (Error E = BCOrErr.takeError()) {
@@ -107,21 +108,21 @@ Error MachORewriteInstance::setProfile(StringRef Filename) {
 void MachORewriteInstance::preprocessProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->preprocessProfile(*BC.get()))
+  if (Error E = ProfileReader->preprocessProfile(*BC))
     report_error("cannot pre-process profile", std::move(E));
 }
 
 void MachORewriteInstance::processProfileDataPreCFG() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfilePreCFG(*BC.get()))
+  if (Error E = ProfileReader->readProfilePreCFG(*BC))
     report_error("cannot read profile pre-CFG", std::move(E));
 }
 
 void MachORewriteInstance::processProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfile(*BC.get()))
+  if (Error E = ProfileReader->readProfile(*BC))
     report_error("cannot read profile", std::move(E));
 }
 

@@ -77,6 +77,8 @@ end program
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! ALL-NEXT: LowerRepackArraysPass
+! ALL-NEXT: SimplifyFIROperations
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
@@ -94,16 +96,23 @@ end program
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
+! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
+! ALL-NEXT:   'gpu.module' Pipeline
+! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
+! ALL-NEXT:   'func.func' Pipeline 
+! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:   'gpu.func' Pipeline 
+! ALL-NEXT:   AbstractResultOpt
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'omp.private' Pipeline
@@ -111,10 +120,10 @@ end program
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
-! ALL-NEXT: TargetRewrite
-! ALL-NEXT: CompilerGeneratedNamesConversion
 ! ALL-NEXT: ExternalNameConversion
 ! DEBUG-NEXT: AddDebugInfo
 ! NO-DEBUG-NOT: AddDebugInfo
+! ALL-NEXT: TargetRewrite
+! ALL-NEXT: CompilerGeneratedNamesConversion
 ! ALL: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

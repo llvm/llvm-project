@@ -9,12 +9,10 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 
@@ -224,10 +222,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   BlockFrequencyInfo *BFI = UseBlockFrequencyInfo && F.hasProfileData()
                                 ? (&AM.getResult<BlockFrequencyAnalysis>(F))
                                 : nullptr;
-  BranchProbabilityInfo *BPI =
-      UseBranchProbabilityInfo && F.hasProfileData()
-          ? (&AM.getResult<BranchProbabilityAnalysis>(F))
-          : nullptr;
   LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
                                      AM.getResult<AssumptionAnalysis>(F),
                                      AM.getResult<DominatorTreeAnalysis>(F),
@@ -236,7 +230,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                      AM.getResult<TargetLibraryAnalysis>(F),
                                      AM.getResult<TargetIRAnalysis>(F),
                                      BFI,
-                                     BPI,
                                      MSSA};
 
   // Setup the loop analysis manager from its proxy. It is important that
@@ -309,9 +302,8 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
       PI.runAfterPass<Loop>(*Pass, *L, PassPA);
 
     if (LAR.MSSA && !PassPA.getChecker<MemorySSAAnalysis>().preserved())
-      report_fatal_error("Loop pass manager using MemorySSA contains a pass "
-                         "that does not preserve MemorySSA",
-                         /*gen_crash_diag*/ false);
+      reportFatalUsageError("Loop pass manager using MemorySSA contains a pass "
+                            "that does not preserve MemorySSA");
 
 #ifndef NDEBUG
     // LoopAnalysisResults should always be valid.
@@ -351,10 +343,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  if (UseBlockFrequencyInfo && F.hasProfileData())
-    PA.preserve<BlockFrequencyAnalysis>();
-  if (UseBranchProbabilityInfo && F.hasProfileData())
-    PA.preserve<BranchProbabilityAnalysis>();
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;

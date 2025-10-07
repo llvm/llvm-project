@@ -11,7 +11,7 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_DECLARATION_H
 
 #include <__config>
-#include <cstddef>
+#include <__cstddef/size_t.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -49,7 +49,7 @@ using native = __vec_ext<_LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES / sizeof(_Tp)>;
 // TODO: make this platform dependent
 template <class _Tp, size_t _Np, class... _Abis>
 struct deduce {
-  using type = fixed_size<_Np>;
+  using type _LIBCPP_NODEBUG = fixed_size<_Np>;
 };
 
 // TODO: make this platform dependent

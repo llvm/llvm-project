@@ -531,21 +531,21 @@ bb1:
 define i32 @fcmp_ogt1(float %x) {
 ; SDAG-X64-LABEL: fcmp_ogt1:
 ; SDAG-X64:       ## %bb.0:
-; SDAG-X64-NEXT:    xorl    %eax, %eax
-; SDAG-X64-NEXT:    testb   %al, %al
-; SDAG-X64-NEXT:    je      LBB16_1
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    testb %al, %al
+; SDAG-X64-NEXT:    je LBB16_1
 ; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
-; SDAG-X64-NEXT:    xorl    %eax, %eax
+; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
 ; SDAG-X64-NEXT:  LBB16_1: ## %bb2
-; SDAG-X64-NEXT:    movl    $1, %eax
+; SDAG-X64-NEXT:    movl $1, %eax
 ; SDAG-X64-NEXT:    retq
-
+;
 ; FASTISEL-X64-LABEL: fcmp_ogt1:
 ; FASTISEL-X64:       ## %bb.0:
-; FASTISEL-X64:         movl    $1, %eax
-; FASTISEL-X64:         retq
-
+; FASTISEL-X64-NEXT:    movl $1, %eax
+; FASTISEL-X64-NEXT:    retq
+;
 ; GISEL-X64-LABEL: fcmp_ogt1:
 ; GISEL-X64:       ## %bb.0:
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
@@ -667,6 +667,23 @@ bb1:
 }
 
 define i32 @fcmp_olt1(float %x) {
+; SDAG-X64-LABEL: fcmp_olt1:
+; SDAG-X64:       ## %bb.0:
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    testb %al, %al
+; SDAG-X64-NEXT:    je LBB20_1
+; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    retq
+; SDAG-X64-NEXT:  LBB20_1: ## %bb2
+; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:    retq
+;
+; FASTISEL-X64-LABEL: fcmp_olt1:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    movl $1, %eax
+; FASTISEL-X64-NEXT:    retq
+;
 ; GISEL-X64-LABEL: fcmp_olt1:
 ; GISEL-X64:       ## %bb.0:
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
@@ -788,6 +805,23 @@ bb1:
 }
 
 define i32 @fcmp_one1(float %x) {
+; SDAG-X64-LABEL: fcmp_one1:
+; SDAG-X64:       ## %bb.0:
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    testb %al, %al
+; SDAG-X64-NEXT:    je LBB24_1
+; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    retq
+; SDAG-X64-NEXT:  LBB24_1: ## %bb2
+; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:    retq
+;
+; FASTISEL-X64-LABEL: fcmp_one1:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    movl $1, %eax
+; FASTISEL-X64-NEXT:    retq
+;
 ; GISEL-X64-LABEL: fcmp_one1:
 ; GISEL-X64:       ## %bb.0:
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
@@ -973,6 +1007,23 @@ bb1:
 }
 
 define i32 @fcmp_ueq1(float %x) {
+; SDAG-X64-LABEL: fcmp_ueq1:
+; SDAG-X64:       ## %bb.0:
+; SDAG-X64-NEXT:    movb $1, %al
+; SDAG-X64-NEXT:    testb %al, %al
+; SDAG-X64-NEXT:    jne LBB30_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb2
+; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:    retq
+; SDAG-X64-NEXT:  LBB30_2: ## %bb1
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    retq
+;
+; FASTISEL-X64-LABEL: fcmp_ueq1:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    xorl %eax, %eax
+; FASTISEL-X64-NEXT:    retq
+;
 ; GISEL-X64-LABEL: fcmp_ueq1:
 ; GISEL-X64:       ## %bb.0:
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
@@ -1094,6 +1145,23 @@ bb1:
 }
 
 define i32 @fcmp_uge1(float %x) {
+; SDAG-X64-LABEL: fcmp_uge1:
+; SDAG-X64:       ## %bb.0:
+; SDAG-X64-NEXT:    movb $1, %al
+; SDAG-X64-NEXT:    testb %al, %al
+; SDAG-X64-NEXT:    je LBB34_1
+; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    retq
+; SDAG-X64-NEXT:  LBB34_1: ## %bb2
+; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:    retq
+;
+; FASTISEL-X64-LABEL: fcmp_uge1:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    xorl %eax, %eax
+; FASTISEL-X64-NEXT:    retq
+;
 ; GISEL-X64-LABEL: fcmp_uge1:
 ; GISEL-X64:       ## %bb.0:
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
@@ -1215,6 +1283,23 @@ bb1:
 }
 
 define i32 @fcmp_ule1(float %x) {
+; SDAG-X64-LABEL: fcmp_ule1:
+; SDAG-X64:       ## %bb.0:
+; SDAG-X64-NEXT:    movb $1, %al
+; SDAG-X64-NEXT:    testb %al, %al
+; SDAG-X64-NEXT:    je LBB38_1
+; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    retq
+; SDAG-X64-NEXT:  LBB38_1: ## %bb2
+; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:    retq
+;
+; FASTISEL-X64-LABEL: fcmp_ule1:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    xorl %eax, %eax
+; FASTISEL-X64-NEXT:    retq
+;
 ; GISEL-X64-LABEL: fcmp_ule1:
 ; GISEL-X64:       ## %bb.0:
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0

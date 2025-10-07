@@ -24,10 +24,6 @@
 // RUN:   -analyzer-checker-help-developer \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-STABLE-ALPHA-DEVELOPER
 
-// CHECK-STABLE-NOT:    alpha.unix.Chroot
-// CHECK-DEVELOPER-NOT: alpha.unix.Chroot
-// CHECK-ALPHA:         alpha.unix.Chroot
-
 // Note that alpha.cplusplus.IteratorModeling is not only an alpha, but also a
 // hidden checker. In this case, we'd only like to see it in the developer list.
 // CHECK-ALPHA-NOT: alpha.cplusplus.IteratorModeling
@@ -42,10 +38,6 @@
 // CHECK-ALPHA-NOT:  debug.ConfigDumper
 
 
-// CHECK-STABLE-ALPHA:         alpha.unix.Chroot
-// CHECK-DEVELOPER-ALPHA:      alpha.unix.Chroot
-// CHECK-STABLE-DEVELOPER-NOT: alpha.unix.Chroot
-
 // CHECK-STABLE-ALPHA:        core.DivideZero
 // CHECK-DEVELOPER-ALPHA-NOT: core.DivideZero
 // CHECK-STABLE-DEVELOPER:    core.DivideZero
@@ -55,6 +47,5 @@
 // CHECK-STABLE-DEVELOPER: debug.ConfigDumper
 
 
-// CHECK-STABLE-ALPHA-DEVELOPER: alpha.unix.Chroot
 // CHECK-STABLE-ALPHA-DEVELOPER: core.DivideZero
 // CHECK-STABLE-ALPHA-DEVELOPER: debug.ConfigDumper

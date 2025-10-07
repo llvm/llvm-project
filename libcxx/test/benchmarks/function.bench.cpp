@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
@@ -101,6 +104,7 @@ inline Function MakeFunction(FunctionType type, bool opaque = false) {
   case FunctionType::LargeNonTrivialFunctor:
     return maybeOpaque(LargeNonTrivialFunctor{}, opaque);
   }
+  std::unreachable();
 }
 
 template <class Opacity, class FunctionType>
@@ -179,7 +183,7 @@ template <class FunctionType>
 struct Invoke {
   static void run(benchmark::State& state) {
     S s;
-    const auto value = MakeFunction(FunctionType());
+    auto value = MakeFunction(FunctionType());
     for (auto _ : state) {
       benchmark::DoNotOptimize(value);
       benchmark::DoNotOptimize(value(&s));

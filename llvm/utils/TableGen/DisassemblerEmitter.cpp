@@ -95,7 +95,7 @@ using namespace llvm::X86Disassembler;
 /// X86RecognizableInstr.cpp contains the implementation for a single
 ///   instruction.
 
-static void EmitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
+static void emitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
   const CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
@@ -103,8 +103,7 @@ static void EmitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
   if (Target.getName() == "X86") {
     DisassemblerTables Tables;
 
-    for (const auto &[Idx, NumberedInst] :
-         enumerate(Target.getInstructionsByEnumValue()))
+    for (const auto &[Idx, NumberedInst] : enumerate(Target.getInstructions()))
       RecognizableInstr::processInstr(Tables, *NumberedInst, Idx);
 
     if (Tables.hasConflicts()) {
@@ -120,17 +119,14 @@ static void EmitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
   // below (which depends on a Size table-gen Record), and also uses a custom
   // disassembler.
   if (Target.getName() == "WebAssembly") {
-    emitWebAssemblyDisassemblerTables(OS, Target.getInstructionsByEnumValue());
+    emitWebAssemblyDisassemblerTables(OS, Target.getInstructions());
     return;
   }
 
-  StringRef PredicateNamespace = Target.getName();
-  if (PredicateNamespace == "Thumb")
-    PredicateNamespace = "ARM";
-  EmitDecoder(Records, OS, PredicateNamespace);
+  EmitDecoder(Records, OS);
 }
 
 cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
 
-static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
+static TableGen::Emitter::Opt X("gen-disassembler", emitDisassembler,
                                 "Generate disassembler");

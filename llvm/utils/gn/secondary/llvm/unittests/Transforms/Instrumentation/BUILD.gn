@@ -10,5 +10,8 @@ unittest("InstrumentationTests") {
     "//llvm/lib/Testing/Support",
     "//llvm/lib/Transforms/Instrumentation",
   ]
-  sources = [ "PGOInstrumentationTest.cpp" ]
+  sources = [
+    "MemProfUseTest.cpp",
+    "PGOInstrumentationTest.cpp",
+  ]
 }

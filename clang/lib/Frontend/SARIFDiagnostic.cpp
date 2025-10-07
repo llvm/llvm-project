@@ -31,7 +31,7 @@
 namespace clang {
 
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
-                                 DiagnosticOptions *DiagOpts,
+                                 DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
     : DiagnosticRenderer(LangOpts, DiagOpts), Writer(Writer) {}
 
@@ -91,8 +91,8 @@ SarifResult SARIFDiagnostic::addLocationToResult(
     SourceLocation E = ERange.getEnd();
     bool IsTokenRange = ERange.isTokenRange();
 
-    std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
-    std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
+    FileIDAndOffset BInfo = SM.getDecomposedLoc(B);
+    FileIDAndOffset EInfo = SM.getDecomposedLoc(E);
 
     // If the start or end of the range is in another file, just discard
     // it.
@@ -163,7 +163,7 @@ SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
 
 llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
                                               const SourceManager &SM) {
-  if (DiagOpts->AbsolutePath) {
+  if (DiagOpts.AbsolutePath) {
     auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".

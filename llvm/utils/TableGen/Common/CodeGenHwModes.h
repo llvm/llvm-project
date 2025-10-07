@@ -30,8 +30,7 @@ struct CodeGenHwModes;
 struct HwMode {
   HwMode(const Record *R);
   StringRef Name;
-  std::string Features;
-  std::string Predicates;
+  std::vector<const Record *> Predicates;
   void dump() const;
 };
 

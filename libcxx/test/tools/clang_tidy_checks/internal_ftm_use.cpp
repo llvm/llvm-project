@@ -25,39 +25,6 @@ std::array valid_macros{
 
     // Testing macros
     "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
-
-    // TODO: Why does this macro even exist?
-    "_LIBCPP_HAS_NO_TREE_BARRIER",
-
-    // Configuration macros
-    "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE",
-    "_LIBCPP_HAS_NO_FILESYSTEM",
-    "_LIBCPP_HAS_NO_LOCALIZATION",
-    "_LIBCPP_HAS_NO_THREADS",
-    "_LIBCPP_HAS_NO_MONOTONIC_CLOCK",
-    "_LIBCPP_HAS_MUSL_LIBC",
-    "_LIBCPP_HAS_NO_WIDE_CHARACTERS",
-    "_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS",
-    "_LIBCPP_HAS_NO_RANDOM_DEVICE",
-    "_LIBCPP_HAS_NO_UNICODE",
-    "_LIBCPP_HAS_NO_TERMINAL",
-
-    // Atomic API macros
-    "_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP",
-    "_LIBCPP_HAS_GCC_ATOMIC_IMP",
-    "_LIBCPP_HAS_C_ATOMIC_IMP",
-
-    // Thread API macros
-    "_LIBCPP_HAS_THREAD_API_PTHREAD",
-    "_LIBCPP_HAS_THREAD_API_WIN32",
-    "_LIBCPP_HAS_THREAD_API_EXTERNAL",
-    "_LIBCPP_HAS_THREAD_API_C11",
-
-    // Experimental features
-    "_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB",
-    "_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM",
-    "_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN",
-    "_LIBCPP_HAS_NO_INCOMPLETE_PSTL",
 };
 
 class internal_ftm_use_callbacks : public clang::PPCallbacks {

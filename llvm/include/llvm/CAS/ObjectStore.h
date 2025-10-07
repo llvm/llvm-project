@@ -126,7 +126,8 @@ protected:
   /// Get the size of some data.
   virtual uint64_t getDataSize(ObjectHandle Node) const = 0;
 
-  /// Methods for handling objects.
+  /// Methods for handling objects. CAS implementations need to override to
+  /// provide functions to access stored CAS objects and references.
   virtual Error forEachRef(ObjectHandle Node,
                            function_ref<Error(ObjectRef)> Callback) const = 0;
   virtual ObjectRef readRef(ObjectHandle Node, size_t I) const = 0;
@@ -217,10 +218,6 @@ public:
   /// Validate the whole node tree.
   Error validateTree(ObjectRef Ref);
 
-  /// Print the ObjectStore internals for debugging purpose.
-  virtual void print(raw_ostream &) const {}
-  void dump() const;
-
   /// Get CASContext
   const CASContext &getContext() const { return Context; }
 
@@ -238,8 +235,7 @@ private:
 /// ObjectStore is.
 class ObjectProxy {
 public:
-  const ObjectStore &getCAS() const { return *CAS; }
-  ObjectStore &getCAS() { return *CAS; }
+  ObjectStore &getCAS() const { return *CAS; }
   CASID getID() const { return CAS->getID(Ref); }
   ObjectRef getRef() const { return Ref; }
   size_t getNumReferences() const { return CAS->getNumRefs(H); }

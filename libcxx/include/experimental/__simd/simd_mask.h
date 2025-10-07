@@ -11,9 +11,9 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
-#include <cstddef>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
@@ -27,8 +27,8 @@ inline namespace parallelism_v2 {
 // TODO: implement simd_mask class
 template <class _Tp, class _Abi>
 class simd_mask {
-  using _Impl    = __mask_operations<_Tp, _Abi>;
-  using _Storage = typename _Impl::_MaskStorage;
+  using _Impl _LIBCPP_NODEBUG    = __mask_operations<_Tp, _Abi>;
+  using _Storage _LIBCPP_NODEBUG = typename _Impl::_MaskStorage;
 
   _Storage __s_;
 

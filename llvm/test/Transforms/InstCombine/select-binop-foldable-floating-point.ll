@@ -48,7 +48,7 @@ define float @select_nnan_fadd_swapped(i1 %cond, float %A, float %B) {
 define float @select_nnan_fadd_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fadd_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float -0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fadd fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fadd reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd fast float %A, %B
@@ -59,7 +59,7 @@ define float @select_nnan_fadd_fast_math(i1 %cond, float %A, float %B) {
 define float @select_nnan_fadd_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fadd_swapped_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float -0.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fadd fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fadd reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fadd fast float %A, %B
@@ -125,7 +125,7 @@ define float @select_nnan_fmul_swapped(i1 %cond, float %A, float %B) {
 define float @select_nnan_fmul_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fmul_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fmul fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fmul fast float %A, %B
@@ -136,7 +136,7 @@ define float @select_nnan_fmul_fast_math(i1 %cond, float %A, float %B) {
 define float @select_nnan_fmul_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fmul_swapped_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fmul fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fmul fast float %A, %B
@@ -169,7 +169,7 @@ define float @select_nnan_fsub_swapped(i1 %cond, float %A, float %B) {
 define float @select_nnan_fsub_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fsub_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fsub fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fsub reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fsub fast float %A, %B
@@ -180,7 +180,7 @@ define float @select_nnan_fsub_fast_math(i1 %cond, float %A, float %B) {
 define float @select_nnan_fsub_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fsub_swapped_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 0.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fsub fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fsub reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fsub fast float %A, %B
@@ -247,7 +247,7 @@ define float @select_nnan_fdiv_swapped(i1 %cond, float %A, float %B) {
 define float @select_nnan_fdiv_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fdiv_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fdiv fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fdiv fast float %A, %B
@@ -258,7 +258,7 @@ define float @select_nnan_fdiv_fast_math(i1 %cond, float %A, float %B) {
 define float @select_nnan_fdiv_swapped_fast_math(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_nnan_fdiv_swapped_fast_math(
 ; CHECK-NEXT:    [[C:%.*]] = select nnan i1 [[COND:%.*]], float 1.000000e+00, float [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = fdiv fast float [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan arcp contract afn float [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
   %C = fdiv fast float %A, %B

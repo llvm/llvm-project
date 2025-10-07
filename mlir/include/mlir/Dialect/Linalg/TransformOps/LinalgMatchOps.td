@@ -541,9 +541,10 @@ def MatchStructuredRankOp : Op<Transform_Dialect, "match.structured.rank", [
 
   let arguments = (ins TransformHandleTypeInterface:$operand_handle);
   let results = (outs TransformParamTypeInterface:$rank);
-  let assemblyFormat =
-      "$operand_handle attr-dict `:`"
-      "custom<SemiFunctionType>(type($operand_handle), type($rank))";
+  let assemblyFormat = [{
+      $operand_handle attr-dict `:`
+      custom<SemiFunctionType>(type($operand_handle), type($rank), "false")
+  }];
 
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }

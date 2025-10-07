@@ -58,8 +58,6 @@ public:
 
   std::optional<lldb_private::Address> GetStartAddress() override;
 
-  static void CreateSettings(lldb_private::Debugger &debugger);
-
 protected:
   void PrivateInitialize(lldb_private::Process *process);
 

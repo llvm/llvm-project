@@ -15,11 +15,11 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -35,9 +35,6 @@
 #include <io.h>
 #endif
 
-#ifdef __MVS__
-#include "llvm/Support/AutoConvert.h"
-#endif
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -362,6 +359,11 @@ static bool shouldUseMmap(sys::fs::file_t FD,
                           bool RequiresNullTerminator,
                           int PageSize,
                           bool IsVolatile) {
+#if defined(__MVS__)
+  // zOS Enhanced ASCII auto convert does not support mmap.
+  return false;
+#endif
+
   // mmap may leave the buffer without null terminator if the file size changed
   // by the time the last page is mapped in, so avoid it if the file size is
   // likely to change.
@@ -499,14 +501,27 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     std::unique_ptr<MB> Result(
         new (NamedBufferAlloc(Filename)) MemoryBufferMMapFile<MB>(
             RequiresNullTerminator, FD, MapSize, Offset, EC));
-    if (!EC)
-      return std::move(Result);
+    if (!EC) {
+      // On at least Linux, and possibly on other systems, mmap may return pages
+      // from the page cache that are not properly filled with trailing zeroes,
+      // if some prior user of the page wrote non-zero bytes. Detect this and
+      // don't use mmap in that case.
+      if (!RequiresNullTerminator || *Result->getBufferEnd() == '\0')
+        return std::move(Result);
+    }
   }
 
 #ifdef __MVS__
-  // Set codepage auto-conversion for z/OS.
-  if (auto EC = llvm::enablezOSAutoConversion(FD))
+  ErrorOr<bool> NeedsConversion = needConversion(Filename.str().c_str(), FD);
+  if (std::error_code EC = NeedsConversion.getError())
     return EC;
+  // File size may increase due to EBCDIC -> UTF-8 conversion, therefore we
+  // cannot trust the file size and we create the memory buffer by copying
+  // off the stream.
+  // Note: This only works with the assumption of reading a full file (i.e,
+  // Offset == 0 and MapSize == FileSize). Reading a file slice does not work.
+  if (*NeedsConversion && Offset == 0 && MapSize == FileSize)
+    return getMemoryBufferForStream(FD, Filename);
 #endif
 
   auto Buf =

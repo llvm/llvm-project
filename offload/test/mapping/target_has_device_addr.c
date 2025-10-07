@@ -66,8 +66,9 @@ void zoo() {
   short **xpp = &xp[0];
 
   x[1] = 111;
-#pragma omp target data map(tofrom : xpp[1][1]) use_device_addr(xpp[1][1])
-#pragma omp target has_device_addr(xpp[1][1])
+#pragma omp target data map(tofrom : xpp[1][1]) map(xpp[1])                    \
+    use_device_addr(xpp[1])
+#pragma omp target has_device_addr(xpp[1])
   {
     xpp[1][1] = 222;
     // CHECK: 222

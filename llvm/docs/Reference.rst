@@ -14,6 +14,8 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
+   CalleeTypeMetadata
+   CIBestPractices
    CommandGuide/index
    ContentAddressableStorage
    ConvergenceAndUniformity
@@ -31,6 +33,7 @@ LLVM and API reference documentation.
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
    InAlloca
+   InterfaceExportAnnotations
    LangRef
    LibFuzzer
    MarkedUpDisassembly
@@ -39,9 +42,11 @@ LLVM and API reference documentation.
    PCSectionsMetadata
    PDB/index
    PointerAuth
+   MLGO
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   QualGroup
    Security
    SecurityTransparencyReports
    SegmentedStacks
@@ -53,6 +58,7 @@ LLVM and API reference documentation.
    TestingGuide
    TransformMetadata
    TypeMetadata
+   UndefinedBehavior
    XRay
    XRayExample
    XRayFDRFormat
@@ -120,6 +126,9 @@ LLVM IR
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
   different nodes.
+
+:doc:`Undefined Behavior (UB) <UndefinedBehavior>`
+  A guide on what UB/undef/poison are and when to use each one.
 
 :doc:`InAlloca`
   Description of the ``inalloca`` argument attribute.
@@ -233,6 +242,10 @@ Additional Topics
 :doc:`ConvergenceAndUniformity`
    A description of uniformity analysis in the presence of irreducible
    control flow, and its implementation.
+
+:doc:`MLGO`
+   Facilities for ML-Guided Optimization, such as collecting IR corpora from a
+   build, interfacing with ML models, an exposing features for training.
 
 :doc:`ContentAddressableStorage`
    A reference guide for using LLVM's CAS library.

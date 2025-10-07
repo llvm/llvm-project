@@ -17,6 +17,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -42,8 +43,8 @@ template <> struct VarStreamArrayExtractor<codeview::FileChecksumEntry> {
 public:
   using ContextType = void;
 
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
-                   codeview::FileChecksumEntry &Item);
+  LLVM_ABI Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+                            codeview::FileChecksumEntry &Item);
 };
 
 namespace codeview {
@@ -62,8 +63,8 @@ public:
 
   bool valid() const { return Checksums.valid(); }
 
-  Error initialize(BinaryStreamReader Reader);
-  Error initialize(BinaryStreamRef Stream);
+  LLVM_ABI Error initialize(BinaryStreamReader Reader);
+  LLVM_ABI Error initialize(BinaryStreamRef Stream);
 
   Iterator begin() const { return Checksums.begin(); }
   Iterator end() const { return Checksums.end(); }
@@ -74,7 +75,7 @@ private:
   FileChecksumArray Checksums;
 };
 
-class DebugChecksumsSubsection final : public DebugSubsection {
+class LLVM_ABI DebugChecksumsSubsection final : public DebugSubsection {
 public:
   explicit DebugChecksumsSubsection(DebugStringTableSubsection &Strings);
 

@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_NORMAL_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_NORMAL_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_NORMAL_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_NORMAL_DISTRIBUTION_H
 
-#include <__config>
-#include <__random/is_valid.h>
-#include <__random/uniform_real_distribution.h>
-#include <cmath>
-#include <iosfwd>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__random/is_valid.h>
+#include <__cxx03/__random/uniform_real_distribution.h>
+#include <__cxx03/cmath>
+#include <__cxx03/iosfwd>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -60,14 +60,8 @@ private:
 
 public:
   // constructors and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI normal_distribution() : normal_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(result_type __mean, result_type __stddev = 1)
-      : __p_(param_type(__mean, __stddev)), __v_hot_(false) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(result_type __mean = 0, result_type __stddev = 1)
       : __p_(param_type(__mean, __stddev)), __v_hot_(false) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(const param_type& __p) : __p_(__p), __v_hot_(false) {}
   _LIBCPP_HIDE_FROM_ABI void reset() { __v_hot_ = false; }
 
@@ -173,4 +167,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_NORMAL_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_NORMAL_DISTRIBUTION_H

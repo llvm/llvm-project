@@ -16,5 +16,7 @@ TEST(LlvmLibcStdcHasSingleBitUsTest, Zero) {
 
 TEST(LlvmLibcStdcHasSingleBitUsTest, OneHot) {
   for (unsigned i = 0U; i != USHRT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_has_single_bit_us(1U << i), true);
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_has_single_bit_us(
+                  static_cast<unsigned short>(1U << i)),
+              true);
 }

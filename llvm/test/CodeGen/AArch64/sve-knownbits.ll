@@ -4,7 +4,7 @@
 define <vscale x 8 x i16> @test_knownzero(<vscale x 8 x i16> %x) {
 ; CHECK-LABEL: test_knownzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %a1 = shl <vscale x 8 x i16> %x, splat (i16 8)
   %a2 = and <vscale x 8 x i16> %a1, splat (i16 8)

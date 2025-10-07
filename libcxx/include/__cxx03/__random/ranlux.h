@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_RANLUX_H
-#define _LIBCPP___RANDOM_RANLUX_H
+#ifndef _LIBCPP___CXX03___RANDOM_RANLUX_H
+#define _LIBCPP___CXX03___RANDOM_RANLUX_H
 
-#include <__config>
-#include <__random/discard_block_engine.h>
-#include <__random/subtract_with_carry_engine.h>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/__random/discard_block_engine.h>
+#include <__cxx03/__random/subtract_with_carry_engine.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,4 +28,4 @@ typedef discard_block_engine<ranlux48_base, 389, 11> ranlux48;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_RANLUX_H
+#endif // _LIBCPP___CXX03___RANDOM_RANLUX_H

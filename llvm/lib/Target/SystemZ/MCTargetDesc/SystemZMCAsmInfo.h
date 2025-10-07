@@ -26,7 +26,33 @@ class SystemZMCAsmInfoGOFF : public MCAsmInfoGOFF {
 public:
   explicit SystemZMCAsmInfoGOFF(const Triple &TT);
   bool isAcceptableChar(char C) const override;
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
+                                 const MCAssembler *Asm) const override;
 };
+
+namespace SystemZ {
+using Specifier = uint16_t;
+enum {
+  S_None,
+
+  S_DTPOFF,
+  S_GOT,
+  S_GOTENT,
+  S_INDNTPOFF,
+  S_NTPOFF,
+  S_PLT,
+  S_TLSGD,
+  S_TLSLD,
+  S_TLSLDM,
+
+  // HLASM docs for address constants:
+  // https://www.ibm.com/docs/en/hla-and-tf/1.6?topic=value-address-constants
+  S_RCon, // Address of ADA of symbol.
+  S_VCon, // Address of external function symbol.
+};
+} // namespace SystemZ
 
 } // end namespace llvm
 

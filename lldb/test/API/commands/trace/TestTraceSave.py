@@ -43,6 +43,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
             "trace save", substrs=["error: Process is not being traced"], error=True
         )
 
+    @skipIfNoIntelPT
     def testSaveToInvalidDir(self):
         self.expect(
             "target create "
@@ -165,6 +166,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
                     copied_cpu = find(lambda cor: cor["id"] == cpu["id"], copy["cpus"])
                     self.assertIsNotNone(copied_cpu)
 
+    @skipIfNoIntelPT
     def testSaveTrace(self):
         self.expect(
             "target create "

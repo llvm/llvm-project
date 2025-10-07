@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hsdr -hexagon-bit=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hsdr -hexagon-bit=0 < %s | FileCheck %s
 ; CHECK: combine(r{{[0-9]+}},r{{[0-9]+}})
 
 @j = external global i32

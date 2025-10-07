@@ -15,6 +15,7 @@
 #include <__algorithm/simd_utils.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__iterator/aliasing_iterator.h>
 #include <__iterator/iterator_traits.h>
@@ -26,8 +27,6 @@
 #include <__type_traits/is_integral.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <__utility/unreachable.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -61,7 +60,7 @@ __mismatch(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Pred& __pred, _Pro
 template <class _Iter>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter, _Iter>
 __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
-  using __value_type              = __iter_value_type<_Iter>;
+  using __value_type              = __iterator_value_type<_Iter>;
   constexpr size_t __unroll_count = 4;
   constexpr size_t __vec_size     = __native_vector_size<__value_type>;
   using __vec                     = __simd_vector<__value_type, __vec_size>;

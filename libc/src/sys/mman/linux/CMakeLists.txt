@@ -25,6 +25,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mremap
+  SRCS
+    mremap.cpp
+  HDRS
+    ../mremap.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   munmap
   SRCS
     munmap.cpp
@@ -171,11 +184,10 @@ add_header_library(
   HDRS
     shm_common.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.CPP.array
     libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.optional
-    libc.src.__support.common
-    libc.src.errno.errno
+    libc.src.__support.error_or
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -186,8 +198,8 @@ add_entrypoint_object(
   HDRS
     ../shm_open.h
   DEPENDS
-    libc.src.fcntl.open
     libc.hdr.types.mode_t
+    libc.src.errno.errno
     .shm_common
 )
 
@@ -198,6 +210,6 @@ add_entrypoint_object(
   HDRS
     ../shm_unlink.h
   DEPENDS
-    libc.src.unistd.unlink
+    libc.src.errno.errno
     .shm_common
 )

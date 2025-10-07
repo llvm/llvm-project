@@ -61,7 +61,7 @@ class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS filter_view : public view_interface<f
   // We cache the result of begin() to allow providing an amortized O(1) begin() whenever
   // the underlying range is at least a forward_range.
   static constexpr bool _UseCache = forward_range<_View>;
-  using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _Cache _LIBCPP_NODEBUG    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
 
   class __iterator;
@@ -115,7 +115,7 @@ struct __filter_iterator_category {};
 
 template <forward_range _View>
 struct __filter_iterator_category<_View> {
-  using _Cat = typename iterator_traits<iterator_t<_View>>::iterator_category;
+  using _Cat _LIBCPP_NODEBUG = typename iterator_traits<iterator_t<_View>>::iterator_category;
   using iterator_category =
       _If<derived_from<_Cat, bidirectional_iterator_tag>,
           bidirectional_iterator_tag,

@@ -9,6 +9,7 @@
 #include "flang/Semantics/type.h"
 #include "check-declarations.h"
 #include "compute-offsets.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
@@ -125,7 +126,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
         auto restorer{foldingContext.WithPDTInstance(*this)};
         auto folded{Fold(foldingContext, KindExpr{intrinType->kind()})};
         if (auto k{evaluate::ToInt64(folded)}; k &&
-            evaluate::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+            common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
           parameterKind = static_cast<int>(*k);
         } else {
           messages.Say(
@@ -205,14 +206,25 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
   return typeSymbol_.get<DerivedTypeDetails>().isForwardReferenced();
 }
 
-bool DerivedTypeSpec::HasDefaultInitialization(
+std::optional<std::string> DerivedTypeSpec::ComponentWithDefaultInitialization(
     bool ignoreAllocatable, bool ignorePointer) const {
   DirectComponentIterator components{*this};
-  return bool{std::find_if(
-      components.begin(), components.end(), [&](const Symbol &component) {
-        return IsInitialized(component, /*ignoreDataStatements=*/true,
-            ignoreAllocatable, ignorePointer);
-      })};
+  if (auto it{std::find_if(components.begin(), components.end(),
+          [ignoreAllocatable, ignorePointer](const Symbol &component) {
+            return (!ignoreAllocatable && IsAllocatable(component)) ||
+                (!ignorePointer && IsPointer(component)) ||
+                HasDeclarationInitializer(component);
+          })}) {
+    return it.BuildResultDesignatorName();
+  } else {
+    return std::nullopt;
+  }
+}
+
+bool DerivedTypeSpec::HasDefaultInitialization(
+    bool ignoreAllocatable, bool ignorePointer) const {
+  return ComponentWithDefaultInitialization(ignoreAllocatable, ignorePointer)
+      .has_value();
 }
 
 bool DerivedTypeSpec::HasDestruction() const {
@@ -567,11 +579,18 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
       kind = *value;
     } else {
       foldingContext().messages().Say(symbolName,
-          "KIND parameter value (%jd) of intrinsic type %s "
-          "did not resolve to a supported value"_err_en_US,
+          "KIND parameter value (%jd) of intrinsic type %s did not resolve to a supported value"_err_en_US,
           *value,
           parser::ToUpperCaseLetters(EnumToString(intrinsic.category())));
     }
+  } else {
+    std::string exprString;
+    llvm::raw_string_ostream sstream(exprString);
+    copy.AsFortran(sstream);
+    foldingContext().messages().Say(symbolName,
+        "KIND parameter expression (%s) of intrinsic type %s did not resolve to a constant value"_err_en_US,
+        exprString,
+        parser::ToUpperCaseLetters(EnumToString(intrinsic.category())));
   }
   switch (spec.category()) {
   case DeclTypeSpec::Numeric:

@@ -16,7 +16,7 @@ using namespace llvm;
 
 /// This tablegen backend takes an input .td file describing a list of options
 /// and emits a RST man page.
-static void EmitOptionRST(const RecordKeeper &Records, raw_ostream &OS) {
+static void emitOptionRst(const RecordKeeper &Records, raw_ostream &OS) {
   llvm::StringMap<std::vector<const Record *>> OptionsByGroup;
 
   // Get the options.
@@ -96,5 +96,5 @@ static void EmitOptionRST(const RecordKeeper &Records, raw_ostream &OS) {
   }
 }
 
-static TableGen::Emitter::Opt X("gen-opt-rst", EmitOptionRST,
+static TableGen::Emitter::Opt X("gen-opt-rst", emitOptionRst,
                                 "Generate option RST");

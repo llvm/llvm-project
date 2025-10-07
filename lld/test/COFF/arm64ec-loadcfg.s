@@ -30,7 +30,10 @@
 # LOADCFG-NEXT: ]
 
 # RUN: llvm-readobj --hex-dump=.test %t.dll | FileCheck --check-prefix=TEST %s
-# TEST: 0x180003000 00000000 00000000 00000000
+# TEST: 0x180004000 00000000 00000000 00000000
+
+# RUN: llvm-readobj --hex-dump=.a64xrm %t.dll | FileCheck --check-prefix=A64XRM %s
+# A64XRM: 0x180003000 00000000 00000000                   ........
 
 .section .test,"dr"
         .rva __arm64x_native_entrypoint

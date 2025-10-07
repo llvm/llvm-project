@@ -104,6 +104,8 @@ public:
 
   bool IsArtificial() const;
 
+  bool IsSynthetic() const;
+
   /// Return whether a frame recognizer decided this frame should not
   /// be displayes in backtraces etc.
   bool IsHidden() const;
@@ -121,6 +123,11 @@ public:
 
   lldb::SBValue EvaluateExpression(const char *expr,
                                    const SBExpressionOptions &options);
+
+  /// Language plugins can use this API to report language-specific
+  /// runtime information about this compile unit, such as additional
+  /// language version details or feature flags.
+  SBStructuredData GetLanguageSpecificData() const;
 
   /// Gets the lexical block that defines the stack frame. Another way to think
   /// of this is it will return the block that contains all of the variables
@@ -227,6 +234,10 @@ protected:
   lldb::StackFrameSP GetFrameSP() const;
 
   void SetFrameSP(const lldb::StackFrameSP &lldb_object_sp);
+
+  /// Return an SBValue containing an error message that warns the process is
+  /// not currently stopped.
+  static SBValue CreateProcessIsRunningExprEvalError();
 
   lldb::ExecutionContextRefSP m_opaque_sp;
 };

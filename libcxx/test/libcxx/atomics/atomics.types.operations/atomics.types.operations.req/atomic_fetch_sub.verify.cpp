@@ -46,12 +46,12 @@ void pointer_to_incomplete_type() {
 void function_pointer() {
   {
     volatile std::atomic<void (*)(int)> fun;
-    // expected-error-re@*:* {{static assertion failed due to requirement '!is_function<void (int)>::value'{{.*}}Pointer to function isn't allowed}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}Pointer to function isn't allowed}}
     std::atomic_fetch_sub(&fun, 0);
   }
   {
     std::atomic<void (*)(int)> fun;
-    // expected-error-re@*:* {{static assertion failed due to requirement '!is_function<void (int)>::value'{{.*}}Pointer to function isn't allowed}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}Pointer to function isn't allowed}}
     std::atomic_fetch_sub(&fun, 0);
   }
 }
@@ -63,12 +63,12 @@ struct S {
 void member_function_pointer() {
   {
     volatile std::atomic<void (S::*)(int)> fun;
-    // expected-error@*:* {{no member named 'fetch_sub' in}}
+    // expected-error@*:* {{no matching function for call to 'atomic_fetch_sub'}}
     std::atomic_fetch_sub(&fun, 0);
   }
   {
     std::atomic<void (S::*)(int)> fun;
-    // expected-error@*:* {{no member named 'fetch_sub' in}}
+    // expected-error@*:* {{no matching function for call to 'atomic_fetch_sub'}}
     std::atomic_fetch_sub(&fun, 0);
   }
 }

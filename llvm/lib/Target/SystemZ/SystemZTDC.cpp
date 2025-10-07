@@ -51,12 +51,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
-#include <deque>
 #include <set>
 
 using namespace llvm;
@@ -66,9 +64,7 @@ namespace {
 class SystemZTDCPass : public FunctionPass {
 public:
   static char ID;
-  SystemZTDCPass() : FunctionPass(ID) {
-    initializeSystemZTDCPassPass(*PassRegistry::getPassRegistry());
-  }
+  SystemZTDCPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 

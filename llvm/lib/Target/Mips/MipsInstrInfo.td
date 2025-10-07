@@ -156,6 +156,8 @@ def MipsSDR : SDNode<"MipsISD::SDR", SDTStore,
 //===----------------------------------------------------------------------===//
 // Mips Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
+// FIXME: Move to Mips.td
+
 def HasMips2     :    Predicate<"Subtarget->hasMips2()">,
                       AssemblerPredicate<(all_of FeatureMips2)>;
 def HasMips3_32  :    Predicate<"Subtarget->hasMips3_32()">,
@@ -188,10 +190,6 @@ def IsGP64bit    :    Predicate<"Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of FeatureGP64Bit)>;
 def IsGP32bit    :    Predicate<"!Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of (not FeatureGP64Bit))>;
-def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
-def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
 def HasMips64    :    Predicate<"Subtarget->hasMips64()">,
                       AssemblerPredicate<(all_of FeatureMips64)>;
 def NotMips64    :    Predicate<"!Subtarget->hasMips64()">,
@@ -236,7 +234,6 @@ def NotInMicroMips :  Predicate<"!Subtarget->inMicroMipsMode()">,
                       AssemblerPredicate<(all_of (not FeatureMicroMips))>;
 def IsLE           :  Predicate<"Subtarget->isLittle()">;
 def IsBE           :  Predicate<"!Subtarget->isLittle()">;
-def IsNotNaCl    :    Predicate<"!Subtarget->isTargetNaCl()">;
 def UseTCCInDIV    :  AssemblerPredicate<(all_of FeatureUseTCCInDIV)>;
 def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
                       AssemblerPredicate<(all_of FeatureEVA)>;
@@ -1126,7 +1123,7 @@ def InvertedImOperand64 : Operand<i64> {
 
 class mem_generic : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let ParserMatchClass = MipsMemAsmOperand;
   let OperandType = "OPERAND_MEMORY";
@@ -1137,7 +1134,7 @@ def mem : mem_generic;
 
 // MSA specific address operand
 def mem_msa : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm10);
+  let MIOperandInfo = (ops mips_ptr_rc, simm10);
   let EncoderMethod = "getMSAMemEncoding";
 }
 
@@ -1146,7 +1143,7 @@ def simm12 : Operand<i32> {
 }
 
 def mem_simm9_exp : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm9);
+  let MIOperandInfo = (ops mips_ptr_rc, simm9);
   let ParserMatchClass = MipsMemSimmPtrAsmOperand;
   let OperandNamespace = "MipsII";
   let OperandType = "OPERAND_MEM_SIMM9";
@@ -1154,13 +1151,13 @@ def mem_simm9_exp : mem_generic {
 
 foreach I = {9, 10, 11, 12, 16} in
   def mem_simm # I : mem_generic {
-    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm" # I));
+    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm" # I));
     let ParserMatchClass = MipsMemSimmAsmOperand<I>;
   }
 
 foreach I = {1, 2, 3} in
   def mem_simm10_lsl # I : mem_generic {
-    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm10_lsl" # I));
+    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm10_lsl" # I));
     let EncoderMethod = "getMemEncoding<" # I  # ">";
     let ParserMatchClass = MipsMemSimmAsmOperand<10, I>;
   }
@@ -1171,13 +1168,13 @@ def mem_simmptr : mem_generic {
 
 def mem_ea : Operand<iPTR> {
   let PrintMethod = "printMemOperandEA";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let OperandType = "OPERAND_MEMORY";
 }
 
 def PtrRC : Operand<iPTR> {
-  let MIOperandInfo = (ops ptr_rc);
+  let MIOperandInfo = (ops mips_ptr_rc);
   let DecoderMethod = "DecodePtrRegisterClass";
   let ParserMatchClass = GPR32AsmOperand;
 }
@@ -1199,7 +1196,9 @@ def HI16 : SDNodeXForm<imm, [{
 }]>;
 
 // Plus 1.
-def Plus1 : SDNodeXForm<imm, [{ return getImm(N, N->getSExtValue() + 1); }]>;
+def Plus1 : SDNodeXForm<imm, [{
+  return getSignedImm(N, N->getSExtValue() + 1);
+}]>;
 
 // Node immediate is zero (e.g. insve.d)
 def immz : PatLeaf<(imm), [{ return N->getSExtValue() == 0; }]>;
@@ -3356,9 +3355,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
   }
 
   // Atomic load patterns.
-  def : MipsPat<(atomic_load_8 addr:$a), (LB addr:$a)>, ISA_MIPS1;
-  def : MipsPat<(atomic_load_16 addr:$a), (LH addr:$a)>, ISA_MIPS1;
-  def : MipsPat<(atomic_load_32 addr:$a), (LW addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_asext_8 addr:$a), (LB addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_asext_16 addr:$a), (LH addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_nonext_32 addr:$a), (LW addr:$a)>, ISA_MIPS1;
 
   // Atomic store patterns.
   def : MipsPat<(atomic_store_8 GPR32:$v, addr:$a), (SB GPR32:$v, addr:$a)>,

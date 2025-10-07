@@ -88,7 +88,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
         parent_ty, proc_name,
-        /*mangled_name=*/nullptr, func_ct, /*access=*/access_type,
+        /*asm_label=*/{}, func_ct, /*access=*/access_type,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -178,7 +178,7 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   std::string_view sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
   if (demangler.Error)
-    return {m_clang.GetTranslationUnitDecl(), std::string(record.UniqueName)};
+    return CreateDeclInfoForUndecoratedName(record.Name);
 
   llvm::ms_demangle::IdentifierNode *idn =
       ttn->QualifiedName->getUnqualifiedIdentifier();
@@ -449,7 +449,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
                         ->GetIndex();
   lldbassert(IsTagRecord(type_id, index.tpi()));
 
-  clang::QualType tag_qt = m_clang.getASTContext().getTypeDeclType(&tag);
+  clang::QualType tag_qt = m_clang.getASTContext().getCanonicalTagType(&tag);
   TypeSystemClang::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
 
   TypeIndex tag_ti = type_id.index;
@@ -562,7 +562,8 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
           m_clang.getASTContext(), spelling));
     }
     return m_clang.getASTContext().getMemberPointerType(
-        pointee_type, class_type.getTypePtr());
+        pointee_type, /*Qualifier=*/std::nullopt,
+        class_type->getAsCXXRecordDecl());
   }
 
   clang::QualType pointer_type;
@@ -644,9 +645,12 @@ clang::Decl *PdbAstBuilder::TryGetDecl(PdbSymUid uid) const {
 clang::NamespaceDecl *
 PdbAstBuilder::GetOrCreateNamespaceDecl(const char *name,
                                         clang::DeclContext &context) {
-  return m_clang.GetUniqueNamespaceDeclaration(
+  clang::NamespaceDecl *ns = m_clang.GetUniqueNamespaceDeclaration(
       IsAnonymousNamespaceName(name) ? nullptr : name, &context,
       OptionalClangModuleID());
+  m_known_namespaces.insert(ns);
+  m_parent_to_namespaces[&context].insert(ns);
+  return ns;
 }
 
 clang::BlockDecl *
@@ -859,9 +863,9 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
     SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
         m_clang.GetSymbolFile()->GetBackingSymbolFile());
     PdbIndex &index = pdb->GetIndex();
-    clang::QualType parent_qt = llvm::cast<clang::TypeDecl>(parent)
-                                    ->getTypeForDecl()
-                                    ->getCanonicalTypeInternal();
+    clang::CanQualType parent_qt =
+        m_clang.getASTContext().getCanonicalTypeDeclType(
+            llvm::cast<clang::TypeDecl>(parent));
     lldb::opaque_compiler_type_t parent_opaque_ty =
         ToCompilerType(parent_qt).GetOpaqueQualType();
     // FIXME: Remove this workaround.
@@ -903,7 +907,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
           parent_opaque_ty, func_name,
-          /*mangled_name=*/nullptr, func_ct,
+          /*asm_label=*/{}, func_ct,
           /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
@@ -913,7 +917,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
   } else {
     function_decl = m_clang.CreateFunctionDeclaration(
         parent, OptionalClangModuleID(), func_name, func_ct, func_storage,
-        is_inline);
+        is_inline, /*asm_label=*/{});
     CreateFunctionParameters(func_id, *function_decl, param_count);
   }
   return function_decl;
@@ -1137,7 +1141,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   }
 
   if (!params.empty() && params.size() == param_count)
-    m_clang.SetFunctionParameters(&function_decl, params);
+    function_decl.setParams(params);
 }
 
 clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
@@ -1165,6 +1169,7 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
 
 clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
+  TypeSystemClang::RequireCompleteType(ToCompilerType(element_type));
 
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
@@ -1216,8 +1221,8 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
     return {};
 
   CompilerType return_ct = ToCompilerType(return_type);
-  CompilerType func_sig_ast_type = m_clang.CreateFunctionType(
-      return_ct, arg_types.data(), arg_types.size(), is_variadic, 0, *cc);
+  CompilerType func_sig_ast_type =
+      m_clang.CreateFunctionType(return_ct, arg_types, is_variadic, 0, *cc);
 
   return clang::QualType::getFromOpaquePtr(
       func_sig_ast_type.GetOpaqueQualType());
@@ -1449,6 +1454,34 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
-void PdbAstBuilder::Dump(Stream &stream) {
-  m_clang.Dump(stream.AsRawOstream());
+void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter,
+                         bool show_color) {
+  m_clang.Dump(stream.AsRawOstream(), filter, show_color);
+}
+
+clang::NamespaceDecl *
+PdbAstBuilder::FindNamespaceDecl(const clang::DeclContext *parent,
+                                 llvm::StringRef name) {
+  NamespaceSet *set;
+  if (parent) {
+    auto it = m_parent_to_namespaces.find(parent);
+    if (it == m_parent_to_namespaces.end())
+      return nullptr;
+
+    set = &it->second;
+  } else {
+    // In this case, search through all known namespaces
+    set = &m_known_namespaces;
+  }
+  assert(set);
+
+  for (clang::NamespaceDecl *namespace_decl : *set)
+    if (namespace_decl->getName() == name)
+      return namespace_decl;
+
+  for (clang::NamespaceDecl *namespace_decl : *set)
+    if (namespace_decl->isAnonymousNamespace())
+      return FindNamespaceDecl(namespace_decl, name);
+
+  return nullptr;
 }

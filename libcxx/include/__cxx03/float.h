@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FLOAT_H
-#define _LIBCPP_FLOAT_H
+#ifndef _LIBCPP___CXX03_FLOAT_H
+#define _LIBCPP___CXX03_FLOAT_H
 
 /*
     float.h synopsis
@@ -70,7 +70,7 @@ Macros:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -92,4 +92,4 @@ Macros:
 
 #endif // __cplusplus
 
-#endif // _LIBCPP_FLOAT_H
+#endif // _LIBCPP___CXX03_FLOAT_H

@@ -201,7 +201,7 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB,
 
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
-  if (unsigned ConstVal = InsertedPHI->isConstantValuePHI()) {
+  if (Register ConstVal = InsertedPHI->isConstantValuePHI()) {
     InsertedPHI->eraseFromParent();
     return ConstVal;
   }

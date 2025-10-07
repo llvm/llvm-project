@@ -11,6 +11,7 @@
 #include "OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
@@ -34,6 +35,7 @@ using llvm::StringMap;
 
 //===----------------------------------------------------------------------===//
 // VariableElement
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents an instance of an op variable element. A variable
@@ -113,13 +115,16 @@ struct AttributeLikeVariable : public VariableElement {
     return isa<VariableElement>(fe) && classof(cast<VariableElement>(fe));
   }
 
-  /// Returns true if the variable is a UnitAttr or a UnitProperty.
+  /// Returns true if the variable is a UnitAttr or a UnitProp.
   bool isUnit() const {
     if (const auto *attr = dyn_cast<AttributeVariable>(this))
       return attr->getVar()->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
     if (const auto *prop = dyn_cast<PropertyVariable>(this)) {
-      return prop->getVar()->prop.getBaseProperty().getPropertyDefName() ==
-             "UnitProperty";
+      StringRef baseDefName =
+          prop->getVar()->prop.getBaseProperty().getPropertyDefName();
+      // Note: remove the `UnitProperty` case once the deprecation period is
+      // over.
+      return baseDefName == "UnitProp" || baseDefName == "UnitProperty";
     }
     llvm_unreachable("Type that wasn't listed in classof()");
   }
@@ -136,6 +141,7 @@ struct AttributeLikeVariable : public VariableElement {
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents the `operands` directive. This directive represents
@@ -229,10 +235,9 @@ public:
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
-    function_ref<LiteralElement *(FormatElement * el)>
-        literalElementCastConverter =
-            [](FormatElement *el) { return cast<LiteralElement>(el); };
-    return llvm::map_range(literalElements, literalElementCastConverter);
+    return llvm::map_range(literalElements, [](FormatElement *el) {
+      return cast<LiteralElement>(el);
+    });
   }
 
   /// Returns a range to iterate over the parsing elements corresponding to the
@@ -421,18 +426,19 @@ struct OperationFormat {
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
+//===----------------------------------------------------------------------===//
 
-/// Returns true if we can format the given attribute as an EnumAttr in the
+/// Returns true if we can format the given attribute as an enum in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   Attribute baseAttr = attr->attr.getBaseAttr();
-  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&baseAttr);
-  if (!enumAttr)
+  if (!baseAttr.isEnumAttr())
     return false;
+  EnumInfo enumInfo(&baseAttr.getDef());
 
   // The attribute must have a valid underlying type and a constant builder.
-  return !enumAttr->getUnderlyingType().empty() &&
-         !enumAttr->getConstBuilderTemplate().empty();
+  return !enumInfo.getUnderlyingType().empty() &&
+         !baseAttr.getConstBuilderTemplate().empty();
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -666,7 +672,7 @@ const char *const inferReturnTypesParserCode = R"(
 /// The code snippet used to generate a parser call for a region list.
 ///
 /// {0}: The name for the region list.
-const char *regionListParserCode = R"(
+static const char *regionListParserCode = R"(
   {
     std::unique_ptr<::mlir::Region> region;
     auto firstRegionResult = parser.parseOptionalRegion(region);
@@ -689,7 +695,7 @@ const char *regionListParserCode = R"(
 /// The code snippet used to ensure a list of regions have terminators.
 ///
 /// {0}: The name of the region list.
-const char *regionListEnsureTerminatorParserCode = R"(
+static const char *regionListEnsureTerminatorParserCode = R"(
   for (auto &region : {0}Regions)
     ensureTerminator(*region, parser.getBuilder(), result.location);
 )";
@@ -697,7 +703,7 @@ const char *regionListEnsureTerminatorParserCode = R"(
 /// The code snippet used to ensure a list of regions have a block.
 ///
 /// {0}: The name of the region list.
-const char *regionListEnsureSingleBlockParserCode = R"(
+static const char *regionListEnsureSingleBlockParserCode = R"(
   for (auto &region : {0}Regions)
     if (region->empty()) region->emplaceBlock();
 )";
@@ -705,7 +711,7 @@ const char *regionListEnsureSingleBlockParserCode = R"(
 /// The code snippet used to generate a parser call for an optional region.
 ///
 /// {0}: The name of the region.
-const char *optionalRegionParserCode = R"(
+static const char *optionalRegionParserCode = R"(
   {
      auto parseResult = parser.parseOptionalRegion(*{0}Region);
      if (parseResult.has_value() && failed(*parseResult))
@@ -716,7 +722,7 @@ const char *optionalRegionParserCode = R"(
 /// The code snippet used to generate a parser call for a region.
 ///
 /// {0}: The name of the region.
-const char *regionParserCode = R"(
+static const char *regionParserCode = R"(
   if (parser.parseRegion(*{0}Region))
     return ::mlir::failure();
 )";
@@ -724,21 +730,21 @@ const char *regionParserCode = R"(
 /// The code snippet used to ensure a region has a terminator.
 ///
 /// {0}: The name of the region.
-const char *regionEnsureTerminatorParserCode = R"(
+static const char *regionEnsureTerminatorParserCode = R"(
   ensureTerminator(*{0}Region, parser.getBuilder(), result.location);
 )";
 
 /// The code snippet used to ensure a region has a block.
 ///
 /// {0}: The name of the region.
-const char *regionEnsureSingleBlockParserCode = R"(
+static const char *regionEnsureSingleBlockParserCode = R"(
   if ({0}Region->empty()) {0}Region->emplaceBlock();
 )";
 
 /// The code snippet used to generate a parser call for a successor list.
 ///
 /// {0}: The name for the successor list.
-const char *successorListParserCode = R"(
+static const char *successorListParserCode = R"(
   {
     ::mlir::Block *succ;
     auto firstSucc = parser.parseOptionalSuccessor(succ);
@@ -760,7 +766,7 @@ const char *successorListParserCode = R"(
 /// The code snippet used to generate a parser call for a successor.
 ///
 /// {0}: The name of the successor.
-const char *successorParserCode = R"(
+static const char *successorParserCode = R"(
   if (parser.parseSuccessor({0}Successor))
     return ::mlir::failure();
 )";
@@ -768,7 +774,7 @@ const char *successorParserCode = R"(
 /// The code snippet used to generate a parser for OIList
 ///
 /// {0}: literal keyword corresponding to a case for oilist
-const char *oilistParserCode = R"(
+static const char *oilistParserCode = R"(
   if ({0}Clause) {
     return parser.emitError(parser.getNameLoc())
           << "`{0}` clause can appear at most once in the expansion of the "
@@ -846,6 +852,7 @@ static void genLiteralParser(StringRef value, MethodBody &body) {
               .Case("]", "RSquare()")
               .Case("?", "Question()")
               .Case("+", "Plus()")
+              .Case("-", "Minus()")
               .Case("*", "Star()")
               .Case("...", "Ellipsis()");
 }
@@ -876,7 +883,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     }
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
-    for (FormatElement *paramElement : custom->getArguments())
+    for (FormatElement *paramElement : custom->getElements())
       genElementParserStorage(paramElement, op, body);
 
   } else if (isa<OperandsDirective>(element)) {
@@ -1031,7 +1038,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   // * Add a local variable for optional operands and types. This provides a
   //   better API to the user defined parser methods.
   // * Set the location of operand variables.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *operand = dyn_cast<OperandVariable>(param)) {
       auto *var = operand->getVar();
       body << "    " << var->name
@@ -1083,7 +1090,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   body << "    auto odsResult = parse" << dir->getName() << "(parser";
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     body << ", ";
     genCustomParameterParser(param, body);
   }
@@ -1097,7 +1104,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   }
 
   // After parsing, add handling for any of the optional constructs.
-  for (FormatElement *param : dir->getArguments()) {
+  for (FormatElement *param : dir->getElements()) {
     if (auto *attr = dyn_cast<AttributeVariable>(param)) {
       const NamedAttribute *var = attr->getVar();
       if (var->attr.isOptional() || var->attr.hasDefaultValue())
@@ -1148,21 +1155,21 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
                               bool useProperties, StringRef opCppClassName) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+  EnumInfo enumInfo(&baseAttr.getDef());
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Generate the code for building an attribute for this enum.
   std::string attrBuilderStr;
   {
     llvm::raw_string_ostream os(attrBuilderStr);
-    os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
+    os << tgfmt(baseAttr.getConstBuilderTemplate(), &attrTypeCtx,
                 "*attrOptional");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
   std::string validCaseKeywordsStr = "{";
   llvm::raw_string_ostream validCaseKeywordsOS(validCaseKeywordsStr);
-  for (const EnumAttrCase &attrCase : cases)
+  for (const EnumCase &attrCase : cases)
     if (canFormatStringAsKeyword(attrCase.getStr()))
       validCaseKeywordsOS << '"' << attrCase.getStr() << "\",";
   validCaseKeywordsOS.str().back() = '}';
@@ -1192,8 +1199,8 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
         formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
   }
 
-  body << formatv(enumAttrParserCode, var->name, enumAttr.getCppNamespace(),
-                  enumAttr.getStringToSymbolFnName(), attrBuilderStr,
+  body << formatv(enumAttrParserCode, var->name, enumInfo.getCppNamespace(),
+                  enumInfo.getStringToSymbolFnName(), attrBuilderStr,
                   validCaseKeywordsStr, errorMessage, attrAssignment);
 }
 
@@ -1294,6 +1301,11 @@ if (!dict) {
   emitError() << "expected DictionaryAttr to set properties";
   return ::mlir::failure();
 }
+// keep track of used keys in the input dictionary to be able to error out
+// if there are some unknown ones.
+::mlir::DenseSet<::mlir::StringAttr> usedKeys;
+::mlir::MLIRContext *ctx = dict.getContext();
+(void)ctx;
 )decl";
 
   // {0}: fromAttribute call
@@ -1304,13 +1316,15 @@ auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
          ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
   {0};
 };
-auto attr = dict.get("{1}");
+auto {1}AttrName = ::mlir::StringAttr::get(ctx, "{1}");
+usedKeys.insert({1}AttrName);
+auto attr = dict.get({1}AttrName);
 if (!attr && {2}) {{
   emitError() << "expected key entry for {1} in DictionaryAttr to set "
              "Properties.";
   return ::mlir::failure();
 }
-if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   return ::mlir::failure();
 )decl";
 
@@ -1350,7 +1364,9 @@ if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
     bool isRequired = !attr.isOptional() && !attr.hasDefaultValue();
     body << formatv(R"decl(
 auto &propStorage = prop.{0};
-auto attr = dict.get("{0}");
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
+auto attr = dict.get({0}AttrName);
+usedKeys.insert({0}AttrName);
 if (attr || /*isRequired=*/{1}) {{
   if (!attr) {{
     emitError() << "expected key entry for {0} in DictionaryAttr to set "
@@ -1368,7 +1384,14 @@ if (attr || /*isRequired=*/{1}) {{
 )decl",
                     namedAttr.name, isRequired);
   }
-  body << "return ::mlir::success();\n";
+  body << R"decl(
+for (::mlir::NamedAttribute attr : dict) {
+  if (!usedKeys.contains(attr.getName()))
+    return emitError() << "unknown key '" << attr.getName() <<
+        "' when parsing properties dictionary";
+}
+return ::mlir::success();
+)decl";
 }
 
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
@@ -1948,12 +1971,13 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 
 //===----------------------------------------------------------------------===//
 // PrinterGen
+//===----------------------------------------------------------------------===//
 
 /// The code snippet used to generate a printer call for a region of an
 // operation that has the SingleBlockImplicitTerminator trait.
 ///
 /// {0}: The name of the region.
-const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
+static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   {
     bool printTerminator = true;
     if (auto *term = {0}.empty() ? nullptr : {0}.begin()->getTerminator()) {{
@@ -1971,7 +1995,7 @@ const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
 ///
 /// {0}: The name of the enum attribute.
 /// {1}: The name of the enum attributes symbolToString function.
-const char *enumAttrBeginPrinterCode = R"(
+static const char *enumAttrBeginPrinterCode = R"(
   {
     auto caseValue = {0}();
     auto caseValueStr = {1}(caseValue);
@@ -1997,7 +2021,7 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
     fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
     body << getter << "Attr() != "
          << tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                  attr.getDefaultValue());
+                  tgfmt(attr.getDefaultValue(), &fctx));
   }
   if (optionalAndDefault)
     body << ")";
@@ -2005,29 +2029,49 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
 
 static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
                                     PropertyVariable &propElement) {
-  body << op.getGetterName(propElement.getVar()->name)
-       << "() != " << propElement.getVar()->prop.getDefaultValue();
+  FmtContext fctx;
+  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+  body << op.getGetterName(propElement.getVar()->name) << "() != "
+       << tgfmt(propElement.getVar()->prop.getDefaultValue(), &fctx);
+}
+
+/// Elide the variadic segment size attributes if necessary.
+/// This pushes elided attribute names in `elidedStorage`.
+static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
+                                      MethodBody &body,
+                                      const char *elidedStorage) {
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    body << "  " << elidedStorage << ".push_back(\"operandSegmentSizes\");\n";
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
 }
 
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedProps");
+
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -2040,8 +2084,10 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // Similarly, elide default-valued properties.
   for (const NamedProperty &prop : op.getProperties()) {
     if (prop.prop.hasDefaultValue()) {
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
       body << "  if (" << op.getGetterName(prop.name)
-           << "() == " << prop.prop.getDefaultValue() << ") {";
+           << "() == " << tgfmt(prop.prop.getDefaultValue(), &fctx) << ") {";
       body << "    elidedProps.push_back(\"" << prop.name << "\");\n";
       body << "  }\n";
     }
@@ -2058,27 +2104,26 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
-  // Elide the variadic segment size attributes if necessary.
-  if (!fmt.allOperands &&
-      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
-  if (!fmt.allResultTypes &&
-      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
+
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
     body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -2187,7 +2232,7 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 static void genCustomDirectivePrinter(CustomDirective *customDir,
                                       const Operator &op, MethodBody &body) {
   body << "  print" << customDir->getName() << "(_odsPrinter, *this";
-  for (FormatElement *param : customDir->getArguments()) {
+  for (FormatElement *param : customDir->getElements()) {
     body << ", ";
     genCustomDirectiveParameterPrinter(param, op, body);
   }
@@ -2241,13 +2286,13 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+  const EnumInfo enumInfo(&baseAttr.getDef());
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   body << formatv(enumAttrBeginPrinterCode,
                   (var->attr.isOptional() ? "*" : "") +
                       op.getGetterName(var->name),
-                  enumAttr.getSymbolToStringFnName());
+                  enumInfo.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
@@ -2260,7 +2305,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // Otherwise if this is a bit enum attribute, don't allow cases that may
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
-  if (enumAttr.isBitEnum()) {
+  if (enumInfo.isBitEnum()) {
     for (auto it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
@@ -2272,8 +2317,8 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // case value to determine when to print in the string form.
   if (nonKeywordCases.any()) {
     body << "    switch (caseValue) {\n";
-    StringRef cppNamespace = enumAttr.getCppNamespace();
-    StringRef enumName = enumAttr.getEnumClassName();
+    StringRef cppNamespace = enumInfo.getCppNamespace();
+    StringRef enumName = enumInfo.getEnumClassName();
     for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;
@@ -2331,7 +2376,7 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       .Case([&](CustomDirective *ele) {
         body << '(';
         llvm::interleave(
-            ele->getArguments(), body,
+            ele->getElements(), body,
             [&](FormatElement *child) {
               body << '(';
               genOptionalGroupPrinterAnchor(child, op, body);
@@ -2342,12 +2387,12 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       });
 }
 
-void collect(FormatElement *element,
-             SmallVectorImpl<VariableElement *> &variables) {
+static void collect(FormatElement *element,
+                    SmallVectorImpl<VariableElement *> &variables) {
   TypeSwitch<FormatElement *>(element)
       .Case([&](VariableElement *var) { variables.emplace_back(var); })
       .Case([&](CustomDirective *ele) {
-        for (FormatElement *arg : ele->getArguments())
+        for (FormatElement *arg : ele->getElements())
           collect(arg, variables);
       })
       .Case([&](OptionalElement *ele) {
@@ -2743,6 +2788,11 @@ private:
   void handleTypesMatchConstraint(
       StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def);
 
+  /// Check for inferable type resolution based on
+  /// `ShapedTypeMatchesElementCountAndTypes` constraint.
+  void handleShapedTypeMatchesElementCountAndTypesConstraint(
+      StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def);
+
   /// Returns an argument or attribute with the given name that has been seen
   /// within the format.
   ConstArgument findSeenArg(StringRef name);
@@ -2806,6 +2856,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
     } else if (def.isSubClassOf("TypesMatchWith")) {
       handleTypesMatchConstraint(variableTyResolver, def);
+    } else if (def.isSubClassOf("ShapedTypeMatchesElementCountAndTypes")) {
+      handleShapedTypeMatchesElementCountAndTypesConstraint(variableTyResolver,
+                                                            def);
     } else if (!op.allResultTypesKnown()) {
       // This doesn't check the name directly to handle
       //    DeclareOpInterfaceMethods<InferTypeOpInterface>
@@ -3245,6 +3298,24 @@ void OpFormatParser::handleTypesMatchConstraint(
     variableTyResolver[rhsName] = {arg, transformer};
 }
 
+void OpFormatParser::handleShapedTypeMatchesElementCountAndTypesConstraint(
+    StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def) {
+  StringRef shapedArg = def.getValueAsString("shaped");
+  StringRef elementsArg = def.getValueAsString("elements");
+
+  // Check if the 'shaped' argument is seen, then we can infer the 'elements'
+  // types.
+  if (ConstArgument arg = findSeenArg(shapedArg)) {
+    variableTyResolver[elementsArg] = {
+        arg, "::llvm::SmallVector<::mlir::Type>(::llvm::cast<::mlir::"
+             "ShapedType>($_self).getNumElements(), "
+             "::llvm::cast<::mlir::ShapedType>($_self).getElementType())"};
+  }
+
+  // Type inference in the opposite direction is not possible as the actual
+  // shaped type can't be inferred from the variadic elements.
+}
+
 ConstArgument OpFormatParser::findSeenArg(StringRef name) {
   if (const NamedTypeConstraint *arg = findArg(op.getOperands(), name))
     return seenOperandTypes.test(arg - op.operand_begin()) ? arg : nullptr;
@@ -3306,11 +3377,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllRegions || !seenRegions.insert(region).second)
         return emitError(loc, "region '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenRegions.count(region)) {
-      return emitError(loc, "region '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenRegions.count(region))
+        return emitError(loc, "region '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "regions can only be used at the top level");
+      return emitError(loc, "regions can only be used at the top level "
+                            "or in a ref directive");
     }
     return create<RegionVariable>(region);
   }
@@ -3326,11 +3399,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
         return emitError(loc, "successor '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenSuccessors.count(successor)) {
-      return emitError(loc, "successor '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenSuccessors.count(successor))
+        return emitError(loc, "successor '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "successors can only be used at the top level");
+      return emitError(loc, "successors can only be used at the top level "
+                            "or in a ref directive");
     }
 
     return create<SuccessorVariable>(successor);
@@ -3705,7 +3780,8 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         Property prop = propEle->getVar()->prop;
         if (isAnchor && !(prop.hasDefaultValue() && prop.hasOptionalParser()))
           return emitError(loc, "only properties with default values "
-                                "that can be optionally parsed "
+                                "that can be optionally parsed (have the `let "
+                                "optionalParser = ...` field defined) "
                                 "can be used to anchor an optional group");
         return success();
       })
@@ -3746,7 +3822,7 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
           return success();
         // Verify each child as being valid in an optional group. They are all
         // potential anchors if the custom directive was marked as one.
-        for (FormatElement *child : ele->getArguments()) {
+        for (FormatElement *child : ele->getElements()) {
           if (isa<RefDirective>(child))
             continue;
           if (failed(verifyOptionalGroupElement(loc, child, /*isAnchor=*/true)))
@@ -3778,8 +3854,14 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
-  if (!op.hasAssemblyFormat())
+  if (!op.hasAssemblyFormat()) {
+    // We still need to generate the parsed attribute properties setter for
+    // allowing it to be reused in custom assembly implementations.
+    OperationFormat format(op, hasProperties);
+    format.hasPropDict = true;
+    genParsedAttrPropertiesSetter(format, op, opClass);
     return;
+  }
 
   // Parse the format description.
   llvm::SourceMgr mgr;

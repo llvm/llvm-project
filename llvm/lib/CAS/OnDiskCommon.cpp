@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "OnDiskCommon.h"
+#include "llvm/Config/config.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include <thread>
 
 #if __has_include(<sys/file.h>)
@@ -18,16 +21,21 @@
 #endif
 #endif
 
+#if __has_include(<fcntl.h>)
+#include <fcntl.h>
+#endif
+
 using namespace llvm;
 
-std::error_code cas::ondisk::lockFileThreadSafe(int FD, bool Exclusive) {
+std::error_code cas::ondisk::lockFileThreadSafe(int FD,
+                                                sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
-  if (flock(FD, Exclusive ? LOCK_EX : LOCK_SH) == 0)
+  if (flock(FD, Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 #elif defined(_WIN32)
   // On Windows this implementation is thread-safe.
-  return sys::fs::lockFile(FD, Exclusive);
+  return sys::fs::lockFile(FD, Kind);
 #else
   return make_error_code(std::errc::no_lock_available);
 #endif
@@ -48,12 +56,13 @@ std::error_code cas::ondisk::unlockFileThreadSafe(int FD) {
 
 std::error_code
 cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
-                                   bool Exclusive) {
+                                   sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
-    if (flock(FD, (Exclusive ? LOCK_EX : LOCK_SH) | LOCK_NB) == 0)
+    if (flock(FD, (Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) |
+                      LOCK_NB) == 0)
       return std::error_code();
     int Error = errno;
     if (Error == EWOULDBLOCK) {
@@ -66,8 +75,53 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
   return make_error_code(std::errc::no_lock_available);
 #elif defined(_WIN32)
   // On Windows this implementation is thread-safe.
-  return sys::fs::tryLockFile(FD, Timeout, Exclusive);
+  return sys::fs::tryLockFile(FD, Timeout, Kind);
 #else
   return make_error_code(std::errc::no_lock_available);
+#endif
+}
+
+Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
+                                                  size_t NewSize) {
+  auto CreateError = [&](std::error_code EC) -> Expected<size_t> {
+    if (EC == std::errc::not_supported)
+      // Ignore ENOTSUP in case the filesystem cannot preallocate.
+      return NewSize;
+#if defined(HAVE_POSIX_FALLOCATE)
+    if (EC == std::errc::invalid_argument && CurrentSize < NewSize && // len > 0
+        NewSize < std::numeric_limits<off_t>::max()) // 0 <= offset, len < max
+      // Prior to 2024, POSIX required EINVAL for cases that should be ENOTSUP,
+      // so handle it the same as above if it is not one of the other ways to
+      // get EINVAL.
+      return NewSize;
+#endif
+    return createStringError(EC,
+                             "failed to allocate to CAS file: " + EC.message());
+  };
+#if defined(HAVE_POSIX_FALLOCATE)
+  // Note: posix_fallocate returns its error directly, not via errno.
+  if (int Err = posix_fallocate(FD, CurrentSize, NewSize - CurrentSize))
+    return CreateError(std::error_code(Err, std::generic_category()));
+  return NewSize;
+#elif defined(__APPLE__)
+  fstore_t FAlloc;
+  FAlloc.fst_flags = F_ALLOCATEALL;
+#if defined(F_ALLOCATEPERSIST) &&                                              \
+    defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
+    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 130000
+  // F_ALLOCATEPERSIST is introduced in macOS 13.
+  FAlloc.fst_flags |= F_ALLOCATEPERSIST;
+#endif
+  FAlloc.fst_posmode = F_PEOFPOSMODE;
+  FAlloc.fst_offset = 0;
+  FAlloc.fst_length = NewSize - CurrentSize;
+  FAlloc.fst_bytesalloc = 0;
+  if (fcntl(FD, F_PREALLOCATE, &FAlloc))
+    return CreateError(errnoAsErrorCode());
+  assert(CurrentSize + FAlloc.fst_bytesalloc >= NewSize);
+  return CurrentSize + FAlloc.fst_bytesalloc;
+#else
+  (void)CreateError; // Silence unused variable.
+  return NewSize;    // Pretend it worked.
 #endif
 }

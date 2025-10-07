@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_destructible.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_destructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,11 +37,6 @@ struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
 
 #endif // __has_builtin(__is_trivially_destructible)
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<_Tp>::value;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H

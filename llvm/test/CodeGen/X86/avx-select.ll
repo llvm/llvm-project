@@ -84,7 +84,7 @@ head:
   %isneg = icmp slt <4 x i32> %v3, zeroinitializer
   %or0 = select <4 x i1> %isneg, <4 x i32> <i32 26146, i32 -1257, i32 -2, i32 -3052>, <4 x i32> <i32 -24947, i32 7802, i32 29242, i32 15858>
   %or1 = shufflevector <4 x i32> %or0, <4 x i32> <i32 29361, i32 -16094, i32 -3080, i32 -26286>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  br i1 undef, label %exit, label %head
+  br i1 poison, label %exit, label %head
 
 exit:
   store <8 x i32> %or1, ptr addrspace(1) undef, align 32

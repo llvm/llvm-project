@@ -45,7 +45,7 @@ public:
         im_.Compare(that.im_) == Relation::Equal;
   }
 
-  constexpr bool IsZero() const { return re_.IsZero() || im_.IsZero(); }
+  constexpr bool IsZero() const { return re_.IsZero() && im_.IsZero(); }
 
   constexpr bool IsInfinite() const {
     return re_.IsInfinite() || im_.IsInfinite();
@@ -61,10 +61,11 @@ public:
 
   template <typename INT>
   static ValueWithRealFlags<Complex> FromInteger(const INT &n,
+      bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding) {
     ValueWithRealFlags<Complex> result;
-    result.value.re_ =
-        Part::FromInteger(n, rounding).AccumulateFlags(result.flags);
+    result.value.re_ = Part::FromInteger(n, isUnsigned, rounding)
+                           .AccumulateFlags(result.flags);
     return result;
   }
 

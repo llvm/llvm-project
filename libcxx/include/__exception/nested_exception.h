@@ -22,13 +22,12 @@
 #include <__type_traits/is_final.h>
 #include <__type_traits/is_polymorphic.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-namespace std { // purposefully not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
   exception_ptr __ptr_;
@@ -96,6 +95,6 @@ inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep& __e) {
 template <class _Ep, __enable_if_t<!__can_dynamic_cast<_Ep, nested_exception>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H

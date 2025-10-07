@@ -21,12 +21,14 @@ add_mlir_library(MLIRTestAnalysis
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAffineDialect
   MLIRAnalysis
   MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass
-  MLIRTestDialect
   )
 
 target_include_directories(MLIRTestAnalysis

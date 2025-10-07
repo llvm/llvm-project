@@ -13,11 +13,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v1i1
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(s32) = COPY $w0
     %0:_(s1) = G_TRUNC %1(s32)
     %2:_(s1) = G_VECREDUCE_OR %0(s1)
@@ -38,13 +39,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v2i1
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<2 x s32>) = COPY $d0
     %0:_(<2 x s1>) = G_TRUNC %1(<2 x s32>)
     %2:_(s1) = G_VECREDUCE_OR %0(<2 x s1>)
@@ -65,19 +67,20 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v4i1
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR2]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR2]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<4 x s16>) = COPY $d0
     %0:_(<4 x s1>) = G_TRUNC %1(<4 x s16>)
     %2:_(s1) = G_VECREDUCE_OR %0(<4 x s1>)
@@ -98,27 +101,28 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v8i1
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<8 x s8>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
-    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
-    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
-    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
-    ; CHECK: [[OR4:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
-    ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
-    ; CHECK: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR6]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<8 x s8>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
+    ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
+    ; CHECK-NEXT: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR6]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<8 x s8>) = COPY $d0
     %0:_(<8 x s1>) = G_TRUNC %1(<8 x s8>)
     %2:_(s1) = G_VECREDUCE_OR %0(<8 x s1>)
@@ -142,43 +146,44 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v16i1
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<16 x s8>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
-    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
-    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
-    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
-    ; CHECK: [[ANYEXT8:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
-    ; CHECK: [[ANYEXT9:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
-    ; CHECK: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ANYEXT8]], [[ANYEXT9]]
-    ; CHECK: [[ANYEXT10:%[0-9]+]]:_(s32) = G_ANYEXT [[UV10]](s8)
-    ; CHECK: [[ANYEXT11:%[0-9]+]]:_(s32) = G_ANYEXT [[UV11]](s8)
-    ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ANYEXT10]], [[ANYEXT11]]
-    ; CHECK: [[ANYEXT12:%[0-9]+]]:_(s32) = G_ANYEXT [[UV12]](s8)
-    ; CHECK: [[ANYEXT13:%[0-9]+]]:_(s32) = G_ANYEXT [[UV13]](s8)
-    ; CHECK: [[OR6:%[0-9]+]]:_(s32) = G_OR [[ANYEXT12]], [[ANYEXT13]]
-    ; CHECK: [[ANYEXT14:%[0-9]+]]:_(s32) = G_ANYEXT [[UV14]](s8)
-    ; CHECK: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[UV15]](s8)
-    ; CHECK: [[OR7:%[0-9]+]]:_(s32) = G_OR [[ANYEXT14]], [[ANYEXT15]]
-    ; CHECK: [[OR8:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
-    ; CHECK: [[OR9:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
-    ; CHECK: [[OR10:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
-    ; CHECK: [[OR11:%[0-9]+]]:_(s32) = G_OR [[OR6]], [[OR7]]
-    ; CHECK: [[OR12:%[0-9]+]]:_(s32) = G_OR [[OR8]], [[OR9]]
-    ; CHECK: [[OR13:%[0-9]+]]:_(s32) = G_OR [[OR10]], [[OR11]]
-    ; CHECK: [[OR14:%[0-9]+]]:_(s32) = G_OR [[OR12]], [[OR13]]
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR14]], [[C]]
-    ; CHECK: $w0 = COPY [[AND]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<16 x s8>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK-NEXT: [[ANYEXT8:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
+    ; CHECK-NEXT: [[ANYEXT9:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
+    ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ANYEXT8]], [[ANYEXT9]]
+    ; CHECK-NEXT: [[ANYEXT10:%[0-9]+]]:_(s32) = G_ANYEXT [[UV10]](s8)
+    ; CHECK-NEXT: [[ANYEXT11:%[0-9]+]]:_(s32) = G_ANYEXT [[UV11]](s8)
+    ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ANYEXT10]], [[ANYEXT11]]
+    ; CHECK-NEXT: [[ANYEXT12:%[0-9]+]]:_(s32) = G_ANYEXT [[UV12]](s8)
+    ; CHECK-NEXT: [[ANYEXT13:%[0-9]+]]:_(s32) = G_ANYEXT [[UV13]](s8)
+    ; CHECK-NEXT: [[OR6:%[0-9]+]]:_(s32) = G_OR [[ANYEXT12]], [[ANYEXT13]]
+    ; CHECK-NEXT: [[ANYEXT14:%[0-9]+]]:_(s32) = G_ANYEXT [[UV14]](s8)
+    ; CHECK-NEXT: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[UV15]](s8)
+    ; CHECK-NEXT: [[OR7:%[0-9]+]]:_(s32) = G_OR [[ANYEXT14]], [[ANYEXT15]]
+    ; CHECK-NEXT: [[OR8:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
+    ; CHECK-NEXT: [[OR9:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
+    ; CHECK-NEXT: [[OR10:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
+    ; CHECK-NEXT: [[OR11:%[0-9]+]]:_(s32) = G_OR [[OR6]], [[OR7]]
+    ; CHECK-NEXT: [[OR12:%[0-9]+]]:_(s32) = G_OR [[OR8]], [[OR9]]
+    ; CHECK-NEXT: [[OR13:%[0-9]+]]:_(s32) = G_OR [[OR10]], [[OR11]]
+    ; CHECK-NEXT: [[OR14:%[0-9]+]]:_(s32) = G_OR [[OR12]], [[OR13]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[OR14]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<16 x s8>) = COPY $q0
     %0:_(<16 x s1>) = G_TRUNC %1(<16 x s8>)
     %2:_(s1) = G_VECREDUCE_OR %0(<16 x s1>)
@@ -199,11 +204,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v1i8
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<8 x s8>)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; CHECK: $w0 = COPY [[TRUNC]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<8 x s8>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<8 x s8>) = COPY $d0
     %11:_(s64) = G_BITCAST %1(<8 x s8>)
     %0:_(s8) = G_TRUNC %11(s64)
@@ -227,13 +233,14 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v3i8
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[COPY2]]
-    ; CHECK: $w0 = COPY [[OR1]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[COPY2]]
+    ; CHECK-NEXT: $w0 = COPY [[OR1]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(s32) = COPY $w0
     %2:_(s32) = COPY $w1
     %3:_(s32) = COPY $w2
@@ -257,17 +264,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v4i8
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
-    ; CHECK: $w0 = COPY [[OR2]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
+    ; CHECK-NEXT: $w0 = COPY [[OR2]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<4 x s16>) = COPY $d0
     %0:_(<4 x s8>) = G_TRUNC %1(<4 x s16>)
     %2:_(s8) = G_VECREDUCE_OR %0(<4 x s8>)
@@ -288,25 +296,26 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v8i8
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<8 x s8>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
-    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
-    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
-    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
-    ; CHECK: [[OR4:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
-    ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
-    ; CHECK: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
-    ; CHECK: $w0 = COPY [[OR6]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](<8 x s8>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
+    ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
+    ; CHECK-NEXT: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
+    ; CHECK-NEXT: $w0 = COPY [[OR6]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(s8) = G_VECREDUCE_OR %0(<8 x s8>)
     %2:_(s32) = G_ANYEXT %1(s8)
@@ -326,27 +335,28 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v16i8
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[UV:%[0-9]+]]:_(<8 x s8>), [[UV1:%[0-9]+]]:_(<8 x s8>) = G_UNMERGE_VALUES [[COPY]](<16 x s8>)
-    ; CHECK: [[OR:%[0-9]+]]:_(<8 x s8>) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[OR]](<8 x s8>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
-    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
-    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
-    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
-    ; CHECK: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
-    ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR1]], [[OR2]]
-    ; CHECK: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR3]], [[OR4]]
-    ; CHECK: [[OR7:%[0-9]+]]:_(s32) = G_OR [[OR5]], [[OR6]]
-    ; CHECK: $w0 = COPY [[OR7]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<8 x s8>), [[UV1:%[0-9]+]]:_(<8 x s8>) = G_UNMERGE_VALUES [[COPY]](<16 x s8>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<8 x s8>) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[OR]](<8 x s8>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
+    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
+    ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR1]], [[OR2]]
+    ; CHECK-NEXT: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR3]], [[OR4]]
+    ; CHECK-NEXT: [[OR7:%[0-9]+]]:_(s32) = G_OR [[OR5]], [[OR6]]
+    ; CHECK-NEXT: $w0 = COPY [[OR7]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(s8) = G_VECREDUCE_OR %0(<16 x s8>)
     %2:_(s32) = G_ANYEXT %1(s8)
@@ -367,29 +377,30 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v32i8
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[OR:%[0-9]+]]:_(<16 x s8>) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK: [[UV:%[0-9]+]]:_(<8 x s8>), [[UV1:%[0-9]+]]:_(<8 x s8>) = G_UNMERGE_VALUES [[OR]](<16 x s8>)
-    ; CHECK: [[OR1:%[0-9]+]]:_(<8 x s8>) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[OR1]](<8 x s8>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
-    ; CHECK: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
-    ; CHECK: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
-    ; CHECK: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
-    ; CHECK: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
-    ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
-    ; CHECK: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
-    ; CHECK: [[OR7:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
-    ; CHECK: [[OR8:%[0-9]+]]:_(s32) = G_OR [[OR6]], [[OR7]]
-    ; CHECK: $w0 = COPY [[OR8]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<16 x s8>) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<8 x s8>), [[UV1:%[0-9]+]]:_(<8 x s8>) = G_UNMERGE_VALUES [[OR]](<16 x s8>)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(<8 x s8>) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[OR1]](<8 x s8>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s8)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s8)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s8)
+    ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s8)
+    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[UV9]](s8)
+    ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ANYEXT6]], [[ANYEXT7]]
+    ; CHECK-NEXT: [[OR6:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
+    ; CHECK-NEXT: [[OR7:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[OR5]]
+    ; CHECK-NEXT: [[OR8:%[0-9]+]]:_(s32) = G_OR [[OR6]], [[OR7]]
+    ; CHECK-NEXT: $w0 = COPY [[OR8]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<16 x s8>) = COPY $q0
     %2:_(<16 x s8>) = COPY $q1
     %0:_(<32 x s8>) = G_CONCAT_VECTORS %1(<16 x s8>), %2(<16 x s8>)
@@ -411,17 +422,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v4i16
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
-    ; CHECK: $w0 = COPY [[OR2]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR]], [[OR1]]
+    ; CHECK-NEXT: $w0 = COPY [[OR2]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(s16) = G_VECREDUCE_OR %0(<4 x s16>)
     %2:_(s32) = G_ANYEXT %1(s16)
@@ -441,19 +453,20 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v8i16
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
-    ; CHECK: [[OR:%[0-9]+]]:_(<4 x s16>) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[OR]](<4 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[OR1]], [[OR2]]
-    ; CHECK: $w0 = COPY [[OR3]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x s16>) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[OR]](<4 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[OR1]], [[OR2]]
+    ; CHECK-NEXT: $w0 = COPY [[OR3]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(s16) = G_VECREDUCE_OR %0(<8 x s16>)
     %2:_(s32) = G_ANYEXT %1(s16)
@@ -474,21 +487,22 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v16i16
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[OR:%[0-9]+]]:_(<8 x s16>) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[OR]](<8 x s16>)
-    ; CHECK: [[OR1:%[0-9]+]]:_(<4 x s16>) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[OR1]](<4 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
-    ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK: [[OR4:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
-    ; CHECK: $w0 = COPY [[OR4]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<8 x s16>) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[OR]](<8 x s16>)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(<4 x s16>) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[OR1]](<4 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[OR2]], [[OR3]]
+    ; CHECK-NEXT: $w0 = COPY [[OR4]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<8 x s16>) = COPY $q0
     %2:_(<8 x s16>) = COPY $q1
     %0:_(<16 x s16>) = G_CONCAT_VECTORS %1(<8 x s16>), %2(<8 x s16>)
@@ -510,12 +524,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v2i32
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
-    ; CHECK: $w0 = COPY [[COPY1]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(s32) = G_VECREDUCE_OR %0(<2 x s32>)
     $w0 = COPY %1(s32)
@@ -534,14 +549,15 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v4i32
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](<2 x s32>)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV2]], [[UV3]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[OR1]](s32)
-    ; CHECK: $w0 = COPY [[COPY1]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](<2 x s32>)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV2]], [[UV3]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[OR1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_VECREDUCE_OR %0(<4 x s32>)
     $w0 = COPY %1(s32)
@@ -561,16 +577,17 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v8i32
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[OR:%[0-9]+]]:_(<4 x s32>) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[OR]](<4 x s32>)
-    ; CHECK: [[OR1:%[0-9]+]]:_(<2 x s32>) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR1]](<2 x s32>)
-    ; CHECK: [[OR2:%[0-9]+]]:_(s32) = G_OR [[UV2]], [[UV3]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR2]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x s32>) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[OR]](<4 x s32>)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(<2 x s32>) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR1]](<2 x s32>)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[UV2]], [[UV3]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR2]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:_(<4 x s32>) = COPY $q0
     %2:_(<4 x s32>) = COPY $q1
     %0:_(<8 x s32>) = G_CONCAT_VECTORS %1(<4 x s32>), %2(<4 x s32>)
@@ -591,12 +608,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v2i64
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[OR]](s64)
-    ; CHECK: $x0 = COPY [[COPY1]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[OR]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(s64) = G_VECREDUCE_OR %0(<2 x s64>)
     $x0 = COPY %1(s64)
@@ -616,14 +634,15 @@ body:             |
 
     ; CHECK-LABEL: name: test_redor_v4i64
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[OR]](<2 x s64>)
-    ; CHECK: [[OR1:%[0-9]+]]:_(s64) = G_OR [[UV]], [[UV1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[OR1]](s64)
-    ; CHECK: $x0 = COPY [[COPY2]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[OR]](<2 x s64>)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[OR1]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %1:_(<2 x s64>) = COPY $q0
     %2:_(<2 x s64>) = COPY $q1
     %0:_(<4 x s64>) = G_CONCAT_VECTORS %1(<2 x s64>), %2(<2 x s64>)

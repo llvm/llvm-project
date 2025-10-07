@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_UNREACHABLE_H
-#define _LIBCPP___UTILITY_UNREACHABLE_H
+#ifndef _LIBCPP___CXX03___UTILITY_UNREACHABLE_H
+#define _LIBCPP___CXX03___UTILITY_UNREACHABLE_H
 
-#include <__assert>
-#include <__config>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,12 +23,6 @@ _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __libcpp_unreachable() {
   __builtin_unreachable();
 }
 
-#if _LIBCPP_STD_VER >= 23
-
-[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void unreachable() { __libcpp_unreachable(); }
-
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_UNREACHABLE_H
+#endif // _LIBCPP___CXX03___UTILITY_UNREACHABLE_H

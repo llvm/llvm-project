@@ -86,3 +86,47 @@ func.func @while(%arg0: tensor<1024xf32, #SparseVector>, %c: i1) -> tensor<1024x
   }
   return %0: tensor<1024xf32, #SparseVector>
 }
+
+// CHECK-LABEL:   func.func @index_switch(
+// CHECK-SAME:                            %[[PRED:.*0]]: index,
+// CHECK-SAME:                            %[[VAL_A_1:.*1]]: memref<?xindex>,
+// CHECK-SAME:                            %[[VAL_A_2:.*2]]: memref<?xindex>,
+// CHECK-SAME:                            %[[VAL_A_3:.*3]]: memref<?xf32>,
+// CHECK-SAME:                            %[[VAL_A_4:.*4]]: !sparse_tensor.storage_specifier
+// CHECK-SAME:                            %[[VAL_B_1:.*5]]: memref<?xindex>,
+// CHECK-SAME:                            %[[VAL_B_2:.*6]]: memref<?xindex>,
+// CHECK-SAME:                            %[[VAL_B_3:.*7]]: memref<?xf32>,
+// CHECK-SAME:                            %[[VAL_B_4:.*8]]: !sparse_tensor.storage_specifier
+// CHECK-SAME:                            %[[VAL_C_1:.*9]]: memref<?xindex>,
+// CHECK-SAME:                            %[[VAL_C_2:.*10]]: memref<?xindex>,
+// CHECK-SAME:                            %[[VAL_C_3:.*11]]: memref<?xf32>,
+// CHECK-SAME:                            %[[VAL_C_4:.*12]]: !sparse_tensor.storage_specifier
+
+// CHECK:           %[[RES:.*]]:4 = scf.index_switch %[[PRED]]
+// CHECK-SAME:          -> memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier
+// CHECK:           case 1 {
+// CHECK:             scf.yield %[[VAL_A_1]], %[[VAL_A_2]], %[[VAL_A_3]], %[[VAL_A_4]]
+// CHECK:           case 2 {
+// CHECK:             scf.yield %[[VAL_B_1]], %[[VAL_B_2]], %[[VAL_B_3]], %[[VAL_B_4]]
+// CHECK:           default {
+// CHECK:             scf.yield %[[VAL_C_1]], %[[VAL_C_2]], %[[VAL_C_3]], %[[VAL_C_4]]
+
+// CHECK:           return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2, %[[RES]]#3 :
+// CHECK-SAME:        memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier
+
+func.func @index_switch(%pred: index, %a: tensor<5xf32, #SparseVector>,
+                        %b: tensor<5xf32, #SparseVector>,
+                        %c: tensor<5xf32, #SparseVector>) -> tensor<5xf32, #SparseVector> {
+  %0 = scf.index_switch %pred -> tensor<5xf32, #SparseVector>
+  case 1 {
+    scf.yield %a : tensor<5xf32, #SparseVector>
+  }
+  case 2 {
+    scf.yield %b : tensor<5xf32, #SparseVector>
+  }
+  default {
+    scf.yield %c : tensor<5xf32, #SparseVector>
+  }
+
+  return %0 : tensor<5xf32, #SparseVector>
+}

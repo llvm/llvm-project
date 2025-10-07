@@ -423,10 +423,13 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
                                  &Error, &ExecutionFailed);
-    ASSERT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
+
+    EXPECT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
                              "positive value indicating the result code";
-    ASSERT_TRUE(ExecutionFailed);
-    ASSERT_FALSE(Error.empty());
+    EXPECT_FALSE(Error.empty());
+
+    // Note ExecutionFailed may or may not be false. When using fork, the error
+    // is produced on the wait for the child, not the execution point.
   }
 
   {
@@ -434,10 +437,19 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
                                    &Error, &ExecutionFailed);
-    ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
-        << "On error ExecuteNoWait should return an invalid ProcessInfo";
-    ASSERT_TRUE(ExecutionFailed);
-    ASSERT_FALSE(Error.empty());
+
+    if (ExecutionFailed) {
+      EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
+          << "On error ExecuteNoWait should return an invalid ProcessInfo";
+      EXPECT_FALSE(Error.empty());
+    } else {
+      std::string WaitErrMsg;
+      EXPECT_NE(PI.Pid, ProcessInfo::InvalidPid);
+      ProcessInfo WaitPI = Wait(PI, std::nullopt, &WaitErrMsg);
+      EXPECT_EQ(WaitPI.Pid, PI.Pid);
+      EXPECT_LT(WaitPI.ReturnCode, 0);
+      EXPECT_FALSE(WaitErrMsg.empty());
+    }
   }
 
 }
@@ -572,9 +584,15 @@ TEST_F(ProgramEnvTest, TestLockFileExclusive) {
     ASSERT_NO_ERROR(fs::openFileForReadWrite(LockedFile, FD2,
                                              fs::CD_OpenExisting, fs::OF_None));
 
-    std::error_code ErrC =
-        fs::tryLockFile(FD2, std::chrono::seconds(0), /*Exclusive=*/true);
-    EXPECT_TRUE(ErrC);
+    // File should currently be non-exclusive locked by the main process, thus
+    // trying to acquire exclusive lock will fail and trying to acquire
+    // non-exclusive will succeed.
+    EXPECT_TRUE(
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Exclusive));
+
+    EXPECT_FALSE(
+        fs::tryLockFile(FD2, std::chrono::seconds(0), fs::LockKind::Shared));
+
     close(FD2);
     // Write a file to indicate just finished.
     std::string FinishFile = std::string(LockedFile) + "-finished";
@@ -605,7 +623,8 @@ TEST_F(ProgramEnvTest, TestLockFileExclusive) {
   addEnvVar(EnvVar);
 
   // Lock the file.
-  ASSERT_NO_ERROR(fs::tryLockFile(FD1));
+  ASSERT_NO_ERROR(
+      fs::tryLockFile(FD1, std::chrono::seconds(0), fs::LockKind::Exclusive));
 
   std::string Error;
   bool ExecutionFailed;
@@ -659,6 +678,31 @@ TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {
                                &ExecutionFailed);
   EXPECT_FALSE(ExecutionFailed) << Error;
   ASSERT_EQ(0, RetCode);
+}
+
+TEST_F(ProgramEnvTest, TestExecuteEmptyEnvironment) {
+  using namespace llvm::sys;
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=" // A null invocation to avoid infinite recursion
+  };
+
+  std::string Error;
+  bool ExecutionFailed;
+  int RetCode = ExecuteAndWait(Executable, argv, ArrayRef<StringRef>{}, {}, 0,
+                               0, &Error, &ExecutionFailed);
+  EXPECT_FALSE(ExecutionFailed) << Error;
+#ifndef __MINGW32__
+  // When running with an empty environment, the child process doesn't in herit
+  // the PATH variable. On MinGW, it is common for executables to require a
+  // shared libstdc++ or libc++ DLL, which may be in PATH but not in the
+  // directory of SupportTests.exe - leading to STATUS_DLL_NOT_FOUND errors.
+  // Therefore, waive this failure in MinGW environments.
+  ASSERT_EQ(0, RetCode);
+#endif
 }
 
 } // end anonymous namespace

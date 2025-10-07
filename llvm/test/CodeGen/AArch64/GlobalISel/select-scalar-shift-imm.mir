@@ -9,10 +9,12 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: shl_cimm_32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 24, 23
-    ; CHECK: $w0 = COPY [[UBFMWri]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 24, 23
+    ; CHECK-NEXT: $w0 = COPY [[UBFMWri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 8
     %2:gpr(s32) = G_SHL %0, %1(s32)
@@ -29,10 +31,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: shl_cimm_64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 56, 55
-    ; CHECK: $x0 = COPY [[UBFMXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 56, 55
+    ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -49,10 +53,12 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: lshr_cimm_32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 8, 31
-    ; CHECK: $w0 = COPY [[UBFMWri]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 8, 31
+    ; CHECK-NEXT: $w0 = COPY [[UBFMWri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %3:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s32) = G_LSHR %0, %3(s64)
@@ -69,10 +75,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: lshr_cimm_64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 8, 63
-    ; CHECK: $x0 = COPY [[UBFMXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 8, 63
+    ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_LSHR %0, %1(s64)
@@ -89,10 +97,12 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: ashr_cimm_32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 8, 31
-    ; CHECK: $w0 = COPY [[SBFMWri]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 8, 31
+    ; CHECK-NEXT: $w0 = COPY [[SBFMWri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %3:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s32) = G_ASHR %0, %3(s64)
@@ -109,12 +119,14 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: ashr_cimm_32_64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -8
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[MOVi64imm]]
-    ; CHECK: [[ASRVWr:%[0-9]+]]:gpr32 = ASRVWr [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[ASRVWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -8
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[MOVi64imm]].sub_32
+    ; CHECK-NEXT: [[ASRVWr:%[0-9]+]]:gpr32 = ASRVWr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[ASRVWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %3:gpr(s64) = G_CONSTANT i64 -8
     %2:gpr(s32) = G_ASHR %0, %3(s64)
@@ -131,12 +143,14 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: lshr_cimm_32_64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -8
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[MOVi64imm]]
-    ; CHECK: [[LSRVWr:%[0-9]+]]:gpr32 = LSRVWr [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[LSRVWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm -8
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[MOVi64imm]].sub_32
+    ; CHECK-NEXT: [[LSRVWr:%[0-9]+]]:gpr32 = LSRVWr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[LSRVWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %3:gpr(s64) = G_CONSTANT i64 -8
     %2:gpr(s32) = G_LSHR %0, %3(s64)
@@ -153,10 +167,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: ashr_cimm_64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[COPY]], 8, 63
-    ; CHECK: $x0 = COPY [[SBFMXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[COPY]], 8, 63
+    ; CHECK-NEXT: $x0 = COPY [[SBFMXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_ASHR %0, %1(s64)
@@ -173,14 +189,16 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: lshr_32_notimm64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 8
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[SUBREG_TO_REG]], 8000
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXri]].sub_32
-    ; CHECK: [[LSRVWr:%[0-9]+]]:gpr32 = LSRVWr [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[LSRVWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 8
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[SUBREG_TO_REG]], 8000
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXri]].sub_32
+    ; CHECK-NEXT: [[LSRVWr:%[0-9]+]]:gpr32 = LSRVWr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[LSRVWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %3:gpr(s64) = G_CONSTANT i64 8
     %4:gpr(s64) = G_AND %3, %3
@@ -198,14 +216,16 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: ashr_32_notimm64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 8
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[SUBREG_TO_REG]], 8000
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXri]].sub_32
-    ; CHECK: [[ASRVWr:%[0-9]+]]:gpr32 = ASRVWr [[COPY]], [[COPY1]]
-    ; CHECK: $w0 = COPY [[ASRVWr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 8
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64common = ANDXri [[SUBREG_TO_REG]], 8000
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDXri]].sub_32
+    ; CHECK-NEXT: [[ASRVWr:%[0-9]+]]:gpr32 = ASRVWr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[ASRVWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %3:gpr(s64) = G_CONSTANT i64 8
     %4:gpr(s64) = G_AND %3, %3

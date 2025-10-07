@@ -36,10 +36,10 @@ public:
   void printOperand(const MCOperand &MO, const MCAsmInfo *MAI, raw_ostream &O);
 
   virtual void printFormattedRegName(const MCAsmInfo *MAI, MCRegister Reg,
-                                     raw_ostream &O) const {}
+                                     raw_ostream &O) {}
 
   // Override MCInstPrinter.
-  void printRegName(raw_ostream &O, MCRegister Reg) const override;
+  void printRegName(raw_ostream &O, MCRegister Reg) override;
 
 protected:
   template <unsigned N>
@@ -58,6 +58,7 @@ protected:
   void printBDLAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDRAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printBDVAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printLXAAddrOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU1ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU2ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU3ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
@@ -70,11 +71,8 @@ protected:
   void printS32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU48ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printPCRelOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printPCRelOperand(const MCInst *MI, uint64_t /*Address*/, int OpNum,
-                         raw_ostream &O) {
-    printPCRelOperand(MI, OpNum, O);
-  }
+  void printPCRelOperand(const MCInst *MI, uint64_t Address, int OpNum,
+                         raw_ostream &O);
   void printPCRelTLSOperand(const MCInst *MI, uint64_t Address, int OpNum,
                             raw_ostream &O);
 

@@ -22,7 +22,7 @@ void PythonTestSuite::SetUp() {
   // test suite.
   Py_InitializeEx(0);
   m_gil_state = PyGILState_Ensure();
-  PyRun_SimpleString("import sys");
+  python::RunSimpleString("import sys");
 }
 
 void PythonTestSuite::TearDown() {
@@ -80,20 +80,6 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject(
   return python::PythonObject();
 }
 
-python::PythonObject lldb_private::python::SWIGBridge::
-    LLDBSwigPythonCreateScriptedBreakpointResolver(
-        const char *python_class_name, const char *session_dictionary_name,
-        const StructuredDataImpl &args, const lldb::BreakpointSP &bkpt_sp) {
-  return python::PythonObject();
-}
-
-unsigned int
-lldb_private::python::SWIGBridge::LLDBSwigPythonCallBreakpointResolver(
-    void *implementor, const char *method_name,
-    lldb_private::SymbolContext *sym_ctx) {
-  return 0;
-}
-
 size_t lldb_private::python::SWIGBridge::LLDBSwigPython_CalculateNumChildren(
     PyObject *implementor, uint32_t max) {
   return 0;
@@ -141,6 +127,11 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data) {
 
 void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(
+    PyObject *data) {
   return nullptr;
 }
 
@@ -227,6 +218,12 @@ LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger) {
+  return false;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+    const char *python_module_name, const char *session_dictionary_name,
+    lldb::TargetSP target) {
   return false;
 }
 

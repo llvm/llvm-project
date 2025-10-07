@@ -6,33 +6,33 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___OSTREAM_BASIC_OSTREAM_H
-#define _LIBCPP___OSTREAM_BASIC_OSTREAM_H
+#ifndef _LIBCPP___CXX03___OSTREAM_BASIC_OSTREAM_H
+#define _LIBCPP___CXX03___OSTREAM_BASIC_OSTREAM_H
 
-#include <__config>
-#include <__exception/operations.h>
-#include <__memory/shared_ptr.h>
-#include <__memory/unique_ptr.h>
-#include <__system_error/error_code.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_base_of.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <bitset>
-#include <cstddef>
-#include <ios>
-#include <locale>
-#include <new> // for __throw_bad_alloc
-#include <streambuf>
-#include <string_view>
+#include <__cxx03/__config>
+#include <__cxx03/__exception/operations.h>
+#include <__cxx03/__memory/shared_ptr.h>
+#include <__cxx03/__memory/unique_ptr.h>
+#include <__cxx03/__system_error/error_code.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_base_of.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/bitset>
+#include <__cxx03/cstddef>
+#include <__cxx03/ios>
+#include <__cxx03/locale>
+#include <__cxx03/new> // for __throw_bad_alloc
+#include <__cxx03/streambuf>
+#include <__cxx03/string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -99,19 +99,7 @@ public:
   basic_ostream& operator<<(long double __f);
   basic_ostream& operator<<(const void* __p);
 
-#if _LIBCPP_STD_VER >= 23
-  _LIBCPP_HIDE_FROM_ABI basic_ostream& operator<<(const volatile void* __p) {
-    return operator<<(const_cast<const void*>(__p));
-  }
-#endif
-
   basic_ostream& operator<<(basic_streambuf<char_type, traits_type>* __sb);
-
-#if _LIBCPP_STD_VER >= 17
-  // LWG 2221 - nullptr. This is not backported to older standards modes.
-  // See https://reviews.llvm.org/D127033 for more info on the rationale.
-  _LIBCPP_HIDE_FROM_ABI basic_ostream& operator<<(nullptr_t) { return *this << "nullptr"; }
-#endif
 
   // 27.7.2.7 Unformatted output:
   basic_ostream& put(char_type __c);
@@ -797,57 +785,6 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x) {
                                                          std::use_facet<ctype<_CharT> >(__os.getloc()).widen('1'));
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, wchar_t) = delete;
-
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const wchar_t*) = delete;
-
-template <class _Traits>
-basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, char16_t) = delete;
-
-template <class _Traits>
-basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, char32_t) = delete;
-
-template <class _Traits>
-basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char16_t*) = delete;
-
-template <class _Traits>
-basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char32_t*) = delete;
-
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, char8_t) = delete;
-
-template <class _Traits>
-basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, char8_t) = delete;
-
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const char8_t*) = delete;
-
-template <class _Traits>
-basic_ostream<wchar_t, _Traits>& operator<<(basic_ostream<wchar_t, _Traits>&, const char8_t*) = delete;
-#  endif
-
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, char16_t) = delete;
-
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, char32_t) = delete;
-
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const char16_t*) = delete;
-
-template <class _Traits>
-basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const char32_t*) = delete;
-
-#endif // _LIBCPP_STD_VER >= 20
-
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
@@ -857,4 +794,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___OSTREAM_BASIC_OSTREAM_H
+#endif // _LIBCPP___CXX03___OSTREAM_BASIC_OSTREAM_H

@@ -36,6 +36,6 @@ kernel void test(int i) {
 // Check that the temporary is scoped to the `if`
 
 // CHECK-DEBUG: ![[TESTFILE:[0-9]+]] = !DIFile(filename: "<stdin>"
-// CHECK-DEBUG: ![[TESTSCOPE:[0-9]+]] = distinct !DISubprogram(name: "test", {{.*}} file: ![[TESTFILE]]
+// CHECK-DEBUG: ![[TESTSCOPE:[0-9]+]] = distinct !DISubprogram(name: "test", linkageName: "__clang_ocl_kern_imp_test", {{.*}} file: ![[TESTFILE]]
 // CHECK-DEBUG: ![[IFSCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TESTSCOPE]], file: ![[TESTFILE]], line: 26)
 // CHECK-DEBUG: ![[TEMPLOCATION]] = !DILocation(line: 27, scope: ![[IFSCOPE]])

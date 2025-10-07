@@ -12,7 +12,7 @@ define <4 x float> @extend_to_float_low_i16x8_u(<8 x i16> %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_u
-; CHECK-NEXT:    f32x4.convert_i32x4_u
+; CHECK-NEXT:    f32x4.convert_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %low = shufflevector <8 x i16> %x, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %extended = uitofp <4 x i16> %low to <4 x float>
@@ -25,7 +25,7 @@ define <4 x float> @extend_to_float_high_i16x8_u(<8 x i16> %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.extend_high_i16x8_u
-; CHECK-NEXT:    f32x4.convert_i32x4_u
+; CHECK-NEXT:    f32x4.convert_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %high = shufflevector <8 x i16> %x, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %extended = uitofp <4 x i16> %high to <4 x float>
@@ -39,7 +39,7 @@ define <4 x float> @extend_to_float_low_i8x16_u(<8 x i8> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_u
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_u
-; CHECK-NEXT:    f32x4.convert_i32x4_u
+; CHECK-NEXT:    f32x4.convert_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %low = shufflevector <8 x i8> %x, <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %extended = uitofp <4 x i8> %low to <4 x float>
@@ -55,7 +55,7 @@ define <4 x float> @extend_to_float_high_i8x16_u(<8 x i8> %x) {
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_u
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_u
-; CHECK-NEXT:    f32x4.convert_i32x4_u
+; CHECK-NEXT:    f32x4.convert_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %high = shufflevector <8 x i8> %x, <8 x i8> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %extended = uitofp <4 x i8> %high to <4 x float>
@@ -136,7 +136,7 @@ define <2 x double> @extend_to_double_low_i16x4_u(<4 x i16> %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32x4.extend_low_i16x8_u
-; CHECK-NEXT:    f64x2.convert_low_i32x4_u
+; CHECK-NEXT:    f64x2.convert_low_i32x4_s
 ; CHECK-NEXT:    # fallthrough-return
   %low = shufflevector <4 x i16> %x, <4 x i16> undef, <2 x i32> <i32 0, i32 1>
   %extended = uitofp <2 x i16> %low to <2 x double>
