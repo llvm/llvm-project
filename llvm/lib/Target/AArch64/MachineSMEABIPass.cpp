@@ -508,14 +508,15 @@ MachineSMEABI::findStateChangeInsertionPoint(
     return {InsertPt, PhysLiveRegs}; // Nothing to do (no live flags).
   // Find the previous state change. We can not move before this point.
   MachineBasicBlock::iterator PrevStateChangeI;
-  if (Inst == Block.Insts.begin())
+  if (Inst == Block.Insts.begin()) {
     PrevStateChangeI = MBB.begin();
-  else
+  } else {
     // Note: `std::prev(Inst)` is the previous InstInfo. We only create an
     // InstInfo object for instructions that require a specific ZA state, so the
     // InstInfo is the site of the previous state change in the block (which can
     // be several MIs earlier).
     PrevStateChangeI = std::prev(Inst)->InsertPt;
+  }
   // Note: LiveUnits will only accurately track X0 and NZCV.
   LiveRegUnits LiveUnits(*TRI);
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
