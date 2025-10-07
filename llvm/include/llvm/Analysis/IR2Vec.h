@@ -210,6 +210,13 @@ public:
   const_iterator end() const {
     return const_iterator(this, getNumSections(), 0);
   }
+
+  using VocabMap = std::map<std::string, Embedding>;
+  /// Parse a vocabulary section from JSON and populate the target vocabulary
+  /// map.
+  static Error parseVocabSection(StringRef Key,
+                                 const json::Value &ParsedVocabValue,
+                                 VocabMap &TargetVocab, unsigned &Dim);
 };
 
 /// Class for storing and accessing the IR2Vec vocabulary.
@@ -600,8 +607,6 @@ class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
 
   Error readVocabulary(VocabMap &OpcVocab, VocabMap &TypeVocab,
                        VocabMap &ArgVocab);
-  Error parseVocabSection(StringRef Key, const json::Value &ParsedVocabValue,
-                          VocabMap &TargetVocab, unsigned &Dim);
   void generateVocabStorage(VocabMap &OpcVocab, VocabMap &TypeVocab,
                             VocabMap &ArgVocab);
   void emitError(Error Err, LLVMContext &Ctx);
