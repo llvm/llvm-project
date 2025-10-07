@@ -184,13 +184,83 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
   return Call;
 }
 
+static bool IsImageSampleBuiltIn(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_1d_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_1darray_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_2d_f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_2d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_2d_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_2darray_f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_2darray_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_2darray_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f16_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f32_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f16_f32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static llvm::Value *LoadTextureDescPtorAsVec8I32(CodeGenFunction &CGF,
+                                                 llvm::Value *RsrcPtr) {
+  auto &B = CGF.Builder;
+  auto *VecTy = llvm::FixedVectorType::get(B.getInt32Ty(), 8);
+
+  if (RsrcPtr->getType() == VecTy)
+    return RsrcPtr;
+
+  if (RsrcPtr->getType()->isIntegerTy(32)) {
+    unsigned AS = 8;
+    llvm::PointerType *VecPtrTy = llvm::PointerType::get(VecTy, AS);
+    llvm::Value *Ptr =
+        B.CreateIntToPtr(RsrcPtr, VecPtrTy, "tex.rsrc.from.int");
+    return B.CreateAlignedLoad(VecTy, Ptr, llvm::Align(32), "tex.rsrc.val");
+  }
+
+  if (RsrcPtr->getType()->isPointerTy()) {
+    unsigned AS = RsrcPtr->getType()->getPointerAddressSpace();
+    auto *VecPtrTy = llvm::PointerType::get(VecTy, AS);
+    llvm::Value *Typed = B.CreateBitCast(RsrcPtr, VecPtrTy, "tex.rsrc.typed");
+    return B.CreateAlignedLoad(VecTy, Typed, llvm::Align(32), "tex.rsrc.val");
+  }
+
+  const auto &DL = CGF.CGM.getDataLayout();
+  if (DL.getTypeSizeInBits(RsrcPtr->getType()) == 256)
+    return B.CreateBitCast(RsrcPtr, VecTy, "tex.rsrc.val");
+
+  RsrcPtr->getType()->print(llvm::errs());
+  llvm::report_fatal_error(": Unexpected texture resource argument form");
+}
+
+static unsigned GetTextureDescIndex(unsigned BuiltinID, const CallExpr *E) {
+  unsigned N = E->getNumArgs();
+  if (IsImageSampleBuiltIn(BuiltinID)) {
+    if (N < 5) return (unsigned)-1;
+    return N - 5;
+  }
+  
+  if (N < 3) return (unsigned)-1;
+  return N - 3;
+}
+
 llvm::CallInst *EmitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
                                               const clang::CallExpr *E,
                                               unsigned IntrinsicID,
                                               bool IsImageStore) {
   clang::SmallVector<llvm::Value *,  10> Args;
-  for (unsigned I = 0; I < E->getNumArgs(); ++I)
-    Args.push_back(CGF.EmitScalarExpr(E->getArg(I)));
+  unsigned RsrcIndex = GetTextureDescIndex(E->getBuiltinCallee(), E);
+
+  for (unsigned I = 0; I < E->getNumArgs(); ++I){
+    llvm::Value *V = CGF.EmitScalarExpr(E->getArg(I));
+    if (I == RsrcIndex)
+      V = LoadTextureDescPtorAsVec8I32(CGF, V);
+    Args.push_back(V);
+  }
 
   llvm::Type *RetTy = CGF.ConvertType(E->getType());
   if (IsImageStore)
