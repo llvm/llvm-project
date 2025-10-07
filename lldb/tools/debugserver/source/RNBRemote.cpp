@@ -93,7 +93,6 @@ static const std::string JSON_ASYNC_TYPE_KEY_NAME("type");
   std::setfill(' ') << std::setw((iword_idx)) << ""
 #define INDENT_WITH_TABS(iword_idx)                                            \
   std::setfill('\t') << std::setw((iword_idx)) << ""
-// Class to handle communications via gdb remote protocol.
 
 // If `ch` is a meta character as per the binary packet convention in the
 // gdb-remote protocol, quote it and write it into `stream`, otherwise write it
@@ -163,16 +162,16 @@ static std::string decode_hex_ascii_string(const char *p,
   return arg;
 }
 
-uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
-                       uint64_t fail_value = 0) {
+static uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
+                              uint64_t fail_value = 0) {
   nub_addr_t addr = strtoull(p, end, 16);
   if (addr == 0 && errno != 0)
     return fail_value;
   return addr;
 }
 
-void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
-                      bool swap) {
+static void append_hex_value(std::ostream &ostrm, const void *buf,
+                             size_t buf_size, bool swap) {
   int i;
   const uint8_t *p = (const uint8_t *)buf;
   if (swap) {
@@ -184,7 +183,7 @@ void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
   }
 }
 
-std::string cstring_to_asciihex_string(const char *str) {
+static std::string cstring_to_asciihex_string(const char *str) {
   std::string hex_str;
   hex_str.reserve(strlen(str) * 2);
   while (str && *str) {
@@ -196,7 +195,8 @@ std::string cstring_to_asciihex_string(const char *str) {
   return hex_str;
 }
 
-void append_hexified_string(std::ostream &ostrm, const std::string &string) {
+static void append_hexified_string(std::ostream &ostrm,
+                                   const std::string &string) {
   size_t string_size = string.size();
   const char *string_buf = string.c_str();
   for (size_t i = 0; i < string_size; i++) {
@@ -1051,8 +1051,6 @@ rnb_err_t RNBRemote::HandleAsyncPacket(PacketEnum *type) {
 rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
   static DNBTimer g_packetTimer(true);
 
-  //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8u RNBRemote::%s",
-  //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
   rnb_err_t err = rnb_err;
   std::string packet_data;
   RNBRemote::Packet packet_info;
@@ -1308,8 +1306,7 @@ static cpu_type_t best_guess_cpu_type() {
  LEN is the number of bytes to be processed.  If a character is escaped,
  it is 2 characters for LEN.  A LEN of -1 means decode-until-nul-byte
  (end of string).  */
-
-std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
+static std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
   std::vector<uint8_t> bytes;
   if (len == 0) {
     return bytes;
@@ -1331,8 +1328,7 @@ std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
 // If the value side of a key-value pair in JSON is a string,
 // and that string has a " character in it, the " character must
 // be escaped.
-
-std::string json_string_quote_metachars(const std::string &s) {
+static std::string json_string_quote_metachars(const std::string &s) {
   if (s.find('"') == std::string::npos)
     return s;
 
@@ -1465,15 +1461,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
         }
       }
     }
-
-    //        for (auto &reg_entry: g_dynamic_register_map)
-    //        {
-    //            DNBLogThreaded("%4i: size = %3u, pseudo = %i, name = %s",
-    //                           reg_entry.offset,
-    //                           reg_entry.nub_info.size,
-    //                           reg_entry.nub_info.value_regs != NULL,
-    //                           reg_entry.nub_info.name);
-    //        }
 
     g_reg_entries = g_dynamic_register_map.data();
     g_num_reg_entries = g_dynamic_register_map.size();
@@ -1723,7 +1710,7 @@ rnb_err_t RNBRemote::HandlePacket_qThreadExtraInfo(const char *p) {
   return SendPacket("");
 }
 
-const char *k_space_delimiters = " \t";
+static const char *k_space_delimiters = " \t";
 static void skip_spaces(std::string &line) {
   if (!line.empty()) {
     size_t space_pos = line.find_first_not_of(k_space_delimiters);
@@ -2028,7 +2015,7 @@ rnb_err_t RNBRemote::HandlePacket_qRegisterInfo(const char *p) {
  QSetLogging:bitmask=LOG_ALL;mode=asl;
  */
 
-rnb_err_t set_logging(const char *p) {
+static rnb_err_t set_logging(const char *p) {
   int bitmask = 0;
   while (p && *p != '\0') {
     if (strncmp(p, "bitmask=", sizeof("bitmask=") - 1) == 0) {
@@ -2572,11 +2559,10 @@ rnb_err_t RNBRemote::HandlePacket_QSetProcessEvent(const char *p) {
 
 // If a fail_value is provided, a correct-length reply is always provided,
 // even if the register cannot be read right now on this thread.
-bool register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
-                                       nub_thread_t tid,
-                                       const register_map_entry_t *reg,
-                                       const DNBRegisterValue *reg_value_ptr,
-                                       std::optional<uint8_t> fail_value) {
+static bool register_value_in_hex_fixed_width(
+    std::ostream &ostrm, nub_process_t pid, nub_thread_t tid,
+    const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr,
+    std::optional<uint8_t> fail_value) {
   if (reg != NULL) {
     std::unique_ptr<DNBRegisterValue> reg_value =
         std::make_unique<DNBRegisterValue>();
@@ -2603,7 +2589,7 @@ bool register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
   return false;
 }
 
-void debugserver_regnum_with_fixed_width_hex_register_value(
+static void debugserver_regnum_with_fixed_width_hex_register_value(
     std::ostream &ostrm, nub_process_t pid, nub_thread_t tid,
     const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr,
     std::optional<uint8_t> fail_value) {
@@ -4894,8 +4880,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
   return SendPacket(strm.str());
 }
 
-void XMLElementStart(std::ostringstream &s, uint32_t indent, const char *name,
-                     bool has_attributes) {
+static void XMLElementStart(std::ostringstream &s, uint32_t indent,
+                            const char *name, bool has_attributes) {
   if (indent)
     s << INDENT_WITH_SPACES(indent);
   s << '<' << name;
@@ -4903,43 +4889,22 @@ void XMLElementStart(std::ostringstream &s, uint32_t indent, const char *name,
     s << '>' << std::endl;
 }
 
-void XMLElementStartEndAttributes(std::ostringstream &s, bool empty) {
+static void XMLElementStartEndAttributes(std::ostringstream &s, bool empty) {
   if (empty)
     s << '/';
   s << '>' << std::endl;
 }
 
-void XMLElementEnd(std::ostringstream &s, uint32_t indent, const char *name) {
+static void XMLElementEnd(std::ostringstream &s, uint32_t indent,
+                          const char *name) {
   if (indent)
     s << INDENT_WITH_SPACES(indent);
   s << '<' << '/' << name << '>' << std::endl;
 }
 
-void XMLElementWithStringValue(std::ostringstream &s, uint32_t indent,
-                               const char *name, const char *value,
-                               bool close = true) {
-  if (value) {
-    if (indent)
-      s << INDENT_WITH_SPACES(indent);
-    s << '<' << name << '>' << value;
-    if (close)
-      XMLElementEnd(s, 0, name);
-  }
-}
-
-void XMLElementWithUnsignedValue(std::ostringstream &s, uint32_t indent,
-                                 const char *name, uint64_t value,
-                                 bool close = true) {
-  if (indent)
-    s << INDENT_WITH_SPACES(indent);
-
-  s << '<' << name << '>' << DECIMAL << value;
-  if (close)
-    XMLElementEnd(s, 0, name);
-}
-
-void XMLAttributeString(std::ostringstream &s, const char *name,
-                        const char *value, const char *default_value = NULL) {
+static void XMLAttributeString(std::ostringstream &s, const char *name,
+                               const char *value,
+                               const char *default_value = NULL) {
   if (value) {
     if (default_value && strcmp(value, default_value) == 0)
       return; // No need to emit the attribute because it matches the default
@@ -4948,15 +4913,16 @@ void XMLAttributeString(std::ostringstream &s, const char *name,
   }
 }
 
-void XMLAttributeUnsignedDecimal(std::ostringstream &s, const char *name,
-                                 uint64_t value) {
+static void XMLAttributeUnsignedDecimal(std::ostringstream &s, const char *name,
+                                        uint64_t value) {
   s << ' ' << name << "=\"" << DECIMAL << value << "\"";
 }
 
-void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
-                               nub_size_t num_reg_sets,
-                               const DNBRegisterSetInfo *reg_set_info,
-                               const register_map_entry_t &reg) {
+static void GenerateTargetXMLRegister(std::ostringstream &s,
+                                      const uint32_t reg_num,
+                                      nub_size_t num_reg_sets,
+                                      const DNBRegisterSetInfo *reg_set_info,
+                                      const register_map_entry_t &reg) {
   const char *default_lldb_encoding = "uint";
   const char *lldb_encoding = default_lldb_encoding;
   const char *gdb_group = "general";
@@ -5127,7 +5093,7 @@ void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
   XMLElementStartEndAttributes(s, true);
 }
 
-void GenerateTargetXMLRegisters(std::ostringstream &s) {
+static void GenerateTargetXMLRegisters(std::ostringstream &s) {
   nub_size_t num_reg_sets = 0;
   const DNBRegisterSetInfo *reg_sets = DNBGetRegisterSetInfo(&num_reg_sets);
 
@@ -5166,7 +5132,7 @@ static const char *g_target_xml_footer = "</target>";
 
 static std::string g_target_xml;
 
-void UpdateTargetXML() {
+static void UpdateTargetXML() {
   std::ostringstream s;
   s << g_target_xml_header << std::endl;
 
@@ -5301,8 +5267,9 @@ rnb_err_t RNBRemote::HandlePacket_jGetDyldProcessState(const char *p) {
 // a one-level-deep JSON dictionary of key-value pairs.  e.g.
 // jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":144305}]
 //
-uint64_t get_integer_value_for_key_name_from_json(const char *key,
-                                                  const char *json_string) {
+static uint64_t
+get_integer_value_for_key_name_from_json(const char *key,
+                                         const char *json_string) {
   uint64_t retval = INVALID_NUB_ADDRESS;
   std::string key_with_quotes = "\"";
   key_with_quotes += key;
@@ -5338,9 +5305,9 @@ uint64_t get_integer_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, and sets the 'value'
 // argument to the value found.
 
-bool get_boolean_value_for_key_name_from_json(const char *key,
-                                              const char *json_string,
-                                              bool &value) {
+static bool get_boolean_value_for_key_name_from_json(const char *key,
+                                                     const char *json_string,
+                                                     bool &value) {
   std::string key_with_quotes = "\"";
   key_with_quotes += key;
   key_with_quotes += "\"";
@@ -5377,7 +5344,7 @@ bool get_boolean_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, false if it did not.
 // "ints" will have all integers found in the array appended to it.
 
-bool get_array_of_ints_value_for_key_name_from_json(
+static bool get_array_of_ints_value_for_key_name_from_json(
     const char *key, const char *json_string, std::vector<uint64_t> &ints) {
   std::string key_with_quotes = "\"";
   key_with_quotes += key;
