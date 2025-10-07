@@ -1434,7 +1434,7 @@ template<typename, typename... Ts>
 concept true_types = true_int<sizeof...(Ts), void>;
 
 template<typename, typename... Ts>
-concept true_types2 = true_int<Ts...[0]{1}, void>;
+concept true_types2 = true_int<Ts...[0]{1}, void>; // cxx20-warning {{pack indexing is a C++2c extension}}
 
 template<typename... Ts>
 struct s {
