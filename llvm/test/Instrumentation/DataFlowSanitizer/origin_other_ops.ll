@@ -22,7 +22,7 @@ define i1 @binop(i1 %a, i1 %b) {
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -55,7 +55,7 @@ define i1 @cmpop(i1 %a, i1 %b) {
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -76,9 +76,9 @@ define ptr @gepop(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 6) to ptr), align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 6), align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i8 [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i8 [[TMP9]], [[TMP6]]
@@ -103,7 +103,7 @@ define i32 @eeop(<4 x i32> %a, i32 %b) {
 ; CHECK-SAME: <4 x i32> [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -123,8 +123,8 @@ define <4 x i32> @ieop(<4 x i32> %p, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i8 [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i8 [[TMP7]], [[TMP4]]
@@ -146,7 +146,7 @@ define <4 x i32> @svop(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -182,7 +182,7 @@ define {i32, {float, float}} @ivop({i32, {float, float}} %a, {float, float} %b) 
 ; CHECK-SAME: { i32, { float, float } } [[A:%.*]], { float, float } [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load { i8, { i8, i8 } }, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i8, { i8, i8 } } [[TMP4]], { i8, i8 } [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { i8, i8 } [[TMP3]], 0

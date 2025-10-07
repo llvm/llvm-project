@@ -48,7 +48,7 @@ define void @load_update_store_vector(ptr %p) {
 define <4 x i1> @icmp_vector(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: define <4 x i1> @icmp_vector(
 ; CHECK-SAME: <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[A]], [[B]]

@@ -7,8 +7,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @select8(i1 %c, i8 %t, i8 %f) {
 ; TRACK_CF-LABEL: define i8 @select8(
 ; TRACK_CF-SAME: i1 [[C:%.*]], i8 [[T:%.*]], i8 [[F:%.*]]) {
-; TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; TRACK_CF-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; TRACK_CF-NEXT:    [[TMP4:%.*]] = select i1 [[C]], i8 [[TMP2]], i8 [[TMP1]]
 ; TRACK_CF-NEXT:    [[TMP5:%.*]] = or i8 [[TMP3]], [[TMP4]]
@@ -18,8 +18,8 @@ define i8 @select8(i1 %c, i8 %t, i8 %f) {
 ;
 ; NO_TRACK_CF-LABEL: define i8 @select8(
 ; NO_TRACK_CF-SAME: i1 [[C:%.*]], i8 [[T:%.*]], i8 [[F:%.*]]) {
-; NO_TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; NO_TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; NO_TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; NO_TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_TRACK_CF-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; NO_TRACK_CF-NEXT:    [[TMP4:%.*]] = select i1 [[C]], i8 [[TMP2]], i8 [[TMP1]]
 ; NO_TRACK_CF-NEXT:    [[A:%.*]] = select i1 [[C]], i8 [[T]], i8 [[F]]
@@ -33,7 +33,7 @@ define i8 @select8(i1 %c, i8 %t, i8 %f) {
 define i8 @select8e(i1 %c, i8 %tf) {
 ; TRACK_CF-LABEL: define i8 @select8e(
 ; TRACK_CF-SAME: i1 [[C:%.*]], i8 [[TF:%.*]]) {
-; TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; TRACK_CF-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; TRACK_CF-NEXT:    [[A:%.*]] = select i1 [[C]], i8 [[TF]], i8 [[TF]]
@@ -42,7 +42,7 @@ define i8 @select8e(i1 %c, i8 %tf) {
 ;
 ; NO_TRACK_CF-LABEL: define i8 @select8e(
 ; NO_TRACK_CF-SAME: i1 [[C:%.*]], i8 [[TF:%.*]]) {
-; NO_TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; NO_TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; NO_TRACK_CF-NEXT:    [[A:%.*]] = select i1 [[C]], i8 [[TF]], i8 [[TF]]
 ; NO_TRACK_CF-NEXT:    store i8 [[TMP1]], ptr @__dfsan_retval_tls, align 2
@@ -55,8 +55,8 @@ define i8 @select8e(i1 %c, i8 %tf) {
 define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
 ; TRACK_CF-LABEL: define <4 x i8> @select8v(
 ; TRACK_CF-SAME: <4 x i1> [[C:%.*]], <4 x i8> [[T:%.*]], <4 x i8> [[F:%.*]]) {
-; TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; TRACK_CF-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; TRACK_CF-NEXT:    [[TMP4:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; TRACK_CF-NEXT:    [[TMP5:%.*]] = or i8 [[TMP3]], [[TMP4]]
@@ -66,8 +66,8 @@ define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
 ;
 ; NO_TRACK_CF-LABEL: define <4 x i8> @select8v(
 ; NO_TRACK_CF-SAME: <4 x i1> [[C:%.*]], <4 x i8> [[T:%.*]], <4 x i8> [[F:%.*]]) {
-; NO_TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; NO_TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; NO_TRACK_CF-NEXT:    [[TMP1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; NO_TRACK_CF-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_TRACK_CF-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; NO_TRACK_CF-NEXT:    [[TMP4:%.*]] = or i8 [[TMP2]], [[TMP1]]
 ; NO_TRACK_CF-NEXT:    [[A:%.*]] = select <4 x i1> [[C]], <4 x i8> [[T]], <4 x i8> [[F]]

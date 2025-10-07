@@ -9,7 +9,7 @@ define i32 @phiop(i32 %a, i32 %b, i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:    br i1 [[C]], label %[[NEXT:.*]], label %[[DONE:.*]]
 ; CHECK:       [[NEXT]]:
