@@ -175,7 +175,7 @@ jobs:
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*|windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            build_runs_on="depot-${{ inputs.runs-on }}-64"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
@@ -247,6 +247,9 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
+    - name: Install Wix
+      run: |
+        dotnet tool install --global wix
     - name: Configure
       id: build
       env:
@@ -276,6 +279,8 @@ jobs:
             -DBOOTSTRAP_BOOTSTRAP_CMAKE_NINJA_FORCE_RESPONSE_FILE=1 `
             -DBOOTSTRAP_CMAKE_OBJECT_PATH_MAX=500 `
             -DBOOTSTRAP_BOOTSTRAP_CMAKE_OBJECT_PATH_MAX=500 `
+            -DBOOTSTRAP_BOOTSTRAP_LLVM_BUILD_TOOLS=OFF `
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_GENERATOR=WIX `
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build Unix
