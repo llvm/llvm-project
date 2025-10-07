@@ -45,7 +45,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
   send_message.msg_controllen = 0;
   send_message.msg_flags = 0;
 
-  ASSERT_THAT(LIBC_NAMESPACE::sendmsg(sockpair[0], &send_message, 0),
+  ASSERT_THAT((int)LIBC_NAMESPACE::sendmsg(sockpair[0], &send_message, 0),
               Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
 
   char buffer[256];
@@ -63,7 +63,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
   recv_message.msg_controllen = 0;
   recv_message.msg_flags = 0;
 
-  ASSERT_THAT(LIBC_NAMESPACE::recvmsg(sockpair[1], &recv_message, 0),
+  ASSERT_THAT((int)LIBC_NAMESPACE::recvmsg(sockpair[1], &recv_message, 0),
               Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
 
   ASSERT_STREQ(buffer, TEST_MESSAGE);
@@ -91,7 +91,7 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendFails) {
   send_message.msg_controllen = 0;
   send_message.msg_flags = 0;
 
-  ASSERT_THAT(LIBC_NAMESPACE::sendmsg(-1, &send_message, 0), Fails(EBADF));
+  ASSERT_THAT((int)LIBC_NAMESPACE::sendmsg(-1, &send_message, 0), Fails(EBADF));
 }
 
 TEST_F(LlvmLibcSendMsgRecvMsgTest, RecvFails) {
@@ -110,5 +110,5 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, RecvFails) {
   recv_message.msg_controllen = 0;
   recv_message.msg_flags = 0;
 
-  ASSERT_THAT(LIBC_NAMESPACE::recvmsg(-1, &recv_message, 0), Fails(EBADF));
+  ASSERT_THAT((int)LIBC_NAMESPACE::recvmsg(-1, &recv_message, 0), Fails(EBADF));
 }
