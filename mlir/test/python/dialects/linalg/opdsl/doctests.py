@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 import doctest
 import importlib

@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 
 from mlir.dialects import arith, func, linalg, tensor, memref
 from mlir.dialects.linalg.opdsl.lang import *

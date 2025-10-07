@@ -1,4 +1,5 @@
 # RUN: %PYTHON %s
+# RUN: %PYTHON -m mypy %s --config-file %mlir_src_root/test/python/mypy.ini
 # It is sufficient that this doesn't assert.
 
 from mlir.ir import *
