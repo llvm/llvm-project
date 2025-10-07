@@ -548,7 +548,7 @@ different forms as *canonical* for different transforms.
 Linalg's various forms also carry information, and that
 information should be preserved as much as possible during the progressive
 lowering. A `matmul` operation is a special case of a `contract` operation,
-which in turn is a special case of `generic` operation. Transformations on
+which in turn is a special case of a `generic` operation. Transformations on
 the more special forms should not be converted to the more generic ones
 unnecessarily, in the same way that they should not be broken down into
 loops + arithmetic if they can still be represented as a Linalg op.
@@ -558,7 +558,7 @@ loops + arithmetic if they can still be represented as a Linalg op.
 With multiple (often exchangeable) forms, and with transformation simplicity
 in mind, compilers should aim for reducing matching and replacing complexity
 as much as possible. When matching a single operation with a complex pattern,
-having all the information in a `generic` is useful to iteratively match
+having all the information in a `generic` Op is useful to iteratively match
 different patterns in turn. However, when assembling a DAG of operations to
 form a pattern, it's much simpler to match against named operations (like
 `max` + `div` + `reduce` + `broadcast`) than their generic counterparts.
