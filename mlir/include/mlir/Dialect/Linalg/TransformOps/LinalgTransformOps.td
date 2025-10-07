@@ -445,9 +445,10 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
   ];
 
   let assemblyFormat = [{
-    $target
-    (`tile_sizes` custom<DynamicIndexList>($tile_sizes, $static_tile_sizes)^)?
-    (`interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)^)?
+    $target oilist(
+      `tile_sizes` custom<DynamicIndexList>($tile_sizes, $static_tile_sizes) |
+      `interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)
+    )
     attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
