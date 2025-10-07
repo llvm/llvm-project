@@ -113,6 +113,7 @@ public:
                                           CIRGenFunction &cgf) = 0;
 
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
+  virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
 
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
