@@ -228,7 +228,7 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
   for (const auto &S : reverse(Sections)) {
     if (S.SectionMatcher.match(Section)) {
-      unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
+      unsigned Blame = S.getLastMatch(Prefix, Query, Category);
       if (Blame)
         return {S.FileIdx, Blame};
     }
@@ -236,9 +236,9 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
   return NotFound;
 }
 
-unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
-                                         StringRef Prefix, StringRef Query,
-                                         StringRef Category) const {
+unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
+                                                StringRef Query,
+                                                StringRef Category) const {
   SectionEntries::const_iterator I = Entries.find(Prefix);
   if (I == Entries.end())
     return 0;
