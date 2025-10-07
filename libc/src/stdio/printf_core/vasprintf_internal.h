@@ -43,7 +43,7 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 
-LIBC_INLINE int vasprintf_internal(char **ret, const char *__restrict format,
+LIBC_INLINE PrintfResult vasprintf_internal(char **ret, const char *__restrict format,
                                    internal::ArgList args) {
   char init_buff_on_stack[DEFAULT_BUFFER_SIZE];
   printf_core::WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> wb(
@@ -51,19 +51,19 @@ LIBC_INLINE int vasprintf_internal(char **ret, const char *__restrict format,
   printf_core::Writer writer(wb);
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
-  if (ret_val < 0) {
+  if (ret_val.has_error()) {
     *ret = nullptr;
-    return -1;
+    return ret_val;
   }
   if (wb.buff == init_buff_on_stack) {
-    *ret = static_cast<char *>(malloc(ret_val + 1));
+    *ret = static_cast<char *>(malloc(ret_val.value + 1));
     if (ret == nullptr)
       return -ENOMEM;
-    inline_memcpy(*ret, wb.buff, ret_val);
+    inline_memcpy(*ret, wb.buff, ret_val.value);
   } else {
     *ret = wb.buff;
   }
-  (*ret)[ret_val] = '\0';
+  (*ret)[ret_val.value] = '\0'; // TODO OK HERE or overflow
   return ret_val;
 }
 } // namespace printf_core

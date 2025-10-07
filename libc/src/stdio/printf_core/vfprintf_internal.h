@@ -68,7 +68,7 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   return WRITE_OK;
 }
 
-LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
+LIBC_INLINE PrintfResult vfprintf_internal(::FILE *__restrict stream,
                                   const char *__restrict format,
                                   internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
@@ -77,10 +77,10 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
       buffer, BUFF_SIZE, &file_write_hook, reinterpret_cast<void *>(stream));
   Writer writer(wb);
   internal::flockfile(stream);
-  int retval = printf_main(&writer, format, args);
+  auto retval = printf_main(&writer, format, args);
   int flushval = wb.overflow_write("");
   if (flushval != WRITE_OK)
-    retval = flushval;
+    retval.error = -flushval;
   internal::funlockfile(stream);
   return retval;
 }

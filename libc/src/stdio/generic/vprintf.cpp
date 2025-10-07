@@ -29,9 +29,18 @@ LLVM_LIBC_FUNCTION(int, vprintf,
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
-  int ret_val = printf_core::vfprintf_internal(
+  auto ret_val = printf_core::vfprintf_internal(
       reinterpret_cast<::FILE *>(PRINTF_STDOUT), format, args);
-  return ret_val;
+  if (ret_val.has_error()) {
+    libc_errno = ret_val.error;
+    return -1;
+  }
+  if (ret_val.value > cpp::numeric_limits<int>::max()) {
+    libc_errno = EOVERFLOW;
+    return -1;
+  } 
+
+  return static_cast<int>(ret_val.value); 
 }
 
 } // namespace LIBC_NAMESPACE_DECL

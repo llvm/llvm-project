@@ -29,10 +29,20 @@ LLVM_LIBC_FUNCTION(int, vsnprintf,
       wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(wb);
 
-  int ret_val = printf_core::printf_main(&writer, format, args);
+  auto ret_val = printf_core::printf_main(&writer, format, args);
+  if (ret_val.has_error()) {
+    libc_errno = ret_val.error;
+    return -1;
+  }
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
     wb.buff[wb.buff_cur] = '\0';
-  return ret_val;
+  
+  if (ret_val.value > cpp::numeric_limits<int>::max()) {
+    libc_errno = EOVERFLOW;
+    return -1;
+  } 
+  
+  return static_cast<int>(ret_val.value);  
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -22,8 +22,17 @@ LLVM_LIBC_FUNCTION(int, asprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  int ret = printf_core::vasprintf_internal(buffer, format, args);
-  return ret;
+  auto ret_val = printf_core::vasprintf_internal(buffer, format, args);
+  if (ret_val.has_error()) {
+    libc_errno = ret_val.error;
+    return -1;
+  }
+  if (ret_val.value > cpp::numeric_limits<int>::max()) {
+    libc_errno = EOVERFLOW;
+    return -1;
+  } 
+
+  return static_cast<int>(ret_val.value);  
 }
 
 } // namespace LIBC_NAMESPACE_DECL

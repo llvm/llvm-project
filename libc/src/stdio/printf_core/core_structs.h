@@ -22,6 +22,18 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
+struct PrintfResult {
+  size_t value;
+  int error;
+
+  constexpr PrintfResult(size_t val) : value(val), error(0) {}
+  constexpr PrintfResult(size_t val, int error) : value(val), error(error) {}
+
+  constexpr bool has_error() { return error != 0; }
+
+  constexpr operator size_t() { return value; }
+};
+
 // These length modifiers match the length modifiers in the format string, which
 // is why they are formatted differently from the rest of the file.
 enum class LengthModifier { hh, h, l, ll, j, z, t, L, w, wf, none };
