@@ -419,13 +419,18 @@ public:
     // The expression for this variable, OR
     const Expr *Exp = nullptr;
 
-    // Reference to another VarDefinition
-    unsigned Ref = 0;
+    // Direct reference to another VarDefinition
+    unsigned DirectRef = 0;
+
+    // Reference to underlying canonical non-reference VarDefinition.
+    unsigned CanonicalRef = 0;
 
     // The map with which Exp should be interpreted.
     Context Ctx;
 
     bool isReference() const { return !Exp; }
+
+    void invalidateRef() { DirectRef = CanonicalRef = 0; }
 
   private:
     // Create ordinary variable definition
@@ -433,8 +438,9 @@ public:
         : Dec(D), Exp(E), Ctx(C) {}
 
     // Create reference to previous definition
-    VarDefinition(const NamedDecl *D, unsigned R, Context C)
-        : Dec(D), Ref(R), Ctx(C) {}
+    VarDefinition(const NamedDecl *D, unsigned DirectRef, unsigned CanonicalRef,
+                  Context C)
+        : Dec(D), DirectRef(DirectRef), CanonicalRef(CanonicalRef), Ctx(C) {}
   };
 
 private:
@@ -445,7 +451,7 @@ private:
 public:
   LocalVariableMap() {
     // index 0 is a placeholder for undefined variables (aka phi-nodes).
-    VarDefinitions.push_back(VarDefinition(nullptr, 0u, getEmptyContext()));
+    VarDefinitions.push_back(VarDefinition(nullptr, 0, 0, getEmptyContext()));
   }
 
   /// Look up a definition, within the given context.
@@ -471,7 +477,7 @@ public:
         Ctx = VarDefinitions[i].Ctx;
         return VarDefinitions[i].Exp;
       }
-      i = VarDefinitions[i].Ref;
+      i = VarDefinitions[i].DirectRef;
     }
     return nullptr;
   }
@@ -508,7 +514,7 @@ public:
   void dump() {
     for (unsigned i = 1, e = VarDefinitions.size(); i < e; ++i) {
       const Expr *Exp = VarDefinitions[i].Exp;
-      unsigned Ref = VarDefinitions[i].Ref;
+      unsigned Ref = VarDefinitions[i].DirectRef;
 
       dumpVarDefinitionName(i);
       llvm::errs() << " = ";
@@ -539,9 +545,9 @@ protected:
   friend class VarMapBuilder;
 
   // Resolve any definition ID down to its non-reference base ID.
-  unsigned getCanonicalDefinitionID(unsigned ID) {
+  unsigned getCanonicalDefinitionID(unsigned ID) const {
     while (ID > 0 && VarDefinitions[ID].isReference())
-      ID = VarDefinitions[ID].Ref;
+      ID = VarDefinitions[ID].CanonicalRef;
     return ID;
   }
 
@@ -564,10 +570,11 @@ protected:
   }
 
   // Add a new reference to an existing definition.
-  Context addReference(const NamedDecl *D, unsigned i, Context Ctx) {
+  Context addReference(const NamedDecl *D, unsigned Ref, Context Ctx) {
     unsigned newID = VarDefinitions.size();
     Context NewCtx = ContextFactory.add(Ctx, D, newID);
-    VarDefinitions.push_back(VarDefinition(D, i, Ctx));
+    VarDefinitions.push_back(
+        VarDefinition(D, Ref, getCanonicalDefinitionID(Ref), Ctx));
     return NewCtx;
   }
 
@@ -769,15 +776,14 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
     const unsigned *I2 = C2.lookup(P.first);
     if (!I2) {
       // Variable does not exist at the end of the loop, invalidate.
-      VDef->Ref = 0;
+      VDef->invalidateRef();
       continue;
     }
 
     // Compare the canonical IDs. This correctly handles chains of references
     // and determines if the variable is truly loop-invariant.
-    if (getCanonicalDefinitionID(VDef->Ref) != getCanonicalDefinitionID(*I2)) {
-      VDef->Ref = 0; // Mark this variable as undefined
-    }
+    if (VDef->CanonicalRef != getCanonicalDefinitionID(*I2))
+      VDef->invalidateRef(); // Mark this variable as undefined
   }
 }
 
