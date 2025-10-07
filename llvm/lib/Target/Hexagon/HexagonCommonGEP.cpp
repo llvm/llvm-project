@@ -330,7 +330,7 @@ bool HexagonCommonGEP::isHandledGepForm(GetElementPtrInst *GepI) {
   if (!GepI->getType()->isPointerTy())
     return false;
   // No GEPs without any indices.  (Is this possible?)
-  if (GepI->idx_begin() == GepI->idx_end())
+  if (GepI->indices().empty())
     return false;
   return true;
 }

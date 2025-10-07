@@ -110,6 +110,7 @@ enum RelExpr {
   RE_MIPS_GOT_LOCAL_PAGE,
   RE_MIPS_GOT_OFF,
   RE_MIPS_GOT_OFF32,
+  RE_MIPS_OSEC_LOCAL_PAGE,
   RE_MIPS_TLSGD,
   RE_MIPS_TLSLD,
   RE_PPC32_PLTREL,
@@ -163,6 +164,8 @@ void addGotEntry(Ctx &ctx, Symbol &sym);
 
 void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
+bool isAbsolute(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;

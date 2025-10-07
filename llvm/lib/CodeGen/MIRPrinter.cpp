@@ -149,7 +149,13 @@ static void convertMCP(yaml::MachineFunction &MF,
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
                         const MachineJumpTableInfo &JTI);
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
-                       const MachineFrameInfo &MFI);
+                       const MachineFrameInfo &MFI,
+                       const TargetRegisterInfo *TRI);
+static void
+convertSRPoints(ModuleSlotTracker &MST,
+                std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+                const llvm::SaveRestorePoints &SRPoints,
+                const TargetRegisterInfo *TRI);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -200,7 +206,8 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
   convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker &MST = State.MST;
   MST.incorporateFunction(MF.getFunction());
-  convertMFI(MST, YamlMF.FrameInfo, MF.getFrameInfo());
+  convertMFI(MST, YamlMF.FrameInfo, MF.getFrameInfo(),
+             MF.getSubtarget().getRegisterInfo());
   convertStackObjects(YamlMF, MF, MST, State);
   convertEntryValueObjects(YamlMF, MF, MST);
   convertCallSiteObjects(YamlMF, MF, MST);
@@ -335,7 +342,8 @@ static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
 }
 
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
-                       const MachineFrameInfo &MFI) {
+                       const MachineFrameInfo &MFI,
+                       const TargetRegisterInfo *TRI) {
   YamlMFI.IsFrameAddressTaken = MFI.isFrameAddressTaken();
   YamlMFI.IsReturnAddressTaken = MFI.isReturnAddressTaken();
   YamlMFI.HasStackMap = MFI.hasStackMap();
@@ -355,14 +363,10 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.HasTailCall = MFI.hasTailCall();
   YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
-  if (MFI.getSavePoint()) {
-    raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
-    StrOS << printMBBReference(*MFI.getSavePoint());
-  }
-  if (MFI.getRestorePoint()) {
-    raw_string_ostream StrOS(YamlMFI.RestorePoint.Value);
-    StrOS << printMBBReference(*MFI.getRestorePoint());
-  }
+  if (!MFI.getSavePoints().empty())
+    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoints(), TRI);
+  if (!MFI.getRestorePoints().empty())
+    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoints(), TRI);
 }
 
 static void convertEntryValueObjects(yaml::MachineFunction &YMF,
@@ -525,23 +529,29 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
-  for (auto CSInfo : MF.getCallSitesInfo()) {
+  for (auto [MI, CallSiteInfo] : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI = MI->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
     CallLocation.Offset =
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
+
+    auto [ArgRegPairs, CalleeTypeIds] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
-    for (auto ArgReg : CSInfo.second.ArgRegPairs) {
+    for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
       YmlArgReg.ArgNo = ArgReg.ArgNo;
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
+    }
+    // Get type ids.
+    for (auto *CalleeTypeId : CalleeTypeIds) {
+      YmlCS.CalleeTypeIds.push_back(CalleeTypeId->getZExtValue());
     }
     YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
@@ -608,6 +618,40 @@ static void convertMCP(yaml::MachineFunction &MF,
 
     MF.Constants.push_back(std::move(YamlConstant));
   }
+}
+
+static void
+convertSRPoints(ModuleSlotTracker &MST,
+                std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+                const llvm::SaveRestorePoints &SRPoints,
+                const TargetRegisterInfo *TRI) {
+  for (const auto &[MBB, CSInfos] : SRPoints) {
+    SmallString<16> Str;
+    yaml::SaveRestorePointEntry Entry;
+    raw_svector_ostream StrOS(Str);
+    StrOS << printMBBReference(*MBB);
+    Entry.Point = StrOS.str().str();
+    Str.clear();
+    for (const CalleeSavedInfo &Info : CSInfos) {
+      if (Info.getReg()) {
+        StrOS << printReg(Info.getReg(), TRI);
+        Entry.Registers.push_back(StrOS.str().str());
+        Str.clear();
+      }
+    }
+    // Sort here needed for stable output for lit tests
+    std::sort(Entry.Registers.begin(), Entry.Registers.end(),
+              [](const yaml::StringValue &Lhs, const yaml::StringValue &Rhs) {
+                return Lhs.Value < Rhs.Value;
+              });
+    YamlSRPoints.push_back(std::move(Entry));
+  }
+  // Sort here needed for stable output for lit tests
+  std::sort(YamlSRPoints.begin(), YamlSRPoints.end(),
+            [](const yaml::SaveRestorePointEntry &Lhs,
+               const yaml::SaveRestorePointEntry &Rhs) {
+              return Lhs.Point.Value < Rhs.Point.Value;
+            });
 }
 
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
@@ -814,6 +858,11 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "nusw ";
   if (MI.getFlag(MachineInstr::SameSign))
     OS << "samesign ";
+  if (MI.getFlag(MachineInstr::InBounds))
+    OS << "inbounds ";
+
+  // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
+  // llvm/utils/update_mir_test_checks.py.
 
   OS << TII->getName(MI.getOpcode());
 

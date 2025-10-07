@@ -1,5 +1,3 @@
-// REQUIRES: shell
-//
 // Check driver works
 // RUN: %clang -fmodules -fsyntax-only -fmodules-validate-input-files-content %s -### 2>&1 | FileCheck --check-prefix=CHECK-CC1 %s
 // CHECK-CC1: -fvalidate-ast-input-files-content

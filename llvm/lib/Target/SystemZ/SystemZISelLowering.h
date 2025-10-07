@@ -523,12 +523,14 @@ public:
                             bool MathUsed) const override {
     // Form add and sub with overflow intrinsics regardless of any extra
     // users of the math result.
-    return VT == MVT::i32 || VT == MVT::i64;
+    return VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128;
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
-  bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
+  bool preferSelectsOverBooleanArithmetic(EVT VT) const override {
+    return true;
+  }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>

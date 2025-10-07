@@ -18,8 +18,7 @@
 
 #include "llvm/Support/DataTypes.h"
 
-namespace llvm {
-namespace X86Disassembler {
+namespace llvm::X86Disassembler {
 
 #define INSTRUCTIONS_SYM x86DisassemblerInstrSpecifiers
 #define CONTEXTS_SYM x86DisassemblerContexts
@@ -541,7 +540,6 @@ static const unsigned X86_MAX_OPERANDS = 6;
 /// respectively.
 enum DisassemblerMode { MODE_16BIT, MODE_32BIT, MODE_64BIT };
 
-} // namespace X86Disassembler
-} // namespace llvm
+} // namespace llvm::X86Disassembler
 
 #endif

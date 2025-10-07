@@ -20,7 +20,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -505,7 +504,7 @@ public:
     // Remember that the function is a thumb function. Fixup and relocation
     // values will need adjusted.
     getStreamer().getAssembler().setIsThumbFunc(Symbol);
-    cast<MCSymbolMachO>(Symbol)->setThumbFunc();
+    static_cast<MCSymbolMachO *>(Symbol)->setThumbFunc();
   }
 };
 } // namespace

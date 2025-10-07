@@ -9,6 +9,6 @@
 #include <clc/geometric/clc_dot.h>
 #include <clc/opencl/geometric/dot.h>
 
-#define FUNCTION dot
+#define __CLC_FUNCTION dot
 #define __CLC_BODY <clc/geometric/binary_def.inc>
 #include <clc/math/gentype.inc>

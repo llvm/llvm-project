@@ -217,7 +217,8 @@ private:
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
 
-  void registerUnit(DWARFUnit &DU, bool NeedSort);
+  /// Returns true if DWARFUnit is registered successfully.
+  bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);

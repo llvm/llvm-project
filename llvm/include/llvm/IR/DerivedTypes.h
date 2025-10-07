@@ -479,7 +479,8 @@ public:
   /// the input type, and the element type is an integer type of the same width
   /// as the input element type.
   static VectorType *getInteger(VectorType *VTy) {
-    unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
+    unsigned EltBits =
+        VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
     assert(EltBits && "Element size must be of a non-zero size");
     Type *EltTy = IntegerType::get(VTy->getContext(), EltBits);
     return VectorType::get(EltTy, VTy->getElementCount());
@@ -510,7 +511,8 @@ public:
         llvm_unreachable("Cannot create narrower fp vector element type");
       }
     } else {
-      unsigned EltBits = VTy->getElementType()->getPrimitiveSizeInBits();
+      unsigned EltBits =
+          VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
       assert((EltBits & 1) == 0 &&
              "Cannot truncate vector element with odd bit-width");
       EltTy = IntegerType::get(VTy->getContext(), EltBits / 2);
@@ -845,8 +847,11 @@ public:
     /// This type may be allocated on the stack, either as the allocated type
     /// of an alloca instruction or as a byval function parameter.
     CanBeLocal = 1U << 2,
-    // This type may be used as an element in a vector.
+    /// This type may be used as an element in a vector.
     CanBeVectorElement = 1U << 3,
+    // This type can only be used in intrinsic arguments and return values.
+    /// In particular, it cannot be used in select and phi instructions.
+    IsTokenLike = 1U << 4,
   };
 
   /// Returns true if the target extension type contains the given property.

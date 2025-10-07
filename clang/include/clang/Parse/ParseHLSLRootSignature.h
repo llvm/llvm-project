@@ -30,7 +30,6 @@ namespace hlsl {
 class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
-                      SmallVector<RootSignatureElement> &Elements,
                       StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
@@ -39,6 +38,9 @@ public:
   ///
   /// Returns true if a parsing error is encountered.
   bool parse();
+
+  /// Return all elements that have been parsed.
+  ArrayRef<RootSignatureElement> getElements() { return Elements; }
 
 private:
   DiagnosticsEngine &getDiags() { return PP.getDiagnostics(); }
@@ -128,6 +130,7 @@ private:
     std::optional<float> MaxLOD;
     std::optional<uint32_t> Space;
     std::optional<llvm::dxbc::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::StaticSamplerFlags> Flags;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
@@ -151,6 +154,8 @@ private:
   parseRootDescriptorFlags(RootSignatureToken::Kind Context);
   std::optional<llvm::dxbc::DescriptorRangeFlags>
   parseDescriptorRangeFlags(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::StaticSamplerFlags>
+  parseStaticSamplerFlags(RootSignatureToken::Kind Context);
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
@@ -226,13 +231,19 @@ private:
 
 private:
   llvm::dxbc::RootSignatureVersion Version;
-  SmallVector<RootSignatureElement> &Elements;
+  SmallVector<RootSignatureElement> Elements;
   StringLiteral *Signature;
   RootSignatureLexer Lexer;
   Preprocessor &PP;
 
   RootSignatureToken CurToken;
 };
+
+IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
+                                       llvm::dxbc::RootSignatureVersion Version,
+                                       StringLiteral *Signature);
+
+void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig);
 
 } // namespace hlsl
 } // namespace clang

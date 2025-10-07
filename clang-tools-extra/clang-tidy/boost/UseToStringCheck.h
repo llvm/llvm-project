@@ -1,4 +1,4 @@
-//===--- UseToStringCheck.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::boost {
 /// ``std::to_string`` and ``std::to_wstring`` calls.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/boost/use-to-string.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/boost/use-to-string.html
 class UseToStringCheck : public ClangTidyCheck {
 public:
   UseToStringCheck(StringRef Name, ClangTidyContext *Context)

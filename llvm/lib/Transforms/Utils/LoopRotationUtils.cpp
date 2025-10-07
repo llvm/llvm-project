@@ -158,10 +158,8 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 
     // Replace MetadataAsValue(ValueAsMetadata(OrigHeaderVal)) uses in debug
     // intrinsics.
-    SmallVector<DbgValueInst *, 1> DbgValues;
     SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
-    llvm::findDbgValues(DbgValues, OrigHeaderVal, &DbgVariableRecords);
-    assert(DbgValues.empty());
+    llvm::findDbgValues(OrigHeaderVal, DbgVariableRecords);
 
     for (DbgVariableRecord *DVR : DbgVariableRecords) {
       // The original users in the OrigHeader are already using the original

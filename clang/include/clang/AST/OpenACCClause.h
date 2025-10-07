@@ -835,46 +835,127 @@ public:
   ArrayRef<Expr *> getVarList() const { return getExprs(); }
 };
 
+// Represents all the data needed for recipe generation.  The declaration and
+// init are stored separately, because in the case of subscripts, we do the
+// alloca at the level of the base, and the init at the element level.
+struct OpenACCPrivateRecipe {
+  VarDecl *AllocaDecl;
+
+  OpenACCPrivateRecipe(VarDecl *A) : AllocaDecl(A) {}
+
+  bool isSet() const { return AllocaDecl; }
+
+  static OpenACCPrivateRecipe Empty() {
+    return OpenACCPrivateRecipe(/*AllocaDecl=*/nullptr);
+  }
+};
+
 class OpenACCPrivateClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *,
+                                    OpenACCPrivateRecipe> {
   friend TrailingObjects;
 
   OpenACCPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
-                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                       ArrayRef<Expr *> VarList,
+                       ArrayRef<OpenACCPrivateRecipe> InitRecipes,
+                       SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Private, BeginLoc,
                                  LParenLoc, EndLoc) {
-    setExprs(getTrailingObjects(VarList.size()), VarList);
+    assert(VarList.size() == InitRecipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(InitRecipes,
+                             getTrailingObjects<OpenACCPrivateRecipe>());
   }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::Private;
   }
+  // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
+  // ensure that we properly initialize each of these variables.
+  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() {
+    return ArrayRef<OpenACCPrivateRecipe>{
+        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() const {
+    return ArrayRef<OpenACCPrivateRecipe>{
+        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
+  }
+
   static OpenACCPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         ArrayRef<Expr *> VarList, ArrayRef<OpenACCPrivateRecipe> InitRecipes,
+         SourceLocation EndLoc);
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
+};
+
+// A 'pair' to stand in for the recipe.  RecipeDecl is the main declaration, and
+// InitFromTemporary is the 'temp' declaration we put in to be 'copied from'.
+struct OpenACCFirstPrivateRecipe {
+  VarDecl *AllocaDecl;
+  VarDecl *InitFromTemporary;
+  OpenACCFirstPrivateRecipe(VarDecl *A, VarDecl *T)
+      : AllocaDecl(A), InitFromTemporary(T) {
+    assert(!InitFromTemporary || InitFromTemporary->getInit() == nullptr);
+  }
+
+  bool isSet() const { return AllocaDecl; }
+
+  static OpenACCFirstPrivateRecipe Empty() {
+    return OpenACCFirstPrivateRecipe(/*AllocaDecl=*/nullptr,
+                                     /*InitFromTemporary=*/nullptr);
+  }
 };
 
 class OpenACCFirstPrivateClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *,
+                                    OpenACCFirstPrivateRecipe> {
   friend TrailingObjects;
 
   OpenACCFirstPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                            ArrayRef<Expr *> VarList,
+                            ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
+                            SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::FirstPrivate, BeginLoc,
                                  LParenLoc, EndLoc) {
-    setExprs(getTrailingObjects(VarList.size()), VarList);
+    assert(VarList.size() == InitRecipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(InitRecipes,
+                             getTrailingObjects<OpenACCFirstPrivateRecipe>());
   }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::FirstPrivate;
   }
+
+  // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
+  // ensure that we properly initialize each of these variables.
+  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() {
+    return ArrayRef<OpenACCFirstPrivateRecipe>{
+        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() const {
+    return ArrayRef<OpenACCFirstPrivateRecipe>{
+        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
+  }
+
   static OpenACCFirstPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         ArrayRef<Expr *> VarList,
+         ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
+         SourceLocation EndLoc);
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
 };
 
 class OpenACCDevicePtrClause final
@@ -1195,19 +1276,39 @@ public:
          SourceLocation EndLoc);
 };
 
+// A structure to stand in for the recipe on a reduction.  RecipeDecl is the
+// 'main' declaration used for initializaiton, which is fixed. 
+struct OpenACCReductionRecipe {
+  VarDecl *AllocaDecl;
+  // TODO: OpenACC: this should eventually have the operations here too.
+
+  OpenACCReductionRecipe(VarDecl *A) : AllocaDecl(A) {}
+
+  bool isSet() const { return AllocaDecl; }
+  static OpenACCReductionRecipe Empty() {
+    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr);
+  }
+};
+
 class OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCReductionClause, Expr *,
+                                    OpenACCReductionRecipe> {
   friend TrailingObjects;
   OpenACCReductionOperator Op;
 
   OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          OpenACCReductionOperator Operator,
-                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                         ArrayRef<Expr *> VarList,
+                         ArrayRef<OpenACCReductionRecipe> Recipes,
+                         SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Reduction, BeginLoc,
                                  LParenLoc, EndLoc),
         Op(Operator) {
-    setExprs(getTrailingObjects(VarList.size()), VarList);
+          assert(VarList.size() == Recipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(Recipes, getTrailingObjects<
+                             OpenACCReductionRecipe > ());
   }
 
 public:
@@ -1215,12 +1316,26 @@ public:
     return C->getClauseKind() == OpenACCClauseKind::Reduction;
   }
 
+  ArrayRef<OpenACCReductionRecipe> getRecipes() {
+    return ArrayRef<OpenACCReductionRecipe>{
+        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
+  }
+
+  ArrayRef<OpenACCReductionRecipe> getRecipes() const {
+    return ArrayRef<OpenACCReductionRecipe>{
+        getTrailingObjects<OpenACCReductionRecipe>(), getExprs().size()};
+  }
+
   static OpenACCReductionClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
-         SourceLocation EndLoc);
+         ArrayRef<OpenACCReductionRecipe> Recipes, SourceLocation EndLoc);
 
   OpenACCReductionOperator getReductionOp() const { return Op; }
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
 };
 
 class OpenACCLinkClause final

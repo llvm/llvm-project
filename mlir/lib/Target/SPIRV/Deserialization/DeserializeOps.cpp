@@ -42,37 +42,38 @@ static inline spirv::Opcode extractOpcode(uint32_t word) {
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto constInfo = getConstant(id)) {
     // Materialize a `spirv.Constant` op at every use site.
-    return opBuilder.create<spirv::ConstantOp>(unknownLoc, constInfo->second,
-                                               constInfo->first);
+    return spirv::ConstantOp::create(opBuilder, unknownLoc, constInfo->second,
+                                     constInfo->first);
   }
   if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
           getConstantCompositeReplicate(id)) {
-    return opBuilder.create<spirv::EXTConstantCompositeReplicateOp>(
-        unknownLoc, constCompositeReplicateInfo->second,
+    return spirv::EXTConstantCompositeReplicateOp::create(
+        opBuilder, unknownLoc, constCompositeReplicateInfo->second,
         constCompositeReplicateInfo->first);
   }
   if (auto varOp = getGlobalVariable(id)) {
-    auto addressOfOp = opBuilder.create<spirv::AddressOfOp>(
-        unknownLoc, varOp.getType(), SymbolRefAttr::get(varOp.getOperation()));
+    auto addressOfOp =
+        spirv::AddressOfOp::create(opBuilder, unknownLoc, varOp.getType(),
+                                   SymbolRefAttr::get(varOp.getOperation()));
     return addressOfOp.getPointer();
   }
   if (auto constOp = getSpecConstant(id)) {
-    auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
-        unknownLoc, constOp.getDefaultValue().getType(),
+    auto referenceOfOp = spirv::ReferenceOfOp::create(
+        opBuilder, unknownLoc, constOp.getDefaultValue().getType(),
         SymbolRefAttr::get(constOp.getOperation()));
     return referenceOfOp.getReference();
   }
   if (SpecConstantCompositeOp specConstCompositeOp =
           getSpecConstantComposite(id)) {
-    auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
-        unknownLoc, specConstCompositeOp.getType(),
+    auto referenceOfOp = spirv::ReferenceOfOp::create(
+        opBuilder, unknownLoc, specConstCompositeOp.getType(),
         SymbolRefAttr::get(specConstCompositeOp.getOperation()));
     return referenceOfOp.getReference();
   }
   if (auto specConstCompositeReplicateOp =
           getSpecConstantCompositeReplicate(id)) {
-    auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
-        unknownLoc, specConstCompositeReplicateOp.getType(),
+    auto referenceOfOp = spirv::ReferenceOfOp::create(
+        opBuilder, unknownLoc, specConstCompositeReplicateOp.getType(),
         SymbolRefAttr::get(specConstCompositeReplicateOp.getOperation()));
     return referenceOfOp.getReference();
   }
@@ -83,7 +84,14 @@ Value spirv::Deserializer::getValue(uint32_t id) {
         specConstOperationInfo->enclosedOpOperands);
   }
   if (auto undef = getUndefType(id)) {
-    return opBuilder.create<spirv::UndefOp>(unknownLoc, undef);
+    return spirv::UndefOp::create(opBuilder, unknownLoc, undef);
+  }
+  if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+          graphConstantARMInfo = getGraphConstantARM(id)) {
+    IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
+    Type resultType = graphConstantARMInfo->resultType;
+    return spirv::GraphConstantARMOp::create(opBuilder, unknownLoc, resultType,
+                                             graphConstantID);
   }
   return valueMap.lookup(id);
 }
@@ -179,6 +187,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
   case spirv::Opcode::OpTypeTensorARM:
+  case spirv::Opcode::OpTypeGraphARM:
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
     return processType(opcode, operands);
   case spirv::Opcode::OpTypeForwardPointer:
@@ -207,12 +216,26 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstantBool(/*isTrue=*/false, operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantNull:
     return processConstantNull(operands);
+  case spirv::Opcode::OpGraphConstantARM:
+    return processGraphConstantARM(operands);
   case spirv::Opcode::OpDecorate:
     return processDecoration(operands);
   case spirv::Opcode::OpMemberDecorate:
     return processMemberDecoration(operands);
   case spirv::Opcode::OpFunction:
     return processFunction(operands);
+  case spirv::Opcode::OpGraphEntryPointARM:
+    if (deferInstructions) {
+      deferredInstructions.emplace_back(opcode, operands);
+      return success();
+    }
+    return processGraphEntryPointARM(operands);
+  case spirv::Opcode::OpGraphARM:
+    return processGraphARM(operands);
+  case spirv::Opcode::OpGraphSetOutputARM:
+    return processOpGraphSetOutputARM(operands);
+  case spirv::Opcode::OpGraphEndARM:
+    return processGraphEndARM(operands);
   case spirv::Opcode::OpLabel:
     return processLabel(operands);
   case spirv::Opcode::OpBranch:
@@ -387,8 +410,9 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     interface.push_back(SymbolRefAttr::get(arg.getOperation()));
     wordIndex++;
   }
-  opBuilder.create<spirv::EntryPointOp>(
-      unknownLoc, execModel, SymbolRefAttr::get(opBuilder.getContext(), fnName),
+  spirv::EntryPointOp::create(
+      opBuilder, unknownLoc, execModel,
+      SymbolRefAttr::get(opBuilder.getContext(), fnName),
       opBuilder.getArrayAttr(interface));
   return success();
 }
@@ -420,9 +444,10 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
     attrListElems.push_back(opBuilder.getI32IntegerAttr(words[wordIndex++]));
   }
   auto values = opBuilder.getArrayAttr(attrListElems);
-  opBuilder.create<spirv::ExecutionModeOp>(
-      unknownLoc, SymbolRefAttr::get(opBuilder.getContext(), fn.getName()),
-      execMode, values);
+  spirv::ExecutionModeOp::create(
+      opBuilder, unknownLoc,
+      SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
+      values);
   return success();
 }
 
@@ -459,8 +484,8 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
     arguments.push_back(value);
   }
 
-  auto opFunctionCall = opBuilder.create<spirv::FunctionCallOp>(
-      unknownLoc, resultType,
+  auto opFunctionCall = spirv::FunctionCallOp::create(
+      opBuilder, unknownLoc, resultType,
       SymbolRefAttr::get(opBuilder.getContext(), functionName), arguments);
 
   if (resultType)
@@ -536,7 +561,8 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   }
 
   Location loc = createFileLineColLoc(opBuilder);
-  opBuilder.create<spirv::CopyMemoryOp>(loc, resultTypes, operands, attributes);
+  spirv::CopyMemoryOp::create(opBuilder, loc, resultTypes, operands,
+                              attributes);
 
   return success();
 }
@@ -567,8 +593,8 @@ LogicalResult Deserializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   operands.push_back(arg);
 
   Location loc = createFileLineColLoc(opBuilder);
-  Operation *op = opBuilder.create<spirv::GenericCastToPtrExplicitOp>(
-      loc, resultTypes, operands);
+  Operation *op = spirv::GenericCastToPtrExplicitOp::create(
+      opBuilder, loc, resultTypes, operands);
   valueMap[valueID] = op->getResult(0);
   return success();
 }

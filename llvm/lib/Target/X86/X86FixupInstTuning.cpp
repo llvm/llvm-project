@@ -277,6 +277,22 @@ bool X86FixupInstTuningPass::processInstruction(
     return true;
   };
 
+  // Is ADD(X,X) more efficient than SHL(X,1)?
+  auto ProcessShiftLeftToAdd = [&](unsigned AddOpc) -> bool {
+    if (MI.getOperand(NumOperands - 1).getImm() != 1)
+      return false;
+    if (!NewOpcPreferable(AddOpc, /*ReplaceInTie*/ true))
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(AddOpc));
+      MI.removeOperand(NumOperands - 1);
+      MI.addOperand(MI.getOperand(NumOperands - 2));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return false;
+  };
+
   switch (Opc) {
   case X86::BLENDPDrri:
     return ProcessBLENDToMOV(X86::MOVSDrr, 0x3, 0x1);
@@ -563,6 +579,44 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKPS(X86::VPUNPCKHDQZ256rmkz);
   case X86::VUNPCKHPSZrmkz:
     return ProcessUNPCKPS(X86::VPUNPCKHDQZrmkz);
+
+  case X86::PSLLWri:
+    return ProcessShiftLeftToAdd(X86::PADDWrr);
+  case X86::VPSLLWri:
+    return ProcessShiftLeftToAdd(X86::VPADDWrr);
+  case X86::VPSLLWYri:
+    return ProcessShiftLeftToAdd(X86::VPADDWYrr);
+  case X86::VPSLLWZ128ri:
+    return ProcessShiftLeftToAdd(X86::VPADDWZ128rr);
+  case X86::VPSLLWZ256ri:
+    return ProcessShiftLeftToAdd(X86::VPADDWZ256rr);
+  case X86::VPSLLWZri:
+    return ProcessShiftLeftToAdd(X86::VPADDWZrr);
+  case X86::PSLLDri:
+    return ProcessShiftLeftToAdd(X86::PADDDrr);
+  case X86::VPSLLDri:
+    return ProcessShiftLeftToAdd(X86::VPADDDrr);
+  case X86::VPSLLDYri:
+    return ProcessShiftLeftToAdd(X86::VPADDDYrr);
+  case X86::VPSLLDZ128ri:
+    return ProcessShiftLeftToAdd(X86::VPADDDZ128rr);
+  case X86::VPSLLDZ256ri:
+    return ProcessShiftLeftToAdd(X86::VPADDDZ256rr);
+  case X86::VPSLLDZri:
+    return ProcessShiftLeftToAdd(X86::VPADDDZrr);
+  case X86::PSLLQri:
+    return ProcessShiftLeftToAdd(X86::PADDQrr);
+  case X86::VPSLLQri:
+    return ProcessShiftLeftToAdd(X86::VPADDQrr);
+  case X86::VPSLLQYri:
+    return ProcessShiftLeftToAdd(X86::VPADDQYrr);
+  case X86::VPSLLQZ128ri:
+    return ProcessShiftLeftToAdd(X86::VPADDQZ128rr);
+  case X86::VPSLLQZ256ri:
+    return ProcessShiftLeftToAdd(X86::VPADDQZ256rr);
+  case X86::VPSLLQZri:
+    return ProcessShiftLeftToAdd(X86::VPADDQZrr);
+
   default:
     return false;
   }

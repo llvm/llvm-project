@@ -107,6 +107,17 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   return utohexstr(Value, true);
 }
 
+/// Retrieves the Value's enum name.
+///
+/// Returns an empty StringRef when an invalid value is provided.
+template <typename T, typename TEnum>
+StringRef enumToStringRef(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
+  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
+    if (EnumItem.Value == Value)
+      return EnumItem.AltName;
+  return "";
+}
+
 class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
@@ -273,9 +284,11 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
-  template <typename... T> void printVersion(StringRef Label, T... Version) {
+  template <typename T, typename... TArgs>
+  void printVersion(StringRef Label, T MajorVersion, TArgs... MinorVersions) {
     startLine() << Label << ": ";
-    printVersionInternal(Version...);
+    getOStream() << MajorVersion;
+    ((getOStream() << '.' << MinorVersions), ...);
     getOStream() << "\n";
   }
 
@@ -443,16 +456,6 @@ public:
   virtual raw_ostream &getOStream() { return OS; }
 
 private:
-  template <typename T> void printVersionInternal(T Value) {
-    getOStream() << Value;
-  }
-
-  template <typename S, typename T, typename... TArgs>
-  void printVersionInternal(S Value, T Value2, TArgs... Args) {
-    getOStream() << Value << ".";
-    printVersionInternal(Value2, Args...);
-  }
-
   static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
     return LHS.Name < RHS.Name;
   }

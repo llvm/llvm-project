@@ -132,7 +132,8 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
   // But only if they don't point to a few forbidden sections.
   if (!Symbol.isInSection())
     return true;
-  const MCSectionMachO &RefSec = cast<MCSectionMachO>(Symbol.getSection());
+  const MCSectionMachO &RefSec =
+      static_cast<MCSectionMachO &>(Symbol.getSection());
   if (RefSec.getType() == MachO::S_CSTRING_LITERALS)
     return false;
 

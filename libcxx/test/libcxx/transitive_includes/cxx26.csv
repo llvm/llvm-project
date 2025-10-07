@@ -669,7 +669,6 @@ mutex ctime
 mutex limits
 mutex ratio
 mutex tuple
-mutex typeinfo
 mutex version
 new version
 numbers version

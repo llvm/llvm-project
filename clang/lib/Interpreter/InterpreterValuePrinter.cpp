@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IncrementalParser.h"
+#include "IncrementalAction.h"
 #include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -66,10 +66,10 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   const QualType NonRefTy = QT.getNonReferenceType();
 
   if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TTy->getDecl());
+    return DeclTypeToString(NonRefTy, TTy->getOriginalDecl());
 
   if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TRy->getDecl());
+    return DeclTypeToString(NonRefTy, TRy->getOriginalDecl());
 
   const QualType Canon = NonRefTy.getCanonicalType();
 
@@ -101,15 +101,11 @@ static std::string EnumToString(const Value &V) {
   llvm::raw_string_ostream SS(Str);
   ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
 
-  QualType DesugaredTy = V.getType().getDesugaredType(Ctx);
-  const EnumType *EnumTy = DesugaredTy.getNonReferenceType()->getAs<EnumType>();
-  assert(EnumTy && "Fail to cast to enum type");
-
-  EnumDecl *ED = EnumTy->getDecl();
   uint64_t Data = V.convertTo<uint64_t>();
   bool IsFirst = true;
-  llvm::APSInt AP = Ctx.MakeIntValue(Data, DesugaredTy);
+  llvm::APSInt AP = Ctx.MakeIntValue(Data, V.getType());
 
+  auto *ED = V.getType()->castAsEnumDecl();
   for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E; ++I) {
     if (I->getInitVal() == AP) {
       if (!IsFirst)
@@ -366,7 +362,7 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
       getCompilerInstance()->getSema().LookupDestructor(CXXRD);
 
   llvm::StringRef Name =
-      getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
+      Act->getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
   auto AddrOrErr = getSymbolAddress(Name);
   if (!AddrOrErr)
     return AddrOrErr.takeError();
@@ -665,8 +661,8 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
   if (VRef.getKind() == Value::K_PtrOrObj) {
     VRef.setPtr(va_arg(args, void *));
   } else {
-    if (const auto *ET = QT->getAs<EnumType>())
-      QT = ET->getDecl()->getIntegerType();
+    if (const auto *ED = QT->getAsEnumDecl())
+      QT = ED->getIntegerType();
     switch (QT->castAs<BuiltinType>()->getKind()) {
     default:
       llvm_unreachable("unknown type kind!");

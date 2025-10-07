@@ -3746,6 +3746,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
+        if (CurTok.isNot(tok::eod))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
       return Result.getLimitedValue();
@@ -3793,9 +3795,13 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
             [[fallthrough]];
           case tok::r_brace:
           case tok::r_square: {
+            if (BracketStack.empty()) {
+              ExpectOrDiagAndSkipToEOD(tok::r_paren);
+              return false;
+            }
             tok::TokenKind Matching =
                 GetMatchingCloseBracket(BracketStack.back().first);
-            if (BracketStack.empty() || CurTok.getKind() != Matching) {
+            if (CurTok.getKind() != Matching) {
               DiagMismatchedBracesAndSkipToEOD(Matching, BracketStack.back());
               return false;
             }

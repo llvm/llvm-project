@@ -98,8 +98,8 @@ public:
 
 void foo() { Templ<Derived> x(&Derived::func); }
 // expected-error@-1 {{no matching constructor for initialization of 'Templ<Derived>'}}
-//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'const Templ<cwg203::ex3::Derived>' for 1st argument}}
-//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'Templ<cwg203::ex3::Derived>' for 1st argument}}
+//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (cwg203::ex3::Base::*)() const') to 'const Templ<cwg203::ex3::Derived>' for 1st argument}}
+//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (cwg203::ex3::Base::*)() const') to 'Templ<cwg203::ex3::Derived>' for 1st argument}}
 //   expected-note@#cwg203-ex3-Templ-ctor {{candidate template ignored: could not match 'cwg203::ex3::Derived' against 'cwg203::ex3::Base'}}
 } // namespace ex3
 
@@ -690,8 +690,8 @@ namespace cwg244 { // cwg244: 11
 
   void f() {
     D_object.~B();
-    // expected-error@-1 {{destructor type 'cwg244::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    //   expected-note@#cwg244-B {{type 'cwg244::B' found by destructor name lookup}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'D' of the object being destroyed}}
+    //   expected-note@#cwg244-B {{type 'B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();
@@ -1400,7 +1400,7 @@ namespace cwg298 { // cwg298: 3.1
   // expected-error@-1 {{a type specifier is required for all declarations}}
   B::A() {} // ok
   C::~C() {}
-  // expected-error@-1 {{destructor cannot be declared using a typedef 'C' (aka 'const cwg298::A') of the class name}}
+  // expected-error@-1 {{destructor cannot be declared using a typedef 'C' (aka 'const A') of the class name}}
 
   typedef struct D E; // #cwg298-E
   struct E {};

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
@@ -2206,6 +2207,41 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
     EXPECT_TRUE(PartiallyPoison.SignBit);
   }
+}
+
+TEST_F(ComputeKnownFPClassTest, fcmpImpliesClass_fabs_zero) {
+  parseAssembly("define float @test(float %x) {\n"
+                "  %A = call float @llvm.fabs.f32(float %x)\n"
+                "  ret float %A\n"
+                "}\n");
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OEQ, *F, A, fcZero)),
+            fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UEQ, *F, A, fcZero)),
+            fcZero | fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UNE, *F, A, fcZero)),
+            ~fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ONE, *F, A, fcZero)),
+            ~fcNan & ~fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ORD, *F, A, fcZero)),
+            ~fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UNO, *F, A, fcZero)),
+            fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OGT, *F, A, fcZero)),
+            fcSubnormal | fcNormal | fcInf);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UGT, *F, A, fcZero)),
+            fcSubnormal | fcNormal | fcInf | fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OGE, *F, A, fcZero)),
+            ~fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UGE, *F, A, fcZero)),
+            fcAllFlags);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OLT, *F, A, fcZero)),
+            fcNone);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ULT, *F, A, fcZero)),
+            fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OLE, *F, A, fcZero)),
+            fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ULE, *F, A, fcZero)),
+            fcZero | fcNan);
 }
 
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
