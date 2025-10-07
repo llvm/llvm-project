@@ -33,8 +33,7 @@ namespace llvm {
   private:
     bool isEligibleForTailCallOptimization(
         const CCState &CCInfo, unsigned NextStackOffset,
-        const MipsFunctionInfo &FI,
-        bool IsMustTail = false) const override;
+        const MipsFunctionInfo &FI, bool IsMustTail = false) const override;
 
     void setMips16HardFloatLibCalls();
 

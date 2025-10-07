@@ -1179,8 +1179,8 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 }
 
 bool MipsSETargetLowering::isEligibleForTailCallOptimization(
-    const CCState &CCInfo, unsigned NextStackOffset,
-    const MipsFunctionInfo &FI, bool IsMustTail) const {
+    const CCState &CCInfo, unsigned NextStackOffset, const MipsFunctionInfo &FI,
+    bool IsMustTail) const {
   if (!UseMipsTailCalls && !IsMustTail)
     return false;
 
