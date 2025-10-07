@@ -671,15 +671,6 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
-                                  const InterpFrame *Frame,
-                                  const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
-  pushInteger(S, Val.getBitWidth() - Val.getSignificantBits(), Call->getType());
-  return true;
-}
-
 static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const CallExpr *Call) {
@@ -3023,14 +3014,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
   case Builtin::BI__builtin_parityll:
-    return interp__builtin_elementwise_int_unaryop(S, OpPC, Call, [](const APSInt &Val) -> APInt {
-        return APInt(Val.getBitWidth(), Val.popcount() % 2);
-    });
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Val) -> APInt {
+          return APInt(Val.getBitWidth(), Val.popcount() % 2);
+        });
   case Builtin::BI__builtin_clrsb:
   case Builtin::BI__builtin_clrsbl:
   case Builtin::BI__builtin_clrsbll:
-    return interp__builtin_clrsb(S, OpPC, Frame, Call);
-
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &V) -> APInt {
+          return APInt(Val.getBitWidth(),
+                       Val.getBitWidth() - Val.getSignificantBits());
+        });
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
