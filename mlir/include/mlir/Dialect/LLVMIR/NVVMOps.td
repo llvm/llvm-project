@@ -1655,17 +1655,6 @@ def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   }];
 }
 
-def ConvertFP4E2M1 : I32EnumCase<"E2M1", 0, "e2m1">;
-
-def ConvertFP4Type : I32Enum<"ConvertFP4Type", "NVVM ConvertFP4Type kind",
-                             [ConvertFP4E2M1]> {
-  let cppNamespace = "::mlir::NVVM";
-}
-def ConvertFP4TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP4Type, 
-                                  "convert_fp4_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
   let summary = "Convert a pair of float inputs to f4x2";
   let description = [{
@@ -1681,16 +1670,18 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
   }];
 
   let results = (outs I8:$dst);
-  let arguments = (ins ConvertFP4TypeAttr:$type, F32:$a, F32:$b,
-                       DefaultValuedAttr<BoolAttr, "false">:$relu);
-  let assemblyFormat = "$type $a `,` $b attr-dict";
+  let arguments = (ins F32:$a, F32:$b,
+                       DefaultValuedAttr<BoolAttr, "false">:$relu,
+                       TypeAttr:$dstTy);
+  let assemblyFormat = "$a `,` $b attr-dict `:` type($dst) `(` $dstTy `)`";
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP4Type, bool hasRelu);
+    static llvm::Intrinsic::ID getIntrinsicID(bool hasRelu);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicID($type, $relu);
+    auto intId = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicID($relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
     $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
   }];
