@@ -125,8 +125,6 @@ auto m_AnyAdd(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Add(L, R), m_FAdd(L, R));
 }
 
-namespace {
-
 // Given an element pointer \p BasePtr to the start of a (sub) matrix, compute
 // the start address of vector \p VecIdx with type (\p EltType x \p NumElements)
 // assuming \p Stride elements between start two consecutive vectors.
@@ -167,9 +165,9 @@ namespace {
 //         v_2_0 |v_2_1 |v_2_2 |v_2_3
 //         v_3_0 {v_3_1 {v_3_2  v_3_3
 //
-Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
-                         unsigned NumElements, Type *EltType,
-                         IRBuilder<> &Builder) {
+static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
+                                unsigned NumElements, Type *EltType,
+                                IRBuilder<> &Builder) {
 
   assert((!isa<ConstantInt>(Stride) ||
           cast<ConstantInt>(Stride)->getZExtValue() >= NumElements) &&
@@ -238,7 +236,6 @@ struct ShapeInfo {
 raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
   return OS << SI.NumRows << 'x' << SI.NumColumns;
 }
-
 } // namespace
 
 static bool isUniformShape(Value *V) {
@@ -361,6 +358,7 @@ computeShapeInfoForInst(Instruction *I,
 /// 3. After we lowered all instructions in a function, remove the now
 ///    obsolete instructions.
 ///
+namespace {
 class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;

@@ -204,7 +204,7 @@ public:
     return runPartiallyInlineLibCalls(F, TLI, TTI, DT, ORE);
   }
 };
-}
+} // namespace
 
 char PartiallyInlineLibCallsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(PartiallyInlineLibCallsLegacyPass,
