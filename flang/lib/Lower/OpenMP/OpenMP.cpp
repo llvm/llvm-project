@@ -3360,7 +3360,12 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
     break;
-  case llvm::omp::Directive::OMPD_fuse:
+  case llvm::omp::Directive::OMPD_fuse: {
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    TODO(loc, "Unhandled loop directive (" +
+                  llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+    break;
+  }
   case llvm::omp::Directive::OMPD_tile: {
     unsigned version = semaCtx.langOptions().OpenMPVersion;
     if (!semaCtx.langOptions().OpenMPSimd)
