@@ -2025,8 +2025,7 @@ ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
-llvm::Intrinsic::ID
-ConvertF32x2ToF4x2Op::getIntrinsicID(bool hasRelu) {
+llvm::Intrinsic::ID ConvertF32x2ToF4x2Op::getIntrinsicID(bool hasRelu) {
   return hasRelu ? llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite
                  : llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite;
 }
