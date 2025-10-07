@@ -26,20 +26,6 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[TMP7]], 1.000000e+02
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP7]], 1.000000e+00
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX5]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 1599
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;

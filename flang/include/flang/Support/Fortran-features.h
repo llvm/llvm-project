@@ -76,7 +76,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IndexVarRedefinition, IncompatibleImplicitInterfaces, CdefinedInit,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
-    CompatibleDeclarationsFromDistinctModules,
+    CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
     RealConstantWidening, VolatileOrAsynchronousTemporary)

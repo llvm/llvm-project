@@ -600,6 +600,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__debug_utils/sanitizers.h>
 #  include <__format/enable_insertable.h>
 #  include <__functional/hash.h>
+#  include <__functional/is_transparent.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/string.h>
 #  include <__iterator/bounded_iter.h>
@@ -628,6 +629,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_array.h>
 #  include <__type_traits/is_convertible.h>
+#  include <__type_traits/is_generic_transparent_comparator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_replaceable.h>
@@ -2566,6 +2568,20 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
   }
 };
 #  endif
+
+template <class _Comparator, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  const _CharT*,
+                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
+    true;
+
+template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  _CharT[_Np],
+                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
+    true;
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

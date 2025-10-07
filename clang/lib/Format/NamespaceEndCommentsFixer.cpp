@@ -70,7 +70,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
     // and closing parenthesis or comma.
     assert(Tok && Tok->is(tok::l_paren) && "expected an opening parenthesis");
     Tok = Tok->getNextNonComment();
-    while (Tok && !Tok->isOneOf(tok::r_paren, tok::comma)) {
+    while (Tok && Tok->isNoneOf(tok::r_paren, tok::comma)) {
       name += Tok->TokenText;
       Tok = Tok->getNextNonComment();
     }
@@ -85,7 +85,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
   // one token before that up until the '{'. A '(' might be a macro with
   // arguments.
   const FormatToken *FirstNSTok = nullptr;
-  while (Tok && !Tok->isOneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
+  while (Tok && Tok->isNoneOf(tok::l_brace, tok::coloncolon, tok::l_paren)) {
     if (FirstNSTok)
       FirstNSName += FirstNSTok->TokenText;
     FirstNSTok = Tok;

@@ -133,8 +133,7 @@ public:
   }
   void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
-    cgf.cgm.errorNYI(ge->getSourceRange(),
-                     "AggExprEmitter: VisitGenericSelectionExpr");
+    Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
@@ -145,10 +144,7 @@ public:
   void VisitUnaryCoawait(UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
   }
-  void VisitUnaryExtension(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitUnaryExtension");
-  }
+  void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
@@ -185,7 +181,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinAssign");
   }
   void VisitBinComma(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinComma");
+    cgf.emitIgnoredExpr(e->getLHS());
+    Visit(e->getRHS());
   }
   void VisitBinCmp(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
@@ -204,8 +201,10 @@ public:
   }
 
   void VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitDesignatedInitUpdateExpr");
+    AggValueSlot dest = ensureSlot(cgf.getLoc(e->getExprLoc()), e->getType());
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    emitInitializationToLValue(e->getBase(), destLV);
+    VisitInitListExpr(e->getUpdater());
   }
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -213,9 +212,11 @@ public:
   }
   void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXParenListInitExpr");
+    visitCXXParenListOrInitListExpr(e, e->getInitExprs(),
+                                    e->getInitializedFieldInUnion(),
+                                    e->getArrayFiller());
   }
+
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
                               llvm::Value *outerBegin = nullptr) {
     cgf.cgm.errorNYI(e->getSourceRange(),

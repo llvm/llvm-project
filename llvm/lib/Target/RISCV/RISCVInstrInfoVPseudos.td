@@ -345,7 +345,7 @@ defset list<VTypeInfo> AllVectors = {
     }
   }
 
-  defset list<VTypeInfo> AllFloatAndBFloatVectors = {
+  defset list<VTypeInfo> AllFloatAndBF16Vectors = {
     defset list<VTypeInfo> AllFloatVectors = {
       defset list<VTypeInfo> NoGroupFloatVectors = {
         defset list<VTypeInfo> FractionalGroupFloatVectors = {
@@ -382,16 +382,16 @@ defset list<VTypeInfo> AllVectors = {
       }
     }
 
-    defset list<VTypeInfo> AllBFloatVectors = {
-      defset list<VTypeInfo> NoGroupBFloatVectors = {
-        defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+    defset list<VTypeInfo> AllBF16Vectors = {
+      defset list<VTypeInfo> NoGroupBF16Vectors = {
+        defset list<VTypeInfo> FractionalGroupBF16Vectors = {
           def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
           def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
         }
         def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
       }
 
-      defset list<GroupVTypeInfo> GroupBFloatVectors = {
+      defset list<GroupVTypeInfo> GroupBF16Vectors = {
         def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
                                     V_M2, bf16, FPR16>;
         def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
@@ -542,7 +542,7 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
   def : VTypeInfoToWide<VI32M4, VF64M8>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
+defset list<VTypeInfoToWide> AllWidenableBF16ToFloatVectors = {
   def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
   def : VTypeInfoToWide<VBF16MF2, VF32M1>;
   def : VTypeInfoToWide<VBF16M1, VF32M2>;
@@ -554,7 +554,8 @@ defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
 // This represents the information we need in codegen for each pseudo.
 // The definition should be consistent with `struct PseudoInfo` in
 // RISCVInstrInfo.h.
-class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [], string opcodestr = "", string argstr = "">
+class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
+                   string opcodestr = "", string argstr = "">
     : Pseudo<outs, ins, pattern, opcodestr, argstr> {
   Pseudo Pseudo = !cast<Pseudo>(NAME); // Used as a key.
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
@@ -1010,8 +1011,7 @@ class VPseudoNullaryNoMask<VReg RegClass> :
 class VPseudoNullaryMask<VReg RegClass> :
       RISCVVPseudo<(outs GetVRegNoV0<RegClass>.R:$rd),
                    (ins GetVRegNoV0<RegClass>.R:$passthru,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1190,8 +1190,7 @@ class VPseudoBinaryNoMask<VReg RetClass,
                           bits<2> TargetConstraintType = 1,
                           DAGOperand sewop = sew> :
       RISCVVPseudo<(outs RetClass:$rd),
-                   (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sewop:$sew),
-                   []> {
+                   (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sewop:$sew)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1227,8 +1226,7 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
                                       bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
                    (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
-                        vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1320,7 +1318,7 @@ class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
                           bit Ordered>:
       RISCVVPseudo<(outs),
                    (ins StClass:$rd, GPRMemZeroOffset:$rs1, IdxClass:$rs2,
-                        AVL:$vl, sew:$sew),[]>,
+                        AVL:$vl, sew:$sew)>,
       RISCVVSX</*Masked*/0, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1333,7 +1331,7 @@ class VPseudoIStoreMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
                         bit Ordered>:
       RISCVVPseudo<(outs),
                    (ins StClass:$rd, GPRMemZeroOffset:$rs1, IdxClass:$rs2,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew),[]>,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew)>,
       RISCVVSX</*Masked*/1, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1351,8 +1349,7 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1371,8 +1368,7 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1414,8 +1410,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
       RISCVVPseudo<(outs RetClass:$rd),
                    (ins RetClass:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1438,8 +1433,7 @@ class VPseudoTiedBinaryMask<VReg RetClass,
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op2Class:$rs1,
-                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1546,8 +1540,7 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
                                                  bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
                    (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                        vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy),
-                   []> {
+                        vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1716,8 +1709,8 @@ class VPseudoUSSegStoreNoMask<VReg ValClass,
                               int EEW,
                               bits<4> NF> :
       RISCVVPseudo<(outs),
-                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, AVL:$vl, sew:$sew),
-                   []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, AVL:$vl,
+                        sew:$sew)>,
       RISCVVSSEG<NF, /*Masked*/0, /*Strided*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -5870,7 +5863,7 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction,
 
 multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
                                   bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in
   {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -5977,7 +5970,7 @@ multiclass VPatConversionVF_WF_RTZ<string intrinsic, string instruction,
 
 multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
                                      bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -6029,9 +6022,9 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
                         PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVLENB.Encoding, X0)>,
                         Sched<[WriteRdVLENB]>;
   let Defs = [VL, VTYPE] in {
-  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins uimm5:$shamt),
-                                  []>,
-                           Sched<[WriteVSETVLI, ReadVSETVLI]>;
+  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd),
+                                           (ins uimm5:$shamt), []>,
+                                    Sched<[WriteVSETVLI, ReadVSETVLI]>;
   }
 }
 
@@ -6694,14 +6687,14 @@ defm PseudoVID : VPseudoVID_V;
 let Predicates = [HasVInstructions] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   let HasSEWOp = 1, BaseInstr = VMV_X_S in
-  def PseudoVMV_X_S:
+  def PseudoVMV_X_S :
     RISCVVPseudo<(outs GPR:$rd), (ins VR:$rs2, sew:$sew)>,
     Sched<[WriteVMovXS, ReadVMovXS]>;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, isReMaterializable = 1,
       Constraints = "$rd = $passthru" in
-  def PseudoVMV_S_X: RISCVVPseudo<(outs VR:$rd),
-                            (ins VR:$passthru, GPR:$rs1, AVL:$vl, sew:$sew),
-                            []>,
+  def PseudoVMV_S_X :
+    RISCVVPseudo<(outs VR:$rd),
+                 (ins VR:$passthru, GPR:$rs1, AVL:$vl, sew:$sew)>,
     Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>;
 }
 } // Predicates = [HasVInstructions]
@@ -6721,8 +6714,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
         Constraints = "$rd = $passthru" in
     def "PseudoVFMV_S_" # f.FX :
       RISCVVPseudo<(outs VR:$rd),
-             (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew),
-             []>,
+                   (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew)>,
       Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
   }
 }
@@ -7154,7 +7146,7 @@ defm : VPatConversionVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
 // We can use vmerge.vvm to support vector-vector vfmerge.
 // NOTE: Clang previously used int_riscv_vfmerge for vector-vector, but now uses
 // int_riscv_vmerge. Support both for compatibility.
-foreach vti = AllFloatAndBFloatVectors in {
+foreach vti = AllFloatAndBF16Vectors in {
   let Predicates = GetVTypeMinimalPredicates<vti>.Predicates in
     defm : VPatBinaryCarryInTAIL<"int_riscv_vmerge", "PseudoVMERGE", "VVM",
                                  vti.Vector,

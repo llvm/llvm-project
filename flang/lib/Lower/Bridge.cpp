@@ -3182,7 +3182,7 @@ private:
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
-        *this, bridge.getSemanticsContext(), getEval(), acc);
+        *this, bridge.getSemanticsContext(), getEval(), acc, localSymbols);
 
     const Fortran::parser::OpenACCLoopConstruct *accLoop =
         std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
