@@ -158,6 +158,7 @@ private:
   void
   unfoldSelectInstrs(DominatorTree *DT,
                      const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
+    // TODO: Have everything use a single lazy DTU
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
