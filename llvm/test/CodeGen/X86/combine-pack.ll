@@ -26,14 +26,12 @@ define <8 x i16> @combine_packss_v4i32_signsplat(<4 x i32> %a0, <4 x i32> %a1) {
   ret <8 x i16> %signsplat
 }
 
-; TODO: Failure to remove unnecessary signsplat through freeze
 define <8 x i16> @combine_packss_v4i32_freeze_signsplat(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_packss_v4i32_freeze_signsplat:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    psraw $15, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_packss_v4i32_freeze_signsplat:
@@ -41,7 +39,6 @@ define <8 x i16> @combine_packss_v4i32_freeze_signsplat(<4 x i32> %a0, <4 x i32>
 ; AVX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %a0, %a1
   %ext = sext <4 x i1> %cmp to <4 x i32>

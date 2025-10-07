@@ -148,13 +148,7 @@ public:
   /// Mangled name get accessor.
   ///
   /// \return
-  ///     A reference to the mangled name string object.
-  ConstString &GetMangledName() { return m_mangled; }
-
-  /// Mangled name get accessor.
-  ///
-  /// \return
-  ///     A const reference to the mangled name string object.
+  ///     The mangled name string object.
   ConstString GetMangledName() const { return m_mangled; }
 
   /// Best name get accessor.

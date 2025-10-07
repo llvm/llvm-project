@@ -362,8 +362,9 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -607,8 +608,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP15]], true
 ; PRED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -1181,8 +1183,9 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; PRED-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH:.*:]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
 ;
 entry:
   br label %loop.header

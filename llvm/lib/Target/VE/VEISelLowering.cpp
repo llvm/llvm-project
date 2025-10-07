@@ -957,6 +957,8 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
 
 EVT VETargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
                                          EVT VT) const {
+  if (VT.isVector())
+    return VT.changeVectorElementType(MVT::i1);
   return MVT::i32;
 }
 

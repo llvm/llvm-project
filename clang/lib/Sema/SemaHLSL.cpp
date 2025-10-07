@@ -1810,6 +1810,13 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.RawBuffer = true;
       break;
+    case attr::HLSLIsCounter:
+      if (ResAttrs.IsCounter) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.IsCounter = true;
+      break;
     case attr::HLSLContainedType: {
       const HLSLContainedTypeAttr *CTAttr = cast<HLSLContainedTypeAttr>(A);
       QualType Ty = CTAttr->getType();
@@ -1900,6 +1907,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLRawBuffer:
     A = HLSLRawBufferAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsCounter:
+    A = HLSLIsCounterAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -3560,9 +3571,6 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
   if (SrcVecTy)
     SrcTy = SrcVecTy->getElementType();
 
-  if (ContainsBitField(DestTy))
-    return false;
-
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
 
@@ -3587,9 +3595,6 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
 
   if (SrcTy->isVectorType() &&
       (DestTy->isScalarType() || DestTy->isVectorType()))
-    return false;
-
-  if (ContainsBitField(DestTy) || ContainsBitField(SrcTy))
     return false;
 
   llvm::SmallVector<QualType> DestTypes;

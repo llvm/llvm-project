@@ -221,10 +221,9 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
   return initialAlloca;
 }
 
-mlir::Value
-OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
-                                           mlir::Value bound,
-                                           mlir::Location loc, bool inverse) {
+std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
+    mlir::Value subscriptedValue, mlir::Value subscriptedValue2,
+    mlir::Value bound, mlir::Location loc, bool inverse) {
   mlir::Operation *bodyInsertLoc;
 
   mlir::Type itrTy = cgf.cgm.convertType(cgf.getContext().UnsignedLongLongTy);
@@ -240,7 +239,7 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
 
     if (auto arrayTy = dyn_cast<cir::ArrayType>(eltTy))
       return builder.getArrayElement(loc, loc, subVal, arrayTy.getElementType(),
-                                     idxLoad.getResult(),
+                                     idxLoad,
                                      /*shouldDecay=*/true);
 
     assert(isa<cir::PointerType>(eltTy));
@@ -248,8 +247,7 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
     auto eltLoad = cir::LoadOp::create(builder, loc, {subVal});
 
     return cir::PtrStrideOp::create(builder, loc, eltLoad.getType(), eltLoad,
-                                    idxLoad.getResult())
-        .getResult();
+                                    idxLoad);
   };
 
   auto forStmtBuilder = [&]() {
@@ -271,12 +269,11 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
     if (inverse) {
       cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub =
-          cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
-                             ubConversion.getResult(0), constOne.getResult());
+      auto sub = cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
+                                    ubConversion.getResult(0), constOne);
 
       // Upperbound is exclusive, so subtract 1.
-      builder.CIRBaseBuilderTy::createStore(loc, sub.getResult(), itr);
+      builder.CIRBaseBuilderTy::createStore(loc, sub, itr);
     } else {
       // Lowerbound is inclusive, so we can include it.
       builder.CIRBaseBuilderTy::createStore(loc, lbConversion.getResult(0),
@@ -294,8 +291,8 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
           auto loadCur = cir::LoadOp::create(builder, loc, {itr});
           // Use 'not equal' since we are just doing an increment/decrement.
           auto cmp = builder.createCompare(
-              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt,
-              loadCur.getResult(), endItr.getResult(0));
+              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt, loadCur,
+              endItr.getResult(0));
           builder.createCondition(cmp);
         },
         /*bodyBuilder=*/
@@ -304,16 +301,17 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
 
           if (subscriptedValue)
             subscriptedValue = doSubscriptOp(subscriptedValue, load);
+          if (subscriptedValue2)
+            subscriptedValue2 = doSubscriptOp(subscriptedValue2, load);
           bodyInsertLoc = builder.createYield(loc);
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto unary = cir::UnaryOp::create(builder, loc, load.getType(),
-                                            inverse ? cir::UnaryOpKind::Dec
-                                                    : cir::UnaryOpKind::Inc,
-                                            load.getResult());
-          builder.CIRBaseBuilderTy::createStore(loc, unary.getResult(), itr);
+          auto unary = cir::UnaryOp::create(
+              builder, loc, load.getType(),
+              inverse ? cir::UnaryOpKind::Dec : cir::UnaryOpKind::Inc, load);
+          builder.CIRBaseBuilderTy::createStore(loc, unary, itr);
           builder.createYield(loc);
         });
   };
@@ -327,7 +325,7 @@ OpenACCRecipeBuilderBase::createBoundsLoop(mlir::Value subscriptedValue,
   // Leave the insertion point to be inside the body, so we can loop over
   // these things.
   builder.setInsertionPoint(bodyInsertLoc);
-  return subscriptedValue;
+  return {subscriptedValue, subscriptedValue2};
 }
 
 mlir::acc::ReductionOperator
@@ -402,23 +400,47 @@ void OpenACCRecipeBuilderBase::createRecipeDestroySection(
 
   mlir::acc::YieldOp::create(builder, locEnd);
 }
+void OpenACCRecipeBuilderBase::makeBoundsInit(
+    mlir::Value alloca, mlir::Location loc, mlir::Block *block,
+    const VarDecl *allocaDecl, QualType origType, bool isInitSection) {
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  builder.setInsertionPointToEnd(block);
+  CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
-// TODO: OpenACC: When we get this implemented for the reduction/firstprivate,
-// this might end up re-merging with createRecipeInitCopy.  For now, keep it
-// separate until we're sure what everything looks like to keep this as clean
-// as possible.
-void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
+  CIRGenFunction::AutoVarEmission tempDeclEmission{*allocaDecl};
+  tempDeclEmission.emittedAsOffload = true;
+
+  // The init section is the only one of the handful that only has a single
+  // argument for the 'type', so we have to drop 1 for init, and future calls
+  // to this will need to drop 2.
+  llvm::MutableArrayRef<mlir::BlockArgument> boundsRange =
+      block->getArguments().drop_front(isInitSection ? 1 : 2);
+
+  mlir::Value subscriptedValue = alloca;
+  for (mlir::BlockArgument boundArg : llvm::reverse(boundsRange))
+    subscriptedValue = createBoundsLoop(subscriptedValue, boundArg, loc,
+                                        /*inverse=*/false);
+
+  tempDeclEmission.setAllocatedAddress(
+      Address{subscriptedValue, cgf.convertType(origType),
+              cgf.getContext().getDeclAlign(allocaDecl)});
+  cgf.emitAutoVarInit(tempDeclEmission);
+}
+
+// TODO: OpenACC: when we start doing firstprivate for array/vlas/etc, we
+// probably need to do a little work about the 'init' calls to put it in 'copy'
+// region instead.
+void OpenACCRecipeBuilderBase::createInitRecipe(
     mlir::Location loc, mlir::Location locEnd, SourceRange exprRange,
-    mlir::Value mainOp, mlir::acc::PrivateRecipeOp recipe, size_t numBounds,
+    mlir::Value mainOp, mlir::Region &recipeInitRegion, size_t numBounds,
     llvm::ArrayRef<QualType> boundTypes, const VarDecl *allocaDecl,
-    QualType origType, const Expr *initExpr) {
+    QualType origType, bool emitInitExpr) {
   assert(allocaDecl && "Required recipe variable not set?");
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, allocaDecl};
 
-  mlir::Block *block =
-      createRecipeBlock(recipe.getInitRegion(), mainOp.getType(), loc,
-                        numBounds, /*isInit=*/true);
-  builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
+  mlir::Block *block = createRecipeBlock(recipeInitRegion, mainOp.getType(),
+                                         loc, numBounds, /*isInit=*/true);
+  builder.setInsertionPointToEnd(&recipeInitRegion.back());
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
   const Type *allocaPointeeType =
@@ -434,7 +456,7 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     // Sema::TentativeAnalysisScopes in SemaOpenACC::CreateInitRecipe, it'll
     // emit an error to tell us.  However, emitting those errors during
     // production is a violation of the standard, so we cannot do them.
-    cgf.cgm.errorNYI(exprRange, "private default-init recipe");
+    cgf.cgm.errorNYI(exprRange, "private/reduction default-init recipe");
   }
 
   if (!numBounds) {
@@ -442,13 +464,20 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
     // initialize this variable correctly.
     CIRGenFunction::AutoVarEmission tempDeclEmission =
         cgf.emitAutoVarAlloca(*allocaDecl, builder.saveInsertionPoint());
-    cgf.emitAutoVarInit(tempDeclEmission);
+    if (emitInitExpr)
+      cgf.emitAutoVarInit(tempDeclEmission);
   } else {
-    makeBoundsAlloca(block, exprRange, loc, "openacc.private.init", numBounds,
-                     boundTypes);
+    mlir::Value alloca = makeBoundsAlloca(
+        block, exprRange, loc, allocaDecl->getName(), numBounds, boundTypes);
 
-    if (initExpr)
-      cgf.cgm.errorNYI(exprRange, "private-init with bounds initialization");
+    // If the initializer is trivial, there is nothing to do here, so save
+    // ourselves some effort.
+    if (emitInitExpr && allocaDecl->getInit() &&
+        (!cgf.isTrivialInitializer(allocaDecl->getInit()) ||
+         cgf.getContext().getLangOpts().getTrivialAutoVarInit() !=
+             LangOptions::TrivialAutoVarInitKind::Uninitialized))
+      makeBoundsInit(alloca, loc, block, allocaDecl, origType,
+                     /*isInitSection=*/true);
   }
 
   mlir::acc::YieldOp::create(builder, locEnd);
@@ -456,45 +485,52 @@ void OpenACCRecipeBuilderBase::createPrivateInitRecipe(
 
 void OpenACCRecipeBuilderBase::createFirstprivateRecipeCopy(
     mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
-    CIRGenFunction::AutoVarEmission tempDeclEmission,
-    mlir::acc::FirstprivateRecipeOp recipe, const VarDecl *varRecipe,
-    const VarDecl *temporary) {
-  mlir::Block *block =
-      createRecipeBlock(recipe.getCopyRegion(), mainOp.getType(), loc,
-                        /*numBounds=*/0, /*isInit=*/false);
-  builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
+    const VarDecl *allocaDecl, const VarDecl *temporary,
+    mlir::Region &copyRegion, size_t numBounds) {
+  mlir::Block *block = createRecipeBlock(copyRegion, mainOp.getType(), loc,
+                                         numBounds, /*isInit=*/false);
+  builder.setInsertionPointToEnd(&copyRegion.back());
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
-  mlir::BlockArgument fromArg = block->getArgument(0);
-  mlir::BlockArgument toArg = block->getArgument(1);
+  mlir::Value fromArg = block->getArgument(0);
+  mlir::Value toArg = block->getArgument(1);
 
+  llvm::MutableArrayRef<mlir::BlockArgument> boundsRange =
+      block->getArguments().drop_front(2);
+
+  for (mlir::BlockArgument boundArg : llvm::reverse(boundsRange))
+    std::tie(fromArg, toArg) =
+        createBoundsLoop(fromArg, toArg, boundArg, loc, /*inverse=*/false);
+
+  // Set up the 'to' address.
   mlir::Type elementTy =
-      mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
-
-  // Set the address of the emission to be the argument, so that we initialize
-  // that instead of the variable in the other block.
+      mlir::cast<cir::PointerType>(toArg.getType()).getPointee();
+  CIRGenFunction::AutoVarEmission tempDeclEmission(*allocaDecl);
+  tempDeclEmission.emittedAsOffload = true;
   tempDeclEmission.setAllocatedAddress(
-      Address{toArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
-  tempDeclEmission.EmittedAsOffload = true;
+      Address{toArg, elementTy, cgf.getContext().getDeclAlign(allocaDecl)});
 
+  // Set up the 'from' address from the temporary.
   CIRGenFunction::DeclMapRevertingRAII declMapRAII{cgf, temporary};
   cgf.setAddrOfLocalVar(
       temporary,
-      Address{fromArg, elementTy, cgf.getContext().getDeclAlign(varRecipe)});
-
+      Address{fromArg, elementTy, cgf.getContext().getDeclAlign(allocaDecl)});
   cgf.emitAutoVarInit(tempDeclEmission);
+
+  builder.setInsertionPointToEnd(&copyRegion.back());
   mlir::acc::YieldOp::create(builder, locEnd);
 }
+
 // This function generates the 'combiner' section for a reduction recipe. Note
 // that this function is not 'insertion point' clean, in that it alters the
 // insertion point to be inside of the 'combiner' section of the recipe, but
 // doesn't restore it aftewards.
 void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
     mlir::Location loc, mlir::Location locEnd, mlir::Value mainOp,
-    mlir::acc::ReductionRecipeOp recipe) {
-  mlir::Block *block = builder.createBlock(
-      &recipe.getCombinerRegion(), recipe.getCombinerRegion().end(),
-      {mainOp.getType(), mainOp.getType()}, {loc, loc});
+    mlir::acc::ReductionRecipeOp recipe, size_t numBounds) {
+  mlir::Block *block =
+      createRecipeBlock(recipe.getCombinerRegion(), mainOp.getType(), loc,
+                        numBounds, /*isInit=*/false);
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
   CIRGenFunction::LexicalScope ls(cgf, loc, block);
 

@@ -468,6 +468,10 @@ public:
 };
 #endif
 
+/// Check if a constant \p CI can be safely treated as having been extended
+/// from a narrower type with the given extension kind.
+bool canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+                           TTI::PartialReductionExtendKind ExtKind);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

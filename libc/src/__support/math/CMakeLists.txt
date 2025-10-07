@@ -374,6 +374,15 @@ add_header_library(
 )
 
 add_header_library(
+  common_constants
+  HDRS
+    common_constants.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.number_pair
+)
+
+add_header_library(
   cos
   HDRS
     cos.h
@@ -702,6 +711,28 @@ add_header_library(
     libc.src.__support.FPUtil.triple_double
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp2
+  HDRS
+    exp2.h
+  DEPENDS
+    .common_constants
+    .exp_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
 )
 
 add_header_library(

@@ -132,9 +132,9 @@ STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
-static cl::opt<bool>
-EnableCodeSinking("instcombine-code-sinking", cl::desc("Enable code sinking"),
-                                              cl::init(true));
+static cl::opt<bool> EnableCodeSinking("instcombine-code-sinking",
+                                       cl::desc("Enable code sinking"),
+                                       cl::init(true));
 
 static cl::opt<unsigned> MaxSinkNumUsers(
     "instcombine-max-sink-users", cl::init(32),
@@ -144,7 +144,9 @@ static cl::opt<unsigned>
 MaxArraySize("instcombine-maxarray-size", cl::init(1024),
              cl::desc("Maximum array size considered when doing a combine"));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
