@@ -14,6 +14,8 @@
 // otherwise.
 def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
 
+// This scheduling predicate is true when subtarget feature TuneHasThrottledVecFP64
+// is enabled.
 def ThrottledVecFP64SchedPred : FeatureSchedPredicate<TuneHasThrottledVecFP64>;
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
