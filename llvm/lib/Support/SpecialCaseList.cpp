@@ -153,12 +153,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     return false;
   }
 
+  // Scan the start of the file for special comments. These don't appear when
+  // iterating below because comment lines are automatically skipped.
+  StringRef Buffer = MB->getBuffer();
   // In https://reviews.llvm.org/D154014 we added glob support and planned to
   // remove regex support in patterns. We temporarily support the original
-  // behavior using regexes if "#!special-case-list-v1" is the first line of the
-  // file. For more details, see
+  // behavior using regexes if "#!special-case-list-v1" is the first line of
+  // the file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
-  bool UseGlobs = !MB->getBuffer().starts_with("#!special-case-list-v1\n");
+  bool UseGlobs = !Buffer.consume_front("#!special-case-list-v1\n");
+  // Specifies that patterns should be matched against canonicalized filepaths.
+  CanonicalizePaths = Buffer.consume_front("#!canonical-paths\n");
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
@@ -237,7 +242,12 @@ unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
   if (II == I->second.end())
     return 0;
 
-  return II->getValue().match(Query);
+  if (CanonicalizePaths && (Prefix == "src" || Prefix == "mainfile")) {
+    return II->getValue().match(llvm::sys::path::convert_to_slash(
+        llvm::sys::path::remove_leading_dotslash(Query)));
+  } else {
+    return II->getValue().match(Query);
+  }
 }
 
 } // namespace llvm

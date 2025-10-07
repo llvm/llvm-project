@@ -122,7 +122,7 @@ protected:
   class Matcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
-                          bool UseRegex);
+                          bool UseGlobs);
     // Returns the line number in the source file that this query matches to.
     // Returns zero if no match is found.
     LLVM_ABI unsigned match(StringRef Query) const;
@@ -156,6 +156,7 @@ protected:
   };
 
   std::vector<Section> Sections;
+  bool CanonicalizePaths = false;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
                                           unsigned FileIdx, unsigned LineNo,

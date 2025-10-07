@@ -372,4 +372,22 @@ TEST_F(SpecialCaseListTest, FileIdx) {
     sys::fs::remove(Path);
 }
 
+#ifdef _WIN32
+TEST_F(SpecialCaseListTest, CanonicalizePathsOnWindows) {
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("#!canonical-paths\n"
+                          "\n"
+                          "src:*foo/bar*\n"
+                          "src:*foo\\\\baz\n"
+                          "fun:hi\\\\bye=category\n");
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/bar"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\bar"));
+  // The baz pattern doesn't match because paths are canonicalized first
+  EXPECT_FALSE(SCL->inSection("", "src", "foo/baz"));
+  EXPECT_FALSE(SCL->inSection("", "src", "foo\\baz"));
+  // The canonicalization only applies to files
+  EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
+}
+#endif
+
 } // namespace

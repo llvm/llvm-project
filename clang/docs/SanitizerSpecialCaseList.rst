@@ -196,6 +196,23 @@ tool-specific docs.
     [{cfi-vcall,cfi-icall}]
     fun:*BadCfiCall
 
+
+.. note::
+
+  By default, ``src`` and ``mainfile`` are matched against the filename as seen
+  by LLVM. On Windows, this might involve a mix of forward and backslashes as
+  file separators, and writing patterns to match both variants can be
+  inconvenient.
+  
+  If the special case list file begins with ``#!canonical-paths``, then paths
+  will be canonicalized before patterns are matched against them. This involves
+  stripping any leading dots and slashes, and (on Windows only) converting all
+  backslashes to forward slashes.
+
+  If the file uses both ``#!special-case-list-v1`` and ``#!canonical-paths``,
+  then they should occupy the first two lines, and ``#!canonical-paths`` must
+  appear on the second line.
+
 ``mainfile`` is similar to applying ``-fno-sanitize=`` to a set of files but
 does not need plumbing into the build system. This works well for internal
 linkage functions but has a caveat for C++ vague linkage functions.

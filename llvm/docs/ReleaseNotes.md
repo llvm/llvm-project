@@ -176,6 +176,11 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
+* (Sanitizer Special Case Lists)[https://clang.llvm.org/docs/SanitizerSpecialCaseList.html]
+  may now be prefixed with ``#!canonical-paths`` to specify that filename patterns
+  should be matched against canonicalized paths, without leading dots or slashes
+  and (on Windows only) without any backslashes.
+
 Other Changes
 -------------
 
