@@ -32,7 +32,7 @@ constexpr int BITS_PER_KEY = 2;
 LIBC_INLINE uint32_t read_prku() {
   uint32_t pkru = 0;
   uint32_t edx = 0;
-  LIBC_INLINE_ASM("rdpkru" : "=a"(pkru), "=d"(edx) : "c"(0));
+  asm volatile("rdpkru" : "=a"(pkru), "=d"(edx) : "c"(0));
   return pkru;
 }
 
@@ -40,7 +40,7 @@ LIBC_INLINE uint32_t read_prku() {
 // but this case should never be reached as a prior pkey_alloc invocation
 // would have failed more gracefully.
 LIBC_INLINE void write_prku(uint32_t pkru) {
-  LIBC_INLINE_ASM("wrpkru" : : "a"(pkru), "d"(0), "c"(0));
+  asm volatile("wrpkru" : : "a"(pkru), "d"(0), "c"(0));
 }
 
 } // namespace internal
