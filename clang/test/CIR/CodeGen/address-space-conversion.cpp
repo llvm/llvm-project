@@ -80,7 +80,7 @@ void test_nullptr() {
 void test_side_effect(pi1_t b) {
   pi2_t p = (pi2_t)(*b++, (int*)0);
   // CIR:      %[[#DEREF:]] = cir.load deref align(8) %{{[0-9]+}} : !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>, !cir.ptr<!s32i, target_address_space(1)>
-  // CIR:      %[[#STRIDE:]] = cir.ptr_stride(%[[#DEREF]] : !cir.ptr<!s32i, target_address_space(1)>, %{{[0-9]+}} : !s32i), !cir.ptr<!s32i, target_address_space(1)>
+  // CIR:      %[[#STRIDE:]] = cir.ptr_stride %[[#DEREF]], %{{[0-9]+}} : (!cir.ptr<!s32i, target_address_space(1)>, !s32i) -> !cir.ptr<!s32i, target_address_space(1)>
   // CIR:      %[[#NULL:]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i, target_address_space(2)>
   // CIR-NEXT: cir.store align(8) %[[#NULL]], %{{[0-9]+}} : !cir.ptr<!s32i, target_address_space(2)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(2)>>
 
