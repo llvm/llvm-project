@@ -91,7 +91,8 @@ public:
 
   mlir::Type getIntPtrType(mlir::Type ty) const {
     assert(mlir::isa<cir::PointerType>(ty) && "Expected pointer type");
-    return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty), false);
+    return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty),
+                             false);
   }
 };
 

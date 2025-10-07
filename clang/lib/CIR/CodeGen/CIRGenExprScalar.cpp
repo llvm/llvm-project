@@ -1904,7 +1904,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
         src, middleTy);
 
     if (cgf.cgm.getCodeGenOpts().StrictVTablePointers) {
-      cgf.cgm.errorNYI(subExpr->getSourceRange(), "IntegralToPointer: strict vtable pointers");
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "IntegralToPointer: strict vtable pointers");
       return {};
     }
 
