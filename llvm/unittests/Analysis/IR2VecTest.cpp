@@ -436,7 +436,7 @@ TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
 
   // Get initial function vector
   const auto &FuncVec1 = Emb->getFunctionVector();
-  
+
   // Compute embeddings again by calling getFunctionVector multiple times
   const auto &FuncVec2 = Emb->getFunctionVector();
   const auto &FuncVec3 = Emb->getFunctionVector();
@@ -449,7 +449,7 @@ TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
   // Also check that instruction vectors remain consistent
   const auto &InstMap1 = Emb->getInstVecMap();
   const auto &InstMap2 = Emb->getInstVecMap();
-  
+
   EXPECT_EQ(InstMap1.size(), InstMap2.size());
   for (const auto &[Inst, Vec1] : InstMap1) {
     ASSERT_TRUE(InstMap2.count(Inst));
@@ -463,7 +463,7 @@ TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_FlowAware) {
 
   // Get initial function vector
   const auto &FuncVec1 = Emb->getFunctionVector();
-  
+
   // Compute embeddings again by calling getFunctionVector multiple times
   const auto &FuncVec2 = Emb->getFunctionVector();
   const auto &FuncVec3 = Emb->getFunctionVector();
@@ -476,7 +476,7 @@ TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_FlowAware) {
   // Also check that instruction vectors remain consistent
   const auto &InstMap1 = Emb->getInstVecMap();
   const auto &InstMap2 = Emb->getInstVecMap();
-  
+
   EXPECT_EQ(InstMap1.size(), InstMap2.size());
   for (const auto &[Inst, Vec1] : InstMap1) {
     ASSERT_TRUE(InstMap2.count(Inst));
