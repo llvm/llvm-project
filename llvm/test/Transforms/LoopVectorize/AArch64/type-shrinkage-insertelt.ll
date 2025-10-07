@@ -49,23 +49,6 @@ define void @test0(ptr noalias %M3, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_INC1286_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[IF_THEN1165_US:%.*]]
-; CHECK:       if.then1165.us:
-; CHECK-NEXT:    [[INDVARS_IV1783:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT1784:%.*]], [[IF_THEN1165_US]] ]
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDVARS_IV1783]]
-; CHECK-NEXT:    [[L_A:%.*]] = load i16, ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[CONV1177_US:%.*]] = zext i16 [[L_A]] to i32
-; CHECK-NEXT:    [[ADD1178_US:%.*]] = add nsw i32 [[CONV1177_US]], 10
-; CHECK-NEXT:    [[CONV1179_US:%.*]] = trunc i32 [[ADD1178_US]] to i16
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDVARS_IV1783]]
-; CHECK-NEXT:    [[L_B:%.*]] = load i64, ptr [[GEP_B]], align 8
-; CHECK-NEXT:    [[IDXPROM1181_US:%.*]] = ashr exact i64 [[L_B]], 32
-; CHECK-NEXT:    [[ARRAYIDX1185_US:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[IDXPROM1181_US]]
-; CHECK-NEXT:    store i16 [[CONV1179_US]], ptr [[ARRAYIDX1185_US]], align 2
-; CHECK-NEXT:    [[INDVARS_IV_NEXT1784]] = add nuw nsw i64 [[INDVARS_IV1783]], 1
-; CHECK-NEXT:    [[EXITCOND1785:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT1784]], 16
-; CHECK-NEXT:    br i1 [[EXITCOND1785]], label [[FOR_INC1286_LOOPEXIT]], label [[IF_THEN1165_US]]
 ; CHECK:       for.inc1286.loopexit:
 ; CHECK-NEXT:    ret void
 ;
@@ -141,24 +124,6 @@ define void @test1(ptr noalias %M3, ptr noalias %A, ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_INC1286_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[IF_THEN1165_US:%.*]]
-; CHECK:       if.then1165.us:
-; CHECK-NEXT:    [[INDVARS_IV1783:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT1784:%.*]], [[IF_THEN1165_US]] ]
-; CHECK-NEXT:    [[FPTR:%.*]] = load i32, ptr [[C]], align 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDVARS_IV1783]]
-; CHECK-NEXT:    [[L_A:%.*]] = load i16, ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[CONV1177_US:%.*]] = zext i16 [[L_A]] to i32
-; CHECK-NEXT:    [[ADD1178_US:%.*]] = add nsw i32 [[CONV1177_US]], [[FPTR]]
-; CHECK-NEXT:    [[CONV1179_US:%.*]] = trunc i32 [[ADD1178_US]] to i16
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDVARS_IV1783]]
-; CHECK-NEXT:    [[L_B:%.*]] = load i64, ptr [[GEP_B]], align 8
-; CHECK-NEXT:    [[IDXPROM1181_US:%.*]] = ashr exact i64 [[L_B]], 32
-; CHECK-NEXT:    [[ARRAYIDX1185_US:%.*]] = getelementptr inbounds i16, ptr [[M3]], i64 [[IDXPROM1181_US]]
-; CHECK-NEXT:    store i16 [[CONV1179_US]], ptr [[ARRAYIDX1185_US]], align 2
-; CHECK-NEXT:    [[INDVARS_IV_NEXT1784]] = add nuw nsw i64 [[INDVARS_IV1783]], 1
-; CHECK-NEXT:    [[EXITCOND1785:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT1784]], 16
-; CHECK-NEXT:    br i1 [[EXITCOND1785]], label [[FOR_INC1286_LOOPEXIT]], label [[IF_THEN1165_US]]
 ; CHECK:       for.inc1286.loopexit:
 ; CHECK-NEXT:    ret void
 ;
