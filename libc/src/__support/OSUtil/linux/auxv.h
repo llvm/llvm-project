@@ -77,6 +77,7 @@ LIBC_INLINE void Vector::initialize_unsafe(const Entry *auxv) {
 // This initialize routine will do a mmap to allocate a memory region.
 // Since auxv tends to live throughout the program lifetime, we do not
 // munmap it.
+[[gnu::cold]]
 LIBC_INLINE void Vector::fallback_initialize_unsync() {
   constexpr size_t AUXV_MMAP_SIZE = FALLBACK_AUXV_ENTRIES * sizeof(Entry);
   long mmap_ret = syscall_impl<long>(SYS_mmap, nullptr, AUXV_MMAP_SIZE,
