@@ -1149,6 +1149,80 @@ public:
   static OMPFullClause *CreateEmpty(const ASTContext &C);
 };
 
+/// This class represents the 'looprange' clause in the
+/// '#pragma omp fuse' directive
+///
+/// \code {c}
+/// #pragma omp fuse looprange(1,2)
+/// {
+///   for(int i = 0; i < 64; ++i)
+///   for(int j = 0; j < 256; j+=2)
+///   for(int k = 127; k >= 0; --k)
+/// \endcode
+class OMPLoopRangeClause final : public OMPClause {
+  friend class OMPClauseReader;
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  /// Location of first and count expressions
+  SourceLocation FirstLoc, CountLoc;
+
+  /// Number of looprange arguments (always 2: first, count)
+  enum { FirstExpr, CountExpr, NumArgs };
+  Stmt *Args[NumArgs] = {nullptr, nullptr};
+
+  /// Set looprange 'first' expression
+  void setFirst(Expr *E) { Args[FirstExpr] = E; }
+
+  /// Set looprange 'count' expression
+  void setCount(Expr *E) { Args[CountExpr] = E; }
+
+  /// Build an empty clause for deserialization.
+  explicit OMPLoopRangeClause()
+      : OMPClause(llvm::omp::OMPC_looprange, {}, {}) {}
+
+public:
+  /// Build a 'looprange' clause AST node.
+  static OMPLoopRangeClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation FirstLoc, SourceLocation CountLoc,
+         SourceLocation EndLoc, Expr *First, Expr *Count);
+
+  /// Build an empty 'looprange' clause node.
+  static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
+
+  // Location getters/setters
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getFirstLoc() const { return FirstLoc; }
+  SourceLocation getCountLoc() const { return CountLoc; }
+
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setFirstLoc(SourceLocation Loc) { FirstLoc = Loc; }
+  void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
+
+  /// Get looprange 'first' expression
+  Expr *getFirst() const { return cast_or_null<Expr>(Args[FirstExpr]); }
+
+  /// Get looprange 'count' expression
+  Expr *getCount() const { return cast_or_null<Expr>(Args[CountExpr]); }
+
+  child_range children() { return child_range(Args, Args + NumArgs); }
+  const_child_range children() const {
+    return const_child_range(Args, Args + NumArgs);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_looprange;
+  }
+};
+
 /// Representation of the 'partial' clause of the '#pragma omp unroll'
 /// directive.
 ///

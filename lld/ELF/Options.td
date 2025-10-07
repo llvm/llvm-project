@@ -722,11 +722,11 @@ def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
   "ThinLTO backend compilations will be distributed">;
 defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
   "pass to the ThinLTO distributor">;
-def thinlto_compiler_eq: JJ<"thinlto-remote-compiler=">,
+def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
   HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-defm thinlto_compiler_arg: EEq<"thinlto-remote-compiler-arg", "Compiler "
-  "arguments for the ThinLTO distributor to pass for ThinLTO backend "
+defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",

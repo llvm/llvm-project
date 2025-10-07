@@ -482,7 +482,7 @@ when running the benchmarks. For example,
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --show-all --param optimization=speed
 
 Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
@@ -504,7 +504,7 @@ more benchmarks, as usual:
 .. code-block:: bash
 
   $ cmake -S runtimes -B <build> [...]
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --param optimization=speed
 
 Then, get the consolidated benchmark output for that run using ``consolidate-benchmarks``:
 

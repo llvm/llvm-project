@@ -194,10 +194,6 @@ private:
   void parseInstructionEncodings();
 };
 
-} // end anonymous namespace
-
-namespace {
-
 struct EncodingIsland {
   unsigned StartBit;
   unsigned NumBits;

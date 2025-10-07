@@ -542,6 +542,7 @@ private:
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
   void visitAccessGroupMetadata(const MDNode *MD);
+  void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -5373,6 +5374,27 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
   }
 }
 
+void Verifier::visitCapturesMetadata(Instruction &I, const MDNode *Captures) {
+  static const char *ValidArgs[] = {"address_is_null", "address",
+                                    "read_provenance", "provenance"};
+
+  auto *SI = dyn_cast<StoreInst>(&I);
+  Check(SI, "!captures metadata can only be applied to store instructions", &I);
+  Check(SI->getValueOperand()->getType()->isPointerTy(),
+        "!captures metadata can only be applied to store with value operand of "
+        "pointer type",
+        &I);
+  Check(Captures->getNumOperands() != 0, "!captures metadata cannot be empty",
+        &I);
+
+  for (Metadata *Op : Captures->operands()) {
+    auto *Str = dyn_cast<MDString>(Op);
+    Check(Str, "!captures metadata must be a list of strings", &I);
+    Check(is_contained(ValidArgs, Str->getString()),
+          "invalid entry in !captures metadata", &I, Str);
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -5599,6 +5621,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
+
+  if (MDNode *Captures = I.getMetadata(LLVMContext::MD_captures))
+    visitCapturesMetadata(I, Captures);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
@@ -5869,9 +5894,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::call_preallocated_setup: {
-    auto *NumArgs = dyn_cast<ConstantInt>(Call.getArgOperand(0));
-    Check(NumArgs != nullptr,
-          "llvm.call.preallocated.setup argument must be a constant");
+    auto *NumArgs = cast<ConstantInt>(Call.getArgOperand(0));
     bool FoundCall = false;
     for (User *U : Call.users()) {
       auto *UseCall = dyn_cast<CallBase>(U);

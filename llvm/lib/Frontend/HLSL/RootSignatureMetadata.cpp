@@ -218,6 +218,7 @@ MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
       ConstantAsMetadata::get(Builder.getInt32(Sampler.Space)),
       ConstantAsMetadata::get(
           Builder.getInt32(to_underlying(Sampler.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(to_underlying(Sampler.Flags))),
   };
   return MDNode::get(Ctx, Operands);
 }
@@ -417,7 +418,7 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
 
 Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
                                          MDNode *StaticSamplerNode) {
-  if (StaticSamplerNode->getNumOperands() != 14)
+  if (StaticSamplerNode->getNumOperands() != 15)
     return make_error<InvalidRSMetadataFormat>("Static Sampler");
 
   mcdxbc::StaticSampler Sampler;
@@ -500,6 +501,17 @@ Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
   if (auto E = Visibility.takeError())
     return Error(std::move(E));
   Sampler.ShaderVisibility = *Visibility;
+
+  if (RSD.Version < 3) {
+    RSD.StaticSamplers.push_back(Sampler);
+    return Error::success();
+  }
+  assert(RSD.Version >= 3);
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 14))
+    Sampler.Flags = *Val;
+  else
+    return make_error<InvalidRSMetadataValue>("Static Sampler Flags");
 
   RSD.StaticSamplers.push_back(Sampler);
   return Error::success();
@@ -639,8 +651,11 @@ Error MetadataParser::validateRootSignature(
                            "RegisterSpace", Descriptor.RegisterSpace));
 
       if (RSD.Version > 1) {
-        if (!hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
-                                                     Descriptor.Flags))
+        bool IsValidFlag =
+            dxbc::isValidRootDesciptorFlags(Descriptor.Flags) &&
+            hlsl::rootsig::verifyRootDescriptorFlag(
+                RSD.Version, dxbc::RootDescriptorFlags(Descriptor.Flags));
+        if (!IsValidFlag)
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
@@ -664,9 +679,11 @@ Error MetadataParser::validateRootSignature(
                          make_error<RootSignatureValidationError<uint32_t>>(
                              "NumDescriptors", Range.NumDescriptors));
 
-        if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType,
-                dxbc::DescriptorRangeFlags(Range.Flags)))
+        bool IsValidFlag = dxbc::isValidDescriptorRangeFlags(Range.Flags) &&
+                           hlsl::rootsig::verifyDescriptorRangeFlag(
+                               RSD.Version, Range.RangeType,
+                               dxbc::DescriptorRangeFlags(Range.Flags));
+        if (!IsValidFlag)
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
@@ -719,8 +736,11 @@ Error MetadataParser::validateRootSignature(
           joinErrors(std::move(DeferredErrs),
                      make_error<RootSignatureValidationError<uint32_t>>(
                          "RegisterSpace", Sampler.RegisterSpace));
-
-    if (!hlsl::rootsig::verifyStaticSamplerFlags(RSD.Version, Sampler.Flags))
+    bool IsValidFlag =
+        dxbc::isValidStaticSamplerFlags(Sampler.Flags) &&
+        hlsl::rootsig::verifyStaticSamplerFlags(
+            RSD.Version, dxbc::StaticSamplerFlags(Sampler.Flags));
+    if (!IsValidFlag)
       DeferredErrs =
           joinErrors(std::move(DeferredErrs),
                      make_error<RootSignatureValidationError<uint32_t>>(
