@@ -36,7 +36,7 @@ int strftime_main(printf_core::Writer<write_mode> *writer,
       return result;
   }
 
-  return writer->get_chars_written();
+  return static_cast<int>(writer->get_chars_written());
 }
 
 } // namespace strftime_core

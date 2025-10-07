@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace {
 
 LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
-  write_to_stdout(new_str);
+  write_to_stdout(new_str); 
   return printf_core::WRITE_OK;
 }
 
@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(int, vprintf,
       buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
-  int retval = printf_core::printf_main(&writer, format, args);
+  int retval = printf_core::printf_main(&writer, format, args); // TODO baremetal stuff
 
   int flushval = wb.overflow_write("");
   if (flushval != printf_core::WRITE_OK)

@@ -47,7 +47,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   int flushval = wb.overflow_write("");
   if (flushval != printf_core::WRITE_OK)
     retval = flushval;
-
+    
   return retval;
 }
 

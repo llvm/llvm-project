@@ -91,13 +91,14 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
 
-struct NoopStream {};
-
-static ssize_t noop_write(void *, const char *, size_t size) { return size; }
-
 TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
+  struct NoopStream {};
+  auto noop_write = [](void *cookie, const char *buf, size_t size) -> ssize_t {
+    return size;
+  };
+
   NoopStream stream;
-  cookie_io_functions_t funcs = {nullptr, &noop_write, nullptr, nullptr};
+  cookie_io_functions_t funcs = {nullptr, +noop_write, nullptr, nullptr};
   ::FILE *file = printf_test::fopencookie(&stream, "w", funcs);
   ASSERT_NE(file, nullptr);
 
