@@ -2824,8 +2824,8 @@ static bool interp__builtin_ia32_movmsk_op(InterpState &S, CodePtr OpPC,
   const Pointer &Source = S.Stk.pop<Pointer>();
 
   unsigned SourceLen = Source.getNumElems();
-  const QualType ElemQT = getElemType(Source);
-  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  QualType ElemQT = getElemType(Source);
+  OptPrimType ElemPT = S.getContext().classify(ElemQT);
   unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
 
   if (ElemQT->isIntegerType()) {
