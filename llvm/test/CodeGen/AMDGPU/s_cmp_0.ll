@@ -252,16 +252,16 @@ define amdgpu_ps i32 @nor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nor_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s0
-; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i32 %val0, %val1
   %result2 = xor i32 %result, -1
-  call void asm "; use $0", "s"(i32 %result2)
+  store i32 %result2, ptr addrspace(1) %ptr
   %cmp = icmp ne i32 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
