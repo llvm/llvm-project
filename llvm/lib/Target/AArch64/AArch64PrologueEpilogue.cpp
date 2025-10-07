@@ -363,16 +363,17 @@ SVEFrameSizes AArch64PrologueEpilogueCommon::getSVEStackFrameSizes() const {
   StackOffset PPRLocalsSize = AFL.getPPRStackSize(MF) - PPRCalleeSavesSize;
   StackOffset ZPRLocalsSize = AFL.getZPRStackSize(MF) - ZPRCalleeSavesSize;
   if (AFI->hasSplitSVEObjects())
-    return {PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize,
-            ZPRLocalsSize};
+    return {{PPRCalleeSavesSize, PPRLocalsSize},
+            {ZPRCalleeSavesSize, ZPRLocalsSize}};
   // For simplicity, attribute all locals to ZPRs when split SVE is disabled.
-  return {PPRCalleeSavesSize, ZPRCalleeSavesSize, StackOffset{},
-          PPRLocalsSize + ZPRLocalsSize};
+  return {{PPRCalleeSavesSize, StackOffset{}},
+          {ZPRCalleeSavesSize, PPRLocalsSize + ZPRLocalsSize}};
 }
 
 struct SVEPartitions {
-  MachineBasicBlock::iterator PPRBegin, PPREnd;
-  MachineBasicBlock::iterator ZPRBegin, ZPREnd;
+  struct {
+    MachineBasicBlock::iterator Begin, End;
+  } PPR, ZPR;
 };
 
 static SVEPartitions partitionSVECS(MachineBasicBlock &MBB,
@@ -399,8 +400,8 @@ static SVEPartitions partitionSVECS(MachineBasicBlock &MBB,
       IsEpilogue ? (--ZPRsI) : (++ZPRsI);
   }
   if (IsEpilogue)
-    return {PPRsI, MBBI, ZPRsI, PPRsI};
-  return {MBBI, PPRsI, PPRsI, ZPRsI};
+    return {{PPRsI, MBBI}, {ZPRsI, PPRsI}};
+  return {{MBBI, PPRsI}, {PPRsI, ZPRsI}};
 }
 
 AArch64PrologueEmitter::AArch64PrologueEmitter(MachineFunction &MF,
@@ -763,61 +764,59 @@ void AArch64PrologueEmitter::emitPrologue() {
   if (AFL.windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding))
     emitWindowsStackProbe(AfterGPRSavesI, DL, NumBytes, RealignmentPadding);
 
-  assert(!(AFL.canUseRedZone(MF) && NeedsRealignment) &&
-         "Cannot use redzone with stack realignment");
-
-  auto [PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize] =
-      getSVEStackFrameSizes();
+  auto [PPR, ZPR] = getSVEStackFrameSizes();
 
   StackOffset NonSVELocalsSize = StackOffset::getFixed(NumBytes);
-  StackOffset SVECalleeSavesSize = ZPRCalleeSavesSize + PPRCalleeSavesSize;
+  StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
   StackOffset CFAOffset =
       StackOffset::getFixed(MFI.getStackSize()) - NonSVELocalsSize;
 
   MachineBasicBlock::iterator AfterSVESavesI = AfterGPRSavesI;
   // Allocate space for the callee saves and PPR locals (if any).
   if (SVELayout != SVEStackLayout::CalleeSavesAboveFrameRecord) {
-    SVEPartitions SVECSPartitions =
-        partitionSVECS(MBB, AfterGPRSavesI, PPRCalleeSavesSize,
-                       ZPRCalleeSavesSize, /*IsEpilogue=*/false);
-    AfterSVESavesI = SVECSPartitions.ZPREnd;
+    auto [PPRRange, ZPRRange] =
+        partitionSVECS(MBB, AfterGPRSavesI, PPR.CalleeSavesSize,
+                       ZPR.CalleeSavesSize, /*IsEpilogue=*/false);
+    AfterSVESavesI = ZPRRange.End;
     if (EmitAsyncCFI)
       emitCalleeSavedSVELocations(AfterSVESavesI);
 
     StackOffset AllocateBeforePPRs = SVECalleeSavesSize;
-    StackOffset AllocateAfterPPRs = PPRLocalsSize;
+    StackOffset AllocateAfterPPRs = PPR.LocalsSize;
     if (SVELayout == SVEStackLayout::Split) {
-      AllocateBeforePPRs = PPRCalleeSavesSize;
-      AllocateAfterPPRs = PPRLocalsSize + ZPRCalleeSavesSize;
+      AllocateBeforePPRs = PPR.CalleeSavesSize;
+      AllocateAfterPPRs = PPR.LocalsSize + ZPR.CalleeSavesSize;
     }
-    allocateStackSpace(SVECSPartitions.PPRBegin, 0, AllocateBeforePPRs,
+    allocateStackSpace(PPRRange.Begin, 0, AllocateBeforePPRs,
                        EmitAsyncCFI && !HasFP, CFAOffset,
                        MFI.hasVarSizedObjects() || AllocateAfterPPRs ||
-                           ZPRLocalsSize || NonSVELocalsSize);
+                           ZPR.LocalsSize || NonSVELocalsSize);
     CFAOffset += AllocateBeforePPRs;
-    assert(SVECSPartitions.PPREnd == SVECSPartitions.ZPRBegin &&
+    assert(PPRRange.End == ZPRRange.Begin &&
            "Expected ZPR callee saves after PPR locals");
-    allocateStackSpace(SVECSPartitions.PPREnd, RealignmentPadding,
-                       AllocateAfterPPRs, EmitAsyncCFI && !HasFP, CFAOffset,
-                       MFI.hasVarSizedObjects() || ZPRLocalsSize ||
+    allocateStackSpace(PPRRange.End, RealignmentPadding, AllocateAfterPPRs,
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects() || ZPR.LocalsSize ||
                            NonSVELocalsSize);
     CFAOffset += AllocateAfterPPRs;
   } else {
     // Note: With CalleeSavesAboveFrameRecord the SVE CS have already been
     // allocated (and separate PPRLocals are not supported).
-    assert(!PPRLocalsSize && "Unexpected PPR locals!");
+    assert(!PPR.LocalsSize && "Unexpected PPR locals!");
     CFAOffset += SVECalleeSavesSize;
   }
 
   // Allocate space for the rest of the frame including ZPR locals. Align the
   // stack as necessary.
+  assert(!(AFL.canUseRedZone(MF) && NeedsRealignment) &&
+         "Cannot use redzone with stack realignment");
   if (!AFL.canUseRedZone(MF)) {
     // FIXME: in the case of dynamic re-alignment, NumBytes doesn't have the
     // correct value here, as NumBytes also includes padding bytes, which
     // shouldn't be counted here.
-    allocateStackSpace(AfterSVESavesI, RealignmentPadding,
-                       ZPRLocalsSize + NonSVELocalsSize, EmitAsyncCFI && !HasFP,
-                       CFAOffset, MFI.hasVarSizedObjects());
+    allocateStackSpace(
+        AfterSVESavesI, RealignmentPadding, ZPR.LocalsSize + NonSVELocalsSize,
+        EmitAsyncCFI && !HasFP, CFAOffset, MFI.hasVarSizedObjects());
   }
 
   // If we need a base pointer, set it up here. It's whatever the value of the
@@ -1439,24 +1438,24 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   NumBytes -= PrologueSaveSize;
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
-  auto [PPRCalleeSavesSize, ZPRCalleeSavesSize, PPRLocalsSize, ZPRLocalsSize] =
-      getSVEStackFrameSizes();
-  StackOffset SVECalleeSavesSize = ZPRCalleeSavesSize + PPRCalleeSavesSize;
-  StackOffset SVEStackSize = SVECalleeSavesSize + PPRLocalsSize + ZPRLocalsSize;
+  auto [PPR, ZPR] = getSVEStackFrameSizes();
+  StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
+  StackOffset SVEStackSize =
+      SVECalleeSavesSize + PPR.LocalsSize + ZPR.LocalsSize;
 
-  auto SVECSPartitions = partitionSVECS(
+  auto [PPRRange, ZPRRange] = partitionSVECS(
       MBB,
       SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
           ? MBB.getFirstTerminator()
           : FirstGPRRestoreI,
-      PPRCalleeSavesSize, ZPRCalleeSavesSize, /*IsEpilogue=*/true);
+      PPR.CalleeSavesSize, ZPR.CalleeSavesSize, /*IsEpilogue=*/true);
 
-  MachineBasicBlock::iterator RestoreBegin = SVECSPartitions.ZPRBegin;
-  MachineBasicBlock::iterator RestoreEnd = SVECSPartitions.PPREnd;
+  MachineBasicBlock::iterator RestoreBegin = ZPRRange.Begin;
+  MachineBasicBlock::iterator RestoreEnd = PPRRange.End;
 
   // Deallocate the SVE area.
   if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
-    StackOffset SVELocalsSize = ZPRLocalsSize + PPRLocalsSize;
+    StackOffset SVELocalsSize = ZPR.LocalsSize + PPR.LocalsSize;
     // If the callee-save area is before FP, restoring the FP implicitly
     // deallocates non-callee-save SVE allocations.  Otherwise, deallocate them
     // explicitly.
@@ -1481,8 +1480,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
                     SVECalleeSavesSize, TII, MachineInstr::FrameDestroy, false,
                     NeedsWinCFI, &HasWinCFI);
   } else if (AFI->hasSVEStackSize()) {
-    auto [PPRRestoreBegin, PPRRestoreEnd, ZPRRestoreBegin, ZPRRestoreEnd] =
-        SVECSPartitions;
     // If we have stack realignment or variable-sized objects we must use the FP
     // to restore SVE callee saves (as there is an unknown amount of
     // data/padding between the SP and SVE CS area).
@@ -1520,36 +1517,36 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
         auto NonSVELocals = StackOffset::getFixed(NumBytes);
-        emitFrameOffset(MBB, ZPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
+        emitFrameOffset(MBB, ZPRRange.Begin, DL, AArch64::SP, AArch64::SP,
                         NonSVELocals, TII, MachineInstr::FrameDestroy, false,
                         NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
         CFAOffset -= NonSVELocals;
         NumBytes = 0;
       }
 
-      if (ZPRLocalsSize) {
-        emitFrameOffset(MBB, ZPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
-                        ZPRLocalsSize, TII, MachineInstr::FrameDestroy, false,
+      if (ZPR.LocalsSize) {
+        emitFrameOffset(MBB, ZPRRange.Begin, DL, AArch64::SP, AArch64::SP,
+                        ZPR.LocalsSize, TII, MachineInstr::FrameDestroy, false,
                         NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
-        CFAOffset -= ZPRLocalsSize;
+        CFAOffset -= ZPR.LocalsSize;
       }
 
       StackOffset SVECalleeSavesToDealloc = SVECalleeSavesSize;
       if (SVELayout == SVEStackLayout::Split &&
-          (PPRLocalsSize || ZPRCalleeSavesSize)) {
-        assert(PPRRestoreBegin == ZPRRestoreEnd &&
+          (PPR.LocalsSize || ZPR.CalleeSavesSize)) {
+        assert(PPRRange.Begin == ZPRRange.End &&
                "Expected PPR restores after ZPR");
-        emitFrameOffset(MBB, PPRRestoreBegin, DL, AArch64::SP, AArch64::SP,
-                        PPRLocalsSize + ZPRCalleeSavesSize, TII,
+        emitFrameOffset(MBB, PPRRange.Begin, DL, AArch64::SP, AArch64::SP,
+                        PPR.LocalsSize + ZPR.CalleeSavesSize, TII,
                         MachineInstr::FrameDestroy, false, NeedsWinCFI,
                         &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
-        CFAOffset -= PPRLocalsSize + ZPRCalleeSavesSize;
-        SVECalleeSavesToDealloc -= ZPRCalleeSavesSize;
+        CFAOffset -= PPR.LocalsSize + ZPR.CalleeSavesSize;
+        SVECalleeSavesToDealloc -= ZPR.CalleeSavesSize;
       }
 
       // If split SVE is on, this dealloc PPRs, otherwise, deallocs ZPRs + PPRs:
       if (SVECalleeSavesToDealloc)
-        emitFrameOffset(MBB, PPRRestoreEnd, DL, AArch64::SP, AArch64::SP,
+        emitFrameOffset(MBB, PPRRange.End, DL, AArch64::SP, AArch64::SP,
                         SVECalleeSavesToDealloc, TII,
                         MachineInstr::FrameDestroy, false, NeedsWinCFI,
                         &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
@@ -1557,7 +1554,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
     if (EmitCFI)
       emitCalleeSavedSVERestores(
-          SVELayout == SVEStackLayout::Split ? ZPRRestoreEnd : PPRRestoreEnd);
+          SVELayout == SVEStackLayout::Split ? ZPRRange.End : PPRRange.End);
   }
 
   if (!HasFP) {

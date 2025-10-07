@@ -28,8 +28,9 @@ class AArch64FunctionInfo;
 class AArch64FrameLowering;
 
 struct SVEFrameSizes {
-  StackOffset PPRCalleeSavesSize, ZPRCalleeSavesSize;
-  StackOffset PPRLocalsSize, ZPRLocalsSize;
+  struct {
+    StackOffset CalleeSavesSize, LocalsSize;
+  } PPR, ZPR;
 };
 
 class AArch64PrologueEpilogueCommon {
