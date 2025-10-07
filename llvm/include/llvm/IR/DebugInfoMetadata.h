@@ -103,6 +103,12 @@ public:
     return Name;
   }
 
+  /// Returns language version. Only valid for versioned language names.
+  uint32_t getVersion() const {
+    assert(hasVersionedName());
+    return Version;
+  }
+
   DISourceLanguageName(uint16_t Lang, uint32_t Version)
       : Version(Version), Name(Lang), HasVersion(true) {};
   DISourceLanguageName(uint16_t Lang)
