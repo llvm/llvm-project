@@ -133,14 +133,7 @@ public:
 
   explicit operator bool() const { return SI && SIUse; }
 };
-} // namespace
 
-static void unfold(DomTreeUpdater *DTU, LoopInfo *LI,
-                   SelectInstToUnfold SIToUnfold,
-                   std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-                   std::vector<BasicBlock *> *NewBBs);
-
-namespace {
 class DFAJumpThreading {
 public:
   DFAJumpThreading(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
@@ -169,6 +162,11 @@ private:
     }
   }
 
+  static void unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                     SelectInstToUnfold SIToUnfold,
+                     std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                     std::vector<BasicBlock *> *NewBBs);
+
   AssumptionCache *AC;
   DominatorTree *DT;
   LoopInfo *LI;
@@ -184,10 +182,10 @@ private:
 /// created basic blocks into \p NewBBs.
 ///
 /// TODO: merge it with CodeGenPrepare::optimizeSelectInst() if possible.
-static void unfold(DomTreeUpdater *DTU, LoopInfo *LI,
-                   SelectInstToUnfold SIToUnfold,
-                   std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-                   std::vector<BasicBlock *> *NewBBs) {
+void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                              SelectInstToUnfold SIToUnfold,
+                              std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                              std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
   assert(SI->hasOneUse());
@@ -377,11 +375,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   return OS;
 }
 
+namespace {
 /// ThreadingPath is a path in the control flow of a loop that can be threaded
 /// by cloning necessary basic blocks and replacing conditional branches with
 /// unconditional ones. A threading path includes a list of basic blocks, the
 /// exit state, and the block that determines the next state.
-namespace {
 struct ThreadingPath {
   /// Exit value is DFA's exit state for the given path.
   APInt getExitValue() const { return ExitVal; }
