@@ -400,7 +400,9 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
         TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Tiles the operations pointed to by the target handle and fuses their
-    producers greedily using the options provided as attributes.
+    producers greedily using the options provided as attributes. Tile sizes
+    and loop interchange permutation can be provided as either static
+    attributes or dynamic values (transform parameters or payload handles).
 
     If `apply_cleanup` is true then slice canonicalization is applied between
     fusion steps. If `use_forall` is true then tiling method generates a
