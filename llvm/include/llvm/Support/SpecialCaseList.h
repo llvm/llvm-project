@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -118,15 +119,20 @@ protected:
   SpecialCaseList(SpecialCaseList const &) = delete;
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
-  /// Represents a set of globs and their line numbers
-  class Matcher {
+  // Lagacy v1 matcher.
+  class RegexMatcher {
   public:
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
-                          bool UseRegex);
+    LLVM_ABI unsigned match(StringRef Query) const;
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
+  };
+
+  class GlobMatcher {
+  public:
     // Returns the line number in the source file that this query matches to.
     // Returns zero if no match is found.
     LLVM_ABI unsigned match(StringRef Query) const;
-
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
     struct Glob {
       std::string Name;
       unsigned LineNo;
@@ -137,17 +143,33 @@ protected:
       Glob() = default;
     };
 
-    std::vector<std::unique_ptr<Matcher::Glob>> Globs;
-    std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
+    std::vector<std::unique_ptr<GlobMatcher::Glob>> Globs;
+  };
+
+  /// Represents a set of globs and their line numbers
+  class Matcher {
+  public:
+    LLVM_ABI explicit Matcher(bool UseGlobs);
+    // Returns the line number in the source file that this query matches to.
+    // Returns zero if no match is found.
+    LLVM_ABI unsigned match(StringRef Query) const;
+
+  private:
+    friend class SpecialCaseList;
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+
+    std::variant<RegexMatcher, GlobMatcher> M;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
   struct Section {
-    Section(StringRef Str, unsigned FileIdx)
-        : SectionStr(Str), FileIdx(FileIdx) {};
+    Section(StringRef Str, unsigned FileIdx, bool UseGlobs)
+        : SectionMatcher(UseGlobs), SectionStr(Str), FileIdx(FileIdx) {};
 
-    std::unique_ptr<Matcher> SectionMatcher = std::make_unique<Matcher>();
+    Section(Section &&) = default;
+
+    Matcher SectionMatcher;
     SectionEntries Entries;
     std::string SectionStr;
     unsigned FileIdx;
@@ -157,7 +179,7 @@ protected:
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
                                           unsigned FileIdx, unsigned LineNo,
-                                          bool UseGlobs = true);
+                                          bool UseGlobs);
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
