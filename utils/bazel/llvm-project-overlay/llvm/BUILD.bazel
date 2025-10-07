@@ -4772,6 +4772,17 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-offload-binary",
+    srcs = glob(["tools/llvm-offload-binary/*.cpp"]),
+    stamp = 0,
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-pdbutil",
     srcs = glob([
         "tools/llvm-pdbutil/*.cpp",
@@ -4805,7 +4816,7 @@ cc_library(
     ],
 )
 
-llvm_driver_cc_binary(
+cc_binary(
     name = "llvm-profdata",
     stamp = 0,
     deps = [":llvm-profdata-lib"],
