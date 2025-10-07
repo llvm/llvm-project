@@ -178,6 +178,22 @@ __attribute__((objc_root_class))
 + (NSNumber *)numberWithBool:(BOOL)value;
 @end
 
+@interface NSResponder : NSObject
+@end
+
+@interface NSApplication : NSResponder
+
+extern NSApplication * NSApp;
+
+@property (class, readonly, strong) NSApplication *sharedApplication;
+
+- (void)finishLaunching;
+- (void)run;
+- (void)stop:(id)sender;
+- (void)terminate:(id)sender;
+
+@end
+
 @interface SomeObj : NSObject
 - (instancetype)_init;
 - (SomeObj *)mutableCopy;

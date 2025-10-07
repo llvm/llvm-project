@@ -588,6 +588,7 @@ struct Derived : Base {
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), OSObjectPtr { provide_dispatch() }.get()];
   [self doWork:__null];
   [self doWork:nil];
+  [NSApp run];
 }
 
 - (SomeObj *)getSomeObj {
