@@ -41,6 +41,18 @@
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV %s
 
+// Only the first case where -fembed-bitcode-marker is used is relevant.
+// The next 2 cases only verify that the user's will is respected.
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -fembed-bitcode=all \
+// RUN:   %s -nogpuinc -nogpulib \
+// RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV-EMBED %s
+
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -fembed-bitcode=off \
+// RUN:   %s -nogpuinc -nogpulib \
+// RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV %s
+
 //
 // Compile device code in a.cu to code object for gfx803.
 //
@@ -214,3 +226,7 @@
 // AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
 // AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-spirv64-amd-amdhsa--amdgcnspirv,hipv4-amdgcn-amd-amdhsa--gfx900"
 // AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
+
+// Only check that no confliction options are passed
+// AMDGCNSPIRV-EMBED: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-fembed-bitcode=marker" "-disable-llvm-passes" {{.*}} "-o" "[[AMDGCNSPV_MARKER_BC:.*bc]]"
+// AMDGCNSPIRV-EMBED: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-fembed-bitcode=all"{{.*}}"-fembed-bitcode=marker" {{.*}} "-o" "[[AMDGCNSPV_BC:.*bc]]" "-x" "ir" "[[AMDGCNSPV_MARKER_BC]]"
