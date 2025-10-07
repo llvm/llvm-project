@@ -28,9 +28,9 @@ namespace llvm {
 /// initialization.
 template <unsigned NumBits>
 class Bitset {
-  typedef uintptr_t BitWord;
+  using BitWord = uintptr_t;
 
-  enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };
+  static constexpr unsigned BITWORD_SIZE = sizeof(BitWord) * CHAR_BIT;
 
   static_assert(BITWORD_SIZE == 64 || BITWORD_SIZE == 32,
                 "Unsupported word size");
