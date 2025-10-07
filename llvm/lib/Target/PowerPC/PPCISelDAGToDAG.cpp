@@ -4570,23 +4570,21 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
     if (Subtarget->hasSPE())
       return false;
 
+    EVT VecVT = LHS.getValueType();
     // Optimize 'Not equal to zero-vector' comparisons to 'Greater than or
     // less than' operators.
     // Example: Consider k to be any non-zero positive value.
     // * for k != 0, change SETNE to SETUGT (k > 0)
     // * for 0 != k, change SETNE to SETULT (0 < k)
     if (CC == ISD::SETNE) {
-      EVT VT = LHS.getValueType();
-
       // Only optimize for integer types (avoid FP completely)
-      if (VT.getVectorElementType().isInteger()) {
+      if (VecVT.getVectorElementType().isInteger()) {
         if (ISD::isBuildVectorAllZeros(RHS.getNode()))
           CC = ISD::SETUGT;
         else if (ISD::isBuildVectorAllZeros(LHS.getNode()))
           CC = ISD::SETULT;
       }
     }
-    EVT VecVT = LHS.getValueType();
     bool Swap, Negate;
     unsigned int VCmpInst =
         getVCmpInst(VecVT.getSimpleVT(), CC, Subtarget->hasVSX(), Swap, Negate);
