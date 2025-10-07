@@ -112,7 +112,7 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_setr_ph(
                        e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_pch(_Float16 _Complex __h) {
   return (__m512h)_mm512_set1_ps(__builtin_bit_cast(float, __h));
 }

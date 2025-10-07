@@ -117,6 +117,7 @@ __m512h test_mm512_set1_pch(_Float16 _Complex h) {
   // CHECK: bitcast <16 x float>{{.*}} to <32 x half>
   return _mm512_set1_pch(h);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_set1_pch(1.0), 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0));
 
 __m512h test_mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                           _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
