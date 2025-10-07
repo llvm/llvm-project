@@ -692,8 +692,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
         }
 
         BadOffsetKind Problem = AlsoMentionUnderflow
-                                            ? BadOffsetKind::Indeterminate
-                                            : BadOffsetKind::Overflowing;
+                                    ? BadOffsetKind::Indeterminate
+                                    : BadOffsetKind::Overflowing;
         Messages Msgs =
             getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
                             *KnownSize, Location, Problem);
