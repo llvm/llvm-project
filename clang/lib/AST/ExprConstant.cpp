@@ -13775,9 +13775,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
         unsigned SourceLen = SourceLHS.getVectorLength();
         const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
-        const QualType ElemQT = VT->getElementType();
+        QualType ElemQT = VT->getElementType();
         unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
-        APInt SignMask = APInt::getSignMask(LaneWidth);
 
         APInt AWide(LaneWidth * SourceLen, 0);
         APInt BWide(LaneWidth * SourceLen, 0);
@@ -13785,16 +13784,19 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         for (unsigned I = 0; I != SourceLen; ++I) {
           APInt ALane;
           APInt BLane;
-
-          if (ElemQT->isIntegerType()) { // Get value
+          if (ElemQT->isIntegerType()) { // Get value.
             ALane = SourceLHS.getVectorElt(I).getInt();
             BLane = SourceRHS.getVectorElt(I).getInt();
-          } else if (ElemQT->isFloatingType()) { // Get only sign bit
-            ALane = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt() &
-                    SignMask;
-            BLane = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt() &
-                    SignMask;
-          } else { // Must be integer or floating type
+          } else if (ElemQT->isFloatingType()) { // Get only sign bit.
+            ALane = SourceLHS.getVectorElt(I)
+                        .getFloat()
+                        .bitcastToAPInt()
+                        .isNegative();
+            BLane = SourceRHS.getVectorElt(I)
+                        .getFloat()
+                        .bitcastToAPInt()
+                        .isNegative();
+          } else { // Must be integer or floating type.
             return false;
           }
           AWide.insertBits(ALane, I * LaneWidth);

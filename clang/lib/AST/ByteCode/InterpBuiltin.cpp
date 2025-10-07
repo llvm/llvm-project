@@ -2826,10 +2826,9 @@ static bool interp__builtin_ia32_test_op(
   assert(LHS.getNumElems() == RHS.getNumElems());
 
   unsigned SourceLen = LHS.getNumElems();
-  const QualType ElemQT = getElemType(LHS);
-  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+  QualType ElemQT = getElemType(LHS);
+  OptPrimType ElemPT = S.getContext().classify(ElemQT);
   unsigned LaneWidth = S.getASTContext().getTypeSize(ElemQT);
-  APInt SignMask = APInt::getSignMask(LaneWidth);
 
   APInt AWide(LaneWidth * SourceLen, 0);
   APInt BWide(LaneWidth * SourceLen, 0);
@@ -2838,16 +2837,16 @@ static bool interp__builtin_ia32_test_op(
     APInt ALane;
     APInt BLane;
 
-    if (ElemQT->isIntegerType()) { // Get value
+    if (ElemQT->isIntegerType()) { // Get value.
       INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
         ALane = LHS.elem<T>(I).toAPSInt();
         BLane = RHS.elem<T>(I).toAPSInt();
       });
-    } else if (ElemQT->isFloatingType()) { // Get only sign bit
+    } else if (ElemQT->isFloatingType()) { // Get only sign bit.
       using T = PrimConv<PT_Float>::T;
-      ALane = LHS.elem<T>(I).getAPFloat().bitcastToAPInt() & SignMask;
-      BLane = RHS.elem<T>(I).getAPFloat().bitcastToAPInt() & SignMask;
-    } else { // Must be integer or floating type
+      ALane = LHS.elem<T>(I).getAPFloat().bitcastToAPInt().isNegative();
+      BLane = RHS.elem<T>(I).getAPFloat().bitcastToAPInt().isNegative();
+    } else { // Must be integer or floating type.
       return false;
     }
     AWide.insertBits(ALane, I * LaneWidth);
