@@ -69,6 +69,8 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
+- Clang warning suppressions file, ``--warning-suppression-mappings=``, now will
+  use the last matching entry instead of the longest one.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
