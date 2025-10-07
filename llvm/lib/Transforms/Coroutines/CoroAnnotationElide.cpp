@@ -41,44 +41,6 @@ static cl::opt<float> CoroElideBranchRatio(
     cl::desc("Minimum BranchProbability to consider a elide a coroutine."));
 extern cl::opt<unsigned> MinBlockCounterExecution;
 
-static cl::opt<bool>
-    PrintElidedCoroutine("print-elided-coroutine-stats", cl::init(false),
-                         cl::Hidden,
-                         cl::desc("Print stats for elided coroutine"));
-
-static cl::opt<std::string>
-    ElideStatOutput("coro-elide-stat-output", cl::init(""), cl::Hidden,
-                    cl::desc("Output file for -print-elided-coroutine-stats. "
-                             "Defaults to standard error output."));
-
-// The return value is used to indicate the owner of the resources. The users
-// should use the output parameter.
-static std::unique_ptr<llvm::raw_ostream>
-getCoroElidedStatsOStream(llvm::raw_ostream *&OS) {
-  if (!PrintElidedCoroutine) {
-    OS = &llvm::nulls();
-    return nullptr;
-  }
-
-  if (ElideStatOutput.empty()) {
-    OS = &llvm::errs();
-    return nullptr;
-  }
-
-  std::error_code EC;
-  auto ret = std::make_unique<llvm::raw_fd_ostream>(ElideStatOutput, EC,
-                                                    sys::fs::OF_Append);
-
-  if (EC) {
-    llvm::errs() << "llvm cannot open file: " << EC.message() << "\n";
-    OS = &llvm::nulls();
-    return nullptr;
-  }
-
-  OS = ret.get();
-  return ret;
-}
-
 static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
   for (Instruction &I : F->getEntryBlock())
     if (!isa<AllocaInst>(&I))
@@ -191,36 +153,26 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
       bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
       bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
       if (IsCallerPresplitCoroutine && HasAttr) {
-
-        llvm::raw_ostream *OS = nullptr;
-        auto _ = getCoroElidedStatsOStream(OS);
-        assert(OS && "At least we should able to get access to standard error");
+        static BranchProbability MinBranchProbability(
+          static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
+          MinBlockCounterExecution);
 
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*Caller);
-        if (BFI.getBlockFreq(CB->getParent()) <
-            BFI.getEntryFreq()) {
-          static BranchProbability MinBranchProbability(
-              static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
-              MinBlockCounterExecution);
 
-          auto Prob = BranchProbability::getBranchProbability(
-              BFI.getBlockFreq(CB->getParent()).getFrequency(),
-              BFI.getEntryFreq().getFrequency());
+        auto Prob = BranchProbability::getBranchProbability(
+            BFI.getBlockFreq(CB->getParent()).getFrequency(),
+            BFI.getEntryFreq().getFrequency());
 
-          if (Prob < MinBranchProbability) {
-            *OS << "Not eliding " << *CB
-                << " with estimated probability: " << Prob << "\n";
-            continue;
-          }
-
-          *OS << "BB Prob: \t" << Prob << "\n";
-        } else {
-          *OS << "BB Freq: \t"
-              << BFI.getBlockFreq(CB->getParent()).getFrequency() << "\n";
-          *OS << "Entry Freq: \t" << BFI.getEntryFreq().getFrequency() << "\n";
+        if (Prob < MinBranchProbability) {
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "CoroAnnotationElideUnlikely", Caller)
+                  << "'" << ore::NV("callee", Callee->getName())
+                  << "' not elided in '" << ore::NV("caller", Caller->getName())
+                  << "' because of low probability: " << ore::NV("probability", Prob)
+                  << " (threshold: " << ore::NV("threshold", MinBranchProbability) << ")";
+          });
+          continue;
         }
-
-        *OS << "eliding " << *CB << "\n";
 
         auto *CallerN = CG.lookup(*Caller);
         auto *CallerC = CallerN ? CG.lookupSCC(*CallerN) : nullptr;
@@ -233,7 +185,7 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
           return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
                  << "'" << ore::NV("callee", Callee->getName())
                  << "' elided in '" << ore::NV("caller", Caller->getName())
-                 << "'";
+                 << "' (probability: " << ore::NV("probability", Prob) << ")";
         });
 
         FAM.invalidate(*Caller, PreservedAnalyses::none());
