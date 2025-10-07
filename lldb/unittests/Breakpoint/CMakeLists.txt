@@ -1,6 +1,5 @@
 add_lldb_unittest(LLDBBreakpointTests      
   BreakpointIDTest.cpp
-  BreakpointClearConditionTest.cpp
   WatchpointAlgorithmsTests.cpp
 
   LINK_COMPONENTS

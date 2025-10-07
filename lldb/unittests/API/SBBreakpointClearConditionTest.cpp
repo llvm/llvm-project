@@ -1,4 +1,3 @@
-//===-- BreakpointClearConditionTest.cpp
 //--------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,24 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBTarget.h"
-#include "lldb/Breakpoint/StoppointCallbackContext.h"
-#include "lldb/Core/Debugger.h"
-#include "lldb/Core/Progress.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
-#include "lldb/Target/ExecutionContext.h"
-#include "lldb/lldb-private-enumerations.h"
-#include "lldb/lldb-types.h"
 #include "gtest/gtest.h"
-#include <iostream>
 #include <memory>
 #include <mutex>
 
@@ -34,12 +22,12 @@ using namespace lldb;
 class BreakpointClearConditionTest : public ::testing::Test {
 public:
   void SetUp() override {
-    std::call_once(TestUtilities::g_debugger_initialize_flag,
-                   []() { SBDebugger::Initialize(); });
+    m_sb_debugger = SBDebugger::Create(/*source_init_files=*/ false);
   };
 
+  void TearDown() override { SBDebugger::Destroy(m_sb_debugger); }
   SBDebugger m_sb_debugger;
-  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
+  SubsystemRAII<lldb::SBDebugger> subsystems;
 };
 
 template<typename T>
@@ -60,9 +48,6 @@ void test_condition(T sb_object) {
 }
 
 TEST_F(BreakpointClearConditionTest, BreakpointClearConditionTest) {
-  // Set up the debugger, make sure that was done properly.
-  m_sb_debugger = SBDebugger::Create(false);
-
   // Create target
   SBTarget sb_target;
   SBError error;
