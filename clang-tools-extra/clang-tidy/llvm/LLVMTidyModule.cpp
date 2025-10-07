@@ -13,6 +13,7 @@
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
 #include "HeaderGuardCheck.h"
+#include "IOSandboxCheck.h"
 #include "IncludeOrderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
@@ -31,6 +32,7 @@ public:
         "llvm-else-after-return");
     CheckFactories.registerCheck<LLVMHeaderGuardCheck>("llvm-header-guard");
     CheckFactories.registerCheck<IncludeOrderCheck>("llvm-include-order");
+    CheckFactories.registerCheck<IOSandboxCheck>("llvm-io-sandbox");
     CheckFactories.registerCheck<readability::NamespaceCommentCheck>(
         "llvm-namespace-comment");
     CheckFactories.registerCheck<PreferIsaOrDynCastInConditionalsCheck>(

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyLLVMModule STATIC
   HeaderGuardCheck.cpp
   IncludeOrderCheck.cpp
+  IOSandboxCheck.cpp
   LLVMTidyModule.cpp
   PreferIsaOrDynCastInConditionalsCheck.cpp
   PreferRegisterOverUnsignedCheck.cpp
