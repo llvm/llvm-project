@@ -54,27 +54,32 @@ protected:
   std::unique_ptr<TargetMachine> TM;
   const TargetInstrInfo *TII;
 
+  static void SetUpTestCase() {
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+  }
+
   void SetUp() override {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86TargetMC();
+    Triple TargetTriple("x86_64-unknown-linux-gnu");
+    std::string Error;
+    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
+    if (!T) {
+      GTEST_SKIP() << "x86_64-unknown-linux-gnu target triple not available; "
+                      "Skipping test";
+      return;
+    }
 
     Ctx = std::make_unique<LLVMContext>();
     M = std::make_unique<Module>("test", *Ctx);
-
-    // Set up X86 target
-    Triple TargetTriple("x86_64-unknown-linux-gnu");
     M->setTargetTriple(TargetTriple);
 
-    std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(M->getTargetTriple(), Error);
-    ASSERT_TRUE(TheTarget) << "Failed to lookup target: " << Error;
-
     TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-        M->getTargetTriple(), "", "", Options, Reloc::Model::Static));
-    ASSERT_TRUE(TM);
+    TM = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt));
+    if (!TM) {
+      GTEST_SKIP() << "Failed to create X86 target machine; Skipping test";
+      return;
+    }
 
     // Create a dummy function to get subtarget info
     FunctionType *FT = FunctionType::get(Type::getVoidTy(*Ctx), false);
@@ -83,7 +88,10 @@ protected:
 
     // Get the target instruction info
     TII = TM->getSubtargetImpl(*F)->getInstrInfo();
-    ASSERT_TRUE(TII);
+    if (!TII) {
+      GTEST_SKIP() << "Failed to get target instruction info; Skipping test";
+      return;
+    }
   }
 };
 
