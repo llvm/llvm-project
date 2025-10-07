@@ -31,11 +31,13 @@ namespace Fortran::semantics {
 //   - 1-element arrays being single member of COMMON
 //   - passed to intrinsic
 //   - passed to PURE procedure
+//   - passed to VALUE dummy argument
 // - avy variable from module except
 //   - having attribute PARAMETER or PRIVATE
 //   - having DERIVED type
 //   - passed to intrinsic
 //   - passed to PURE procedure
+//   - passed to VALUE dummy argument
 //   - being arrays having 1-D rank and is not having ALLOCATABLE or POINTER or
 //       VOLATILE attributes
 static void CheckPassGlobalVariable(
@@ -43,7 +45,7 @@ static void CheckPassGlobalVariable(
     const parser::ContextualMessages &messages, SemanticsContext &context,
     evaluate::FoldingContext &foldingContext,
     const evaluate::SpecificIntrinsic *intrinsic,
-    const characteristics::Procedure *procedure) {
+    const characteristics::Procedure *procedure, bool dummyIsValue = false) {
   const Symbol *actualFirstSymbol{evaluate::GetFirstSymbol(actual)};
   if (actualFirstSymbol) {
     bool warn{false};
@@ -56,6 +58,8 @@ static void CheckPassGlobalVariable(
       if (intrinsic) {
         warn |= false;
       } else if (procedure && procedure->IsPure()) {
+        warn |= false;
+      } else if (dummyIsValue) {
         warn |= false;
       } else if (!(actualFirstSymbol->Rank() == 1 &&
                      actualFirstSymbol->offset() == 0)) {
@@ -92,6 +96,8 @@ static void CheckPassGlobalVariable(
       } else if (intrinsic) {
         warn |= false;
       } else if (procedure && procedure->IsPure()) {
+        warn |= false;
+      } else if (dummyIsValue) {
         warn |= false;
       } else if (actualFirstSymbol->Rank() != 1) {
         warn |= true;
@@ -1254,8 +1260,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
 
-  CheckPassGlobalVariable(
-      actual, messages, context, foldingContext, intrinsic, &procedure);
+  CheckPassGlobalVariable(actual, messages, context, foldingContext, intrinsic,
+      &procedure, dummyIsValue);
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
