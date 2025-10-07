@@ -10209,7 +10209,7 @@ public:
 
   /// Determine whether the conversion from FromType to ToType is a valid
   /// conversion of ExtInfo/ExtProtoInfo on the nested function type.
-  /// More precisely, this method checks whether FromType can be tranformed
+  /// More precisely, this method checks whether FromType can be transformed
   /// into an exact match for ToType, by transforming its extended function
   /// type information in legal manner (e.g. by strictly stripping "noreturn"
   /// or "noexcept", or by stripping "noescape" for arguments).
