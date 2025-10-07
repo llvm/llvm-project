@@ -2066,7 +2066,7 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
-bool Debugger::IsInteractiveColorTTY() {
+bool Debugger::IsEscapeCodeCapableTTY() {
   if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
     File &file = stream_sp->GetUnlockedFile();
     return file.GetIsInteractive() && file.GetIsRealTerminal() &&
@@ -2079,7 +2079,7 @@ bool Debugger::StatuslineSupported() {
 // We have trouble with the contol codes on Windows, see
 // https://github.com/llvm/llvm-project/issues/134846.
 #ifndef _WIN32
-  return GetShowStatusline() && IsInteractiveColorTTY();
+  return GetShowStatusline() && IsEscapeCodeCapableTTY();
 #else
   return false;
 #endif
@@ -2294,7 +2294,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
     }
 
     // Show progress using Operating System Command (OSC) sequences.
-    if (GetShowProgress() && IsInteractiveColorTTY()) {
+    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
       if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
 
         // Clear progress if this was the last progress event.
