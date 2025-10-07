@@ -120,6 +120,12 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
+static cl::opt<double> MaxClonedRate(
+    "dfa-max-cloned-rate",
+    cl::desc(
+        "Maximum cloned instructions rate accepted for the transformation"),
+    cl::Hidden, cl::init(7.5));
+
 namespace {
 
 class SelectInstToUnfold {
@@ -828,6 +834,7 @@ private:
   /// also returns false if it is illegal to clone some required block.
   bool isLegalAndProfitableToTransform() {
     CodeMetrics Metrics;
+    uint64_t NumClonedInst = 0;
     SwitchInst *Switch = SwitchPaths->getSwitchInst();
 
     // Don't thread switch without multiple successors.
@@ -837,7 +844,6 @@ private:
     // Note that DuplicateBlockMap is not being used as intended here. It is
     // just being used to ensure (BB, State) pairs are only counted once.
     DuplicateBlockMap DuplicateMap;
-
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       PathType PathBBs = TPath.getPath();
       APInt NextState = TPath.getExitValue();
@@ -848,6 +854,7 @@ private:
       BasicBlock *VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
       if (!VisitedBB) {
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -865,6 +872,7 @@ private:
         if (VisitedBB)
           continue;
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -899,6 +907,22 @@ private:
         });
         return false;
       }
+    }
+
+    // Too much cloned instructions slow down later optimizations, especially
+    // SLPVectorizer.
+    // TODO: Thread the switch partially before reaching the threshold.
+    uint64_t NumOrigInst = 0;
+    for (auto *BB : DuplicateMap.keys())
+      NumOrigInst += BB->sizeWithoutDebug();
+    if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
+      LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
+                           "instructions wll be cloned\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
+               << "Too much instructions will be cloned.";
+      });
+      return false;
     }
 
     InstructionCost DuplicationCost = 0;
@@ -969,14 +993,14 @@ private:
     SmallPtrSet<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
-    for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
+    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
       NumPaths++;
     }
 
     // After all paths are cloned, now update the last successor of the cloned
     // path so it skips over the switch statement
-    for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
+    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
       updateLastSuccessor(TPath, DuplicateMap, &DTU);
 
     // For each instruction that was cloned and used outside, update its uses
@@ -993,7 +1017,7 @@ private:
   /// To remember the correct destination, we have to duplicate blocks
   /// corresponding to each state. Also update the terminating instruction of
   /// the predecessors, and phis in the successor blocks.
-  void createExitPath(DefMap &NewDefs, ThreadingPath &Path,
+  void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
                       SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
@@ -1239,7 +1263,7 @@ private:
   ///
   /// Note that this is an optional step and would have been done in later
   /// optimizations, but it makes the CFG significantly easier to work with.
-  void updateLastSuccessor(ThreadingPath &TPath,
+  void updateLastSuccessor(const ThreadingPath &TPath,
                            DuplicateBlockMap &DuplicateMap,
                            DomTreeUpdater *DTU) {
     APInt NextState = TPath.getExitValue();
