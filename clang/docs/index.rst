@@ -102,7 +102,6 @@ Using Clang Tools
    ClangLinkerWrapper
    ClangNVLinkWrapper
    ClangOffloadBundler
-   ClangOffloadPackager
    ClangRepl
    ClangSYCLLinker
 
