@@ -78,7 +78,15 @@ class LLVMLoweringInfo {
 }
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
-    Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
+    Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo {
+  // Should we generate an LLVM lowering pattern for this op?
+  bit hasLLVMLowering = true;
+  // Is the LLVM lowering pattern for this operation recursive?
+  bit isLLVMLoweringRecursive = false;
+  // Extra class declarations to be included in the generated LLVM lowering
+  // pattern.
+  code extraLLVMLoweringPatternDecl = "";
+}
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -201,9 +209,10 @@ def CIR_CastOp : CIR_Op<"cast", [
     Example:
 
     ```mlir
-    %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+    %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
-    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    %x = cir.cast array_to_ptrdecay %0 
+       : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
     ```
   }];
 
@@ -211,15 +220,112 @@ def CIR_CastOp : CIR_Op<"cast", [
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $src `:` type($src) `)`
-    `,` type($result) attr-dict
+    $kind $src `:` type($src) `->` type($result) attr-dict
   }];
 
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::Type convertTy(mlir::Type ty) const;
+  }];
 }
 
+//===----------------------------------------------------------------------===//
+// DynamicCastOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicCastKind : CIR_I32EnumAttr<
+  "DynamicCastKind", "dynamic cast kind", [
+    I32EnumAttrCase<"Ptr", 0, "ptr">,
+    I32EnumAttrCase<"Ref", 1, "ref">
+]>;
+
+def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
+  let summary = "Perform dynamic cast on record pointers";
+  let description = [{
+    The `cir.dyn_cast` operation models part of the semantics of the
+    `dynamic_cast` operator in C++. It can be used to perform 3 kinds of casts
+    on record pointers:
+
+    - Down-cast, which casts a base class pointer to a derived class pointer;
+    - Side-cast, which casts a class pointer to a sibling class pointer;
+    - Cast-to-complete, which casts a class pointer to a void pointer.
+
+    The input of the operation must be a record pointer. The result of the
+    operation is either a record pointer or a void pointer.
+
+    The parameter `kind` specifies the semantics of this operation. If its value
+    is `ptr`, then the operation models dynamic casts on pointers. Otherwise, if
+    its value is `ref`, the operation models dynamic casts on references.
+    Specifically:
+
+    - When the input pointer is a null pointer value:
+      - If `kind` is `ref`, the operation will invoke undefined behavior. A
+        sanitizer check will be emitted if sanitizer is on.
+      - Otherwise, the operation will return a null pointer value as its result.
+    - When the runtime type check fails:
+      - If `kind` is `ref`, the operation will throw a `bad_cast` exception.
+      - Otherwise, the operation will return a null pointer value as its result.
+
+    The `info` argument gives detailed information about the requested dynamic
+    cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
+    only present when the operation models a down-cast or a side-cast.
+
+    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
+    uses relative layout. It is only meaningful when the operation models a
+    cast-to-complete operation.
+
+    Examples:
+
+    ```mlir
+    %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
+              -> !cir.ptr<!rec_Derived>
+    %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+              #cir.dyn_cast_info<
+                srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
+                destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
+                runtimeFunc = @__dynamic_cast,
+                badCastFunc = @__cxa_bad_cast,
+                offsetHint = #cir.int<0> : !s64i
+              >
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_DynamicCastKind:$kind,
+    CIR_PtrToRecordType:$src,
+    OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
+    UnitAttr:$relative_layout
+  );
+
+  let results = (outs
+    CIR_PtrToAnyOf<[CIR_VoidType, CIR_RecordType]>:$result
+  );
+
+  let assemblyFormat = [{
+    $kind (`relative_layout` $relative_layout^)? $src
+    `:` qualified(type($src)) `->` qualified(type($result))
+    (qualified($info)^)? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Determine whether this operation models reference casting in C++.
+    bool isRefCast() {
+      return getKind() == ::cir::DynamicCastKind::Ref;
+    }
+
+    /// Determine whether this operation represents a dynamic cast to a void
+    /// pointer.
+    bool isCastToVoid() {
+      return getType().isVoidPtr();
+    }
+  }];
+
+  let hasLLVMLowering = false;
+}
 
 //===----------------------------------------------------------------------===//
 // PtrStrideOp
@@ -230,12 +336,13 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 ]> {
   let summary = "Pointer access with stride";
   let description = [{
-    Given a base pointer as first operand, provides a new pointer after applying
-    a stride (second operand).
+    The `cir.ptr_stride` operation computes a new pointer from a base pointer
+    and an integer stride, similar to a single-index `getelementptr` in LLVM IR.
+    It moves the pointer by `stride * sizeof(element_type)` bytes.
 
     ```mlir
     %3 = cir.const 0 : i32
-    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<i32>, i32) -> !cir.ptr<i32>
     ```
   }];
 
@@ -247,13 +354,12 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
-    `(` $base `:` qualified(type($base)) `,` $stride `:`
-    qualified(type($stride)) `)` `,` qualified(type($result)) attr-dict
+    $base`,` $stride `:` functional-type(operands, results) attr-dict
   }];
 
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
-    mlir::Type getElementTy() {
+    mlir::Type getElementType() {
       return getBase().getType().getPointee();
     }
   }];
@@ -266,22 +372,22 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 def CIR_ConstantOp : CIR_Op<"const", [
   ConstantLike, Pure, AllTypesMatch<["value", "res"]>
 ]> {
-  let summary = "Defines a CIR constant";
+  let summary = "Create a CIR constant from a literal attribute";
   let description = [{
     The `cir.const` operation turns a literal into an SSA value. The data is
     attached to the operation as an attribute.
 
     ```mlir
-      %0 = cir.const 42 : i32
-      %1 = cir.const 4.2 : f32
-      %2 = cir.const nullptr : !cir.ptr<i32>
+      %0 = cir.const #cir.int<4> : !u32i
+      %1 = cir.const #cir.fp<1.500000e+00> : !cir.float
+      %2 = cir.const #cir.ptr<null> : !cir.ptr<!void>
     ```
   }];
 
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs CIR_AnyType:$res);
 
-  let assemblyFormat = "attr-dict $value";
+  let assemblyFormat = "$value attr-dict";
 
   let hasVerifier = 1;
 
@@ -297,6 +403,8 @@ def CIR_ConstantOp : CIR_Op<"const", [
   }];
 
   let hasFolder = 1;
+
+  let isLLVMLoweringRecursive = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -341,6 +449,11 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     The presence of the `const` attribute indicates that the local variable is
     declared with C/C++ `const` keyword.
 
+    The `dynAllocSize` specifies the size to dynamically allocate on the stack
+    and ignores the allocation size based on the original type. This is useful
+    when handling VLAs or the `alloca` builtin and is omitted when declaring
+    regular local variables.
+
     The result type is a pointer to the input's type.
 
     Example:
@@ -356,6 +469,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
   }];
 
   let arguments = (ins
+    Optional<CIR_AnyFundamentalIntType>:$dynAllocSize,
     TypeAttr:$allocaType,
     StrAttr:$name,
     UnitAttr:$init,
@@ -372,16 +486,29 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     OpBuilder<(ins "mlir::Type":$addr,
                    "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
-                   "mlir::IntegerAttr":$alignment)>
+                   "mlir::IntegerAttr":$alignment)>,
+
+    OpBuilder<(ins "mlir::Type":$addr,
+                   "mlir::Type":$allocaType,
+                   "llvm::StringRef":$name,
+                   "mlir::IntegerAttr":$alignment,
+                   "mlir::Value":$dynAllocSize),
+    [{
+      if (dynAllocSize)
+        $_state.addOperands(dynAllocSize);
+      build($_builder, $_state, addr, allocaType, name, alignment);
+    }]>
   ];
 
   let extraClassDeclaration = [{
     // Whether the alloca input type is a pointer.
     bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
+    bool isDynamic() { return (bool)getDynAllocSize(); }
   }];
 
   let assemblyFormat = [{
     $allocaType `,` qualified(type($addr)) `,`
+    ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
     `[` $name
        (`,` `init` $init^)?
        (`,` `const` $constant^)?
@@ -594,6 +721,8 @@ def CIR_IfOp : CIR_Op<"if", [
       CArg<"BuilderCallbackRef", "buildTerminatedBody">:$thenBuilder,
       CArg<"BuilderCallbackRef", "nullptr">:$elseBuilder)>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -640,6 +769,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
   let arguments = (ins CIR_BoolType:$condition);
   let assemblyFormat = " `(` $condition `)` attr-dict ";
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -647,8 +777,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp",
-  "SwitchOp", "TernaryOp", "WhileOp"
+  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
+  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -707,6 +837,8 @@ def CIR_YieldOp : CIR_Op<"yield", [
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
   ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -722,6 +854,7 @@ def CIR_BreakOp : CIR_Op<"break", [Terminator]> {
   }];
   let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -737,6 +870,7 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
   }];
   let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -795,6 +929,8 @@ def CIR_ScopeOp : CIR_Op<"scope", [
     // Scopes without yielding values.
     OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$scopeBuilder)>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -841,6 +977,8 @@ def CIR_CaseOp : CIR_Op<"case", [
                    "CaseOpKind":$kind,
                    "mlir::OpBuilder::InsertPoint &":$insertPoint)>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_SwitchOp : CIR_Op<"switch", [
@@ -1006,6 +1144,8 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     // This is an expensive and need to be used with caution.
     bool isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases);
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1130,7 +1270,7 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
   ```mlir
     cir.scope {  // REGION #1
       %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      %3 = cir.cast int_to_bool %2 : !s32i -> !cir.bool
       cir.if %3 {
         cir.goto "label"
       }
@@ -1151,6 +1291,8 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
   }];
   let arguments = (ins StrAttr:$label);
   let assemblyFormat = [{ $label attr-dict }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1166,6 +1308,8 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let arguments = (ins StrAttr:$label);
   let assemblyFormat = [{ $label attr-dict }];
   let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1330,6 +1474,8 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
     }
     ```
   }];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
@@ -1356,6 +1502,8 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
     }
     ```
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1423,6 +1571,8 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
       return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
     }
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1461,6 +1611,8 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   let assemblyFormat = [{
     `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
   }];
+
+  let isLLVMLoweringRecursive = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1531,6 +1683,10 @@ def CIR_BinOp : CIR_Op<"binop", [
   }];
 
   let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1668,6 +1824,8 @@ def CIR_TernaryOp : CIR_Op<"ternary", [
       `false` $falseRegion
     `)` `:` functional-type(operands, results) attr-dict
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1712,7 +1870,9 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // is upstreamed.
 
 def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<CIRGlobalValueInterface>
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
+  NoRegionArguments
 ]> {
   let summary = "Declare or define a global variable";
   let description = [{
@@ -1743,6 +1903,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
+
   let assemblyFormat = [{
     ($sym_visibility^)?
     (`` $global_visibility^)?
@@ -1751,26 +1914,50 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     (`dso_local` $dso_local^)?
     $sym_name
-    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
+    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
+                                        $ctorRegion, $dtorRegion)
     attr-dict
   }];
 
   let extraClassDeclaration = [{
-    bool isDeclaration() { return !getInitialValue(); }
+    bool isDeclaration() {
+      return !getInitialValue() && getCtorRegion().empty() && getDtorRegion().empty();
+    }
     bool hasInitializer() { return !isDeclaration(); }
   }];
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins
-    "llvm::StringRef":$sym_name,
-    "mlir::Type":$sym_type,
-    CArg<"bool", "false">:$isConstant,
-    // CIR defaults to external linkage.
-    CArg<"cir::GlobalLinkageKind",
-    "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
+  let builders = [
+    OpBuilder<(ins
+      "llvm::StringRef":$sym_name,
+      "mlir::Type":$sym_type,
+      CArg<"bool", "false">:$isConstant,
+      // CIR defaults to external linkage.
+      CArg<"cir::GlobalLinkageKind",
+           "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+      CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
+           "nullptr">:$ctorBuilder,
+      CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>",
+           "nullptr">:$dtorBuilder)
+    >
+  ];
 
   let hasVerifier = 1;
+
+  let isLLVMLoweringRecursive = true;
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::LogicalResult matchAndRewriteRegionInitializedGlobal(
+      cir::GlobalOp op, mlir::Attribute init,
+      mlir::ConversionPatternRewriter &rewriter) const;
+
+    void setupRegionInitializedLLVMGlobalOp(
+        cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+
+    mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+    mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
+                                      mlir::OpBuilder &builder) const;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2248,6 +2435,16 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    A compiler builtin function must be marked as `builtin` for further
+    processing when lowering from CIR.
+
+    The `coroutine` keyword is used to mark a coroutine function, which requires
+    at least one `cir.await` instruction to be used in its body.
+
+    The `lambda` translates to a C++ `operator()` that implements a lambda, this
+    allow callsites to make certain assumptions about the real function nature
+    when writing analysis.
+
     The `no_proto` keyword is used to identify functions that were declared
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
@@ -2265,11 +2462,23 @@ def CIR_FuncOp : CIR_Op<"func", [
     // Linkage information
     cir.func linkonce_odr @some_method(...)
     ```
+    // Builtin function
+    cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
+    // Coroutine
+    cir.func coroutine @_Z10silly_taskv() -> !CoroTask {
+      ...
+      cir.await(...)
+      ...
+    }
+    ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$builtin,
+                       UnitAttr:$coroutine,
+                       UnitAttr:$lambda,
                        UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
@@ -2321,6 +2530,19 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
+
+    void lowerFuncAttributes(
+        cir::FuncOp func, bool filterArgAndResAttrs,
+        mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
+
+    mlir::LogicalResult
+    matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
+                         OpAdaptor adaptor,
+                         mlir::ConversionPatternRewriter &rewriter) const;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2742,6 +2964,8 @@ class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
         regionBuilder($_builder, $_state.location);
     }]>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
@@ -3147,18 +3371,20 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
   let summary = "Extract the real part of a complex value";
   let description = [{
-    `cir.complex.real` operation takes an operand of `!cir.complex` type and
-    yields the real part of it.
+    `cir.complex.real` operation takes an operand of `!cir.complex`, `cir.int`, 
+    `!cir.bool` or `!cir.float`. If the operand is `!cir.complex`, the real 
+    part of it will be returned, otherwise the value returned unmodified. 
 
     Example:
 
     ```mlir
-    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %complex : !cir.complex<!cir.float> -> !cir.float
+    %real = cir.complex.real %scalar : !cir.float -> !cir.float
     ```
   }];
 
-  let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let results = (outs CIR_AnyIntOrBoolOrFloatType:$result);
+  let arguments = (ins CIR_AnyComplexOrIntOrBoolOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))
@@ -3176,18 +3402,20 @@ def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
 def CIR_ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
   let summary = "Extract the imaginary part of a complex value";
   let description = [{
-    `cir.complex.imag` operation takes an operand of `!cir.complex` type and
-    yields the imaginary part of it.
+    `cir.complex.imag` operation takes an operand of `!cir.complex`, `!cir.int`
+    `!cir.bool` or `!cir.float`. If the operand is `!cir.complex`, the imag 
+    part of it will be returned, otherwise a zero value will be returned.  
 
     Example:
 
     ```mlir
-    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    %imag = cir.complex.imag %complex : !cir.complex<!cir.float> -> !cir.float
+    %imag = cir.complex.imag %scalar : !cir.float -> !cir.float
     ```
   }];
 
-  let results = (outs CIR_AnyIntOrFloatType:$result);
-  let arguments = (ins CIR_ComplexType:$operand);
+  let results = (outs CIR_AnyIntOrBoolOrFloatType:$result);
+  let arguments = (ins CIR_AnyComplexOrIntOrBoolOrFloatType:$operand);
 
   let assemblyFormat = [{
     $operand `:` qualified(type($operand)) `->` qualified(type($result))
@@ -3361,6 +3589,8 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
   let assemblyFormat = [{
     $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
   }];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_ComplexDivOp : CIR_Op<"complex.div", [
@@ -3403,6 +3633,8 @@ def CIR_ComplexDivOp : CIR_Op<"complex.div", [
   let assemblyFormat = [{
     $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3808,6 +4040,36 @@ def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
   }];
 }
 
+def CIR_ASinOp : CIR_UnaryFPToFPBuiltinOp<"asin", "ASinOp"> {
+  let summary = "Computes the arcus sine of the specified value";
+  let description = [{
+    `cir.asin`computes the arcus sine of a given value and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_ATanOp : CIR_UnaryFPToFPBuiltinOp<"atan", "ATanOp"> {
+  let summary = "Computes the floating-point arcus tangent value";
+  let description = [{
+    `cir.atan` computes the arcus tangent of a floating-point operand
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
+  let summary = "Computes the floating-point cosine value";
+  let description = [{
+    `cir.cos` computes the cosine of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
@@ -3847,9 +4109,9 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
 
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>)
+          -> !cir.ptr<!rec___va_list_tag>
     %count = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.va_start %p %count : !cir.ptr<!rec___va_list_tag>, !s32i
     ```
@@ -3886,9 +4148,9 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-        !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
     cir.va_end %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
@@ -3921,9 +4183,9 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
     Example:
     ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-    %p = cir.cast(array_to_ptrdecay, %args
-            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
-          !cir.ptr<!rec___va_list_tag>
+    %p = cir.cast array_to_ptrdecay %args
+            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+            -> !cir.ptr<!rec___va_list_tag>
     cir.va.start %p : !cir.ptr<!rec___va_list_tag>
 
     // Fetch an `int` from the vararg list.
@@ -4001,8 +4263,81 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AllocExceptionOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
+  let summary = "Allocates an exception according to Itanium ABI";
+  let description = [{
+    Implements a slightly higher level __cxa_allocate_exception:
+
+    `void *__cxa_allocate_exception(size_t thrown_size);`
+
+    If the operation fails, the program terminates rather than throw.
+
+    Example:
+
+    ```mlir
+    // if (b == 0) {
+    //   ...
+    //   throw "...";
+    cir.if %10 {
+        %11 = cir.alloc_exception 8 -> !cir.ptr<!void>
+        ... // store exception content into %11
+        cir.throw %11 : !cir.ptr<!cir.ptr<!u8i>>, ...
+    ```
+  }];
+
+  let arguments = (ins I64Attr:$size);
+  let results = (outs Res<CIR_PointerType, "", [MemAlloc<DefaultResource>]>:$addr);
+
+  let assemblyFormat = [{
+    $size `->` qualified(type($addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
+
+def CIR_AtomicXchg : CIR_Op<"atomic.xchg", [
+  AllTypesMatch<["result", "val"]>,
+  TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
+    "ptr", "val", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Atomic exchange";
+  let description = [{
+    C/C++ atomic exchange operation. This operation implements the C/C++
+    builtin function `__atomic_exchange`, `__atomic_exchange_n`, and
+    `__c11_atomic_exchange`.
+
+    This operation takes two arguments: a pointer `ptr` and a value `val`. The
+    operation atomically replaces the value of the object pointed-to by `ptr`
+    with `val`, and returns the original value of the object.
+
+    Example:
+
+    ```mlir
+    %res = cir.atomic.xchg(%ptr : !cir.ptr<!u64i>,
+                           %val : !u64i,
+                           seq_cst) : !u64i
+    ```
+  }];
+
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins
+    Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
+    CIR_AnyType:$val,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $mem_order (`volatile` $is_volatile^)?
+    $ptr `,` $val
+    `:` qualified(type($ptr)) `->` type($result) attr-dict
+  }];
+}
 
 def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
   AllTypesMatch<["old", "expected", "desired"]>

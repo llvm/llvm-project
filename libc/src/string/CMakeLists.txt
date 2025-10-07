@@ -22,6 +22,8 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.simd
     libc.src.__support.common
+    libc.src.__support.macros.attributes
+    libc.src.string.memory_utils.inline_memcpy
   ${string_config_options}
 )
 

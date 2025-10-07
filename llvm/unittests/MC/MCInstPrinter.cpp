@@ -35,8 +35,7 @@ public:
     Triple TT(TripleName);
     std::string ErrorStr;
 
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, ErrorStr);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, ErrorStr);
 
     // If we didn't build x86, do not run the test.
     if (!TheTarget)

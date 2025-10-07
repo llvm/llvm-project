@@ -709,27 +709,21 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
-          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI, *MF)) {
-    const TargetRegisterClass *OldRC = MRI->getRegClass(Old.getReg());
-    const TargetRegisterClass *NewRC = MRI->getRegClass(New->getReg());
-    unsigned NewSubReg = New->getSubReg();
-    unsigned OldSubReg = Old.getSubReg();
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
+    const TargetRegisterClass *NewRC =
+        TRI->getRegClassForReg(*MRI, New->getReg());
 
     const TargetRegisterClass *ConstrainRC = OpRC;
-    if (NewSubReg && OldSubReg) {
-      unsigned PreA, PreB;
-      ConstrainRC = TRI->getCommonSuperRegClass(OpRC, OldSubReg, NewRC,
-                                                NewSubReg, PreA, PreB);
-    } else if (OldSubReg) {
-      ConstrainRC = TRI->getMatchingSuperRegClass(OldRC, OpRC, OldSubReg);
-    } else if (NewSubReg) {
-      ConstrainRC = TRI->getMatchingSuperRegClass(NewRC, OpRC, NewSubReg);
+    if (New->getSubReg()) {
+      ConstrainRC =
+          TRI->getMatchingSuperRegClass(NewRC, OpRC, New->getSubReg());
+
+      if (!ConstrainRC)
+        return false;
     }
 
-    if (!ConstrainRC)
-      return false;
-
-    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+    if (New->getReg().isVirtual() &&
+        !MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
                         << TRI->getRegClassName(ConstrainRC) << '\n');
       return false;
@@ -740,8 +734,12 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   // 16-bit SGPRs instead of 32-bit ones.
   if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
     Old.setSubReg(AMDGPU::NoSubRegister);
-  Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
-  Old.setIsUndef(New->isUndef());
+  if (New->getReg().isPhysical()) {
+    Old.substPhysReg(New->getReg(), *TRI);
+  } else {
+    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+    Old.setIsUndef(New->isUndef());
+  }
   return true;
 }
 
@@ -934,7 +932,9 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
        SubDef && TII.isFoldableCopy(*SubDef);
        SubDef = MRI.getVRegDef(Sub->getReg())) {
-    MachineOperand &SrcOp = SubDef->getOperand(1);
+    unsigned SrcIdx = TII.getFoldableCopySrcIdx(*SubDef);
+    MachineOperand &SrcOp = SubDef->getOperand(SrcIdx);
+
     if (SrcOp.isImm())
       return &SrcOp;
     if (!SrcOp.isReg() || SrcOp.getReg().isPhysical())
@@ -1316,6 +1316,15 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovSrcRC) {
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+
+        // FIXME: We should be able to directly check immediate operand legality
+        // for all cases, but gfx908 hacks break.
+        if (MovOp == AMDGPU::AV_MOV_B32_IMM_PSEUDO &&
+            (!OpToFold.isImm() ||
+             !TII->isImmOperandLegal(MovDesc, SrcIdx,
+                                     *OpToFold.getEffectiveImmVal())))
+          break;
+
         if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
           break;
 
@@ -2010,7 +2019,9 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!FoldingImm && !OpToFold.isReg())
     return false;
 
-  if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
+  // Fold virtual registers and constant physical registers.
+  if (OpToFold.isReg() && OpToFold.getReg().isPhysical() &&
+      !TRI->isConstantPhysReg(OpToFold.getReg()))
     return false;
 
   // Prevent folding operands backwards in the function. For example,
@@ -2409,8 +2420,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const TargetRegisterClass *OpRC =
-      TII->getRegClass(InstDesc, OpIdx, TRI, *MI.getMF());
+  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx, TRI);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 

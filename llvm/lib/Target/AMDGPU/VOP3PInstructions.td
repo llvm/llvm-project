@@ -44,7 +44,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FP16InputMods:$src1_modifiers, Src1RC:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
     dag dpp_srcs =
-          (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
+          (ins FPVRegInputMods:$src0_modifiers, VGPROp_32:$src0,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
 
@@ -62,6 +62,13 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
     let InsVOP3Base = !con(dpp_srcs, mods);
     let AsmVOP3Base =
       "$vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$op_sel$op_sel_hi$clamp";
+}
+
+class VOP3P_Mix_Profile_t16<VOPProfile P, VOP3Features Features = VOP3_REGULAR>
+     :  VOP3P_Mix_Profile<P, Features, 0> {
+  let IsTrue16 = 1;
+  let IsRealTrue16 = 1;
+  let DstRC64 = getVALUDstForVT<P.DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
 }
 
 multiclass VOP3PInst<string OpName, VOPProfile P,
@@ -93,6 +100,16 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
         let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
       }
   } // end SubtargetPredicate = isGFX11Plus
+}
+
+multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
+  def NAME : VOP3P_Pseudo<OpName, P>;
+
+  if P.HasExtVOP3DPP then
+    def _dpp : VOP3_DPP_Pseudo<OpName, P> {
+      let VOP3P = 1;
+      let PseudoInstr = OpName#"_dpp";
+    }
 }
 
 let isReMaterializable = 1 in {
@@ -160,12 +177,9 @@ defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_
 
 // TODO: Make sure we're doing the right thing with denormals. Note
 // that FMA and MAD will differ.
-multiclass MadFmaMixPats<SDPatternOperator fma_like,
-                         Instruction mix_inst,
-                         Instruction mixlo_inst,
-                         Instruction mixhi_inst,
-                         ValueType VT = f16,
-                         ValueType vecVT = v2f16> {
+multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
+                             Instruction mix_inst,
+                             ValueType VT = f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   defvar VOP3PMadMixModsExtPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExt, VOP3PMadMixModsExt);
   // At least one of the operands needs to be an fpextend of an f16
@@ -189,7 +203,14 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                    (f32 (VOP3PMadMixModsExtPat VT:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
               DSTCLAMP.NONE)>;
+}
 
+multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
+                             Instruction mixlo_inst,
+                             Instruction mixhi_inst,
+                             ValueType VT = f16,
+                             ValueType vecVT = v2f16> {
+  defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   def : GCNPat <
     (AMDGPUclamp (build_vector
       (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$lo_src0, i32:$lo_src0_modifiers)),
@@ -243,9 +264,6 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   // FIXME: Special case handling for maxhi (especially for clamp)
   // because dealing with the write to high half of the register is
   // difficult.
-  foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-  let True16Predicate = p in {
-
   def : GCNPat <
     (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
                                                    (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
@@ -269,45 +287,60 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        DSTCLAMP.ENABLE,
                        VGPR_32:$elt0))
   >;
+}
 
-  } // end True16Predicate
-
-  let True16Predicate = UseRealTrue16Insts in {
+multiclass MadFmaMixFP16Pats_t16<SDPatternOperator fma_like,
+                                 Instruction mix_inst_16,
+                                 ValueType VT = f16,
+                                 ValueType vecVT = v2f16> {
+  defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   def : GCNPat <
-    (build_vector (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+    (VT (fpround (fmul (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                       (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
+    (mix_inst_16 $src0_modifiers, $src0,
+                 $src1_modifiers, $src1,
+                 (i32 0), (i32 0),
+                 DSTCLAMP.NONE)
+  >;
+
+  def : GCNPat <
+    (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
                            (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
-                           (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))), VT:$elt1),
-    (vecVT (mixlo_inst $src0_modifiers, $src0,
-                $src1_modifiers, $src1,
-                $src2_modifiers, $src2,
-                DSTCLAMP.NONE,
-                (REG_SEQUENCE VGPR_32, (VT (IMPLICIT_DEF)), lo16, $elt1, hi16)))
+                           (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))),
+    (mix_inst_16 $src0_modifiers, $src0,
+                 $src1_modifiers, $src1,
+                 $src2_modifiers, $src2,
+                 DSTCLAMP.NONE)
+  >;
+
+
+  def : GCNPat <
+    (AMDGPUclamp (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                        (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                        (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers)))))),
+    (mix_inst_16 $src0_modifiers, $src0,
+                 $src1_modifiers, $src1,
+                 $src2_modifiers, $src2,
+                 DSTCLAMP.ENABLE)
   >;
 
   def : GCNPat <
-    (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
-                                              (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
-                                              (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers)))))),
-    (vecVT (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.NONE,
-                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (VT (IMPLICIT_DEF)), hi16)))
+    (AMDGPUclamp (build_vector
+      (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$lo_src0, i32:$lo_src0_modifiers)),
+                        (f32 (VOP3PMadMixModsPat VT:$lo_src1, i32:$lo_src1_modifiers)),
+                        (f32 (VOP3PMadMixModsPat VT:$lo_src2, i32:$lo_src2_modifiers))))),
+      (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$hi_src0, i32:$hi_src0_modifiers)),
+                        (f32 (VOP3PMadMixModsPat VT:$hi_src1, i32:$hi_src1_modifiers)),
+                        (f32 (VOP3PMadMixModsPat VT:$hi_src2, i32:$hi_src2_modifiers))))))),
+    (vecVT (REG_SEQUENCE VGPR_32, (mix_inst_16 $lo_src0_modifiers, $lo_src0,
+                                        $lo_src1_modifiers, $lo_src1,
+                                        $lo_src2_modifiers, $lo_src2,
+                                        DSTCLAMP.ENABLE), lo16,
+                           (mix_inst_16 $hi_src0_modifiers, $hi_src0,
+                                        $hi_src1_modifiers, $hi_src1,
+                                        $hi_src2_modifiers, $hi_src2,
+                                        DSTCLAMP.ENABLE), hi16))
   >;
-
-  def : GCNPat <
-    (build_vector
-      VT:$elt0,
-      (AMDGPUclamp (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
-                                     (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
-                                     (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))))),
-    (vecVT (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.ENABLE,
-                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (VT (IMPLICIT_DEF)), hi16)))
-  >;
-  } // end True16Predicate
 }
 
 class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
@@ -341,7 +374,8 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
+defm : MadFmaMixFP32Pats<fmad, V_MAD_MIX_F32>;
+defm : MadFmaMixFP16Pats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 } // OtherPredicates = [NoFP32Denormals]
 } // End SubtargetPredicate = HasMadMixInsts
 
@@ -360,10 +394,18 @@ defm V_FMA_MIXLO_F16 : VOP3_VOP3PInst<"v_fma_mixlo_f16", VOP3P_Mix_Profile<VOP_F
 let ClampLo = 0, ClampHi = 1 in {
 defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL, 1>>;
 }
+
+// Pseudo true16 inst for v_fma_mixlo/hi_f16
+defm V_FMA_MIX_F16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_f16_t16", VOP3P_Mix_Profile_t16<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
+defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32>;
+
+let True16Predicate = NotUseRealTrue16Insts in
+defm : MadFmaMixFP16Pats<fma, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
+let True16Predicate = UseRealTrue16Insts in
+defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_F16_t16>;
 }
 
 let SubtargetPredicate = HasFmaMixBF16Insts in {
@@ -378,10 +420,17 @@ defm V_FMA_MIXLO_BF16 : VOP3_VOP3PInst<"v_fma_mixlo_bf16", VOP3P_Mix_Profile<VOP
 let ClampLo = 0, ClampHi = 1 in {
 defm V_FMA_MIXHI_BF16 : VOP3_VOP3PInst<"v_fma_mixhi_bf16", VOP3P_Mix_Profile<VOP_BF16_BF16_BF16_BF16, VOP3_OPSEL, 1>>;
 }
+
+// Pseudo true16 inst for v_fma_mixlo/hi_bf16
+defm V_FMA_MIX_BF16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_bf16_t16", VOP3P_Mix_Profile_t16<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End FPDPRounding = 1
 } // End isCommutable = 1
 
-defm : MadFmaMixPats<fma, V_FMA_MIX_F32_BF16, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
+defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32_BF16, bf16>;
+let True16Predicate = NotUseRealTrue16Insts in
+defm : MadFmaMixFP16Pats<fma, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
+let True16Predicate = UseRealTrue16Insts in
+defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
@@ -901,7 +950,7 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
 }
 
 // Currently assumes scaled instructions never have abid
-class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = false> : PatFrag <
+class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false> : PatFrag <
   !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
                    node:$src0_modifiers, node:$scale_src0,
                    node:$src1_modifiers, node:$scale_src1),
@@ -910,37 +959,30 @@ class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = 
                     (ops node:$blgp))),
   !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1),
               !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
-                           (Op $src0, $src1, $src2, $cbsz, $blgp))),
-  pred
->;
+                           (Op $src0, $src1, $src2, $cbsz, $blgp)))>;
 
-defvar MayNeedAGPRs = [{
-  return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
+class CanUseAGPR_MAI<ValueType vt> {
+  code PredicateCode = [{
+    return !Subtarget->hasGFX90AInsts() ||
+      (!SIMachineFunctionInfo::MFMAVGPRForm &&
+       MF->getInfo<SIMachineFunctionInfo>()->getMinNumAGPRs() >=
+  }] # !srl(vt.Size, 5) # ");";
 
-defvar MayNeedAGPRs_gisel = [{
-  return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
-
-defvar MayNotNeedAGPRs = [{
-  return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
-
-defvar MayNotNeedAGPRs_gisel = [{
-  return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
-
-class AgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                  bit Scaled = false> :
-  MAIFrag<Op, MayNeedAGPRs, HasAbid, Scaled> {
-  let GISelPredicateCode = MayNeedAGPRs_gisel;
+  code GISelPredicateCode = [{
+    return !Subtarget->hasGFX90AInsts() ||
+      (!SIMachineFunctionInfo::MFMAVGPRForm &&
+       MF.getInfo<SIMachineFunctionInfo>()->getMinNumAGPRs() >=
+  }] # !srl(vt.Size, 5) # ");";
 }
+
+class AgprMAIFrag<SDPatternOperator Op, ValueType vt, bit HasAbid = true,
+                  bit Scaled = false> :
+  MAIFrag<Op, HasAbid, Scaled>,
+  CanUseAGPR_MAI<vt>;
 
 class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                   bit Scaled = false> :
-  MAIFrag<Op, MayNotNeedAGPRs, HasAbid, Scaled> {
-  let GISelPredicateCode = MayNotNeedAGPRs_gisel;
-}
+                  bit Scaled = false> :
+  MAIFrag<Op, HasAbid, Scaled>;
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
   defm V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
@@ -966,9 +1008,14 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
+  // Restrict to VGPR only (VRegSrc_32) for the scale operands to workaround a
+  // hardware design defect: For all Inline/SGPR constants, SP HW use bits
+  // [30:23] as the scale.
+  // TODO: We may still be able to allow Inline Constants/SGPR, with a proper
+  // shift, to obtain a potentially better performance.
   let InOperandList = !con(BaseInst.InOperandList,
-    (ins VSrc_b32:$scale_src0,
-         VSrc_b32:$scale_src1,
+    (ins VRegSrc_32:$scale_src0,
+         VRegSrc_32:$scale_src1,
          op_sel0:$src0_modifiers,
          op_sel_hi0:$src1_modifiers));
   let AsmOperands =
@@ -983,16 +1030,19 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                    bit HasAbid = true,
                    bit Scaled = false> {
   defvar NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap;
+  defvar ProfileAGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P);
+  defvar ProfileVGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD");
+
 
   let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
-      def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
+      def _e64 : MAIInst<OpName, ProfileAGPR,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled>), Scaled>,
                  MFMATable<0, "AGPR", NAME # "_e64">;
 
       let OtherPredicates = [isGFX90APlus], Mnemonic = OpName in
-      def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
+      def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", ProfileVGPR,
                                 !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                         MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
     }
@@ -1001,12 +1051,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
+        def "_mac_e64" : MAIInst<OpName # "_mac", ProfileAGPR,
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled>), Scaled>,
                          MFMATable<1, "AGPR", NAME # "_e64", NAME # "_mac_e64">;
 
         let OtherPredicates = [isGFX90APlus] in
-        def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
+        def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", ProfileVGPR,
                                       !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                               MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
       }
@@ -1020,11 +1070,11 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
   defvar UnscaledOpName = UnscaledOpName_#VariantSuffix;
 
   defvar HasAbid = false;
-
-  defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl).NoDstOverlap;
+  defvar Profile = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl);
+  defvar NoDstOverlap = Profile.NoDstOverlap;
 
   def _e64 : ScaledMAIInst<OpName,
-        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, HasAbid, true>)>,
+        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, Profile.DstVT, HasAbid, true>)>,
       MFMATable<0, "AGPR", NAME # "_e64">;
 
   def _vgprcd_e64 : ScaledMAIInst<OpName # "_vgprcd",
@@ -1036,7 +1086,7 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
        isConvertibleToThreeAddress = NoDstOverlap,
        Mnemonic = UnscaledOpName_ in {
      def _mac_e64 : ScaledMAIInst<OpName # "_mac",
-          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, HasAbid, true>>,
+          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, Profile.DstVT, HasAbid, true>>,
         MFMATable<1, "AGPR", NAME # "_e64">;
 
      def _mac_vgprcd_e64 : ScaledMAIInst<OpName # " _mac_vgprcd",
@@ -1857,8 +1907,8 @@ defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : WMMAInstGFX12<"v_wmma_scale_f32_32x16
 defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : WMMAInstGFX12<"v_wmma_scale16_f32_32x16x128_f4", F32_32X16X128_F4_SCALE16_w32, "_w32">;
 } // End is_wmma_xdl = 1.
 
-defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3PInst<"v_wmma_ld_scale_paired_b32",   VOP_WMMA_LD_SCALE<i32, VCSrc_b32>>;
-defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64>>;
+defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3PInst<"v_wmma_ld_scale_paired_b32",   VOP_WMMA_LD_SCALE<i32, VCSrc_b32_Lo256>>;
+defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64_Lo256>>;
 } // End SubtargetPredicate = isGFX125xOnly
 } // End WaveSizePredicate = isWave32
 

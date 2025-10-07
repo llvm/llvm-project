@@ -172,6 +172,28 @@ public:
   }
 };
 
+class SPSSize;
+
+/// SPSSize is serializable to/from size_t. Wire size is 64-bits.
+template <> class SPSSerializationTraits<SPSSize, size_t> {
+public:
+  static size_t size(const size_t &Value) {
+    return SPSArgList<uint64_t>::size(static_cast<uint64_t>(Value));
+  }
+  static bool serialize(SPSOutputBuffer &OB, const size_t &Value) {
+    return SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(Value));
+  }
+  static bool deserialize(SPSInputBuffer &IB, size_t &Value) {
+    uint64_t Tmp;
+    if (!SPSArgList<uint64_t>::deserialize(IB, Tmp))
+      return false;
+    if (Tmp > std::numeric_limits<size_t>::max())
+      return false;
+    Value = Tmp;
+    return true;
+  }
+};
+
 /// Any empty placeholder suitable as a substitute for void when deserializing
 class SPSEmpty {};
 
@@ -599,15 +621,11 @@ template <typename SPSTagT> class SPSExpected;
 /// See SPSSerializableError for more details.
 template <typename T> struct SPSSerializableExpected {
   SPSSerializableExpected() = default;
-  SPSSerializableExpected(Expected<T> E) {
+  explicit SPSSerializableExpected(Expected<T> E) {
     if (E)
       Val = decltype(Val)(std::in_place_index<0>, std::move(*E));
     else
       Val = decltype(Val)(std::in_place_index<1>, toString(E.takeError()));
-  }
-  SPSSerializableExpected(Error E) {
-    assert(E && "Cannot create Expected from Error::success()");
-    Val = decltype(Val)(std::in_place_index<1>, toString(std::move(E)));
   }
 
   Expected<T> toExpected() {
@@ -621,12 +639,17 @@ template <typename T> struct SPSSerializableExpected {
 
 template <typename T>
 SPSSerializableExpected<T> toSPSSerializableExpected(Expected<T> E) {
-  return std::move(E);
+  return SPSSerializableExpected<T>(std::move(E));
+}
+
+template <typename T>
+SPSSerializableExpected<T> toSPSSerializableExpected(T Val) {
+  return SPSSerializableExpected<T>(std::move(Val));
 }
 
 template <typename T>
 SPSSerializableExpected<T> toSPSSerializableExpected(Error E) {
-  return std::move(E);
+  return SPSSerializableExpected<T>(std::move(E));
 }
 
 template <typename SPSTagT, typename T>

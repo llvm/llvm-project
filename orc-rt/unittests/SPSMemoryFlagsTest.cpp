@@ -17,7 +17,7 @@
 
 using namespace orc_rt;
 
-TEST(SPSMemoryFlags, TestAllocGroupSerialization) {
+TEST(SPSMemoryFlagsTest, TestAllocGroupSerialization) {
   for (bool Read : {false, true}) {
     for (bool Write : {false, true}) {
       for (bool Exec : {false, true}) {

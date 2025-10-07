@@ -53,14 +53,15 @@ static cl::opt<bool>
 extern cl::opt<bool> X86EnableAPXForRelocation;
 
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
-    : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
+    : X86GenRegisterInfo((TT.isX86_64() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
                          X86_MC::getDwarfRegFlavour(TT, true),
-                         (TT.isArch64Bit() ? X86::RIP : X86::EIP)) {
+                         (TT.isX86_64() ? X86::RIP : X86::EIP)) {
   X86_MC::initLLVMToSEHAndCVRegMapping(this);
 
   // Cache some information.
-  Is64Bit = TT.isArch64Bit();
+  Is64Bit = TT.isX86_64();
+  IsTarget64BitLP64 = Is64Bit && !TT.isX32();
   IsWin64 = Is64Bit && TT.isOSWindows();
   IsUEFI64 = Is64Bit && TT.isUEFI();
 
@@ -192,50 +193,15 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                    unsigned Kind) const {
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  switch (Kind) {
-  default: llvm_unreachable("Unexpected Kind in getPointerRegClass!");
-  case 0: // Normal GPRs.
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64RegClass;
-    // If the target is 64bit but we have been told to use 32bit addresses,
-    // we can still use 64-bit register as long as we know the high bits
-    // are zeros.
-    // Reflect that in the returned register class.
-    return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
-  case 1: // Normal GPRs except the stack pointer (for encoding reasons).
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64_NOSPRegClass;
-    // NOSP does not contain RIP, so no special case here.
-    return &X86::GR32_NOSPRegClass;
-  case 2: // NOREX GPRs.
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64_NOREXRegClass;
-    return &X86::GR32_NOREXRegClass;
-  case 3: // NOREX GPRs except the stack pointer (for encoding reasons).
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64_NOREX_NOSPRegClass;
-    // NOSP does not contain RIP, so no special case here.
-    return &X86::GR32_NOREX_NOSPRegClass;
-  case 4: // Available for tailcall (not callee-saved GPRs).
-    return getGPRsForTailCall(MF);
-  }
-}
-
-const TargetRegisterClass *
-X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  if (IsWin64 || IsUEFI64 || (F.getCallingConv() == CallingConv::Win64))
-    return &X86::GR64_TCW64RegClass;
-  else if (Is64Bit)
-    return &X86::GR64_TCRegClass;
-
-  bool hasHipeCC = (F.getCallingConv() == CallingConv::HiPE);
-  if (hasHipeCC)
-    return &X86::GR32RegClass;
-  return &X86::GR32_TCRegClass;
+X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
+  assert(Kind == 0 && "this should only be used for default cases");
+  if (IsTarget64BitLP64)
+    return &X86::GR64RegClass;
+  // If the target is 64bit but we have been told to use 32bit addresses,
+  // we can still use 64-bit register as long as we know the high bits
+  // are zeros.
+  // Reflect that in the returned register class.
+  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
 }
 
 const TargetRegisterClass *
@@ -999,10 +965,9 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 unsigned X86RegisterInfo::findDeadCallerSavedReg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
   const MachineFunction *MF = MBB.getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   if (MF->callsEHReturn())
     return 0;
-
-  const TargetRegisterClass &AvailableRegs = *getGPRsForTailCall(*MF);
 
   if (MBBI == MBB.end())
     return 0;
@@ -1018,27 +983,26 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::RETI64:
   case X86::TCRETURNdi:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
   case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64:
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
-    SmallSet<uint16_t, 8> Uses;
-    for (MachineOperand &MO : MBBI->operands()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
-        Uses.insert(*AI);
-    }
+    LiveRegUnits LRU(*this);
+    LRU.addLiveOuts(MBB);
+    LRU.stepBackward(*MBBI);
 
-    for (auto CS : AvailableRegs)
-      if (!Uses.count(CS) && CS != X86::RIP && CS != X86::RSP && CS != X86::ESP)
-        return CS;
+    const TargetRegisterClass &RC =
+        Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
+    for (MCRegister Reg : RC) {
+      if (LRU.available(Reg) && !MRI.isReserved(Reg))
+        return Reg;
+    }
   }
   }
 

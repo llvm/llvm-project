@@ -206,8 +206,10 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
-                             /*insertIntoFnEntryBlock=*/false);
+    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
+                                  /*insertIntoFnEntryBlock=*/false);
+    fnRetAlloca = addr;
+    returnValue = Address(addr, alignment);
   }
 }
 
@@ -340,10 +342,15 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  if (!cgf.curFn.getFunctionType().hasVoidReturn()) {
+  // If we are on a coroutine, add the coro_end builtin call.
+  assert(!cir::MissingFeatures::coroEndBuiltinCall());
+
+  auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
+  assert(fn && "emitReturn from non-function");
+  if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = builder.create<cir::LoadOp>(
-        loc, cgf.curFn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+        loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return builder.create<cir::ReturnOp>(loc,
                                          llvm::ArrayRef(value.getResult()));
   }
@@ -403,6 +410,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+  curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
 
@@ -455,7 +463,38 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     const auto *md = cast<CXXMethodDecl>(d);
     if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
-      cgm.errorNYI(loc, "lambda call operator");
+      // We're in a lambda.
+      auto fn = dyn_cast<cir::FuncOp>(curFn);
+      assert(fn && "lambda in non-function region");
+      fn.setLambda(true);
+
+      // Figure out the captures.
+      md->getParent()->getCaptureFields(lambdaCaptureFields,
+                                        lambdaThisCaptureField);
+      if (lambdaThisCaptureField) {
+        // If the lambda captures the object referred to by '*this' - either by
+        // value or by reference, make sure CXXThisValue points to the correct
+        // object.
+
+        // Get the lvalue for the field (which is a copy of the enclosing object
+        // or contains the address of the enclosing object).
+        LValue thisFieldLValue =
+            emitLValueForLambdaField(lambdaThisCaptureField);
+        if (!lambdaThisCaptureField->getType()->isPointerType()) {
+          // If the enclosing object was captured by value, just use its
+          // address. Sign this pointer.
+          cxxThisValue = thisFieldLValue.getPointer();
+        } else {
+          // Load the lvalue pointed to by the field, since '*this' was captured
+          // by reference.
+          cxxThisValue =
+              emitLoadOfLValue(thisFieldLValue, SourceLocation()).getValue();
+        }
+      }
+      for (auto *fd : md->getParent()->fields()) {
+        if (fd->hasCapturedVLAType())
+          cgm.errorNYI(loc, "lambda captured VLA type");
+      }
     } else {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
@@ -545,7 +584,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
-      getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
+      // The lambda static invoker function is special, because it forwards or
+      // clones the body of the function call operator (but is actually
+      // static).
+      emitLambdaStaticInvokeBody(cast<CXXMethodDecl>(funcDecl));
     } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
                (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
                 cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
@@ -655,6 +697,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (dtorType) {
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor");
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
@@ -774,6 +818,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
     return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
@@ -795,6 +841,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   case Expr::CStyleCastExprClass:
@@ -804,6 +852,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }
 }
 

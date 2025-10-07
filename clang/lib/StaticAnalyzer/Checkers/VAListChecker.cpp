@@ -18,11 +18,36 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace ento;
+using llvm::formatv;
 
-REGISTER_SET_WITH_PROGRAMSTATE(InitializedVALists, const MemRegion *)
+namespace {
+enum class VAListState {
+  Uninitialized,
+  Unknown,
+  Initialized,
+  Released,
+};
+
+constexpr llvm::StringLiteral StateNames[] = {
+    "uninitialized", "unknown", "initialized", "already released"};
+} // end anonymous namespace
+
+static StringRef describeState(const VAListState S) {
+  return StateNames[static_cast<int>(S)];
+}
+
+REGISTER_MAP_WITH_PROGRAMSTATE(VAListStateMap, const MemRegion *, VAListState)
+
+static VAListState getVAListState(ProgramStateRef State, const MemRegion *Reg) {
+  if (const VAListState *Res = State->get<VAListStateMap>(Reg))
+    return *Res;
+  return Reg->getSymbolicBase() ? VAListState::Unknown
+                                : VAListState::Uninitialized;
+}
 
 namespace {
 typedef SmallVector<const MemRegion *, 2> RegionVector;
@@ -48,7 +73,7 @@ public:
 
 private:
   const MemRegion *getVAListAsRegion(SVal SV, const Expr *VAExpr,
-                                     bool &IsSymbolic, CheckerContext &C) const;
+                                     CheckerContext &C) const;
   const ExplodedNode *getStartCallSite(const ExplodedNode *N,
                                        const MemRegion *Reg) const;
 
@@ -57,8 +82,8 @@ private:
   void reportLeaked(const RegionVector &Leaked, StringRef Msg1, StringRef Msg2,
                     CheckerContext &C, ExplodedNode *N) const;
 
-  void checkVAListStartCall(const CallEvent &Call, CheckerContext &C,
-                            bool IsCopy) const;
+  void checkVAListStartCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkVAListCopyCall(const CallEvent &Call, CheckerContext &C) const;
   void checkVAListEndCall(const CallEvent &Call, CheckerContext &C) const;
 
   class VAListBugVisitor : public BugReporterVisitor {
@@ -118,41 +143,35 @@ const CallDescription VAListChecker::VaStart(CDM::CLibrary,
 void VAListChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
   if (VaStart.matches(Call))
-    checkVAListStartCall(Call, C, false);
+    checkVAListStartCall(Call, C);
   else if (VaCopy.matches(Call))
-    checkVAListStartCall(Call, C, true);
+    checkVAListCopyCall(Call, C);
   else if (VaEnd.matches(Call))
     checkVAListEndCall(Call, C);
   else {
     for (auto FuncInfo : VAListAccepters) {
       if (!FuncInfo.Func.matches(Call))
         continue;
-      bool Symbolic;
       const MemRegion *VAList =
           getVAListAsRegion(Call.getArgSVal(FuncInfo.ParamIndex),
-                            Call.getArgExpr(FuncInfo.ParamIndex), Symbolic, C);
+                            Call.getArgExpr(FuncInfo.ParamIndex), C);
       if (!VAList)
         return;
+      VAListState S = getVAListState(C.getState(), VAList);
 
-      if (C.getState()->contains<InitializedVALists>(VAList))
+      if (S == VAListState::Initialized || S == VAListState::Unknown)
         return;
 
-      // We did not see va_start call, but the source of the region is unknown.
-      // Be conservative and assume the best.
-      if (Symbolic)
-        return;
-
-      SmallString<80> Errmsg("Function '");
-      Errmsg += FuncInfo.Func.getFunctionName();
-      Errmsg += "' is called with an uninitialized va_list argument";
-      reportUninitializedAccess(VAList, Errmsg.c_str(), C);
+      std::string ErrMsg =
+          formatv("Function '{0}' is called with an {1} va_list argument",
+                  FuncInfo.Func.getFunctionName(), describeState(S));
+      reportUninitializedAccess(VAList, ErrMsg, C);
       break;
     }
   }
 }
 
 const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
-                                                  bool &IsSymbolic,
                                                   CheckerContext &C) const {
   const MemRegion *Reg = SV.getAsRegion();
   if (!Reg)
@@ -168,7 +187,6 @@ const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
     if (isa<ParmVarDecl>(DeclReg->getDecl()))
       Reg = C.getState()->getSVal(SV.castAs<Loc>()).getAsRegion();
   }
-  IsSymbolic = Reg && Reg->getBaseRegion()->getAs<SymbolicRegion>();
   // Some VarRegion based VA lists reach here as ElementRegions.
   const auto *EReg = dyn_cast_or_null<ElementRegion>(Reg);
   return (EReg && VAListModelledAsArray) ? EReg->getSuperRegion() : Reg;
@@ -178,52 +196,53 @@ void VAListChecker::checkPreStmt(const VAArgExpr *VAA,
                                  CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   const Expr *ArgExpr = VAA->getSubExpr();
-  SVal VAListSVal = C.getSVal(ArgExpr);
-  bool Symbolic;
-  const MemRegion *VAList = getVAListAsRegion(VAListSVal, ArgExpr, Symbolic, C);
+  const MemRegion *VAList = getVAListAsRegion(C.getSVal(ArgExpr), ArgExpr, C);
   if (!VAList)
     return;
-  if (Symbolic)
+  VAListState S = getVAListState(C.getState(), VAList);
+  if (S == VAListState::Initialized || S == VAListState::Unknown)
     return;
-  if (!State->contains<InitializedVALists>(VAList))
-    reportUninitializedAccess(
-        VAList, "va_arg() is called on an uninitialized va_list", C);
+
+  std::string ErrMsg =
+      formatv("va_arg() is called on an {0} va_list", describeState(S));
+  reportUninitializedAccess(VAList, ErrMsg, C);
 }
 
 void VAListChecker::checkDeadSymbols(SymbolReaper &SR,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  InitializedVAListsTy Tracked = State->get<InitializedVALists>();
+  VAListStateMapTy Tracked = State->get<VAListStateMap>();
   RegionVector Leaked;
-  for (const MemRegion *Reg : Tracked) {
+  for (const auto &[Reg, S] : Tracked) {
     if (SR.isLiveRegion(Reg))
       continue;
-    Leaked.push_back(Reg);
-    State = State->remove<InitializedVALists>(Reg);
+    if (S == VAListState::Initialized)
+      Leaked.push_back(Reg);
+    State = State->remove<VAListStateMap>(Reg);
   }
-  if (ExplodedNode *N = C.addTransition(State))
+  if (ExplodedNode *N = C.addTransition(State)) {
     reportLeaked(Leaked, "Initialized va_list", " is leaked", C, N);
+  }
 }
 
 // This function traverses the exploded graph backwards and finds the node where
-// the va_list is initialized. That node is used for uniquing the bug paths.
-// It is not likely that there are several different va_lists that belongs to
-// different stack frames, so that case is not yet handled.
+// the va_list becomes initialized. That node is used for uniquing the bug
+// paths. It is not likely that there are several different va_lists that
+// belongs to different stack frames, so that case is not yet handled.
 const ExplodedNode *
 VAListChecker::getStartCallSite(const ExplodedNode *N,
                                 const MemRegion *Reg) const {
   const LocationContext *LeakContext = N->getLocationContext();
   const ExplodedNode *StartCallNode = N;
 
-  bool FoundInitializedState = false;
+  bool SeenInitializedState = false;
 
   while (N) {
-    ProgramStateRef State = N->getState();
-    if (!State->contains<InitializedVALists>(Reg)) {
-      if (FoundInitializedState)
-        break;
-    } else {
-      FoundInitializedState = true;
+    VAListState S = getVAListState(N->getState(), Reg);
+    if (S == VAListState::Initialized) {
+      SeenInitializedState = true;
+    } else if (SeenInitializedState) {
+      break;
     }
     const LocationContext *NContext = N->getLocationContext();
     if (NContext == LeakContext || NContext->isParentOf(LeakContext))
@@ -274,71 +293,84 @@ void VAListChecker::reportLeaked(const RegionVector &Leaked, StringRef Msg1,
 }
 
 void VAListChecker::checkVAListStartCall(const CallEvent &Call,
-                                         CheckerContext &C, bool IsCopy) const {
-  bool Symbolic;
-  const MemRegion *VAList =
-      getVAListAsRegion(Call.getArgSVal(0), Call.getArgExpr(0), Symbolic, C);
-  if (!VAList)
+                                         CheckerContext &C) const {
+  const MemRegion *Arg =
+      getVAListAsRegion(Call.getArgSVal(0), Call.getArgExpr(0), C);
+  if (!Arg)
     return;
 
   ProgramStateRef State = C.getState();
+  VAListState ArgState = getVAListState(State, Arg);
 
-  if (IsCopy) {
-    const MemRegion *Arg2 =
-        getVAListAsRegion(Call.getArgSVal(1), Call.getArgExpr(1), Symbolic, C);
-    if (Arg2) {
-      if (VAList == Arg2) {
-        RegionVector Leaked{VAList};
-        if (ExplodedNode *N = C.addTransition(State))
-          reportLeaked(Leaked, "va_list", " is copied onto itself", C, N);
-        return;
-      }
-      if (!State->contains<InitializedVALists>(Arg2) && !Symbolic) {
-        if (State->contains<InitializedVALists>(VAList)) {
-          State = State->remove<InitializedVALists>(VAList);
-          RegionVector Leaked{VAList};
-          if (ExplodedNode *N = C.addTransition(State))
-            reportLeaked(Leaked, "Initialized va_list",
-                         " is overwritten by an uninitialized one", C, N);
-        } else {
-          reportUninitializedAccess(Arg2, "Uninitialized va_list is copied", C);
-        }
-        return;
-      }
-    }
-  }
-  if (State->contains<InitializedVALists>(VAList)) {
-    RegionVector Leaked{VAList};
+  if (ArgState == VAListState::Initialized) {
+    RegionVector Leaked{Arg};
     if (ExplodedNode *N = C.addTransition(State))
       reportLeaked(Leaked, "Initialized va_list", " is initialized again", C,
                    N);
     return;
   }
 
-  State = State->add<InitializedVALists>(VAList);
+  State = State->set<VAListStateMap>(Arg, VAListState::Initialized);
+  C.addTransition(State);
+}
+
+void VAListChecker::checkVAListCopyCall(const CallEvent &Call,
+                                        CheckerContext &C) const {
+  const MemRegion *Arg1 =
+      getVAListAsRegion(Call.getArgSVal(0), Call.getArgExpr(0), C);
+  const MemRegion *Arg2 =
+      getVAListAsRegion(Call.getArgSVal(1), Call.getArgExpr(1), C);
+  if (!Arg1 || !Arg2)
+    return;
+
+  ProgramStateRef State = C.getState();
+  if (Arg1 == Arg2) {
+    RegionVector Leaked{Arg1};
+    if (ExplodedNode *N = C.addTransition(State))
+      reportLeaked(Leaked, "va_list", " is copied onto itself", C, N);
+    return;
+  }
+  VAListState State1 = getVAListState(State, Arg1);
+  VAListState State2 = getVAListState(State, Arg2);
+  // Update the ProgramState by copying the state of Arg2 to Arg1.
+  State = State->set<VAListStateMap>(Arg1, State2);
+  if (State1 == VAListState::Initialized) {
+    RegionVector Leaked{Arg1};
+    std::string Msg2 =
+        formatv(" is overwritten by {0} {1} one",
+                (State2 == VAListState::Initialized) ? "another" : "an",
+                describeState(State2));
+    if (ExplodedNode *N = C.addTransition(State))
+      reportLeaked(Leaked, "Initialized va_list", Msg2, C, N);
+    return;
+  }
+  if (State2 != VAListState::Initialized && State2 != VAListState::Unknown) {
+    std::string Msg = formatv("{0} va_list is copied", describeState(State2));
+    Msg[0] = toupper(Msg[0]);
+    reportUninitializedAccess(Arg2, Msg, C);
+    return;
+  }
   C.addTransition(State);
 }
 
 void VAListChecker::checkVAListEndCall(const CallEvent &Call,
                                        CheckerContext &C) const {
-  bool Symbolic;
-  const MemRegion *VAList =
-      getVAListAsRegion(Call.getArgSVal(0), Call.getArgExpr(0), Symbolic, C);
-  if (!VAList)
+  const MemRegion *Arg =
+      getVAListAsRegion(Call.getArgSVal(0), Call.getArgExpr(0), C);
+  if (!Arg)
     return;
 
-  // We did not see va_start call, but the source of the region is unknown.
-  // Be conservative and assume the best.
-  if (Symbolic)
-    return;
+  ProgramStateRef State = C.getState();
+  VAListState ArgState = getVAListState(State, Arg);
 
-  if (!C.getState()->contains<InitializedVALists>(VAList)) {
-    reportUninitializedAccess(
-        VAList, "va_end() is called on an uninitialized va_list", C);
+  if (ArgState != VAListState::Unknown &&
+      ArgState != VAListState::Initialized) {
+    std::string Msg = formatv("va_end() is called on an {0} va_list",
+                              describeState(ArgState));
+    reportUninitializedAccess(Arg, Msg, C);
     return;
   }
-  ProgramStateRef State = C.getState();
-  State = State->remove<InitializedVALists>(VAList);
+  State = State->set<VAListStateMap>(Arg, VAListState::Released);
   C.addTransition(State);
 }
 
@@ -351,13 +383,26 @@ PathDiagnosticPieceRef VAListChecker::VAListBugVisitor::VisitNode(
   if (!S)
     return nullptr;
 
+  VAListState After = getVAListState(State, Reg);
+  VAListState Before = getVAListState(StatePrev, Reg);
+  if (Before == After)
+    return nullptr;
+
   StringRef Msg;
-  if (State->contains<InitializedVALists>(Reg) &&
-      !StatePrev->contains<InitializedVALists>(Reg))
+  switch (After) {
+  case VAListState::Uninitialized:
+    Msg = "Copied uninitialized contents into the va_list";
+    break;
+  case VAListState::Unknown:
+    Msg = "Copied unknown contents into the va_list";
+    break;
+  case VAListState::Initialized:
     Msg = "Initialized va_list";
-  else if (!State->contains<InitializedVALists>(Reg) &&
-           StatePrev->contains<InitializedVALists>(Reg))
+    break;
+  case VAListState::Released:
     Msg = "Ended va_list";
+    break;
+  }
 
   if (Msg.empty())
     return nullptr;

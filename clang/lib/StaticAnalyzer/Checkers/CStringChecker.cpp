@@ -672,6 +672,10 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 
   ProgramStateRef stateTrue, stateFalse;
 
+  if (!First.Expression->getType()->isAnyPointerType() ||
+      !Second.Expression->getType()->isAnyPointerType())
+    return state;
+
   // Assume different address spaces cannot overlap.
   if (First.Expression->getType()->getPointeeType().getAddressSpace() !=
       Second.Expression->getType()->getPointeeType().getAddressSpace())

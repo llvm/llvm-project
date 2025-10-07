@@ -126,6 +126,7 @@ class RISCVVIntrinsic {
   Intrinsic IntrinsicID = !cast<Intrinsic>(NAME);
   bits<4> ScalarOperand = NoScalarOperand;
   bits<5> VLOperand = NoVLOperand;
+  bit IsFPIntrinsic = 0;
 }
 
 let TargetPrefix = "riscv" in {
@@ -1442,14 +1443,15 @@ let TargetPrefix = "riscv" in {
   defm vwmaccus : RISCVTernaryWide;
   defm vwmaccsu : RISCVTernaryWide;
 
-  defm vfadd : RISCVBinaryAAXRoundingMode;
-  defm vfsub : RISCVBinaryAAXRoundingMode;
-  defm vfrsub : RISCVBinaryAAXRoundingMode;
-
-  defm vfwadd : RISCVBinaryABXRoundingMode;
-  defm vfwsub : RISCVBinaryABXRoundingMode;
-  defm vfwadd_w : RISCVBinaryAAXRoundingMode;
-  defm vfwsub_w : RISCVBinaryAAXRoundingMode;
+  let IsFPIntrinsic = 1 in {
+    defm vfadd : RISCVBinaryAAXRoundingMode;
+    defm vfsub : RISCVBinaryAAXRoundingMode;
+    defm vfrsub : RISCVBinaryAAXRoundingMode;
+    defm vfwadd : RISCVBinaryABXRoundingMode;
+    defm vfwsub : RISCVBinaryABXRoundingMode;
+    defm vfwadd_w : RISCVBinaryAAXRoundingMode;
+    defm vfwsub_w : RISCVBinaryAAXRoundingMode;
+  }
 
   defm vsaddu : RISCVSaturatingBinaryAAX;
   defm vsadd : RISCVSaturatingBinaryAAX;
@@ -1484,6 +1486,7 @@ let TargetPrefix = "riscv" in {
                                                   llvm_anyint_ty],
                                                  [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 2;
+    let IsFPIntrinsic = 1;
   }
 
   def int_riscv_vmv_x_s : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
@@ -1506,51 +1509,57 @@ let TargetPrefix = "riscv" in {
                                                   llvm_anyint_ty],
                                                  [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 2;
+    let IsFPIntrinsic = 1;
   }
 
-  defm vfmul : RISCVBinaryAAXRoundingMode;
-  defm vfdiv : RISCVBinaryAAXRoundingMode;
-  defm vfrdiv : RISCVBinaryAAXRoundingMode;
+  let IsFPIntrinsic = 1 in {
+    defm vfmul : RISCVBinaryAAXRoundingMode;
+    defm vfdiv : RISCVBinaryAAXRoundingMode;
+    defm vfrdiv : RISCVBinaryAAXRoundingMode;
 
-  defm vfwmul : RISCVBinaryABXRoundingMode;
+    defm vfwmul : RISCVBinaryABXRoundingMode;
 
-  defm vfmacc : RISCVTernaryAAXARoundingMode;
-  defm vfnmacc : RISCVTernaryAAXARoundingMode;
-  defm vfmsac : RISCVTernaryAAXARoundingMode;
-  defm vfnmsac : RISCVTernaryAAXARoundingMode;
-  defm vfmadd : RISCVTernaryAAXARoundingMode;
-  defm vfnmadd : RISCVTernaryAAXARoundingMode;
-  defm vfmsub : RISCVTernaryAAXARoundingMode;
-  defm vfnmsub : RISCVTernaryAAXARoundingMode;
+    defm vfmacc : RISCVTernaryAAXARoundingMode;
+    defm vfnmacc : RISCVTernaryAAXARoundingMode;
+    defm vfmsac : RISCVTernaryAAXARoundingMode;
+    defm vfnmsac : RISCVTernaryAAXARoundingMode;
+    defm vfmadd : RISCVTernaryAAXARoundingMode;
+    defm vfnmadd : RISCVTernaryAAXARoundingMode;
+    defm vfmsub : RISCVTernaryAAXARoundingMode;
+    defm vfnmsub : RISCVTernaryAAXARoundingMode;
 
-  defm vfwmacc : RISCVTernaryWideRoundingMode;
-  defm vfwmaccbf16 : RISCVTernaryWideRoundingMode;
-  defm vfwnmacc : RISCVTernaryWideRoundingMode;
-  defm vfwmsac : RISCVTernaryWideRoundingMode;
-  defm vfwnmsac : RISCVTernaryWideRoundingMode;
+    defm vfwmacc : RISCVTernaryWideRoundingMode;
+    defm vfwmaccbf16 : RISCVTernaryWideRoundingMode;
+    defm vfwnmacc : RISCVTernaryWideRoundingMode;
+    defm vfwmsac : RISCVTernaryWideRoundingMode;
+    defm vfwnmsac : RISCVTernaryWideRoundingMode;
 
-  defm vfsqrt : RISCVUnaryAARoundingMode;
-  defm vfrsqrt7 : RISCVUnaryAA;
-  defm vfrec7 : RISCVUnaryAARoundingMode;
+    defm vfsqrt : RISCVUnaryAARoundingMode;
+    defm vfrsqrt7 : RISCVUnaryAA;
+    defm vfrec7 : RISCVUnaryAARoundingMode;
 
-  defm vfmin : RISCVBinaryAAX;
-  defm vfmax : RISCVBinaryAAX;
+    defm vfmin : RISCVBinaryAAX;
+    defm vfmax : RISCVBinaryAAX;
 
-  defm vfsgnj : RISCVBinaryAAX;
-  defm vfsgnjn : RISCVBinaryAAX;
-  defm vfsgnjx : RISCVBinaryAAX;
+    defm vfsgnj : RISCVBinaryAAX;
+    defm vfsgnjn : RISCVBinaryAAX;
+    defm vfsgnjx : RISCVBinaryAAX;
 
-  defm vfclass : RISCVClassify;
+    defm vfclass : RISCVClassify;
 
-  defm vfmerge : RISCVBinaryWithV0;
+    defm vfmerge : RISCVBinaryWithV0;
+  }
 
   defm vslideup : RVVSlide;
   defm vslidedown : RVVSlide;
 
   defm vslide1up : RISCVBinaryAAX;
   defm vslide1down : RISCVBinaryAAX;
-  defm vfslide1up : RISCVBinaryAAX;
-  defm vfslide1down : RISCVBinaryAAX;
+
+  let IsFPIntrinsic = 1 in {
+    defm vfslide1up : RISCVBinaryAAX;
+    defm vfslide1down : RISCVBinaryAAX;
+  }
 
   defm vrgather_vv : RISCVRGatherVV;
   defm vrgather_vx : RISCVRGatherVX;
@@ -1571,12 +1580,14 @@ let TargetPrefix = "riscv" in {
   defm vnclipu : RISCVSaturatingBinaryABShiftRoundingMode;
   defm vnclip : RISCVSaturatingBinaryABShiftRoundingMode;
 
-  defm vmfeq : RISCVCompare;
-  defm vmfne : RISCVCompare;
-  defm vmflt : RISCVCompare;
-  defm vmfle : RISCVCompare;
-  defm vmfgt : RISCVCompare;
-  defm vmfge : RISCVCompare;
+  let IsFPIntrinsic = 1 in {
+    defm vmfeq : RISCVCompare;
+    defm vmfne : RISCVCompare;
+    defm vmflt : RISCVCompare;
+    defm vmfle : RISCVCompare;
+    defm vmfgt : RISCVCompare;
+    defm vmfge : RISCVCompare;
+  }
 
   defm vredsum : RISCVReduction;
   defm vredand : RISCVReduction;
@@ -1590,13 +1601,15 @@ let TargetPrefix = "riscv" in {
   defm vwredsumu : RISCVReduction;
   defm vwredsum : RISCVReduction;
 
-  defm vfredosum : RISCVReductionRoundingMode;
-  defm vfredusum : RISCVReductionRoundingMode;
-  defm vfredmin : RISCVReduction;
-  defm vfredmax : RISCVReduction;
+  let IsFPIntrinsic = 1 in {
+    defm vfredosum : RISCVReductionRoundingMode;
+    defm vfredusum : RISCVReductionRoundingMode;
+    defm vfredmin : RISCVReduction;
+    defm vfredmax : RISCVReduction;
 
-  defm vfwredusum : RISCVReductionRoundingMode;
-  defm vfwredosum : RISCVReductionRoundingMode;
+    defm vfwredusum : RISCVReductionRoundingMode;
+    defm vfwredosum : RISCVReductionRoundingMode;
+  }
 
   def int_riscv_vmand: RISCVBinaryAAAUnMasked;
   def int_riscv_vmnand: RISCVBinaryAAAUnMasked;
@@ -1615,31 +1628,33 @@ let TargetPrefix = "riscv" in {
   defm vmsof : RISCVMaskedUnaryMOut;
   defm vmsif : RISCVMaskedUnaryMOut;
 
-  defm vfcvt_xu_f_v : RISCVConversionRoundingMode;
-  defm vfcvt_x_f_v : RISCVConversionRoundingMode;
-  defm vfcvt_rtz_xu_f_v : RISCVConversion;
-  defm vfcvt_rtz_x_f_v : RISCVConversion;
-  defm vfcvt_f_xu_v : RISCVConversionRoundingMode;
-  defm vfcvt_f_x_v : RISCVConversionRoundingMode;
+  let IsFPIntrinsic = 1 in {
+    defm vfcvt_xu_f_v : RISCVConversionRoundingMode;
+    defm vfcvt_x_f_v : RISCVConversionRoundingMode;
+    defm vfcvt_rtz_xu_f_v : RISCVConversion;
+    defm vfcvt_rtz_x_f_v : RISCVConversion;
+    defm vfcvt_f_xu_v : RISCVConversionRoundingMode;
+    defm vfcvt_f_x_v : RISCVConversionRoundingMode;
 
-  defm vfwcvt_f_xu_v : RISCVConversion;
-  defm vfwcvt_f_x_v : RISCVConversion;
-  defm vfwcvt_xu_f_v : RISCVConversionRoundingMode;
-  defm vfwcvt_x_f_v : RISCVConversionRoundingMode;
-  defm vfwcvt_rtz_xu_f_v : RISCVConversion;
-  defm vfwcvt_rtz_x_f_v : RISCVConversion;
-  defm vfwcvt_f_f_v : RISCVConversion;
-  defm vfwcvtbf16_f_f_v : RISCVConversion;
+    defm vfwcvt_f_xu_v : RISCVConversion;
+    defm vfwcvt_f_x_v : RISCVConversion;
+    defm vfwcvt_xu_f_v : RISCVConversionRoundingMode;
+    defm vfwcvt_x_f_v : RISCVConversionRoundingMode;
+    defm vfwcvt_rtz_xu_f_v : RISCVConversion;
+    defm vfwcvt_rtz_x_f_v : RISCVConversion;
+    defm vfwcvt_f_f_v : RISCVConversion;
+    defm vfwcvtbf16_f_f_v : RISCVConversion;
 
-  defm vfncvt_f_xu_w : RISCVConversionRoundingMode;
-  defm vfncvt_f_x_w : RISCVConversionRoundingMode;
-  defm vfncvt_xu_f_w : RISCVConversionRoundingMode;
-  defm vfncvt_x_f_w : RISCVConversionRoundingMode;
-  defm vfncvt_rtz_xu_f_w : RISCVConversion;
-  defm vfncvt_rtz_x_f_w : RISCVConversion;
-  defm vfncvt_f_f_w : RISCVConversionRoundingMode;
-  defm vfncvtbf16_f_f_w : RISCVConversionRoundingMode;
-  defm vfncvt_rod_f_f_w : RISCVConversion;
+    defm vfncvt_f_xu_w : RISCVConversionRoundingMode;
+    defm vfncvt_f_x_w : RISCVConversionRoundingMode;
+    defm vfncvt_xu_f_w : RISCVConversionRoundingMode;
+    defm vfncvt_x_f_w : RISCVConversionRoundingMode;
+    defm vfncvt_rtz_xu_f_w : RISCVConversion;
+    defm vfncvt_rtz_x_f_w : RISCVConversion;
+    defm vfncvt_f_f_w : RISCVConversionRoundingMode;
+    defm vfncvtbf16_f_f_w : RISCVConversionRoundingMode;
+    defm vfncvt_rod_f_f_w : RISCVConversion;
+  }
 
   // Output: (vector)
   // Input: (passthru, mask type input, vl)
@@ -1949,3 +1964,4 @@ include "llvm/IR/IntrinsicsRISCVXTHead.td"
 include "llvm/IR/IntrinsicsRISCVXsf.td"
 include "llvm/IR/IntrinsicsRISCVXCV.td"
 include "llvm/IR/IntrinsicsRISCVXAndes.td"
+include "llvm/IR/IntrinsicsRISCVXMIPS.td"

@@ -305,7 +305,7 @@ define <vscale x 8 x i1> @icmp_uge_vi_nxv8i8_6(<vscale x 8 x i8> %va, iXLen %vl)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmsleu.vv v0, v9, v8
 ; CHECK-NEXT:    ret
-  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.iXLen(<vscale x 8 x i8> undef, i8 0, iXLen %vl)
+  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.iXLen(<vscale x 8 x i8> poison, i8 0, iXLen %vl)
   %vc = icmp uge <vscale x 8 x i8> %va, %splat
   ret <vscale x 8 x i1> %vc
 }
@@ -414,7 +414,7 @@ define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_5(<vscale x 8 x i8> %va, iXLen %vl)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmsltu.vx v0, v8, zero
 ; CHECK-NEXT:    ret
-  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.iXLen(<vscale x 8 x i8> undef, i8 0, iXLen %vl)
+  %splat = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.iXLen(<vscale x 8 x i8> poison, i8 0, iXLen %vl)
   %vc = icmp ult <vscale x 8 x i8> %va, %splat
   ret <vscale x 8 x i1> %vc
 }

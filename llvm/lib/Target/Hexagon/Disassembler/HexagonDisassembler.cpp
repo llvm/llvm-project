@@ -34,6 +34,7 @@
 #define DEBUG_TYPE "hexagon-disassembler"
 
 using namespace llvm;
+using namespace llvm::MCD;
 using namespace Hexagon;
 
 using DecodeStatus = MCDisassembler::DecodeStatus;

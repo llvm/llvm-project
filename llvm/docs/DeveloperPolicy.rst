@@ -51,7 +51,7 @@ respected.
 
 We accept code contributions as :ref:`GitHub Pull Requests <github-reviews>`.
 Our project is generally too large to subscribe to all github notifications, so
-if you want to be notified of pull requests affecting a specific parts of the
+if you want to be notified of pull requests affecting specific parts of the
 code, you can join
 one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
 GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
@@ -388,7 +388,7 @@ Below are some guidelines about the format of the message itself:
   reviews.
 
 * The body should be concise, but explanatory, including a complete
-  reasoning.  Unless it is required to understand the change, examples,
+  rationale.  Unless it is required to understand the change, examples,
   code snippets and gory details should be left to bug comments, web
   review or the mailing list.
 
@@ -474,7 +474,7 @@ What are the expectations around a revert?
   the commit thread asking for assistance.  We aren't trying to enumerate
   every case, but rather give a set of guidelines.
 * You should be sure that reverting the change improves the stability of tip
-  of tree.  Sometimes reverting one change in a series can worsen things
+  of tree.  Sometimes, reverting one change in a series can worsen things
   instead of improving them.  We expect reasonable judgment to ensure that
   the proper patch or set of patches is being reverted.
 * The commit message for the reverting commit should explain why patch
@@ -591,7 +591,7 @@ Proposing Major Changes (RFCs)
 
 LLVM is a large community with many stakeholders, and before landing any major
 change, it is important to discuss the design of a change publicly with the
-community. This is done by posting an Request For Comments (RFC) on the `LLVM
+community. This is done by posting a Request For Comments (RFC) on the `LLVM
 Discourse forums`_.
 
 The design of LLVM is carefully controlled to ensure that all the pieces fit
@@ -628,7 +628,7 @@ confirming that we can all live with the tradeoffs embodied in the proposal.
 
 The LLVM Area Teams (defined in `LP0004
 <https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_)
-are responsible for facilitating project decision making. In cases were there
+are responsible for facilitating project decision making. In cases where there
 isn't obvious agreement, area teams should step in to restate their perceived
 consensus. In cases of deeper disagreement, area teams should try to identify
 the next steps for the proposal, such as gathering more data, changing the

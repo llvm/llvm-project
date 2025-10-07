@@ -27,6 +27,8 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -282,6 +284,8 @@ private:
   template <typename T>
   void prepareLoadConfig(SymbolTable &symtab, T *loadConfig);
 
+  void printSummary();
+
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
   StringTableBuilder strtab;
@@ -320,6 +324,7 @@ private:
   OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
+  OutputSection *cvinfoSec;
   OutputSection *dataSec;
   OutputSection *pdataSec;
   OutputSection *idataSec;
@@ -823,6 +828,8 @@ void Writer::run() {
 
   writePEChecksum();
 
+  printSummary();
+
   if (errorCount())
     return;
 
@@ -1086,6 +1093,7 @@ void Writer::createSections() {
   bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
+  cvinfoSec = createSection(".cvinfo", data | r);
   dataSec = createSection(".data", data | r | w);
   pdataSec = createSection(".pdata", data | r);
   idataSec = createSection(".idata", data | r);
@@ -1222,7 +1230,13 @@ void Writer::createMiscChunks() {
   });
 
   // Create Debug Information Chunks
-  debugInfoSec = config->mingw ? buildidSec : rdataSec;
+  if (config->mingw) {
+    debugInfoSec = buildidSec;
+  } else if (!config->mergeDebugDirectory) {
+    debugInfoSec = cvinfoSec;
+  } else {
+    debugInfoSec = rdataSec;
+  }
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
       config->repro || config->cetCompat || config->cetCompatStrict ||
       config->cetCompatIpValidationRelaxed ||
@@ -1606,7 +1620,7 @@ void Writer::createSymbolAndStringTable() {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
                     createSymbol(dthunk->wrappedSym)) {
-              if (d->getName().size() > COFF::NameSize)
+              if (dthunk->wrappedSym->getName().size() > COFF::NameSize)
                 longNameSymbols.emplace_back(outputSymtab.size(),
                                              dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);
@@ -3045,4 +3059,44 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
 #undef IF_CONTAINS
 #undef CHECK_VA
 #undef CHECK_ABSOLUTE
+}
+
+void Writer::printSummary() {
+  if (!ctx.config.showSummary)
+    return;
+
+  SmallString<256> buffer;
+  raw_svector_ostream stream(buffer);
+
+  stream << center_justify("Summary", 80) << '\n'
+         << std::string(80, '-') << '\n';
+
+  auto print = [&](uint64_t v, StringRef s) {
+    stream << formatv("{0}",
+                      fmt_align(formatv("{0:N}", v), AlignStyle::Right, 20))
+           << " " << s << '\n';
+  };
+
+  bool hasStats = ctx.pdbStats.has_value();
+
+  print(ctx.objFileInstances.size(),
+        "Input OBJ files (expanded from all cmd-line inputs)");
+  print(ctx.consumedInputsSize,
+        "Size of all consumed OBJ files (non-lazy), in bytes");
+  print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
+  print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
+  print(hasStats ? ctx.pdbStats->nbTypeRecords : 0, "Input debug type records");
+  print(hasStats ? ctx.pdbStats->nbTypeRecordsBytes : 0,
+        "Size of all input debug type records, in bytes");
+  print(hasStats ? ctx.pdbStats->nbTPIrecords : 0, "Merged TPI records");
+  print(hasStats ? ctx.pdbStats->nbIPIrecords : 0, "Merged IPI records");
+  print(hasStats ? ctx.pdbStats->strTabSize : 0, "Output PDB strings");
+  print(hasStats ? ctx.pdbStats->globalSymbols : 0, "Global symbol records");
+  print(hasStats ? ctx.pdbStats->moduleSymbols : 0, "Module symbol records");
+  print(hasStats ? ctx.pdbStats->publicSymbols : 0, "Public symbol records");
+
+  if (hasStats)
+    stream << ctx.pdbStats->largeInputTypeRecs;
+
+  Msg(ctx) << buffer;
 }
