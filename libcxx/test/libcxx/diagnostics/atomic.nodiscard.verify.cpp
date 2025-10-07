@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++26
 
 // check that <atomic> functions are marked [[nodiscard]]
-
-// clang-format off
 
 #include <atomic>
 
@@ -23,9 +21,7 @@ struct TestAtomicRef {
     T x(T(1));
     const std::atomic_ref<T> a(x);
 
-#if TEST_STD_VER >= 26
-  a.address(); // expected-warning 4 {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
+    a.address(); // expected-warning 4 {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 };
 
