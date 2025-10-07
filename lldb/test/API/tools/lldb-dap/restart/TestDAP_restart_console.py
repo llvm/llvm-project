@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 
 
+@skipIf(bugnumber = "rdar://162151859")
 @skipIfBuildType(["debug"])
 class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
     @skipIfAsan
