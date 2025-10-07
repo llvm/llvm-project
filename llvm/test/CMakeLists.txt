@@ -71,7 +71,6 @@ set(LLVM_TEST_DEPENDS
   ${LLVM_TEST_DEPENDS_COMMON}
   BugpointPasses
   LLVMWindowsDriver
-  UnitTests
   bugpoint
   llc
   lli
@@ -248,7 +247,7 @@ if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-link)
 endif()
 
-add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
+add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS} UnitTests)
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "LLVM/Tests")
 
 if(LLVM_BUILD_TOOLS)
@@ -260,7 +259,7 @@ endif()
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   ${exclude_from_check_all}
-  DEPENDS ${LLVM_TEST_DEPENDS}
+  DEPENDS ${LLVM_TEST_DEPENDS} UnitTests
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 
@@ -270,10 +269,11 @@ add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS}
   FOLDER "Tests/Subdirectories"
-  SKIP "^FileCheck" "^TableGen"
+  SKIP "^FileCheck" "^TableGen" "^Unit"
   )
 add_subdirectory(FileCheck)
 add_subdirectory(TableGen)
+add_subdirectory(Unit)
 
 # Setup an alias for 'check-all'.
 add_custom_target(check)
