@@ -26,8 +26,81 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
+// Raise warnings for some dangerous context of passing global variables
+// - any variable from common blocks except
+//   - 1-element arrays being single member of COMMON
+// - avy variable from module except
+//   - having attribute PARAMETER
+//   - being arrays having 1-D rank and is not having ALLOCATABLE or POINTER or
+//       VOLATILE attributes
+static void CheckPassGlobalVariable(
+    const evaluate::Expr<evaluate::SomeType> &actual,
+    const parser::ContextualMessages &messages, SemanticsContext &context,
+    evaluate::FoldingContext &foldingContext) {
+  const Symbol *actualFirstSymbol{evaluate::GetFirstSymbol(actual)};
+  if (actualFirstSymbol) {
+    bool warn{false};
+    std::string ownerType{""};
+    std::string ownerName{""};
+    if (actualFirstSymbol->flags().test(Symbol::Flag::InCommonBlock)) {
+      const Symbol *common{FindCommonBlockContaining(*actualFirstSymbol)};
+      ownerType = "COMMON";
+      ownerName = common->name().ToString();
+      if (!(actualFirstSymbol->Rank() == 1 &&
+                     actualFirstSymbol->offset() == 0)) {
+        warn |= true;
+      } else if (actualFirstSymbol->Rank() == 1) {
+        bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
+        if (!actualIsArrayElement) {
+          warn |= true;
+        }
+        if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+            dims && dims->IsExplicitShape()) {
+          if (!((*dims)[0].lbound().GetExplicit() ==
+                  (*dims)[0].ubound().GetExplicit())) {
+            warn |= true;
+          }
+        }
+        if (common->get<CommonBlockDetails>().objects().size() > 1) {
+          warn |= true;
+        }
+      }
+    } else if (const auto &owner{actualFirstSymbol->GetUltimate().owner()};
+        owner.IsModule() || owner.IsSubmodule()) {
+      const Scope *module{FindModuleContaining(owner)};
+      ownerType = "MODULE";
+      ownerName = module->GetName()->ToString();
+      if (actualFirstSymbol->attrs().test(Attr::PARAMETER)) {
+        warn |= false;
+      } else if (actualFirstSymbol->Rank() != 1) {
+        warn |= true;
+      } else if (!actualFirstSymbol->attrs().test(Attr::ALLOCATABLE) &&
+          !actualFirstSymbol->attrs().test(Attr::POINTER) &&
+          !actualFirstSymbol->attrs().test(Attr::VOLATILE)) {
+        bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
+        if (!actualIsArrayElement) {
+          warn |= true;
+        }
+        if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+            dims && dims->IsExplicitShape()) {
+          if (!((*dims)[0].lbound().GetExplicit() ==
+                  (*dims)[0].ubound().GetExplicit())) {
+            warn |= true;
+          }
+        }
+      }
+    }
+    if (warn) {
+      context.Warn(common::UsageWarning::PassGlobalVariable, messages.at(),
+          "Passing global variable '%s' from %s '%s' as function argument"_warn_en_US,
+          actualFirstSymbol->name(), ownerType, ownerName);
+    }
+  }
+}
+
 static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
-    parser::ContextualMessages &messages, SemanticsContext &context) {
+    parser::ContextualMessages &messages, SemanticsContext &context,
+    evaluate::FoldingContext &foldingContext) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
@@ -117,6 +190,10 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         }
       }
     }
+  }
+
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    CheckPassGlobalVariable(*expr, messages, context, foldingContext);
   }
 }
 
@@ -1153,6 +1230,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     messages.Say(
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
+
+  CheckPassGlobalVariable(actual, messages, context, foldingContext);
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
@@ -2409,7 +2488,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
       auto restorer{messages.SetMessages(implicitBuffer)};
       for (auto &actual : actuals) {
         if (actual) {
-          CheckImplicitInterfaceArg(*actual, messages, context);
+          CheckImplicitInterfaceArg(*actual, messages, context, foldingContext);
         }
       }
     }
