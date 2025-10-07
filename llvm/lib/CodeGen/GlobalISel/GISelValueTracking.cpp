@@ -2035,8 +2035,8 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       if ((Known1.Zero | 1).isAllOnes())
         return TyBits;
 
-      // If the input is known to be positive (the sign bit is known clear),
-      // the output of the NEG has the same number of sign bits as the input.
+      // If we are subtracting one from a positive number, there is no carry
+      // out of the result.
       if (Known1.isNonNegative())
         return Src1NumSignBits;
 
