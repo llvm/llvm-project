@@ -59,12 +59,12 @@ LIBC_INLINE PrintfResult vasprintf_internal(char **ret,
   if (wb.buff == init_buff_on_stack) {
     *ret = static_cast<char *>(malloc(ret_val.value + 1));
     if (ret == nullptr)
-      return -ENOMEM;
+      return {0, ENOMEM};
     inline_memcpy(*ret, wb.buff, ret_val.value);
   } else {
     *ret = wb.buff;
   }
-  (*ret)[ret_val.value] = '\0'; // TODO OK HERE or overflow
+  (*ret)[ret_val.value] = '\0';
   return ret_val;
 }
 } // namespace printf_core

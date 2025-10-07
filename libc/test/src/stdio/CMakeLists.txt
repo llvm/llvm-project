@@ -186,6 +186,8 @@ add_libc_test(
     fprintf_test.cpp
   DEPENDS
     libc.src.stdio.fprintf
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
     ${fprintf_test_deps}
   COMPILE_OPTIONS
     ${use_system_file}

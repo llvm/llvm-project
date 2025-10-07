@@ -16,6 +16,8 @@
 #include "src/stdio/fprintf.h"
 
 #include "test/UnitTest/Test.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
@@ -30,6 +32,8 @@ using ::fopen;
 using ::fread;
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace printf_test
+
+using LlvmLibcFPrintfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcFPrintfTest, WriteToFile) {
   const char *FILENAME = APPEND_LIBC_TEST("fprintf_output.test");
@@ -78,6 +82,7 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   written =
       LIBC_NAMESPACE::fprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
+  ASSERT_ERRNO_EQ(EIO);
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
