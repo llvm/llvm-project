@@ -204,14 +204,15 @@ Value create2DTransformMatrix(OpBuilder &builder, Location loc,
   assert(type.isFloat() && "Only floats are supported by Winograd");
   ArrayRef<float> constVec(transform.table.data(),
                            transform.rows * transform.cols);
-  auto constAttrVec = llvm::map_to_vector<>(constVec, [&](const float v) -> Attribute {
-    return builder.getFloatAttr(type, v);
-  });
+  auto constAttrVec =
+      llvm::map_to_vector<>(constVec, [&](const float v) -> Attribute {
+        return builder.getFloatAttr(type, v);
+      });
   SmallVector<int64_t, 2> shape{transform.rows, transform.cols};
   return arith::ConstantOp::create(
       builder, loc,
-      DenseFPElementsAttr::get(
-          RankedTensorType::get(shape, type), constAttrVec));
+      DenseFPElementsAttr::get(RankedTensorType::get(shape, type),
+                               constAttrVec));
 }
 
 /// Extract height x width data from 4D tensors.
