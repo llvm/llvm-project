@@ -773,54 +773,40 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
             op, "Only 1D & 2D vector constant supported");
 
       SmallVector<Attribute> values(vecAttr.getValues<Attribute>());
-      int64_t stride = 0;
       int64_t rowStride = 0, colStride = 0;
-      if (wgShape.size() == 1) {
-        // 1D case: single stride
-        if (values.size() > 1) {
-          stride = cast<IntegerAttr>(values[1]).getInt() -
-                   cast<IntegerAttr>(values[0]).getInt();
-          for (size_t i = 2; i < values.size(); ++i) {
-            int64_t diff = cast<IntegerAttr>(values[i]).getInt() -
-                           cast<IntegerAttr>(values[i - 1]).getInt();
-            if (diff != stride)
+      int64_t rows = wgShape.size() == 1 ? 1 : wgShape[0];
+      int64_t cols = wgShape.size() == 1 ? wgShape[0] : wgShape[1];
+
+      // Compute colStride and rowStride, and check for constant strides.
+      if (cols > 1) {
+        colStride = cast<IntegerAttr>(values[1]).getInt() -
+                    cast<IntegerAttr>(values[0]).getInt();
+      }
+      if (rows > 1) {
+        rowStride = cast<IntegerAttr>(values[cols]).getInt() -
+                    cast<IntegerAttr>(values[0]).getInt();
+      }
+
+      for (int64_t r = 0; r < rows; ++r) {
+        for (int64_t c = 0; c < cols; ++c) {
+          int64_t idx = r * cols + c;
+          // Check column stride (skip first column)
+          if (c > 0 && cols > 1) {
+            int64_t prevIdx = r * cols + (c - 1);
+            int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
+                           cast<IntegerAttr>(values[prevIdx]).getInt();
+            if (diff != colStride)
               return rewriter.notifyMatchFailure(
-                  op, "Non-constant stride in non-splat constant op.");
+                  op, "Non-constant column stride in constant op.");
           }
-        }
-      } else if (wgShape.size() == 2) {
-        // 2D case: row stride and column stride
-        int64_t rows = wgShape[0], cols = wgShape[1];
-        // Compute col stride (stride between elements in a column)
-        if (cols > 1) {
-          colStride = cast<IntegerAttr>(values[1]).getInt() -
-                      cast<IntegerAttr>(values[0]).getInt();
-          for (int64_t r = 0; r < rows; ++r) {
-            for (int64_t c = 1; c < cols; ++c) {
-              int64_t idx = r * cols + c;
-              int64_t prevIdx = r * cols + (c - 1);
-              int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
-                             cast<IntegerAttr>(values[prevIdx]).getInt();
-              if (diff != colStride)
-                return rewriter.notifyMatchFailure(
-                    op, "Non-constant column stride in 2D constant op.");
-            }
-          }
-        }
-        // Compute row stride (stride between elements in a row)
-        if (rows > 1) {
-          rowStride = cast<IntegerAttr>(values[cols]).getInt() -
-                      cast<IntegerAttr>(values[0]).getInt();
-          for (int64_t c = 0; c < cols; ++c) {
-            for (int64_t r = 1; r < rows; ++r) {
-              int64_t idx = r * cols + c;
-              int64_t prevIdx = (r - 1) * cols + c;
-              int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
-                             cast<IntegerAttr>(values[prevIdx]).getInt();
-              if (diff != rowStride)
-                return rewriter.notifyMatchFailure(
-                    op, "Non-constant row stride in 2D constant op.");
-            }
+          // Check row stride (skip first row)
+          if (r > 0 && rows > 1) {
+            int64_t prevIdx = (r - 1) * cols + c;
+            int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
+                           cast<IntegerAttr>(values[prevIdx]).getInt();
+            if (diff != rowStride)
+              return rewriter.notifyMatchFailure(
+                  op, "Non-constant row stride in constant op.");
           }
         }
       }
@@ -829,12 +815,11 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       // For 2D case, extract the top-left sgShape[0] x sgShape[1] submatrix.
       // For 1D case, extract the first sgShape[0] elements.
       SmallVector<Attribute> baseTileValues;
-      int cols = sgShape[sgShape.size() - 1];
-      int64_t wgCols = wgShape[sgShape.size() - 1];
-      int64_t rows = sgShape.size() == 1 ? 1 : sgShape[0];
-      for (int64_t r = 0; r < rows; ++r) {
-        for (int64_t c = 0; c < cols; ++c) {
-          baseTileValues.push_back(values[r * wgCols + c]);
+      int baseTileCols = sgShape[sgShape.size() - 1];
+      int64_t baseTileRows = sgShape.size() == 1 ? 1 : sgShape[0];
+      for (int64_t r = 0; r < baseTileRows; ++r) {
+        for (int64_t c = 0; c < baseTileCols; ++c) {
+          baseTileValues.push_back(values[r * cols + c]);
         }
       }
 
@@ -852,9 +837,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
       SmallVector<Value, 2> strideConsts;
       strideConsts.push_back(
-          rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
-      strideConsts.push_back(
           rewriter.create<arith::ConstantIndexOp>(loc, colStride));
+      if (rows > 1)
+        strideConsts.insert(
+            strideConsts.begin(),
+            rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
+
       SmallVector<Value> newConstOps;
       Value mulOffset;
       for (auto offsets : *sgOffsets) {

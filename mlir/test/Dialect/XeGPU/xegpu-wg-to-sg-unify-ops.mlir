@@ -459,8 +459,8 @@ gpu.module @test_distribution {
     gpu.return
   }
 
-  // CHECK-LABEL: non_splat_constant
-  gpu.func @non_splat_constant() {
+  // CHECK-LABEL: non_splat_constant_2D
+  gpu.func @non_splat_constant_2D() {
     // CHECK-DAG: %[[CST:.*]] = arith.constant dense<0> : vector<1x1xindex>
     // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
     // CHECK-DAG: affine.apply #map4()[%[[SGID]]]
