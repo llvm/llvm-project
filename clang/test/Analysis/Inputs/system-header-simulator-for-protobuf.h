@@ -6,7 +6,9 @@
 #pragma clang system_header
 
 class Arena;
-class MessageLite;
+class MessageLite {
+  int SomeArbitraryField;
+};
 
 // Originally declared in generated_message_util.h
 MessageLite *GetOwnedMessageInternal(Arena *, MessageLite *, Arena *);

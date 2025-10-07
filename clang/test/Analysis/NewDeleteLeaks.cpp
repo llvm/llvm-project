@@ -13,6 +13,8 @@
 // RUN:     unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes=true
 
 #include "Inputs/system-header-simulator-for-malloc.h"
+// For the tests in namespace protobuf_leak:
+#include "Inputs/system-header-simulator-for-protobuf.h"
 
 //===----------------------------------------------------------------------===//
 // Report for which we expect NoOwnershipChangeVisitor to add a new note.
@@ -223,9 +225,6 @@ void caller() {
 // protobuf code that passes dynamically allocated memory to a certain function
 // named GetOwnedMessageInternal.
 namespace protobuf_leak {
-#include "Inputs/system-header-simulator-for-protobuf.h"
-
-class MessageLite { int SomeField; }; // Sufficient for our purposes.
 Arena *some_arena, *some_submessage_arena;
 
 MessageLite *protobuf_leak() {
