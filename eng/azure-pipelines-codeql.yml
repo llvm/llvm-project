@@ -48,11 +48,7 @@ stages:
               ClangBinDirArg: /p:ClangBinDir=/usr/local/bin
               archflag: --arch x64
         pool:
-          ${{ if eq(variables['System.TeamProject'], 'public') }}:
-            name: $(DncEngPublicBuildPool)
-            demands: ImageOverride -equals build.ubuntu.2204.amd64.open
-          ${{ if eq(variables['System.TeamProject'], 'internal') }}:
-            name: $(DncEngInternalBuildPool)
+            name: NetCore1ESPool-Internal-XL
             demands: ImageOverride -equals build.ubuntu.2204.amd64
         container:
           image: $(imagename)
@@ -96,11 +92,7 @@ stages:
               ClangTableGenArg: /p:ClangTableGenPath=$(Build.SourcesDirectory)\artifacts\obj\BuildRoot-x64\bin\clang-tblgen.exe
               archflag: -arch x64
         pool:
-          ${{ if eq(variables['System.TeamProject'], 'public') }}:
-            name: $(DncEngPublicBuildPool)
-            demands: ImageOverride -equals windows.vs2022.amd64.open
-          ${{ if eq(variables['System.TeamProject'], 'internal') }}:
-            name: $(DncEngInternalBuildPool)
+            name: NetCore1ESPool-Internal-XL
             demands: ImageOverride -equals windows.vs2022.amd64
         steps:
         - checkout: self
