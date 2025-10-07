@@ -19,6 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
 class LLVMContext;
@@ -27,113 +28,20 @@ class Metadata;
 
 namespace hlsl {
 namespace rootsig {
-
-enum class RSErrorKind {
-  Validation,
-  AppendAfterUnboundedRange,
-  ShaderRegisterOverflow,
-  OffsetOverflow,
-  SamplerMixin,
-  GenericMetadata,
-  InvalidMetadataFormat,
-  InvalidMetadataValue
-};
-
-template <typename T>
-void formatImpl(raw_string_ostream &Buff,
-                std::integral_constant<RSErrorKind, RSErrorKind::Validation>,
-                StringRef ParamName, T Value);
-
-void formatImpl(
-    raw_string_ostream &Buff,
-    std::integral_constant<RSErrorKind, RSErrorKind::AppendAfterUnboundedRange>,
-    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
-
-void formatImpl(
-    raw_string_ostream &Buff,
-    std::integral_constant<RSErrorKind, RSErrorKind::ShaderRegisterOverflow>,
-    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
-
-void formatImpl(
-    raw_string_ostream &Buff,
-    std::integral_constant<RSErrorKind, RSErrorKind::OffsetOverflow>,
-    dxil::ResourceClass Type, uint32_t Register, uint32_t Space);
-
-void formatImpl(raw_string_ostream &Buff,
-                std::integral_constant<RSErrorKind, RSErrorKind::SamplerMixin>,
-                dxil::ResourceClass Type, uint32_t Location);
-
-void formatImpl(
-    raw_string_ostream &Buff,
-    std::integral_constant<RSErrorKind, RSErrorKind::InvalidMetadataFormat>,
-    StringRef ElementName);
-
-void formatImpl(
-    raw_string_ostream &Buff,
-    std::integral_constant<RSErrorKind, RSErrorKind::InvalidMetadataValue>,
-    StringRef ParamName);
-
-void formatImpl(
-    raw_string_ostream &Buff,
-    std::integral_constant<RSErrorKind, RSErrorKind::GenericMetadata>,
-    StringRef Message, MDNode *MD);
-
-template <typename... ArgsTs>
-inline void formatImpl(raw_string_ostream &Buff, RSErrorKind Kind,
-                       ArgsTs... Args) {
-  switch (Kind) {
-  case RSErrorKind::Validation:
-    return formatImpl(
-        Buff, std::integral_constant<RSErrorKind, RSErrorKind::Validation>(),
-        Args...);
-  case RSErrorKind::AppendAfterUnboundedRange:
-    return formatImpl(
-        Buff,
-        std::integral_constant<RSErrorKind,
-                               RSErrorKind::AppendAfterUnboundedRange>(),
-        Args...);
-  case RSErrorKind::ShaderRegisterOverflow:
-    return formatImpl(
-        Buff,
-        std::integral_constant<RSErrorKind,
-                               RSErrorKind::ShaderRegisterOverflow>(),
-        Args...);
-  case RSErrorKind::OffsetOverflow:
-    return formatImpl(
-        Buff,
-        std::integral_constant<RSErrorKind, RSErrorKind::OffsetOverflow>(),
-        Args...);
-  case RSErrorKind::SamplerMixin:
-    return formatImpl(
-        Buff, std::integral_constant<RSErrorKind, RSErrorKind::SamplerMixin>(),
-        Args...);
-  case RSErrorKind::InvalidMetadataFormat:
-    return formatImpl(
-        Buff,
-        std::integral_constant<RSErrorKind,
-                               RSErrorKind::InvalidMetadataFormat>(),
-        Args...);
-  case RSErrorKind::InvalidMetadataValue:
-    return formatImpl(
-        Buff,
-        std::integral_constant<RSErrorKind,
-                               RSErrorKind::InvalidMetadataValue>(),
-        Args...);
-  case RSErrorKind::GenericMetadata:
-    return formatImpl(
-        Buff,
-        std::integral_constant<RSErrorKind, RSErrorKind::GenericMetadata>(),
-        Args...);
-  }
-}
-
-template <typename... ArgsTs>
-static llvm::Error createRSError(RSErrorKind Kind, ArgsTs... Args) {
+class RootSignatureValidationError
+    : public ErrorInfo<RootSignatureValidationError> {
+public:
+  static char ID;
   std::string Msg;
-  raw_string_ostream Buff(Msg);
-  formatImpl(Buff, Kind, Args...);
-  return createStringError(std::move(Buff.str()), inconvertibleErrorCode());
-}
+
+  RootSignatureValidationError(const Twine &Msg) : Msg(Msg.str()) {}
+
+  void log(raw_ostream &OS) const override { OS << Msg; }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
 
 class MetadataBuilder {
 public:
