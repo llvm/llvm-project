@@ -121,11 +121,14 @@ protected:
   /// Represents a set of globs and their line numbers
   class Matcher {
   public:
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
-                          bool UseRegex);
     // Returns the line number in the source file that this query matches to.
     // Returns zero if no match is found.
     LLVM_ABI unsigned match(StringRef Query) const;
+
+  private:
+    friend class SpecialCaseList;
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
+                          bool UseRegex);
 
     struct Glob {
       std::string Name;
@@ -147,7 +150,9 @@ protected:
     Section(StringRef Str, unsigned FileIdx)
         : SectionStr(Str), FileIdx(FileIdx) {};
 
-    std::unique_ptr<Matcher> SectionMatcher = std::make_unique<Matcher>();
+    Section(Section &&) = default;
+
+    Matcher SectionMatcher;
     SectionEntries Entries;
     std::string SectionStr;
     unsigned FileIdx;
