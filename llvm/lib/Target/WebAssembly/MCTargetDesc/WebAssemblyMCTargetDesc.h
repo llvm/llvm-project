@@ -435,6 +435,18 @@ inline bool isCallIndirect(unsigned Opc) {
   }
 }
 
+inline bool isCallRef(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CALL_REF:
+  case WebAssembly::CALL_REF_S:
+  case WebAssembly::RET_CALL_REF:
+  case WebAssembly::RET_CALL_REF_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool isBrTable(unsigned Opc) {
   switch (Opc) {
   case WebAssembly::BR_TABLE_I32:

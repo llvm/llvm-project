@@ -723,6 +723,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   bool IsIndirect =
       CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
   bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
+  bool IsCallRef = false;
 
   bool IsFuncrefCall = false;
   if (IsIndirect && CallParams.getOperand(0).isReg()) {
@@ -732,10 +733,19 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     const TargetRegisterClass *TRC = MRI.getRegClass(Reg);
     IsFuncrefCall = (TRC == &WebAssembly::FUNCREFRegClass);
     assert(!IsFuncrefCall || Subtarget->hasReferenceTypes());
+
+    if (IsFuncrefCall && Subtarget->hasGC()) {
+      IsIndirect = false;
+      IsCallRef = true;
+    }
   }
 
   unsigned CallOp;
-  if (IsIndirect && IsRetCall) {
+  if (IsCallRef && IsRetCall) {
+    CallOp = WebAssembly::RET_CALL_REF;
+  } else if (IsCallRef) {
+    CallOp = WebAssembly::CALL_REF;
+  } else if (IsIndirect && IsRetCall) {
     CallOp = WebAssembly::RET_CALL_INDIRECT;
   } else if (IsIndirect) {
     CallOp = WebAssembly::CALL_INDIRECT;
@@ -771,6 +781,14 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
       CallParams.addOperand(FnPtr);
   }
 
+  // Move the function pointer to the end of the arguments for funcref calls
+  if (IsCallRef) {
+    auto FnRef = CallParams.getOperand(0);
+    CallParams.removeOperand(0);
+
+    CallParams.addOperand(FnRef);
+  }
+
   for (auto Def : CallResults.defs())
     MIB.add(Def);
 
@@ -793,6 +811,12 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
       Table->setNoStrip();
       MIB.addImm(0);
     }
+  }
+
+  if (IsCallRef) {
+    // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
+    MIB.addImm(0);
   }
 
   for (auto Use : CallParams.uses())
@@ -1173,6 +1197,60 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::Swift;
 }
 
+APInt WebAssembly::encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
+                                           SmallVector<MVT, 4> &Returns,
+                                           SmallVector<MVT, 4> &Params) {
+  auto toWasmValType = [](MVT VT) {
+    if (VT == MVT::i32) {
+      return wasm::ValType::I32;
+    }
+    if (VT == MVT::i64) {
+      return wasm::ValType::I64;
+    }
+    if (VT == MVT::f32) {
+      return wasm::ValType::F32;
+    }
+    if (VT == MVT::f64) {
+      return wasm::ValType::F64;
+    }
+    if (VT == MVT::externref) {
+      return wasm::ValType::EXTERNREF;
+    }
+    if (VT == MVT::funcref) {
+      return wasm::ValType::FUNCREF;
+    }
+    if (VT == MVT::exnref) {
+      return wasm::ValType::EXNREF;
+    }
+    LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT
+                      << "\n");
+    llvm_unreachable("Unhandled type for llvm.wasm.ref.test.func");
+  };
+  auto NParams = Params.size();
+  auto NReturns = Returns.size();
+  auto BitWidth = (NParams + NReturns + 2) * 64;
+  auto Sig = APInt(BitWidth, 0);
+
+  // Annoying special case: if getSignificantBits() <= 64 then InstrEmitter will
+  // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
+  // always emit a CImm. So xor NParams with 0x7ffffff to ensure
+  // getSignificantBits() > 64
+  Sig |= NReturns ^ 0x7ffffff;
+  for (auto &Return : Returns) {
+    auto V = toWasmValType(Return);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  Sig <<= 64;
+  Sig |= NParams;
+  for (auto &Param : Params) {
+    auto V = toWasmValType(Param);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  return Sig;
+}
+
 SDValue
 WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
@@ -1412,33 +1490,58 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     InTys.push_back(In.VT);
   }
 
-  // Lastly, if this is a call to a funcref we need to add an instruction
-  // table.set to the chain and transform the call.
+  // Lastly, if this is a call to a funcref we need to insert an instruction
+  // to either cast the funcref to a typed funcref for call_ref, or place it
+  // into a table for call_indirect
   if (CLI.CB && WebAssembly::isWebAssemblyFuncrefType(
                     CLI.CB->getCalledOperand()->getType())) {
-    // In the absence of function references proposal where a funcref call is
-    // lowered to call_ref, using reference types we generate a table.set to set
-    // the funcref to a special table used solely for this purpose, followed by
-    // a call_indirect. Here we just generate the table set, and return the
-    // SDValue of the table.set so that LowerCall can finalize the lowering by
-    // generating the call_indirect.
-    SDValue Chain = Ops[0];
+    if (Subtarget->hasGC()) {
+      // Since LLVM doesn't directly support typed function references, we take
+      // the untyped funcref and ref.cast it into a typed funcref.
+      SmallVector<MVT, 4> Params;
+      SmallVector<MVT, 4> Returns;
 
-    MCSymbolWasm *Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
-        MF.getContext(), Subtarget);
-    SDValue Sym = DAG.getMCSymbol(Table, PtrVT);
-    SDValue TableSlot = DAG.getConstant(0, DL, MVT::i32);
-    SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
-    SDValue TableSet = DAG.getMemIntrinsicNode(
-        WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
-        MVT::funcref,
-        // Machine Mem Operand args
-        MachinePointerInfo(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
-        CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
-        MachineMemOperand::MOStore);
+      for (const auto &Out : Outs) {
+        Params.push_back(Out.VT);
+      }
+      for (const auto &In : Ins) {
+        Returns.push_back(In.VT);
+      }
 
-    Ops[0] = TableSet; // The new chain is the TableSet itself
+      auto Sig =
+          WebAssembly::encodeFunctionSignature(&DAG, DL, Returns, Params);
+
+      auto SigOp = DAG.getTargetConstant(
+          Sig, DL, EVT::getIntegerVT(*DAG.getContext(), Sig.getBitWidth()));
+      MachineSDNode *RefCastNode = DAG.getMachineNode(
+          WebAssembly::REF_CAST_FUNCREF, DL, MVT::funcref, {SigOp, Callee});
+
+      Ops[1] = SDValue(RefCastNode, 0);
+    } else {
+      // In the absence of function references proposal where a funcref call is
+      // lowered to call_ref, using reference types we generate a table.set to
+      // set the funcref to a special table used solely for this purpose,
+      // followed by a call_indirect. Here we just generate the table set, and
+      // return the SDValue of the table.set so that LowerCall can finalize the
+      // lowering by generating the call_indirect.
+      SDValue Chain = Ops[0];
+
+      MCSymbolWasm *Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue Sym = DAG.getMCSymbol(Table, PtrVT);
+      SDValue TableSlot = DAG.getConstant(0, DL, MVT::i32);
+      SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
+      SDValue TableSet = DAG.getMemIntrinsicNode(
+          WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
+          MVT::funcref,
+          // Machine Mem Operand args
+          MachinePointerInfo(
+              WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
+          CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
+          MachineMemOperand::MOStore);
+
+      Ops[0] = TableSet; // The new chain is the TableSet itself
+    }
   }
 
   if (CLI.IsTailCall) {
