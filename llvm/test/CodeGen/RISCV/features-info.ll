@@ -179,6 +179,7 @@
 ; CHECK-NEXT:   svpbmt                           - 'Svpbmt' (Page-Based Memory Types).
 ; CHECK-NEXT:   svvptc                           - 'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
 ; CHECK-NEXT:   tagged-globals                   - Use an instruction sequence for taking the address of a global that allows a memory tag in the upper address bits.
+; CHECK-NEXT:   throttled-vec-fp64               - Certain vector FP64 operations have limited performance.
 ; CHECK-NEXT:   unaligned-scalar-mem             - Has reasonably performant unaligned scalar loads and stores.
 ; CHECK-NEXT:   unaligned-vector-mem             - Has reasonably performant unaligned vector loads and stores.
 ; CHECK-NEXT:   use-postra-scheduler             - Schedule again after register allocation.

@@ -1823,6 +1823,10 @@ def TuneConditionalCompressedMoveFusion
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
+def TuneHasThrottledVecFP64
+  : SubtargetFeature<"throttled-vec-fp64", "HasThrottledVectorFP64", "true",
+                     "Certain vector FP64 operations have limited performance">;
+
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
                        "MIPS p8700 processor">;
