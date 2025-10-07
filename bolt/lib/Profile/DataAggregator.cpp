@@ -295,10 +295,8 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 
   PerfProcessInfo BuildIDProcessInfo;
   launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
-  int ErrCode = prepareToParse("buildid", BuildIDProcessInfo, WarningCallback);
-  if (ErrCode != 0) {
-    exit(ErrCode);
-  }
+  if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
+    return;
 
   std::optional<StringRef> FileName = getFileNameForBuildID(FileBuildID);
   if (FileName && *FileName == sys::path::filename(BC->getFilename())) {
@@ -434,7 +432,18 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   if (PI.ReturnCode != 0) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorMB =
         MemoryBuffer::getFileOrSTDIN(Process.StderrPath.data());
-    StringRef ErrBuf = (*ErrorMB)->getBuffer();
+    std::string ErrMsg;
+    StringRef ErrBuf;
+    if (std::error_code EC = ErrorMB.getError()) {
+      ErrMsg = "PERF2BOLT: cannot open ";
+      ErrMsg += Process.StderrPath.data();
+      ErrMsg += ": ";
+      ErrMsg += EC.message();
+      ErrMsg += '\n';
+      ErrBuf = ErrMsg;
+    } else {
+      ErrBuf = (*ErrorMB)->getBuffer();
+    }
 
     deleteTempFiles();
     Callback(PI.ReturnCode, ErrBuf);
