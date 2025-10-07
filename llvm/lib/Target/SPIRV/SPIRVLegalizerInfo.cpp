@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 
 using namespace llvm;
 using namespace llvm::LegalizeActions;
@@ -101,6 +102,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                      v4s64, v8s1,   v8s8,   v8s16, v8s32, v8s64, v16s1,
                      v16s8, v16s16, v16s32, v16s64};
 
+  auto allShaderVectors = {v2s1, v2s8, v2s16, v2s32, v2s64,
+                           v3s1, v3s8, v3s16, v3s32, v3s64,
+                           v4s1, v4s8, v4s16, v4s32, v4s64};
+
+  auto allNonShaderVectors = {v8s1,  v8s8,  v8s16,  v8s32,  v8s64,
+                              v16s1, v16s8, v16s16, v16s32, v16s64};
+
   auto allScalarsAndVectors = {
       s1,   s8,   s16,   s32,   s64,   v2s1,  v2s8,  v2s16,  v2s32,  v2s64,
       v3s1, v3s8, v3s16, v3s32, v3s64, v4s1,  v4s8,  v4s16,  v4s32,  v4s64,
@@ -148,15 +156,46 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return IsExtendedInts && Ty.isValid();
       };
 
-  for (auto Opc : getTypeFoldingSupportedOpcodes())
-    getActionDefinitionsBuilder(Opc).custom();
+  // TODO: So far we only legalize vectors for Shaders.
+  // We need to legalize for kernels as well. For Kernels
+  // vector sizes of 8 and 16 are allowed as well.
 
-  getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
+  for (auto Opc : getTypeFoldingSupportedOpcodes()) {
+    if (Opc != G_EXTRACT_VECTOR_ELT)
+      getActionDefinitionsBuilder(Opc).custom();
+  }
 
-  // TODO: add proper rules for vectors legalization.
-  getActionDefinitionsBuilder(
-      {G_BUILD_VECTOR, G_SHUFFLE_VECTOR, G_SPLAT_VECTOR})
-      .alwaysLegal();
+  if (ST.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+    getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
+        .lowerIf(vectorElementCountIsGreaterThan(0, 4))
+        .lowerIf(vectorElementCountIsGreaterThan(1, 4))
+        .legalFor(allShaderVectors);
+    getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+        .moreElementsToNextPow2(1)
+        .fewerElementsIf(vectorElementCountIsGreaterThan(1, 4),
+                         LegalizeMutations::changeElementCountTo(
+                             1, ElementCount::getFixed(4)))
+        .custom();
+    getActionDefinitionsBuilder(G_BUILD_VECTOR)
+        .legalFor(allShaderVectors)
+        .fewerElementsIf(vectorElementCountIsGreaterThan(0, 4),
+                         LegalizeMutations::changeElementCountTo(
+                             0, ElementCount::getFixed(4)));
+    getActionDefinitionsBuilder(G_BITCAST)
+        .moreElementsToNextPow2(0)
+        .moreElementsToNextPow2(1)
+        .fewerElementsIf(vectorElementCountIsGreaterThan(0, 4),
+                         LegalizeMutations::changeElementCountTo(
+                             0, ElementCount::getFixed(4)))
+        .lowerIf(vectorElementCountIsGreaterThan(1, 4))
+        .alwaysLegal();
+    getActionDefinitionsBuilder(G_CONCAT_VECTORS)
+        .legalFor(allShaderVectors)
+        .lower();
+  } else
+    getActionDefinitionsBuilder(
+        {G_SHUFFLE_VECTOR, G_BUILD_VECTOR, G_SPLAT_VECTOR})
+        .alwaysLegal();
 
   // Vector Reduction Operations
   getActionDefinitionsBuilder(
@@ -286,6 +325,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // Pointer-handling.
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
+
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor(allPtrs);
 
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});

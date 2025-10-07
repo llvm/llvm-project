@@ -192,6 +192,10 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
         .addUse(OpReg);
 }
 
+// TODO: See if the comment needs to be more precise. This is a problem for more
+// than just pointers. A bitcast between an two type that map to the same LLT
+// will cause a problem. For example a bitcast from a float to an int.
+
 // We do instruction selections early instead of calling MIB.buildBitcast()
 // generating the general op code G_BITCAST. When MachineVerifier validates
 // G_BITCAST we see a check of a kind: if Source Type is equal to Destination
@@ -212,15 +216,29 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
 // in https://github.com/llvm/llvm-project/pull/110270 for even more context.
 static void selectOpBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                              MachineIRBuilder MIB) {
+  // TODO: This change will still cause failures for the machine verifier.
+  // This is done so that the G_Bitcast legalization rules can be used.
+  // We will have to add rules to legalize the intrinsic. Note that we cannot
+  // try to lower only bitcast the verify will complain about. You could cast
+  // a long vector of float to a long vector of ints. That has to be legalized
+  // but is also an invalid G_Bitcast.
+  //
+  // Could we use G_COPY? for cases where the LLT are the same? Then lowering
+  // the G_COPY could be either an OpBitcast or OpCopyObject denpending on the
+  // source and result type.
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<MachineInstr *, 16> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != TargetOpcode::G_BITCAST)
         continue;
-      MIB.setInsertPt(*MI.getParent(), MI);
-      buildOpBitcast(GR, MIB, MI.getOperand(0).getReg(),
-                     MI.getOperand(1).getReg());
-      ToErase.push_back(&MI);
+      Register DstReg = MI.getOperand(0).getReg();
+      if (MRI.getType(DstReg).isPointer()) {
+        MIB.setInsertPt(*MI.getParent(), MI);
+        buildOpBitcast(GR, MIB, DstReg, MI.getOperand(1).getReg());
+        ToErase.push_back(&MI);
+      }
     }
   }
   for (MachineInstr *MI : ToErase) {

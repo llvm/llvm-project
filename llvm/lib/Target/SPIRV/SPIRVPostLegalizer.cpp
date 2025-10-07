@@ -17,7 +17,8 @@
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
-#include "llvm/IR/Attributes.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/Debug.h"
 #include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
@@ -45,6 +46,10 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_UNMERGE_VALUES:
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+  case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_SMIN:
@@ -53,70 +58,230 @@ static bool mayBeInserted(unsigned Opcode) {
   case TargetOpcode::G_FMINIMUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_BUILD_VECTOR:
     return true;
   default:
     return isTypeFoldingSupported(Opcode);
   }
 }
 
-static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
-                             MachineIRBuilder MIB) {
+static bool processInstr(MachineInstr *I, MachineFunction &MF,
+                         SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const unsigned Opcode = I->getOpcode();
+  Register ResVReg = I->getOperand(0).getReg();
+  SPIRVType *ResType = nullptr;
+  bool Handled = false;
 
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &I : MBB) {
-      const unsigned Opcode = I.getOpcode();
-      if (Opcode == TargetOpcode::G_UNMERGE_VALUES) {
-        unsigned ArgI = I.getNumOperands() - 1;
-        Register SrcReg = I.getOperand(ArgI).isReg()
-                              ? I.getOperand(ArgI).getReg()
-                              : Register(0);
-        SPIRVType *DefType =
-            SrcReg.isValid() ? GR->getSPIRVTypeForVReg(SrcReg) : nullptr;
-        if (!DefType || DefType->getOpcode() != SPIRV::OpTypeVector)
-          report_fatal_error(
-              "cannot select G_UNMERGE_VALUES with a non-vector argument");
+  switch (Opcode) {
+  case TargetOpcode::G_CONSTANT: {
+    const LLT &Ty = MRI.getType(ResVReg);
+    unsigned BitWidth = Ty.getScalarSizeInBits();
+    ResType = GR->getOrCreateSPIRVIntegerType(BitWidth, MIB);
+    Handled = true;
+    break;
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    Register SrcReg = I->getOperand(I->getNumOperands() - 1).getReg();
+    if (SPIRVType *DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
+      if (DefType->getOpcode() == SPIRV::OpTypeVector) {
         SPIRVType *ScalarType =
             GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
-        for (unsigned i = 0; i < I.getNumDefs(); ++i) {
-          Register ResVReg = I.getOperand(i).getReg();
-          SPIRVType *ResType = GR->getSPIRVTypeForVReg(ResVReg);
-          if (!ResType) {
-            // There was no "assign type" actions, let's fix this now
-            ResType = ScalarType;
-            setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
+        for (unsigned i = 0; i < I->getNumDefs(); ++i) {
+          Register DefReg = I->getOperand(i).getReg();
+          if (!GR->getSPIRVTypeForVReg(DefReg)) {
+            LLT DefLLT = MRI.getType(DefReg);
+            SPIRVType *ResType;
+            if (DefLLT.isVector()) {
+              const SPIRVInstrInfo *TII =
+                  MF.getSubtarget<SPIRVSubtarget>().getInstrInfo();
+              ResType = GR->getOrCreateSPIRVVectorType(
+                  ScalarType, DefLLT.getNumElements(), *I, *TII);
+            } else {
+              ResType = ScalarType;
+            }
+            setRegClassType(DefReg, ResType, GR, &MRI, MF);
           }
         }
-      } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
-                 I.getNumOperands() > 1 && I.getOperand(1).isReg()) {
-        // Legalizer may have added a new instructions and introduced new
-        // registers, we must decorate them as if they were introduced in a
-        // non-automatic way
-        Register ResVReg = I.getOperand(0).getReg();
-        // Check if the register defined by the instruction is newly generated
-        // or already processed
-        // Check if we have type defined for operands of the new instruction
-        bool IsKnownReg = MRI.getRegClassOrNull(ResVReg);
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(
-            IsKnownReg ? ResVReg : I.getOperand(1).getReg());
-        if (!ResVType)
-          continue;
-        // Set type & class
-        if (!IsKnownReg)
-          setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
-        // If this is a simple operation that is to be reduced by TableGen
-        // definition we must apply some of pre-legalizer rules here
-        if (isTypeFoldingSupported(Opcode)) {
-          processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
-          if (IsKnownReg && MRI.hasOneUse(ResVReg)) {
-            MachineInstr &UseMI = *MRI.use_instr_begin(ResVReg);
-            if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
-              continue;
+        Handled = true;
+      }
+    }
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    LLVM_DEBUG(dbgs() << "Processing G_EXTRACT_VECTOR_ELT: " << *I);
+    Register VecReg = I->getOperand(1).getReg();
+    if (SPIRVType *VecType = GR->getSPIRVTypeForVReg(VecReg)) {
+      LLVM_DEBUG(dbgs() << "  Found vector type: " << *VecType << "\n");
+      if (VecType->getOpcode() != SPIRV::OpTypeVector) {
+        VecType->dump();
+      }
+      assert(VecType->getOpcode() == SPIRV::OpTypeVector);
+      ResType = GR->getScalarOrVectorComponentType(VecType);
+      Handled = true;
+    } else {
+      LLVM_DEBUG(dbgs() << "  Vector operand " << VecReg
+                        << " has no type. Looking at uses of " << ResVReg
+                        << ".\n");
+      // If not handled yet, then check if it is used in a G_BUILD_VECTOR.
+      // If so get the type from there.
+      for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
+        LLVM_DEBUG(dbgs() << "  Use: " << Use);
+        if (Use.getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+          LLVM_DEBUG(dbgs() << "    Use is G_BUILD_VECTOR.\n");
+          Register BuildVecResReg = Use.getOperand(0).getReg();
+          if (SPIRVType *BuildVecType =
+                  GR->getSPIRVTypeForVReg(BuildVecResReg)) {
+            LLVM_DEBUG(dbgs() << "    Found G_BUILD_VECTOR result type: "
+                              << *BuildVecType << "\n");
+            ResType = GR->getScalarOrVectorComponentType(BuildVecType);
+            Handled = true;
+            break;
+          } else {
+            LLVM_DEBUG(dbgs() << "    G_BUILD_VECTOR result " << BuildVecResReg
+                              << " has no type yet.\n");
           }
-          insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
         }
       }
     }
+    if (!Handled) {
+      LLVM_DEBUG(
+          dbgs() << "  Could not determine type for G_EXTRACT_VECTOR_ELT.\n");
+    }
+    break;
+  }
+  case TargetOpcode::G_BUILD_VECTOR: {
+    // First check if any of the operands have a type.
+    for (unsigned i = 1; i < I->getNumOperands(); ++i) {
+      if (SPIRVType *OpType =
+              GR->getSPIRVTypeForVReg(I->getOperand(i).getReg())) {
+        const LLT &ResLLT = MRI.getType(ResVReg);
+        ResType = GR->getOrCreateSPIRVVectorType(
+            OpType, ResLLT.getNumElements(), MIB, false);
+        Handled = true;
+        break;
+      }
+    }
+    if (Handled) {
+      break;
+    }
+    // If that did not work, then check the uses.
+    for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
+      if (Use.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
+        Register ExtractResReg = Use.getOperand(0).getReg();
+        if (SPIRVType *ScalarType = GR->getSPIRVTypeForVReg(ExtractResReg)) {
+          const LLT &ResLLT = MRI.getType(ResVReg);
+          ResType = GR->getOrCreateSPIRVVectorType(
+              ScalarType, ResLLT.getNumElements(), MIB, false);
+          Handled = true;
+          break;
+        }
+      }
+    }
+    break;
+  }
+  case TargetOpcode::G_IMPLICIT_DEF: {
+    for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
+      const unsigned UseOpc = Use.getOpcode();
+      assert(UseOpc == TargetOpcode::G_BUILD_VECTOR ||
+             UseOpc == TargetOpcode::G_SHUFFLE_VECTOR);
+      // It's possible that the use instruction has not been processed yet.
+      // We should look at the operands of the use to determine the type.
+      for (unsigned i = 1; i < Use.getNumOperands(); ++i) {
+        if (auto *Type = GR->getSPIRVTypeForVReg(Use.getOperand(i).getReg())) {
+          ResType = Type;
+          Handled = true;
+          break;
+        }
+      }
+      if (Handled) {
+        break;
+      }
+    }
+    break;
+  }
+  case TargetOpcode::G_BITCAST: {
+    for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
+      const unsigned UseOpc = Use.getOpcode();
+      assert(UseOpc == TargetOpcode::G_EXTRACT_VECTOR_ELT ||
+             UseOpc == TargetOpcode::G_SHUFFLE_VECTOR);
+      Register UseResultReg = Use.getOperand(0).getReg();
+      if (SPIRVType *UseResType = GR->getSPIRVTypeForVReg(UseResultReg)) {
+        SPIRVType *ScalarType = GR->getScalarOrVectorComponentType(UseResType);
+        const LLT &BitcastLLT = MRI.getType(ResVReg);
+        if (BitcastLLT.isVector()) {
+          ResType = GR->getOrCreateSPIRVVectorType(
+              ScalarType, BitcastLLT.getNumElements(), MIB, false);
+        } else {
+          ResType = ScalarType;
+        }
+        Handled = true;
+        break;
+      }
+    }
+    break;
+  }
+  default:
+    if (I->getNumDefs() == 1 && I->getNumOperands() > 1 &&
+        I->getOperand(1).isReg()) {
+      if (SPIRVType *OpType =
+              GR->getSPIRVTypeForVReg(I->getOperand(1).getReg())) {
+        ResType = OpType;
+        Handled = true;
+      }
+    }
+    break;
+  }
+
+  if (Handled && ResType) {
+    LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType << "\n");
+    GR->assignSPIRVTypeToVReg(ResType, ResVReg, MF);
+  }
+  return Handled;
+}
+
+static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                             MachineIRBuilder MIB) {
+  SmallVector<MachineInstr *, 8> Worklist;
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &I : MBB) {
+      if (I.getNumDefs() > 0 &&
+          !GR->getSPIRVTypeForVReg(I.getOperand(0).getReg()) &&
+          mayBeInserted(I.getOpcode())) {
+        Worklist.push_back(&I);
+      }
+    }
+  }
+
+  if (Worklist.empty()) {
+    return;
+  }
+
+  LLVM_DEBUG(dbgs() << "Initial worklist:\n";
+             for (auto *I : Worklist) { I->dump(); });
+
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    SmallVector<MachineInstr *, 8> NextWorklist;
+
+    for (MachineInstr *I : Worklist) {
+      if (processInstr(I, MF, GR, MIB)) {
+        Changed = true;
+      } else {
+        NextWorklist.push_back(I);
+      }
+    }
+    Worklist = NextWorklist;
+    LLVM_DEBUG(dbgs() << "Worklist size: " << Worklist.size() << "\n");
+  }
+
+  if (!Worklist.empty()) {
+    LLVM_DEBUG(dbgs() << "Remaining worklist:\n";
+               for (auto *I : Worklist) { I->dump(); });
+    assert(Worklist.empty() && "Worklist is not empty");
   }
 }
 
@@ -158,6 +323,46 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
 
   processNewInstrs(MF, GR, MIB);
+
+  // TODO: Move this into is own function.
+  SmallVector<MachineInstr *, 8> ExtractInstrs;
+  SmallVector<MachineInstr *, 8> BitcastInstrs;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
+        ExtractInstrs.push_back(&MI);
+      } else if (MI.getOpcode() == TargetOpcode::G_BITCAST) {
+        BitcastInstrs.push_back(&MI);
+      }
+    }
+  }
+
+  for (MachineInstr *MI : ExtractInstrs) {
+    MachineIRBuilder MIB(*MI);
+    Register Dst = MI->getOperand(0).getReg();
+    Register Vec = MI->getOperand(1).getReg();
+    Register Idx = MI->getOperand(2).getReg();
+
+    auto Intr =
+        MIB.buildIntrinsic(Intrinsic::spv_extractelt, Dst, false, false);
+    Intr.addUse(Vec);
+    Intr.addUse(Idx);
+
+    MI->eraseFromParent();
+  }
+
+  for (MachineInstr *MI : BitcastInstrs) {
+    MachineIRBuilder MIB(*MI);
+    Register Dst = MI->getOperand(0).getReg();
+    Register Src = MI->getOperand(1).getReg();
+    SPIRVType *DstType = GR->getSPIRVTypeForVReg(Dst);
+    assert(DstType && "Destination of G_BITCAST must have a type");
+    MIB.buildInstr(SPIRV::OpBitcast)
+        .addDef(Dst)
+        .addUse(GR->getSPIRVTypeID(DstType))
+        .addUse(Src);
+    MI->eraseFromParent();
+  }
 
   return true;
 }
