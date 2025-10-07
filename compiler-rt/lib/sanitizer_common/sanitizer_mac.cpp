@@ -1147,8 +1147,8 @@ static void PrintVmmap() {
         lastsz += vmsize;
       } else {
         if (lastsz)
-          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-                 last + lastsz, lastsz);
+          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+                 (void*)(last + lastsz), lastsz);
 
         last = address;
         lastsz = vmsize;
@@ -1158,8 +1158,8 @@ static void PrintVmmap() {
       // We've reached the end of the memory map. Print the last remaining
       // region, if there is one.
       if (lastsz)
-        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-               last + lastsz, lastsz);
+        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+               (void*)(last + lastsz), lastsz);
 
       break;
     }
@@ -1170,7 +1170,7 @@ static void ReportShadowAllocFail(uptr shadow_size_bytes, uptr alignment) {
   Report(
       "FATAL: Failed to allocate shadow memory. Tried to allocate %p bytes "
       "(alignment=%p).\n",
-      shadow_size_bytes, alignment);
+      (void*)shadow_size_bytes, (void*)alignment);
   PrintVmmap();
 }
 
