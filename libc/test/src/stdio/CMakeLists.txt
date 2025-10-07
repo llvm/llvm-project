@@ -169,6 +169,7 @@ if(LLVM_LIBC_FULL_BUILD)
        libc.src.stdio.ferror
        libc.src.stdio.fopen
        libc.src.stdio.fread
+       libc.src.stdio.fopencookie
   )
   # This is to be used for tests which write to libc's platform streams
   # under full build but write to system-lib's streams otherwise.

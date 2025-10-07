@@ -10,25 +10,29 @@
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
+#include "src/stdio/fopencookie.h"
 #include "src/stdio/fread.h"
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 #include "src/stdio/fprintf.h"
 
-#include "test/UnitTest/Test.h"
+#include "src/__support/CPP/limits.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
 
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;
 using LIBC_NAMESPACE::ferror;
 using LIBC_NAMESPACE::fopen;
+using LIBC_NAMESPACE::fopencookie;
 using LIBC_NAMESPACE::fread;
 #else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
 using ::fopen;
+using ::fopencookie;
 using ::fread;
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace printf_test
@@ -85,4 +89,26 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
   ASSERT_ERRNO_EQ(EIO);
 
   ASSERT_EQ(printf_test::fclose(file), 0);
+}
+
+struct NoopStream {};
+
+static ssize_t noop_write(void *, const char *, size_t size) { return size; }
+
+TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
+  NoopStream stream;
+  cookie_io_functions_t funcs = {nullptr, &noop_write, nullptr, nullptr};
+  ::FILE *file = printf_test::fopencookie(&stream, "w", funcs);
+  ASSERT_NE(file, nullptr);
+
+  // Trigger an overflow in the return value of fprintf by writing more than
+  // INT_MAX bytes. We do this by printing a string with precision INT_MAX, and
+  // then one more character.
+  int max_int = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
+  int result = LIBC_NAMESPACE::fprintf(file, "%*sA", max_int, "");
+
+  EXPECT_LT(result, 0);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
+
+  EXPECT_EQ(printf_test::fclose(file), 0);
 }
