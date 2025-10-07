@@ -70,6 +70,7 @@ public:
                           QualType thisTy) override;
 
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
+  void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
@@ -1542,6 +1543,59 @@ void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   } else {
     cgm.errorNYI("emitRethrow with isNoReturn false");
   }
+}
+
+void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
+                                    const CXXThrowExpr *e) {
+  // This differs a bit from LLVM codegen, CIR has native operations for some
+  // cxa functions, and defers allocation size computation, always pass the dtor
+  // symbol, etc. CIRGen also does not use getAllocateExceptionFn / getThrowFn.
+
+  // Now allocate the exception object.
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  QualType clangThrowType = e->getSubExpr()->getType();
+  cir::PointerType throwTy =
+      builder.getPointerTo(cgf.convertType(clangThrowType));
+  uint64_t typeSize =
+      cgf.getContext().getTypeSizeInChars(clangThrowType).getQuantity();
+  mlir::Location subExprLoc = cgf.getLoc(e->getSubExpr()->getSourceRange());
+
+  // Defer computing allocation size to some later lowering pass.
+  mlir::TypedValue<cir::PointerType> exceptionPtr =
+      cir::AllocExceptionOp::create(builder, subExprLoc, throwTy,
+                                    builder.getI64IntegerAttr(typeSize))
+          .getAddr();
+
+  // Build expression and store its result into exceptionPtr.
+  CharUnits exnAlign = cgf.getContext().getExnObjectAlignment();
+  cgf.emitAnyExprToExn(e->getSubExpr(), Address(exceptionPtr, exnAlign));
+
+  // Get the RTTI symbol address.
+  auto typeInfo = mlir::cast<cir::GlobalViewAttr>(
+      cgm.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
+                                  /*forEH=*/true));
+  assert(!typeInfo.getIndices() && "expected no indirection");
+
+  // The address of the destructor.
+  //
+  // Note: LLVM codegen already optimizes out the dtor if the
+  // type is a record with trivial dtor (by passing down a
+  // null dtor). In CIR, we forward this info and allow for
+  // Lowering pass to skip passing the trivial function.
+  //
+  if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
+    CXXRecordDecl *rec =
+        cast<CXXRecordDecl>(recordTy->getOriginalDecl()->getDefinition());
+    assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
+    if (!rec->hasTrivialDestructor()) {
+      cgm.errorNYI("emitThrow: non-trivial destructor");
+      return;
+    }
+  }
+
+  // Now throw the exception.
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol());
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {

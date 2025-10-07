@@ -139,11 +139,12 @@ define i128 @ptrtoint_gep_sub_wide_type(ptr %ptr, i128 %end.addr) {
   ret i128 %end.addr2
 }
 
-; FIXME: This is a miscompile.
 define ptr addrspace(1) @inttoptr_of_ptrtoint_wide(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define ptr addrspace(1) @inttoptr_of_ptrtoint_wide(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    ret ptr addrspace(1) [[PTR]]
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; CHECK-NEXT:    [[PTR2:%.*]] = inttoptr i64 [[INT]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[PTR2]]
 ;
   %int = ptrtoint ptr addrspace(1) %ptr to i64
   %ptr2 = inttoptr i64 %int to ptr addrspace(1)
