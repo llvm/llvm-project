@@ -31,9 +31,9 @@ bool tryToFindPtrOrigin(
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
         auto QT = VD->getType();
-        if (VD->hasGlobalStorage() && QT.isConstQualified()) {
+        auto IsImmortal = safeGetName(VD) == "NSApp";
+        if (VD->hasGlobalStorage() && (IsImmortal || QT.isConstQualified()))
           return callback(E, true);
-        }
       }
     }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
