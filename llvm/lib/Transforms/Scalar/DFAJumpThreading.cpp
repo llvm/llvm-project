@@ -821,13 +821,12 @@ struct TransformDFA {
         EphValues(EphValues) {}
 
   bool run() {
-    bool MadeChange = false;
     if (isLegalAndProfitableToTransform()) {
       createAllExitPaths();
-      MadeChange = true;
       NumTransforms++;
+      return true;
     }
-    return MadeChange;
+    return false;
   }
 
 private:
