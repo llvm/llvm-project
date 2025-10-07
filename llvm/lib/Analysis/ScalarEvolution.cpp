@@ -15841,9 +15841,14 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
             if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
               break;
           }
-          From = SE.getMinusSCEV(RHS, LHS);
-          FromRewritten = From;
-          To = SE.getUMaxExpr(FromRewritten, SE.getOne(From->getType()));
+          auto AddSubRewrite = [&](const SCEV *A, const SCEV *B) {
+            const SCEV *Sub = SE.getMinusSCEV(A, B);
+            AddRewrite(Sub, Sub,
+                       SE.getUMaxExpr(Sub, SE.getOne(From->getType())));
+          };
+          AddSubRewrite(LHS, RHS);
+          AddSubRewrite(RHS, LHS);
+          continue;
         }
         break;
       default:
