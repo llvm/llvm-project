@@ -107,7 +107,12 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
   }
 
   // Attempt 2: read /proc/self/auxv.
+#ifdef SYS_openat
+  int fd = syscall_impl<int>(SYS_openat, AT_FDCWD, "/proc/self/auxv",
+                             O_RDONLY | O_CLOEXEC);
+#else
   int fd = syscall_impl<int>(SYS_open, "/proc/self/auxv", O_RDONLY | O_CLOEXEC);
+#endif
   if (fd < 0) {
     syscall_impl<long>(SYS_munmap, vector, AUXV_MMAP_SIZE);
     return;
@@ -135,10 +140,9 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
 
 LIBC_INLINE cpp::optional<unsigned long> get(unsigned long type) {
   Vector auxvec;
-  for (const auto &entry : auxvec) {
+  for (const auto &entry : auxvec)
     if (entry.type == type)
       return entry.val;
-  }
   return cpp::nullopt;
 }
 } // namespace auxv
