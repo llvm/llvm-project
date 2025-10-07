@@ -1870,4 +1870,9 @@ bool HadUseError(
   }
 }
 
+bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
+  return symbol.name() == other.name() && symbol.owner().IsModule() &&
+      other.owner().IsModule() && symbol.owner().GetName() &&
+      symbol.owner().GetName() == other.owner().GetName();
+}
 } // namespace Fortran::semantics
