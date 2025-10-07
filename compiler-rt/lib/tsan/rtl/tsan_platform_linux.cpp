@@ -680,7 +680,8 @@ ThreadState *cur_thread() {
   // significant bit of TLS_SLOT_SANITIZER to 1. Scudo allocator uses this bit
   // as a flag to disable memory initialization. This is a workaround to get the
   // correct ThreadState pointer.
-  reinterpret_cast<ThreadState*>(addr & ~1ULL);
+  uptr addr = reinterpret_cast<uptr>(thr);
+  return reinterpret_cast<ThreadState*>(addr & ~1ULL);
 }
 
 void set_cur_thread(ThreadState *thr) {
