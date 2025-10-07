@@ -31,6 +31,7 @@ namespace Fortran::semantics {
 //   - 1-element arrays being single member of COMMON
 // - avy variable from module except
 //   - having attribute PARAMETER or PRIVATE
+//   - having DERIVED type
 //   - being arrays having 1-D rank and is not having ALLOCATABLE or POINTER or
 //       VOLATILE attributes
 static void CheckPassGlobalVariable(
@@ -73,6 +74,10 @@ static void CheckPassGlobalVariable(
       ownerName = module->GetName()->ToString();
       if (actualFirstSymbol->attrs().test(Attr::PARAMETER) ||
           actualFirstSymbol->attrs().test(Attr::PRIVATE)) {
+        warn |= false;
+      } else if (auto type{characteristics::TypeAndShape::Characterize(
+                     actualFirstSymbol, foldingContext)};
+          type->type().category() == TypeCategory::Derived) {
         warn |= false;
       } else if (actualFirstSymbol->Rank() != 1) {
         warn |= true;
