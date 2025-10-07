@@ -30,17 +30,20 @@ namespace Fortran::semantics {
 // - any variable from common blocks except
 //   - 1-element arrays being single member of COMMON
 //   - passed to intrinsic
+//   - passed to PURE procedure
 // - avy variable from module except
 //   - having attribute PARAMETER or PRIVATE
 //   - having DERIVED type
 //   - passed to intrinsic
+//   - passed to PURE procedure
 //   - being arrays having 1-D rank and is not having ALLOCATABLE or POINTER or
 //       VOLATILE attributes
 static void CheckPassGlobalVariable(
     const evaluate::Expr<evaluate::SomeType> &actual,
     const parser::ContextualMessages &messages, SemanticsContext &context,
     evaluate::FoldingContext &foldingContext,
-    const evaluate::SpecificIntrinsic *intrinsic) {
+    const evaluate::SpecificIntrinsic *intrinsic,
+    const characteristics::Procedure *procedure) {
   const Symbol *actualFirstSymbol{evaluate::GetFirstSymbol(actual)};
   if (actualFirstSymbol) {
     bool warn{false};
@@ -51,6 +54,8 @@ static void CheckPassGlobalVariable(
       ownerType = "COMMON";
       ownerName = common->name().ToString();
       if (intrinsic) {
+        warn |= false;
+      } else if (procedure && procedure->IsPure()) {
         warn |= false;
       } else if (!(actualFirstSymbol->Rank() == 1 &&
                      actualFirstSymbol->offset() == 0)) {
@@ -85,6 +90,8 @@ static void CheckPassGlobalVariable(
           type->type().category() == TypeCategory::Derived) {
         warn |= false;
       } else if (intrinsic) {
+        warn |= false;
+      } else if (procedure && procedure->IsPure()) {
         warn |= false;
       } else if (actualFirstSymbol->Rank() != 1) {
         warn |= true;
@@ -209,7 +216,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
 
   if (const auto *expr{arg.UnwrapExpr()}) {
     CheckPassGlobalVariable(*expr, messages, context, foldingContext,
-        /*intrinsic=*/nullptr);
+        /*intrinsic=*/nullptr, /*procedure=*/nullptr);
   }
 }
 
@@ -1247,7 +1254,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
 
-  CheckPassGlobalVariable(actual, messages, context, foldingContext, intrinsic);
+  CheckPassGlobalVariable(
+      actual, messages, context, foldingContext, intrinsic, &procedure);
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
