@@ -126,12 +126,12 @@ public:
     return Analysis.getLoansAtPoint(OID, PP);
   }
 
-  std::optional<std::vector<LoanID>>
-  getExpiredLoansAtPoint(llvm::StringRef Annotation) {
+  std::optional<std::vector<std::pair<OriginID, LivenessKind>>>
+  getLiveOriginsAtPoint(llvm::StringRef Annotation) {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getExpiredLoansAtPoint(PP);
+    return Analysis.getLiveOriginsAtPoint(PP);
   }
 
 private:
@@ -180,6 +180,15 @@ public:
   LifetimeTestHelper &Helper;
 };
 
+// A helper class to represent a set of origins, identified by variable names.
+class OriginsInfo {
+public:
+  OriginsInfo(const std::vector<std::string> &Vars, LifetimeTestHelper &H)
+      : OriginVars(Vars), Helper(H) {}
+  std::vector<std::string> OriginVars;
+  LifetimeTestHelper &Helper;
+};
+
 /// Matcher to verify the set of loans held by an origin at a specific
 /// program point.
 ///
@@ -221,14 +230,15 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
   std::sort(ExpectedLoans.begin(), ExpectedLoans.end());
   std::sort(ActualLoans.begin(), ActualLoans.end());
   if (ExpectedLoans != ActualLoans) {
-    *result_listener << "Expected: ";
+    *result_listener << "Expected: {";
     for (const auto &LoanID : ExpectedLoans) {
       *result_listener << LoanID.Value << ", ";
     }
-    *result_listener << "Actual: ";
+    *result_listener << "} Actual: {";
     for (const auto &LoanID : ActualLoans) {
       *result_listener << LoanID.Value << ", ";
     }
+    *result_listener << "}";
     return false;
   }
 
@@ -236,32 +246,71 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
                             ActualLoans, result_listener);
 }
 
-/// Matcher to verify that the complete set of expired loans at a program point
-/// matches the expected loan set.
-MATCHER_P(AreExpiredAt, Annotation, "") {
-  const LoanSetInfo &Info = arg;
-  auto &Helper = Info.Helper;
+enum class LivenessKindFilter { Maybe, Must, All };
 
-  auto ActualExpiredSetOpt = Helper.getExpiredLoansAtPoint(Annotation);
-  if (!ActualExpiredSetOpt) {
-    *result_listener << "could not get a valid expired loan set at point '"
+/// Matcher to verify the complete set of live origins at a program point.
+MATCHER_P2(AreLiveAtImpl, Annotation, ConfFilter, "") {
+  const OriginsInfo &Info = arg;
+  auto &Helper = Info.Helper;
+  auto ActualLiveSetOpt = Helper.getLiveOriginsAtPoint(Annotation);
+  if (!ActualLiveSetOpt) {
+    *result_listener << "could not get a valid live origin set at point '"
                      << Annotation << "'";
     return false;
   }
-  std::vector<LoanID> ActualExpiredLoans = *ActualExpiredSetOpt;
-  std::vector<LoanID> ExpectedExpiredLoans;
-  for (const auto &VarName : Info.LoanVars) {
-    auto LoanIDs = Helper.getLoansForVar(VarName);
-    if (LoanIDs.empty()) {
-      *result_listener << "could not find a loan for variable '" << VarName
+  std::vector<OriginID> ActualLiveOrigins;
+  for (const auto [OID, ActualConfidence] : ActualLiveSetOpt.value()) {
+    if (ConfFilter == LivenessKindFilter::All)
+      ActualLiveOrigins.push_back(OID);
+    if (ActualConfidence == LivenessKind::Maybe &&
+        ConfFilter == LivenessKindFilter::Maybe)
+      ActualLiveOrigins.push_back(OID);
+    if (ActualConfidence == LivenessKind::Must &&
+        ConfFilter == LivenessKindFilter::Must)
+      ActualLiveOrigins.push_back(OID);
+  }
+
+  std::vector<OriginID> ExpectedLiveOrigins;
+  for (const auto &VarName : Info.OriginVars) {
+    auto OriginIDOpt = Helper.getOriginForDecl(VarName);
+    if (!OriginIDOpt) {
+      *result_listener << "could not find an origin for variable '" << VarName
                        << "'";
       return false;
     }
-    ExpectedExpiredLoans.insert(ExpectedExpiredLoans.end(), LoanIDs.begin(),
-                                LoanIDs.end());
+    ExpectedLiveOrigins.push_back(*OriginIDOpt);
   }
-  return ExplainMatchResult(UnorderedElementsAreArray(ExpectedExpiredLoans),
-                            ActualExpiredLoans, result_listener);
+  std::sort(ExpectedLiveOrigins.begin(), ExpectedLiveOrigins.end());
+  std::sort(ActualLiveOrigins.begin(), ActualLiveOrigins.end());
+  if (ExpectedLiveOrigins != ActualLiveOrigins) {
+    *result_listener << "Expected: {";
+    for (const auto &OriginID : ExpectedLiveOrigins) {
+      *result_listener << OriginID.Value << ", ";
+    }
+    *result_listener << "} Actual: {";
+    for (const auto &OriginID : ActualLiveOrigins) {
+      *result_listener << OriginID.Value << ", ";
+    }
+    *result_listener << "}";
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P(MustBeLiveAt, Annotation, "") {
+  return ExplainMatchResult(AreLiveAtImpl(Annotation, LivenessKindFilter::Must),
+                            arg, result_listener);
+}
+
+MATCHER_P(MaybeLiveAt, Annotation, "") {
+  return ExplainMatchResult(
+      AreLiveAtImpl(Annotation, LivenessKindFilter::Maybe), arg,
+      result_listener);
+}
+
+MATCHER_P(AreLiveAt, Annotation, "") {
+  return ExplainMatchResult(AreLiveAtImpl(Annotation, LivenessKindFilter::All),
+                            arg, result_listener);
 }
 
 // Base test fixture to manage the runner and helper.
@@ -275,6 +324,13 @@ protected:
   OriginInfo Origin(llvm::StringRef OriginVar) {
     return OriginInfo(OriginVar, *Helper);
   }
+
+  /// Factory function that hides the std::vector creation.
+  OriginsInfo Origins(std::initializer_list<std::string> OriginVars) {
+    return OriginsInfo({OriginVars}, *Helper);
+  }
+
+  OriginsInfo NoOrigins() { return Origins({}); }
 
   /// Factory function that hides the std::vector creation.
   LoanSetInfo LoansTo(std::initializer_list<std::string> LoanVars) {
@@ -428,29 +484,6 @@ TEST_F(LifetimeAnalysisTest, AssignInSwitch) {
   EXPECT_THAT(Origin("p"), HasLoansTo({"s1", "s2", "s3"}, "after_switch"));
 }
 
-TEST_F(LifetimeAnalysisTest, LoanInLoop) {
-  SetupTest(R"(
-    void target(bool condition) {
-      MyObj* p = nullptr;
-      while (condition) {
-        POINT(start_loop);
-        MyObj inner;
-        p = &inner;
-        POINT(end_loop);
-      }
-      POINT(after_loop);
-    }
-  )");
-  EXPECT_THAT(Origin("p"), HasLoansTo({"inner"}, "start_loop"));
-  EXPECT_THAT(LoansTo({"inner"}), AreExpiredAt("start_loop"));
-
-  EXPECT_THAT(Origin("p"), HasLoansTo({"inner"}, "end_loop"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("end_loop"));
-
-  EXPECT_THAT(Origin("p"), HasLoansTo({"inner"}, "after_loop"));
-  EXPECT_THAT(LoansTo({"inner"}), AreExpiredAt("after_loop"));
-}
-
 TEST_F(LifetimeAnalysisTest, LoopWithBreak) {
   SetupTest(R"(
     void target(int count) {
@@ -528,20 +561,16 @@ TEST_F(LifetimeAnalysisTest, PointersAndExpirationInACycle) {
   )");
   EXPECT_THAT(Origin("p1"), HasLoansTo({"v1"}, "before_while"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v2"}, "before_while"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_while"));
 
   EXPECT_THAT(Origin("p1"),
               HasLoansTo({"v1", "v2", "temp"}, "in_loop_before_temp"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v2", "temp"}, "in_loop_before_temp"));
-  EXPECT_THAT(LoansTo({"temp"}), AreExpiredAt("in_loop_before_temp"));
 
   EXPECT_THAT(Origin("p1"), HasLoansTo({"temp"}, "in_loop_after_temp"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v2", "temp"}, "in_loop_after_temp"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("in_loop_after_temp"));
 
   EXPECT_THAT(Origin("p1"), HasLoansTo({"v1", "v2", "temp"}, "after_loop"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v2", "temp"}, "after_loop"));
-  EXPECT_THAT(LoansTo({"temp"}), AreExpiredAt("after_loop"));
 }
 
 TEST_F(LifetimeAnalysisTest, InfiniteLoopPrunesEdges) {
@@ -583,178 +612,6 @@ TEST_F(LifetimeAnalysisTest, NestedScopes) {
   EXPECT_THAT(Origin("p"), HasLoansTo({"outer"}, "before_inner_scope"));
   EXPECT_THAT(Origin("p"), HasLoansTo({"inner"}, "inside_inner_scope"));
   EXPECT_THAT(Origin("p"), HasLoansTo({"inner"}, "after_inner_scope"));
-}
-
-TEST_F(LifetimeAnalysisTest, SimpleExpiry) {
-  SetupTest(R"(
-    void target() {
-      MyObj* p = nullptr;
-      {
-        MyObj s;
-        p = &s;
-        POINT(before_expiry);
-      } // s goes out of scope here
-      POINT(after_expiry);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_expiry"));
-  EXPECT_THAT(LoansTo({"s"}), AreExpiredAt("after_expiry"));
-}
-
-TEST_F(LifetimeAnalysisTest, NestedExpiry) {
-  SetupTest(R"(
-    void target() {
-      MyObj s1;
-      MyObj* p = &s1;
-      POINT(before_inner);
-      {
-        MyObj s2;
-        p = &s2;
-        POINT(in_inner);
-      } // s2 expires
-      POINT(after_inner);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_inner"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("in_inner"));
-  EXPECT_THAT(LoansTo({"s2"}), AreExpiredAt("after_inner"));
-}
-
-TEST_F(LifetimeAnalysisTest, ConditionalExpiry) {
-  SetupTest(R"(
-    void target(bool cond) {
-      MyObj s1;
-      MyObj* p = &s1;
-      POINT(before_if);
-      if (cond) {
-        MyObj s2;
-        p = &s2;
-        POINT(then_block);
-      } // s2 expires here
-      POINT(after_if);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_if"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("then_block"));
-  EXPECT_THAT(LoansTo({"s2"}), AreExpiredAt("after_if"));
-}
-
-TEST_F(LifetimeAnalysisTest, LoopExpiry) {
-  SetupTest(R"(
-    void target() {
-      MyObj *p = nullptr;
-      for (int i = 0; i < 2; ++i) {
-        POINT(start_loop);
-        MyObj s;
-        p = &s;
-        POINT(end_loop);
-      } // s expires here on each iteration
-      POINT(after_loop);
-    }
-  )");
-  EXPECT_THAT(LoansTo({"s"}), AreExpiredAt("start_loop"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("end_loop"));
-  EXPECT_THAT(LoansTo({"s"}), AreExpiredAt("after_loop"));
-}
-
-TEST_F(LifetimeAnalysisTest, MultipleExpiredLoans) {
-  SetupTest(R"(
-    void target() {
-      MyObj *p1, *p2, *p3;
-      {
-        MyObj s1;
-        p1 = &s1;
-        POINT(p1);
-      } // s1 expires
-      POINT(p2);
-      {
-        MyObj s2;
-        p2 = &s2;
-        MyObj s3;
-        p3 = &s3;
-        POINT(p3);
-      } // s2, s3 expire
-      POINT(p4);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("p1"));
-  EXPECT_THAT(LoansTo({"s1"}), AreExpiredAt("p2"));
-  EXPECT_THAT(LoansTo({"s1"}), AreExpiredAt("p3"));
-  EXPECT_THAT(LoansTo({"s1", "s2", "s3"}), AreExpiredAt("p4"));
-}
-
-TEST_F(LifetimeAnalysisTest, GotoJumpsOutOfScope) {
-  SetupTest(R"(
-    void target(bool cond) {
-      MyObj *p = nullptr;
-      {
-        MyObj s;
-        p = &s;
-        POINT(before_goto);
-        if (cond) {
-          goto end;
-        }
-      } // `s` expires here on the path that doesn't jump
-      POINT(after_scope);
-    end:
-      POINT(after_goto);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_goto"));
-  EXPECT_THAT(LoansTo({"s"}), AreExpiredAt("after_scope"));
-  EXPECT_THAT(LoansTo({"s"}), AreExpiredAt("after_goto"));
-}
-
-TEST_F(LifetimeAnalysisTest, ContinueInLoop) {
-  SetupTest(R"(
-    void target(int count) {
-      MyObj *p = nullptr;
-      MyObj outer;
-      p = &outer;
-      POINT(before_loop);
-
-      for (int i = 0; i < count; ++i) {
-        if (i % 2 == 0) {
-          MyObj s_even;
-          p = &s_even;
-          POINT(in_even_iter);
-          continue;
-        }
-        MyObj s_odd;
-        p = &s_odd;
-        POINT(in_odd_iter);
-      }
-      POINT(after_loop);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_loop"));
-  EXPECT_THAT(LoansTo({"s_odd"}), AreExpiredAt("in_even_iter"));
-  EXPECT_THAT(LoansTo({"s_even"}), AreExpiredAt("in_odd_iter"));
-  EXPECT_THAT(LoansTo({"s_even", "s_odd"}), AreExpiredAt("after_loop"));
-}
-
-TEST_F(LifetimeAnalysisTest, ReassignedPointerThenOriginalExpires) {
-  SetupTest(R"(
-    void target() {
-      MyObj* p = nullptr;
-      {
-        MyObj s1;
-        p = &s1;
-        POINT(p_has_s1);
-        {
-          MyObj s2;
-          p = &s2;
-          POINT(p_has_s2);
-        }
-        POINT(p_after_s2_expires);
-      } // s1 expires here.
-      POINT(p_after_s1_expires);
-    }
-  )");
-  EXPECT_THAT(NoLoans(), AreExpiredAt("p_has_s1"));
-  EXPECT_THAT(NoLoans(), AreExpiredAt("p_has_s2"));
-  EXPECT_THAT(LoansTo({"s2"}), AreExpiredAt("p_after_s2_expires"));
-  EXPECT_THAT(LoansTo({"s1", "s2"}), AreExpiredAt("p_after_s1_expires"));
 }
 
 TEST_F(LifetimeAnalysisTest, NoDuplicateLoansForImplicitCastToConst) {
@@ -880,23 +737,6 @@ TEST_F(LifetimeAnalysisTest, GslPointerPropagation) {
   EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p3"));
 }
 
-TEST_F(LifetimeAnalysisTest, GslPointerLoanExpiration) {
-  SetupTest(R"(
-    void target() {
-      View x;
-      {
-        MyObj a;
-        x = a;
-        POINT(before_expiry);
-      } // `a` is destroyed here.
-      POINT(after_expiry);
-    }
-  )");
-
-  EXPECT_THAT(NoLoans(), AreExpiredAt("before_expiry"));
-  EXPECT_THAT(LoansTo({"a"}), AreExpiredAt("after_expiry"));
-}
-
 TEST_F(LifetimeAnalysisTest, GslPointerReassignment) {
   SetupTest(R"(
     void target() {
@@ -916,7 +756,6 @@ TEST_F(LifetimeAnalysisTest, GslPointerReassignment) {
   EXPECT_THAT(Origin("v"), HasLoansTo({"safe"}, "p1"));
   EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p2"));
   EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p3"));
-  EXPECT_THAT(LoansTo({"unsafe"}), AreExpiredAt("p3"));
 }
 
 TEST_F(LifetimeAnalysisTest, GslPointerConversionOperator) {
@@ -1174,5 +1013,187 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundConversionOperator) {
   )");
   EXPECT_THAT(Origin("v"), HasLoansTo({"owner"}, "p1"));
 }
+
+TEST_F(LifetimeAnalysisTest, LivenessDeadPointer) {
+  SetupTest(R"(
+    void target() {
+      POINT(p1);
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p2);
+    }
+  )");
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessSimpleReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessKilledByReassignment) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s1, s2;
+      MyObj* p = &s1;
+      POINT(p1);
+      p = &s2;
+      POINT(p2);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessAcrossBranches) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj x, y;
+      MyObj* p = nullptr;
+      POINT(p1);
+      if (c) {
+        p = &x;
+        POINT(p2);
+      } else {
+        p = &y;
+        POINT(p3);
+      }
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p3"));
+  // Before the `if`, the value of `p` (`nullptr`) is always overwritten before.
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInLoop) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj s1, s2;
+      MyObj* p = &s1;
+      MyObj* q = &s2;
+      POINT(p1);
+      while(c) {
+        POINT(p2);
+
+        p = q;
+        POINT(p3);
+      }
+      POINT(p4);
+      return p;
+    }
+  )");
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p4"));
+  EXPECT_THAT(NoOrigins(), MaybeLiveAt("p4"));
+
+  EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p3"));
+
+  EXPECT_THAT(Origins({"q"}), MustBeLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), MaybeLiveAt("p2"));
+
+  EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf) {
+  // See https://github.com/llvm/llvm-project/issues/156959.
+  SetupTest(R"(
+    void target(bool cond) {
+      MyObj b;
+      while (cond) {
+        POINT(p1);
+
+        MyObj a;
+        View p = b;
+
+        POINT(p2);
+
+        if (cond) {
+          POINT(p3);
+          p = a;
+        }
+        POINT(p4);
+        (void)p;
+        POINT(p5);
+      }
+    }
+  )");
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p5"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p4"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p3"));
+  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf2) {
+  SetupTest(R"(
+    void target(MyObj safe, bool condition) {
+      MyObj* p = &safe;
+      MyObj* q = &safe;
+      POINT(p1);
+
+      while (condition) {
+        POINT(p2);
+        MyObj x;
+        p = &x;
+
+        POINT(p3);
+
+        if (condition) {
+          q = p;
+          POINT(p4);
+        }
+        
+        POINT(p5);
+        (void)*p;
+        (void)*q;
+        POINT(p6);
+      }
+    }
+  )");
+  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p6"));
+  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p6"));
+
+  EXPECT_THAT(Origins({"p", "q"}), MustBeLiveAt("p5"));
+
+  EXPECT_THAT(Origins({"p", "q"}), MustBeLiveAt("p4"));
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p3"));
+  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p3"));
+
+  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p2"));
+  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p2"));
+
+  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p1"));
+  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
+  SetupTest(R"(
+    void target(MyObj safe) {
+      MyObj* p = &safe;
+      for (int i = 0; i < 1; ++i) {
+        MyObj s;
+        p = &s;
+        POINT(p1);
+      }
+      POINT(p2);
+      (void)*p;
+    }
+  )");
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+}
+
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
