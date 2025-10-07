@@ -201,6 +201,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.MaxPercentThresholdBoost = 400;
   UP.OptSizeThreshold = UnrollOptSizeThreshold;
   UP.PartialThreshold = 150;
+  UP.ScaledThreshold = 100;
   UP.PartialOptSizeThreshold = UnrollOptSizeThreshold;
   UP.Count = 0;
   UP.DefaultUnrollRuntimeCount = 8;
@@ -884,8 +885,8 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
   if (UP.PartialThreshold != NoThreshold) {
     // Reduce unroll count to be modulo of TripCount for partial unrolling.
     if (UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
-      count = (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
-        (LoopSize - UP.BEInsns);
+      count = (std::max(UP.ScaledThreshold, UP.BEInsns + 1) - UP.BEInsns) /
+              (LoopSize - UP.BEInsns);
     if (count > UP.MaxCount)
       count = UP.MaxCount;
     while (count != 0 && TripCount % count != 0)
