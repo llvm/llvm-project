@@ -675,20 +675,39 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
   CC = getRISCVCCFromICmp(Pred);
 }
 
-/// Select the RISC-V opcode for the G_LOAD or G_STORE operation \p GenericOpc,
-/// appropriate for the GPR register bank and of memory access size \p OpSize.
-/// \returns \p GenericOpc if the combination is unsupported.
-static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned OpSizeInBytes) {
+/// Select the RISC-V Zalasr opcode for the G_LOAD or G_STORE operation
+/// \p GenericOpc, appropriate for the GPR register bank and of memory access
+/// size \p OpSize.
+static unsigned selectZalasrLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
   const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
-  switch (OpSizeInBytes) {
-  case 1:
+  switch (OpSize) {
+  default:
+    llvm_unreachable("Unexpected memory size");
+  case 8:
+    return IsStore ? RISCV::SB_RL : RISCV::LB_AQ;
+  case 16:
+    return IsStore ? RISCV::SH_RL : RISCV::LH_AQ;
+  case 32:
+    return IsStore ? RISCV::SW_RL : RISCV::LW_AQ;
+  case 64:
+    return IsStore ? RISCV::SD_RL : RISCV::LD_AQ;
+  }
+}
+
+/// Select the RISC-V regimm opcode for the G_LOAD or G_STORE operation
+/// \p GenericOpc, appropriate for the GPR register bank and of memory access
+/// size \p OpSize. \returns \p GenericOpc if the combination is unsupported.
+static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (OpSize) {
+  case 8:
     // Prefer unsigned due to no c.lb in Zcb.
     return IsStore ? RISCV::SB : RISCV::LBU;
-  case 2:
+  case 16:
     return IsStore ? RISCV::SH : RISCV::LH;
-  case 4:
+  case 32:
     return IsStore ? RISCV::SW : RISCV::LW;
-  case 8:
+  case 64:
     return IsStore ? RISCV::SD : RISCV::LD;
   }
 
@@ -879,22 +898,15 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     if (PtrTy.getAddressSpace() != 0)
       return false;
 
-    unsigned MemSizeInBytes = LdSt.getMemSize().getValue();
+    unsigned MemSize = LdSt.getMemSizeInBits().getValue();
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     if (isStrongerThanMonotonic(Order)) {
-      assert(MemSizeInBytes <= 8 && "Unexpected mem size!");
-      static constexpr unsigned LoadOpcodes[] = {RISCV::LB_AQ, RISCV::LH_AQ,
-                                                 RISCV::LW_AQ, RISCV::LD_AQ};
-      static constexpr unsigned StoreOpcodes[] = {RISCV::SB_RL, RISCV::SH_RL,
-                                                  RISCV::SW_RL, RISCV::SD_RL};
-      ArrayRef<unsigned> Opcodes =
-          isa<GLoad>(LdSt) ? LoadOpcodes : StoreOpcodes;
-      MI.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
+      MI.setDesc(TII.get(selectZalasrLoadStoreOp(Opc, MemSize)));
       return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
     }
 
-    const unsigned NewOpc = selectLoadStoreOp(MI.getOpcode(), MemSizeInBytes);
+    const unsigned NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
     if (NewOpc == MI.getOpcode())
       return false;
 
