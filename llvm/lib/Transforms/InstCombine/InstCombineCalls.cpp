@@ -1920,6 +1920,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand, m_SRem(m_Value(X), m_APInt(C))) && *C == 2)
       return BinaryOperator::CreateAnd(X, ConstantInt::get(II->getType(), 1));
 
+    // abs (sub (sext X, sext Y)) -> zext (sub (smax (x, y) - smin(x, y)))
+    bool AbsSExtDiff = match(
+        IIOperand, m_OneUse(m_Sub(m_SExt(m_Value(X)), m_SExt(m_Value(Y)))));
+    // abs (sub (zext X, zext Y)) -> zext (sub (umax (x, y) - umin(x, y)))
+    bool AbsZExtDiff =
+        !AbsSExtDiff && match(IIOperand, m_OneUse(m_Sub(m_ZExt(m_Value(X)),
+                                                        m_ZExt(m_Value(Y)))));
+    if ((AbsSExtDiff || AbsZExtDiff) && X->getType() == Y->getType()) {
+      bool IsSigned = AbsSExtDiff;
+      Value *Max = Builder.CreateBinaryIntrinsic(
+          IsSigned ? Intrinsic::smax : Intrinsic::umax, X, Y);
+      Value *Min = Builder.CreateBinaryIntrinsic(
+          IsSigned ? Intrinsic::smin : Intrinsic::umin, X, Y);
+      Value *Sub = Builder.CreateSub(Max, Min);
+      return CastInst::Create(Instruction::ZExt, Sub, II->getType());
+    }
+
     break;
   }
   case Intrinsic::umin: {

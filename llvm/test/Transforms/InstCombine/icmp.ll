@@ -4065,10 +4065,10 @@ define <2 x i1> @f4_vec(<2 x i64> %a, <2 x i64> %b) {
 define i32 @f5(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i32 @f5(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV3]]
-; CHECK-NEXT:    [[SUB7_SUB:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[SUB7_SUB:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[SUB7_SUB]]
 ;
   %conv = zext i8 %a to i32
