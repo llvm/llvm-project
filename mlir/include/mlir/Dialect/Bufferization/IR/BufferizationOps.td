@@ -96,8 +96,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
                             const BufferizationOptions &options,
                             BufferizationState &state);
 
-    bool resultBufferizesToMemoryWrite(OpResult opResult,
-                                       const AnalysisState &state);
+    bool bufferizesToMemoryWrite(OpResult opResult,
+                                 const AnalysisState &state);
 
     bool bufferizesToAllocation(Value value) { return true; }
 
