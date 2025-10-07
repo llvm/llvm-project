@@ -415,8 +415,8 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
         Variadic<TransformAnyParamTypeOrAnyHandle> : $tile_interchange,
         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_interchange,
-        DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup,
-        DefaultValuedAttr<BoolAttr, "false">:$use_forall);
+        UnitAttr:$apply_cleanup,
+        UnitAttr:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transformed,
                       Variadic<TransformHandleTypeInterface>:$loops);
   let builders = [
@@ -448,9 +448,7 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
     $target
     (`tile_sizes` custom<DynamicIndexList>($tile_sizes, $static_tile_sizes)^)?
     (`interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)^)?
-    (`apply_cleanup` `=` $apply_cleanup^)?
-    (`use_forall` `=` $use_forall^)? attr-dict
-    `:` functional-type(operands, results)
+    attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 

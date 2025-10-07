@@ -110,7 +110,7 @@ def testFuseOpCompact(target):
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
     # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
-    # CHECK-SAME: interchange [0, 1] apply_cleanup = true
+    # CHECK-SAME: interchange [0, 1] {apply_cleanup}
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
 
@@ -126,7 +126,7 @@ def testFuseOpCompactForall(target):
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
     # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
-    # CHECK-SAME: apply_cleanup = true use_forall = true
+    # CHECK-SAME: {apply_cleanup, use_forall}
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
 

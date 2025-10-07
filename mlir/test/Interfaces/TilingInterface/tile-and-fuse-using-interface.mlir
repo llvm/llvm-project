@@ -652,7 +652,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %loops:4 = transform.structured.fuse %generic tile_sizes [1, 16, 16, 16] interchange [0, 1, 2, 3] apply_cleanup = false
+    %a, %loops:4 = transform.structured.fuse %generic tile_sizes [1, 16, 16, 16] interchange [0, 1, 2, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
