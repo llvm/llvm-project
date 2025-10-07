@@ -38,7 +38,8 @@ int printf_main(Writer<write_mode> *writer, const char *__restrict str,
       return result;
   }
 
-  return writer->get_chars_written();
+  // TODO overflow
+  return static_cast<int>(writer->get_chars_written());
 }
 
 } // namespace printf_core

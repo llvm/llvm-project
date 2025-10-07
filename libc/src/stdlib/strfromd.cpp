@@ -36,7 +36,8 @@ LLVM_LIBC_FUNCTION(int, strfromd,
   if (n > 0)
     wb.buff[wb.buff_cur] = '\0';
 
-  return writer.get_chars_written();
+  // TODO overflow
+  return static_cast<int>(writer.get_chars_written());
 }
 
 } // namespace LIBC_NAMESPACE_DECL
