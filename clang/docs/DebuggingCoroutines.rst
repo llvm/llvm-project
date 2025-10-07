@@ -1279,9 +1279,6 @@ To load this by default, add this command to your ``~/.gdbinit`` file.
 
   CppCoroutineFrameFilter()
 
-  if __name__ == '__main__':
-      print("This script should be loaded from GDB using `source <filename>`")
-
 Further Reading
 ---------------
 
