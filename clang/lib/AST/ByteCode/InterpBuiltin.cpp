@@ -2783,87 +2783,34 @@ static bool interp_builtin_horizontal_fp_binop(
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  unsigned SourceLen = VT->getNumElements();
-  unsigned DstElem = 0;
-  for (unsigned I = 0; I != SourceLen; I += 2) {
+
+  unsigned NumElts = VT->getNumElements();
+  unsigned EltBits = S.getASTContext().getTypeSize(VT->getElementType());
+  unsigned NumLanes = NumElts * EltBits / 128;
+  unsigned NumElemsPerLane = NumElts / NumLanes;
+  unsigned HalfElemsPerLane = NumElemsPerLane / 2;
+
+  for (unsigned L = 0; L != NumElts; L += NumElemsPerLane) {
     using T = PrimConv<PT_Float>::T;
-    APFloat Elem1 = LHS.elem<T>(I).getAPFloat();
-    APFloat Elem2 = LHS.elem<T>(I + 1).getAPFloat();
-    Dst.elem<T>(DstElem++) = static_cast<T>(Fn(Elem1, Elem2, RM));
-  }
-  for (unsigned I = 0; I != SourceLen; I += 2) {
-    using T = PrimConv<PT_Float>::T;
-    APFloat Elem1 = RHS.elem<T>(I).getAPFloat();
-    APFloat Elem2 = RHS.elem<T>(I + 1).getAPFloat();
-    Dst.elem<T>(DstElem++) = static_cast<T>(Fn(Elem1, Elem2, RM));
+    for (unsigned E = 0; E != HalfElemsPerLane; ++E) {
+      APFloat Elem1 = LHS.elem<T>(L + (2 * E) + 0).getAPFloat();
+      APFloat Elem2 = LHS.elem<T>(L + (2 * E) + 1).getAPFloat();
+      Dst.elem<T>(L + E) = static_cast<T>(Fn(Elem1, Elem2, RM));
+    }
+    for (unsigned E = 0; E != HalfElemsPerLane; ++E) {
+      APFloat Elem1 = RHS.elem<T>(L + (2 * E) + 0).getAPFloat();
+      APFloat Elem2 = RHS.elem<T>(L + (2 * E) + 1).getAPFloat();
+      Dst.elem<T>(L + E + HalfElemsPerLane) =
+          static_cast<T>(Fn(Elem1, Elem2, RM));
+    }
   }
   Dst.initializeAllElements();
   return true;
 }
 
-static bool interp_builtin_horizontal_fps256_binop(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                               llvm::RoundingMode)>
-        Fn) {
-  const Pointer &RHS = S.Stk.pop<Pointer>();
-  const Pointer &LHS = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  for (unsigned I = 0; I < 4; ++I) {
-    using T = PrimConv<PT_Float>::T;
-    unsigned SrcIdx = 2 * I;
-    unsigned DestIdx = (I < 2) ? I : (I + 2);
-    APFloat Elem1 = LHS.elem<T>(SrcIdx).getAPFloat();
-    APFloat Elem2 = LHS.elem<T>(SrcIdx + 1).getAPFloat();
-    Dst.elem<T>(DestIdx) = static_cast<T>(Fn(Elem1, Elem2, RM));
-  }
-  for (unsigned I = 0; I < 4; ++I) {
-    using T = PrimConv<PT_Float>::T;
-    unsigned SrcIdx = 2 * I;
-    unsigned DestIdx = (I < 2) ? (I + 2) : (I + 4);
-    APFloat Elem1 = RHS.elem<T>(SrcIdx).getAPFloat();
-    APFloat Elem2 = RHS.elem<T>(SrcIdx + 1).getAPFloat();
-    Dst.elem<T>(DestIdx) = static_cast<T>(Fn(Elem1, Elem2, RM));
-  }
-  Dst.initializeAllElements();
-  return true;
-}
-
-static bool interp_builtin_horizontal_fpd256_binop(
-    InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                               llvm::RoundingMode)>
-        Fn) {
-  const Pointer &RHS = S.Stk.pop<Pointer>();
-  const Pointer &LHS = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  for (unsigned I = 0; I < 2; ++I) {
-    using T = PrimConv<PT_Float>::T;
-    APFloat Elem1 = LHS.elem<T>(2 * I).getAPFloat();
-    APFloat Elem2 = LHS.elem<T>(2 * I + 1).getAPFloat();
-    Dst.elem<T>(2 * I) = static_cast<T>(Fn(Elem1, Elem2, RM));
-  }
-  for (unsigned I = 0; I < 2; ++I) {
-    using T = PrimConv<PT_Float>::T;
-    APFloat Elem1 = RHS.elem<T>(2 * I).getAPFloat();
-    APFloat Elem2 = RHS.elem<T>(2 * I + 1).getAPFloat();
-    Dst.elem<T>(2 * I + 1) = static_cast<T>(Fn(Elem1, Elem2, RM));
-  }
-  Dst.initializeAllElements();
-  return true;
-}
 static bool interp__builtin_elementwise_triop_fp(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
@@ -3703,6 +3650,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   case clang::X86::BI__builtin_ia32_haddpd:
   case clang::X86::BI__builtin_ia32_haddps:
+  case clang::X86::BI__builtin_ia32_haddpd256:
+  case clang::X86::BI__builtin_ia32_haddps256:
     return interp_builtin_horizontal_fp_binop(
         S, OpPC, Call,
         [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
@@ -3710,26 +3659,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           F.add(RHS, RM);
           return F;
         });
-  case clang::X86::BI__builtin_ia32_haddpd256: {
-    return interp_builtin_horizontal_fpd256_binop(
-        S, OpPC, Call,
-        [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
-          APFloat F = LHS;
-          F.add(RHS, RM);
-          return F;
-        });
-  }
-  case clang::X86::BI__builtin_ia32_haddps256: {
-    return interp_builtin_horizontal_fps256_binop(
-        S, OpPC, Call,
-        [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
-          APFloat F = LHS;
-          F.add(RHS, RM);
-          return F;
-        });
-  }
   case clang::X86::BI__builtin_ia32_hsubpd:
   case clang::X86::BI__builtin_ia32_hsubps:
+  case clang::X86::BI__builtin_ia32_hsubpd256:
+  case clang::X86::BI__builtin_ia32_hsubps256:
     return interp_builtin_horizontal_fp_binop(
         S, OpPC, Call,
         [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
@@ -3737,24 +3670,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           F.subtract(RHS, RM);
           return F;
         });
-  case clang::X86::BI__builtin_ia32_hsubpd256: {
-    return interp_builtin_horizontal_fpd256_binop(
-        S, OpPC, Call,
-        [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
-          APFloat F = LHS;
-          F.subtract(RHS, RM);
-          return F;
-        });
-  }
-  case clang::X86::BI__builtin_ia32_hsubps256: {
-    return interp_builtin_horizontal_fps256_binop(
-        S, OpPC, Call,
-        [](const APFloat &LHS, const APFloat &RHS, llvm::RoundingMode RM) {
-          APFloat F = LHS;
-          F.subtract(RHS, RM);
-          return F;
-        });
-  }
+
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
