@@ -21,4 +21,3 @@ void registerTestOpenACC() { registerTestPointerLikeTypeInterfacePass(); }
 
 } // namespace test
 } // namespace mlir
-
