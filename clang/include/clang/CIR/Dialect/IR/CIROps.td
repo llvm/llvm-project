@@ -242,12 +242,13 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 ]> {
   let summary = "Pointer access with stride";
   let description = [{
-    Given a base pointer as first operand, provides a new pointer after applying
-    a stride (second operand).
+    The `cir.ptr_stride` operation computes a new pointer from a base pointer
+    and an integer stride, similar to a single-index `getelementptr` in LLVM IR.
+    It moves the pointer by `stride * sizeof(element_type)` bytes.
 
     ```mlir
     %3 = cir.const 0 : i32
-    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<i32>, i32) -> !cir.ptr<i32>
     ```
   }];
 
@@ -259,13 +260,12 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
-    `(` $base `:` qualified(type($base)) `,` $stride `:`
-    qualified(type($stride)) `)` `,` qualified(type($result)) attr-dict
+    $base`,` $stride `:` functional-type(operands, results) attr-dict
   }];
 
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
-    mlir::Type getElementTy() {
+    mlir::Type getElementType() {
       return getBase().getType().getPointee();
     }
   }];
@@ -278,22 +278,22 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 def CIR_ConstantOp : CIR_Op<"const", [
   ConstantLike, Pure, AllTypesMatch<["value", "res"]>
 ]> {
-  let summary = "Defines a CIR constant";
+  let summary = "Create a CIR constant from a literal attribute";
   let description = [{
     The `cir.const` operation turns a literal into an SSA value. The data is
     attached to the operation as an attribute.
 
     ```mlir
-      %0 = cir.const 42 : i32
-      %1 = cir.const 4.2 : f32
-      %2 = cir.const nullptr : !cir.ptr<i32>
+      %0 = cir.const #cir.int<4> : !u32i
+      %1 = cir.const #cir.fp<1.500000e+00> : !cir.float
+      %2 = cir.const #cir.ptr<null> : !cir.ptr<!void>
     ```
   }];
 
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs CIR_AnyType:$res);
 
-  let assemblyFormat = "attr-dict $value";
+  let assemblyFormat = "$value attr-dict";
 
   let hasVerifier = 1;
 
