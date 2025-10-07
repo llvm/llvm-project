@@ -515,7 +515,8 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
                                   ? llvm::Intrinsic::maxnum
                                   : llvm::Intrinsic::minnum;
 
-    return Builder.CreateBinaryIntrinsic(IID, OldVal, RHS, llvm::FMFSource(), "newval");
+    return Builder.CreateBinaryIntrinsic(IID, OldVal, RHS, llvm::FMFSource(),
+                                         "newval");
   }
 
   llvm::CmpInst::Predicate Pred;
