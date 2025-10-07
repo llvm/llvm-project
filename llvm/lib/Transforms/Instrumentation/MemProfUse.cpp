@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -775,23 +776,6 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
-// Returns true iff the global variable has custom section either by
-// __attribute__((section("name")))
-// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
-// or #pragma clang section directives
-// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
-static bool hasExplicitSectionName(const GlobalVariable &GVar) {
-  if (GVar.hasSection())
-    return true;
-
-  auto Attrs = GVar.getAttributes();
-  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
-      Attrs.hasAttribute("relro-section") ||
-      Attrs.hasAttribute("rodata-section"))
-    return true;
-  return false;
-}
-
 bool MemProfUsePass::annotateGlobalVariables(
     Module &M, const memprof::DataAccessProfData *DataAccessProf) {
   if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
@@ -817,13 +801,16 @@ bool MemProfUsePass::annotateGlobalVariables(
   for (GlobalVariable &GVar : M.globals()) {
     assert(!GVar.getSectionPrefix().has_value() &&
            "GVar shouldn't have section prefix yet");
-    if (GVar.isDeclarationForLinker())
-      continue;
-
-    if (hasExplicitSectionName(GVar)) {
+    auto Kind = llvm::memprof::getAnnotationKind(GVar);
+    switch (Kind) {
+    case llvm::memprof::AnnotationKind::AnnotationOK:
+      break;
+    case llvm::memprof::AnnotationKind::ExplicitSection:
       ++NumOfMemProfExplicitSectionGlobalVars;
       LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
                         << " has explicit section name. Skip annotating.\n");
+      [[fallthrough]];
+    default:
       continue;
     }
 
@@ -833,7 +820,6 @@ bool MemProfUsePass::annotateGlobalVariables(
     // TODO: Track string content hash in the profiles and compute it inside the
     // compiler to categeorize the hotness string literals.
     if (Name.starts_with(".str")) {
-
       LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
       continue;
     }
