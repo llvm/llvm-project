@@ -398,6 +398,7 @@ public:
       ValueRange(operands));
 
     rewriter.replaceOp(op, callIntrOpRef);
+    return success();
   }
 };
 
@@ -422,6 +423,7 @@ public:
       ValueRange(operands));
 
     rewriter.replaceOp(op, callIntrOpRef);
+    return success();
   }
 };
 
@@ -446,6 +448,7 @@ public:
       ValueRange(operands));
 
     rewriter.replaceOp(op, callIntrOpRef);
+    return success();
   }
 };
 
