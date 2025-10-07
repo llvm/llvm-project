@@ -140,9 +140,13 @@ public:
 
   CompilerType GetParentType(lldb::opaque_compiler_type_t type);
   std::vector<std::vector<CompilerType>>
+  /// Extract the substitutions from a bound generic type.
   GetSubstitutions(lldb::opaque_compiler_type_t type);
+  /// Apply substitutions to a bound generic type that is mapped out of context.
   CompilerType ApplySubstitutions(lldb::opaque_compiler_type_t type,
                                   std::vector<std::vector<CompilerType>> subs);
+  /// Apply substitutions to a bound generic type that is mapped out of context.
+  CompilerType MapOutOfContext(lldb::opaque_compiler_type_t type);
 
   Module *GetModule() const { return m_module; }
 
@@ -366,6 +370,7 @@ public:
   /// Determine whether \p type is a protocol.
   bool IsExistentialType(lldb::opaque_compiler_type_t type);
   bool IsBoundGenericAliasType(lldb::opaque_compiler_type_t type);
+  bool ContainsBoundGenericType(lldb::opaque_compiler_type_t type);
 
   /// Recursively transform the demangle tree starting a \p node by
   /// doing a post-order traversal and replacing each node with
@@ -389,6 +394,7 @@ public:
 
   /// A left-to-right preorder traversal. Don't visit children if
   /// visitor returns false.
+  /// The NodePointer passed to \p fn is guaranteed to be non-null.
   static void
   PreOrderTraversal(swift::Demangle::NodePointer node,
                     std::function<bool(swift::Demangle::NodePointer)>);

@@ -194,6 +194,7 @@ func g() {
     let functionType = FunctionType()
     let innerFunctionType = InnerFunctionType()
     var inlineArray: InlineArray<4, Int> = [1, 2, 3, 4]
+    var dict: Dictionary<Int, Int> = [1:4, 2:3, 3:2, 4:1]
 
     let dummy = A() 
     let string = StaticString("Hello") 

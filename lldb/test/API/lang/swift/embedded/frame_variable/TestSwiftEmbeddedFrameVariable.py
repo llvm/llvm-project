@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-@skipIf(bugnumber = "rdar://159531308")
 class TestSwiftEmbeddedFrameVariable(TestBase):
  
     @skipUnlessDarwin
@@ -32,7 +31,7 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         if self.TraceOn():
             self.expect("log enable lldb types")
             self.expect("frame variable")
- 
+
         alias1 = frame.FindVariable("alias1")
         field = alias1.GetChildMemberWithName("t")
         lldbutil.check_variable(self, field, False, value='1')
@@ -262,3 +261,6 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
 
         string = frame.FindVariable("string")
         lldbutil.check_variable(self, string, False, summary='"Hello"')
+
+        dictionary = frame.FindVariable("dict")
+        lldbutil.check_variable(self, dictionary, False, summary='4 key/value pairs')

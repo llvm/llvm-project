@@ -161,6 +161,12 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
     return {};
   TypeSP lldb_type = ts.FindTypeInModule(type.GetOpaqueQualType());
   if (!lldb_type) {
+    if (ts.ContainsBoundGenericType(type.GetOpaqueQualType())) {
+      CompilerType generic_type = ts.MapOutOfContext(type.GetOpaqueQualType());
+      lldb_type = ts.FindTypeInModule(generic_type.GetOpaqueQualType());
+    }
+  }
+  if (!lldb_type) {
     std::tie(lldb_type, type) = DWARFASTParserSwift::ResolveTypeAlias(type);
     if (lldb_type) {
       auto die = dwarf->GetDIE(lldb_type->GetID());

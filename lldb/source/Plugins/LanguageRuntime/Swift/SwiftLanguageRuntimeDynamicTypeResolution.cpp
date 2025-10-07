@@ -32,6 +32,7 @@
 #include "lldb/ValueObject/ValueObjectCast.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Casting.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
@@ -791,11 +792,11 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
   const unsigned success = 0;
   bool count_only = !visit_callback;
-  auto ts_sp =
-      m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts_sp)
-    return llvm::createStringError("no type system");
-  auto &ts = *ts_sp;
+  auto ts_or_err =
+      SwiftLanguageRuntime::GetReflectionTypeSystem(m_type, m_exe_ctx);
+  if (!ts_or_err)
+    return ts_or_err.takeError();
+  auto &ts = *ts_or_err->get();
 
   // Deal with the LLDB-only SILPackType variant.
   if (auto pack_type_info = ts.IsSILPackType(m_type)) {
@@ -3383,6 +3384,42 @@ SwiftLanguageRuntime::GetTypeRef(CompilerType type,
   return type_ref_or_err;
 }
 
+llvm::Expected<TypeSystemSwiftTypeRefSP>
+SwiftLanguageRuntime::GetReflectionTypeSystem(CompilerType for_type,
+                                              ExecutionContext exe_ctx) {
+  auto ts_sp = for_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts_sp)
+    return llvm::createStringError("not a Swift type");
+
+  // The TypeSystemSwiftTypeRefForExpressions doesn't have a SymbolFile,
+  // so any DWARF lookups for Embedded Swift fail.
+  //
+  // FIXME: It's unclear whether this is safe to do in a non-LTO Swift program.
+  if (auto *tr_ts =
+          llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+              ts_sp.get())) {
+    if (tr_ts->GetManglingFlavor(&exe_ctx) ==
+        swift::Mangle::ManglingFlavor::Embedded) {
+      if (auto *frame = exe_ctx.GetFramePtr()) {
+        auto &sc = frame->GetSymbolContext(eSymbolContextModule);
+        if (sc.module_sp) {
+          auto ts_or_err =
+              sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeSwift);
+          if (!ts_or_err)
+            return ts_or_err.takeError();
+          if (auto *tr_ts =
+                  llvm::dyn_cast_or_null<TypeSystemSwift>(ts_or_err->get()))
+            ts_sp = tr_ts->GetTypeSystemSwiftTypeRef();
+        }
+      }
+    }
+  }
+  auto tr_ts = ts_sp->GetTypeSystemSwiftTypeRef();
+  if (!tr_ts)
+    return llvm::createStringError("no Swift typesystem");
+  return tr_ts;
+}
+
 llvm::Expected<const swift::reflection::TypeInfo &>
 SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
     CompilerType type, ExecutionContextScope *exe_scope,
@@ -3393,14 +3430,17 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
              "[SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo] Getting "
              "type info for type: {0}",
              type.GetMangledTypeName());
-
-  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!ts_sp)
-    return llvm::createStringError("not a Swift type");
-  auto tr_ts = ts_sp->GetTypeSystemSwiftTypeRef();
-  if (!tr_ts)
-    return llvm::createStringError("no Swift typesystem");
-  auto &ts = *tr_ts;
+  StackFrame *frame = nullptr;
+  ExecutionContext exe_ctx;
+  if (exe_scope) {
+    frame = exe_scope->CalculateStackFrame().get();
+    if (frame)
+      frame->CalculateExecutionContext(exe_ctx);
+  }
+  auto ts_or_err = GetReflectionTypeSystem(type, exe_ctx);
+  if (!ts_or_err)
+    return ts_or_err.takeError();
+  auto &ts = *ts_or_err->get();
 
   // Resolve all type aliases.
   type = type.GetCanonicalType();
@@ -3414,15 +3454,13 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch
   // context.
-  ExecutionContext exe_ctx;
-  if (exe_scope)
-    if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
-      frame->CalculateExecutionContext(exe_ctx);
-      auto bound_type_or_err = BindGenericTypeParameters(*frame, type);
-      if (!bound_type_or_err)
-        return bound_type_or_err.takeError();
-      type = *bound_type_or_err;
-    }
+  if (frame) {
+    frame->CalculateExecutionContext(exe_ctx);
+    auto bound_type_or_err = BindGenericTypeParameters(*frame, type);
+    if (!bound_type_or_err)
+      return bound_type_or_err.takeError();
+    type = *bound_type_or_err;
+  }
 
   // BindGenericTypeParameters imports the type into the scratch
   // context, but we need to resolve (any DWARF links in) the typeref
@@ -3438,33 +3476,9 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
 
-  // The TypeSystemSwiftTypeRefForExpressions doesn't ve a SymbolFile,
-  // so any DWARF lookups for Embedded Swift fail.
-  //
-  // FIXME: It's unclear whether this is safe to do in a non-LTO Swift program.
-  if (llvm::isa<TypeSystemSwiftTypeRefForExpressions>(tr_ts.get()) &&
-      tr_ts->GetManglingFlavor(&exe_ctx) ==
-          swift::Mangle::ManglingFlavor::Embedded) {
-    if (auto frame_sp = exe_ctx.GetFrameSP()) {
-      auto &sc = frame_sp->GetSymbolContext(eSymbolContextModule);
-      if (sc.module_sp) {
-        auto ts_or_err =
-            sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeSwift);
-        if (!ts_or_err)
-          return ts_or_err.takeError();
-        if (auto *tr_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-                ts_or_err->get())) {
-          LLDBTypeInfoProvider provider(*this, *tr_ts);
-          return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
-                                             tr_ts->GetDescriptorFinder());
-        }
-      }
-    }
-  }
-
   LLDBTypeInfoProvider provider(*this, ts);
   return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
-                                     tr_ts->GetDescriptorFinder());
+                                     ts.GetDescriptorFinder());
 }
 
 bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
