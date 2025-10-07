@@ -4169,6 +4169,40 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AllocExceptionOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
+  let summary = "Allocates an exception according to Itanium ABI";
+  let description = [{
+    Implements a slightly higher level __cxa_allocate_exception:
+
+    `void *__cxa_allocate_exception(size_t thrown_size);`
+
+    If the operation fails, the program terminates rather than throw.
+
+    Example:
+
+    ```mlir
+    // if (b == 0) {
+    //   ...
+    //   throw "...";
+    cir.if %10 {
+        %11 = cir.alloc_exception 8 -> !cir.ptr<!void>
+        ... // store exception content into %11
+        cir.throw %11 : !cir.ptr<!cir.ptr<!u8i>>, ...
+    ```
+  }];
+
+  let arguments = (ins I64Attr:$size);
+  let results = (outs Res<CIR_PointerType, "", [MemAlloc<DefaultResource>]>:$addr);
+
+  let assemblyFormat = [{
+    $size `->` qualified(type($addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
