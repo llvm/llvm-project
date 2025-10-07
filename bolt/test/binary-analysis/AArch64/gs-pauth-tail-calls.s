@@ -1,6 +1,7 @@
 // RUN: %clang %cflags -Wl,--entry=_custom_start -march=armv8.3-a %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
-// RUN: llvm-bolt-binary-analysis --scanners=pauth  %t.exe 2>&1 | FileCheck %s
+// RUN: llvm-bolt-binary-analysis --scanners=pacret                        %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,FPAC %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck -check-prefixes=CHECK,NOFPAC %s
 
 // PACRET-NOT: untrusted link register found before tail call
 
@@ -89,19 +90,20 @@ bad_indirect_tailcall_not_auted:
         .globl  bad_direct_tailcall_untrusted
         .type   bad_direct_tailcall_untrusted,@function
 bad_direct_tailcall_untrusted:
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_direct_tailcall_untrusted, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       callee # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_direct_tailcall_untrusted, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      b       callee # TAILCALL
-// CHECK-NEXT:  This happens in the following basic block:
-// CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
-// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   b       callee # TAILCALL
+// FPAC-NOT: bad_direct_tailcall_untrusted
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_direct_tailcall_untrusted, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       callee # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_direct_tailcall_untrusted, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      b       callee # TAILCALL
+// NOFPAC-NEXT:  This happens in the following basic block:
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   paciasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   autiasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   b       callee # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10
@@ -114,19 +116,20 @@ bad_direct_tailcall_untrusted:
 bad_plt_tailcall_untrusted:
 // FIXME: Calls via PLT are disassembled incorrectly. Nevertheless, they are
 //        still detected as tail calls.
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_plt_tailcall_untrusted, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_plt_tailcall_untrusted, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted # TAILCALL
-// CHECK-NEXT:  This happens in the following basic block:
-// CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
-// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   b       bad_indirect_tailcall_untrusted # TAILCALL
+// FPAC-NOT: bad_plt_tailcall_untrusted
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_plt_tailcall_untrusted, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_plt_tailcall_untrusted, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted # TAILCALL
+// NOFPAC-NEXT:  This happens in the following basic block:
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   paciasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   autiasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   b       bad_indirect_tailcall_untrusted # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10
@@ -137,20 +140,21 @@ bad_plt_tailcall_untrusted:
         .globl  bad_indirect_tailcall_untrusted
         .type   bad_indirect_tailcall_untrusted,@function
 bad_indirect_tailcall_untrusted:
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_indirect_tailcall_untrusted, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x0 # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      br      x0 # TAILCALL
-// CHECK-NEXT:  This happens in the following basic block:
-// CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
-// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x0, x1
-// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x0 # TAILCALL
+// FPAC-NOT: bad_indirect_tailcall_untrusted
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_indirect_tailcall_untrusted, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x0 # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      br      x0 # TAILCALL
+// NOFPAC-NEXT:  This happens in the following basic block:
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   paciasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   autiasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   autia   x0, x1
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   br      x0 # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10
@@ -251,13 +255,14 @@ bad_indirect_tailcall_not_auted_multi_bb:
         .globl  bad_direct_tailcall_untrusted_multi_bb
         .type   bad_direct_tailcall_untrusted_multi_bb,@function
 bad_direct_tailcall_untrusted_multi_bb:
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_direct_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       callee # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_direct_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      b       callee # TAILCALL
+// FPAC-NOT: bad_direct_tailcall_untrusted_multi_bb
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_direct_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       callee # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_direct_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      b       callee # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10
@@ -271,12 +276,13 @@ bad_direct_tailcall_untrusted_multi_bb:
         .globl  bad_indirect_tailcall_untrusted_multi_bb
         .type   bad_indirect_tailcall_untrusted_multi_bb,@function
 bad_indirect_tailcall_untrusted_multi_bb:
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_indirect_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x0 # UNKNOWN CONTROL FLOW
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
+// FPAC-NOT: bad_indirect_tailcall_untrusted_multi_bb
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_indirect_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x0 # UNKNOWN CONTROL FLOW
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted_multi_bb, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 0 instructions that leak the affected registers are:
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10
@@ -397,13 +403,14 @@ bad_indirect_tailcall_not_auted_nocfg:
         .globl  bad_direct_tailcall_untrusted_nocfg
         .type   bad_direct_tailcall_untrusted_nocfg,@function
 bad_direct_tailcall_untrusted_nocfg:
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_direct_tailcall_untrusted_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       callee # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_direct_tailcall_untrusted_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      b       callee # TAILCALL
+// FPAC-NOT: bad_direct_tailcall_untrusted_nocfg
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_direct_tailcall_untrusted_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       callee # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_direct_tailcall_untrusted_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      b       callee # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         adr     x3, 1f
@@ -419,13 +426,14 @@ bad_direct_tailcall_untrusted_nocfg:
 bad_plt_tailcall_untrusted_nocfg:
 // FIXME: Calls via PLT are disassembled incorrectly. Nevertheless, they are
 //        still detected as tail calls.
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_plt_tailcall_untrusted_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted_nocfg # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_plt_tailcall_untrusted_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted_nocfg # TAILCALL
+// FPAC-NOT: bad_plt_tailcall_untrusted_nocfg
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_plt_tailcall_untrusted_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted_nocfg # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_plt_tailcall_untrusted_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      b       bad_indirect_tailcall_untrusted_nocfg # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         adr     x3, 1f
@@ -441,11 +449,12 @@ bad_plt_tailcall_untrusted_nocfg:
 bad_indirect_tailcall_untrusted_nocfg:
 // Known false negative: ignoring UNKNOWN CONTROL FLOW without CFG.
 // Authentication oracle is found by a generic checker, though.
-// CHECK-NOT: untrusted link register{{.*}}bad_indirect_tailcall_untrusted_nocfg
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted_nocfg, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
-// CHECK-NOT: untrusted link register{{.*}}bad_indirect_tailcall_untrusted_nocfg
+// FPAC-NOT: bad_indirect_tailcall_untrusted_nocfg
+// NOFPAC-NOT: untrusted link register{{.*}}bad_indirect_tailcall_untrusted_nocfg
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted_nocfg, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 0 instructions that leak the affected registers are:
+// NOFPAC-NOT: untrusted link register{{.*}}bad_indirect_tailcall_untrusted_nocfg
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         adr     x3, 1f
@@ -515,19 +524,20 @@ good_indirect_tailcall_no_clobber_v83:
         .globl  bad_indirect_tailcall_untrusted_v83
         .type   bad_indirect_tailcall_untrusted_v83,@function
 bad_indirect_tailcall_untrusted_v83:
-// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_indirect_tailcall_untrusted_v83, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      braa    x0, x1 # TAILCALL
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted_v83, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
-// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      braa    x0, x1 # TAILCALL
-// CHECK-NEXT:  This happens in the following basic block:
-// CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
-// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
-// CHECK-NEXT:  {{[0-9a-f]+}}:   braa    x0, x1 # TAILCALL
+// FPAC-NOT: bad_indirect_tailcall_untrusted_v83
+// NOFPAC-LABEL: GS-PAUTH: untrusted link register found before tail call in function bad_indirect_tailcall_untrusted_v83, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      braa    x0, x1 # TAILCALL
+// NOFPAC-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// NOFPAC-LABEL: GS-PAUTH: authentication oracle found in function bad_indirect_tailcall_untrusted_v83, basic block {{[^,]+}}, at address
+// NOFPAC-NEXT:  The instruction is     {{[0-9a-f]+}}:      autiasp
+// NOFPAC-NEXT:  The 1 instructions that leak the affected registers are:
+// NOFPAC-NEXT:  1.     {{[0-9a-f]+}}:      braa    x0, x1 # TAILCALL
+// NOFPAC-NEXT:  This happens in the following basic block:
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   paciasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   autiasp
+// NOFPAC-NEXT:  {{[0-9a-f]+}}:   braa    x0, x1 # TAILCALL
         paciasp
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10

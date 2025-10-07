@@ -27,3 +27,66 @@ loop:
 exit:
   ret void
 }
+
+declare void @clobber()
+
+define void @test_add_sub_1_guard(ptr %src, i32 %n) {
+; CHECK-LABEL: 'test_add_sub_1_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @test_add_sub_1_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (-1 + (%n /u 2))<nsw> to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (-1 + (%n /u 2))<nsw> to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %shr = lshr i32 %n, 1
+  %sub.1 = add i32 %shr, -1
+  %sub.ext = zext i32 %sub.1 to i64
+  %pre = icmp eq i32 %shr, 1
+  %end = getelementptr i8, ptr %src, i64 %sub.ext
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %iv = phi ptr [ %src, %entry ], [ %iv.next, %loop ]
+  call void @clobber()
+  %iv.next = getelementptr i8, ptr %iv, i64 1
+  %ec = icmp eq ptr %iv, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+declare void @use(ptr)
+
+define i32 @test_3_op_add(i32 %x, i32 %y, ptr %A) {
+; CHECK-LABEL: 'test_3_op_add'
+; CHECK-NEXT:  Determining loop execution counts for: @test_3_op_add
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i32 (1 + (-1 * %x) + %y) to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483647
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 (1 + (-1 * %x) + %y) to i64))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %pre.0 = icmp ugt i32 %x, 0
+  br i1 %pre.0, label %then, label %exit
+
+then:
+  %y.sub.x = sub i32 %y, %x
+  %pre.1 = icmp slt i32 %y.sub.x, 0
+  %add.1 = add i32 %y.sub.x, 1
+  %add.ext = zext i32 %add.1 to i64
+  br i1 %pre.1, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %then ]
+  %and = and i64 %iv, 1
+  %gep = getelementptr i8, ptr %A, i64 %and
+  call void @use(ptr %gep)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %add.ext
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 0
+}

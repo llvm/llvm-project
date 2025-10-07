@@ -252,7 +252,7 @@ def generate_markdown_report(results: dict) -> str:
             report.append(" ".join(row))
 
         report.append("\n**Complexity Analysis:**\n")
-        report.append("| Analysis Phase    | Complexity O(n<sup>k</sup>) |")
+        report.append("| Analysis Phase    | Complexity O(n<sup>k</sup>) | ")
         report.append("|:------------------|:--------------------------|")
 
         analysis_phases = {
@@ -302,7 +302,7 @@ def run_single_test(
         source_file,
     ]
 
-    result = subprocess.run(clang_command, capture_output=True, text=True)
+    result = subprocess.run(clang_command, capture_output=True, text=True, timeout=60)
 
     if result.returncode != 0:
         print(f"Compilation failed for N={n}!", file=sys.stderr)
@@ -334,24 +334,25 @@ if __name__ == "__main__":
     os.makedirs(args.output_dir, exist_ok=True)
     print(f"Benchmark files will be saved in: {os.path.abspath(args.output_dir)}\n")
 
+    # Maximize 'n' values while keeping execution time under 10s.
     test_configurations = [
         {
             "name": "cycle",
             "title": "Pointer Cycle in Loop",
             "generator_func": generate_cpp_cycle_test,
-            "n_values": [10, 25, 50, 75, 100, 150],
+            "n_values": [50, 75, 100, 200, 300],
         },
         {
             "name": "merge",
             "title": "CFG Merges",
             "generator_func": generate_cpp_merge_test,
-            "n_values": [10, 50, 100, 200, 400, 800],
+            "n_values": [400, 1000, 2000, 5000],
         },
         {
             "name": "nested_loops",
             "title": "Deeply Nested Loops",
             "generator_func": generate_cpp_nested_loop_test,
-            "n_values": [10, 50, 100, 200, 400, 800],
+            "n_values": [50, 100, 150, 200],
         },
     ]
 

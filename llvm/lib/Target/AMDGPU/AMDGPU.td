@@ -1238,6 +1238,19 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
+// Ugly hack to accomodate assembling modules with mixed
+// wavesizes. Ideally we would have a mapping symbol in assembly which
+// would keep track of which sections of code should be treated as
+// wave32 and wave64. Instead what users do is assemble with both
+// wavesizes enabled. We translate this into this special mode so this
+// only influences assembler behavior and nothing else.
+def FeatureAssemblerPermissiveWavesize : SubtargetFeature<
+  "assembler-permissive-wavesize",
+  "AssemblerPermissiveWavesize",
+  "true",
+  "allow parsing wave32 and wave64 variants of instructions"
+>;
+
 class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
   "max-private-element-size-"#size,
   "MaxPrivateElementSize",
@@ -1398,20 +1411,6 @@ def FeatureGloballyAddressableScratch : SubtargetFeature<
   "FLAT instructions can access scratch memory for any thread in any wave"
 >;
 
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
-  "DynamicVGPR",
-  "true",
-  "Enable dynamic VGPR mode"
->;
-
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
-  "DynamicVGPRBlockSize32",
-  "true",
-  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
->;
-
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
@@ -1441,6 +1440,18 @@ def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic
   "HasLdsBarrierArriveAtomic",
   "true",
   "Has LDS barrier-arrive atomic instructions"
+>;
+
+def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records-buffer-resource",
+  "Has45BitNumRecordsBufferResource",
+  "true",
+  "The buffer resource (V#) supports 45-bit num_records"
+>;
+
+def FeatureClusters : SubtargetFeature< "clusters",
+  "HasClusters",
+  "true",
+  "Has clusters of workgroups support"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -2106,6 +2117,10 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
+   Feature45BitNumRecordsBufferResource,
+   FeatureSupportsXNACK,
+   FeatureXNACK,
+   FeatureClusters,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2569,6 +2584,8 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 // only allow 32-bit registers in operands and use low halves thereof.
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
+def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(not (all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts))>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;

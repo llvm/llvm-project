@@ -365,6 +365,14 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // object, get the base object.
             return op.getRef();
           })
+          .Case<fir::ConvertOp>([&](auto op) -> mlir::Value {
+            // Strip the conversion and recursively check the operand
+            if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
+                    mlir::TypedValue<mlir::acc::PointerLikeType>>(
+                    op.getValue()))
+              return getBaseRef(ptrLikeOperand);
+            return varPtr;
+          })
           .Default([&](mlir::Operation *) { return varPtr; });
 
   return baseRef;
@@ -587,6 +595,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
             loops.push_back(loop);
             ivs.push_back(loop.getInductionVar());
           }
+          // Reverse IVs to match CoordinateOp's canonical index order.
+          std::reverse(ivs.begin(), ivs.end());
           auto coord = fir::CoordinateOp::create(firBuilder, loc, refTy,
                                                  declareOp.getBase(), ivs);
           fir::StoreOp::create(firBuilder, loc, initVal, coord);

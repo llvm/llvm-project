@@ -345,7 +345,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
-    return MO.getImm();
+    return Imm;
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -457,6 +457,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     else if (Op.isExpr()) {
       if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
         Imm = C->getValue();
+      else if (AMDGPU::isLitExpr(Op.getExpr()))
+        Imm = AMDGPU::getLitValue(Op.getExpr());
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 

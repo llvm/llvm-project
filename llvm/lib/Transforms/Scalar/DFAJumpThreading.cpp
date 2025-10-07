@@ -120,6 +120,12 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
+static cl::opt<double> MaxClonedRate(
+    "dfa-max-cloned-rate",
+    cl::desc(
+        "Maximum cloned instructions rate accepted for the transformation"),
+    cl::Hidden, cl::init(7.5));
+
 namespace {
 
 class SelectInstToUnfold {
@@ -152,7 +158,8 @@ private:
   void
   unfoldSelectInstrs(DominatorTree *DT,
                      const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+    // TODO: Have everything use a single lazy DTU
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
@@ -190,12 +197,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
-  BasicBlock *StartBlock = SI->getParent();
+  assert(SI->hasOneUse());
+  // The select may come indirectly, instead of from where it is defined.
+  BasicBlock *StartBlock = SIUse->getIncomingBlock(*SI->use_begin());
   BranchInst *StartBlockTerm =
       dyn_cast<BranchInst>(StartBlock->getTerminator());
-
   assert(StartBlockTerm);
-  assert(SI->hasOneUse());
 
   if (StartBlockTerm->isUnconditional()) {
     BasicBlock *EndBlock = StartBlock->getUniqueSuccessor();
@@ -332,7 +339,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   }
 
   // Preserve loop info
-  if (Loop *L = LI->getLoopFor(SI->getParent())) {
+  if (Loop *L = LI->getLoopFor(StartBlock)) {
     for (BasicBlock *NewBB : *NewBBs)
       L->addBasicBlockToLoop(NewBB, *LI);
   }
@@ -533,6 +540,8 @@ private:
       return false;
 
     // Only fold the select coming from directly where it is defined.
+    // TODO: We have dealt with the select coming indirectly now. This
+    // constraint can be relaxed.
     PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
     if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;
@@ -812,11 +821,13 @@ struct TransformDFA {
       : SwitchPaths(SwitchPaths), DT(DT), AC(AC), TTI(TTI), ORE(ORE),
         EphValues(EphValues) {}
 
-  void run() {
+  bool run() {
     if (isLegalAndProfitableToTransform()) {
       createAllExitPaths();
       NumTransforms++;
+      return true;
     }
+    return false;
   }
 
 private:
@@ -826,6 +837,7 @@ private:
   /// also returns false if it is illegal to clone some required block.
   bool isLegalAndProfitableToTransform() {
     CodeMetrics Metrics;
+    uint64_t NumClonedInst = 0;
     SwitchInst *Switch = SwitchPaths->getSwitchInst();
 
     // Don't thread switch without multiple successors.
@@ -835,7 +847,6 @@ private:
     // Note that DuplicateBlockMap is not being used as intended here. It is
     // just being used to ensure (BB, State) pairs are only counted once.
     DuplicateBlockMap DuplicateMap;
-
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       PathType PathBBs = TPath.getPath();
       APInt NextState = TPath.getExitValue();
@@ -846,6 +857,7 @@ private:
       BasicBlock *VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
       if (!VisitedBB) {
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -863,6 +875,7 @@ private:
         if (VisitedBB)
           continue;
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -897,6 +910,22 @@ private:
         });
         return false;
       }
+    }
+
+    // Too much cloned instructions slow down later optimizations, especially
+    // SLPVectorizer.
+    // TODO: Thread the switch partially before reaching the threshold.
+    uint64_t NumOrigInst = 0;
+    for (auto *BB : DuplicateMap.keys())
+      NumOrigInst += BB->sizeWithoutDebug();
+    if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
+      LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
+                           "instructions wll be cloned\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
+               << "Too much instructions will be cloned.";
+      });
+      return false;
     }
 
     InstructionCost DuplicationCost = 0;
@@ -949,8 +978,6 @@ private:
 
   /// Transform each threading path to effectively jump thread the DFA.
   void createAllExitPaths() {
-    DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
-
     // Move the switch block to the end of the path, since it will be duplicated
     BasicBlock *SwitchBlock = SwitchPaths->getSwitchBlock();
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -967,15 +994,18 @@ private:
     SmallPtrSet<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
-    for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
-      createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
-      NumPaths++;
-    }
+    {
+      DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
+      for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
+        createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
+        NumPaths++;
+      }
 
-    // After all paths are cloned, now update the last successor of the cloned
-    // path so it skips over the switch statement
-    for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
-      updateLastSuccessor(TPath, DuplicateMap, &DTU);
+      // After all paths are cloned, now update the last successor of the cloned
+      // path so it skips over the switch statement
+      for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
+        updateLastSuccessor(TPath, DuplicateMap, &DTU);
+    }
 
     // For each instruction that was cloned and used outside, update its uses
     updateSSA(NewDefs);
@@ -991,7 +1021,7 @@ private:
   /// To remember the correct destination, we have to duplicate blocks
   /// corresponding to each state. Also update the terminating instruction of
   /// the predecessors, and phis in the successor blocks.
-  void createExitPath(DefMap &NewDefs, ThreadingPath &Path,
+  void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
                       SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
@@ -1237,7 +1267,7 @@ private:
   ///
   /// Note that this is an optional step and would have been done in later
   /// optimizations, but it makes the CFG significantly easier to work with.
-  void updateLastSuccessor(ThreadingPath &TPath,
+  void updateLastSuccessor(const ThreadingPath &TPath,
                            DuplicateBlockMap &DuplicateMap,
                            DomTreeUpdater *DTU) {
     APInt NextState = TPath.getExitValue();
@@ -1400,9 +1430,8 @@ bool DFAJumpThreading::run(Function &F) {
 
   for (AllSwitchPaths SwitchPaths : ThreadableLoops) {
     TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
-    Transform.run();
-    MadeChanges = true;
-    LoopInfoBroken = true;
+    if (Transform.run())
+      MadeChanges = LoopInfoBroken = true;
   }
 
 #ifdef EXPENSIVE_CHECKS

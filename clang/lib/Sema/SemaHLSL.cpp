@@ -19,6 +19,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -52,6 +53,7 @@
 #include <utility>
 
 using namespace clang;
+using namespace clang::hlsl;
 using RegisterType = HLSLResourceBindingAttr::RegisterType;
 
 static CXXRecordDecl *createHostLayoutStruct(Sema &S,
@@ -1287,8 +1289,8 @@ bool SemaHLSL::handleRootSignatureElements(
       VerifyRegister(Loc, Descriptor->Reg.Number);
       VerifySpace(Loc, Descriptor->Space);
 
-      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(
-              Version, llvm::to_underlying(Descriptor->Flags)))
+      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(Version,
+                                                         Descriptor->Flags))
         ReportFlagError(Loc);
     } else if (const auto *Constants =
                    std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
@@ -1369,7 +1371,8 @@ bool SemaHLSL::handleRootSignatureElements(
              "Number of unbound elements must match the number of clauses");
       bool HasAnySampler = false;
       bool HasAnyNonSampler = false;
-      uint32_t Offset = 0;
+      uint64_t Offset = 0;
+      bool IsPrevUnbound = false;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         SourceLocation Loc = ClauseElem->getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
@@ -1386,32 +1389,28 @@ bool SemaHLSL::handleRootSignatureElements(
         if (Clause->NumDescriptors == 0)
           return true;
 
-        if (Clause->Offset !=
-            llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
-          // Manually specified the offset
+        bool IsAppending =
+            Clause->Offset == llvm::hlsl::rootsig::DescriptorTableOffsetAppend;
+        if (!IsAppending)
           Offset = Clause->Offset;
-        }
 
         uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
             Offset, Clause->NumDescriptors);
 
-        if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
-          // Trying to append onto unbound offset
+        if (IsPrevUnbound && IsAppending)
           Diag(Loc, diag::err_hlsl_appending_onto_unbound);
-        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound)) {
-          // Upper bound overflows maximum offset
+        else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound))
           Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
-        }
 
-        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
-                     ? uint32_t(RangeBound)
-                     : uint32_t(RangeBound + 1);
+        // Update offset to be 1 past this range's bound
+        Offset = RangeBound + 1;
+        IsPrevUnbound = Clause->NumDescriptors ==
+                        llvm::hlsl::rootsig::NumDescriptorsUnbounded;
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
-        uint32_t UpperBound = Clause->NumDescriptors == ~0u
-                                  ? ~0u
-                                  : LowerBound + Clause->NumDescriptors - 1;
+        uint32_t UpperBound = llvm::hlsl::rootsig::computeRangeBound(
+            LowerBound, Clause->NumDescriptors);
 
         BindingChecker.trackBinding(
             Table->Visibility,
@@ -1811,6 +1810,13 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.RawBuffer = true;
       break;
+    case attr::HLSLIsCounter:
+      if (ResAttrs.IsCounter) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.IsCounter = true;
+      break;
     case attr::HLSLContainedType: {
       const HLSLContainedTypeAttr *CTAttr = cast<HLSLContainedTypeAttr>(A);
       QualType Ty = CTAttr->getType();
@@ -1901,6 +1907,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLRawBuffer:
     A = HLSLRawBufferAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsCounter:
+    A = HLSLIsCounterAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -3093,7 +3103,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+  case Builtin::BI__builtin_hlsl_elementwise_isinf:
+  case Builtin::BI__builtin_hlsl_elementwise_isnan: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
@@ -3294,7 +3305,6 @@ static void BuildFlattenedTypeList(QualType BaseTy,
   while (!WorkList.empty()) {
     QualType T = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
     if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
       llvm::SmallVector<QualType, 16> ElementFields;
       // Generally I've avoided recursion in this algorithm, but arrays of
@@ -3326,7 +3336,8 @@ static void BuildFlattenedTypeList(QualType BaseTy,
 
       llvm::SmallVector<QualType, 16> FieldTypes;
       for (const auto *FD : RD->fields())
-        FieldTypes.push_back(FD->getType());
+        if (!FD->isUnnamedBitField())
+          FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
       llvm::append_range(WorkList, FieldTypes);
@@ -3560,9 +3571,6 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
   if (SrcVecTy)
     SrcTy = SrcVecTy->getElementType();
 
-  if (ContainsBitField(DestTy))
-    return false;
-
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
 
@@ -3587,9 +3595,6 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
 
   if (SrcTy->isVectorType() &&
       (DestTy->isScalarType() || DestTy->isVectorType()))
-    return false;
-
-  if (ContainsBitField(DestTy) || ContainsBitField(SrcTy))
     return false;
 
   llvm::SmallVector<QualType> DestTypes;
@@ -3801,19 +3806,8 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
 
-  // Gather resource binding information from attributes.
-  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  HLSLVkBindingAttr *VkBinding = VD->getAttr<HLSLVkBindingAttr>();
-  std::optional<uint32_t> RegisterSlot;
-  uint32_t SpaceNo = 0;
-  if (VkBinding) {
-    RegisterSlot = VkBinding->getBinding();
-    SpaceNo = VkBinding->getSet();
-  } else if (RBA) {
-    if (RBA->hasRegisterSlot())
-      RegisterSlot = RBA->getSlotNumber();
-    SpaceNo = RBA->getSpaceNumber();
-  }
+  // Gather resource binding attributes.
+  ResourceBindingAttrs Binding(VD);
 
   // Find correct initialization method and create its arguments.
   QualType ResourceTy = VD->getType();
@@ -3821,21 +3815,21 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   CXXMethodDecl *CreateMethod = nullptr;
   llvm::SmallVector<Expr *> Args;
 
-  if (RegisterSlot.has_value()) {
+  if (Binding.isExplicit()) {
     // The resource has explicit binding.
     CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding",
                                 VD->getLocation());
-    IntegerLiteral *RegSlot = IntegerLiteral::Create(
-        AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
-        SourceLocation());
+    IntegerLiteral *RegSlot =
+        IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, Binding.getSlot()),
+                               AST.UnsignedIntTy, SourceLocation());
     Args.push_back(RegSlot);
   } else {
     // The resource has implicit binding.
     CreateMethod =
         lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding",
                      VD->getLocation());
-    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
-                           ? RBA->getImplicitBindingOrderID()
+    uint32_t OrderID = (Binding.hasImplicitOrderID())
+                           ? Binding.getImplicitOrderID()
                            : getNextImplicitBindingOrderID();
     IntegerLiteral *OrderId =
         IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, OrderID),
@@ -3850,7 +3844,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
     return false;
 
   IntegerLiteral *Space =
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, Binding.getSpace()),
                              AST.UnsignedIntTy, SourceLocation());
   Args.push_back(Space);
 
@@ -3954,6 +3948,34 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
       return initGlobalResourceArrayDecl(VD);
   }
   return false;
+}
+
+// Return true if everything is ok; returns false if there was an error.
+bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
+                                  Expr *RHSExpr, SourceLocation Loc) {
+  assert((LHSExpr->getType()->isHLSLResourceRecord() ||
+          LHSExpr->getType()->isHLSLResourceRecordArray()) &&
+         "expected LHS to be a resource record or array of resource records");
+  if (Opc != BO_Assign)
+    return true;
+
+  // If LHS is an array subscript, get the underlying declaration.
+  Expr *E = LHSExpr;
+  while (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
+
+  // Report error if LHS is a resource declared at a global scope.
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (VD->hasGlobalStorage()) {
+        // assignment to global resource is not allowed
+        SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
+        SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 // Walks though the global variable declaration, collects all resource binding
@@ -4133,6 +4155,8 @@ class InitListTransformer {
       while (!RecordDecls.empty()) {
         CXXRecordDecl *RD = RecordDecls.pop_back_val();
         for (auto *FD : RD->fields()) {
+          if (FD->isUnnamedBitField())
+            continue;
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -4182,7 +4206,8 @@ class InitListTransformer {
       while (!RecordDecls.empty()) {
         CXXRecordDecl *RD = RecordDecls.pop_back_val();
         for (auto *FD : RD->fields())
-          Inits.push_back(generateInitListsImpl(FD->getType()));
+          if (!FD->isUnnamedBitField())
+            Inits.push_back(generateInitListsImpl(FD->getType()));
       }
     }
     auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
@@ -4255,6 +4280,9 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   }
   size_t ExpectedSize = ILT.DestTypes.size();
   size_t ActualSize = ILT.ArgExprs.size();
+  if (ExpectedSize == 0 && ActualSize == 0)
+    return true;
+
   // For incomplete arrays it is completely arbitrary to choose whether we think
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to

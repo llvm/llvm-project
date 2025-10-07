@@ -1137,6 +1137,7 @@ R"(All available -march extensions for RISC-V
     xandesvbfhcvt        5.0
     xandesvdot           5.0
     xandesvpackfph       5.0
+    xandesvsinth         5.0
     xandesvsintload      5.0
     xcvalu               1.0
     xcvbi                1.0
@@ -1190,6 +1191,7 @@ Experimental extensions
     zalasr               0.1
     zvbc32e              0.7
     zvfbfa               0.1
+    zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
     svukte               0.3

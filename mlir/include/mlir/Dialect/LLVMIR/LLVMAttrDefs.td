@@ -425,17 +425,19 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
     "DIEmissionKind":$emissionKind,
-    OptionalParameter<"DINameTableKind">:$nameTableKind
+    OptionalParameter<"DINameTableKind">:$nameTableKind,
+    OptionalParameter<"StringAttr">:$splitDebugFilename
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
-      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename
     ), [{
       return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind);
+                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";

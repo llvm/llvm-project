@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// Finds code that uses pipe2() without using the O_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe2.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe2.html
 class CloexecPipe2Check : public CloexecCheck {
 public:
   CloexecPipe2Check(StringRef Name, ClangTidyContext *Context)

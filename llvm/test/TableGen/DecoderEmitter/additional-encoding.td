@@ -30,28 +30,42 @@ class I<dag out_ops, dag in_ops> : Instruction {
   let OutOperandList = out_ops;
 }
 
-// CHECK:      /* 0 */  OPC_ExtractField, 12, 4,               // Field = Inst{15-12}
-// CHECK-NEXT: /* 3 */  OPC_FilterValueOrSkip, 0, 15, 0,       // if Field != 0x0 skip to 22
-// CHECK-NEXT: /* 7 */  OPC_Scope, 8, 0,                       // end scope at 18
-// CHECK-NEXT: /* 10 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
-// CHECK-NEXT: /* 14 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 18 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT0, DecodeIdx: 1
-// CHECK-NEXT: /* 22 */ OPC_FilterValueOrSkip, 1, 15, 0,       // if Field != 0x1 skip to 41
-// CHECK-NEXT: /* 26 */ OPC_Scope, 8, 0,                       // end scope at 37
-// CHECK-NEXT: /* 29 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
-// CHECK-NEXT: /* 33 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 37 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT1, DecodeIdx: 1
-// CHECK-NEXT: /* 41 */ OPC_FilterValueOrSkip, 2, 15, 0,       // if Field != 0x2 skip to 60
-// CHECK-NEXT: /* 45 */ OPC_Scope, 8, 0,                       // end scope at 56
-// CHECK-NEXT: /* 48 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
-// CHECK-NEXT: /* 52 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 56 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT2, DecodeIdx: 1
-// CHECK-NEXT: /* 60 */ OPC_FilterValue, 3,                    // if Field != 0x3
-// CHECK-NEXT: /* 62 */ OPC_Scope, 8, 0,                       // end scope at 73
-// CHECK-NEXT: /* 65 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
-// CHECK-NEXT: /* 69 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 73 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT3, DecodeIdx: 1
-
+// CHECK-LABEL: static const uint8_t DecoderTable16[67] = {
+// CHECK-NEXT:    OPC_SwitchField, 12, 4,      //  0: switch Inst[15:12] {
+// CHECK-NEXT:    0, 14,                       //  3: case 0x0: {
+// CHECK-NEXT:    OPC_Scope, 8,                //  5:  try {
+// CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     //  7:   check Inst[11:6] == 0x0
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 11:   decode to NOP using decoder 0
+// CHECK-NEXT:                                 // 11:  } else try {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 15:   decode to SHIFT0 using decoder 1
+// CHECK-NEXT:                                 // 15:  }
+// CHECK-NEXT:                                 // 15: }
+// CHECK-NEXT:    1, 14,                       // 19: case 0x1: {
+// CHECK-NEXT:    OPC_Scope, 8,                // 21:  try {
+// CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     // 23:   check Inst[11:6] == 0x0
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 27:   decode to {{.*}}:NOP using decoder 0
+// CHECK-NEXT:                                 // 27:  } else try {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 31:   decode to SHIFT1 using decoder 1
+// CHECK-NEXT:                                 // 31:  }
+// CHECK-NEXT:                                 // 31: }
+// CHECK-NEXT:    2, 14,                       // 35: case 0x2: {
+// CHECK-NEXT:    OPC_Scope, 8,                // 37:  try {
+// CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     // 39:   check Inst[11:6] == 0x0
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 43:   decode to {{.*}}:NOP using decoder 0
+// CHECK-NEXT:                                 // 43:  } else try {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 47:   decode to SHIFT2 using decoder 1
+// CHECK-NEXT:                                 // 47:  }
+// CHECK-NEXT:                                 // 47: }
+// CHECK-NEXT:    3, 0,                        // 51: case 0x3: {
+// CHECK-NEXT:    OPC_Scope, 8,                // 53:  try {
+// CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     // 55:   check Inst[11:6] == 0x0
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 59:   decode to {{.*}}:NOP using decoder 0
+// CHECK-NEXT:                                 // 59:  } else try {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 63:   decode to SHIFT3 using decoder 1
+// CHECK-NEXT:                                 // 63:  }
+// CHECK-NEXT:                                 // 63: }
+// CHECK-NEXT:                                 // 63: } // switch Inst[15:12]
+// CHECK-NEXT:  };
 
 class SHIFT<bits<2> opc> : I<(outs), (ins ShAmtOp:$shamt)>, EncSHIFT<opc>;
 def SHIFT0 : SHIFT<0>;

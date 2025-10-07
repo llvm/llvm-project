@@ -11575,6 +11575,100 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
   return false;
 }
 
+static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
+                            llvm::function_ref<APInt(const APSInt &)> PackFn) {
+  APValue LHS, RHS;
+  if (!EvaluateAsRValue(Info, E->getArg(0), LHS) ||
+      !EvaluateAsRValue(Info, E->getArg(1), RHS))
+    return false;
+
+  unsigned LHSVecLen = LHS.getVectorLength();
+  unsigned RHSVecLen = RHS.getVectorLength();
+
+  assert(LHSVecLen != 0 && LHSVecLen == RHSVecLen &&
+         "pack builtin LHSVecLen must equal to RHSVecLen");
+
+  const VectorType *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
+  const unsigned SrcBits = Info.Ctx.getIntWidth(VT0->getElementType());
+
+  const VectorType *DstVT = E->getType()->castAs<VectorType>();
+  QualType DstElemTy = DstVT->getElementType();
+  const bool DstIsUnsigned = DstElemTy->isUnsignedIntegerType();
+
+  const unsigned SrcPerLane = 128 / SrcBits;
+  const unsigned Lanes = LHSVecLen * SrcBits / 128;
+
+  SmallVector<APValue, 64> Out;
+  Out.reserve(LHSVecLen + RHSVecLen);
+
+  for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
+    unsigned base = Lane * SrcPerLane;
+    for (unsigned I = 0; I != SrcPerLane; ++I)
+      Out.emplace_back(APValue(
+          APSInt(PackFn(LHS.getVectorElt(base + I).getInt()), DstIsUnsigned)));
+    for (unsigned I = 0; I != SrcPerLane; ++I)
+      Out.emplace_back(APValue(
+          APSInt(PackFn(RHS.getVectorElt(base + I).getInt()), DstIsUnsigned)));
+  }
+
+  Result = APValue(Out.data(), Out.size());
+  return true;
+}
+
+static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
+                             bool IsShufHW, APValue &Out) {
+  APValue Vec;
+  APSInt Imm;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), Vec))
+    return false;
+  if (!EvaluateInteger(Call->getArg(1), Imm, Info))
+    return false;
+
+  const auto *VT = Call->getType()->getAs<VectorType>();
+  if (!VT)
+    return false;
+
+  QualType ElemT = VT->getElementType();
+  unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
+  unsigned NumElts = VT->getNumElements();
+
+  unsigned LaneBits = 128u;
+  unsigned LaneElts = LaneBits / ElemBits;
+  if (!LaneElts || (NumElts % LaneElts) != 0)
+    return false;
+
+  uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
+
+  SmallVector<APValue, 32> ResultElements;
+  ResultElements.reserve(NumElts);
+
+  for (unsigned Idx = 0; Idx != NumElts; Idx++) {
+    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
+    unsigned LaneIdx = Idx % LaneElts;
+    unsigned SrcIdx = Idx;
+    unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
+
+    if (ElemBits == 32) {
+      SrcIdx = LaneBase + Sel;
+    } else {
+      constexpr unsigned HalfSize = 4;
+      bool InHigh = LaneIdx >= HalfSize;
+      if (!IsShufHW && !InHigh) {
+        SrcIdx = LaneBase + Sel;
+      } else if (IsShufHW && InHigh) {
+        unsigned Rel = LaneIdx - HalfSize;
+        Sel = (Ctl >> (2 * Rel)) & 0x3;
+        SrcIdx = LaneBase + HalfSize + Sel;
+      }
+    }
+
+    ResultElements.push_back(Vec.getVectorElt(SrcIdx));
+  }
+
+  Out = APValue(ResultElements.data(), ResultElements.size());
+  return true;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -11768,7 +11862,29 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
       return LHS.lshr(RHS.getZExtValue());
     });
-
+  case X86::BI__builtin_ia32_packsswb128:
+  case X86::BI__builtin_ia32_packsswb256:
+  case X86::BI__builtin_ia32_packsswb512:
+  case X86::BI__builtin_ia32_packssdw128:
+  case X86::BI__builtin_ia32_packssdw256:
+  case X86::BI__builtin_ia32_packssdw512:
+    return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
+      return APSInt(Src).truncSSat(Src.getBitWidth() / 2);
+    });
+  case X86::BI__builtin_ia32_packusdw128:
+  case X86::BI__builtin_ia32_packusdw256:
+  case X86::BI__builtin_ia32_packusdw512:
+  case X86::BI__builtin_ia32_packuswb128:
+  case X86::BI__builtin_ia32_packuswb256:
+  case X86::BI__builtin_ia32_packuswb512:
+    return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
+      unsigned DstBits = Src.getBitWidth() / 2;
+      if (Src.isNegative())
+        return APInt::getZero(DstBits);
+      if (Src.isIntN(DstBits))
+        return APInt((Src).trunc(DstBits));
+      return APInt::getAllOnes(DstBits);
+    });
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
@@ -11806,7 +11922,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
   case clang::X86::BI__builtin_ia32_vprotqi:
@@ -12025,8 +12140,127 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case Builtin::BI__builtin_elementwise_ctlz:
-  case Builtin::BI__builtin_elementwise_cttz: {
+
+  case X86::BI__builtin_ia32_pshuflw:
+  case X86::BI__builtin_ia32_pshuflw256:
+  case X86::BI__builtin_ia32_pshuflw512: {
+    APValue R;
+    if (!evalPshufBuiltin(Info, E, false, R))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_pshufhw:
+  case X86::BI__builtin_ia32_pshufhw256:
+  case X86::BI__builtin_ia32_pshufhw512: {
+    APValue R;
+    if (!evalPshufBuiltin(Info, E, true, R))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_pshufd:
+  case X86::BI__builtin_ia32_pshufd256:
+  case X86::BI__builtin_ia32_pshufd512: {
+    APValue R;
+    if (!evalPshufBuiltin(Info, E, false, R))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_pternlogd128_mask:
+  case X86::BI__builtin_ia32_pternlogd256_mask:
+  case X86::BI__builtin_ia32_pternlogd512_mask:
+  case X86::BI__builtin_ia32_pternlogq128_mask:
+  case X86::BI__builtin_ia32_pternlogq256_mask:
+  case X86::BI__builtin_ia32_pternlogq512_mask: {
+    APValue AValue, BValue, CValue, ImmValue, UValue;
+    if (!EvaluateAsRValue(Info, E->getArg(0), AValue) ||
+        !EvaluateAsRValue(Info, E->getArg(1), BValue) ||
+        !EvaluateAsRValue(Info, E->getArg(2), CValue) ||
+        !EvaluateAsRValue(Info, E->getArg(3), ImmValue) ||
+        !EvaluateAsRValue(Info, E->getArg(4), UValue))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    APInt Imm = ImmValue.getInt();
+    APInt U = UValue.getInt();
+    unsigned ResultLen = AValue.getVectorLength();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(ResultLen);
+
+    for (unsigned EltNum = 0; EltNum < ResultLen; ++EltNum) {
+      APInt ALane = AValue.getVectorElt(EltNum).getInt();
+      APInt BLane = BValue.getVectorElt(EltNum).getInt();
+      APInt CLane = CValue.getVectorElt(EltNum).getInt();
+
+      if (U[EltNum]) {
+        unsigned BitWidth = ALane.getBitWidth();
+        APInt ResLane(BitWidth, 0);
+
+        for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
+          unsigned ABit = ALane[Bit];
+          unsigned BBit = BLane[Bit];
+          unsigned CBit = CLane[Bit];
+
+          unsigned Idx = (ABit << 2) | (BBit << 1) | CBit;
+          ResLane.setBitVal(Bit, Imm[Idx]);
+        }
+        ResultElements.push_back(APValue(APSInt(ResLane, DestUnsigned)));
+      } else {
+        ResultElements.push_back(APValue(APSInt(ALane, DestUnsigned)));
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_pternlogd128_maskz:
+  case X86::BI__builtin_ia32_pternlogd256_maskz:
+  case X86::BI__builtin_ia32_pternlogd512_maskz:
+  case X86::BI__builtin_ia32_pternlogq128_maskz:
+  case X86::BI__builtin_ia32_pternlogq256_maskz:
+  case X86::BI__builtin_ia32_pternlogq512_maskz: {
+    APValue AValue, BValue, CValue, ImmValue, UValue;
+    if (!EvaluateAsRValue(Info, E->getArg(0), AValue) ||
+        !EvaluateAsRValue(Info, E->getArg(1), BValue) ||
+        !EvaluateAsRValue(Info, E->getArg(2), CValue) ||
+        !EvaluateAsRValue(Info, E->getArg(3), ImmValue) ||
+        !EvaluateAsRValue(Info, E->getArg(4), UValue))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    APInt Imm = ImmValue.getInt();
+    APInt U = UValue.getInt();
+    unsigned ResultLen = AValue.getVectorLength();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(ResultLen);
+
+    for (unsigned EltNum = 0; EltNum < ResultLen; ++EltNum) {
+      APInt ALane = AValue.getVectorElt(EltNum).getInt();
+      APInt BLane = BValue.getVectorElt(EltNum).getInt();
+      APInt CLane = CValue.getVectorElt(EltNum).getInt();
+
+      unsigned BitWidth = ALane.getBitWidth();
+      APInt ResLane(BitWidth, 0);
+
+      if (U[EltNum]) {
+        for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
+          unsigned ABit = ALane[Bit];
+          unsigned BBit = BLane[Bit];
+          unsigned CBit = CLane[Bit];
+
+          unsigned Idx = (ABit << 2) | (BBit << 1) | CBit;
+          ResLane.setBitVal(Bit, Imm[Idx]);
+        }
+      }
+      ResultElements.push_back(APValue(APSInt(ResLane, DestUnsigned)));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case Builtin::BI__builtin_elementwise_clzg:
+  case Builtin::BI__builtin_elementwise_ctzg: {
     APValue SourceLHS;
     std::optional<APValue> Fallback;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS))
@@ -12050,19 +12284,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         if (!Fallback) {
           Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
               << /*IsTrailing=*/(E->getBuiltinCallee() ==
-                                 Builtin::BI__builtin_elementwise_cttz);
+                                 Builtin::BI__builtin_elementwise_ctzg);
           return false;
         }
         ResultElements.push_back(Fallback->getVectorElt(EltNum));
         continue;
       }
       switch (E->getBuiltinCallee()) {
-      case Builtin::BI__builtin_elementwise_ctlz:
+      case Builtin::BI__builtin_elementwise_clzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countl_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
-      case Builtin::BI__builtin_elementwise_cttz:
+      case Builtin::BI__builtin_elementwise_ctzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countr_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
@@ -12127,6 +12361,86 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256: {
+    APValue SourceDst, SourceSub;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceDst) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceSub))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    assert(SourceDst.isVector() && SourceSub.isVector());
+    unsigned DstLen = SourceDst.getVectorLength();
+    unsigned SubLen = SourceSub.getVectorLength();
+    assert(SubLen != 0 && DstLen != 0 && (DstLen % SubLen) == 0);
+    unsigned NumLanes = DstLen / SubLen;
+    unsigned LaneIdx = (Imm.getZExtValue() % NumLanes) * SubLen;
+
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    for (unsigned EltNum = 0; EltNum < DstLen; ++EltNum) {
+      if (EltNum >= LaneIdx && EltNum < LaneIdx + SubLen)
+        ResultElements.push_back(SourceSub.getVectorElt(EltNum - LaneIdx));
+      else
+        ResultElements.push_back(SourceDst.getVectorElt(EltNum));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_vec_set_v4hi:
+  case clang::X86::BI__builtin_ia32_vec_set_v16qi:
+  case clang::X86::BI__builtin_ia32_vec_set_v8hi:
+  case clang::X86::BI__builtin_ia32_vec_set_v4si:
+  case clang::X86::BI__builtin_ia32_vec_set_v2di:
+  case clang::X86::BI__builtin_ia32_vec_set_v32qi:
+  case clang::X86::BI__builtin_ia32_vec_set_v16hi:
+  case clang::X86::BI__builtin_ia32_vec_set_v8si:
+  case clang::X86::BI__builtin_ia32_vec_set_v4di: {
+    APValue VecVal;
+    APSInt Scalar, IndexAPS;
+    if (!EvaluateVector(E->getArg(0), VecVal, Info) ||
+        !EvaluateInteger(E->getArg(1), Scalar, Info) ||
+        !EvaluateInteger(E->getArg(2), IndexAPS, Info))
+      return false;
+
+    QualType ElemTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned ElemWidth = Info.Ctx.getIntWidth(ElemTy);
+    bool ElemUnsigned = ElemTy->isUnsignedIntegerOrEnumerationType();
+    Scalar.setIsUnsigned(ElemUnsigned);
+    APSInt ElemAPS = Scalar.extOrTrunc(ElemWidth);
+    APValue ElemAV(ElemAPS);
+
+    unsigned NumElems = VecVal.getVectorLength();
+    unsigned Index =
+        static_cast<unsigned>(IndexAPS.getZExtValue() & (NumElems - 1));
+
+    SmallVector<APValue, 4> Elems;
+    Elems.reserve(NumElems);
+    for (unsigned ElemNum = 0; ElemNum != NumElems; ++ElemNum)
+      Elems.push_back(ElemNum == Index ? ElemAV : VecVal.getVectorElt(ElemNum));
+
+    return Success(APValue(Elems.data(), NumElems), E);
   }
   }
 }
@@ -13543,6 +13857,20 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+
+  auto HandleMaskBinOp =
+      [&](llvm::function_ref<APSInt(const APSInt &, const APSInt &)> Fn)
+      -> bool {
+    APValue LHS, RHS;
+    if (!Evaluate(LHS, Info, E->getArg(0)) ||
+        !Evaluate(RHS, Info, E->getArg(1)))
+      return false;
+
+    APSInt ResultInt = Fn(LHS.getInt(), RHS.getInt());
+
+    return Success(APValue(ResultInt), E);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
@@ -13683,7 +14011,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clzg:
-  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -13699,7 +14027,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_clzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_clzg) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13718,7 +14046,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                              BuiltinOp != Builtin::BI__lzcnt &&
                              BuiltinOp != Builtin::BI__lzcnt64;
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_clzg) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/false;
       }
@@ -13778,7 +14106,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctzg:
-  case Builtin::BI__builtin_elementwise_cttz: {
+  case Builtin::BI__builtin_elementwise_ctzg: {
     APSInt Val;
     if (E->getArg(0)->getType()->isExtVectorBoolType()) {
       APValue Vec;
@@ -13791,7 +14119,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_ctzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_cttz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_ctzg) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13803,7 +14131,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Fallback)
         return Success(*Fallback, E);
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_cttz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctzg) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/true;
       }
@@ -14028,7 +14356,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), Amt, Info))
       return false;
 
-    return Success(Val.rotl(Amt.urem(Val.getBitWidth())), E);
+    return Success(Val.rotl(Amt), E);
   }
 
   case Builtin::BI__builtin_rotateright8:
@@ -14045,7 +14373,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), Amt, Info))
       return false;
 
-    return Success(Val.rotr(Amt.urem(Val.getBitWidth())), E);
+    return Success(Val.rotr(Amt), E);
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
@@ -14641,6 +14969,84 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Msk[I])
         Result.setBitVal(P++, Val[I]);
     return Success(Result, E);
+  }
+
+  case X86::BI__builtin_ia32_kandqi:
+  case X86::BI__builtin_ia32_kandhi:
+  case X86::BI__builtin_ia32_kandsi:
+  case X86::BI__builtin_ia32_kanddi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS & RHS; });
+  }
+
+  case X86::BI__builtin_ia32_kandnqi:
+  case X86::BI__builtin_ia32_kandnhi:
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
+  }
+
+  case X86::BI__builtin_ia32_korqi:
+  case X86::BI__builtin_ia32_korhi:
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS | RHS; });
+  }
+
+  case X86::BI__builtin_ia32_kxnorqi:
+  case X86::BI__builtin_ia32_kxnorhi:
+  case X86::BI__builtin_ia32_kxnorsi:
+  case X86::BI__builtin_ia32_kxnordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return ~(LHS ^ RHS); });
+  }
+
+  case X86::BI__builtin_ia32_kxorqi:
+  case X86::BI__builtin_ia32_kxorhi:
+  case X86::BI__builtin_ia32_kxorsi:
+  case X86::BI__builtin_ia32_kxordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
+  }
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    APSInt Result = ~Val;
+    return Success(APValue(Result), E);
+  }
+
+  case X86::BI__builtin_ia32_kaddqi:
+  case X86::BI__builtin_ia32_kaddhi:
+  case X86::BI__builtin_ia32_kaddsi:
+  case X86::BI__builtin_ia32_kadddi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
+  }
+
+  case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v8hi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v4si:
+  case clang::X86::BI__builtin_ia32_vec_ext_v2di:
+  case clang::X86::BI__builtin_ia32_vec_ext_v32qi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v16hi:
+  case clang::X86::BI__builtin_ia32_vec_ext_v8si:
+  case clang::X86::BI__builtin_ia32_vec_ext_v4di: {
+    APValue Vec;
+    APSInt IdxAPS;
+    if (!EvaluateVector(E->getArg(0), Vec, Info) ||
+        !EvaluateInteger(E->getArg(1), IdxAPS, Info))
+      return false;
+    unsigned N = Vec.getVectorLength();
+    unsigned Idx = static_cast<unsigned>(IdxAPS.getZExtValue() & (N - 1));
+    return Success(Vec.getVectorElt(Idx).getInt(), E);
   }
   }
 }
@@ -16458,6 +16864,17 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     (void)Result.fusedMultiplyAdd(SourceY, SourceZ, RM);
     return true;
   }
+
+  case clang::X86::BI__builtin_ia32_vec_ext_v4sf: {
+    APValue Vec;
+    APSInt IdxAPS;
+    if (!EvaluateVector(E->getArg(0), Vec, Info) ||
+        !EvaluateInteger(E->getArg(1), IdxAPS, Info))
+      return false;
+    unsigned N = Vec.getVectorLength();
+    unsigned Idx = static_cast<unsigned>(IdxAPS.getZExtValue() & (N - 1));
+    return Success(Vec.getVectorElt(Idx), E);
+  }
   }
 }
 
@@ -17866,14 +18283,12 @@ bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
          !hasUnacceptableSideEffect(Result, SEK);
 }
 
-APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
-                    SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
+APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
-  EVResult.Diag = Diag;
   EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 
@@ -18727,9 +19142,15 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   uint64_t Result;
   std::string StringResult;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateString(Info, this, StringResult))
+      return std::nullopt;
+    return StringResult;
+  }
+
   if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
     return StringResult;
-  return {};
+  return std::nullopt;
 }
 
 template <typename T>

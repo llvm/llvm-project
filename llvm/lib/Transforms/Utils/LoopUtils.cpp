@@ -1865,32 +1865,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   return NumReplaced;
 }
 
-/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
-/// \p OrigLoop.
-void llvm::setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
-                                        Loop *RemainderLoop, uint64_t UF) {
-  assert(UF > 0 && "Zero unrolled factor is not supported");
-  assert(UnrolledLoop != RemainderLoop &&
-         "Unrolled and Remainder loops are expected to distinct");
-
-  // Get number of iterations in the original scalar loop.
-  unsigned OrigLoopInvocationWeight = 0;
-  std::optional<unsigned> OrigAverageTripCount =
-      getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
-  if (!OrigAverageTripCount)
-    return;
-
-  // Calculate number of iterations in unrolled loop.
-  unsigned UnrolledAverageTripCount = *OrigAverageTripCount / UF;
-  // Calculate number of iterations for remainder loop.
-  unsigned RemainderAverageTripCount = *OrigAverageTripCount % UF;
-
-  setLoopEstimatedTripCount(UnrolledLoop, UnrolledAverageTripCount,
-                            OrigLoopInvocationWeight);
-  setLoopEstimatedTripCount(RemainderLoop, RemainderAverageTripCount,
-                            OrigLoopInvocationWeight);
-}
-
 /// Utility that implements appending of loops onto a worklist.
 /// Loops are added in preorder (analogous for reverse postorder for trees),
 /// and the worklist is processed LIFO.

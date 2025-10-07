@@ -125,6 +125,8 @@ Changes to the RISC-V Backend
 * Ssctr and Smctr extensions are no longer experimental.
 * Add support for Zvfbfa (Additional BF16 vector compute support)
 * Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
+* Add support for Zvfofp8min (OFP8 conversion extension)
+* Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -158,6 +160,7 @@ Changes to the LLVM tools
 
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
+* Support for `%T` in lit has been removed.
 
 Changes to LLDB
 ---------------------------------
@@ -173,6 +176,10 @@ Changes to Sanitizers
 
 Other Changes
 -------------
+
+* Introduces the `AllocToken` pass, an instrumentation pass providing tokens to
+  memory allocators enabling various heap organization strategies, such as heap
+  partitioning.
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
