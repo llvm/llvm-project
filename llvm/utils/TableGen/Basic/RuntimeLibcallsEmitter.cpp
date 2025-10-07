@@ -543,21 +543,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, EABI EABIVersion, "
-        "StringRef ABIName) {\n"
-        "  struct LibcallImplPair {\n"
-        "    RTLIB::Libcall Func;\n"
-        "    RTLIB::LibcallImpl Impl;\n"
-        "  };\n"
-        "  auto setLibcallsImpl = [this](\n"
-        "    ArrayRef<LibcallImplPair> Libcalls,\n"
-        "    std::optional<llvm::CallingConv::ID> CC = {})\n"
-        "  {\n"
-        "    for (const auto [Func, Impl] : Libcalls) {\n"
-        "      setLibcallImpl(Func, Impl);\n"
-        "      if (CC)\n"
-        "        setLibcallImplCallingConv(Impl, *CC);\n"
-        "    }\n"
-        "  };\n";
+        "StringRef ABIName) {\n";
+
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
 
@@ -682,18 +669,21 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       Funcs.erase(UniqueI, Funcs.end());
 
-      OS << indent(IndentDepth + 2) << "setLibcallsImpl({\n";
+      StringRef CCEnum;
+      if (FuncsWithCC.CallingConv)
+        CCEnum = FuncsWithCC.CallingConv->getValueAsString("CallingConv");
+
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 4);
-        LibCallImpl->emitTableEntry(OS);
+        OS << indent(IndentDepth + 2);
+        LibCallImpl->emitSetImplCall(OS);
+
+        if (FuncsWithCC.CallingConv) {
+          OS << indent(IndentDepth + 2) << "setLibcallImplCallingConv(";
+          LibCallImpl->emitEnumEntry(OS);
+          OS << ", " << CCEnum << ");\n";
+        }
       }
-      OS << indent(IndentDepth + 2) << "}";
-      if (FuncsWithCC.CallingConv) {
-        StringRef CCEnum =
-            FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << ", " << CCEnum;
-      }
-      OS << ");\n\n";
+      OS << '\n';
 
       if (!SubsetPredicate.isAlwaysAvailable()) {
         OS << indent(IndentDepth);

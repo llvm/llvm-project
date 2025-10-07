@@ -34,9 +34,10 @@ using namespace Fortran::frontend;
 
 /// Print supported cpus of the given target.
 static int printSupportedCPUs(llvm::StringRef triple) {
+  llvm::Triple parsedTriple(triple);
   std::string error;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!target) {
     llvm::errs() << error;
     return 1;
@@ -45,8 +46,8 @@ static int printSupportedCPUs(llvm::StringRef triple) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions targetOpts;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(llvm::Triple(triple), "", "+cpuhelp",
-                                  targetOpts, std::nullopt));
+      target->createTargetMachine(parsedTriple, "", "+cpuhelp", targetOpts,
+                                  std::nullopt));
   return 0;
 }
 

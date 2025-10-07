@@ -48,47 +48,39 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:     Entry = DefaultCC;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:      {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
-// CHECK-NEXT:    });
+// CHECK-NEXT:    setLibcallImpl(RTLIB::MALLOC, RTLIB::impl_malloc); // malloc
 // CHECK-EMPTY:
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4}, // __divmodqi4
-// CHECK-NEXT:        {RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:    }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    setLibcallImpl(RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4); // __divmodqi4
+// CHECK-NEXT:    setLibcallImplCallingConv(RTLIB::impl___divmodqi4, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    setLibcallImpl(RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4); // __udivmodhi4
+// CHECK-NEXT:    setLibcallImplCallingConv(RTLIB::impl___udivmodhi4, CallingConv::AVR_BUILTIN);
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:   setLibcallsImpl({
-// CHECK-NEXT:       {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
-// CHECK-NEXT:   });
+// CHECK-NEXT:   setLibcallImpl(RTLIB::MALLOC, RTLIB::impl_malloc); // malloc
 // CHECK-EMPTY:
-// CHECK-NEXT:   setLibcallsImpl({
-// CHECK-NEXT:       {RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4}, // __divmodqi4
-// CHECK-NEXT:       {RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:   }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:   setLibcallImpl(RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4); // __divmodqi4
+// CHECK-NEXT:   setLibcallImplCallingConv(RTLIB::impl___divmodqi4, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:   setLibcallImpl(RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4); // __udivmodhi4
+// CHECK-NEXT:   setLibcallImplCallingConv(RTLIB::impl___udivmodhi4, CallingConv::AVR_BUILTIN);
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  if (TT.getArch() == Triple::msp430) {
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::impl_malloc}, // malloc
-// CHECK-NEXT:    });
+// CHECK-NEXT:    setLibcallImpl(RTLIB::MALLOC, RTLIB::impl_malloc); // malloc
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isFoo() ) {
-// CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4}, // __divmodqi4
-// CHECK-NEXT:      }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:      setLibcallImpl(RTLIB::SDIVREM_I8, RTLIB::impl___divmodqi4); // __divmodqi4
+// CHECK-NEXT:      setLibcallImplCallingConv(RTLIB::impl___divmodqi4, CallingConv::AVR_BUILTIN);
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isBar() ) {
-// CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:          {RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:      }, CallingConv::MSP430_BUILTIN);
+// CHECK-NEXT:      setLibcallImpl(RTLIB::UDIVREM_I16, RTLIB::impl___udivmodhi4); // __udivmodhi4
+// CHECK-NEXT:      setLibcallImplCallingConv(RTLIB::impl___udivmodhi4, CallingConv::MSP430_BUILTIN);
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
