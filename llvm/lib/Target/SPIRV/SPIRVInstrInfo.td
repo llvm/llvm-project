@@ -163,52 +163,74 @@ def OpExecutionModeId: Op<331, (outs), (ins ID:$entry, ExecutionMode:$mode, vari
 
 // 3.42.6 Type-Declaration Instructions
 
-def OpTypeVoid: Op<19, (outs TYPE:$type), (ins), "$type = OpTypeVoid">;
-def OpTypeBool: Op<20, (outs TYPE:$type), (ins), "$type = OpTypeBool">;
-def OpTypeInt: Op<21, (outs TYPE:$type), (ins i32imm:$width, i32imm:$signedness),
-                  "$type = OpTypeInt $width $signedness">;
-def OpTypeFloat: Op<22, (outs TYPE:$type), (ins i32imm:$width, variable_ops),
-                  "$type = OpTypeFloat $width">;
-def OpTypeVector: Op<23, (outs TYPE:$type), (ins TYPE:$compType, i32imm:$compCount),
-                  "$type = OpTypeVector $compType $compCount">;
-def OpTypeMatrix: Op<24, (outs TYPE:$type), (ins TYPE:$colType, i32imm:$colCount),
-                  "$type = OpTypeMatrix $colType $colCount">;
-def OpTypeImage: Op<25, (outs TYPE:$res), (ins TYPE:$sampTy, Dim:$dim, i32imm:$depth,
-      i32imm:$arrayed, i32imm:$MS, i32imm:$sampled, ImageFormat:$imFormat, variable_ops),
-                  "$res = OpTypeImage $sampTy $dim $depth $arrayed $MS $sampled $imFormat">;
-def OpTypeSampler: Op<26, (outs TYPE:$res), (ins), "$res = OpTypeSampler">;
-def OpTypeSampledImage: Op<27, (outs TYPE:$res), (ins TYPE:$imageType),
-                  "$res = OpTypeSampledImage $imageType">;
-def OpTypeArray: Op<28, (outs TYPE:$type), (ins TYPE:$elementType, ID:$length),
-                  "$type = OpTypeArray $elementType $length">;
-def OpTypeRuntimeArray: Op<29, (outs TYPE:$type), (ins TYPE:$elementType),
-                  "$type = OpTypeRuntimeArray $elementType">;
-def OpTypeStruct: Op<30, (outs TYPE:$res), (ins variable_ops), "$res = OpTypeStruct">;
-def OpTypeStructContinuedINTEL: Op<6090, (outs), (ins variable_ops),
-                  "OpTypeStructContinuedINTEL">;
-def OpTypeOpaque: Op<31, (outs TYPE:$res), (ins StringImm:$name, variable_ops),
-                  "$res = OpTypeOpaque $name">;
-def OpTypePointer: Op<32, (outs TYPE:$res), (ins StorageClass:$storage, TYPE:$type),
-                  "$res = OpTypePointer $storage $type">;
-def OpTypeFunction: Op<33, (outs TYPE:$funcType), (ins TYPE:$returnType, variable_ops),
-                  "$funcType = OpTypeFunction $returnType">;
-def OpTypeEvent: Op<34, (outs TYPE:$res), (ins), "$res = OpTypeEvent">;
-def OpTypeDeviceEvent: Op<35, (outs TYPE:$res), (ins), "$res = OpTypeDeviceEvent">;
-def OpTypeReserveId: Op<36, (outs TYPE:$res), (ins), "$res = OpTypeReserveId">;
-def OpTypeQueue: Op<37, (outs TYPE:$res), (ins), "$res = OpTypeQueue">;
-def OpTypePipe: Op<38, (outs TYPE:$res), (ins AccessQualifier:$a), "$res = OpTypePipe $a">;
-def OpTypeForwardPointer: Op<39, (outs), (ins TYPE:$ptrType, StorageClass:$storageClass),
-                  "OpTypeForwardPointer $ptrType $storageClass">;
-def OpTypePipeStorage: Op<322, (outs TYPE:$res), (ins), "$res = OpTypePipeStorage">;
-def OpTypeNamedBarrier: Op<327, (outs TYPE:$res), (ins), "$res = OpTypeNamedBarrier">;
-def OpTypeAccelerationStructureNV: Op<5341, (outs TYPE:$res), (ins),
-                  "$res = OpTypeAccelerationStructureNV">;
-def OpTypeCooperativeMatrixNV: Op<5358, (outs TYPE:$res),
-                  (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols),
-                  "$res = OpTypeCooperativeMatrixNV $compType $scope $rows $cols">;
-def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
-                  (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
-                  "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
+def OpTypeVoid : PureOp<19, (outs TYPE:$type), (ins), "$type = OpTypeVoid">;
+def OpTypeBool : PureOp<20, (outs TYPE:$type), (ins), "$type = OpTypeBool">;
+def OpTypeInt
+    : PureOp<21, (outs TYPE:$type), (ins i32imm:$width, i32imm:$signedness),
+             "$type = OpTypeInt $width $signedness">;
+def OpTypeFloat
+    : PureOp<22, (outs TYPE:$type), (ins i32imm:$width, variable_ops),
+             "$type = OpTypeFloat $width">;
+def OpTypeVector
+    : PureOp<23, (outs TYPE:$type), (ins TYPE:$compType, i32imm:$compCount),
+             "$type = OpTypeVector $compType $compCount">;
+def OpTypeMatrix
+    : PureOp<24, (outs TYPE:$type), (ins TYPE:$colType, i32imm:$colCount),
+             "$type = OpTypeMatrix $colType $colCount">;
+def OpTypeImage : PureOp<25, (outs TYPE:$res),
+                         (ins TYPE:$sampTy, Dim:$dim, i32imm:$depth,
+                             i32imm:$arrayed, i32imm:$MS, i32imm:$sampled,
+                             ImageFormat:$imFormat, variable_ops),
+                         "$res = OpTypeImage $sampTy $dim $depth $arrayed $MS "
+                         "$sampled $imFormat">;
+def OpTypeSampler : PureOp<26, (outs TYPE:$res), (ins), "$res = OpTypeSampler">;
+def OpTypeSampledImage : PureOp<27, (outs TYPE:$res), (ins TYPE:$imageType),
+                                "$res = OpTypeSampledImage $imageType">;
+def OpTypeArray
+    : PureOp<28, (outs TYPE:$type), (ins TYPE:$elementType, ID:$length),
+             "$type = OpTypeArray $elementType $length">;
+def OpTypeRuntimeArray : PureOp<29, (outs TYPE:$type), (ins TYPE:$elementType),
+                                "$type = OpTypeRuntimeArray $elementType">;
+def OpTypeStruct
+    : PureOp<30, (outs TYPE:$res), (ins variable_ops), "$res = OpTypeStruct">;
+def OpTypeStructContinuedINTEL
+    : PureOp<6090, (outs), (ins variable_ops), "OpTypeStructContinuedINTEL">;
+def OpTypeOpaque
+    : PureOp<31, (outs TYPE:$res), (ins StringImm:$name, variable_ops),
+             "$res = OpTypeOpaque $name">;
+def OpTypePointer
+    : PureOp<32, (outs TYPE:$res), (ins StorageClass:$storage, TYPE:$type),
+             "$res = OpTypePointer $storage $type">;
+def OpTypeFunction
+    : PureOp<33, (outs TYPE:$funcType), (ins TYPE:$returnType, variable_ops),
+             "$funcType = OpTypeFunction $returnType">;
+def OpTypeEvent : PureOp<34, (outs TYPE:$res), (ins), "$res = OpTypeEvent">;
+def OpTypeDeviceEvent
+    : PureOp<35, (outs TYPE:$res), (ins), "$res = OpTypeDeviceEvent">;
+def OpTypeReserveId
+    : PureOp<36, (outs TYPE:$res), (ins), "$res = OpTypeReserveId">;
+def OpTypeQueue : PureOp<37, (outs TYPE:$res), (ins), "$res = OpTypeQueue">;
+def OpTypePipe : PureOp<38, (outs TYPE:$res), (ins AccessQualifier:$a),
+                        "$res = OpTypePipe $a">;
+def OpTypeForwardPointer
+    : PureOp<39, (outs), (ins TYPE:$ptrType, StorageClass:$storageClass),
+             "OpTypeForwardPointer $ptrType $storageClass">;
+def OpTypePipeStorage
+    : PureOp<322, (outs TYPE:$res), (ins), "$res = OpTypePipeStorage">;
+def OpTypeNamedBarrier
+    : PureOp<327, (outs TYPE:$res), (ins), "$res = OpTypeNamedBarrier">;
+def OpTypeAccelerationStructureNV
+    : PureOp<5341, (outs TYPE:$res), (ins),
+             "$res = OpTypeAccelerationStructureNV">;
+def OpTypeCooperativeMatrixNV
+    : PureOp<5358, (outs TYPE:$res),
+             (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols),
+             "$res = OpTypeCooperativeMatrixNV $compType $scope $rows $cols">;
+def OpTypeCooperativeMatrixKHR
+    : PureOp<4456, (outs TYPE:$res),
+             (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
+             "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols "
+             "$use">;
 
 // 3.42.7 Constant-Creation Instructions
 
@@ -222,31 +244,46 @@ defm OpConstant: IntFPImm<43, "OpConstant">;
 
 def ConstPseudoTrue: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
 def ConstPseudoFalse: IntImmLeaf<i64, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
-def OpConstantTrue: Op<41, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantTrue $src_ty",
-                      [(set iID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
-def OpConstantFalse: Op<42, (outs iID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantFalse $src_ty",
-                      [(set iID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
+def OpConstantTrue
+    : PureOp<41, (outs iID:$dst), (ins TYPE:$src_ty),
+             "$dst = OpConstantTrue $src_ty",
+             [(set iID:$dst, (assigntype ConstPseudoTrue, TYPE:$src_ty))]>;
+def OpConstantFalse
+    : PureOp<42, (outs iID:$dst), (ins TYPE:$src_ty),
+             "$dst = OpConstantFalse $src_ty",
+             [(set iID:$dst, (assigntype ConstPseudoFalse, TYPE:$src_ty))]>;
 
-def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
-                  "$res = OpConstantComposite $type">;
-def OpConstantCompositeContinuedINTEL: Op<6091, (outs), (ins variable_ops),
-                  "OpConstantCompositeContinuedINTEL">;
+def OpConstantComposite
+    : PureOp<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
+             "$res = OpConstantComposite $type">;
+def OpConstantCompositeContinuedINTEL
+    : PureOp<6091, (outs), (ins variable_ops),
+             "OpConstantCompositeContinuedINTEL">;
 
-def OpConstantSampler: Op<45, (outs ID:$res),
-                  (ins TYPE:$t, SamplerAddressingMode:$s, i32imm:$p, SamplerFilterMode:$f),
-                  "$res = OpConstantSampler $t $s $p $f">;
-def OpConstantNull: Op<46, (outs ID:$dst), (ins TYPE:$src_ty), "$dst = OpConstantNull $src_ty">;
+def OpConstantSampler : PureOp<45, (outs ID:$res),
+                               (ins TYPE:$t, SamplerAddressingMode:$s,
+                                   i32imm:$p, SamplerFilterMode:$f),
+                               "$res = OpConstantSampler $t $s $p $f">;
+def OpConstantNull : PureOp<46, (outs ID:$dst), (ins TYPE:$src_ty),
+                            "$dst = OpConstantNull $src_ty">;
 
-def OpSpecConstantTrue: Op<48, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantTrue $t">;
-def OpSpecConstantFalse: Op<49, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantFalse $t">;
-def OpSpecConstant: Op<50, (outs ID:$res), (ins TYPE:$type, i32imm:$imm, variable_ops),
-                  "$res = OpSpecConstant $type $imm">;
-def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_ops),
-                  "$res = OpSpecConstantComposite $type">;
-def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
-                  "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
-                  "$res = OpSpecConstantOp $t $c $o">;
+def OpSpecConstantTrue
+    : PureOp<48, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantTrue $t">;
+def OpSpecConstantFalse
+    : PureOp<49, (outs ID:$r), (ins TYPE:$t), "$r = OpSpecConstantFalse $t">;
+def OpSpecConstant
+    : PureOp<50, (outs ID:$res), (ins TYPE:$type, i32imm:$imm, variable_ops),
+             "$res = OpSpecConstant $type $imm">;
+def OpSpecConstantComposite
+    : PureOp<51, (outs ID:$res), (ins TYPE:$type, variable_ops),
+             "$res = OpSpecConstantComposite $type">;
+def OpSpecConstantCompositeContinuedINTEL
+    : PureOp<6092, (outs), (ins variable_ops),
+             "OpSpecConstantCompositeContinuedINTEL">;
+def OpSpecConstantOp
+    : PureOp<52, (outs ID:$res),
+             (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
+             "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
 
