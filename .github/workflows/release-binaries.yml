@@ -257,28 +257,18 @@ jobs:
 
     - name: Build Unix
       shell: bash
-      if: runner.os != 'Windows'
       run: |
-        ninja -v -C /b stage2-package
-        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
+        ninja -v -C /s/build stage2-package
+        release_dir=`find /s/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-
-    - name: Enable long paths
-      run: reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
 
     # There is an issue with building on Windows with bash so we use power shell.
     # ninja: error: mkdir(tools/clang/tools/extra/clang-tidy/misc/ConfusableTable/CMakeFiles/clang-tidy-confusable-chars-gen.dir/C_/actions-runner/llvm-project/llvm-project/llvm): No such file or directory
-    - name: Build Windows
-      if: runner.os == 'Windows'
-      run: |
-        ninja -v -C "S:\build" stage2-package
+    #- name: Build Windows
+    #  if: runner.os == 'Windows'
+    #  run: |
+    #    ninja -v -C "S:\build" stage2-package
 
-    - name: Move Release Package
-      shell: bash
-      run: |
-        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
-        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-    
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
