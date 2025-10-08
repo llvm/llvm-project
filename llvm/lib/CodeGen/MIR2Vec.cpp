@@ -70,15 +70,6 @@ Expected<MIRVocabulary> MIRVocabulary::create(VocabMap &&Entries,
   return MIRVocabulary(std::move(Entries), TII);
 }
 
-Expected<MIRVocabulary> MIRVocabulary::create(ir2vec::VocabStorage &&Storage,
-                                              const TargetInstrInfo &TII) {
-  if (!Storage.isValid())
-    return createStringError(errc::invalid_argument,
-                             "Invalid vocabulary storage provided");
-
-  return MIRVocabulary(std::move(Storage), TII);
-}
-
 std::string MIRVocabulary::extractBaseOpcodeName(StringRef InstrName) {
   // Extract base instruction name using regex to capture letters and
   // underscores Examples: "ADD32rr" -> "ADD", "ARITH_FENCE" -> "ARITH_FENCE"

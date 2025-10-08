@@ -93,9 +93,7 @@ public:
   /// Get the string key for a vocabulary entry at the given position
   std::string getStringKey(unsigned Pos) const;
 
-  unsigned getDimension() const {
-    return Storage.getDimension();
-  }
+  unsigned getDimension() const { return Storage.getDimension(); }
 
   // Accessor methods
   const Embedding &operator[](unsigned Opcode) const {
@@ -105,31 +103,21 @@ public:
 
   // Iterator access
   using const_iterator = ir2vec::VocabStorage::const_iterator;
-  const_iterator begin() const {
-    return Storage.begin();
-  }
+  const_iterator begin() const { return Storage.begin(); }
 
-  const_iterator end() const {
-    return Storage.end();
-  }
+  const_iterator end() const { return Storage.end(); }
 
   /// Total number of entries in the vocabulary
-  size_t getCanonicalSize() const {
-    return Storage.size();
-  }
+  size_t getCanonicalSize() const { return Storage.size(); }
 
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
-  static Expected<MIRVocabulary> create(VocabMap &&Entries, const TargetInstrInfo &TII);
-  
-  /// Factory method to create MIRVocabulary from existing storage
-  static Expected<MIRVocabulary> create(ir2vec::VocabStorage &&Storage, const TargetInstrInfo &TII);
+  static Expected<MIRVocabulary> create(VocabMap &&Entries,
+                                        const TargetInstrInfo &TII);
 
 private:
   MIRVocabulary(VocabMap &&Entries, const TargetInstrInfo &TII);
-  MIRVocabulary(ir2vec::VocabStorage &&Storage, const TargetInstrInfo &TII)
-      : Storage(std::move(Storage)), TII(TII) {}
 };
 
 } // namespace mir2vec
