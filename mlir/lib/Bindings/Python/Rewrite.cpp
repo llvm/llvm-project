@@ -139,10 +139,96 @@ private:
   MlirFrozenRewritePatternSet set;
 };
 
+/// Owning Wrapper around a GreedyRewriteDriverConfig.
+class PyGreedyRewriteDriverConfig {
+public:
+  PyGreedyRewriteDriverConfig() 
+      : config(mlirGreedyRewriteDriverConfigCreate()) {}
+  PyGreedyRewriteDriverConfig(PyGreedyRewriteDriverConfig &&other) noexcept
+      : config(other.config) {
+    other.config.ptr = nullptr;
+  }
+  ~PyGreedyRewriteDriverConfig() {
+    if (config.ptr != nullptr)
+      mlirGreedyRewriteDriverConfigDestroy(config);
+  }
+  MlirGreedyRewriteDriverConfig get() { return config; }
+
+  void setMaxIterations(int64_t maxIterations) {
+    mlirGreedyRewriteDriverConfigSetMaxIterations(config, maxIterations);
+  }
+  
+  void setMaxNumRewrites(int64_t maxNumRewrites) {
+    mlirGreedyRewriteDriverConfigSetMaxNumRewrites(config, maxNumRewrites);
+  }
+  
+  void setUseTopDownTraversal(bool useTopDownTraversal) {
+    mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(config, useTopDownTraversal);
+  }
+  
+  void enableFolding(bool enable) {
+    mlirGreedyRewriteDriverConfigEnableFolding(config, enable);
+  }
+  
+  void setStrictness(MlirGreedyRewriteStrictness strictness) {
+    mlirGreedyRewriteDriverConfigSetStrictness(config, strictness);
+  }
+  
+  void setRegionSimplificationLevel(MlirGreedySimplifyRegionLevel level) {
+    mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(config, level);
+  }
+  
+  void enableConstantCSE(bool enable) {
+    mlirGreedyRewriteDriverConfigEnableConstantCSE(config, enable);
+  }
+
+  int64_t getMaxIterations() {
+    return mlirGreedyRewriteDriverConfigGetMaxIterations(config);
+  }
+  
+  int64_t getMaxNumRewrites() {
+    return mlirGreedyRewriteDriverConfigGetMaxNumRewrites(config);
+  }
+  
+  bool getUseTopDownTraversal() {
+    return mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(config);
+  }
+  
+  bool isFoldingEnabled() {
+    return mlirGreedyRewriteDriverConfigIsFoldingEnabled(config);
+  }
+  
+  MlirGreedyRewriteStrictness getStrictness() {
+    return mlirGreedyRewriteDriverConfigGetStrictness(config);
+  }
+  
+  MlirGreedySimplifyRegionLevel getRegionSimplificationLevel() {
+    return mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(config);
+  }
+  
+  bool isConstantCSEEnabled() {
+    return mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(config);
+  }
+
+private:
+  MlirGreedyRewriteDriverConfig config;
+};
+
 } // namespace
 
 /// Create the `mlir.rewrite` here.
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
+  // Enum definitions
+  nb::enum_<MlirGreedyRewriteStrictness>(m, "GreedyRewriteStrictness")
+      .value("ANY_OP", MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP)
+      .value("EXISTING_AND_NEW_OPS", MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS)
+      .value("EXISTING_OPS", MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS);
+      
+  nb::enum_<MlirGreedySimplifyRegionLevel>(m, "GreedySimplifyRegionLevel")
+      .value("DISABLED", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED)
+      .value("NORMAL", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL)
+      .value("AGGRESSIVE", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE);
+
   nb::class_<MlirPatternRewriter>(m, "PatternRewriter");
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
@@ -228,6 +314,38 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           },
           nb::keep_alive<1, 3>());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
+  
+  nb::class_<PyGreedyRewriteDriverConfig>(m, "GreedyRewriteDriverConfig")
+      .def(nb::init<>(), "Create a greedy rewrite driver config with defaults")
+      .def("set_max_iterations", &PyGreedyRewriteDriverConfig::setMaxIterations,
+           "max_iterations"_a, "Set maximum number of iterations")
+      .def("set_max_num_rewrites", &PyGreedyRewriteDriverConfig::setMaxNumRewrites,
+           "max_num_rewrites"_a, "Set maximum number of rewrites per iteration")
+      .def("set_use_top_down_traversal", &PyGreedyRewriteDriverConfig::setUseTopDownTraversal,
+           "use_top_down"_a, "Set whether to use top-down traversal")
+      .def("enable_folding", &PyGreedyRewriteDriverConfig::enableFolding,
+           "enable"_a, "Enable or disable folding")
+      .def("set_strictness", &PyGreedyRewriteDriverConfig::setStrictness,
+           "strictness"_a, "Set rewrite strictness level")
+      .def("set_region_simplification_level", &PyGreedyRewriteDriverConfig::setRegionSimplificationLevel,
+           "level"_a, "Set region simplification level")
+      .def("enable_constant_cse", &PyGreedyRewriteDriverConfig::enableConstantCSE,
+           "enable"_a, "Enable or disable constant CSE")
+      .def("get_max_iterations", &PyGreedyRewriteDriverConfig::getMaxIterations,
+           "Get maximum number of iterations")
+      .def("get_max_num_rewrites", &PyGreedyRewriteDriverConfig::getMaxNumRewrites,
+           "Get maximum number of rewrites per iteration")
+      .def("get_use_top_down_traversal", &PyGreedyRewriteDriverConfig::getUseTopDownTraversal,
+           "Get whether top-down traversal is used")
+      .def("is_folding_enabled", &PyGreedyRewriteDriverConfig::isFoldingEnabled,
+           "Check if folding is enabled")
+      .def("get_strictness", &PyGreedyRewriteDriverConfig::getStrictness,
+           "Get rewrite strictness level")
+      .def("get_region_simplification_level", &PyGreedyRewriteDriverConfig::getRegionSimplificationLevel,
+           "Get region simplification level")
+      .def("is_constant_cse_enabled", &PyGreedyRewriteDriverConfig::isConstantCSEEnabled,
+           "Check if constant CSE is enabled");
+
   nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
                    &PyFrozenRewritePatternSet::getCapsule)
