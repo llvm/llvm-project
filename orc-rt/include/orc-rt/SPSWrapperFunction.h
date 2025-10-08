@@ -102,7 +102,8 @@ private:
 public:
   template <typename... ArgTs>
   std::optional<WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
-    return serializeImpl(Serializable<ArgTs>::to(std::forward<ArgTs>(Args))...);
+    return serializeImpl(
+        Serializable<std::decay_t<ArgTs>>::to(std::forward<ArgTs>(Args))...);
   }
 
   template <typename ArgTuple>
