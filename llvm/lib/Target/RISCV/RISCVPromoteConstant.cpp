@@ -85,7 +85,7 @@ ModulePass *llvm::createRISCVPromoteConstantPass() {
 
 bool RISCVPromoteConstant::runOnFunction(Function &F,
                                          const RISCVTargetLowering *TLI) {
-  if (F.hasOptNone())
+  if (F.hasOptNone() || F.hasOptSize())
     return false;
 
   // Bail out and make no transformation if the target doesn't support
@@ -100,14 +100,13 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
 
   for (Instruction &I : instructions(F)) {
     for (Use &U : I.operands()) {
-      if (auto *C = dyn_cast<ConstantFP>(U.get())) {
-        if (!C->getType()->isDoubleTy())
-          continue;
-        if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
-                              /*ForCodeSize=*/false))
-          continue;
-        ConstUsesMap[C].push_back(&U);
-      }
+      auto *C = dyn_cast<ConstantFP>(U.get());
+      if (!C || !C->getType()->isDoubleTy())
+        continue;
+      if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
+                            /*ForCodeSize=*/false))
+        continue;
+      ConstUsesMap[C].push_back(&U);
     }
   }
 
