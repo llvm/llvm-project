@@ -15,9 +15,6 @@ define void @equivalent_on_default(i1 %c1) {
 ; CHECK-NEXT:      i32 0, label [[CASE1:%.*]]
 ; CHECK-NEXT:      i32 1, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       switch_bb.jt3:
-; CHECK-NEXT:    [[PHI_JT3:%.*]] = phi i32 [ [[PHI_CASE2_JT3:%.*]], [[CASE2END_JT3:%.*]] ]
-; CHECK-NEXT:    br label [[DEFAULT_DEST]]
 ; CHECK:       switch_bb.jt2:
 ; CHECK-NEXT:    [[PHI_JT2:%.*]] = phi i32 [ [[PHI_CASE2_JT2:%.*]], [[CASE2END_JT2:%.*]] ]
 ; CHECK-NEXT:    br label [[DEFAULT_DEST]]
@@ -29,16 +26,12 @@ define void @equivalent_on_default(i1 %c1) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br i1 [[C1]], label [[CASE2THEN:%.*]], label [[CASE2END_JT2]]
 ; CHECK:       case2then:
-; CHECK-NEXT:    br label [[CASE2END_JT3]]
+; CHECK-NEXT:    br label [[CASE2END_JT2]]
 ; CHECK:       case2end:
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB]]
-; CHECK:       case2end.jt3:
-; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 3, [[CASE2THEN]] ]
-; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    br label [[SWITCH_BB_JT3:%.*]]
 ; CHECK:       case2end.jt2:
-; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ], [ 3, [[CASE2THEN]] ]
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB_JT2:%.*]]
 ; CHECK:       default_dest:
@@ -83,9 +76,6 @@ define void @equivalent_on_default_user(i1 %c1) {
 ; CHECK-NEXT:      i32 0, label [[CASE1:%.*]]
 ; CHECK-NEXT:      i32 1, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       switch_bb.jt3:
-; CHECK-NEXT:    [[PHI_JT3:%.*]] = phi i32 [ [[PHI_CASE2_JT3:%.*]], [[CASE2END_JT3:%.*]] ]
-; CHECK-NEXT:    br label [[DEFAULT_DEST]]
 ; CHECK:       switch_bb.jt2:
 ; CHECK-NEXT:    [[PHI_JT2:%.*]] = phi i32 [ [[PHI_CASE2_JT2:%.*]], [[CASE2END_JT2:%.*]] ]
 ; CHECK-NEXT:    br label [[DEFAULT_DEST]]
@@ -97,18 +87,13 @@ define void @equivalent_on_default_user(i1 %c1) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br i1 [[C1]], label [[CASE2THEN:%.*]], label [[CASE2END_JT2]]
 ; CHECK:       case2then:
-; CHECK-NEXT:    br label [[CASE2END_JT3]]
+; CHECK-NEXT:    br label [[CASE2END_JT2]]
 ; CHECK:       case2end:
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    call void @user(i32 poison)
 ; CHECK-NEXT:    br label [[SWITCH_BB]]
-; CHECK:       case2end.jt3:
-; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 3, [[CASE2THEN]] ]
-; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    call void @user(i32 [[PHI_CASE2_JT3]])
-; CHECK-NEXT:    br label [[SWITCH_BB_JT3:%.*]]
 ; CHECK:       case2end.jt2:
-; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ], [ 3, [[CASE2THEN]] ]
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    call void @user(i32 [[PHI_CASE2_JT2]])
 ; CHECK-NEXT:    br label [[SWITCH_BB_JT2:%.*]]
@@ -157,9 +142,6 @@ define void @equivalent_only_cases(i1 %c1) {
 ; CHECK-NEXT:      i32 2, label [[CASE1]]
 ; CHECK-NEXT:      i32 3, label [[CASE1]]
 ; CHECK-NEXT:    ]
-; CHECK:       switch_bb.jt3:
-; CHECK-NEXT:    [[PHI_JT3:%.*]] = phi i32 [ [[PHI_CASE2_JT3:%.*]], [[CASE2END_JT3:%.*]] ]
-; CHECK-NEXT:    br label [[CASE1]]
 ; CHECK:       switch_bb.jt2:
 ; CHECK-NEXT:    [[PHI_JT2:%.*]] = phi i32 [ [[PHI_CASE2_JT2:%.*]], [[CASE2END_JT2:%.*]] ]
 ; CHECK-NEXT:    br label [[CASE1]]
@@ -172,16 +154,12 @@ define void @equivalent_only_cases(i1 %c1) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br i1 [[C1]], label [[CASE2THEN:%.*]], label [[CASE2END_JT2]]
 ; CHECK:       case2then:
-; CHECK-NEXT:    br label [[CASE2END_JT3]]
+; CHECK-NEXT:    br label [[CASE2END_JT2]]
 ; CHECK:       case2end:
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB]]
-; CHECK:       case2end.jt3:
-; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 3, [[CASE2THEN]] ]
-; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    br label [[SWITCH_BB_JT3:%.*]]
 ; CHECK:       case2end.jt2:
-; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ], [ 3, [[CASE2THEN]] ]
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB_JT2:%.*]]
 ; CHECK:       default_dest:
@@ -231,15 +209,9 @@ define void @equivalent_both_case_and_default(i1 %c1, i1 %c2) {
 ; CHECK-NEXT:      i32 2, label [[CASE1]]
 ; CHECK-NEXT:      i32 3, label [[CASE1]]
 ; CHECK-NEXT:    ]
-; CHECK:       switch_bb.jt5:
-; CHECK-NEXT:    [[PHI_JT5:%.*]] = phi i32 [ [[PHI_CASE2_JT5:%.*]], [[CASE2END_JT5:%.*]] ]
-; CHECK-NEXT:    br label [[DEFAULT_DEST]]
 ; CHECK:       switch_bb.jt4:
-; CHECK-NEXT:    [[PHI_JT4:%.*]] = phi i32 [ [[PHI_CASE2_JT4:%.*]], [[CASE2END_JT4:%.*]] ]
-; CHECK-NEXT:    br label [[DEFAULT_DEST]]
-; CHECK:       switch_bb.jt3:
 ; CHECK-NEXT:    [[PHI_JT3:%.*]] = phi i32 [ [[PHI_CASE2_JT3:%.*]], [[CASE2END_JT3:%.*]] ]
-; CHECK-NEXT:    br label [[CASE1]]
+; CHECK-NEXT:    br label [[DEFAULT_DEST]]
 ; CHECK:       switch_bb.jt2:
 ; CHECK-NEXT:    [[PHI_JT2:%.*]] = phi i32 [ [[PHI_CASE2_JT2:%.*]], [[CASE2END_JT2:%.*]] ]
 ; CHECK-NEXT:    br label [[CASE1]]
@@ -252,28 +224,20 @@ define void @equivalent_both_case_and_default(i1 %c1, i1 %c2) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br i1 [[C1]], label [[CASE2THEN:%.*]], label [[CASE2END_JT2]]
 ; CHECK:       case2then:
-; CHECK-NEXT:    br i1 [[C2]], label [[CASE2THEN2:%.*]], label [[CASE2END_JT3]]
+; CHECK-NEXT:    br i1 [[C2]], label [[CASE2THEN2:%.*]], label [[CASE2END_JT2]]
 ; CHECK:       case2then2:
-; CHECK-NEXT:    br i1 [[C2]], label [[CASE2THEN3:%.*]], label [[CASE2END_JT4]]
+; CHECK-NEXT:    br i1 [[C2]], label [[CASE2THEN3:%.*]], label [[CASE2END_JT3]]
 ; CHECK:       case2then3:
-; CHECK-NEXT:    br label [[CASE2END_JT5]]
+; CHECK-NEXT:    br label [[CASE2END_JT3]]
 ; CHECK:       case2end:
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB]]
-; CHECK:       case2end.jt5:
-; CHECK-NEXT:    [[PHI_CASE2_JT5]] = phi i32 [ 5, [[CASE2THEN3]] ]
-; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    br label [[SWITCH_BB_JT5:%.*]]
 ; CHECK:       case2end.jt4:
-; CHECK-NEXT:    [[PHI_CASE2_JT4]] = phi i32 [ 4, [[CASE2THEN2]] ]
-; CHECK-NEXT:    call void @do_something()
-; CHECK-NEXT:    br label [[SWITCH_BB_JT4:%.*]]
-; CHECK:       case2end.jt3:
-; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 3, [[CASE2THEN]] ]
+; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 4, [[CASE2THEN2]] ], [ 5, [[CASE2THEN3]] ]
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB_JT3:%.*]]
 ; CHECK:       case2end.jt2:
-; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ]
+; CHECK-NEXT:    [[PHI_CASE2_JT2]] = phi i32 [ 2, [[CASE2]] ], [ 3, [[CASE2THEN]] ]
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB_JT2:%.*]]
 ; CHECK:       default_dest:
