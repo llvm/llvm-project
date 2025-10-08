@@ -12049,13 +12049,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (SrcLen != RetLen * 2) 
       return false;
 
-    unsigned idx = SourceImm.getInt().getZExtValue() & 1;
+    unsigned Idx = SourceImm.getInt().getZExtValue() & 1;
     
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(RetLen);
 
-    for (unsigned i = 0; i < RetLen; i++)
-      ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
+    for (unsigned I = 0; I < RetLen; I++)
+      ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
     
     return Success(APValue(ResultElements.data(), RetLen), E);
   }
@@ -12072,35 +12072,34 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_extractf64x2_512_mask:
   case X86::BI__builtin_ia32_extracti64x4_mask:
   case X86::BI__builtin_ia32_extractf64x4_mask:{ 
-    APValue A, W;
-    APSInt Imm, U;
+    APValue SourceVec, MergeVec;
+    APSInt Imm, MaskImm;
 
-    if (!EvaluateAsRValue(Info, E->getArg(0), A) ||   // A
-      !EvaluateInteger(E->getArg(1), Imm, Info) ||  // imm
-      !EvaluateAsRValue(Info, E->getArg(2), W)  ||  // W (merge)
-      !EvaluateInteger(E->getArg(3), U, Info))      // U (mask)
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||  
+      !EvaluateInteger(E->getArg(1), Imm, Info) ||  
+      !EvaluateAsRValue(Info, E->getArg(2), MergeVec)  ||  
+      !EvaluateInteger(E->getArg(3), MaskImm, Info))      
     return false;
 
     const auto *RetVT = E->getType()->castAs<VectorType>();
-    // QualType EltTy = RetVT->getElementType();
     unsigned RetLen = RetVT->getNumElements();
 
-    if (!A.isVector() || !W.isVector()) return false;
-    unsigned SrcLen = A.getVectorLength();
+    if (!SourceVec.isVector() || !MergeVec.isVector()) return false;
+    unsigned SrcLen = SourceVec.getVectorLength();
     if (!SrcLen || !RetLen || (SrcLen % RetLen) != 0) return false;
 
-    unsigned lanes = SrcLen / RetLen;
-    unsigned lane  = static_cast<unsigned>(Imm.getZExtValue() % lanes);
-    unsigned base  = lane * RetLen;
-    uint64_t K     = U.getZExtValue();
+    unsigned Lanes = SrcLen / RetLen;
+    unsigned Lane  = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
+    unsigned Base  = Lane * RetLen;
+    uint64_t Mask  = MaskImm.getZExtValue();
 
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(RetLen);
-    for (unsigned i = 0; i < RetLen; ++i) {
-      if ((K >> i) & 1)
-        ResultElements.push_back(A.getVectorElt(base + i));
+    for (unsigned I = 0; I < RetLen; ++I) {
+      if ((Mask >> I) & 1)
+        ResultElements.push_back(SourceVec.getVectorElt(Base + I));
       else
-        ResultElements.push_back(W.getVectorElt(i)); 
+        ResultElements.push_back(MergeVec.getVectorElt(I)); 
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }

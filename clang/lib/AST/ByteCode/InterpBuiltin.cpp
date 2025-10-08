@@ -2855,16 +2855,13 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
                                                  unsigned ID) {
   assert(Call->getNumArgs() == 2);
 
-  // srcimm
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
   uint64_t Index = ImmAPS.getZExtValue();
 
-  // srcvec
   const Pointer &Src = S.Stk.pop<Pointer>();
   if (!Src.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  // destination (return value)
   const Pointer &Dst = S.Stk.peek<Pointer>();
   if (!Dst.getFieldDesc()->isPrimitiveArray())
     return false;
@@ -2879,12 +2876,11 @@ static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
   unsigned Lane = static_cast<unsigned>(Index % NumLanes);
   unsigned ExtractPos = Lane * DstElems;
 
-  // element type 
-  PrimType ElemPT = Src.getFieldDesc()->getPrimType();
-  if (ElemPT != Dst.getFieldDesc()->getPrimType())
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+  if (ElemT != Dst.getFieldDesc()->getPrimType())
     return false;
 
-  TYPE_SWITCH(ElemPT, {
+  TYPE_SWITCH(ElemT, {
     for (unsigned I = 0; I != DstElems; ++I) {
       Dst.elem<T>(I) = Src.elem<T>(ExtractPos + I);
     }
@@ -2899,41 +2895,40 @@ static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr Op
                                                       unsigned ID) {
   assert(Call->getNumArgs() == 4);
 
-  APSInt UAPS = popToAPSInt(S, Call->getArg(3));
-  const Pointer &W = S.Stk.pop<Pointer>();
+  APSInt MaskAPS = popToAPSInt(S, Call->getArg(3));
+  const Pointer &Merge = S.Stk.pop<Pointer>();
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
-  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Src = S.Stk.pop<Pointer>();
 
-  if (!A.getFieldDesc()->isPrimitiveArray() || !W.getFieldDesc()->isPrimitiveArray())
+  if (!Src.getFieldDesc()->isPrimitiveArray() || !Merge.getFieldDesc()->isPrimitiveArray())
     return false;
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
   if (!Dst.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  unsigned SrcElems = A.getNumElems();
+  unsigned SrcElems = Src.getNumElems();
   unsigned DstElems = Dst.getNumElems();
   if (!SrcElems || !DstElems || (SrcElems % DstElems) != 0)
     return false;
 
-  // 타입 일치 체크
-  PrimType PT = A.getFieldDesc()->getPrimType();
-  if (PT != Dst.getFieldDesc()->getPrimType() ||
-      PT != W.getFieldDesc()->getPrimType())
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+  if (ElemT != Dst.getFieldDesc()->getPrimType() ||
+      ElemT != Merge.getFieldDesc()->getPrimType())
     return false;
 
-  unsigned numLanes = SrcElems / DstElems;
-  unsigned lane     = static_cast<unsigned>(ImmAPS.getZExtValue() % numLanes);
-  unsigned base     = lane * DstElems;
+  unsigned NumLanes = SrcElems / DstElems;
+  unsigned Lane     = static_cast<unsigned>(ImmAPS.getZExtValue() % NumLanes);
+  unsigned Base     = Lane * DstElems;
 
-  uint64_t U = UAPS.getZExtValue();
+  uint64_t Mask = MaskAPS.getZExtValue();
 
-  TYPE_SWITCH(PT, {
-    for (unsigned i = 0; i < DstElems; ++i) {
-      if ((U >> i) & 1)
-        Dst.elem<T>(i) = A.elem<T>(base + i);
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I < DstElems; ++I) {
+      if ((Mask >> I) & 1)
+        Dst.elem<T>(I) = Src.elem<T>(Base + I);
       else
-        Dst.elem<T>(i) = W.elem<T>(i);   
+        Dst.elem<T>(I) = Merge.elem<T>(I);   
     }
   });
 
