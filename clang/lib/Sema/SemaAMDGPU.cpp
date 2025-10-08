@@ -166,9 +166,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return ((SemaRef.BuiltinConstantArg(TheCall, 0, Result)) ||
-            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
-            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result)));
+    return (SemaRef.BuiltinConstantArg(TheCall, 0, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
   case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f32_i32:
@@ -210,9 +210,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return ((SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
-            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
-            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result)));
+    return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
+           (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
   default:
     return false;
