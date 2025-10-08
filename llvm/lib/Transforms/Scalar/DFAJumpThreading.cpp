@@ -120,6 +120,9 @@ static cl::opt<unsigned>
     CostThreshold("dfa-cost-threshold",
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 } // namespace llvm
 
 static cl::opt<double> MaxClonedRate(
@@ -260,7 +263,11 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
 
     // Insert the real conditional branch based on the original condition.
     StartBlockTerm->eraseFromParent();
-    BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
+    auto *BI =
+        BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
+    if (!ProfcheckDisableMetadataFixes)
+      BI->setMetadata(LLVMContext::MD_prof,
+                      SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
                        {DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
@@ -295,7 +302,11 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     //  (Use)
     BranchInst::Create(EndBlock, NewBlockF);
     // Insert the real conditional branch based on the original condition.
-    BranchInst::Create(EndBlock, NewBlockF, SI->getCondition(), NewBlockT);
+    auto *BI =
+        BranchInst::Create(EndBlock, NewBlockF, SI->getCondition(), NewBlockT);
+    if (!ProfcheckDisableMetadataFixes)
+      BI->setMetadata(LLVMContext::MD_prof,
+                      SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, NewBlockT, NewBlockF},
                        {DominatorTree::Insert, NewBlockT, EndBlock},
                        {DominatorTree::Insert, NewBlockF, EndBlock}});
