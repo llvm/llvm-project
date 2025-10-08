@@ -829,12 +829,14 @@ define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1250-LABEL: suaddo64:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[12:13], s[14:15]
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1250-NEXT:    v_cmp_lt_u64_e64 s0, s[0:1], s[12:13]
+; GFX1250-NEXT:    s_add_co_u32 s0, s12, s14
+; GFX1250-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s0
+; GFX1250-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX1250-NEXT:    s_add_co_ci_u32 s1, s13, s15
+; GFX1250-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[8:9]
@@ -1814,12 +1816,14 @@ define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1250-LABEL: susubo64:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_sub_nc_u64 s[0:1], s[12:13], s[14:15]
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1250-NEXT:    v_cmp_gt_u64_e64 s0, s[0:1], s[12:13]
+; GFX1250-NEXT:    s_sub_co_u32 s0, s12, s14
+; GFX1250-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s0
+; GFX1250-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX1250-NEXT:    s_sub_co_ci_u32 s1, s13, s15
+; GFX1250-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[8:9]
