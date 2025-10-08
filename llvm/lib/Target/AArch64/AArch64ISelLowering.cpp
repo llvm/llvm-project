@@ -17973,7 +17973,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
-  if (Factor != 2 && Factor != 4) {
+  if (Factor != 2 && Factor != 3 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
   }
@@ -18052,7 +18052,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     Instruction *Store, Value *Mask,
     ArrayRef<Value *> InterleavedValues) const {
   unsigned Factor = InterleavedValues.size();
-  if (Factor != 2 && Factor != 4) {
+  if (Factor != 2 && Factor != 3 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
     return false;
   }
