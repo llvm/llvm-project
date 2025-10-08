@@ -261,7 +261,7 @@ New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
-
+- New option ``-foverflow-behavior-types`` added to enable parsing of the ``overflow_behavior`` type attribute and type specifiers.
 
 Lanai Support
 ^^^^^^^^^^^^^^
@@ -285,6 +285,11 @@ Attribute Changes in Clang
 
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
+
+- Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
+  currently accepts either ``wrap`` or ``trap`` as an argument, enabling
+  type-level control over overflow behavior. There is also an accompanying type
+  specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
 Improvements to Clang's diagnostics
 -----------------------------------

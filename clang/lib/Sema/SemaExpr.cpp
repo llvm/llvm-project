@@ -1410,6 +1410,49 @@ static QualType handleComplexIntConversion(Sema &S, ExprResult &LHS,
   return ComplexType;
 }
 
+static QualType handleOverflowBehaviorTypeConversion(Sema &S, ExprResult &LHS,
+                                                     ExprResult &RHS,
+                                                     QualType LHSType,
+                                                     QualType RHSType,
+                                                     bool IsCompAssign) {
+
+  const auto *LhsOBT = LHSType->getAs<OverflowBehaviorType>();
+  const auto *RhsOBT = RHSType->getAs<OverflowBehaviorType>();
+
+  assert(LHSType->isIntegerType() && RHSType->isIntegerType() &&
+         "Non-integer type conversion not supported for OverflowBehaviorTypes");
+
+  bool LHSHasTrap =
+      LhsOBT && LhsOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap;
+  bool RHSHasTrap =
+      RhsOBT && RhsOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap;
+  bool LHSHasWrap =
+      LhsOBT && LhsOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Wrap;
+  bool RHSHasWrap =
+      RhsOBT && RhsOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Wrap;
+
+  QualType LHSUnderlyingType = LhsOBT ? LhsOBT->getUnderlyingType() : LHSType;
+  QualType RHSUnderlyingType = RhsOBT ? RhsOBT->getUnderlyingType() : RHSType;
+
+  QualType StandardResultType =
+      handleIntegerConversion<doIntegralCast, doIntegralCast>(
+          S, LHS, RHS, LHSUnderlyingType, RHSUnderlyingType, IsCompAssign);
+
+  // Apply OBT qualifier precedence rules to the result type
+  if (LHSHasTrap || RHSHasTrap)
+    return S.Context.getOverflowBehaviorType(
+        OverflowBehaviorType::OverflowBehaviorKind::Trap, StandardResultType);
+  if (LHSHasWrap || RHSHasWrap)
+    return S.Context.getOverflowBehaviorType(
+        OverflowBehaviorType::OverflowBehaviorKind::Wrap, StandardResultType);
+
+  return StandardResultType;
+}
+
 /// Return the rank of a given fixed point or integer type. The value itself
 /// doesn't matter, but the values must be increasing with proper increasing
 /// rank as described in N1169 4.1.1.
@@ -1714,6 +1757,10 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
   if (LHSType->isFixedPointType() || RHSType->isFixedPointType())
     return handleFixedPointConversion(*this, LHSType, RHSType);
 
+  if (LHSType->isOverflowBehaviorType() || RHSType->isOverflowBehaviorType())
+    return handleOverflowBehaviorTypeConversion(
+        *this, LHS, RHS, LHSType, RHSType, ACK == ArithConvKind::CompAssign);
+
   // Finally, we have two differing integer types.
   return handleIntegerConversion<doIntegralCast, doIntegralCast>(
       *this, LHS, RHS, LHSType, RHSType, ACK == ArithConvKind::CompAssign);
@@ -1754,6 +1801,29 @@ ExprResult Sema::ActOnGenericSelectionExpr(
       llvm::ArrayRef(Types, NumAssocs), ArgExprs);
   delete [] Types;
   return ER;
+}
+
+// Helper function to determine type compatibility for C _Generic expressions.
+// Multiple compatible types within the same _Generic expression is ambiguous
+// and not valid.
+static bool areTypesCompatibleForGeneric(ASTContext &Ctx, QualType T,
+                                         QualType U) {
+  // Try to handle special types like OverflowBehaviorTypes
+  const auto *TOBT = T->getAs<OverflowBehaviorType>();
+  const auto *UOBT = U.getCanonicalType()->getAs<OverflowBehaviorType>();
+
+  if (TOBT || UOBT) {
+    if (TOBT && UOBT) {
+      if (TOBT->getBehaviorKind() == UOBT->getBehaviorKind())
+        return Ctx.typesAreCompatible(TOBT->getUnderlyingType(),
+                                      UOBT->getUnderlyingType());
+      return false;
+    }
+    return false;
+  }
+
+  // We're dealing with types that don't require special handling.
+  return Ctx.typesAreCompatible(T, U);
 }
 
 ExprResult Sema::CreateGenericSelectionExpr(
@@ -1880,8 +1950,8 @@ ExprResult Sema::CreateGenericSelectionExpr(
         // selection shall specify compatible types."
         for (unsigned j = i+1; j < NumAssocs; ++j)
           if (Types[j] && !Types[j]->getType()->isDependentType() &&
-              Context.typesAreCompatible(Types[i]->getType(),
-                                         Types[j]->getType())) {
+              areTypesCompatibleForGeneric(Context, Types[i]->getType(),
+                                           Types[j]->getType())) {
             Diag(Types[j]->getTypeLoc().getBeginLoc(),
                  diag::err_assoc_compatible_types)
               << Types[j]->getTypeLoc().getSourceRange()
@@ -1919,16 +1989,19 @@ ExprResult Sema::CreateGenericSelectionExpr(
   for (unsigned i = 0; i < NumAssocs; ++i) {
     if (!Types[i])
       DefaultIndex = i;
-    else if (ControllingExpr &&
-             Context.typesAreCompatible(
-                 ControllingExpr->getType().getCanonicalType(),
-                 Types[i]->getType()))
-      CompatIndices.push_back(i);
-    else if (ControllingType &&
-             Context.typesAreCompatible(
-                 ControllingType->getType().getCanonicalType(),
-                 Types[i]->getType()))
-      CompatIndices.push_back(i);
+    else {
+      bool Compatible;
+      QualType ControllingQT =
+          ControllingExpr ? ControllingExpr->getType().getCanonicalType()
+                          : ControllingType->getType().getCanonicalType();
+      QualType AssocQT = Types[i]->getType();
+
+      Compatible =
+          areTypesCompatibleForGeneric(Context, ControllingQT, AssocQT);
+
+      if (Compatible)
+        CompatIndices.push_back(i);
+    }
   }
 
   auto GetControllingRangeAndType = [](Expr *ControllingExpr,
@@ -4541,6 +4614,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::UnaryTransform:
     case Type::Attributed:
     case Type::BTFTagAttributed:
+    case Type::OverflowBehavior:
     case Type::HLSLAttributedResource:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
@@ -9129,6 +9203,26 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
   // unqualified versions of compatible types, ...
   QualType ltrans = QualType(lhptee, 0), rtrans = QualType(rhptee, 0);
+
+  if (ltrans->isOverflowBehaviorType() || rtrans->isOverflowBehaviorType()) {
+    if (!S.Context.hasSameType(ltrans, rtrans)) {
+      QualType LUnderlying =
+          ltrans->isOverflowBehaviorType()
+              ? ltrans->castAs<OverflowBehaviorType>()->getUnderlyingType()
+              : ltrans;
+      QualType RUnderlying =
+          rtrans->isOverflowBehaviorType()
+              ? rtrans->castAs<OverflowBehaviorType>()->getUnderlyingType()
+              : rtrans;
+
+      if (S.Context.hasSameType(LUnderlying, RUnderlying))
+        return AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior;
+
+      ltrans = LUnderlying;
+      rtrans = RUnderlying;
+    }
+  }
+
   if (!S.Context.typesAreCompatible(ltrans, rtrans)) {
     // Check if the pointee types are compatible ignoring the sign.
     // We explicitly check for char so that we catch "char" vs
@@ -9355,6 +9449,12 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
       Kind = CK_NoOp;
       return AssignConvertType::Compatible;
     }
+  }
+
+  if ((LHSType->isOverflowBehaviorType() ||
+       RHSType->isOverflowBehaviorType()) &&
+      !Context.areCompatibleOverflowBehaviorTypes(LHSType, RHSType)) {
+    return AssignConvertType::IncompatibleOBTKinds;
   }
 
   // If we have an atomic type, try a non-atomic assignment, then just add an
@@ -14350,6 +14450,8 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     // C99 6.5.2.4p2, 6.5.6p2
     if (!checkArithmeticOpPointerOperand(S, OpLoc, Op))
       return QualType();
+  } else if (ResType->isOverflowBehaviorType()) {
+    // OK!
   } else if (ResType->isObjCObjectPointerType()) {
     // On modern runtimes, ObjC pointer arithmetic is forbidden.
     // Otherwise, we just need a complete type.
@@ -17222,6 +17324,12 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     llvm_unreachable("unknown error case for discarding qualifiers!");
     // fallthrough
   }
+  case AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior:
+    if (SrcType->isArrayType())
+      SrcType = Context.getArrayDecayedType(SrcType);
+
+    DiagKind = diag::ext_typecheck_convert_discards_overflow_behavior;
+    break;
   case AssignConvertType::CompatiblePointerDiscardsQualifiers:
     // If the qualifiers lost were because we were applying the
     // (deprecated) C++ conversion from a string literal to a char*
@@ -17306,6 +17414,22 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     DiagKind = diag::err_arc_weak_unavailable_assign;
     isInvalid = true;
     break;
+  case AssignConvertType::IncompatibleOBTKinds: {
+    auto getOBTKindName = [](QualType Ty) -> StringRef {
+      if (const auto *OBT = Ty->getAs<OverflowBehaviorType>()) {
+        return OBT->getBehaviorKind() ==
+                       OverflowBehaviorType::OverflowBehaviorKind::Trap
+                   ? "__ob_trap"
+                   : "__ob_wrap";
+      }
+      return "non-OBT";
+    };
+
+    Diag(Loc, diag::err_incompatible_obt_kinds_assignment)
+        << getOBTKindName(DstType) << getOBTKindName(SrcType);
+    isInvalid = true;
+    return true;
+  }
   case AssignConvertType::Incompatible:
     if (maybeDiagnoseAssignmentToFunction(*this, DstType, SrcExpr)) {
       if (Complained)
