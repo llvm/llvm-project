@@ -15,9 +15,12 @@
 
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <limits>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -147,18 +150,24 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
                             std::string &Error) {
+  unsigned long long Version = std::numeric_limits<unsigned long long>::max();
+
+  StringRef Header = MB->getBuffer();
+  if (Header.consume_front("#!special-case-list-v"))
+    consumeUnsignedInteger(Header, 10, Version);
+
+  // In https://reviews.llvm.org/D154014 we added glob support and planned
+  // to remove regex support in patterns. We temporarily support the
+  // original behavior using regexes if "#!special-case-list-v1" is the
+  // first line of the file. For more details, see
+  // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
+  bool UseGlobs = Version > 1;
+
   Section *CurrentSection;
   if (auto Err = addSection("*", FileIdx, 1).moveInto(CurrentSection)) {
     Error = toString(std::move(Err));
     return false;
   }
-
-  // In https://reviews.llvm.org/D154014 we added glob support and planned to
-  // remove regex support in patterns. We temporarily support the original
-  // behavior using regexes if "#!special-case-list-v1" is the first line of the
-  // file. For more details, see
-  // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
-  bool UseGlobs = !MB->getBuffer().starts_with("#!special-case-list-v1\n");
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
