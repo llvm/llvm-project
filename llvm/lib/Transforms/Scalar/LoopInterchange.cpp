@@ -1838,38 +1838,6 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
   for (PHINode *P : LcssaInnerLatch)
     P->moveBefore(InnerExit->getFirstNonPHIIt());
 
-  // This deals with a corner case of LCSSA phi nodes in the outer loop latch
-  // block: the loop was in LCSSA form, some transformations can come along
-  // (e.g. unswitch) and create an empty block:
-  //
-  //   BB4:
-  //     br label %BB5
-  //   BB5:
-  //     %old.cond.lcssa = phi i16 [ %cond, %BB4 ]
-  //     br outer.header
-  //
-  // Interchange then brings it in LCSSA form again and we get:
-  //
-  //   BB4:
-  //     %new.cond.lcssa = phi i16 [ %cond, %BB3 ]
-  //     br label %BB5
-  //   BB5:
-  //     %old.cond.lcssa = phi i16 [ %new.cond.lcssa, %BB4 ]
-  //
-  // Which means that we have a chain of LCSSA phi nodes from %new.cond.lcssa
-  // to %old.cond.lcssa. The problem is that interchange can reoder blocks BB4
-  // and BB5 placing the use before the def if we don't check this. The
-  // observation is that %old.cond.lcssa is unused, so instead of moving and
-  // renaming these phi nodes, just delete it if it's trivially dead. If it
-  // isn't trivially dead, it is handled above. The loop should still be in
-  // LCSSA form, and if it isn't, formLCSSARecursively is called after the
-  // interchange rewrite.
-  SmallVector<PHINode *, 8> LcssaOuterLatch(
-      llvm::make_pointer_range(OuterLatch->phis()));
-  for (PHINode *P : LcssaOuterLatch)
-     if (isInstructionTriviallyDead(P))
-       P->eraseFromParent();
-
   // Deal with LCSSA PHI nodes in the loop nest exit block. For PHIs that have
   // incoming values defined in the outer loop, we have to add a new PHI
   // in the inner loop latch, which became the exit block of the outer loop,
@@ -1905,6 +1873,50 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
   InnerLatch->replacePhiUsesWith(InnerLatch, OuterLatch);
 }
 
+// This deals with a corner case when a LCSSA phi node appears in a non-exit
+// block: the outer loop latch block does not need to be exit block of the
+// inner loop. Consider a loop that was in LCSSA form, but then some
+// transformation like loop-unswitch comes along and creates an empty block,
+// where BB5 in this example is the outer loop latch block:
+//
+//   BB4:
+//     br label %BB5
+//   BB5:
+//     %old.cond.lcssa = phi i16 [ %cond, %BB4 ]
+//     br outer.header
+//
+// Interchange then brings it in LCSSA form again resulting in this chain of
+// single-input phi nodes:
+//
+//   BB4:
+//     %new.cond.lcssa = phi i16 [ %cond, %BB3 ]
+//     br label %BB5
+//   BB5:
+//     %old.cond.lcssa = phi i16 [ %new.cond.lcssa, %BB4 ]
+//
+// The problem is that interchange can reoder blocks BB4 and BB5 placing the
+// use before the def if we don't check this.
+//
+static void simplifyLCSSAPhis(Loop *OuterLoop, Loop *InnerLoop) {
+  BasicBlock *InnerLoopExit = InnerLoop->getExitBlock();
+  BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
+
+  // Do not modify lcssa phis where they actually belong, i.e. in exit blocks.
+  if (OuterLoopLatch == InnerLoopExit)
+    return;
+
+  // Collect and remove phis in non-exit blocks if they have 1 input.
+  SmallVector<PHINode *, 8> Phis(
+      llvm::make_pointer_range(OuterLoopLatch->phis()));
+  for (PHINode *Phi : Phis) {
+    assert(Phi->getNumIncomingValues() == 1 && "Single input phi expected");
+    LLVM_DEBUG(dbgs() << "Removing 1-input phi in non-exit block: " << *Phi
+                      << "\n");
+    Phi->replaceAllUsesWith(Phi->getIncomingValue(0));
+    Phi->eraseFromParent();
+  }
+}
+
 bool LoopInterchangeTransform::adjustLoopBranches() {
   LLVM_DEBUG(dbgs() << "adjustLoopBranches called\n");
   std::vector<DominatorTree::UpdateType> DTUpdates;
@@ -1915,6 +1927,9 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   assert(OuterLoopPreHeader != OuterLoop->getHeader() &&
          InnerLoopPreHeader != InnerLoop->getHeader() && OuterLoopPreHeader &&
          InnerLoopPreHeader && "Guaranteed by loop-simplify form");
+
+  simplifyLCSSAPhis(OuterLoop, InnerLoop);
+
   // Ensure that both preheaders do not contain PHI nodes and have single
   // predecessors. This allows us to move them easily. We use
   // InsertPreHeaderForLoop to create an 'extra' preheader, if the existing
