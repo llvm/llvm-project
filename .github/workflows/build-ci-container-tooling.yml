@@ -1,4 +1,4 @@
-name: Build CI Container
+name: Build CI Tooling Containers
 
 permissions:
   contents: read
