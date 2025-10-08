@@ -81,7 +81,12 @@ LIBC_INLINE void Vector::initialize_unsafe(const Entry *auxv) {
 [[gnu::cold]]
 LIBC_INLINE void Vector::fallback_initialize_unsync() {
   constexpr size_t AUXV_MMAP_SIZE = FALLBACK_AUXV_ENTRIES * sizeof(Entry);
-  long mmap_ret = syscall_impl<long>(SYS_mmap, nullptr, AUXV_MMAP_SIZE,
+#ifdef SYS_mmap2
+  constexpr int MMAP_SYSNO = SYS_mmap2;
+#else
+  constexpr int MMAP_SYSNO = SYS_mmap;
+#endif
+  long mmap_ret = syscall_impl<long>(MMAP_SYSNO, nullptr, AUXV_MMAP_SIZE,
                                      PROT_READ | PROT_WRITE,
                                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   // We do not proceed if mmap fails.
