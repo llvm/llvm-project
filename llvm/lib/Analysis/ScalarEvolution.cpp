@@ -15763,22 +15763,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
             DividesBy = SE.getConstant(Multiple);
             return true;
           }
-          if (auto *Mul = dyn_cast<SCEVMulExpr>(Expr)) {
-            if (Mul->getNumOperands() != 2)
-              return false;
-            auto *MulLHS = Mul->getOperand(0);
-            auto *MulRHS = Mul->getOperand(1);
-            if (isa<SCEVConstant>(MulLHS))
-              std::swap(MulLHS, MulRHS);
-            if (auto *Div = dyn_cast<SCEVUDivExpr>(MulLHS))
-              if (Div->getOperand(1) == MulRHS) {
-                DividesBy = MulRHS;
-                return true;
-              }
-          }
-          if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr))
-            return HasDivisibiltyInfo(MinMax->getOperand(0), DividesBy) ||
-                   HasDivisibiltyInfo(MinMax->getOperand(1), DividesBy);
           return false;
         };
 
@@ -15788,9 +15772,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           if (Expr->getType()->isIntegerTy() &&
               SE.getURemExpr(Expr, DividesBy)->isZero())
             return true;
-          if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr))
-            return IsKnownToDivideBy(MinMax->getOperand(0), DividesBy) &&
-                   IsKnownToDivideBy(MinMax->getOperand(1), DividesBy);
           return false;
         };
 
