@@ -446,7 +446,7 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
   // Assert that this an register input operand to an inline asm statement.
   assert(MI->getOperand(OpNo).isReg());
-  // The ConstraintInfo for this Operand is encounted in Op - 1 operand
+  // The ConstraintInfo for this Operand is encoded in Op - 1 operand
   // as a part of the InlineAsm Flags.
   const MachineOperand &FlagsOP = MI->getOperand(OpNo - 1);
   if (!FlagsOP.isImm())
