@@ -158,10 +158,8 @@ static bool isLabelChar(char C) {
 /// isLabelTail - Return true if this pointer points to a valid end of a label.
 static const char *isLabelTail(const char *CurPtr) {
   while (true) {
-    if (CurPtr[0] == ':')
-      return CurPtr + 1;
-    if (!isLabelChar(CurPtr[0]))
-      return nullptr;
+    if (CurPtr[0] == ':') return CurPtr+1;
+    if (!isLabelChar(CurPtr[0])) return nullptr;
     ++CurPtr;
   }
 }
@@ -179,16 +177,15 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
 int LLLexer::getNextChar() {
   char CurChar = *CurPtr++;
   switch (CurChar) {
-  default:
-    return (unsigned char)CurChar;
+  default: return (unsigned char)CurChar;
   case 0:
     // A nul character in the stream is either the end of the current buffer or
     // a random nul in the file.  Disambiguate that here.
-    if (CurPtr - 1 != CurBuf.end())
-      return 0; // Just whitespace.
+    if (CurPtr-1 != CurBuf.end())
+      return 0;  // Just whitespace.
 
     // Otherwise, return end of file.
-    --CurPtr; // Another call to lex will return EOF again.
+    --CurPtr;  // Another call to lex will return EOF again.
     return EOF;
   }
 }
@@ -513,7 +510,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   // If we stopped due to a colon, unless we were directed to ignore it,
   // this really is a label.
   if (!IgnoreColonInIdentifiers && *CurPtr == ':') {
-    StrVal.assign(StartChar - 1, CurPtr++);
+    StrVal.assign(StartChar-1, CurPtr++);
     return lltok::LabelStr;
   }
 
@@ -1052,7 +1049,7 @@ lltok::Kind LLLexer::LexIdentifier() {
     StringRef HexStr(TokStart + 3, len);
     if (!all_of(HexStr, isxdigit)) {
       // Bad token, return it as an error.
-      CurPtr = TokStart + 3;
+      CurPtr = TokStart+3;
       return lltok::Error;
     }
     APInt Tmp(bits, HexStr, 16);
@@ -1065,12 +1062,12 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   // If this is "cc1234", return this as just "cc".
   if (TokStart[0] == 'c' && TokStart[1] == 'c') {
-    CurPtr = TokStart + 2;
+    CurPtr = TokStart+2;
     return lltok::kw_cc;
   }
 
   // Finally, if this isn't known, return an error.
-  CurPtr = TokStart + 1;
+  CurPtr = TokStart+1;
   return lltok::Error;
 }
 
@@ -1095,7 +1092,7 @@ lltok::Kind LLLexer::Lex0x() {
 
   if (!isxdigit(static_cast<unsigned char>(CurPtr[0]))) {
     // Bad token, return it as an error.
-    CurPtr = TokStart + 1;
+    CurPtr = TokStart+1;
     return lltok::Error;
   }
 
@@ -1201,16 +1198,14 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
   ++CurPtr;
 
   // Skip over [0-9]*([eE][-+]?[0-9]+)?
-  while (isdigit(static_cast<unsigned char>(CurPtr[0])))
-    ++CurPtr;
+  while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
 
   if (CurPtr[0] == 'e' || CurPtr[0] == 'E') {
     if (isdigit(static_cast<unsigned char>(CurPtr[1])) ||
         ((CurPtr[1] == '-' || CurPtr[1] == '+') &&
           isdigit(static_cast<unsigned char>(CurPtr[2])))) {
       CurPtr += 2;
-      while (isdigit(static_cast<unsigned char>(CurPtr[0])))
-        ++CurPtr;
+      while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
     }
   }
 
@@ -1233,23 +1228,21 @@ lltok::Kind LLLexer::LexPositive() {
 
   // At this point, we need a '.'.
   if (CurPtr[0] != '.') {
-    CurPtr = TokStart + 1;
+    CurPtr = TokStart+1;
     return lltok::Error;
   }
 
   ++CurPtr;
 
   // Skip over [0-9]*([eE][-+]?[0-9]+)?
-  while (isdigit(static_cast<unsigned char>(CurPtr[0])))
-    ++CurPtr;
+  while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
 
   if (CurPtr[0] == 'e' || CurPtr[0] == 'E') {
     if (isdigit(static_cast<unsigned char>(CurPtr[1])) ||
         ((CurPtr[1] == '-' || CurPtr[1] == '+') &&
         isdigit(static_cast<unsigned char>(CurPtr[2])))) {
       CurPtr += 2;
-      while (isdigit(static_cast<unsigned char>(CurPtr[0])))
-        ++CurPtr;
+      while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
     }
   }
 
