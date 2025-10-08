@@ -1866,25 +1866,28 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   }];
 }
 
-class NVVM_ConvertF8x2ToFP16x2Op_Base <string dstType>
-: NVVM_Op<"convert.f8x2.to." # !tolower(dstType) # "x2"> {
-  let summary = "Convert a pair of f8 inputs to " # !tolower(dstType) # "x2";
+class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstType>
+: NVVM_Op<"convert." # srcType # "x2.to." # !tolower(dstType) # "x2"> {
+  let summary = "Convert a pair of " # srcType # " inputs to " # !tolower(dstType) # "x2";
   let description = [{
-    This Op converts the given f8 inputs in a i8x2 vector to }] # !tolower(dstType) # [{.
+    This Op converts the given }] # srcType # [{ inputs in a }] #
+    !if(!eq(srcType, "f4"), "packed i8", "i8x2 vector") # [{ to }] #
+    !tolower(dstType) # [{.
 
     The result `dst` is represented as a vector of }] # !tolower(dstType) # [{ elements.
-
-    The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    }] #
+    !if(!eq(dstType, "F16"),
+    [{The `relu` attribute, when set, lowers to the '.relu' variant of 
+    the cvt instruction."}], "") # [{
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstType)]>:$dst);
   let arguments = !if(!eq(dstType, "F16"),
-    (ins VectorOfLengthAndType<[2], [I8]>:$src,
+    (ins srcArgType:$src,
          DefaultValuedAttr<BoolAttr, "false">:$relu,
          TypeAttr:$srcType),
-    (ins VectorOfLengthAndType<[2], [I8]>:$src,
+    (ins srcArgType:$src,
          TypeAttr:$srcType));
   let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
   let hasVerifier = 1;
@@ -1897,79 +1900,20 @@ class NVVM_ConvertF8x2ToFP16x2Op_Base <string dstType>
 
   string llvmBuilder = [{
     auto [intId, args] =
-    NVVM::ConvertF8x2To}] # dstType # [{x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
-    $dst = createIntrinsicCall(builder, intId, args);
-  }];
-}
-def NVVM_ConvertF8x2ToF16x2Op : NVVM_ConvertF8x2ToFP16x2Op_Base<"F16">;
-def NVVM_ConvertF8x2ToBF16x2Op : NVVM_ConvertF8x2ToFP16x2Op_Base<"BF16">;
-
-def NVVM_ConvertF6x2ToF16x2Op : NVVM_Op<"convert.f6x2.to.f16x2"> {
-  let summary = "Convert a pair of f6 inputs to f16x2";
-  let description = [{
-    This Op converts the given f6 inputs in a i8x2 vector to f16x2.
-
-    The result `dst` is represented as a vector of f16 elements.
-    
-    The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
-  }];
-  let results = (outs VectorOfLengthAndType<[2], [F16]>:$dst);
-  let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
-         DefaultValuedAttr<BoolAttr, "false">:$relu,
-         TypeAttr:$srcType);
-  let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt, 
-                          llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [intId, args] =
-    NVVM::ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    NVVM::Convert}] # !toupper(srcType) # [{x2To}] # dstType # 
+      [{x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
     $dst = createIntrinsicCall(builder, intId, args);
   }];
 }
 
-def NVVM_ConvertF4x2ToF16x2Op : NVVM_Op<"convert.f4x2.to.f16x2"> {
-  let summary = "Convert a pair of f4 inputs to f16x2";
-  let description = [{
-    This Op converts the given f4 inputs packed in an i8 to f16x2.
-
-    The result `dst` is represented as a vector of f16 elements. The value 
-    converted from the lower 4 bits of `src` is stored in the first element of 
-    `dst` and the value converted from the upper 4 bits of `src` is stored in 
-    the second element of `dst`.
-
-    The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
-  }];
-  let results = (outs VectorOfLengthAndType<[2], [F16]>:$dst);
-  let arguments = (ins I8:$src,
-         DefaultValuedAttr<BoolAttr, "false">:$relu,
-         TypeAttr:$srcType);
-  let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt, 
-                          llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [intId, args] =
-    NVVM::ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
-    $dst = createIntrinsicCall(builder, intId, args);
-  }];
-}
+def NVVM_ConvertF8x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"f8", VectorOfLengthAndType<[2], [I8]>, "F16">;
+def NVVM_ConvertF8x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"f8", VectorOfLengthAndType<[2], [I8]>, "BF16">;
+def NVVM_ConvertF6x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"f6", VectorOfLengthAndType<[2], [I8]>, "F16">;
+def NVVM_ConvertF4x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"f4", I8, "F16">;
 
 //===----------------------------------------------------------------------===//
 // NVVM MMA Ops
