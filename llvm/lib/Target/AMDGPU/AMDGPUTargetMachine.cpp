@@ -929,8 +929,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
       if (!isLTOPreLink(Phase)) {
-        AMDGPUAttributorOptions Opts;
-        MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+        if (getTargetTriple().isAMDGCN()) {
+          AMDGPUAttributorOptions Opts;
+          MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+        }
       }
     }
   });
@@ -1296,7 +1298,8 @@ void AMDGPUPassConfig::addIRPasses() {
   if (LowerCtorDtor)
     addPass(createAMDGPUCtorDtorLoweringLegacyPass());
 
-  if (isPassEnabled(EnableImageIntrinsicOptimizer))
+  if (TM.getTargetTriple().isAMDGCN() &&
+      isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   // This can be disabled by passing ::Disable here or on the command line

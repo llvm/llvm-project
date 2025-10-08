@@ -1224,12 +1224,9 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
 }
 
 // TODO: Migrate to range merge of amdgpu-agpr-alloc.
-// FIXME: Why is this using Attribute::NoUnwind?
-struct AAAMDGPUNoAGPR
-    : public IRAttribute<Attribute::NoUnwind,
-                         StateWrapper<BooleanState, AbstractAttribute>,
-                         AAAMDGPUNoAGPR> {
-  AAAMDGPUNoAGPR(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUNoAGPR(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   static AAAMDGPUNoAGPR &createForPosition(const IRPosition &IRP,
                                            Attributor &A) {
@@ -1507,7 +1504,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAAMDMaxNumWorkgroups>(IRPosition::function(*F));
-    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
     CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
@@ -1517,6 +1513,9 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
     if (!F->isDeclaration() && ST.hasClusters())
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
+
+    if (ST.hasGFX90AInsts())
+      A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;

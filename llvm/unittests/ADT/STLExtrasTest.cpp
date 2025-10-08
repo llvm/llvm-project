@@ -14,6 +14,7 @@
 #include <array>
 #include <climits>
 #include <cstddef>
+#include <functional>
 #include <initializer_list>
 #include <iterator>
 #include <list>
@@ -1658,6 +1659,54 @@ TEST(STLExtrasTest, Accumulate) {
   EXPECT_EQ(accumulate(V1, 10), std::accumulate(V1.begin(), V1.end(), 10));
   EXPECT_EQ(accumulate(drop_begin(V1), 7),
             std::accumulate(V1.begin() + 1, V1.end(), 7));
+
+  EXPECT_EQ(accumulate(V1, 2, std::multiplies<>{}), 240);
+}
+
+TEST(STLExtrasTest, SumOf) {
+  EXPECT_EQ(sum_of(std::vector<int>()), 0);
+  EXPECT_EQ(sum_of(std::vector<int>(), 1), 1);
+  std::vector<int> V1 = {1, 2, 3, 4, 5};
+  static_assert(std::is_same_v<decltype(sum_of(V1)), int>);
+  static_assert(std::is_same_v<decltype(sum_of(V1, 1)), int>);
+  EXPECT_EQ(sum_of(V1), 15);
+  EXPECT_EQ(sum_of(V1, 1), 16);
+
+  std::vector<float> V2 = {1.0f, 2.0f, 4.0f};
+  static_assert(std::is_same_v<decltype(sum_of(V2)), float>);
+  static_assert(std::is_same_v<decltype(sum_of(V2), 1.0f), float>);
+  static_assert(std::is_same_v<decltype(sum_of(V2), 1.0), double>);
+  EXPECT_EQ(sum_of(V2), 7.0f);
+  EXPECT_EQ(sum_of(V2, 1.0f), 8.0f);
+
+  // Make sure that for a const argument the return value is non-const.
+  const std::vector<float> V3 = {1.0f, 2.0f};
+  static_assert(std::is_same_v<decltype(sum_of(V3)), float>);
+  EXPECT_EQ(sum_of(V3), 3.0f);
+}
+
+TEST(STLExtrasTest, ProductOf) {
+  EXPECT_EQ(product_of(std::vector<int>()), 1);
+  EXPECT_EQ(product_of(std::vector<int>(), 0), 0);
+  EXPECT_EQ(product_of(std::vector<int>(), 1), 1);
+  std::vector<int> V1 = {1, 2, 3, 4, 5};
+  static_assert(std::is_same_v<decltype(product_of(V1)), int>);
+  static_assert(std::is_same_v<decltype(product_of(V1, 1)), int>);
+  EXPECT_EQ(product_of(V1), 120);
+  EXPECT_EQ(product_of(V1, 1), 120);
+  EXPECT_EQ(product_of(V1, 2), 240);
+
+  std::vector<float> V2 = {1.0f, 2.0f, 4.0f};
+  static_assert(std::is_same_v<decltype(product_of(V2)), float>);
+  static_assert(std::is_same_v<decltype(product_of(V2), 1.0f), float>);
+  static_assert(std::is_same_v<decltype(product_of(V2), 1.0), double>);
+  EXPECT_EQ(product_of(V2), 8.0f);
+  EXPECT_EQ(product_of(V2, 4.0f), 32.0f);
+
+  // Make sure that for a const argument the return value is non-const.
+  const std::vector<float> V3 = {1.0f, 2.0f};
+  static_assert(std::is_same_v<decltype(product_of(V3)), float>);
+  EXPECT_EQ(product_of(V3), 2.0f);
 }
 
 struct Foo;
