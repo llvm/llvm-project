@@ -24,9 +24,6 @@ TEST_F(LanguageTest, SourceLanguage_GetDescription) {
       continue;
 
     auto lang_type = static_cast<lldb::LanguageType>(i);
-    if (lang_type == lldb::eLanguageTypeLastStandardLanguage)
-      continue;
-
     SourceLanguage lang(lang_type);
 
     // eLanguageTypeHIP is not implemented as a DW_LNAME because of a conflict.
