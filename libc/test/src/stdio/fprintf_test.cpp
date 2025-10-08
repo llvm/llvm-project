@@ -113,3 +113,19 @@ TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
 
   EXPECT_EQ(printf_test::fclose(file), 0);
 }
+
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
+  const char *FILENAME = APPEND_LIBC_TEST("fprintf_nullptr.test");
+  auto FILE_PATH = libc_make_test_file_path(FILENAME);
+
+  ::FILE *file = printf_test::fopen(FILE_PATH, "w");
+  ASSERT_FALSE(file == nullptr);
+
+  int ret = LIBC_NAMESPACE::fprintf(file, "hello %n", (int *)nullptr);
+  EXPECT_LT(ret, 0);
+  ASSERT_ERRNO_EQ(EINVAL);
+
+  ASSERT_EQ(printf_test::fclose(file), 0);
+}
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
