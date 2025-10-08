@@ -211,9 +211,7 @@ New checks
 - New :doc:`readability-redundant-typename
   <clang-tidy/checks/readability/redundant-typename>` check.
 
-  Finds redundant uses of the ``typename`` keyword. Can be used
-  to modernize code to take advantage of the C++20 rules that make
-  ``typename`` redundant in many cases where it was mandatory before.
+  Finds redundant uses of the ``typename`` keyword.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
