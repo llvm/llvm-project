@@ -1684,6 +1684,16 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::STFIWX:          return "PPCISD::STFIWX";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
+  case PPCISD::BCDSHIFT:
+    return "PPCISD::BCDSHIFT";
+  case PPCISD::BCDSHIFTROUND:
+    return "PPCISD::BCDSHIFTROUND";
+  case PPCISD::BCDTRUNC:
+    return "PPCISD::BCDTRUNC";
+  case PPCISD::BCDUTRUNC:
+    return "PPCISD::BCDUTRUNC";
+  case PPCISD::BCDUSHIFT:
+    return "PPCISD::BCDUSHIFT";
   case PPCISD::XXSPLTI_SP_TO_DP:
     return "PPCISD::XXSPLTI_SP_TO_DP";
   case PPCISD::XXSPLTI32DX:
@@ -11153,6 +11163,19 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(0);
 
   SDLoc dl(Op);
+  // Note: BCD instructions expect the immediate operand in vector form (v4i32),
+  // but the builtin provides it as a scalar. To satisfy the instruction
+  // encoding, we splat the scalar across all lanes using SPLAT_VECTOR.
+  auto MapNodeWithSplatVector =
+      [&](unsigned Opcode,
+          std::initializer_list<SDValue> ExtraOps = {}) -> SDValue {
+    SDValue SplatVal =
+        DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
+
+    SmallVector<SDValue, 4> Ops{SplatVal, Op.getOperand(1)};
+    Ops.append(ExtraOps.begin(), ExtraOps.end());
+    return DAG.getNode(Opcode, dl, MVT::v16i8, Ops);
+  };
 
   switch (IntrinsicID) {
   case Intrinsic::thread_pointer:
@@ -11206,6 +11229,17 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                         DAG.getTargetConstant(ME, dl, MVT::i32)}),
                    0);
   }
+
+  case Intrinsic::ppc_bcdshift:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFT, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdshiftround:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFTROUND, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDTRUNC, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdunsignedtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDUTRUNC);
+  case Intrinsic::ppc_bcdunsignedshift:
+    return MapNodeWithSplatVector(PPCISD::BCDUSHIFT);
 
   case Intrinsic::ppc_rlwnm: {
     if (Op.getConstantOperandVal(3) == 0)
