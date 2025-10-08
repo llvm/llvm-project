@@ -14,7 +14,8 @@ define amdgpu_kernel void @runningSum(ptr addrspace(1) %out0, ptr addrspace(1) %
 ; OPT:       [[LOOPBODY]]:
 ; OPT-NEXT:    [[PREVIOUSSUM:%.*]] = phi <2 x i32> [ [[TMP0]], %[[PREHEADER]] ], [ [[RUNNINGSUM:%.*]], %[[LOOPBODY]] ]
 ; OPT-NEXT:    [[ITERCOUNT:%.*]] = phi i32 [ [[INPUTITER]], %[[PREHEADER]] ], [ [[ITERSLEFT:%.*]], %[[LOOPBODY]] ]
-; OPT-NEXT:    [[RUNNINGSUM]] = add <2 x i32> [[TMP0]], [[PREVIOUSSUM]]
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[VECELEMENT1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; OPT-NEXT:    [[RUNNINGSUM]] = add <2 x i32> [[TMP1]], [[PREVIOUSSUM]]
 ; OPT-NEXT:    [[ITERSLEFT]] = sub i32 [[ITERCOUNT]], 1
 ; OPT-NEXT:    [[COND:%.*]] = icmp eq i32 [[ITERSLEFT]], 0
 ; OPT-NEXT:    br i1 [[COND]], label %[[LOOPEXIT:.*]], label %[[LOOPBODY]]
@@ -48,98 +49,193 @@ loopExit:
   ret void
 }
 
-; testing extract case with single use
-define amdgpu_kernel void @test_sink_extract_single_use_operands(ptr addrspace(1) %out0, <2 x i32> %inputVec) {
+; testing extract case with single use - with divergent control flow
+; The vector has SINGLE use (extractelement), both sink into if.then
+define amdgpu_kernel void @test_sink_extract_single_use_operands(ptr addrspace(1) %out0, <2 x i32> %inputVec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_sink_extract_single_use_operands(
-; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], <2 x i32> [[INPUTVEC:%.*]]) #[[ATTR0]] {
+; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], <2 x i32> [[INPUTVEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[RUNNINGSUM:%.*]] = add <2 x i32> [[INPUTVEC]], splat (i32 1)
-; OPT-NEXT:    [[SUMELEMENT0:%.*]] = extractelement <2 x i32> [[RUNNINGSUM]], i64 0
-; OPT-NEXT:    [[RESULT:%.*]] = add i32 [[SUMELEMENT0]], 100
+; OPT-NEXT:    [[TMP0:%.*]] = extractelement <2 x i32> [[RUNNINGSUM]], i64 0
+; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
+; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[RESULT:%.*]] = add i32 [[TMP0]], 100
 ; OPT-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT0]], align 4
+; OPT-NEXT:    br label %[[IF_END]]
+; OPT:       [[IF_END]]:
 ; OPT-NEXT:    ret void
 ;
 entry:
   %runningSum = add <2 x i32> %inputVec, <i32 1, i32 1>
   %sumElement0 = extractelement <2 x i32> %runningSum, i64 0
+  %cmp = icmp slt i32 %tid, %cond
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
   %result = add i32 %sumElement0, 100
   store i32 %result, ptr addrspace(1) %out0
+  br label %if.end
+
+if.end:
   ret void
 }
 
-; testing extract case with multiple uses
-define amdgpu_kernel void @test_sink_extract_operands(ptr addrspace(1) %ptr, <4 x i32> %input_vec) {
+; testing extract case - extracting two elements with divergent control flow
+; The vector has TWO uses (two extractelements), all sink into if.then
+define amdgpu_kernel void @test_sink_extract_operands(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <4 x i32> %input_vec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_sink_extract_operands(
-; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[INPUT_VEC:%.*]]) #[[ATTR0]] {
+; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], ptr addrspace(1) [[OUT1:%.*]], <4 x i32> [[INPUT_VEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[VEC_FULL:%.*]] = add <4 x i32> [[INPUT_VEC]], <i32 42, i32 43, i32 44, i32 45>
-; OPT-NEXT:    [[EXTRACT0:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 0
-; OPT-NEXT:    [[VEC_SHIFTED:%.*]] = shl <4 x i32> [[VEC_FULL]], splat (i32 1)
-; OPT-NEXT:    [[RESULT0:%.*]] = add i32 [[EXTRACT0]], 100
-; OPT-NEXT:    store i32 [[RESULT0]], ptr addrspace(1) [[PTR]], align 4
-; OPT-NEXT:    store <4 x i32> [[VEC_SHIFTED]], ptr addrspace(1) [[PTR]], align 16
+; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
+; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 0
+; OPT-NEXT:    [[RESULT0:%.*]] = add i32 [[TMP0]], 100
+; OPT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 1
+; OPT-NEXT:    [[RESULT1:%.*]] = add i32 [[TMP1]], 200
+; OPT-NEXT:    store i32 [[RESULT0]], ptr addrspace(1) [[OUT0]], align 4
+; OPT-NEXT:    store i32 [[RESULT1]], ptr addrspace(1) [[OUT1]], align 4
+; OPT-NEXT:    br label %[[IF_END]]
+; OPT:       [[IF_END]]:
 ; OPT-NEXT:    ret void
 ;
 entry:
   %vec_full = add <4 x i32> %input_vec, <i32 42, i32 43, i32 44, i32 45>
   %extract0 = extractelement <4 x i32> %vec_full, i64 0
-  %vec_shifted = shl <4 x i32> %vec_full, <i32 1, i32 1, i32 1, i32 1>
+  %extract1 = extractelement <4 x i32> %vec_full, i64 1
+  %cmp = icmp slt i32 %tid, %cond
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
   %result0 = add i32 %extract0, 100
-  store i32 %result0, ptr addrspace(1) %ptr
-  store <4 x i32> %vec_shifted, ptr addrspace(1) %ptr
+  %result1 = add i32 %extract1, 200
+  store i32 %result0, ptr addrspace(1) %out0
+  store i32 %result1, ptr addrspace(1) %out1
+  br label %if.end
+
+if.end:
   ret void
 }
 
-define amdgpu_kernel void @test_shuffle_insert_subvector(ptr addrspace(1) %ptr, <4 x i16> %vec1, <4 x i16> %vec2) {
+; testing shuffle case with divergent control flow - shuffles sink into if.then
+define amdgpu_kernel void @test_shuffle_insert_subvector(ptr addrspace(1) %ptr, <4 x i16> %vec1, <4 x i16> %vec2, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_shuffle_insert_subvector(
-; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x i16> [[VEC1:%.*]], <4 x i16> [[VEC2:%.*]]) #[[ATTR0]] {
+; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x i16> [[VEC1:%.*]], <4 x i16> [[VEC2:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> [[VEC2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; OPT-NEXT:    [[OTHER_SHUFFLE:%.*]] = shufflevector <4 x i16> [[SHUFFLE]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <4 x i16> [[SHUFFLE]], <i16 100, i16 200, i16 300, i16 400>
-; OPT-NEXT:    [[OTHER_RESULT:%.*]] = mul <4 x i16> [[OTHER_SHUFFLE]], splat (i16 2)
+; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> [[VEC2]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; OPT-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <4 x i16> [[SHUFFLE]], <4 x i16> [[SHUFFLE2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
+; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <4 x i16> [[SHUFFLE5]], <i16 100, i16 200, i16 300, i16 400>
+; OPT-NEXT:    [[SHUFFLE3:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; OPT-NEXT:    [[OTHER_RESULT:%.*]] = mul <4 x i16> [[SHUFFLE3]], splat (i16 2)
+; OPT-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <4 x i16> [[VEC2]], <4 x i16> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; OPT-NEXT:    [[MORE_RESULT:%.*]] = sub <4 x i16> [[SHUFFLE4]], splat (i16 5)
 ; OPT-NEXT:    store <4 x i16> [[RESULT_VEC]], ptr addrspace(1) [[PTR]], align 8
 ; OPT-NEXT:    store <4 x i16> [[OTHER_RESULT]], ptr addrspace(1) [[PTR]], align 8
+; OPT-NEXT:    store <4 x i16> [[MORE_RESULT]], ptr addrspace(1) [[PTR]], align 8
+; OPT-NEXT:    br label %[[IF_END]]
+; OPT:       [[IF_END]]:
 ; OPT-NEXT:    ret void
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %vec1, <4 x i16> %vec2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %other_shuffle = shufflevector <4 x i16> %shuffle, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-  %result_vec = add <4 x i16> %shuffle, <i16 100, i16 200, i16 300, i16 400>
-  %other_result = mul <4 x i16> %other_shuffle, <i16 2, i16 2, i16 2, i16 2>
+  %shuffle2 = shufflevector <4 x i16> %vec1, <4 x i16> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  %shuffle3 = shufflevector <4 x i16> %vec1, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %shuffle4 = shufflevector <4 x i16> %vec2, <4 x i16> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %shuffle5 = shufflevector <4 x i16> %shuffle, <4 x i16> %shuffle2, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %cmp = icmp slt i32 %tid, %cond
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %result_vec = add <4 x i16> %shuffle5, <i16 100, i16 200, i16 300, i16 400>
+  %other_result = mul <4 x i16> %shuffle3, <i16 2, i16 2, i16 2, i16 2>
+  %more_result = sub <4 x i16> %shuffle4, <i16 5, i16 5, i16 5, i16 5>
   store <4 x i16> %result_vec, ptr addrspace(1) %ptr
   store <4 x i16> %other_result, ptr addrspace(1) %ptr
+  store <4 x i16> %more_result, ptr addrspace(1) %ptr
+  br label %if.end
+
+if.end:
   ret void
 }
 
-define amdgpu_kernel void @test_shuffle_extract_subvector(ptr addrspace(1) %ptr, <4 x i16> %input_vec) {
+; testing shuffle extract subvector with divergent control flow - shuffles sink into if.then
+define amdgpu_kernel void @test_shuffle_extract_subvector(ptr addrspace(1) %ptr, <4 x i16> %input_vec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_shuffle_extract_subvector(
-; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x i16> [[INPUT_VEC:%.*]]) #[[ATTR0]] {
+; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x i16> [[INPUT_VEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
+; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
+; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; OPT:       [[IF_THEN]]:
 ; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
 ; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <2 x i16> [[SHUFFLE]], <i16 100, i16 200>
+; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+; OPT-NEXT:    [[RESULT_VEC2:%.*]] = mul <2 x i16> [[SHUFFLE2]], splat (i16 3)
+; OPT-NEXT:    [[SHUFFLE3:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; OPT-NEXT:    [[RESULT_VEC3:%.*]] = sub <4 x i16> [[SHUFFLE3]], splat (i16 10)
 ; OPT-NEXT:    store <2 x i16> [[RESULT_VEC]], ptr addrspace(1) [[PTR]], align 4
+; OPT-NEXT:    store <2 x i16> [[RESULT_VEC2]], ptr addrspace(1) [[PTR]], align 4
+; OPT-NEXT:    store <4 x i16> [[RESULT_VEC3]], ptr addrspace(1) [[PTR]], align 8
+; OPT-NEXT:    br label %[[IF_END]]
+; OPT:       [[IF_END]]:
 ; OPT-NEXT:    ret void
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %input_vec, <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+  %shuffle2 = shufflevector <4 x i16> %input_vec, <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+  %shuffle3 = shufflevector <4 x i16> %input_vec, <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %cmp = icmp slt i32 %tid, %cond
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
   %result_vec = add <2 x i16> %shuffle, <i16 100, i16 200>
+  %result_vec2 = mul <2 x i16> %shuffle2, <i16 3, i16 3>
+  %result_vec3 = sub <4 x i16> %shuffle3, <i16 10, i16 10, i16 10, i16 10>
   store <2 x i16> %result_vec, ptr addrspace(1) %ptr
+  store <2 x i16> %result_vec2, ptr addrspace(1) %ptr
+  store <4 x i16> %result_vec3, ptr addrspace(1) %ptr
+  br label %if.end
+
+if.end:
   ret void
 }
 
-define amdgpu_kernel void @test_shuffle_sink_operands(ptr addrspace(1) %ptr, <2 x i16> %input_vec) {
+; testing shuffle sink with widening operations and divergent control flow
+define amdgpu_kernel void @test_shuffle_sink_operands(ptr addrspace(1) %ptr, <2 x i16> %input_vec, <2 x i16> %input_vec2, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_shuffle_sink_operands(
-; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x i16> [[INPUT_VEC:%.*]]) #[[ATTR0]] {
+; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x i16> [[INPUT_VEC:%.*]], <2 x i16> [[INPUT_VEC2:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
+; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
+; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; OPT:       [[IF_THEN]]:
 ; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[INPUT_VEC]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <4 x i16> [[SHUFFLE]], <i16 100, i16 200, i16 300, i16 400>
+; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <2 x i16> [[INPUT_VEC2]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; OPT-NEXT:    [[RESULT_VEC2:%.*]] = mul <4 x i16> [[SHUFFLE2]], splat (i16 5)
 ; OPT-NEXT:    store <4 x i16> [[RESULT_VEC]], ptr addrspace(1) [[PTR]], align 8
+; OPT-NEXT:    store <4 x i16> [[RESULT_VEC2]], ptr addrspace(1) [[PTR]], align 8
+; OPT-NEXT:    br label %[[IF_END]]
+; OPT:       [[IF_END]]:
 ; OPT-NEXT:    ret void
 ;
 entry:
   %shuffle = shufflevector <2 x i16> %input_vec, <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  %shuffle2 = shufflevector <2 x i16> %input_vec2, <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  %cmp = icmp slt i32 %tid, %cond
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
   %result_vec = add <4 x i16> %shuffle, <i16 100, i16 200, i16 300, i16 400>
+  %result_vec2 = mul <4 x i16> %shuffle2, <i16 5, i16 5, i16 5, i16 5>
   store <4 x i16> %result_vec, ptr addrspace(1) %ptr
+  store <4 x i16> %result_vec2, ptr addrspace(1) %ptr
+  br label %if.end
+
+if.end:
   ret void
 }
