@@ -85,7 +85,7 @@ struct __has_array_cookie : false_type {};
 // [2]: https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Handle-C++-differences
 template <class _Tp>
 // Avoid failures when -fsanitize-address-poison-custom-array-cookie is enabled
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([[maybe_unused]] _Tp const* __ptr) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([[__maybe_unused__]] _Tp const* __ptr) {
   static_assert(
       __has_array_cookie<_Tp>::value, "Trying to access the array cookie of a type that is not guaranteed to have one");
 
