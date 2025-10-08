@@ -10,15 +10,13 @@
 
 #include "include/atomic_support.h"
 
-#if defined(_LIBCPP_ABI_MICROSOFT)
-#  if !defined(_LIBCPP_ABI_VCRUNTIME)
-#    define _LIBPCPP_DEFINE_NEW_HANDLER
-#  endif
-#elif defined(LIBCXX_BUILDING_LIBCXXABI)
+#if defined(_LIBCPP_CXX_ABI_VCRUNTIME)
+// nothing to do, we use the one from the VCRuntime
+#elif defined(_LIBCPP_CXX_ABI_LIBCXXABI)
 // nothing to do, we use the one from libc++abi
-#elif defined(LIBCXXRT)
+#elif defined(_LIBCPP_CXX_ABI_CXXRT)
 #  define _LIBPCPP_DEFINE_NEW_HANDLER
-#elif defined(__GLIBCXX__)
+#elif defined(_LIBCPP_CXX_ABI_LIBSTDCXX) || defined(_LIBCPP_CXX_ABI_LIBSUPCXX)
 // nothing to do, we use the one from libstdc++/libsupc++
 #else
 #  define _LIBPCPP_DEFINE_NEW_HANDLER

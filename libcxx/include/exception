@@ -97,6 +97,7 @@ template <class E> void rethrow_if_nested(const E& e);
 #    include <new>
 #    include <type_traits>
 #  endif
+
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_EXCEPTION

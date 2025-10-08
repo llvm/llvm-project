@@ -6,11 +6,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#ifndef LIBCXXRT
-#  error this header may only be used when targeting libcxxrt
-#endif
-
 namespace std {
 
 bad_exception::~bad_exception() noexcept {}
