@@ -23,6 +23,10 @@
 
 #include "config.h"
 
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#include <ptrauth.h>
+#endif
+
 namespace libunwind {
 
 /// CFI_Parser does basic parsing of a CFI (Call Frame Information) records.
@@ -314,18 +318,6 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
   }
   return false;
 }
-namespace {
-// This helper function handles setting the manually signed personality on
-// CIE_Info without attempt to authenticate and/or re-sign
-template <typename CIE_Info, typename T>
-[[maybe_unused]] void set_cie_info_personality(CIE_Info *info,
-                                               T signed_personality) {
-  static_assert(sizeof(info->personality) == sizeof(signed_personality),
-                "Signed personality is the wrong size");
-  memmove((void *)&info->personality, (void *)&signed_personality,
-          sizeof(signed_personality));
-}
-}
 
 /// Extract info from a CIE
 template <typename A>
@@ -420,7 +412,10 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
           personality = (pint_t)signedPtr;
         }
 #endif
-        set_cie_info_personality(cieInfo, personality);
+        // We use memmove to set the CIE personality as we have already
+        // re-signed the pointer to the correct schema.
+        memmove((void *)&cieInfo->personality, (void *)&personality,
+                sizeof(personality));
         break;
       }
       case 'L':

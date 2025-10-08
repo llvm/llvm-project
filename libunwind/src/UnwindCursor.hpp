@@ -1750,18 +1750,6 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
 
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-// This helper function handles setting the manually signed handler on
-// unw_proc_info without attempt to authenticate and/or re-sign
-namespace {
-template <typename T>
-void set_proc_info_handler(unw_proc_info_t &info, T signed_handler) {
-  static_assert(sizeof(info.handler) == sizeof(signed_handler),
-                "Signed handler is the wrong size");
-  memmove((void *)&info.handler, (void *)&signed_handler,
-          sizeof(signed_handler));
-}
-} // unnamed namespace
-
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
     const typename R::link_reg_t &pc, const UnwindInfoSections &sects) {
@@ -2018,7 +2006,12 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
   _info.start_ip = funcStart;
   _info.end_ip = funcEnd;
   _info.lsda = lsda;
-  set_proc_info_handler(_info, personality);
+  // We use memmove to copy the personality function as we have already manually
+  // re-signed the pointer, and assigning directly will attempt to incorrectly
+  // sign the already signed value.
+  memmove(reinterpret_cast<void *>(&_info.handler),
+          reinterpret_cast<void *>(&personality),
+          sizeof(personality));
   _info.gp = 0;
   _info.flags = 0;
   _info.format = encoding;

@@ -1950,7 +1950,7 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   // authenticating so that we maintain the signature for the resigning
   // performed by setIP.
   uint64_t pcRegister = 0;
-  memcpy(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
+  memmove(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
          sizeof(pcRegister));
   setIP(pcRegister);
 #endif
@@ -1962,9 +1962,9 @@ inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
 
 inline Registers_arm64 &
 Registers_arm64::operator=(const Registers_arm64 &other) {
-  memcpy(&_registers, &other._registers, sizeof(_registers));
-  memcpy(_vectorHalfRegisters, &other._vectorHalfRegisters,
-         sizeof(_vectorHalfRegisters));
+  memmove(&_registers, &other._registers, sizeof(_registers));
+  memmove(_vectorHalfRegisters, &other._vectorHalfRegisters,
+          sizeof(_vectorHalfRegisters));
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   // We perform this step to ensure that we correctly authenticate and re-sign
   // the pc after the bitwise copy.

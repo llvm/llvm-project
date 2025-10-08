@@ -127,6 +127,7 @@
 
 #else
 
+  #define __unwind_ptrauth_restricted_intptr(...)
   #define __ptrauth_unwind_upi_handler
   #define __ptrauth_unwind_upi_handler_intptr
   #define __ptrauth_unwind_upi_startip
@@ -142,6 +143,7 @@
   #define __ptrauth_unwind_uis_compact_unwind_section
   #define __ptrauth_unwind_uis_compact_unwind_section_length
   #define __ptrauth_unwind_cie_info_personality
+
 #endif
 
 #if defined(_WIN32) && defined(__SEH__)
@@ -197,8 +199,8 @@ struct unw_proc_info_t {
   unw_word_t __ptrauth_unwind_upi_handler_intptr handler;
   unw_word_t  gp;                                   /* not used */
   unw_word_t __ptrauth_unwind_upi_flags flags;      /* not used */
-  uint32_t    format;                               /* compact unwind encoding, or zero if none */
-  uint32_t    unwind_info_size;                     /* size of DWARF unwind info, or zero if none */
+  uint32_t   format;                                /* compact unwind encoding, or zero if none */
+  uint32_t   unwind_info_size;                      /* size of DWARF unwind info, or zero if none */
   unw_word_t __ptrauth_unwind_upi_info unwind_info; /* address of DWARF unwind info, or zero */
   unw_word_t __ptrauth_unwind_upi_extra extra;      /* mach_header of mach-o image containing func */
 };

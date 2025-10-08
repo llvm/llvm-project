@@ -601,12 +601,16 @@ int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrameless(
     savedRegisterLoc -= 8;
   }
 
+  // We load the link register prior to setting the new SP as the authentication
+  // schema for LR entangles the SP of the old frame into the diversifier.
   Registers_arm64::reg_t linkRegister = registers.getRegister(UNW_AARCH64_LR);
 
   // subtract stack size off of sp
   registers.setSP(savedRegisterLoc);
 
-  // set pc to be value in lr
+  // Set pc to be value in lr. This needs to be performed after the new SP has
+  // been set, as the PC authentication schema entangles the SP of the new
+  // frame.
   registers.setIP(linkRegister);
 
   return UNW_STEP_SUCCESS;
@@ -684,12 +688,13 @@ int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrame(
 
   Registers_arm64::reg_t fp = registers.getFP();
 
-  // old sp is fp less saved fp and lr. Set this before LR because in arm64e
-  // it's the authentication discriminator.
-  registers.setSP(fp + 16);
-
   // fp points to old fp
   registers.setFP(addressSpace.get64(fp));
+
+  // Old sp is fp less saved fp and lr. We need to set this prior to setting
+  // the lr as the pointer authentication schema for the lr incorporates the
+  // sp as part of the diversifier.
+  registers.setSP(fp + 16);
 
   // pop return address into pc
   registers.setIP(addressSpace.get64(fp + 8));

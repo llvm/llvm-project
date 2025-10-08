@@ -575,9 +575,9 @@ typedef void *__ptrauth_scan_results_landingpad landing_pad_ptr_t;
 struct scan_results
 {
     int64_t        ttypeIndex;   // > 0 catch handler, < 0 exception spec handler, == 0 a cleanup
-    action_ptr_t actionRecord;   // Currently unused.  Retained to ease future maintenance.
-    lsd_ptr_t languageSpecificData; // Needed only for __cxa_call_unexpected
-    landing_pad_t landingPad;       // null -> nothing found, else something found
+    action_ptr_t   actionRecord; // Currently unused.  Retained to ease future maintenance.
+    lsd_ptr_t      languageSpecificData; // Needed only for __cxa_call_unexpected
+    landing_pad_t  landingPad;   // null -> nothing found, else something found
     void*          adjustedPtr;  // Used in cxa_exception.cpp
     _Unwind_Reason_Code reason;  // One of _URC_FATAL_PHASE1_ERROR,
                                  //        _URC_FATAL_PHASE2_ERROR,
@@ -586,38 +586,7 @@ struct scan_results
 };
 
 }  // unnamed namespace
-} // extern "C"
 
-#if !defined(_LIBCXXABI_ARM_EHABI)
-namespace {
-// The logical model for casting authenticated function pointers makes
-// it impossible to directly cast them without breaking the authentication,
-// as a result we need this pair of helpers.
-//
-// __ptrauth_nop_cast cannot be used here as the authentication schemas include
-// address diversification.
-template <typename PtrType>
-void set_landing_pad_as_ptr(scan_results& results, const PtrType& landingPad) {
-  union {
-    landing_pad_t* as_landing_pad;
-    landing_pad_ptr_t* as_pointer;
-  } u;
-  u.as_landing_pad = &results.landingPad;
-  *u.as_pointer = landingPad;
-}
-
-static const landing_pad_ptr_t& get_landing_pad_as_ptr(const scan_results& results) {
-  union {
-    const landing_pad_t* as_landing_pad;
-    const landing_pad_ptr_t* as_pointer;
-  } u;
-  u.as_landing_pad = &results.landingPad;
-  return *u.as_pointer;
-}
-} // unnamed namespace
-#endif
-
-extern "C" {
 static
 void
 set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
@@ -638,10 +607,14 @@ set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
   // We manually re-sign the IP as the __ptrauth qualifiers cannot
   // express the required relationship with the destination address
   const auto existingDiscriminator =
-      ptrauth_blend_discriminator(&results.landingPad, __ptrauth_scan_results_landingpad_disc);
+      ptrauth_blend_discriminator(&results.landingPad,
+                                  __ptrauth_scan_results_landingpad_disc);
   unw_word_t newIP /* opaque __ptrauth(ptrauth_key_return_address, stackPointer, 0) */ =
-      (unw_word_t)ptrauth_auth_and_resign(*(void* const*)&results.landingPad, __ptrauth_scan_results_landingpad_key,
-                                          existingDiscriminator, ptrauth_key_return_address, stackPointer);
+      (unw_word_t)ptrauth_auth_and_resign(*(void* const*)&results.landingPad,
+                                          __ptrauth_scan_results_landingpad_key,
+                                          existingDiscriminator,
+                                          ptrauth_key_return_address,
+                                          stackPointer);
   _Unwind_SetIP(context, newIP);
 #else
   _Unwind_SetIP(context, results.landingPad);
@@ -991,6 +964,57 @@ _UA_CLEANUP_PHASE
 */
 
 #if !defined(_LIBCXXABI_ARM_EHABI)
+
+// We use these helper functions to work around the behavior of casting between
+// integers (even those that are authenticated) and authenticated pointers.
+// Because the schemas being used are address discriminated we cannot use a
+// trivial value union to coerce the types so instead we perform the re-signing
+// manually.
+using __cxa_catch_temp_type = decltype(__cxa_exception::catchTemp);
+static inline void set_landing_pad(scan_results& results,
+                                   const __cxa_catch_temp_type& source) {
+#if __has_feature(ptrauth_calls)
+  const uintptr_t sourceDiscriminator =
+      ptrauth_blend_discriminator(&source, __ptrauth_cxxabi_catch_temp_disc);
+  const uintptr_t targetDiscriminator =
+      ptrauth_blend_discriminator(&results.landingPad,
+                                  __ptrauth_scan_results_landingpad_disc);
+  uintptr_t reauthenticatedLandingPad =
+      (uintptr_t)ptrauth_auth_and_resign(*reinterpret_cast<void* const*>(&source),
+                                         __ptrauth_cxxabi_catch_temp_key,
+                                         sourceDiscriminator,
+                                         __ptrauth_scan_results_landingpad_key,
+                                         targetDiscriminator);
+  memmove(reinterpret_cast<void *>(&results.landingPad),
+          reinterpret_cast<void *>(&reauthenticatedLandingPad),
+          sizeof(reauthenticatedLandingPad));
+#else
+  results.landingPad = reinterpret_cast<landing_pad_t>(source);
+#endif
+}
+
+static inline void get_landing_pad(__cxa_catch_temp_type &dest,
+                                   const scan_results &results) {
+#if __has_feature(ptrauth_calls)
+  const uintptr_t sourceDiscriminator =
+      ptrauth_blend_discriminator(&results.landingPad,
+                                  __ptrauth_scan_results_landingpad_disc);
+  const uintptr_t targetDiscriminator =
+      ptrauth_blend_discriminator(&dest, __ptrauth_cxxabi_catch_temp_disc);
+  uintptr_t reauthenticatedPointer =
+      (uintptr_t)ptrauth_auth_and_resign(*reinterpret_cast<void* const*>(&results.landingPad),
+                                         __ptrauth_scan_results_landingpad_key,
+                                         sourceDiscriminator,
+                                         __ptrauth_cxxabi_catch_temp_key,
+                                         targetDiscriminator);
+  memmove(reinterpret_cast<void *>(&dest),
+          reinterpret_cast<void *>(&reauthenticatedPointer),
+          sizeof(reauthenticatedPointer));
+#else
+  dest = reinterpret_cast<__cxa_catch_temp_type>(results.landingPad);
+#endif
+}
+
 #ifdef __WASM_EXCEPTIONS__
 _Unwind_Reason_Code __gxx_personality_wasm0
 #elif defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
@@ -1023,7 +1047,7 @@ __gxx_personality_v0
         results.ttypeIndex = exception_header->handlerSwitchValue;
         results.actionRecord = exception_header->actionRecord;
         results.languageSpecificData = exception_header->languageSpecificData;
-        set_landing_pad_as_ptr(results, exception_header->catchTemp);
+        set_landing_pad(results, exception_header->catchTemp);
         results.adjustedPtr = exception_header->adjustedPtr;
 
         // Jump to the handler.
@@ -1057,7 +1081,7 @@ __gxx_personality_v0
             exc->handlerSwitchValue = static_cast<int>(results.ttypeIndex);
             exc->actionRecord = results.actionRecord;
             exc->languageSpecificData = results.languageSpecificData;
-            exc->catchTemp = get_landing_pad_as_ptr(results);
+            get_landing_pad(exc->catchTemp, results);
             exc->adjustedPtr = results.adjustedPtr;
 #ifdef __WASM_EXCEPTIONS__
             // Wasm only uses a single phase (_UA_SEARCH_PHASE), so save the

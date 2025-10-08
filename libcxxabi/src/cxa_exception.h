@@ -79,8 +79,8 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 // http://sourcery.mentor.com/archives/cxx-abi-dev/msg01924.html
 // The layout of this structure MUST match the layout of __cxa_exception, with
 // primaryException instead of referenceCount.
-// The tags used in the pointer authentication qualifiers also need to match
-// those of the corresponding members in __cxa_exception.
+// The pointer authentication schemas specified here must also match those of
+// the corresponding members in __cxa_exception.
 struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 #if defined(__LP64__) || defined(_WIN64) || defined(_LIBCXXABI_ARM_EHABI)
     void* reserve; // padding.
@@ -101,7 +101,6 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
     int propagationCount;
 #else
     int handlerSwitchValue;
-
     const unsigned char *__ptrauth_cxxabi_action_record actionRecord;
     const unsigned char *__ptrauth_cxxabi_lsd languageSpecificData;
     void *__ptrauth_cxxabi_catch_temp catchTemp;

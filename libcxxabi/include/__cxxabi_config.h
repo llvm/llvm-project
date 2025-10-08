@@ -116,7 +116,9 @@
 #  define __ptrauth_cxxabi_lsd __ptrauth(ptrauth_key_process_dependent_data, 1, 0xE8EE)
 
 // ptrauth_string_discriminator("__cxa_exception::catchTemp") == 0xFA58
-#  define __ptrauth_cxxabi_catch_temp __ptrauth(ptrauth_key_process_dependent_data, 1, 0xFA58)
+#  define __ptrauth_cxxabi_catch_temp_disc 0xFA58
+#  define __ptrauth_cxxabi_catch_temp_key ptrauth_key_process_dependent_data
+#  define __ptrauth_cxxabi_catch_temp __ptrauth(__ptrauth_cxxabi_catch_temp_key, 1, __ptrauth_cxxabi_catch_temp_disc)
 
 // ptrauth_string_discriminator("__cxa_exception::adjustedPtr") == 0x99E4
 #  define __ptrauth_cxxabi_adjusted_ptr __ptrauth(ptrauth_key_process_dependent_data, 1, 0x99E4)

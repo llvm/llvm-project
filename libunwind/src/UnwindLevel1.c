@@ -90,30 +90,20 @@
   } while (0)
 #endif
 
-// There is not currently a clean way to cast between an authenticated
-// integer and an authenticated function pointer, so we need this helper
-// function to keep things clean.
+// We need this helper function as the semantics of casting between integers and
+// function pointers mean that we end up with a function pointer without the
+// correct signature. Instead we assign to an integer with a matching schema,
+// and then memmove the result into a variable of the correct type. This memmove
+// is possible as `_Unwind_Personality_Fn` is a standard function pointer, and
+// as such is not address diversified.
 static _Unwind_Personality_Fn get_handler_function(unw_proc_info_t *frameInfo) {
-  // Converting from an authenticated integer to a _Unwind_Personality_Fn
-  // requires multiple steps, but as the schema of _Unwind_Personality_Fn is
-  // not address diversified we can mostly just rely on automatic re-signing
-  // by clang.
-
-  // Step 1. Assign from the address diversified integer in frameInfo->handler
-  //         to the non-address diversified schema of `_Unwind_Personality_Fn`
   uintptr_t __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer,
                                                0,
                                                ptrauth_function_pointer_type_discriminator(_Unwind_Personality_Fn))
     reauthenticatedIntegerHandler = frameInfo->handler;
-
-  // Step 2. Memcpy from our re-signed integer typed handler to an
-  //         _Unwind_Personality_Fn typed local - this avoids any confused
-  //         re-signing of values that already have a signature.
   _Unwind_Personality_Fn handler;
-  memcpy(&handler, (void *)&reauthenticatedIntegerHandler,
+  memmove(&handler, (void *)&reauthenticatedIntegerHandler,
          sizeof(_Unwind_Personality_Fn));
-
-  // Step 3. Finally return the correctly typed and signed value.
   return handler;
 }
 
