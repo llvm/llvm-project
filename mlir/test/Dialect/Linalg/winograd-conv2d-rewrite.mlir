@@ -188,8 +188,8 @@ func.func @conv2d_type_promotion(%arg0: tensor<2x6x6x5xf16>, %arg1: tensor<2x3x3
 // CHECK-NEXT:             %[[VAL_32:.*]] = scf.for %[[VAL_33:.*]] = %[[VAL_11]] to %[[VAL_8]] step %[[VAL_8]] iter_args(%[[VAL_34:.*]] = %[[VAL_31]]) -> (tensor<6x6x1x1x2x5xf16>) {
 // CHECK-NEXT:               %[[VAL_35:.*]] = scf.for %[[VAL_36:.*]] = %[[VAL_11]] to %[[VAL_10]] step %[[VAL_8]] iter_args(%[[VAL_37:.*]] = %[[VAL_34]]) -> (tensor<6x6x1x1x2x5xf16>) {
 // CHECK-NEXT:                 %[[VAL_38:.*]] = scf.for %[[VAL_39:.*]] = %[[VAL_11]] to %[[VAL_9]] step %[[VAL_8]] iter_args(%[[VAL_40:.*]] = %[[VAL_37]]) -> (tensor<6x6x1x1x2x5xf16>) {
-// CHECK-NEXT:                   %[[VAL_41:.*]] = affine.apply #[[$ATTR_3]](%[[VAL_30]])
-// CHECK-NEXT:                   %[[VAL_42:.*]] = affine.apply #[[$ATTR_3]](%[[VAL_33]])
+// CHECK-NEXT:                   %[[VAL_41:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_30]])
+// CHECK-NEXT:                   %[[VAL_42:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_33]])
 // CHECK-NEXT:                   %[[VAL_43:.*]] = tensor.extract_slice %[[ARG0]]{{\[}}%[[VAL_36]], %[[VAL_41]], %[[VAL_42]], %[[VAL_39]]] [1, 6, 6, 1] [1, 1, 1, 1] : tensor<2x6x6x5xf16> to tensor<6x6xf16>
 // CHECK-NEXT:                   %[[VAL_44:.*]] = tensor.empty() : tensor<6x6xf16>
 // CHECK-NEXT:                   %[[VAL_45:.*]] = linalg.fill ins(%[[VAL_7]] : f16) outs(%[[VAL_44]] : tensor<6x6xf16>) -> tensor<6x6xf16>
@@ -217,8 +217,8 @@ func.func @conv2d_type_promotion(%arg0: tensor<2x6x6x5xf16>, %arg1: tensor<2x3x3
 // CHECK-NEXT:               %[[VAL_63:.*]] = scf.for %[[VAL_64:.*]] = %[[VAL_11]] to %[[VAL_10]] step %[[VAL_8]] iter_args(%[[VAL_65:.*]] = %[[VAL_62]]) -> (tensor<2x4x4x2xf32>) {
 // CHECK-NEXT:                 %[[VAL_66:.*]] = scf.for %[[VAL_67:.*]] = %[[VAL_11]] to %[[VAL_10]] step %[[VAL_8]] iter_args(%[[VAL_68:.*]] = %[[VAL_65]]) -> (tensor<2x4x4x2xf32>) {
 // CHECK-NEXT:                   %[[VAL_69:.*]] = tensor.extract_slice %[[VAL_56]][0, 0, %[[VAL_58]], %[[VAL_61]], %[[VAL_64]], %[[VAL_67]]] [6, 6, 1, 1, 1, 1] [1, 1, 1, 1, 1, 1] : tensor<6x6x1x1x2x2xf32> to tensor<6x6xf32>
-// CHECK-NEXT:                   %[[VAL_70:.*]] = affine.apply #[[$ATTR_3]](%[[VAL_58]])
-// CHECK-NEXT:                   %[[VAL_71:.*]] = affine.apply #[[$ATTR_3]](%[[VAL_61]])
+// CHECK-NEXT:                   %[[VAL_70:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_58]])
+// CHECK-NEXT:                   %[[VAL_71:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_61]])
 // CHECK-NEXT:                   %[[VAL_72:.*]] = tensor.extract_slice %[[VAL_68]]{{\[}}%[[VAL_64]], %[[VAL_70]], %[[VAL_71]], %[[VAL_67]]] [1, 4, 4, 1] [1, 1, 1, 1] : tensor<2x4x4x2xf32> to tensor<4x4xf32>
 // CHECK-NEXT:                   %[[VAL_73:.*]] = tensor.empty() : tensor<4x6xf32>
 // CHECK-NEXT:                   %[[VAL_74:.*]] = linalg.fill ins(%[[VAL_12]] : f32) outs(%[[VAL_73]] : tensor<4x6xf32>) -> tensor<4x6xf32>
@@ -226,7 +226,7 @@ func.func @conv2d_type_promotion(%arg0: tensor<2x6x6x5xf16>, %arg1: tensor<2x3x3
 // CHECK-NEXT:                   %[[VAL_76:.*]] = tensor.empty() : tensor<4x4xf32>
 // CHECK-NEXT:                   %[[VAL_77:.*]] = linalg.fill ins(%[[VAL_12]] : f32) outs(%[[VAL_76]] : tensor<4x4xf32>) -> tensor<4x4xf32>
 // CHECK-NEXT:                   %[[VAL_78:.*]] = linalg.matmul ins(%[[VAL_75]], %[[VAL_1]] : tensor<4x6xf32>, tensor<6x4xf32>) outs(%[[VAL_77]] : tensor<4x4xf32>) -> tensor<4x4xf32>
-// CHECK-NEXT:                   %[[VAL_79:.*]] = linalg.generic {indexing_maps = [#[[$ATTR_4]], #[[$ATTR_5]], #[[$ATTR_5]]], iterator_types = ["parallel", "parallel"]} ins(%[[VAL_0]], %[[VAL_78]] : f32, tensor<4x4xf32>) outs(%[[VAL_72]] : tensor<4x4xf32>) {
+// CHECK-NEXT:                   %[[VAL_79:.*]] = linalg.generic {indexing_maps = [#[[$ATTR_1]], #[[$ATTR_2]], #[[$ATTR_2]]], iterator_types = ["parallel", "parallel"]} ins(%[[VAL_0]], %[[VAL_78]] : f32, tensor<4x4xf32>) outs(%[[VAL_72]] : tensor<4x4xf32>) {
 // CHECK-NEXT:                   ^bb0(%[[VAL_80:.*]]: f32, %[[VAL_81:.*]]: f32, %[[VAL_82:.*]]: f32):
 // CHECK-NEXT:                     %[[VAL_83:.*]] = arith.mulf %[[VAL_80]], %[[VAL_81]] : f32
 // CHECK-NEXT:                     %[[VAL_84:.*]] = arith.addf %[[VAL_83]], %[[VAL_82]] : f32
