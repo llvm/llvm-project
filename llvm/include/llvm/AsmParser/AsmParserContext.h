@@ -9,8 +9,8 @@
 #ifndef LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 #define LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 
-#include "llvm/AsmParser/FileLoc.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/AsmParser/FileLoc.h"
 #include "llvm/IR/Value.h"
 #include <optional>
 
