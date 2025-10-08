@@ -18,6 +18,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -380,6 +381,17 @@ public:
       OS << "]";
     }
     OS << "}";
+  }
+
+  /// Prints the bitvector in compressed form:
+  /// E.g. for bitvector {[100, 103][110][180, 200]} -> 100+3,110,180+20
+  void printCompressed(raw_ostream &OS) const {
+    ListSeparator LS(",");
+    for (auto It = Intervals.begin(), End = Intervals.end(); It != End; ++It) {
+      OS << LS << It.start();
+      if (size_t Length = It.stop() - It.start(); Length)
+        OS << '-' << Length;
+    }
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

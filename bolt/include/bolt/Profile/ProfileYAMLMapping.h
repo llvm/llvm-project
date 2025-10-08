@@ -101,6 +101,9 @@ struct PseudoProbeInfo {
   std::vector<uint64_t> CallProbes;
   std::vector<uint64_t> IndCallProbes;
   std::vector<uint32_t> InlineTreeNodes;
+  uint32_t BlockProbe;
+  std::string BlockProbesStr;
+  std::string InlineTreeNodesStr;
 
   bool operator==(const PseudoProbeInfo &Other) const {
     return InlineTreeIndex == Other.InlineTreeIndex &&
@@ -112,10 +115,13 @@ struct PseudoProbeInfo {
 
 template <> struct MappingTraits<bolt::PseudoProbeInfo> {
   static void mapping(IO &YamlIO, bolt::PseudoProbeInfo &PI) {
+    YamlIO.mapOptional("bl", PI.BlockProbe, 0);
+    YamlIO.mapOptional("bs", PI.BlockProbesStr, "");
     YamlIO.mapOptional("blx", PI.BlockMask, 0);
     YamlIO.mapOptional("blk", PI.BlockProbes, std::vector<uint64_t>());
     YamlIO.mapOptional("call", PI.CallProbes, std::vector<uint64_t>());
     YamlIO.mapOptional("icall", PI.IndCallProbes, std::vector<uint64_t>());
+    YamlIO.mapOptional("is", PI.InlineTreeNodesStr, "");
     YamlIO.mapOptional("id", PI.InlineTreeIndex, 0);
     YamlIO.mapOptional("ids", PI.InlineTreeNodes, std::vector<uint32_t>());
   }

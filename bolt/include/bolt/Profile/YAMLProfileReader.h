@@ -174,7 +174,7 @@ private:
 
   /// Maps profiled function id to function, for function matching with calls as
   /// anchors.
-  ProfileLookupMap IdToYamLBF;
+  ProfileLookupMap IdToYamlBF;
 
   /// For LTO symbol resolution.
   /// Map a common LTO prefix to a list of YAML profiles matching the prefix.
@@ -182,6 +182,10 @@ private:
 
   /// Map a common LTO prefix to a set of binary functions.
   StringMap<std::unordered_set<BinaryFunction *>> LTOCommonNameFunctionMap;
+
+  /// For pseudo probe function matching.
+  /// Map profile GUID to YAML profile.
+  std::unordered_map<uint64_t, yaml::bolt::BinaryFunctionProfile *> GUIDMap;
 
   /// Function names in profile.
   StringSet<> ProfileFunctionNames;
@@ -244,6 +248,10 @@ private:
 
   /// Check if the profile uses an event with a given \p Name.
   bool usesEvent(StringRef Name) const;
+
+  /// Dump profile as dot.
+  void dumpGraph(BinaryContext &BC, raw_ostream &OS,
+                 const yaml::bolt::BinaryFunctionProfile &YamlBF) const;
 };
 
 } // namespace bolt
