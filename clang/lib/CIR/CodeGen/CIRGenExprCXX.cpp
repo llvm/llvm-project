@@ -463,12 +463,6 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
   void emit(CIRGenFunction &cgf) override {
     cgf.emitDeleteCall(operatorDelete, ptr, elementType);
   }
-
-  // This is a placeholder until EHCleanupScope is implemented.
-  size_t getSize() const override {
-    assert(!cir::MissingFeatures::ehCleanupScope());
-    return sizeof(CallObjectDelete);
-  }
 };
 } // namespace
 
