@@ -6,10 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/signal_macros.h"
 #include "src/string/memrchr.h"
-#include "test/UnitTest/Test.h"
+
 #include <stddef.h>
+
+#include "hdr/signal_macros.h"
+#include "test/UnitTest/Test.h"
+
+namespace {
 
 // A helper function that calls memrchr and abstracts away the explicit cast for
 // readability purposes.
@@ -122,3 +126,5 @@ TEST(LlvmLibcMemRChrTest, CrashOnNullPtr) {
 }
 
 #endif // defined(LIBC_ADD_NULL_CHECKS)
+
+} // namespace

@@ -78,7 +78,7 @@ namespace {
 ///  ```
 struct MultiReduceToContract
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reduceOp,
                                 PatternRewriter &rewriter) const override {
@@ -138,7 +138,7 @@ struct MultiReduceToContract
 ///  ```
 struct CombineContractABTranspose final
     : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
@@ -202,7 +202,7 @@ struct CombineContractABTranspose final
 /// ```
 struct CombineContractResultTranspose final
     : public OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp resTOp,
                                 PatternRewriter &rewriter) const override {
@@ -568,7 +568,7 @@ static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
 //   %2 = vector.extract %1[1] : f16 from vector<2xf16>
 struct BubbleDownVectorBitCastForExtract
     : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -576,7 +576,7 @@ struct BubbleDownVectorBitCastForExtract
     if (extractOp.getSourceVectorType().getRank() != 1)
       return failure();
 
-    auto castOp = extractOp.getVector().getDefiningOp<vector::BitCastOp>();
+    auto castOp = extractOp.getSource().getDefiningOp<vector::BitCastOp>();
     if (!castOp)
       return failure();
 
@@ -643,11 +643,11 @@ struct BubbleDownVectorBitCastForExtract
 //   %1 = vector.bitcast %0 : vector<2xf32> to vector<4xf16>
 struct BubbleDownBitCastForStridedSliceExtract
     : public OpRewritePattern<vector::ExtractStridedSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = extractOp.getVector().getDefiningOp<vector::BitCastOp>();
+    auto castOp = extractOp.getSource().getDefiningOp<vector::BitCastOp>();
     if (!castOp)
       return failure();
 
@@ -721,7 +721,7 @@ struct BubbleDownBitCastForStridedSliceExtract
 //   %2 = vector.insert %0, %1 [4] : vector<16xi8> into vector<8x16xi8>
 //
 struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
                                 PatternRewriter &rewriter) const override {
@@ -794,7 +794,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
 //          offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
 struct BubbleUpBitCastForStridedSliceInsert
     : public OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
                                 PatternRewriter &rewriter) const override {
@@ -892,7 +892,7 @@ struct BubbleUpBitCastForStridedSliceInsert
 //   %7 = vector.insert_strided_slice %6, %cst {
 //          offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 struct BreakDownVectorBitCast : public OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
 public:
   BreakDownVectorBitCast(MLIRContext *context,
@@ -1131,11 +1131,11 @@ struct ReorderElementwiseOpsOnBroadcast final
 class ExtractOpFromElementwise final
     : public OpRewritePattern<vector::ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp op,
                                 PatternRewriter &rewriter) const override {
-    Operation *eltwise = op.getVector().getDefiningOp();
+    Operation *eltwise = op.getSource().getDefiningOp();
 
     // TODO: vector::FMAOp is not an ElemetwiseMappable even if it claims to be,
     // as it doesn't support scalars.
@@ -1206,11 +1206,11 @@ static bool isSupportedMemSinkElementType(Type type) {
 /// ```
 class ExtractOpFromLoad final : public OpRewritePattern<vector::ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp op,
                                 PatternRewriter &rewriter) const override {
-    auto loadOp = op.getVector().getDefiningOp<vector::LoadOp>();
+    auto loadOp = op.getSource().getDefiningOp<vector::LoadOp>();
     if (!loadOp)
       return rewriter.notifyMatchFailure(op, "expected a load op");
 
@@ -1285,7 +1285,7 @@ public:
 class StoreOpFromSplatOrBroadcast final
     : public OpRewritePattern<vector::StoreOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::StoreOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1476,7 +1476,7 @@ static bool allI1ConstantValuesSetTo(arith::ConstantOp constantOp, bool value) {
 /// InstCombine seems to handle vectors with multiple elements but not the
 /// single element ones.
 struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp selectOp,
                                 PatternRewriter &rewriter) const override {
@@ -1560,7 +1560,7 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
 /// Drop inner most contiguous unit dimensions from transfer_read operand.
 class DropInnerMostUnitDimsTransferRead
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -1651,7 +1651,7 @@ class DropInnerMostUnitDimsTransferRead
 /// Note, this pattern will not collapse "scalable unit" dims (i.e. `[1]`).
 class DropInnerMostUnitDimsTransferWrite
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
@@ -1728,7 +1728,7 @@ class DropInnerMostUnitDimsTransferWrite
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final
     : OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
@@ -1845,7 +1845,7 @@ private:
 template <typename ExtOp>
 struct FoldArithExtIntoContractionOp
     : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
@@ -1878,7 +1878,7 @@ struct FoldArithExtIntoContractionOp
 /// %b = vector.reduction <add> %a, %acc
 /// ```
 struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2033,7 +2033,7 @@ struct DropUnitDimFromElementwiseOps final
 ///  ```
 struct DropUnitDimsFromTransposeOp final
     : OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2110,7 +2110,7 @@ struct DropUnitDimsFromTransposeOp final
 ///    : vector<[4]x4xf32> to vector<[4]x1x1x4xf32>
 ///  ```
 struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(scf::ForOp forOp,
                                 PatternRewriter &rewriter) const override {
@@ -2155,7 +2155,7 @@ struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
 /// %c = vector.reduction <add> %b, %acc
 /// ```
 struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
                                 PatternRewriter &rewriter) const override {

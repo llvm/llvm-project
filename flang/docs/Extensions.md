@@ -557,6 +557,17 @@ end
   generic intrinsic function's inferred result type does not
   match an explicit declaration.  This message is a warning.
 
+* There is no restriction in the standard against assigning
+  to a whole polymorphic allocatable under control of a `WHERE`
+  construct or statement, but there is no good portable
+  behavior to implement and the standard isn't entirely clear
+  what it should mean.
+  (Other compilers allow it, but the results are never meaningful;
+  some never change the type, some change the type according to
+  the value of the last mask element, some treat these
+  assignment statements as no-ops, and the rest crash during compilation.)
+  The compiler flags this case as an error.
+
 ## Standard features that might as well not be
 
 * f18 supports designators with constant expressions, properly
@@ -917,6 +928,17 @@ print *, [(j,j=1,10)]
   and the portable interpretation across the most common Fortran
   compilers.
 
+* `NAMELIST` child input statements are allowed to advance to further
+  input records.
+  Further, advancement is allowed when the parent input statement is
+  a non-child (top level) list-directed input statement, or, recursively,
+  an intermediate child list-directed input statement that can advance.
+  This means that non-`NAMELIST` list-directed child input statements are
+  not allowed to advance when they have an ancestor formatted input statement
+  that is not list-directed and there is no intervening `NAMELIST`.
+  This design allows format-driven input with `DT` editing to retain
+  control over advancement in child input, while otherwise allowing it.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -930,3 +952,6 @@ print *, [(j,j=1,10)]
   or contiguous array can be used as the initial element of a storage
   sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
   "&GRP A(1:)=1. 2. 3./".
+  This extension is necessarily disabled when the type of the array
+  has an accessible defined formatted READ subroutine.
+

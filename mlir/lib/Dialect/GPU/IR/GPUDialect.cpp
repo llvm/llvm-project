@@ -375,7 +375,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
         os << shape.back() << 'x' << fragTy.getElementType();
         os << ", \"" << fragTy.getOperand() << "\"" << '>';
       })
-      .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
+      .DefaultUnreachable("unexpected 'gpu' type kind");
 }
 
 static LogicalResult verifyKnownLaunchSizeAttr(Operation *op,
@@ -535,17 +535,26 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
                                   /*allowType=*/true);
 }
 
-/// Prints a GPU function memory attribution.
 static void printAttributions(OpAsmPrinter &p, StringRef keyword,
-                              ArrayRef<BlockArgument> values) {
+                              ArrayRef<BlockArgument> values,
+                              ArrayAttr attributes = {}) {
   if (values.empty())
     return;
 
-  auto printBlockArg = [](BlockArgument v) {
-    return llvm::formatv("{} : {}", v, v.getType());
-  };
-  p << ' ' << keyword << '('
-    << llvm::interleaved(llvm::map_range(values, printBlockArg)) << ')';
+  p << ' ' << keyword << '(';
+  llvm::interleaveComma(
+      llvm::enumerate(values), p, [&p, attributes](auto pair) {
+        BlockArgument v = pair.value();
+        p << v << " : " << v.getType();
+
+        size_t attributionIndex = pair.index();
+        DictionaryAttr attrs;
+        if (attributes && attributionIndex < attributes.size())
+          attrs = llvm::cast<DictionaryAttr>(attributes[attributionIndex]);
+        if (attrs)
+          p.printOptionalAttrDict(attrs.getValue());
+      });
+  p << ')';
 }
 
 /// Verifies a GPU function memory attribution.
@@ -1649,28 +1658,6 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   return parser.parseRegion(*body, entryArgs);
 }
 
-static void printAttributions(OpAsmPrinter &p, StringRef keyword,
-                              ArrayRef<BlockArgument> values,
-                              ArrayAttr attributes) {
-  if (values.empty())
-    return;
-
-  p << ' ' << keyword << '(';
-  llvm::interleaveComma(
-      llvm::enumerate(values), p, [&p, attributes](auto pair) {
-        BlockArgument v = pair.value();
-        p << v << " : " << v.getType();
-
-        size_t attributionIndex = pair.index();
-        DictionaryAttr attrs;
-        if (attributes && attributionIndex < attributes.size())
-          attrs = llvm::cast<DictionaryAttr>(attributes[attributionIndex]);
-        if (attrs)
-          p.printOptionalAttrDict(attrs.getValue());
-      });
-  p << ')';
-}
-
 void GPUFuncOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
@@ -2529,8 +2516,6 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
     // Cannot speculate first_lane broadcast, because speculating it across
     // control flow can change the active lanes.
     return Speculation::NotSpeculatable;
-  case BroadcastType::any_lane:
-    LLVM_FALLTHROUGH;
   case BroadcastType::specific_lane:
     // Speculation should be safe as long as we inside structured control flow.
     return Speculation::Speculatable;
@@ -2540,8 +2525,6 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
 LogicalResult gpu::SubgroupBroadcastOp::verify() {
   switch (getBroadcastType()) {
   case BroadcastType::first_active_lane:
-    LLVM_FALLTHROUGH;
-  case BroadcastType::any_lane:
     if (getLane())
       return emitOpError()
              << "lane can only be specified for `specific_lane` broadcast";

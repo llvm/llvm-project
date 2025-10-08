@@ -50,6 +50,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
     case Instruction::ICmp:
     case Instruction::FCmp:
     case Instruction::Select:
+    case VPInstruction::Not:
     case VPInstruction::Broadcast:
     case VPInstruction::PtrAdd:
       return true;
@@ -100,6 +101,21 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+unsigned getVFScaleFactor(VPRecipeBase *R);
+
+/// Returns the VPValue representing the uncountable exit comparison used by
+/// AnyOf if the recipes it depends on can be traced back to live-ins and
+/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
+/// generating the values for the comparison. The recipes are stored in
+/// \p Recipes, and recipes forming an address for a load are also added to
+/// \p GEPs.
+std::optional<VPValue *>
+getRecipesForUncountableExit(VPlan &Plan,
+                             SmallVectorImpl<VPRecipeBase *> &Recipes,
+                             SmallVectorImpl<VPRecipeBase *> &GEPs);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

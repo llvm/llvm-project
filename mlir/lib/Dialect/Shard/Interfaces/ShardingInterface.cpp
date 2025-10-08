@@ -274,7 +274,7 @@ shard::detail::defaultGetShardingOption(Operation *op,
 
   // 1. Fill sharding option based on op results
   for (auto shardingIt : llvm::enumerate(resultShardings)) {
-    Sharding shardAttr = shardingIt.value();
+    const Sharding &shardAttr = shardingIt.value();
     if (!shardAttr)
       continue;
     AffineMap map = maps[numOperands + shardingIt.index()];
@@ -300,7 +300,7 @@ shard::detail::defaultGetShardingOption(Operation *op,
 
   // 2. Fill sharding option based on operands
   for (auto shardingIt : llvm::enumerate(operandShardings)) {
-    Sharding shardAttr = shardingIt.value();
+    const Sharding &shardAttr = shardingIt.value();
     if (!shardAttr)
       continue;
 

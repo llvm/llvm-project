@@ -25,7 +25,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -44,6 +46,8 @@ class LoopOp;
 } // namespace mlir
 
 namespace clang::CIRGen {
+
+struct CGCoroData;
 
 class CIRGenFunction : public CIRGenTypeCache {
 public:
@@ -64,8 +68,28 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  // Holds coroutine data if the current function is a coroutine. We use a
+  // wrapper to manage its lifetime, so that we don't have to define CGCoroData
+  // in this header.
+  struct CGCoroInfo {
+    std::unique_ptr<CGCoroData> data;
+    CGCoroInfo();
+    ~CGCoroInfo();
+  };
+  CGCoroInfo curCoro;
+
+  bool isCoroutine() const { return curCoro.data != nullptr; }
+
+  /// The temporary alloca to hold the return value. This is
+  /// invalid iff the function has no return value.
+  Address returnValue = Address::invalid();
+
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
+
+  llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
+      lambdaCaptureFields;
+  clang::FieldDecl *lambdaThisCaptureField = nullptr;
 
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
@@ -74,15 +98,24 @@ public:
   mlir::Value cxxThisValue = nullptr;
   clang::CharUnits cxxThisAlignment;
 
+  /// When generating code for a constructor or destructor, this will hold the
+  /// implicit argument (e.g. VTT).
+  ImplicitParamDecl *cxxStructorImplicitParamDecl{};
+  mlir::Value cxxStructorImplicitParamValue{};
+
   /// The value of 'this' to sue when evaluating CXXDefaultInitExprs within this
   /// expression.
   Address cxxDefaultInitExprThis = Address::invalid();
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
+  /// This is the inner-most code context, which includes blocks.
+  const clang::Decl *curCodeDecl = nullptr;
 
-  /// The function for which code is currently being generated.
-  cir::FuncOp curFn;
+  /// The current function or global initializer that is generated code for.
+  /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
+  /// global initializers.
+  mlir::Operation *curFn = nullptr;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -99,7 +132,11 @@ public:
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
 
-  mlir::Block *getCurFunctionEntryBlock() { return &curFn.getRegion().front(); }
+  mlir::Block *getCurFunctionEntryBlock() {
+    // We currently assume this isn't called for a global initializer.
+    auto fn = mlir::cast<cir::FuncOp>(curFn);
+    return &fn.getRegion().front();
+  }
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
@@ -456,55 +493,55 @@ public:
   ConstantEmission tryEmitAsConstant(const MemberExpr *me);
 
   struct AutoVarEmission {
-    const clang::VarDecl *Variable;
+    const clang::VarDecl *variable;
     /// The address of the alloca for languages with explicit address space
     /// (e.g. OpenCL) or alloca casted to generic pointer for address space
     /// agnostic languages (e.g. C++). Invalid if the variable was emitted
     /// as a global constant.
-    Address Addr;
+    Address addr;
 
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
-    bool IsConstantAggregate = false;
+    bool isConstantAggregate = false;
 
     /// True if the variable is a __block variable that is captured by an
     /// escaping block.
-    bool IsEscapingByRef = false;
+    bool isEscapingByRef = false;
 
     /// True if the variable was emitted as an offload recipe, and thus doesn't
     /// have the same sort of alloca initialization.
-    bool EmittedAsOffload = false;
+    bool emittedAsOffload = false;
 
-    mlir::Value NRVOFlag{};
+    mlir::Value nrvoFlag{};
 
     struct Invalid {};
-    AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}
+    AutoVarEmission(Invalid) : variable(nullptr), addr(Address::invalid()) {}
 
     AutoVarEmission(const clang::VarDecl &variable)
-        : Variable(&variable), Addr(Address::invalid()) {}
+        : variable(&variable), addr(Address::invalid()) {}
 
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
 
-    bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
+    bool wasEmittedAsGlobal() const { return !addr.isValid(); }
 
-    bool wasEmittedAsOffloadClause() const { return EmittedAsOffload; }
+    bool wasEmittedAsOffloadClause() const { return emittedAsOffload; }
 
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
     /// address space for address space agnostic languages.
-    Address getAllocatedAddress() const { return Addr; }
+    Address getAllocatedAddress() const { return addr; }
 
     // Changes the stored address for the emission.  This function should only
     // be used in extreme cases, and isn't required to model normal AST
     // initialization/variables.
-    void setAllocatedAddress(Address A) { Addr = A; }
+    void setAllocatedAddress(Address a) { addr = a; }
 
     /// Returns the address of the object within this declaration.
     /// Note that this does not chase the forwarding pointer for
     /// __block decls.
     Address getObjectAddress(CIRGenFunction &cgf) const {
-      if (!IsEscapingByRef)
-        return Addr;
+      if (!isEscapingByRef)
+        return addr;
 
       assert(!cir::MissingFeatures::opAllocaEscapeByReference());
       return Address::invalid();
@@ -594,6 +631,12 @@ public:
   /// true when both vcall CFI and whole-program-vtables are enabled.
   bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
 
+  /// Source location information about the default argument or member
+  /// initializer expression we're evaluating, if any.
+  clang::CurrentSourceLocExprScope curSourceLocExprScope;
+  using SourceLocExprScopeGuard =
+      clang::CurrentSourceLocExprScope::SourceLocExprScopeGuard;
+
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -610,6 +653,29 @@ public:
   private:
     CIRGenFunction &cgf;
     Address oldCXXDefaultInitExprThis;
+  };
+
+  /// The scope of a CXXDefaultInitExpr. Within this scope, the value of 'this'
+  /// is overridden to be the object under construction.
+  class CXXDefaultInitExprScope {
+  public:
+    CXXDefaultInitExprScope(CIRGenFunction &cgf, const CXXDefaultInitExpr *e)
+        : cgf{cgf}, oldCXXThisValue(cgf.cxxThisValue),
+          oldCXXThisAlignment(cgf.cxxThisAlignment),
+          sourceLocScope(e, cgf.curSourceLocExprScope) {
+      cgf.cxxThisValue = cgf.cxxDefaultInitExprThis.getPointer();
+      cgf.cxxThisAlignment = cgf.cxxDefaultInitExprThis.getAlignment();
+    }
+    ~CXXDefaultInitExprScope() {
+      cgf.cxxThisValue = oldCXXThisValue;
+      cgf.cxxThisAlignment = oldCXXThisAlignment;
+    }
+
+  public:
+    CIRGenFunction &cgf;
+    mlir::Value oldCXXThisValue;
+    clang::CharUnits oldCXXThisAlignment;
+    SourceLocExprScopeGuard sourceLocScope;
   };
 
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
@@ -633,6 +699,13 @@ public:
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
 
+  /// Return the VTT parameter that should be passed to a base
+  /// constructor/destructor with virtual bases.
+  /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
+  /// to ItaniumCXXABI.cpp together with all the references to VTT.
+  mlir::Value getVTTParameter(GlobalDecl gd, bool forVirtualBase,
+                              bool delegating);
+
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {
     return makeAddrLValue(addr, ty, LValueBaseInfo(source));
@@ -646,6 +719,8 @@ public:
                                 const clang::CXXRecordDecl *rd);
   void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
 
+  AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *fd);
+
   /// Return the address of a local variable.
   Address getAddrOfLocalVar(const clang::VarDecl *vd) {
     auto it = localDeclMap.find(vd);
@@ -657,6 +732,14 @@ public:
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
                                    mlir::Type fieldType, unsigned index);
 
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -666,12 +749,28 @@ public:
   }
   Address loadCXXThisAddress();
 
+  /// Load the VTT parameter to base constructors/destructors have virtual
+  /// bases. FIXME: Every place that calls LoadCXXVTT is something that needs to
+  /// be abstracted properly.
+  mlir::Value loadCXXVTT() {
+    assert(cxxStructorImplicitParamValue && "no VTT value for this function");
+    return cxxStructorImplicitParamValue;
+  }
+
   /// Convert the given pointer to a complete class to the given direct base.
   Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
                                                 Address value,
                                                 const CXXRecordDecl *derived,
                                                 const CXXRecordDecl *base,
                                                 bool baseIsVirtual);
+
+  /// Determine whether a return value slot may overlap some other object.
+  AggValueSlot::Overlap_t getOverlapForReturnValue() {
+    // FIXME: Assuming no overlap here breaks guaranteed copy elision for base
+    // class subobjects. These cases may need to be revisited depending on the
+    // resolution of the relevant core issue.
+    return AggValueSlot::DoesNotOverlap;
+  }
 
   /// Determine whether a base class initialization may overlap some other
   /// object.
@@ -965,6 +1064,16 @@ public:
 
   LValue emitAggExprToLValue(const Expr *e);
 
+  /// Emit an aggregate copy.
+  ///
+  /// \param isVolatile \c true iff either the source or the destination is
+  ///        volatile.
+  /// \param MayOverlap Whether the tail padding of the destination might be
+  ///        occupied by some other object. More efficient code can often be
+  ///        generated if not.
+  void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
+                         AggValueSlot::Overlap_t mayOverlap);
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
@@ -981,7 +1090,9 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
-  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+  void emitAnyExprToExn(const Expr *e, Address addr);
+
+  void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
 
@@ -1079,6 +1190,10 @@ public:
 
   void emitConstructorBody(FunctionArgList &args);
 
+  mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
+  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
@@ -1107,6 +1222,8 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitCXXDeleteExpr(const CXXDeleteExpr *e);
 
   void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
                              bool forVirtualBase, bool delegating,
@@ -1137,11 +1254,19 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
+  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
+                               mlir::Type ElementTy, Address BeginPtr,
+                               mlir::Value NumElements,
+                               mlir::Value AllocSizeWithoutCookie);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
+
+  void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
+                        Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
@@ -1154,6 +1279,9 @@ public:
   // constructors where they are substantially the same.
   void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
                                         const FunctionArgList &args);
+
+  void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
+                      QualType deleteTy);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -1179,11 +1307,15 @@ public:
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
+  LValue emitPredefinedLValue(const PredefinedExpr *e);
+
   mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
 
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
+
+  void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
@@ -1203,6 +1335,9 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
+                                  CallArgList &callArgs);
 
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
@@ -1266,6 +1401,9 @@ public:
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
+  void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
+  void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
+
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
@@ -1292,6 +1430,8 @@ public:
   /// the LLVM value representation.  The l-value must be a simple
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+  mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
+                               SourceLocation loc, LValueBaseInfo baseInfo);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -1299,6 +1439,10 @@ public:
   LValue emitLValue(const clang::Expr *e);
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitLValueForLambdaField(const FieldDecl *field);
+  LValue emitLValueForLambdaField(const FieldDecl *field,
+                                  mlir::Value thisValue);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -1359,7 +1503,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
-  LValue emitStringLiteralLValue(const StringLiteral *e);
+  LValue emitStringLiteralLValue(const StringLiteral *e,
+                                 llvm::StringRef name = ".str");
 
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
@@ -1613,6 +1758,10 @@ private:
     ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
   };
 
+  // Keep track of the last place we inserted a 'recipe' so that we can insert
+  // the next one in lexical order.
+  mlir::OpBuilder::InsertPoint lastRecipeLocation;
+
 public:
   // Helper type used to store the list of important information for a 'data'
   // clause variable, or a 'cache' variable reference.
@@ -1620,9 +1769,17 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    // The type of the original variable reference: that is, after 'bounds' have
+    // removed pointers/array types/etc. So in the case of int arr[5], and a
+    // private(arr[1]), 'origType' is 'int', but 'baseType' is 'int[5]'.
+    QualType origType;
     QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
+    // The list of types that we found when going through the bounds, which we
+    // can use to properly set the alloca section.
+    llvm::SmallVector<QualType> boundTypes;
   };
+
   // Gets the collection of info required to lower and OpenACC clause or cache
   // construct variable reference.
   OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);

@@ -463,7 +463,7 @@ recovery.
    situations where you absolutely must emit a non-programmatic error and
    the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
    which will call installed error handlers, print a message, and exit the
-   program. The use of `reportFatalUsageError` in this case is discouraged.
+   program. The use of ``reportFatalUsageError`` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -579,7 +579,7 @@ This second form is often more readable for functions that involve multiple
 
 If an ``Expected<T>`` value will be moved into an existing variable then the
 ``moveInto()`` method avoids the need to name an extra variable.  This is
-useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+useful to enable ``operator->()`` if the ``Expected<T>`` value has pointer-like
 semantics.  For example:
 
 .. code-block:: c++
@@ -957,7 +957,7 @@ Concatenating Errors with joinErrors
 """"""""""""""""""""""""""""""""""""
 
 In the archive walking example above, ``BadFileFormat`` errors are simply
-consumed and ignored. If the client had wanted report these errors after
+consumed and ignored. If the client had wanted to report these errors after
 completing the walk over the archive they could use the ``joinErrors`` utility:
 
 .. code-block:: c++
@@ -989,7 +989,7 @@ Building fallible iterators and iterator ranges
 """""""""""""""""""""""""""""""""""""""""""""""
 
 The archive walking examples above retrieve archive members by index; however,
-this requires considerable boiler-plate for iteration and error checking. We can
+this requires considerable boilerplate for iteration and error checking. We can
 clean this up by using the "fallible iterator" pattern, which supports the
 following natural iteration idiom for fallible containers like Archive:
 
@@ -1039,7 +1039,7 @@ fallible_iterator utility which provides ``operator++`` and ``operator--``,
 returning any errors via a reference passed in to the wrapper at construction
 time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
 range on error, and (b) marking the error as checked whenever an iterator is
-compared to ``end`` and found to be inequal (in particular, this marks the
+compared to ``end`` and found to be unequal (in particular, this marks the
 error as checked throughout the body of a range-based for loop), enabling early
 exit from the loop without redundant error checking.
 
@@ -1169,7 +1169,8 @@ It also supports a `level` argument to control the verbosity of the output.
 
   LDBG(2) << "I am here!";
 
-A ``DEBUG_TYPE`` macro should be defined in the file before using ``LDBG()``.
+A ``DEBUG_TYPE`` macro may optionally be defined in the file before using
+``LDBG()``, otherwise the file name is used as the debug type.
 The file name and line number are automatically added to the output, as well as
 a terminating newline.
 
@@ -1180,7 +1181,7 @@ The debug output can be enabled by passing the ``-debug`` command line argument.
   $ opt < a.bc > /dev/null -mypass
   <no output>
   $ opt < a.bc > /dev/null -mypass -debug
-  [my-pass:2] MyPass.cpp:123 I am here!
+  [my-pass MyPass.cpp:123 2] I am here!
 
 While `LDBG()` is useful to add debug output to your code, there are cases
 where you may need to guard a block of code with a debug check. The
@@ -1222,29 +1223,29 @@ Fine grained debug info with ``DEBUG_TYPE`` and the ``-debug-only`` option
 Sometimes you may find yourself in a situation where enabling ``-debug`` just
 turns on **too much** information (such as when working on the code generator).
 If you want to enable debug information with more fine-grained control, you
-should define the ``DEBUG_TYPE`` macro and use the ``-debug-only`` option as
-follows:
+can control the debug type and level with associate with each logging statement
+as follows:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "foo"
+  #define DEBUG_TYPE "foo" // Optional: the file name is used instead if not defined
   LDBG(2) << "Hello,";
   // DEBUG_TYPE can be overridden locally, here with "bar"
   LDBG("bar", 3) << "'bar' debug type";
 
 
-A more fine-grained control can be achieved by passing the ``-debug-only``
-command line argument:
+A more fine-grained control of the output can be achieved by passing the
+``-debug-only`` command line argument:
 
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass -debug-only=foo
-  [foo:2] MyPass.cpp:123 Hello,
+  [foo MyPass.cpp:123 2] Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo,bar
-  [foo:2] MyPass.cpp:123 Hello,
-  [bar:3] MyPass.cpp:124 World!
+  [foo MyPass.cpp:123 2] Hello,
+  [bar MyPass.cpp:124 3] World!
   $ opt < a.bc > /dev/null -mypass -debug-only=bar
-  [bar:3] MyPass.cpp:124 World!
+  [bar MyPass.cpp:124 3] World!
 
 The debug-only argument is a comma separated list of debug types and levels.
 The level is an optional integer setting the maximum debug level to enable:
@@ -1252,9 +1253,9 @@ The level is an optional integer setting the maximum debug level to enable:
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass -debug-only=foo:2,bar:2
-  [foo:2] MyPass.cpp:123 Hello,
+  [foo MyPass.cpp:123 2] Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo:1,bar:3
-  [bar:3] MyPass.cpp:124 World!
+  [bar MyPass.cpp:124 3] World!
 
 Instead of opting in specific debug types, the ``-debug-only`` option also
 works to filter out debug output for specific debug types, by omitting the
@@ -1263,7 +1264,7 @@ level (or setting it to 0):
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass -debug-only=foo:
-  [bar:3] MyPass.cpp:124 World!
+  [bar MyPass.cpp:124 3] World!
   $ opt < a.bc > /dev/null -mypass -debug-only=bar:0,foo:
 
 
@@ -1451,7 +1452,7 @@ A more general utility is provided in `llvm/tools/reduce-chunk-list/reduce-chunk
 How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
-Than find the line with the counter of interest. it should look like:
+Then find the line with the counter of interest. it should look like:
 
 .. code-block:: none
 
@@ -1459,7 +1460,7 @@ Than find the line with the counter of interest. it should look like:
 
 The number of calls to `my-counter` is 5678
 
-Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
+Then find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
 
 .. code-block:: bash
@@ -1468,7 +1469,7 @@ Build a reproducer script like:
   opt -debug-counter=my-counter=$1
   # ... Test result of the command. Failure of the script is considered interesting
 
-Than run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
+Then run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
 This command may take some time.
 but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-12:33-34`
 
@@ -1527,7 +1528,7 @@ LLVM has a plethora of data structures in the ``llvm/ADT/`` directory, and we
 commonly use STL data structures.  This section describes the trade-offs you
 should consider when you pick one.
 
-The first step is a choose your own adventure: do you want a sequential
+The first step is to choose your own adventure: do you want a sequential
 container, a set-like container, or a map-like container?  The most important
 thing when choosing a container is the algorithmic properties of how you plan to
 access the container.  Based on that, you should use:
@@ -2692,16 +2693,7 @@ with an ``assert``).
 Debugging
 =========
 
-A handful of `GDB pretty printers
-<https://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html>`__ are
-provided for some of the core LLVM libraries. To use them, execute the
-following (or add it to your ``~/.gdbinit``)::
-
-  source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
-
-It also might be handy to enable the `print pretty
-<http://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_57.html>`__ option to
-avoid data structures being printed as a big block of text.
+See :doc:`Debugging LLVM <DebuggingLLVM>`.
 
 .. _common:
 
@@ -3840,7 +3832,7 @@ Important Subclasses of the ``Instruction`` class
 
 * ``BinaryOperator``
 
-  This subclasses represents all two operand instructions whose operands must be
+  This subclass represents all two operand instructions whose operands must be
   the same type, except for the comparison instructions.
 
 .. _CastInst:

@@ -314,8 +314,8 @@ class IntEnumAttr<I intType, string name, string summary,
   // symbol is not valid.
   let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
     auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
-    if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+    std::string enumKeyword;
+    if (::mlir::failed($_parser.parseKeywordOrString(&enumKeyword)))
       return ::mlir::failure();
     auto maybeEnum = }] # cppNamespace # "::" #
                           stringToSymbolFnName # [{(enumKeyword);
@@ -436,9 +436,9 @@ class BitEnumAttr<I intType, string name, string summary,
   let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
     }] # cppType # [{ flags = {};
     auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
+    std::string enumKeyword;
     do {
-      if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+      if (::mlir::failed($_parser.parseKeywordOrString(&enumKeyword)))
         return ::mlir::failure();
       auto maybeEnum = }] # cppNamespace # "::" #
                             stringToSymbolFnName # [{(enumKeyword);
