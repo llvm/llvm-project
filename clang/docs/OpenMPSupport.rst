@@ -548,9 +548,9 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Increment between places for OMP_PLACES                     | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMP_AVAILABLE_DEVICES envirable                             | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| OMP_AVAILABLE_DEVICES envirable                             | :none:`unclaimed`         | :none:`unclaimed`         | (should wait for "Traits for default device envirable" being done)       |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Traits for default device envirable                         | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| Traits for default device envirable                         | :part:`in progress`       | :none:`unclaimed`         | ro-i                                                                     |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Optionally omit array length expression                     | :good:`done`              | :none:`unclaimed`         | (Parse) https://github.com/llvm/llvm-project/pull/148048,                |
 |                                                             |                           |                           | (Sema) https://github.com/llvm/llvm-project/pull/152786                  |
@@ -580,9 +580,12 @@ implementation.
 | need_device_addr modifier for adjust_args clause            | :part:`partial`           | :none:`unclaimed`         | Parsing/Sema: https://github.com/llvm/llvm-project/pull/143442           |
 |                                                             |                           |                           |               https://github.com/llvm/llvm-project/pull/149586           |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Prescriptive num_threads                                    | :part:`In Progress`       | :none:`unclaimed`         | ro-i                                                                     |
+| Prescriptive num_threads                                    | :good:`done`              | :none:`unclaimed`         |  https://github.com/llvm/llvm-project/pull/160659                        |
+|                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146403                        |
+|                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146404                        |
+|                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146405                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Message and severity clauses                                | :part:`In Progress`       | :none:`unclaimed`         | ro-i                                                                     |
+| Message and severity clauses                                | :good:`done`              | :none:`unclaimed`         |  https://github.com/llvm/llvm-project/pull/146093                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Local clause on declare target                              | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+

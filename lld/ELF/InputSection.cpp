@@ -1357,6 +1357,8 @@ SyntheticSection *EhInputSection::getParent() const {
 
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
+// In rare cases (.eh_frame pieces are reordered by a linker script), the
+// relocations may be unordered.
 template <class ELFT> void EhInputSection::split() {
   const RelsOrRelas<ELFT> elfRels = relsOrRelas<ELFT>();
   if (elfRels.areRelocsCrel())

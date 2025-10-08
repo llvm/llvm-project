@@ -15,7 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/PassManager.h"
 
-namespace llvm {
+using namespace llvm;
 
 template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Module *>;
 template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Function *>;
@@ -42,7 +42,8 @@ PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
 
 AnalysisKey PassInstrumentationAnalysis::Key;
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials) {
+bool llvm::isSpecialPass(StringRef PassID,
+                         const std::vector<StringRef> &Specials) {
   size_t Pos = PassID.find('<');
   StringRef Prefix = PassID;
   if (Pos != StringRef::npos)
@@ -50,5 +51,3 @@ bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials) {
   return any_of(Specials,
                 [Prefix](StringRef S) { return Prefix.ends_with(S); });
 }
-
-} // namespace llvm
