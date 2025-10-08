@@ -28,6 +28,9 @@ std::string getRISCVArch(const llvm::opt::ArgList &Args,
                          const llvm::Triple &Triple);
 std::string getRISCVTargetCPU(const llvm::opt::ArgList &Args,
                               const llvm::Triple &Triple);
+void addMtuneWithFeatures(const Driver &D, const llvm::opt::Arg *A,
+                          const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs);
 } // end namespace riscv
 } // namespace tools
 } // end namespace driver

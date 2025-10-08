@@ -367,3 +367,31 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
 
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
 }
+
+void riscv::addMtuneWithFeatures(const Driver &D, const Arg *A,
+                                 const ArgList &Args, ArgStringList &CmdArgs) {
+  // format: -mtune=<tune cpu>[:+a,-b,+c...]
+  StringRef MTune(A->getValue());
+  size_t ColonPos = MTune.find(':');
+  bool HasColon = ColonPos != StringRef::npos;
+
+  StringRef TuneCPU = MTune.take_front(ColonPos);
+  if (TuneCPU == "native")
+    CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
+  else
+    CmdArgs.push_back(HasColon ? Args.MakeArgString(TuneCPU) : A->getValue());
+
+  StringRef FeatureStr = HasColon ? MTune.drop_front(ColonPos + 1) : "";
+  // TODO: Emit error
+  assert(!HasColon || !FeatureStr.empty());
+  if (FeatureStr.empty())
+    return;
+  StringRef Feature;
+  do {
+    std::tie(Feature, FeatureStr) = FeatureStr.split(',');
+    // TODO: Emit error
+    assert(Feature.starts_with('-') || Feature.starts_with('+'));
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back(Args.MakeArgString(Feature));
+  } while (!FeatureStr.empty());
+}

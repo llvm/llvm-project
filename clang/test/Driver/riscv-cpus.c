@@ -305,6 +305,11 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=native | FileCheck -check-prefix=MTUNE-NATIVE %s
 // MTUNE-NATIVE-NOT: "-tune-cpu" "native"
 
+// Checking `-mtune=<tune cpu>:+x,-y,+z...`
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=sifive-e20:+xyz,-abc | FileCheck -check-prefix=MTUNE-WITH-FEATURES %s
+// MTUNE-WITH-FEATURES: "-tune-cpu" "sifive-e20"
+// MTUNE-WITH-FEATURES: "-target-feature" "+xyz" "-target-feature" "-abc"
+
 // -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e20 | FileCheck -check-prefix=MCPU-SIFIVE-E20 %s
 // MCPU-SIFIVE-E20: "-nostdsysteminc" "-target-cpu" "sifive-e20"
