@@ -490,7 +490,9 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       return true;
 
     // Tie breaker by number to avoid need for stable sort
-    return A->reg().stackSlotIndex() < B->reg().stackSlotIndex();
+    // The ordering have to be strictly weak.
+    return (A->reg().stackSlotIndex() < B->reg().stackSlotIndex()) &&
+           ((A->weight() <= B->weight()) && (A->getSize() <= B->getSize()));
   });
 
   // FIXME: The APIs for dealing with the LiveInterval of a frame index are
