@@ -89,6 +89,7 @@ STATISTIC(NumTransforms, "Number of transformations done");
 STATISTIC(NumCloned, "Number of blocks cloned");
 STATISTIC(NumPaths, "Number of individual paths threaded");
 
+namespace llvm {
 static cl::opt<bool>
     ClViewCfgBefore("dfa-jump-view-cfg-before",
                     cl::desc("View the CFG before DFA Jump Threading"),
@@ -120,6 +121,10 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // namespace llvm
+
 static cl::opt<double> MaxClonedRate(
     "dfa-max-cloned-rate",
     cl::desc(
@@ -127,7 +132,6 @@ static cl::opt<double> MaxClonedRate(
     cl::Hidden, cl::init(7.5));
 
 namespace {
-
 class SelectInstToUnfold {
   SelectInst *SI;
   PHINode *SIUse;
@@ -140,10 +144,6 @@ public:
 
   explicit operator bool() const { return SI && SIUse; }
 };
-
-void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
-            std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-            std::vector<BasicBlock *> *NewBBs);
 
 class DFAJumpThreading {
 public:
@@ -158,7 +158,8 @@ private:
   void
   unfoldSelectInstrs(DominatorTree *DT,
                      const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+    // TODO: Have everything use a single lazy DTU
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
@@ -173,16 +174,18 @@ private:
     }
   }
 
+  static void unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                     SelectInstToUnfold SIToUnfold,
+                     std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                     std::vector<BasicBlock *> *NewBBs);
+
   AssumptionCache *AC;
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
 };
-
-} // end anonymous namespace
-
-namespace {
+} // namespace
 
 /// Unfold the select instruction held in \p SIToUnfold by replacing it with
 /// control flow.
@@ -191,9 +194,10 @@ namespace {
 /// created basic blocks into \p NewBBs.
 ///
 /// TODO: merge it with CodeGenPrepare::optimizeSelectInst() if possible.
-void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
-            std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-            std::vector<BasicBlock *> *NewBBs) {
+void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                              SelectInstToUnfold SIToUnfold,
+                              std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                              std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
   assert(SI->hasOneUse());
@@ -259,7 +263,11 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
 
     // Insert the real conditional branch based on the original condition.
     StartBlockTerm->eraseFromParent();
-    BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
+    auto *BI =
+        BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
+    if (!ProfcheckDisableMetadataFixes)
+      BI->setMetadata(LLVMContext::MD_prof,
+                      SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
                        {DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
@@ -294,7 +302,11 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
     //  (Use)
     BranchInst::Create(EndBlock, NewBlockF);
     // Insert the real conditional branch based on the original condition.
-    BranchInst::Create(EndBlock, NewBlockF, SI->getCondition(), NewBlockT);
+    auto *BI =
+        BranchInst::Create(EndBlock, NewBlockF, SI->getCondition(), NewBlockT);
+    if (!ProfcheckDisableMetadataFixes)
+      BI->setMetadata(LLVMContext::MD_prof,
+                      SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, NewBlockT, NewBlockF},
                        {DominatorTree::Insert, NewBlockT, EndBlock},
                        {DominatorTree::Insert, NewBlockF, EndBlock}});
@@ -348,10 +360,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   SI->eraseFromParent();
 }
 
+namespace {
 struct ClonedBlock {
   BasicBlock *BB;
   APInt State; ///< \p State corresponds to the next value of a switch stmnt.
 };
+} // namespace
 
 typedef std::deque<BasicBlock *> PathType;
 typedef std::vector<PathType> PathsType;
@@ -381,6 +395,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   return OS;
 }
 
+namespace {
 /// ThreadingPath is a path in the control flow of a loop that can be threaded
 /// by cloning necessary basic blocks and replacing conditional branches with
 /// unconditional ones. A threading path includes a list of basic blocks, the
@@ -820,11 +835,13 @@ struct TransformDFA {
       : SwitchPaths(SwitchPaths), DT(DT), AC(AC), TTI(TTI), ORE(ORE),
         EphValues(EphValues) {}
 
-  void run() {
+  bool run() {
     if (isLegalAndProfitableToTransform()) {
       createAllExitPaths();
       NumTransforms++;
+      return true;
     }
+    return false;
   }
 
 private:
@@ -975,8 +992,6 @@ private:
 
   /// Transform each threading path to effectively jump thread the DFA.
   void createAllExitPaths() {
-    DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
-
     // Move the switch block to the end of the path, since it will be duplicated
     BasicBlock *SwitchBlock = SwitchPaths->getSwitchBlock();
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -993,15 +1008,18 @@ private:
     SmallPtrSet<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
-    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
-      createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
-      NumPaths++;
-    }
+    {
+      DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
+      for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
+        createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
+        NumPaths++;
+      }
 
-    // After all paths are cloned, now update the last successor of the cloned
-    // path so it skips over the switch statement
-    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
-      updateLastSuccessor(TPath, DuplicateMap, &DTU);
+      // After all paths are cloned, now update the last successor of the cloned
+      // path so it skips over the switch statement
+      for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
+        updateLastSuccessor(TPath, DuplicateMap, &DTU);
+    }
 
     // For each instruction that was cloned and used outside, update its uses
     updateSSA(NewDefs);
@@ -1188,19 +1206,18 @@ private:
     // value for the new predecessor ClonedBB. The value will either be the same
     // value from BB or a cloned value.
     for (BasicBlock *Succ : BlocksToUpdate) {
-      for (auto II = Succ->begin(); PHINode *Phi = dyn_cast<PHINode>(II);
-           ++II) {
-        Value *Incoming = Phi->getIncomingValueForBlock(BB);
+      for (PHINode &Phi : Succ->phis()) {
+        Value *Incoming = Phi.getIncomingValueForBlock(BB);
         if (Incoming) {
           if (isa<Constant>(Incoming)) {
-            Phi->addIncoming(Incoming, ClonedBB);
+            Phi.addIncoming(Incoming, ClonedBB);
             continue;
           }
           Value *ClonedVal = VMap[Incoming];
           if (ClonedVal)
-            Phi->addIncoming(ClonedVal, ClonedBB);
+            Phi.addIncoming(ClonedVal, ClonedBB);
           else
-            Phi->addIncoming(Incoming, ClonedBB);
+            Phi.addIncoming(Incoming, ClonedBB);
         }
       }
     }
@@ -1295,27 +1312,19 @@ private:
   void cleanPhiNodes(BasicBlock *BB) {
     // If BB is no longer reachable, remove any remaining phi nodes
     if (pred_empty(BB)) {
-      std::vector<PHINode *> PhiToRemove;
-      for (auto II = BB->begin(); PHINode *Phi = dyn_cast<PHINode>(II); ++II) {
-        PhiToRemove.push_back(Phi);
-      }
-      for (PHINode *PN : PhiToRemove) {
-        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
-        PN->eraseFromParent();
+      for (PHINode &PN : make_early_inc_range(BB->phis())) {
+        PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+        PN.eraseFromParent();
       }
       return;
     }
 
     // Remove any incoming values that come from an invalid predecessor
-    for (auto II = BB->begin(); PHINode *Phi = dyn_cast<PHINode>(II); ++II) {
-      std::vector<BasicBlock *> BlocksToRemove;
-      for (BasicBlock *IncomingBB : Phi->blocks()) {
-        if (!isPredecessor(BB, IncomingBB))
-          BlocksToRemove.push_back(IncomingBB);
-      }
-      for (BasicBlock *BB : BlocksToRemove)
-        Phi->removeIncomingValue(BB);
-    }
+    for (PHINode &Phi : BB->phis())
+      Phi.removeIncomingValueIf([&](unsigned Index) {
+        BasicBlock *IncomingBB = Phi.getIncomingBlock(Index);
+        return !isPredecessor(BB, IncomingBB);
+      });
   }
 
   /// Checks if BB was already cloned for a particular next state value. If it
@@ -1360,6 +1369,7 @@ private:
   SmallPtrSet<const Value *, 32> EphValues;
   std::vector<ThreadingPath> TPaths;
 };
+} // namespace
 
 bool DFAJumpThreading::run(Function &F) {
   LLVM_DEBUG(dbgs() << "\nDFA Jump threading: " << F.getName() << "\n");
@@ -1426,9 +1436,8 @@ bool DFAJumpThreading::run(Function &F) {
 
   for (AllSwitchPaths SwitchPaths : ThreadableLoops) {
     TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
-    Transform.run();
-    MadeChanges = true;
-    LoopInfoBroken = true;
+    if (Transform.run())
+      MadeChanges = LoopInfoBroken = true;
   }
 
 #ifdef EXPENSIVE_CHECKS
@@ -1438,8 +1447,6 @@ bool DFAJumpThreading::run(Function &F) {
 
   return MadeChanges;
 }
-
-} // end anonymous namespace
 
 /// Integrate with the new Pass Manager
 PreservedAnalyses DFAJumpThreadingPass::run(Function &F,

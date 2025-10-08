@@ -115,7 +115,7 @@ template <class _ExecutionPolicy,
           class _Predicate,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI __iter_diff_t<_ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI __iterator_difference_type<_ForwardIterator>
 count_if(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
       _ForwardIterator, "count_if(first, last, pred) requires [first, last) to be ForwardIterators");
@@ -129,7 +129,7 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI __iter_diff_t<_ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI __iterator_difference_type<_ForwardIterator>
 count(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(
       _ForwardIterator, "count(first, last, val) requires [first, last) to be ForwardIterators");
