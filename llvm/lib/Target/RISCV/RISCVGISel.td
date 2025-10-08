@@ -100,65 +100,11 @@ def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
 
-// Load and store patterns for i16, needed because Zfh makes s16 load/store
-// legal and regbank select may not constrain registers to FP.
-def : LdPat<load, LH, i16>;
-def : StPat<store, SH, GPR, i16>;
-
-def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
-def : StPat<truncstorei8, SB, GPR, i16>;
-
-let Predicates = [HasAtomicLdSt] in {
-  // Prefer unsigned due to no c.lb in Zcb.
-  def : LdPat<relaxed_load<atomic_load_aext_8>,    LBU, i16>;
-  def : LdPat<relaxed_load<atomic_load_nonext_16>, LH,  i16>;
-
-  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, i16>;
-  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, i16>;
-}
-
-let Predicates = [HasAtomicLdSt, IsRV64] in {
-  // Load pattern is in RISCVInstrInfoA.td and shared with RV32.
-  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, i32>;
-}
-
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
 //===----------------------------------------------------------------------===//
 
 let Predicates = [IsRV64] in {
-def : LdPat<extloadi8, LBU, i32>; // Prefer unsigned due to no c.lb in Zcb.
-def : LdPat<extloadi16, LH, i32>;
-
-def : StPat<truncstorei8, SB, GPR, i32>;
-def : StPat<truncstorei16, SH, GPR, i32>;
-
 def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
           (ADDIW GPR:$rs1, simm12_lo:$imm)>;
-}
-
-//===----------------------------------------------------------------------===//
-// Zalasr patterns not used by SelectionDAG
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZalasr] in {
-  // the sequentially consistent loads use
-  //  .aq instead of .aqrl to match the psABI/A.7
-  def : PatLAQ<acquiring_load<atomic_load_aext_8>, LB_AQ, i16>;
-  def : PatLAQ<seq_cst_load<atomic_load_aext_8>, LB_AQ, i16>;
-
-  def : PatLAQ<acquiring_load<atomic_load_nonext_16>, LH_AQ, i16>;
-  def : PatLAQ<seq_cst_load<atomic_load_nonext_16>, LH_AQ, i16>;
-
-  def : PatSRL<releasing_store<atomic_store_8>, SB_RL, i16>;
-  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL, i16>;
-
-  def : PatSRL<releasing_store<atomic_store_16>, SH_RL, i16>;
-  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL, i16>;
-}
-
-let Predicates = [HasStdExtZalasr, IsRV64] in {
-  // Load pattern is in RISCVInstrInfoZalasr.td and shared with RV32.
-  def : PatSRL<releasing_store<atomic_store_32>, SW_RL, i32>;
-  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL, i32>;
 }
