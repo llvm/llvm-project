@@ -147,6 +147,7 @@ Changes to the C API
 --------------------
 
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
+* Add `LLVMBuildAtomicLoad` and `LLVMBuildAtomicStore` to build atomic load and store instructions by specifying the ordering and whether the operation is single-threaded.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

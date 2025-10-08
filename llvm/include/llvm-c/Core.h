@@ -4906,6 +4906,34 @@ LLVM_C_ABI LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(
     unsigned SSID);
 
 /**
+ * Builds an atomic load instruction.
+ *
+ * This is similar to LLVMBuildLoad2, but allows specifying the atomic
+ * ordering and whether the operation is single-threaded.
+ *
+ * @see llvm::IRBuilder::CreateLoad()
+ * @see llvm::LoadInst::setAtomic()
+ */
+LLVM_C_ABI LLVMValueRef LLVMBuildAtomicLoad(
+    LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Source, const char *Name,
+    LLVMAtomicOrdering Order, LLVMBool SingleThread);
+
+/**
+ * Builds an atomic store instruction.
+ *
+ * This is similar to LLVMBuildStore, but allows specifying the atomic
+ * ordering and whether the operation is single-threaded.
+ *
+ * @see llvm::IRBuilder::CreateStore()
+ * @see llvm::StoreInst::setAtomic()
+ */
+LLVM_C_ABI LLVMValueRef LLVMBuildAtomicStore(LLVMBuilderRef B,
+                                                 LLVMValueRef V,
+                                                 LLVMValueRef Target,
+                                                 LLVMAtomicOrdering Order,
+                                                 LLVMBool SingleThread);
+
+/**
  * Get the number of elements in the mask of a ShuffleVector instruction.
  */
 LLVM_C_ABI unsigned LLVMGetNumMaskElements(LLVMValueRef ShuffleVectorInst);

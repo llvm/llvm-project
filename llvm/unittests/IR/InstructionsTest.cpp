@@ -1933,5 +1933,48 @@ TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
   EXPECT_TRUE(Offset.isZero());
 }
 
+TEST(FunctionTest, BuildAtomicStoreAndLoad) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
+  Function *F = Function::Create(FTy, GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  IRBuilder<> Builder(BB);
+
+  AllocaInst *Target = Builder.CreateAlloca(Int32Ty);
+  Constant *V = ConstantInt::get(Int32Ty, 42);
+
+  // Atomic store
+  StoreInst *Store = cast<StoreInst>(
+      unwrap(LLVMBuildAtomicStore(wrap(&Builder), wrap(V), wrap(Target),
+                                  LLVMAtomicOrderingRelease, false)));
+  EXPECT_TRUE(Store->isAtomic());
+  EXPECT_EQ(Store->getOrdering(), AtomicOrdering::Release);
+  EXPECT_EQ(Store->getSyncScopeID(), SyncScope::System);
+
+  Store = cast<StoreInst>(unwrap(
+      LLVMBuildAtomicStore(wrap(&Builder), wrap(V), wrap(Target),
+                           LLVMAtomicOrderingSequentiallyConsistent, true)));
+  EXPECT_TRUE(Store->isAtomic());
+  EXPECT_EQ(Store->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Store->getSyncScopeID(), SyncScope::SingleThread);
+
+  // Atomic load
+  LoadInst *Load = cast<LoadInst>(
+      unwrap(LLVMBuildAtomicLoad(wrap(&Builder), wrap(Int32Ty), wrap(Target),
+                                 "aload", LLVMAtomicOrderingAcquire, false)));
+  EXPECT_TRUE(Load->isAtomic());
+  EXPECT_EQ(Load->getOrdering(), AtomicOrdering::Acquire);
+  EXPECT_EQ(Load->getSyncScopeID(), SyncScope::System);
+
+  Load = cast<LoadInst>(unwrap(
+      LLVMBuildAtomicLoad(wrap(&Builder), wrap(Int32Ty), wrap(Target), "aload",
+                          LLVMAtomicOrderingSequentiallyConsistent, true)));
+  EXPECT_TRUE(Load->isAtomic());
+  EXPECT_EQ(Load->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Load->getSyncScopeID(), SyncScope::SingleThread);
+}
+
 } // end anonymous namespace
 } // end namespace llvm

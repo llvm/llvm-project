@@ -4440,6 +4440,26 @@ LLVMValueRef LLVMBuildAtomicCmpXchgSyncScope(LLVMBuilderRef B, LLVMValueRef Ptr,
       mapFromLLVMOrdering(FailureOrdering), SSID));
 }
 
+LLVMValueRef LLVMBuildAtomicLoad(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                 LLVMValueRef Source, const char *Name,
+                                 LLVMAtomicOrdering Order,
+                                 LLVMBool SingleThread) {
+  LoadInst *LI = unwrap(B)->CreateLoad(unwrap(Ty), unwrap(Source), Name);
+  LI->setAtomic(mapFromLLVMOrdering(Order),
+                SingleThread ? SyncScope::SingleThread : SyncScope::System);
+  return wrap(LI);
+}
+
+LLVMValueRef LLVMBuildAtomicStore(LLVMBuilderRef B, LLVMValueRef V,
+                                      LLVMValueRef Target,
+                                      LLVMAtomicOrdering Order,
+                                      LLVMBool SingleThread) {
+  StoreInst *SI = unwrap(B)->CreateStore(unwrap(V), unwrap(Target));
+  SI->setAtomic(mapFromLLVMOrdering(Order),
+                SingleThread ? SyncScope::SingleThread : SyncScope::System);
+  return wrap(SI);
+}
+
 unsigned LLVMGetNumMaskElements(LLVMValueRef SVInst) {
   Value *P = unwrap(SVInst);
   ShuffleVectorInst *I = cast<ShuffleVectorInst>(P);
