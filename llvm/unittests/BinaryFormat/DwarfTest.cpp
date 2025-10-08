@@ -219,4 +219,39 @@ TEST(DwarfTest, lname) {
   EXPECT_EQ(roundtrip(DW_LANG_##NAME), DW_LANG_##NAME);
 #include "llvm/BinaryFormat/Dwarf.def"
 }
+
+TEST(DwarfTest, lname_getSourceLanguageName) {
+  // Some basics.
+  EXPECT_EQ(getSourceLanguageName("DW_LNAME_Ada"), DW_LNAME_Ada);
+  EXPECT_EQ(getSourceLanguageName("DW_LNAME_Metal"), DW_LNAME_Metal);
+
+  // Test invalid input.
+  EXPECT_EQ(getSourceLanguageName(""), 0U);
+  EXPECT_EQ(getSourceLanguageName("blah"), 0U);
+  EXPECT_EQ(getSourceLanguageName("DW_LNAME__something_unlikely"), 0U);
+  EXPECT_EQ(getSourceLanguageName("DW_LANG_C"), 0U);
+
+  // Test that we cover all DW_LNAME_ names.
+#define xstr(X) #X
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  EXPECT_EQ(getSourceLanguageName(xstr(DW_LNAME_##NAME)), DW_LNAME_##NAME);
+#include "llvm/BinaryFormat/Dwarf.def"
+}
+
+TEST(DwarfTest, lname_SourceLanguageNameString) {
+  // Some basics.
+  EXPECT_EQ(SourceLanguageNameString(DW_LNAME_C_plus_plus),
+            "DW_LNAME_C_plus_plus");
+  EXPECT_EQ(SourceLanguageNameString(DW_LNAME_CPP_for_OpenCL),
+            "DW_LNAME_CPP_for_OpenCL");
+
+  // Test invalid input.
+  EXPECT_EQ(SourceLanguageNameString(static_cast<SourceLanguageName>(0)), "");
+
+  // Test that we cover all DW_LNAME_ names.
+#define xstr(X) #X
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  EXPECT_EQ(SourceLanguageNameString(DW_LNAME_##NAME), xstr(DW_LNAME_##NAME));
+#include "llvm/BinaryFormat/Dwarf.def"
+}
 } // end namespace
