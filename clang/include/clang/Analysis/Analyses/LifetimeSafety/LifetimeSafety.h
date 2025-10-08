@@ -25,7 +25,6 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/StringMap.h"
-#include <memory>
 
 namespace clang::lifetimes {
 
@@ -34,8 +33,14 @@ void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter);
 
 namespace internal {
-// Forward declarations of internal types.
-struct LifetimeFactory;
+/// An object to hold the factories for immutable collections, ensuring
+/// that all created states share the same underlying memory management.
+struct LifetimeFactory {
+  llvm::BumpPtrAllocator Allocator;
+  OriginLoanMap::Factory OriginMapFactory{Allocator, /*canonicalize=*/false};
+  LoanSet::Factory LoanSetFactory{Allocator, /*canonicalize=*/false};
+  LivenessMap::Factory LivenessMapFactory{Allocator, /*canonicalize=*/false};
+};
 
 /// Running the lifetime safety analysis and querying its results. It
 /// encapsulates the various dataflow analyses.
@@ -83,8 +88,8 @@ public:
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
-  std::unique_ptr<LifetimeFactory> Factory;
-  std::unique_ptr<FactManager> FactMgr;
+  LifetimeFactory Factory;
+  FactManager FactMgr;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
   std::unique_ptr<LiveOriginAnalysis> LiveOrigins;
 };

@@ -1,4 +1,4 @@
-//===- Facts.h - Lifetime Analysis Facts and Fact Generation ---*- C++ -*-===//
+//===- Facts.h - Lifetime Analysis Facts and Fact Manager ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines Facts, which are atomic lifetime-relevant events (such as
-// loan issuance, loan expiration, origin flow, and use), and the FactGenerator,
-// which traverses the AST to generate these facts from CFG statements.
+// loan issuance, loan expiration, origin flow, and use), and the FactManager,
+// which manages the storage and retrieval of facts for each CFG block.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
@@ -255,7 +255,9 @@ public:
   }
 
   LoanManager &getLoanMgr() { return LoanMgr; }
+  const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
+  const OriginManager &getOriginMgr() const { return OriginMgr; }
 
 private:
   LoanManager LoanMgr;

@@ -26,8 +26,6 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -37,26 +35,12 @@
 namespace clang::lifetimes {
 namespace internal {
 
-// ========================================================================= //
-//                  LifetimeSafetyAnalysis Class Implementation
-// ========================================================================= //
-
-/// An object to hold the factories for immutable collections, ensuring
-/// that all created states share the same underlying memory management.
-struct LifetimeFactory {
-  llvm::BumpPtrAllocator Allocator;
-  OriginLoanMap::Factory OriginMapFactory{Allocator, /*canonicalize=*/false};
-  LoanSet::Factory LoanSetFactory{Allocator, /*canonicalize=*/false};
-  LivenessMap::Factory LivenessMapFactory{Allocator, /*canonicalize=*/false};
-};
-
 // We need this here for unique_ptr with forward declared class.
 LifetimeSafetyAnalysis::~LifetimeSafetyAnalysis() = default;
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
-    : AC(AC), Reporter(Reporter), Factory(std::make_unique<LifetimeFactory>()),
-      FactMgr(std::make_unique<FactManager>()) {}
+    : AC(AC), Reporter(Reporter) {}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
@@ -65,9 +49,9 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
 
-  FactsGenerator FactGen(*FactMgr, AC);
+  FactsGenerator FactGen(FactMgr, AC);
   FactGen.run();
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
+  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -81,16 +65,16 @@ void LifetimeSafetyAnalysis::run() {
   /// 3. Collapse ExpireFacts belonging to same source location into a single
   ///    Fact.
   LoanPropagation = std::make_unique<LoanPropagationAnalysis>(
-      Cfg, AC, *FactMgr, Factory->OriginMapFactory, Factory->LoanSetFactory);
+      Cfg, AC, FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory);
   LoanPropagation->run();
 
   LiveOrigins = std::make_unique<LiveOriginAnalysis>(
-      Cfg, AC, *FactMgr, Factory->LivenessMapFactory);
+      Cfg, AC, FactMgr, Factory.LivenessMapFactory);
   LiveOrigins->run();
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), getTestPoints()));
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
+  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
 }
 
 LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,
@@ -101,18 +85,16 @@ LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,
 
 std::optional<OriginID>
 LifetimeSafetyAnalysis::getOriginIDForDecl(const ValueDecl *D) const {
-  assert(FactMgr && "FactManager not initialized");
   // This assumes the OriginManager's `get` can find an existing origin.
   // We might need a `find` method on OriginManager to avoid `getOrCreate` logic
   // in a const-query context if that becomes an issue.
-  return FactMgr->getOriginMgr().get(*D);
+  return const_cast<OriginManager &>(FactMgr.getOriginMgr()).get(*D);
 }
 
 std::vector<LoanID>
 LifetimeSafetyAnalysis::getLoanIDForVar(const VarDecl *VD) const {
-  assert(FactMgr && "FactManager not initialized");
   std::vector<LoanID> Result;
-  for (const Loan &L : FactMgr->getLoanMgr().getLoans())
+  for (const Loan &L : FactMgr.getLoanMgr().getLoans())
     if (L.Path.D == VD)
       Result.push_back(L.ID);
   return Result;
@@ -128,10 +110,9 @@ LifetimeSafetyAnalysis::getLiveOriginsAtPoint(ProgramPoint PP) const {
 }
 
 llvm::StringMap<ProgramPoint> LifetimeSafetyAnalysis::getTestPoints() const {
-  assert(FactMgr && "FactManager not initialized");
   llvm::StringMap<ProgramPoint> AnnotationToPointMap;
   for (const CFGBlock *Block : *AC.getCFG()) {
-    for (const Fact *F : FactMgr->getFacts(Block)) {
+    for (const Fact *F : FactMgr.getFacts(Block)) {
       if (const auto *TPF = F->getAs<TestPointFact>()) {
         StringRef PointName = TPF->getAnnotation();
         assert(AnnotationToPointMap.find(PointName) ==
