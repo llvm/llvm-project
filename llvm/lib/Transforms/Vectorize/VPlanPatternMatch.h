@@ -450,6 +450,12 @@ inline AllRecipe_match<Instruction::Mul, Op0_t, Op1_t> m_Mul(const Op0_t &Op0,
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::LShr, Op0_t, Op1_t>
+m_LShr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::LShr, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::Mul, Op0_t, Op1_t>
 m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);

@@ -518,6 +518,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Store:
+  case VPInstruction::UMulh:
   case VPInstruction::BranchOnCount:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -899,6 +900,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
     return Builder.CreateLogicalAnd(A, B, Name);
+  }
+  case VPInstruction::UMulh: {
+    Value *A = State.get(getOperand(0));
+    Value *B = State.get(getOperand(1));
+    Type *DblTy = A->getType()->getWithNewBitWidth(A->getType()->getScalarSizeInBits()*2);
+    return Builder.CreateTrunc(
+        Builder.CreateLShr(
+            Builder.CreateMul(Builder.CreateZExt(A, DblTy),
+                              Builder.CreateZExt(B, DblTy), Name),
+            ConstantInt::get(DblTy, A->getType()->getScalarSizeInBits())),
+        A->getType());
   }
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
@@ -1408,6 +1420,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::UMulh:
+    O << "umulh";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());

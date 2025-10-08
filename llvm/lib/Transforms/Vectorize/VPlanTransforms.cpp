@@ -3643,6 +3643,21 @@ void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
         tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
+
+      if (auto *VP = dyn_cast<VPWidenCastRecipe>(&R)) {
+        VPValue *A, *B;
+        Type *Ty = Ctx.Types.inferScalarType(VP);
+        if (match(VP, m_Trunc(m_LShr(
+                          m_Mul(m_ZExt(m_VPValue(A)), m_ZExt(m_VPValue(B))),
+                          m_SpecificInt(Ty->getScalarSizeInBits())))) &&
+            Ctx.Types.inferScalarType(A) == Ctx.Types.inferScalarType(B) &&
+            Ctx.Types.inferScalarType(A) == Ty) {
+          dbgs() << "UMulh Matched\n";
+          auto Mulh = new VPInstruction(VPInstruction::UMulh, {A, B});
+          Mulh->insertBefore(*VPBB, R.getIterator());
+          VP->replaceAllUsesWith(Mulh);
+        }
+      }
     }
   }
 }
