@@ -268,6 +268,7 @@ public:
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
+    CustomExpand,      // Custom target-specific expansion using TLI hooks.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -299,9 +300,12 @@ public:
 
   class ArgListEntry {
   public:
-    Value *Val = nullptr;
-    SDValue Node = SDValue();
-    Type *Ty = nullptr;
+    Value *Val;
+    SDValue Node;
+    /// Original unlegalized argument type.
+    Type *OrigTy;
+    /// Same as OrigTy, or partially legalized for soft float libcalls.
+    Type *Ty;
     bool IsSExt : 1;
     bool IsZExt : 1;
     bool IsNoExt : 1;
@@ -320,12 +324,17 @@ public:
     MaybeAlign Alignment = std::nullopt;
     Type *IndirectType = nullptr;
 
-    ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
-          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
-          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
-          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
-          IsCFGuardTarget(false) {}
+    ArgListEntry(Value *Val, SDValue Node, Type *Ty)
+        : Val(Val), Node(Node), OrigTy(Ty), Ty(Ty), IsSExt(false),
+          IsZExt(false), IsNoExt(false), IsInReg(false), IsSRet(false),
+          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
+          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
+          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
+
+    explicit ArgListEntry(Value *Val, SDValue Node = SDValue())
+        : ArgListEntry(Val, Node, Val->getType()) {}
+
+    ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
@@ -464,15 +473,10 @@ public:
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
                                                     const DataLayout &DL) const;
+  MachineMemOperand::Flags
+  getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
-    return true;
-  }
-
-  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
-  /// should be expanded using generic code in SelectionDAGBuilder.
-  virtual bool
-  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
     return true;
   }
 
@@ -518,10 +522,12 @@ public:
     return true;
   }
 
-  /// Return true if multiple condition registers are available.
-  bool hasMultipleConditionRegisters() const {
-    return HasMultipleConditionRegisters;
-  }
+  /// Does the target have multiple (allocatable) condition registers that
+  /// can be used to store the results of comparisons for use by selects
+  /// and conditional branches. With multiple condition registers, the code
+  /// generator will not aggressively sink comparisons into the blocks of their
+  /// users.
+  virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
@@ -545,10 +551,10 @@ public:
   // intermediate results in f32 precision and range.
   virtual bool softPromoteHalfType() const { return false; }
 
-  // Return true if, for soft-promoted half, the half type should be passed
-  // passed to and returned from functions as f32. The default behavior is to
-  // pass as i16. If soft-promoted half is not used, this function is ignored
-  // and values are always passed and returned as f32.
+  // Return true if, for soft-promoted half, the half type should be passed to
+  // and returned from functions as f32. The default behavior is to pass as
+  // i16. If soft-promoted half is not used, this function is ignored and
+  // values are always passed and returned as f32.
   virtual bool useFPRegsForHalfType() const { return false; }
 
   // There are two general methods for expanding a BUILD_VECTOR node:
@@ -1116,10 +1122,7 @@ public:
     LegalizeTypeAction ValueTypeActions[MVT::VALUETYPE_SIZE];
 
   public:
-    ValueTypeActionImpl() {
-      std::fill(std::begin(ValueTypeActions), std::end(ValueTypeActions),
-                TypeLegal);
-    }
+    ValueTypeActionImpl() { llvm::fill(ValueTypeActions, TypeLegal); }
 
     LegalizeTypeAction getTypeAction(MVT VT) const {
       return ValueTypeActions[VT.SimpleTy];
@@ -2020,7 +2023,7 @@ public:
   /// It returns EVT::Other if the type should be determined using generic
   /// target-independent logic.
   virtual EVT
-  getOptimalMemOpType(const MemOp &Op,
+  getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
@@ -2266,6 +2269,18 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a atomic store using a target-specific way.
+  virtual void emitExpandAtomicStore(StoreInst *SI) const {
+    llvm_unreachable(
+        "Generic atomic store expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic load using a target-specific way.
+  virtual void emitExpandAtomicLoad(LoadInst *LI) const {
+    llvm_unreachable(
+        "Generic atomic load expansion unimplemented on this target");
+  }
+
   /// Perform a cmpxchg expansion using a target-specific method.
   virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
     llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
@@ -2370,8 +2385,8 @@ public:
   }
 
   /// Returns how the given (atomic) store should be expanded by the IR-level
-  /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
-  /// to use an atomicrmw xchg.
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
+  /// will try to use an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
@@ -2456,7 +2471,7 @@ public:
                                                EVT VT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
-    if (hasMultipleConditionRegisters())
+    if (hasMultipleConditionRegisters(VT))
       return false;
     // Only do the transform if the value won't be split into multiple
     // registers.
@@ -2561,15 +2576,6 @@ protected:
   /// llvm.savestack/llvm.restorestack should save and restore.
   void setStackPointerRegisterToSaveRestore(Register R) {
     StackPointerRegisterToSaveRestore = R;
-  }
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  void setHasMultipleConditionRegisters(bool hasManyRegs = true) {
-    HasMultipleConditionRegisters = hasManyRegs;
   }
 
   /// Tells the code generator that the target has BitExtract instructions.
@@ -3204,47 +3210,38 @@ public:
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p LI is the vector load instruction.
+  /// \p Load is the vector load instruction. Can be either a plain load
+  /// instruction or a vp.load intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedLoad(LoadInst *LI,
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
+  virtual bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
-                                    ArrayRef<unsigned> Indices,
-                                    unsigned Factor) const {
+                                    ArrayRef<unsigned> Indices, unsigned Factor,
+                                    const APInt &GapMask) const {
     return false;
   }
 
   /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p SI is the vector store instruction.
+  /// \p SI is the vector store instruction.  Can be either a plain store
+  /// or a vp.store.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
-                                     unsigned Factor) const {
-    return false;
-  }
-
-  /// Lower an interleaved load to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Load is a vp.load instruction.
-  /// \p Mask is a mask value
-  /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
-    return false;
-  }
-
-  /// Lower an interleaved store to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Store is the vp.store instruction.
-  /// \p Mask is a mask value
-  /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                                       ArrayRef<Value *> InterleaveOps) const {
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
+  virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                                     ShuffleVectorInst *SVI, unsigned Factor,
+                                     const APInt &GapMask) const {
     return false;
   }
 
@@ -3252,11 +3249,11 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave{2,3,5,7}
   ///
-  /// \p LI is the accompanying load instruction.
-  /// \p DeinterleaveValues contains the deinterleaved values.
-  virtual bool
-  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues) const {
+  /// \p Load is the accompanying load instruction.  Can be either a plain load
+  /// instruction or a vp.load intrinsic.
+  /// \p DI represents the deinterleaveN intrinsic.
+  virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                                IntrinsicInst *DI) const {
     return false;
   }
 
@@ -3264,10 +3261,14 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.interleave{2,3,5,7}
   ///
-  /// \p SI is the accompanying store instruction
+  /// \p Store is the accompanying store instruction.  Can be either a plain
+  /// store or a vp.store intrinsic.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is uncondiitional.
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
-  lowerInterleaveIntrinsicToStore(StoreInst *SI,
+  lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,
                                   ArrayRef<Value *> InterleaveValues) const {
     return false;
   }
@@ -3447,6 +3448,10 @@ public:
   /// matching of other patterns.
   virtual bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                                     bool MathUsed) const {
+    // Form it if it is legal.
+    if (isOperationLegal(Opcode, VT))
+      return true;
+
     // TODO: The default logic is inherited from code in CodeGenPrepare.
     // The opcode should not make a difference by default?
     if (Opcode != ISD::UADDO)
@@ -3497,9 +3502,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
-  /// Should we expand [US]CMP nodes using two selects and two compares, or by
-  /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
+  /// Should we prefer selects to doing arithmetic on boolean types
+  virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
+    return false;
+  }
 
   /// True if target has some particular form of dealing with pointer arithmetic
   /// semantics for pointers with the given value type. False if pointer
@@ -3507,6 +3513,13 @@ public:
   /// selection, and can fallback to regular arithmetic.
   /// This should be removed when PTRADD nodes are widely supported by backends.
   virtual bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const {
+    return false;
+  }
+
+  /// True if the target allows transformations of in-bounds pointer
+  /// arithmetic that cause out-of-bounds intermediate results.
+  virtual bool canTransformPtrArithOutOfBounds(const Function &F,
+                                               EVT PtrVT) const {
     return false;
   }
 
@@ -3562,33 +3575,51 @@ public:
     Libcalls.setLibcallImpl(Call, Impl);
   }
 
+  /// Get the libcall impl routine name for the specified libcall.
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+    return Libcalls.getLibcallImpl(Call);
+  }
+
   /// Get the libcall routine name for the specified libcall.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return Libcalls.getLibcallName(Call);
+    // FIXME: Return StringRef
+    return Libcalls.getLibcallName(Call).data();
   }
 
-  const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
-
-  /// Override the default CondCode to be used to test the result of the
-  /// comparison libcall against zero.
-  /// FIXME: This should be removed
-  void setCmpLibcallCC(RTLIB::Libcall Call, CmpInst::Predicate Pred) {
-    Libcalls.setSoftFloatCmpLibcallPredicate(Call, Pred);
+  /// Get the libcall routine name for the specified libcall implementation
+  static StringRef getLibcallImplName(RTLIB::LibcallImpl Call) {
+    return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  /// Get the CondCode that's to be used to test the result of the comparison
-  /// libcall against zero.
-  CmpInst::Predicate
-  getSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call) const {
-    return Libcalls.getSoftFloatCmpLibcallPredicate(Call);
+  const char *getMemcpyName() const {
+    // FIXME: Return StringRef
+    return Libcalls.getMemcpyName().data();
   }
+
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
+    return Libcalls.getSupportedLibcallImpl(FuncName);
+  }
+
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    Libcalls.setLibcallCallingConv(Call, CC);
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    Libcalls.setLibcallImplCallingConv(Call, CC);
+  }
+
+  /// Get the CallingConv that should be used for the specified libcall
+  /// implementation.
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return Libcalls.getLibcallImplCallingConv(Call);
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
+  // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
     return Libcalls.getLibcallCallingConv(Call);
   }
@@ -3612,13 +3643,6 @@ public:
 
 private:
   const TargetMachine &TM;
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  bool HasMultipleConditionRegisters;
 
   /// Tells the code generator that the target has BitExtract instructions.
   /// The code generator will aggressively sink "shift"s into the blocks of
@@ -4109,8 +4133,9 @@ public:
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const;
 
   /// Check to see if the specified operand of the specified instruction is a
@@ -4370,6 +4395,11 @@ public:
            Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
 
+  /// Return true if the given select/vselect should be considered canonical and
+  /// not be transformed. Currently only used for "vselect (not Cond), N1, N2 ->
+  /// vselect Cond, N2, N1".
+  virtual bool isTargetCanonicalSelect(SDNode *N) const { return false; }
+
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;
@@ -4624,23 +4654,6 @@ public:
     return false;
   }
 
-  /// Allows the target to handle physreg-carried dependency
-  /// in target-specific way. Used from the ScheduleDAGSDNodes to decide whether
-  /// to add the edge to the dependency graph.
-  /// Def - input: Selection DAG node defininfg physical register
-  /// User - input: Selection DAG node using physical register
-  /// Op - input: Number of User operand
-  /// PhysReg - inout: set to the physical register if the edge is
-  /// necessary, unchanged otherwise
-  /// Cost - inout: physical register copy cost.
-  /// Returns 'true' is the edge is necessary, 'false' otherwise
-  virtual bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                         const TargetRegisterInfo *TRI,
-                                         const TargetInstrInfo *TII,
-                                         MCRegister &PhysReg, int &Cost) const {
-    return false;
-  }
-
   /// Target-specific combining of register parts into its original value
   virtual SDValue
   joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
@@ -4661,6 +4674,13 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  /// Optional target hook to add target-specific actions when entering EH pad
+  /// blocks. The implementation should return the resulting token chain value.
+  virtual SDValue lowerEHPadEntry(SDValue Chain, const SDLoc &DL,
+                                  SelectionDAG &DAG) const {
+    return SDValue();
+  }
+
   virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                      ArgListTy &Args) const {}
 
@@ -4678,6 +4698,9 @@ public:
   /// implementation.
   struct CallLoweringInfo {
     SDValue Chain;
+    /// Original unlegalized return type.
+    Type *OrigRetTy = nullptr;
+    /// Same as OrigRetTy, or partially legalized for soft float libcalls.
     Type *RetTy = nullptr;
     bool RetSExt           : 1;
     bool RetZExt           : 1;
@@ -4732,6 +4755,14 @@ public:
     // setCallee with target/module-specific attributes
     CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
                                    SDValue Target, ArgListTy &&ArgsList) {
+      return setLibCallee(CC, ResultType, ResultType, Target,
+                          std::move(ArgsList));
+    }
+
+    CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
+                                   Type *OrigResultType, SDValue Target,
+                                   ArgListTy &&ArgsList) {
+      OrigRetTy = OrigResultType;
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
@@ -4746,7 +4777,7 @@ public:
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 AttributeSet ResultAttrs = {}) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
       IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
       RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
       RetZExt = ResultAttrs.hasAttribute(Attribute::ZExt);
@@ -4762,7 +4793,7 @@ public:
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 const CallBase &Call) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
@@ -4898,11 +4929,10 @@ public:
       return *this;
     }
 
-    MakeLibCallOptions &setTypeListBeforeSoften(ArrayRef<EVT> OpsVT, EVT RetVT,
-                                                bool Value = true) {
+    MakeLibCallOptions &setTypeListBeforeSoften(ArrayRef<EVT> OpsVT, EVT RetVT) {
       OpsVTBeforeSoften = OpsVT;
       RetVTBeforeSoften = RetVT;
-      IsSoften = Value;
+      IsSoften = true;
       return *this;
     }
 
@@ -5086,20 +5116,9 @@ public:
     return nullptr;
   }
 
-  bool verifyReturnAddressArgumentIsConstant(SDValue Op,
-                                             SelectionDAG &DAG) const;
-
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
-
-  /// This hook allows the target to expand an inline asm call to be explicit
-  /// llvm code if it wants to.  This is useful for turning simple inline asms
-  /// into LLVM intrinsics, which gives the compiler more information about the
-  /// behavior of the code.
-  virtual bool ExpandInlineAsm(CallInst *) const {
-    return false;
-  }
 
   enum ConstraintType {
     C_Register,            // Constraint represents specific register(s).

@@ -181,11 +181,15 @@ enum Kind {
   kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
+  kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
+  kw_cheriot_compartmentcallcc,
+  kw_cheriot_compartmentcalleecc,
+  kw_cheriot_librarycallcc,
 
   // Attributes:
   kw_attributes,
@@ -318,6 +322,7 @@ enum Kind {
   kw_fptoui,
   kw_fptosi,
   kw_inttoptr,
+  kw_ptrtoaddr,
   kw_ptrtoint,
   kw_bitcast,
   kw_addrspacecast,

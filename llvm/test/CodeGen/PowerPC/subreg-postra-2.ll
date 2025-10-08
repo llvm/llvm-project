@@ -60,27 +60,27 @@ define void @jbd2_journal_commit_transaction(i32 %input1, ptr %input2, ptr %inpu
 ; CHECK-NO-ISEL-NEXT:    bne- 0, .Ltmp0
 ; CHECK-NO-ISEL-EMPTY:
 ; CHECK-NO-ISEL-NEXT:    #NO_APP
-; CHECK-NO-ISEL-NEXT:    std 4, 0(6)
+; CHECK-NO-ISEL-NEXT:    std 5, 0(6)
 ; CHECK-NO-ISEL-NEXT:    beq- 5, .LBB0_6
 ; CHECK-NO-ISEL-NEXT:  .LBB0_2: # %while.body392
 ; CHECK-NO-ISEL-NEXT:    #
 ; CHECK-NO-ISEL-NEXT:    bne- 1, .LBB0_5
 ; CHECK-NO-ISEL-NEXT:  # %bb.3: # %wait_on_buffer.exit1319
 ; CHECK-NO-ISEL-NEXT:    #
-; CHECK-NO-ISEL-NEXT:    ld 4, 0(6)
-; CHECK-NO-ISEL-NEXT:    mr 9, 4
-; CHECK-NO-ISEL-NEXT:    ldu 5, -72(9)
-; CHECK-NO-ISEL-NEXT:    andi. 5, 5, 1
-; CHECK-NO-ISEL-NEXT:    mr 5, 3
+; CHECK-NO-ISEL-NEXT:    ld 5, 0(6)
+; CHECK-NO-ISEL-NEXT:    mr 9, 5
+; CHECK-NO-ISEL-NEXT:    ldu 4, -72(9)
+; CHECK-NO-ISEL-NEXT:    andi. 4, 4, 1
+; CHECK-NO-ISEL-NEXT:    mr 4, 3
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB0_1
 ; CHECK-NO-ISEL-NEXT:  # %bb.4: # %wait_on_buffer.exit1319
 ; CHECK-NO-ISEL-NEXT:    #
-; CHECK-NO-ISEL-NEXT:    li 5, -5
+; CHECK-NO-ISEL-NEXT:    li 4, -5
 ; CHECK-NO-ISEL-NEXT:    b .LBB0_1
 ; CHECK-NO-ISEL-NEXT:  .LBB0_5:
-; CHECK-NO-ISEL-NEXT:    mr 5, 7
+; CHECK-NO-ISEL-NEXT:    mr 4, 7
 ; CHECK-NO-ISEL-NEXT:  .LBB0_6: # %while.end418
-; CHECK-NO-ISEL-NEXT:    cmplwi 5, 0
+; CHECK-NO-ISEL-NEXT:    cmplwi 4, 0
 ; CHECK-NO-ISEL-NEXT:    beq 0, .LBB0_8
 ; CHECK-NO-ISEL-NEXT:  # %bb.7: # %if.then420
 ; CHECK-NO-ISEL-NEXT:  .LBB0_8: # %if.end421

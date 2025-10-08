@@ -223,6 +223,8 @@ LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
 ///   /foo  + bar/f => /foo/bar/f
 ///   /foo/ + bar/f => /foo/bar/f
 ///   foo   + bar/f => foo/bar/f
+///   foo   + /bar/f => foo/bar/f (FIXME: will be changed to /bar/f to align
+///                                with C++17 std::filesystem::path::append)
 /// @endcode
 ///
 /// @param path Set to \a path + \a component.
@@ -563,6 +565,18 @@ LLVM_ABI bool is_absolute_gnu(const Twine &path, Style style = Style::native);
 /// @param path Input path.
 /// @result True if the path is relative, false if it is not.
 LLVM_ABI bool is_relative(const Twine &path, Style style = Style::native);
+
+/// Make \a path an absolute path.
+///
+/// Makes \a path absolute using the \a current_directory if it is not already.
+/// An empty \a path will result in the \a current_directory.
+///
+/// /absolute/path   => /absolute/path
+/// relative/../path => <current-directory>/relative/../path
+///
+/// @param path A path that is modified to be an absolute path.
+LLVM_ABI void make_absolute(const Twine &current_directory,
+                            SmallVectorImpl<char> &path);
 
 } // end namespace path
 } // end namespace sys

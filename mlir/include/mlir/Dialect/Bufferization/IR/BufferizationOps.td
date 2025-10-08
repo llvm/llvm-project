@@ -18,7 +18,6 @@ include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/SubsetOpInterface.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 
 class Bufferization_Op<string mnemonic, list<Trait> traits = []>
     : Op<Bufferization_Dialect, mnemonic, traits>;
@@ -111,7 +110,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
-    FailureOr<BaseMemRefType> getBufferType(
+    FailureOr<BufferLikeType> getBufferType(
         Value value, const BufferizationOptions &options,
         const BufferizationState &state,
         SmallVector<Value> &invocationStack);
@@ -171,7 +170,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 //===----------------------------------------------------------------------===//
 
 def Bufferization_CloneOp : Bufferization_Op<"clone", [
-    CopyOpInterface,
     MemoryEffectsOpInterface,
     DeclareOpInterfaceMethods<AllocationOpInterface, ["buildDealloc", "buildClone"]>
   ]> {
@@ -401,7 +399,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     SameOperandsAndResultElementType,
     Bufferization_TensorAndBufferMatch<"result", "buffer">
   ]> {
-  let summary = "create a buffer-like type from a tensor-like type";
+  let summary = "create a tensor-like type from a buffer-like type";
   let description = [{
     An operation that creates a tensor from a buffer. The result value is a
     tensor-like type that must match the corresponding buffer-like operand as
@@ -478,10 +476,10 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     bool isWritable(Value value, const AnalysisState &state);
 
-    FailureOr<BaseMemRefType> getBufferType(
+    FailureOr<BufferLikeType> getBufferType(
         Value value, const BufferizationOptions &options,
         const BufferizationState &state, SmallVector<Value> &invocationStack) {
-      return ::llvm::cast<BaseMemRefType>(getBuffer().getType());
+      return getBuffer().getType();
     }
   }];
 

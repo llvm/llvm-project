@@ -74,6 +74,10 @@ constexpr float ef          = 0x1.5bf0a8P+1F, // (2.71828183) https://oeis.org/A
                 sqrt3f      = 0x1.bb67aeP+0F, // (1.73205081) https://oeis.org/A002194
                 inv_sqrt3f  = 0x1.279a74P-1F, // (.577350269)
                 phif        = 0x1.9e377aP+0F; // (1.61803399) https://oeis.org/A001622
+// These string literals are taken from below:
+// https://github.com/bminor/glibc/blob/8543577b04ded6d979ffcc5a818930e4d74d0645/math/math.h#L1215-L1229
+constexpr const char *pis     = "3.141592653589793238462643383279502884",
+                     *inv_pis = "0.318309886183790671537767526745028724";
 // clang-format on
 } // namespace numbers
 
@@ -192,16 +196,8 @@ constexpr bool isShiftedInt(int64_t x) {
 
 /// Checks if an unsigned integer fits into the given bit width.
 template <unsigned N> constexpr bool isUInt(uint64_t x) {
-  if constexpr (N == 0)
-    return 0 == x;
-  if constexpr (N == 8)
-    return static_cast<uint8_t>(x) == x;
-  if constexpr (N == 16)
-    return static_cast<uint16_t>(x) == x;
-  if constexpr (N == 32)
-    return static_cast<uint32_t>(x) == x;
   if constexpr (N < 64)
-    return x < (UINT64_C(1) << (N));
+    return (x >> N) == 0;
   (void)x; // MSVC v19.25 warns that x is unused.
   return true;
 }
@@ -327,12 +323,18 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 
 /// Compile time Log2.
 /// Valid only for positive powers of two.
-template <size_t kValue> constexpr size_t CTLog2() {
+template <size_t kValue> constexpr size_t ConstantLog2() {
   static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
-  return 1 + CTLog2<kValue / 2>();
+  return 1 + ConstantLog2<kValue / 2>();
 }
 
-template <> constexpr size_t CTLog2<1>() { return 0; }
+template <> constexpr size_t ConstantLog2<1>() { return 0; }
+
+template <size_t kValue>
+LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
+constexpr size_t CTLog2() {
+  return ConstantLog2<kValue>();
+}
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)

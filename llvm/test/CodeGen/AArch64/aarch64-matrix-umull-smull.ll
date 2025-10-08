@@ -267,7 +267,7 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-SD-NEXT:    and x9, x8, #0xfffffff0
 ; CHECK-SD-NEXT:    add x10, x2, #32
 ; CHECK-SD-NEXT:    add x11, x0, #16
-; CHECK-SD-NEXT:    mov x12, x9
+; CHECK-SD-NEXT:    and x12, x8, #0xfffffff0
 ; CHECK-SD-NEXT:  .LBB3_4: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldp q1, q2, [x11, #-16]
@@ -313,7 +313,7 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    and x10, x9, #0xfffffff0
 ; CHECK-GI-NEXT:    add x11, x2, #32
 ; CHECK-GI-NEXT:    add x12, x0, #16
-; CHECK-GI-NEXT:    mov x13, x10
+; CHECK-GI-NEXT:    and x13, x9, #0xfffffff0
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:  .LBB3_3: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -428,7 +428,7 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-SD-NEXT:    and x9, x8, #0xfffffff0
 ; CHECK-SD-NEXT:    add x10, x2, #32
 ; CHECK-SD-NEXT:    add x11, x0, #16
-; CHECK-SD-NEXT:    mov x12, x9
+; CHECK-SD-NEXT:    and x12, x8, #0xfffffff0
 ; CHECK-SD-NEXT:  .LBB4_4: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldp q1, q2, [x11, #-16]
@@ -472,7 +472,7 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    and x8, x9, #0xfffffff0
 ; CHECK-GI-NEXT:    add x10, x2, #32
 ; CHECK-GI-NEXT:    add x11, x0, #16
-; CHECK-GI-NEXT:    mov x12, x8
+; CHECK-GI-NEXT:    and x12, x9, #0xfffffff0
 ; CHECK-GI-NEXT:  .LBB4_3: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    and w13, w1, #0xffff
@@ -583,8 +583,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    mov w10, w2
 ; CHECK-SD-NEXT:    b.hi .LBB5_4
 ; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w8, wzr
 ; CHECK-SD-NEXT:    mov x11, xzr
+; CHECK-SD-NEXT:    mov w8, wzr
 ; CHECK-SD-NEXT:    b .LBB5_7
 ; CHECK-SD-NEXT:  .LBB5_3:
 ; CHECK-SD-NEXT:    mov w8, wzr
@@ -596,7 +596,7 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    and x11, x10, #0xfffffff0
 ; CHECK-SD-NEXT:    fmov s2, w9
 ; CHECK-SD-NEXT:    add x8, x0, #8
-; CHECK-SD-NEXT:    mov x12, x11
+; CHECK-SD-NEXT:    and x12, x10, #0xfffffff0
 ; CHECK-SD-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldp d3, d4, [x8, #-8]
@@ -646,10 +646,10 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    add x10, x0, #8
+; CHECK-GI-NEXT:    and x11, x8, #0xfffffff0
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
 ; CHECK-GI-NEXT:    dup v2.8h, w9
 ; CHECK-GI-NEXT:    and x9, x8, #0xfffffff0
-; CHECK-GI-NEXT:    mov x11, x9
 ; CHECK-GI-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldp d3, d4, [x10, #-8]
@@ -902,7 +902,7 @@ define void @sink_v8z16_0(ptr %p, ptr %d, i64 %n, <16 x i8> %a) {
 ; CHECK-GI-NEXT:    subs x2, x2, #8
 ; CHECK-GI-NEXT:    add x8, x8, #8
 ; CHECK-GI-NEXT:    umull v1.8h, v1.8b, v0.8b
-; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #15
+; CHECK-GI-NEXT:    cmlt v1.8h, v1.8h, #0
 ; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-GI-NEXT:    str d1, [x0], #32
 ; CHECK-GI-NEXT:    b.ne .LBB8_1
@@ -967,8 +967,8 @@ define void @sink_v16s16_8(ptr %p, ptr %d, i64 %n, <16 x i8> %a) {
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
 ; CHECK-GI-NEXT:    smull v1.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    smull v2.8h, v2.8b, v0.8b
-; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #15
-; CHECK-GI-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-GI-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-GI-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-GI-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    str q1, [x0], #32
 ; CHECK-GI-NEXT:    b.ne .LBB9_1
@@ -1365,7 +1365,72 @@ for.end12:                                        ; preds = %vector.body
   ret void
 }
 
-declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
+define noundef <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coerce) {
+; CHECK-SD-LABEL: cmplx_mul_combined_re_im:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    lsr x9, x0, #16
+; CHECK-SD-NEXT:    adrp x8, .LCPI14_0
+; CHECK-SD-NEXT:    dup v4.8h, w0
+; CHECK-SD-NEXT:    dup v1.8h, w9
+; CHECK-SD-NEXT:    fmov s3, w9
+; CHECK-SD-NEXT:    sqneg v2.8h, v1.8h
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-SD-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-SD-NEXT:    rev32 v2.8h, v0.8h
+; CHECK-SD-NEXT:    sqdmull v3.4s, v0.4h, v4.4h
+; CHECK-SD-NEXT:    sqdmull2 v0.4s, v0.8h, v4.8h
+; CHECK-SD-NEXT:    sqdmlal v3.4s, v2.4h, v1.4h
+; CHECK-SD-NEXT:    sqdmlal2 v0.4s, v2.8h, v1.8h
+; CHECK-SD-NEXT:    uzp2 v0.8h, v3.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmplx_mul_combined_re_im:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    lsr w9, w0, #16
+; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
+; CHECK-GI-NEXT:    rev32 v4.8h, v0.8h
+; CHECK-GI-NEXT:    dup v1.8h, w9
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    sqneg v2.8h, v1.8h
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-GI-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    dup v3.8h, w0
+; CHECK-GI-NEXT:    sqdmull v2.4s, v2.4h, v3.4h
+; CHECK-GI-NEXT:    sqdmull v5.4s, v4.4h, v1.4h
+; CHECK-GI-NEXT:    sqdmlal v5.4s, v0.4h, v3.4h
+; CHECK-GI-NEXT:    sqdmlal2 v2.4s, v4.8h, v1.8h
+; CHECK-GI-NEXT:    uzp2 v0.8h, v5.8h, v2.8h
+; CHECK-GI-NEXT:    ret
+entry:
+  %scale.sroa.0.0.extract.trunc = trunc i64 %scale.coerce to i16
+  %scale.sroa.2.0.extract.shift23 = lshr i64 %scale.coerce, 16
+  %scale.sroa.2.0.extract.trunc = trunc i64 %scale.sroa.2.0.extract.shift23 to i16
+  %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %vecinit.i24 = insertelement <8 x i16> poison, i16 %scale.sroa.0.0.extract.trunc, i64 0
+  %vecinit.i = insertelement <8 x i16> poison, i16 %scale.sroa.2.0.extract.trunc, i64 0
+  %vecinit7.i = shufflevector <8 x i16> %vecinit.i, <8 x i16> poison, <8 x i32> zeroinitializer
+  %vqnegq_v1.i = tail call noundef <8 x i16> @llvm.aarch64.neon.sqneg.v8i16(<8 x i16> %vecinit7.i)
+  %vbsl5.i = shufflevector <8 x i16> %vqnegq_v1.i, <8 x i16> %vecinit.i, <8 x i32> <i32 0, i32 8, i32 2, i32 8, i32 4, i32 8, i32 6, i32 8>
+  %shuffle.i40 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i39 = shufflevector <8 x i16> %vecinit.i24, <8 x i16> poison, <4 x i32> zeroinitializer
+  %vqdmull_v2.i36 = tail call noundef <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i40, <4 x i16> %shuffle.i39)
+  %shuffle.i44 = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vqdmull_v2.i = tail call noundef <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i44, <4 x i16> %shuffle.i39)
+  %shuffle.i38 = shufflevector <8 x i16> %shuffle.i, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i37 = shufflevector <8 x i16> %vbsl5.i, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vqdmlal2.i45 = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i38, <4 x i16> %shuffle.i37)
+  %vqdmlal_v3.i46 = tail call noundef <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %vqdmull_v2.i36, <4 x i32> %vqdmlal2.i45)
+  %shuffle.i42 = shufflevector <8 x i16> %shuffle.i, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shuffle.i41 = shufflevector <8 x i16> %vbsl5.i, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vqdmlal2.i = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %shuffle.i42, <4 x i16> %shuffle.i41)
+  %vqdmlal_v3.i = tail call noundef <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> %vqdmull_v2.i, <4 x i32> %vqdmlal2.i)
+  %0 = bitcast <4 x i32> %vqdmlal_v3.i46 to <8 x i16>
+  %1 = bitcast <4 x i32> %vqdmlal_v3.i to <8 x i16>
+  %shuffle.i35 = shufflevector <8 x i16> %0, <8 x i16> %1, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret <8 x i16> %shuffle.i35
+}
+
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

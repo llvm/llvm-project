@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -50,6 +51,7 @@ class raw_ostream;
 
 namespace bolt {
 class BinaryBasicBlock;
+class BinaryContext;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -430,6 +432,17 @@ public:
     return Analysis->isIndirectBranch(Inst);
   }
 
+  /// Returns true if the instruction unconditionally transfers the control to
+  /// another program point, interrupting sequential code execution, e.g. by a
+  /// call, return, or unconditional jump. This explicitly leaves out
+  /// conditional branches as they may not be taken, but does allow transferring
+  /// the control to the next instruction (zero-displacement jump/call).
+  bool isUnconditionalControlTransfer(const MCInst &Inst) const {
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+    // barrier captures returns and unconditional branches
+    return Desc.isBarrier() || Desc.isCall();
+  }
+
   /// Returns true if the instruction is memory indirect call or jump
   virtual bool isBranchOnMem(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -518,10 +531,15 @@ public:
     return 0;
   }
 
+  /// Create a helper function to increment counter for Instrumentation
+  virtual void createInstrCounterIncrFunc(BinaryContext &BC) {
+    llvm_unreachable("not implemented");
+  }
+
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const {
+  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                                   MCContext *Ctx, bool IsLeaf,
+                                                   unsigned CodePointerSize) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
@@ -707,6 +725,20 @@ public:
     return false;
   }
 
+  /// Returns true if Inst is a trap instruction.
+  ///
+  /// Tests if Inst is an instruction that immediately causes an abnormal
+  /// program termination, for example when a security violation is detected
+  /// by a compiler-inserted check.
+  ///
+  /// @note An implementation of this method should likely return false for
+  /// calls to library functions like abort(), as it is possible that the
+  /// execution state is partially attacker-controlled at this point.
+  virtual bool isTrap(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isBreakpoint(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -728,6 +760,10 @@ public:
     llvm_unreachable("not implemented");
     return false;
   }
+
+  /// Return true if the hlt instruction under the x86, otherwise, default to
+  /// false.
+  virtual bool isX86HLT(const MCInst &Inst) const { return false; }
 
   /// Return the width, in bytes, of the memory access performed by \p Inst, if
   /// this is a pop instruction. Return zero otherwise.
@@ -1873,11 +1909,36 @@ public:
     return {};
   }
 
+  /// Find memcpy size in bytes by using preceding instructions.
+  /// Returns std::nullopt if size cannot be determined (no-op for most
+  /// targets).
+  virtual std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const {
+    return std::nullopt;
+  }
+
   /// Creates inline memcpy instruction. If \p ReturnEnd is true, then return
   /// (dest + n) instead of dest.
   virtual InstructionListType createInlineMemcpy(bool ReturnEnd) const {
     llvm_unreachable("not implemented");
     return {};
+  }
+
+  /// Creates size-aware inline memcpy instruction. If \p KnownSize is provided,
+  /// generates optimized code for that specific size. Falls back to regular
+  /// createInlineMemcpy if size is unknown or not needed (e.g. with X86).
+  virtual InstructionListType
+  createInlineMemcpy(bool ReturnEnd, std::optional<uint64_t> KnownSize) const {
+    return createInlineMemcpy(ReturnEnd);
+  }
+
+  /// Extract immediate value from move instruction that sets the given
+  /// register. Returns the immediate value if the instruction is a
+  /// move-immediate to TargetReg.
+  virtual std::optional<uint64_t>
+  extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const {
+    return std::nullopt;
   }
 
   /// Create a target-specific relocation out of the \p Fixup.
@@ -2161,7 +2222,8 @@ public:
   }
 
   /// Print each annotation attached to \p Inst.
-  void printAnnotations(const MCInst &Inst, raw_ostream &OS) const;
+  void printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                        bool PrintMemData = false) const;
 
   /// Remove annotation with a given \p Index.
   ///

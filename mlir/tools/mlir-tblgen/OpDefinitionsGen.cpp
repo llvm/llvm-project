@@ -36,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -228,6 +229,18 @@ static const char *const opCommentHeader = R"(
 // {0} {1}
 //===----------------------------------------------------------------------===//
 
+)";
+
+static const char *const inlineCreateBody = R"(
+  ::mlir::OperationState __state__({0}, getOperationName());
+  build(builder, __state__{1});
+  auto __res__ = ::llvm::dyn_cast<{2}>(builder.create(__state__));
+  assert(__res__ && "builder didn't return the right type");
+  return __res__;
+)";
+
+static const char *const inlineCreateBodyImplicitLoc = R"(
+  return create(builder, builder.getLoc(){0});
 )";
 
 //===----------------------------------------------------------------------===//
@@ -665,6 +678,7 @@ private:
   // Generates the build() method that takes each operand/attribute
   // as a stand-alone parameter.
   void genSeparateArgParamBuilder();
+  void genInlineCreateBody(const SmallVector<MethodParameter> &paramList);
 
   // Generates the build() method that takes each operand/attribute as a
   // stand-alone parameter. The generated build() method uses first operand's
@@ -776,6 +790,14 @@ private:
   Method *genOpInterfaceMethod(const tblgen::InterfaceMethod &method,
                                bool declaration = true);
 
+  // Generate a `using` declaration for the op interface method to include
+  // the default implementation from the interface trait.
+  // This is needed when the interface defines multiple methods with the same
+  // name, but some have a default implementation and some don't.
+  UsingDeclaration *
+  genOpInterfaceMethodUsingDecl(const tblgen::InterfaceTrait *opTrait,
+                                const tblgen::InterfaceMethod &method);
+
   // Generate the side effect interface methods.
   void genSideEffectInterfaceMethods();
 
@@ -802,6 +824,10 @@ private:
 
   // Helper for emitting op code.
   OpOrAdaptorHelper emitHelper;
+
+  // Keep track of the interface using declarations that have been generated to
+  // avoid duplicates.
+  llvm::StringSet<> interfaceUsingNames;
 };
 
 } // namespace
@@ -1114,7 +1140,7 @@ static void genPropertyVerifier(
     body << formatv(fetchProperty, varName, getterName,
                     prop.prop.getInterfaceType());
     auto uniquedFn = staticVerifierEmitter.getPropConstraintFn(prop.prop);
-    if (uniquedFn.has_value())
+    if (uniquedFn.has_value() && emitHelper.isEmittingForOp())
       body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
     else
       body << formatv(
@@ -2223,6 +2249,17 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                     "'SameVariadicOperandSize' traits");
   }
 
+  // Print the ods names so they don't need to be hardcoded in the source.
+  for (int i = 0; i != numOperands; ++i) {
+    const auto &operand = op.getOperand(i);
+    if (operand.name.empty())
+      continue;
+
+    opClass.declare<Field>("static constexpr int", Twine("odsIndex_") +
+                                                       operand.name + " = " +
+                                                       Twine(i));
+  }
+
   // First emit a few "sink" getter methods upon which we layer all nicer named
   // getter methods.
   // If generating for an adaptor, the method is put into the non-templated
@@ -2557,6 +2594,51 @@ static bool canInferType(const Operator &op) {
   return op.getTrait("::mlir::InferTypeOpInterface::Trait");
 }
 
+void OpEmitter::genInlineCreateBody(
+    const SmallVector<MethodParameter> &paramList) {
+  SmallVector<MethodParameter> createParamListOpBuilder;
+  SmallVector<MethodParameter> createParamListImplicitLocOpBuilder;
+  SmallVector<llvm::StringRef, 4> nonBuilderStateArgsList;
+  createParamListOpBuilder.emplace_back("::mlir::OpBuilder &", "builder");
+  createParamListImplicitLocOpBuilder.emplace_back(
+      "::mlir::ImplicitLocOpBuilder &", "builder");
+  std::string locParamName = "location";
+  while (llvm::find_if(paramList, [&locParamName](const MethodParameter &p) {
+           return p.getName() == locParamName;
+         }) != paramList.end()) {
+    locParamName += "_";
+  }
+  createParamListOpBuilder.emplace_back("::mlir::Location", locParamName);
+
+  for (auto &param : paramList) {
+    if (param.getType() == "::mlir::OpBuilder &" ||
+        param.getType() == "::mlir::OperationState &")
+      continue;
+    createParamListOpBuilder.emplace_back(param.getType(), param.getName(),
+                                          param.getDefaultValue(),
+                                          param.isOptional());
+    createParamListImplicitLocOpBuilder.emplace_back(
+        param.getType(), param.getName(), param.getDefaultValue(),
+        param.isOptional());
+    nonBuilderStateArgsList.push_back(param.getName());
+  }
+  auto *cWithLoc = opClass.addStaticMethod(opClass.getClassName(), "create",
+                                           createParamListOpBuilder);
+  auto *cImplicitLoc = opClass.addStaticMethod(
+      opClass.getClassName(), "create", createParamListImplicitLocOpBuilder);
+  std::string nonBuilderStateArgs = "";
+  if (!nonBuilderStateArgsList.empty()) {
+    llvm::raw_string_ostream nonBuilderStateArgsOS(nonBuilderStateArgs);
+    interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
+    nonBuilderStateArgs = ", " + nonBuilderStateArgs;
+  }
+  cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
+                                    nonBuilderStateArgs,
+                                    opClass.getClassName());
+  cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
+                                        nonBuilderStateArgs);
+}
+
 void OpEmitter::genSeparateArgParamBuilder() {
   SmallVector<AttrParamKind, 2> attrBuilderType;
   attrBuilderType.push_back(AttrParamKind::WrappedAttr);
@@ -2573,10 +2655,12 @@ void OpEmitter::genSeparateArgParamBuilder() {
     buildParamList(paramList, inferredAttributes, resultNames, paramKind,
                    attrType);
 
-    auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+    auto *m = opClass.addStaticMethod("void", "build", paramList);
     // If the builder is redundant, skip generating the method.
     if (!m)
       return;
+    genInlineCreateBody(paramList);
+
     auto &body = m->body();
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
@@ -2701,10 +2785,11 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder(
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
   auto &body = m->body();
 
   // Operands
@@ -2815,10 +2900,11 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
   auto &body = m->body();
 
   int numResults = op.getNumResults();
@@ -2895,10 +2981,11 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
     buildParamList(paramList, inferredAttributes, resultNames,
                    TypeParamKind::None, attrType);
 
-    auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+    auto *m = opClass.addStaticMethod("void", "build", paramList);
     // If the builder is redundant, skip generating the method
     if (!m)
       return;
+    genInlineCreateBody(paramList);
     auto &body = m->body();
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
@@ -2937,10 +3024,11 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(
                                  : "attributes";
   paramList.emplace_back("::llvm::ArrayRef<::mlir::NamedAttribute>",
                          attributesName, "{}");
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
 
   auto &body = m->body();
 
@@ -3028,10 +3116,9 @@ void OpEmitter::genBuilder() {
 
     std::optional<StringRef> body = builder.getBody();
     auto properties = body ? Method::Static : Method::StaticDeclaration;
-    auto *method =
-        opClass.addMethod("void", "build", properties, std::move(arguments));
-    if (body)
-      ERROR_IF_PRUNED(method, "build", op);
+    auto *method = opClass.addMethod("void", "build", properties, arguments);
+
+    ERROR_IF_PRUNED(method, "build", op);
 
     if (method)
       method->setDeprecated(builder.getDeprecatedMessage());
@@ -3041,6 +3128,7 @@ void OpEmitter::genBuilder() {
     fctx.addSubst("_state", builderOpState);
     if (body)
       method->body() << tgfmt(*body, &fctx);
+    genInlineCreateBody(arguments);
   }
 
   // Generate default builders that requires all result type, operands, and
@@ -3103,10 +3191,11 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
   auto &body = m->body();
 
   // Operands
@@ -3596,8 +3685,10 @@ void OpEmitter::genOpInterfaceMethods(const tblgen::InterfaceTrait *opTrait) {
     // Don't declare if the method has a default implementation and the op
     // didn't request that it always be declared.
     if (method.getDefaultImplementation() &&
-        !alwaysDeclaredMethods.count(method.getName()))
+        !alwaysDeclaredMethods.count(method.getName())) {
+      genOpInterfaceMethodUsingDecl(opTrait, method);
       continue;
+    }
     // Interface methods are allowed to overlap with existing methods, so don't
     // check if pruned.
     (void)genOpInterfaceMethod(method);
@@ -3614,6 +3705,17 @@ Method *OpEmitter::genOpInterfaceMethod(const InterfaceMethod &method,
                (declaration ? Method::Declaration : Method::None);
   return opClass.addMethod(method.getReturnType(), method.getName(), props,
                            std::move(paramList));
+}
+
+UsingDeclaration *
+OpEmitter::genOpInterfaceMethodUsingDecl(const tblgen::InterfaceTrait *opTrait,
+                                         const InterfaceMethod &method) {
+  std::string name = (llvm::Twine(opTrait->getFullyQualifiedTraitName()) + "<" +
+                      op.getCppClassName() + ">::" + method.getName())
+                         .str();
+  if (interfaceUsingNames.insert(name).second)
+    return opClass.declare<UsingDeclaration>(std::move(name));
+  return nullptr;
 }
 
 void OpEmitter::genOpInterfaceMethods() {
@@ -3773,9 +3875,9 @@ void OpEmitter::genTypeInterfaceMethods() {
     const InferredResultType &infer = op.getInferredResultType(i);
     if (!infer.isArg())
       continue;
-    Operator::OperandOrAttribute arg =
-        op.getArgToOperandOrAttribute(infer.getIndex());
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+    Operator::OperandAttrOrProp arg =
+        op.getArgToOperandAttrOrProp(infer.getIndex());
+    if (arg.kind() == Operator::OperandAttrOrProp::Kind::Operand) {
       maxAccessedIndex =
           std::max(maxAccessedIndex, arg.operandOrAttributeIndex());
     }
@@ -3801,17 +3903,16 @@ void OpEmitter::genTypeInterfaceMethods() {
       if (infer.isArg()) {
         // If this is an operand, just index into operand list to access the
         // type.
-        Operator::OperandOrAttribute arg =
-            op.getArgToOperandOrAttribute(infer.getIndex());
-        if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+        Operator::OperandAttrOrProp arg =
+            op.getArgToOperandAttrOrProp(infer.getIndex());
+        if (arg.kind() == Operator::OperandAttrOrProp::Kind::Operand) {
           typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
                      "].getType()")
                         .str();
 
           // If this is an attribute, index into the attribute dictionary.
-        } else {
-          auto *attr =
-              cast<NamedAttribute *>(op.getArg(arg.operandOrAttributeIndex()));
+        } else if (auto *attr = dyn_cast<NamedAttribute *>(
+                       op.getArg(arg.operandOrAttributeIndex()))) {
           body << "  ::mlir::TypedAttr odsInferredTypeAttr" << inferredTypeIdx
                << " = ";
           if (op.getDialect().usePropertiesForAttributes()) {
@@ -3831,6 +3932,9 @@ void OpEmitter::genTypeInterfaceMethods() {
           typeStr =
               ("odsInferredTypeAttr" + Twine(inferredTypeIdx) + ".getType()")
                   .str();
+        } else {
+          llvm::PrintFatalError(&op.getDef(),
+                                "Properties cannot be used for type inference");
         }
       } else if (std::optional<StringRef> builder =
                      op.getResult(infer.getResultIndex())
@@ -4688,6 +4792,7 @@ void OpOperandAdaptorEmitter::addVerification() {
 
   FmtContext verifyCtx;
   populateSubstitutions(emitHelper, verifyCtx);
+  genPropertyVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter,
                        useProperties);
 
@@ -4721,11 +4826,9 @@ void OpOperandAdaptorEmitter::emitDef(
 }
 
 /// Emit the class declarations or definitions for the given op defs.
-static void
-emitOpClasses(const RecordKeeper &records,
-              const std::vector<const Record *> &defs, raw_ostream &os,
-              const StaticVerifierFunctionEmitter &staticVerifierEmitter,
-              bool emitDecl) {
+static void emitOpClasses(
+    const RecordKeeper &records, ArrayRef<const Record *> defs, raw_ostream &os,
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter, bool emitDecl) {
   if (defs.empty())
     return;
 
@@ -4760,23 +4863,19 @@ emitOpClasses(const RecordKeeper &records,
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &records,
-                             const std::vector<const Record *> &defs,
-                             raw_ostream &os) {
+                             ArrayRef<const Record *> defs, raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
-  for (auto *def : defs) {
+  for (const Record *def : defs) {
     Operator op(*def);
     NamespaceEmitter emitter(os, op.getCppNamespace());
-    std::string comments = tblgen::emitSummaryAndDescComments(
-        op.getSummary(), op.getDescription());
-    if (!comments.empty()) {
-      os << comments << "\n";
-    }
+    tblgen::emitSummaryAndDescComments(os, op.getSummary(),
+                                       op.getDescription());
     os << "class " << op.getCppClassName() << ";\n";
   }
 
   // Emit the op class declarations.
-  IfDefScope scope("GET_OP_CLASSES", os);
+  IfDefEmitter scope(os, "GET_OP_CLASSES");
   if (defs.empty())
     return;
   StaticVerifierFunctionEmitter staticVerifierEmitter(os, records);
@@ -4819,7 +4918,7 @@ static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
     return false;
 
   Dialect dialect = Operator(defs.front()).getDialect();
-  NamespaceEmitter ns(os, dialect);
+  DialectNamespaceEmitter ns(os, dialect);
 
   const char *const opRegistrationHook =
       "void register{0}Operations{1}({2}::{0} *dialect);\n";
@@ -4842,7 +4941,7 @@ static void emitOpDefShard(const RecordKeeper &records,
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
-  IfDefScope scope(shardGuard, os);
+  IfDefEmitter scope(os, shardGuard);
 
   // Emit the op registration hook in the first shard.
   const char *const opRegistrationHook =
@@ -4883,14 +4982,14 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   // If no shard was requested, emit the regular op list and class definitions.
   if (shardedDefs.size() == 1) {
     {
-      IfDefScope scope("GET_OP_LIST", os);
+      IfDefEmitter scope(os, "GET_OP_LIST");
       interleave(
           defs, os,
           [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
           ",\n");
     }
     {
-      IfDefScope scope("GET_OP_CLASSES", os);
+      IfDefEmitter scope(os, "GET_OP_CLASSES");
       emitOpClassDefs(records, defs, os);
     }
     return false;

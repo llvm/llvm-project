@@ -179,6 +179,7 @@ config("compiler_defaults") {
       "_HAS_EXCEPTIONS=0",
       "_UNICODE",
       "UNICODE",
+      "CLANG_BUILD_STATIC",
     ]
     cflags += [ "/EHs-c-" ]
     cflags_cc += [ "/std:c++17" ]

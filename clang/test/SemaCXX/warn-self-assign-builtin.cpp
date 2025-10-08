@@ -48,7 +48,7 @@ void false_positives() {
   vol_a_ref = vol_a_ref;
 }
 
-// Do not diagnose self-assigment in an unevaluated context
+// Do not diagnose self-assignment in an unevaluated context
 void false_positives_unevaluated_ctx(int a) noexcept(noexcept(a = a)) // expected-warning {{expression with side effects has no effect in an unevaluated context}}
 {
   decltype(a = a) b = a;              // expected-warning {{expression with side effects has no effect in an unevaluated context}}

@@ -649,3 +649,17 @@ define void @range_overflows_signed_64_bit_int(ptr %arg) {
   store i32 0, ptr %getelementptr
   ret void
 }
+
+; We should bail if the memset range overflows a signed 64-bit int.
+define void @memset_large_offset_nonzero_size(ptr %dst) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @memset_large_offset_nonzero_size(
+; CHECK-SAME: ptr writeonly captures(none) [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 9223372036854775805
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %offset = getelementptr inbounds i8, ptr %dst, i64 9223372036854775805
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 3, i1 false)
+  ret void
+}

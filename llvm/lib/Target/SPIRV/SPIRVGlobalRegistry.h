@@ -438,6 +438,9 @@ private:
 
   SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
 
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
+                            SPIRV::FPEncoding::FPEncoding FPEncode);
+
   SPIRVType *getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeVector(uint32_t NumElems, SPIRVType *ElemType,
@@ -500,6 +503,13 @@ private:
   void addArrayStrideDecorations(Register Reg, Type *ElementType,
                                  MachineIRBuilder &MIRBuilder);
   bool hasBlockDecoration(SPIRVType *Type) const;
+
+  SPIRVType *
+  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
+                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
+                         uint32_t Multisampled, uint32_t Sampled,
+                         SPIRV::ImageFormat::ImageFormat ImageFormat,
+                         SPIRV::AccessQualifier::AccessQualifier AccQual);
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
@@ -607,11 +617,9 @@ public:
                                    const TargetExtType *T, bool EmitIr = false);
 
   SPIRVType *
-  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
-                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
-                         uint32_t Multisampled, uint32_t Sampled,
-                         SPIRV::ImageFormat::ImageFormat ImageFormat,
-                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+  getImageType(const TargetExtType *ExtensionType,
+               const SPIRV::AccessQualifier::AccessQualifier Qualifier,
+               MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder);
 

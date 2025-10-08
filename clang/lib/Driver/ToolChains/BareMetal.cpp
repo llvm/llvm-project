@@ -12,6 +12,7 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/InputInfo.h"
 
+#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/RISCV.h"
 #include "clang/Driver/Compilation.h"
@@ -30,21 +31,6 @@ using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
-
-/// Is the triple {aarch64.aarch64_be}-none-elf?
-static bool isAArch64BareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::aarch64 &&
-      Triple.getArch() != llvm::Triple::aarch64_be)
-    return false;
-
-  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-    return false;
-
-  if (Triple.getOS() != llvm::Triple::UnknownOS)
-    return false;
-
-  return Triple.getEnvironmentName() == "elf";
-}
 
 static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   if (!Triple.isRISCV())
@@ -206,6 +192,16 @@ std::string BareMetal::computeSysRoot() const {
   return computeClangRuntimesSysRoot(D, /*IncludeTriple*/ true);
 }
 
+std::string BareMetal::getCompilerRTPath() const {
+  const Driver &D = getDriver();
+  if (IsGCCInstallationValid || detectGCCToolchainAdjacent(getDriver())) {
+    SmallString<128> Path(D.ResourceDir);
+    llvm::sys::path::append(Path, "lib");
+    return std::string(Path.str());
+  }
+  return ToolChain::getCompilerRTPath();
+}
+
 static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
                                   const Multilib &Multilib,
                                   StringRef InstallPath,
@@ -353,8 +349,9 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return arm::isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
-         isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
+  return arm::isARMEABIBareMetal(Triple) ||
+         aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
+         isPPCBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -373,6 +370,28 @@ BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
   // No multilibs selected so return a single default multilib.
   static const llvm::SmallVector<Multilib> Default = {Multilib()};
   return llvm::reverse(Default);
+}
+
+ToolChain::CXXStdlibType BareMetal::GetDefaultCXXStdlibType() const {
+  if (getTriple().isRISCV() && IsGCCInstallationValid)
+    return ToolChain::CST_Libstdcxx;
+  return ToolChain::CST_Libcxx;
+}
+
+ToolChain::RuntimeLibType BareMetal::GetDefaultRuntimeLibType() const {
+  if (getTriple().isRISCV() && IsGCCInstallationValid)
+    return ToolChain::RLT_Libgcc;
+  return ToolChain::RLT_CompilerRT;
+}
+
+// TODO: Add a validity check for GCCInstallation.
+//       If valid, use `UNW_Libgcc`; otherwise, use `UNW_None`.
+ToolChain::UnwindLibType
+BareMetal::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
+  if (getTriple().isRISCV())
+    return ToolChain::UNW_None;
+
+  return ToolChain::GetUnwindLibType(Args);
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -567,11 +586,32 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = getToolChain().getDriver();
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  const bool IsStaticPIE = getStaticPIE(Args, TC);
+
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
   CmdArgs.push_back("-Bstatic");
+  if (IsStaticPIE) {
+    CmdArgs.push_back("-pie");
+    CmdArgs.push_back("--no-dynamic-linker");
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("text");
+  }
 
-  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
-    CmdArgs.push_back("--no-relax");
+  if (const char *LDMOption = getLDMOption(TC.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  } else {
+    D.Diag(diag::err_target_unknown_triple) << Triple.str();
+    return;
+  }
+
+  if (Triple.isRISCV()) {
+    CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
@@ -587,14 +627,18 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *CRTBegin, *CRTEnd;
   if (NeedCRTs) {
-    if (!Args.hasArg(options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+    if (!Args.hasArg(options::OPT_r)) {
+      const char *crt = "crt0.o";
+      if (IsStaticPIE)
+        crt = "rcrt1.o";
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crt)));
+    }
     if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) {
       auto RuntimeLib = TC.GetRuntimeLibType(Args);
       switch (RuntimeLib) {
       case (ToolChain::RLT_Libgcc): {
-        CRTBegin = "crtbegin.o";
-        CRTEnd = "crtend.o";
+        CRTBegin = IsStaticPIE ? "crtbeginS.o" : "crtbegin.o";
+        CRTEnd = IsStaticPIE ? "crtendS.o" : "crtend.o";
         break;
       }
       case (ToolChain::RLT_CompilerRT): {
@@ -609,8 +653,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
+                   options::OPT_s, options::OPT_t, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
@@ -637,7 +682,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     CmdArgs.push_back("--start-group");
     AddRunTimeLibs(TC, D, CmdArgs, Args);
-    CmdArgs.push_back("-lc");
+    if (!Args.hasArg(options::OPT_nolibc))
+      CmdArgs.push_back("-lc");
     if (TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D))
       CmdArgs.push_back("-lgloss");
     CmdArgs.push_back("--end-group");
@@ -646,9 +692,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if ((TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) &&
       NeedCRTs)
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
-
-  if (TC.getTriple().isRISCV())
-    CmdArgs.push_back("-X");
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and

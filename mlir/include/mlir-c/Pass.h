@@ -88,6 +88,10 @@ MLIR_CAPI_EXPORTED void mlirPassManagerEnableIRPrinting(
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable);
 
+/// Enable pass timing.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableTiming(MlirPassManager passManager);
+
 /// Nest an OpPassManager under the top-level PassManager, the nested
 /// passmanager will only run on operations matching the provided name.
 /// The returned OpPassManager will be destroyed when the parent is destroyed.

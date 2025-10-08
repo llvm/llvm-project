@@ -26,15 +26,26 @@ llvm_canonicalize_cmake_booleans(
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
-  LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
 # Run tests requiring Z3 headers only if LLVM was built with Z3
 # and the headers are available while building Clang -- the latter may
 # not be the case when building standalone against installed LLVM.
-set(TEST_WITH_Z3_DEVEL 0)
-if(LLVM_WITH_Z3 AND Z3_FOUND)
-  set(TEST_WITH_Z3_DEVEL 1)
+set(TEST_WITH_Z3_MOCK 0)
+if(LLVM_WITH_Z3 AND Z3_FOUND AND CMAKE_SYSTEM_NAME MATCHES "Linux")
+  llvm_add_library(
+    MockZ3SolverCheck
+    MODULE Analysis/z3/Inputs/MockZ3_solver_check.cpp
+    DISABLE_LLVM_LINK_LLVM_DYLIB)
+
+  if(TARGET MockZ3SolverCheck)
+    list(APPEND CLANG_TEST_DEPS
+      MockZ3SolverCheck)
+    target_include_directories(
+      MockZ3SolverCheck
+      PRIVATE ${Z3_INCLUDE_DIR})
+    set(TEST_WITH_Z3_MOCK 1)
+  endif()
 endif()
 
 configure_lit_site_cfg(
@@ -92,7 +103,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
-  clang-offload-packager
   clang-sycl-linker
   diagtool
   hmaptool
@@ -102,6 +112,7 @@ if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
+    mlir-translate
     )
 endif()
 
@@ -161,6 +172,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    llvm-offload-binary
     obj2yaml
     opt
     split-file
@@ -221,3 +233,5 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
     add_subdirectory(debuginfo-tests)
   endif()
 endif()
+
+add_subdirectory(Analysis/LifetimeSafety)

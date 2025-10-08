@@ -272,7 +272,7 @@ def ANDN  : ALU_rr<0b0100000, 0b111, "andn">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def ORN   : ALU_rr<0b0100000, 0b110, "orn">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def XNOR  : ALU_rr<0b0100000, 0b100, "xnor">,
+def XNOR  : ALU_rr<0b0100000, 0b100, "xnor", Commutable=1>,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbbOrZbkb]
 
@@ -399,7 +399,7 @@ def MAX  : ALU_rr<0b0000101, 0b110, "max", Commutable=1>,
            Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
 def MAXU : ALU_rr<0b0000101, 0b111, "maxu", Commutable=1>,
            Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
-} // Predicates = [HasStdExtZbb]
+} // Predicates = [HasStdExtZbbOrP]
 
 let Predicates = [HasStdExtZbkbOrP] in
 def PACK  : ALU_rr<0b0000100, 0b100, "pack">,
@@ -459,15 +459,15 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 def : InstAlias<"zext.w $rd, $rs", (ADD_UW GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
-let Predicates = [HasStdExtZbb] in {
+let Predicates = [HasStdExtZbbOrZbkb] in {
 def : InstAlias<"ror $rd, $rs1, $shamt",
-                (RORI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
-} // Predicates = [HasStdExtZbb]
+                (RORI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+} // Predicates = [HasStdExtZbbOrZbkb]
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
+let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
 def : InstAlias<"rorw $rd, $rs1, $shamt",
-                (RORIW  GPR:$rd, GPR:$rs1, uimm5:$shamt), 0>;
-} // Predicates = [HasStdExtZbb, IsRV64]
+                (RORIW GPR:$rd, GPR:$rs1, uimm5:$shamt), 0>;
+} // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbs] in {
 def : InstAlias<"bset $rd, $rs1, $shamt",
@@ -497,7 +497,8 @@ def invLogicImm : ComplexPattern<XLenVT, 1, "selectInvLogicImm", [], [], 0>;
 let Predicates = [HasStdExtZbbOrZbkb] in {
 def : Pat<(XLenVT (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
 def : Pat<(XLenVT (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (not (riscv_xor_like GPR:$rs1, GPR:$rs2))),
+          (XNOR GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(XLenVT (and GPR:$rs1, invLogicImm:$rs2)), (ANDN GPR:$rs1, invLogicImm:$rs2)>;
 def : Pat<(XLenVT (or  GPR:$rs1, invLogicImm:$rs2)), (ORN  GPR:$rs1, invLogicImm:$rs2)>;
@@ -573,6 +574,19 @@ def : Pat<(XLenVT (and GPR:$r, BCLRIANDIMask:$i)),
                  (BCLRITwoBitsMaskHigh BCLRIANDIMask:$i))>;
 } // Predicates = [HasStdExtZbs]
 
+let Predicates = [HasStdExtZbs, IsRV64] in {
+// If the original code was setting, clearing, or inverting bit 31 of an i32,
+// type legalization might have sign extended the constant so it doesn't have a
+// single 0 or 1 bit. If the upper 32 bits aren't used by later instructions we
+// can still use bseti/bclri.
+def : Pat<(binop_allwusers<and> GPR:$rs1, (XLenVT 2147483647)),
+          (BCLRI GPR:$rs1, 31)>;
+def : Pat<(binop_allwusers<or> GPR:$rs1, (XLenVT -2147483648)),
+          (BSETI GPR:$rs1, 31)>;
+def : Pat<(binop_allwusers<xor> GPR:$rs1, (XLenVT -2147483648)),
+          (BINVI GPR:$rs1, 31)>;
+}
+
 let Predicates = [HasStdExtZbb] in
 def : PatGpr<riscv_orc_b, ORC_B>;
 
@@ -628,9 +642,6 @@ def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 8)),
 def : Pat<(and (or (shl GPR:$rs2, (XLenVT 8)),
                    (zexti8 (XLenVT GPR:$rs1))), 0xFFFF),
           (PACKH GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 24)),
-              (shl (zexti8 (XLenVT GPR:$rs1)), (XLenVT 16))),
-          (SLLI (XLenVT (PACKH GPR:$rs1, GPR:$rs2)), (XLenVT 16))>;
 
 def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
                                (zexti8 (XLenVT GPR:$rs1))),
@@ -640,13 +651,19 @@ def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
 let Predicates = [HasStdExtZbkb, IsRV32] in {
 def : Pat<(i32 (or (zexti16 (i32 GPR:$rs1)), (shl GPR:$rs2, (i32 16)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (or
-                  (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24)),
+
+def : Pat<(or (shl GPR:$rs2, (XLenVT 24)),
+              (shl (zexti8 (XLenVT GPR:$rs1)), (XLenVT 16))),
+          (SLLI (XLenVT (PACKH GPR:$rs1, GPR:$rs2)), (XLenVT 16))>;
+
+// Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+// bits [15:0] coming from a zero extended value. We can use pack with packh for
+// bits [31:16]. If bits [15:0] can also be a packh, it can be matched
+// separately.
+def : Pat<(or (or (shl GPR:$op1rs2, (XLenVT 24)),
                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
-              (or
-                  (shl (zexti8 (XLenVT GPR:$op0rs2)), (XLenVT 8)),
-                  (zexti8 (XLenVT GPR:$op0rs1)))),
-          (PACK (XLenVT (PACKH GPR:$op0rs1, GPR:$op0rs2)),
+              (zexti16 (XLenVT GPR:$rs1))),
+          (PACK (XLenVT GPR:$rs1),
                 (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 }
 
@@ -654,12 +671,55 @@ let Predicates = [HasStdExtZbkb, IsRV64] in {
 def : Pat<(i64 (or (zexti32 (i64 GPR:$rs1)), (shl GPR:$rs2, (i64 32)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
 
+def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 24)),
+              (shl (zexti8 (XLenVT GPR:$rs1)), (XLenVT 16))),
+          (SLLI (XLenVT (PACKH GPR:$rs1, GPR:$rs2)), (XLenVT 16))>;
+def : Pat<(binop_allwusers<or> (shl GPR:$rs2, (XLenVT 24)),
+                               (shl (zexti8 (XLenVT GPR:$rs1)), (XLenVT 16))),
+          (SLLI (XLenVT (PACKH GPR:$rs1, GPR:$rs2)), (XLenVT 16))>;
+
 def : Pat<(binop_allwusers<or> (shl GPR:$rs2, (i64 16)),
                                (zexti16 (i64 GPR:$rs1))),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
                    (zexti16 (i64 GPR:$rs1)))),
           (PACKW GPR:$rs1, GPR:$rs2)>;
+
+// Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+// bits [15:0] coming from a zero extended value, and bits [63:32] being
+// ignored. We can use packw with packh for bits [31:16]. If bits [15:0] can
+// also be a packh, it can be matched separately.
+def : Pat<(binop_allwusers<or>
+               (or (shl GPR:$op1rs2, (XLenVT 24)),
+                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+               (zexti16 (XLenVT GPR:$rs1))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+// We need to manually reassociate the patterns because of the binop_allwusers.
+def : Pat<(binop_allwusers<or>
+               (or (zexti16 (XLenVT GPR:$rs1)),
+                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+               (shl GPR:$op1rs2, (XLenVT 24))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+def : Pat<(binop_allwusers<or>
+               (or (zexti16 (XLenVT GPR:$rs1)),
+                   (shl GPR:$op1rs1, (XLenVT 24))),
+               (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+
+def : Pat<(i64 (or (or (zexti16 (XLenVT GPR:$rs1)),
+                       (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
+                   (sext_inreg (shl GPR:$op1rs1, (XLenVT 24)), i32))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+
+// Match a pattern of 2 halfwords being inserted into bits [63:32], with bits
+// bits [31:0] coming from a zero extended value. We can use pack with packw for
+// bits [63:32]. If bits [63:31] can also be a packw, it can be matched
+// separately.
+def : Pat<(or (or (shl GPR:$op1rs2, (i64 48)),
+                  (shl (zexti16 (i64 GPR:$op1rs1)), (i64 32))),
+              (zexti32 (i64 GPR:$rs1))),
+          (PACK (XLenVT GPR:$rs1),
+                (XLenVT (PACKW GPR:$op1rs1, GPR:$op1rs2)))>;
 } // Predicates = [HasStdExtZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV32] in
@@ -748,9 +808,9 @@ multiclass Sh2Add_UWPat<Instruction sh2add_uw> {
 }
 
 multiclass Sh3Add_UWPat<Instruction sh3add_uw> {
-  def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFF8),
+  def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF),
                                      (XLenVT GPR:$rs2))),
-            (sh3add_uw (XLenVT (SRLIW GPR:$rs1, 3)), GPR:$rs2)>;
+            (sh3add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
   def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x7FFFFFFF8),
                                      (XLenVT GPR:$rs2))),

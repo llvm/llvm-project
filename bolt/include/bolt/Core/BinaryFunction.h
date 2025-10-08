@@ -35,6 +35,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -191,9 +192,6 @@ public:
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
-
-    // Returns constant island alignment
-    uint16_t getAlignment() const { return sizeof(uint64_t); }
   };
 
   static constexpr uint64_t COUNT_NO_PROFILE =
@@ -423,8 +421,9 @@ private:
   /// Original LSDA type encoding
   unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
-  /// Containing compilation unit for the function.
-  DWARFUnit *DwarfUnit{nullptr};
+  /// All compilation units this function belongs to.
+  /// Maps DWARF unit offset to the unit pointer.
+  DenseMap<uint64_t, DWARFUnit *> DwarfUnitMap;
 
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
@@ -1196,11 +1195,6 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
-  /// Remove a label from the secondary entry point map.
-  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
-    SecondaryEntryPoints.erase(Label);
-  }
-
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {
@@ -1663,7 +1657,11 @@ public:
       Offset = I->first;
     }
     assert(I->first == Offset && "CFI pointing to unknown instruction");
-    if (I == Instructions.begin()) {
+    // When dealing with RememberState, we place this CFI in FrameInstructions.
+    // We want to ensure RememberState and RestoreState CFIs are in the same
+    // list in order to properly populate the StateStack.
+    if (I == Instructions.begin() &&
+        Inst.getOperation() != MCCFIInstruction::OpRememberState) {
       CIEFrameInstructions.emplace_back(std::forward<MCCFIInstruction>(Inst));
       return;
     }
@@ -2113,9 +2111,7 @@ public:
     return *std::prev(CodeIter) <= *DataIter;
   }
 
-  uint16_t getConstantIslandAlignment() const {
-    return Islands ? Islands->getAlignment() : 1;
-  }
+  uint16_t getConstantIslandAlignment() const;
 
   /// If there is a constant island in the range [StartOffset, EndOffset),
   /// return its address.
@@ -2165,6 +2161,11 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  /// Return true if the whole function is a constant island.
+  bool isDataObject() const {
+    return Islands && Islands->CodeOffsets.size() == 0;
   }
 
   bool isStartOfConstantIsland(uint64_t Offset) const {
@@ -2410,15 +2411,21 @@ public:
   void
   computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
-  void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
+  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitMap[Unit->getOffset()] = Unit; }
 
-  /// Return DWARF compile unit for this function.
-  DWARFUnit *getDWARFUnit() const { return DwarfUnit; }
+  void removeDWARFUnit(DWARFUnit *Unit) {
+    DwarfUnitMap.erase(Unit->getOffset());
+  }
 
-  /// Return line info table for this function.
-  const DWARFDebugLine::LineTable *getDWARFLineTable() const {
-    return getDWARFUnit() ? BC.DwCtx->getLineTableForUnit(getDWARFUnit())
-                          : nullptr;
+  /// Return DWARF compile units for this function.
+  /// Returns a reference to the map of DWARF unit offsets to units.
+  const DenseMap<uint64_t, DWARFUnit *> &getDWARFUnits() const {
+    return DwarfUnitMap;
+  }
+
+  const DWARFDebugLine::LineTable *
+  getDWARFLineTableForUnit(DWARFUnit *Unit) const {
+    return BC.DwCtx->getLineTableForUnit(Unit);
   }
 
   /// Finalize profile for the function.

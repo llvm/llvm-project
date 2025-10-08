@@ -319,49 +319,6 @@ private:
   StringRef m_filename;
 };
 
-/// Returns true if the SDK for the specified triple supports
-/// builtin modules in system headers. This is used to decide
-/// whether to pass -fbuiltin-headers-in-system-modules to
-/// the compiler instance when compiling the `std` module.
-static llvm::Expected<bool>
-sdkSupportsBuiltinModules(lldb_private::Target &target) {
-  auto arch_spec = target.GetArchitecture();
-  auto const &triple = arch_spec.GetTriple();
-  auto module_sp = target.GetExecutableModule();
-  if (!module_sp)
-    return llvm::createStringError("Executable module not found.");
-
-  // Get SDK path that the target was compiled against.
-  auto platform_sp = target.GetPlatform();
-  if (!platform_sp)
-    return llvm::createStringError("No Platform plugin found on target.");
-
-  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module_sp);
-  if (!sdk_or_err)
-    return sdk_or_err.takeError();
-
-  // Use the SDK path from debug-info to find a local matching SDK directory.
-  auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{std::move(sdk_or_err->first)});
-  if (!sdk_path_or_err)
-    return sdk_path_or_err.takeError();
-
-  auto VFS = FileSystem::Instance().GetVirtualFileSystem();
-  if (!VFS)
-    return llvm::createStringError("No virtual filesystem available.");
-
-  // Extract SDK version from the /path/to/some.sdk/SDKSettings.json
-  auto parsed_or_err = clang::parseDarwinSDKInfo(*VFS, *sdk_path_or_err);
-  if (!parsed_or_err)
-    return parsed_or_err.takeError();
-
-  auto maybe_sdk = *parsed_or_err;
-  if (!maybe_sdk)
-    return llvm::createStringError("Couldn't find Darwin SDK info.");
-
-  return XcodeSDK::SDKSupportsBuiltinModules(triple, maybe_sdk->getVersion());
-}
-
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
                                    std::vector<std::string> include_directories,
                                    lldb::TargetSP target_sp) {
@@ -579,23 +536,19 @@ static void SetupLangOpts(CompilerInstance &compiler,
   lldb::StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
   lldb::ProcessSP process_sp = exe_scope.CalculateProcess();
 
-  // Defaults to lldb::eLanguageTypeUnknown.
-  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
-
-  // Make sure the user hasn't provided a preferred execution language with
-  // `expression --language X -- ...`
-  if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
-    frame_lang = frame_sp->GetLanguage().AsLanguageType();
-
-  if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
-    LLDB_LOGF(log, "Frame has language of type %s",
-              lldb_private::Language::GetNameForLanguageType(frame_lang));
-  }
-
   lldb::LanguageType language = expr.Language().AsLanguageType();
+
+  if (process_sp)
+    LLDB_LOG(
+        log,
+        "Frame has language of type {0}\nPicked {1} for expression evaluation.",
+        lldb_private::Language::GetNameForLanguageType(
+            frame_sp ? frame_sp->GetLanguage().AsLanguageType()
+                     : lldb::eLanguageTypeUnknown),
+        lldb_private::Language::GetNameForLanguageType(language));
+
   LangOptions &lang_opts = compiler.getLangOpts();
 
-  // FIXME: should this switch on frame_lang?
   switch (language) {
   case lldb::eLanguageTypeC:
   case lldb::eLanguageTypeC89:
@@ -705,7 +658,6 @@ static void SetupLangOpts(CompilerInstance &compiler,
 
 static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
                                          lldb_private::Target &target) {
-  Log *log = GetLog(LLDBLog::Expressions);
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
@@ -723,12 +675,7 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
 
-  if (auto supported_or_err = sdkSupportsBuiltinModules(target))
-    lang_opts.BuiltinHeadersInSystemModules = !*supported_or_err;
-  else
-    LLDB_LOG_ERROR(log, supported_or_err.takeError(),
-                   "Failed to determine BuiltinHeadersInSystemModules when "
-                   "setting up import-std-module: {0}");
+  lang_opts.BuiltinHeadersInSystemModules = false;
 
   // The Darwin libc expects this macro to be set.
   lang_opts.GNUCVersion = 40201;
@@ -773,14 +720,16 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler = std::make_unique<CompilerInstance>();
 
   // Make sure clang uses the same VFS as LLDB.
-  m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
+  m_compiler->setVirtualFileSystem(
+      FileSystem::Instance().GetVirtualFileSystem());
+  m_compiler->createFileManager();
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
   SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
-  m_compiler->createDiagnostics(m_compiler->getVirtualFileSystem());
+  m_compiler->createDiagnostics();
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
@@ -831,7 +780,8 @@ ClangExpressionParser::ClangExpressionParser(
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
   m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
-                                 m_compiler->getLangOpts());
+                                 m_compiler->getLangOpts(),
+                                 /*AuxTarget=*/nullptr);
 
   // 5. Set up the diagnostic buffer for reporting errors
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
@@ -842,7 +792,7 @@ ClangExpressionParser::ClangExpressionParser(
   // 6. Set up the source management objects inside the compiler
   m_compiler->createFileManager();
   if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(m_compiler->getFileManager());
+    m_compiler->createSourceManager();
   m_compiler->createPreprocessor(TU_Complete);
 
   switch (expr.Language().AsLanguageType()) {
@@ -893,7 +843,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_llvm_context = std::make_unique<LLVMContext>();
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
-      &m_compiler->getVirtualFileSystem(), m_compiler->getHeaderSearchOpts(),
+      m_compiler->getVirtualFileSystemPtr(), m_compiler->getHeaderSearchOpts(),
       m_compiler->getPreprocessorOpts(), m_compiler->getCodeGenOpts(),
       *m_llvm_context));
 }
@@ -1314,16 +1264,18 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     decl_map->InstallCodeGenerator(&m_compiler->getASTConsumer());
     decl_map->InstallDiagnosticManager(diagnostic_manager);
 
-    clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source =
+        decl_map->CreateProxy();
 
-    auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+    auto ast_source_wrapper =
+        llvm::makeIntrusiveRefCnt<ExternalASTSourceWrapper>(ast_source);
 
     if (ast_context.getExternalSource()) {
-      auto *module_wrapper =
-          new ExternalASTSourceWrapper(ast_context.getExternalSource());
+      auto module_wrapper = llvm::makeIntrusiveRefCnt<ExternalASTSourceWrapper>(
+          ast_context.getExternalSourcePtr());
 
-      auto *multiplexer =
-          new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
+      auto multiplexer = llvm::makeIntrusiveRefCnt<SemaSourceWithPriorities>(
+          module_wrapper, ast_source_wrapper);
 
       ast_context.setExternalSource(multiplexer);
     } else {
@@ -1355,6 +1307,10 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   m_compiler->setSema(nullptr);
 
   adapter->EndSourceFile();
+  // Creating persistent variables can trigger diagnostic emission.
+  // Make sure we reset the manager so we don't get asked to handle
+  // diagnostics after we finished parsing.
+  adapter->ResetManager();
 
   unsigned num_errors = adapter->getNumErrors();
 
@@ -1369,8 +1325,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   if (!num_errors) {
     type_system_helper->CommitPersistentDecls();
   }
-
-  adapter->ResetManager();
 
   return num_errors;
 }

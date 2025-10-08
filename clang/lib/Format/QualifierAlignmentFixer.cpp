@@ -508,7 +508,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
     // Don't change declarations such as
     // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
-    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+    if (!Previous || Previous->isNoneOf(tok::kw_struct, tok::kw_class)) {
       insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
       removeToken(SourceMgr, Fixes, Tok);
     }
@@ -571,7 +571,7 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
-      if (Tok->MustBreakBefore)
+      if (Tok->MustBreakBefore && Tok != First)
         break;
       if (Tok->is(tok::comment))
         continue;
@@ -640,7 +640,7 @@ bool isPossibleMacro(const FormatToken *Tok) {
     return false;
 
   const auto Text = Tok->TokenText;
-  assert(Text.size() > 0);
+  assert(!Text.empty());
 
   // T,K,U,V likely could be template arguments
   if (Text.size() == 1)

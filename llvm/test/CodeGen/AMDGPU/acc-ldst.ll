@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
@@ -9,8 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-COUNT-8: global_load_dwordx4 a[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:     v_accvgpr_write
 ; GCN:         v_mfma_f32_32x32x1f32
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 2
 ; GCN-NOT:     v_accvgpr_read
 ; GCN-COUNT-8: global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
@@ -28,8 +27,7 @@ bb:
 ; GCN:      global_load_dword a{{[0-9]+}}, v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:  v_accvgpr_read
 ; GCN:      v_mfma_f32_32x32x1f32 a[[[N:[0-9]+]]:
-; GCN-NEXT: s_nop 7
-; GCN-NEXT: s_nop 7
+; GCN-NEXT: s_nop 15
 ; GCN-NEXT: s_nop 2
 ; GCN-NOT:  v_accvgpr_read
 ; GCN-NEXT: global_store_dword v{{[0-9:]+}}, a[[N]], s[{{[0-9:]+}}]
@@ -80,8 +78,7 @@ bb:
 ; GCN-COUNT-8:  global_load_dwordx4 v[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-COUNT-32: v_accvgpr_write
 ; GCN:          v_mfma_f32_32x32x1f32
-; GCN-NEXT:     s_nop 7
-; GCN-NEXT:     s_nop 7
+; GCN-NEXT:     s_nop 15
 ; GCN-NEXT:     s_nop 2
 ; GCN-NOT:      v_accvgpr_read
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}]
@@ -203,7 +200,7 @@ define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic_store(ptr addrspace(1) 
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tid
-  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i32 1 syncscope("agent") seq_cst
+  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i32 1 syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   %tmp0 = insertelement <4 x i32> poison, i32 %in.1, i32 0
   %tmp1 = insertelement <4 x i32> %tmp0, i32 0, i32 1
   %tmp2 = insertelement <4 x i32> %tmp1, i32 0, i32 2
@@ -229,7 +226,7 @@ define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic64_store(ptr addrspace(1
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %tid
-  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 1 syncscope("agent") seq_cst
+  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 1 syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   %tmp0 = insertelement <2 x i64> poison, i64 %in.1, i32 0
   %tmp1 = insertelement <2 x i64> %tmp0, i64 0, i32 1
   %tmp2 = bitcast <2 x i64> %tmp1 to <4 x i32>
@@ -319,3 +316,5 @@ exit:
 }
 
 attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+
+!0 = !{}

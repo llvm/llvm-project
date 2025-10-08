@@ -47,8 +47,8 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    assert(!cir::MissingFeatures::labelOp());
-
+    if (isa<cir::LabelOp>(dest->front()))
+      return failure();
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
         dest->getSinglePredecessor() == block) {
@@ -134,8 +134,6 @@ void CIRCanonicalizePass::runOnOperation() {
   getOperation()->walk([&](Operation *op) {
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::complexRealOp());
-    assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
 
     // Many operations are here to perform a manual `fold` in
@@ -143,7 +141,8 @@ void CIRCanonicalizePass::runOnOperation() {
     if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp,
             ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
             VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
-            VecTernaryOp>(op))
+            VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
+            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp>(op))
       ops.push_back(op);
   });
 

@@ -556,8 +556,7 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NewOpc =
       Opc == TargetOpcode::G_ASHR ? AArch64::G_VASHR : AArch64::G_VLSHR;
   MachineIRBuilder MIB(MI);
-  auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
-  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
+  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1)}).addImm(Imm);
   MI.eraseFromParent();
 }
 
@@ -614,8 +613,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x uge c => x ugt c - 1
     //
     // When c is not zero.
-    if (C == 0)
-      return std::nullopt;
+    assert(C != 0 && "C should not be zero here!");
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
     C -= 1;
     break;
@@ -656,14 +654,13 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   if (isLegalArithImmed(C))
     return {{C, P}};
 
-  auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
+  auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
     AArch64_IMM::expandMOVImm(Imm, 32, Insn);
-    return Insn.size() == 1;
+    return Insn.size();
   };
 
-  if (!IsMaterializableInSingleInstruction(OriginalC) &&
-      IsMaterializableInSingleInstruction(C))
+  if (NumberOfInstrToLoadImm(OriginalC) > NumberOfInstrToLoadImm(C))
     return {{C, P}};
 
   return std::nullopt;

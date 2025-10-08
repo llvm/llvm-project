@@ -312,10 +312,8 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *Scope;
   Metadata *InlinedAt;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
   unsigned Line;
   uint16_t Column;
   bool ImplicitCode;
@@ -323,36 +321,24 @@ template <> struct MDNodeKeyImpl<DILocation> {
   MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
                 uint8_t AtomRank)
-      : Scope(Scope), InlinedAt(InlinedAt),
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-        AtomGroup(AtomGroup), AtomRank(AtomRank),
-#endif
-        Line(Line), Column(Column), ImplicitCode(ImplicitCode) {
-  }
+      : Scope(Scope), InlinedAt(InlinedAt), AtomGroup(AtomGroup),
+        AtomRank(AtomRank), Line(Line), Column(Column),
+        ImplicitCode(ImplicitCode) {}
 
   MDNodeKeyImpl(const DILocation *L)
       : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
         AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
-#endif
         Line(L->getLine()), Column(L->getColumn()),
-        ImplicitCode(L->isImplicitCode()) {
-  }
+        ImplicitCode(L->isImplicitCode()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
-           ImplicitCode == RHS->isImplicitCode()
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-           && AtomGroup == RHS->getAtomGroup() &&
-           AtomRank == RHS->getAtomRank();
-#else
-        ;
-#endif
+           ImplicitCode == RHS->isImplicitCode() &&
+           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank();
   }
 
   unsigned getHashValue() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
     // Hashing AtomGroup and AtomRank substantially impacts performance whether
     // Key Instructions is enabled or not. We can't detect whether it's enabled
     // here cheaply; avoiding hashing zero values is a good approximation. This
@@ -363,7 +349,6 @@ template <> struct MDNodeKeyImpl<DILocation> {
     if (AtomGroup || AtomRank)
       return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
                           AtomGroup, (uint8_t)AtomRank);
-#endif
     return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };
@@ -924,8 +909,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   MDString *LinkageName;
   Metadata *File;
   unsigned Line;
-  Metadata *Type;
   unsigned ScopeLine;
+  Metadata *Type;
   Metadata *ContainingType;
   unsigned VirtualIndex;
   int ThisAdjustment;
@@ -938,6 +923,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *ThrownTypes;
   Metadata *Annotations;
   MDString *TargetFuncName;
+  bool UsesKeyInstructions;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
@@ -946,18 +932,19 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 unsigned SPFlags, Metadata *Unit, Metadata *TemplateParams,
                 Metadata *Declaration, Metadata *RetainedNodes,
                 Metadata *ThrownTypes, Metadata *Annotations,
-                MDString *TargetFuncName)
+                MDString *TargetFuncName, bool UsesKeyInstructions)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
-        Line(Line), Type(Type), ScopeLine(ScopeLine),
+        Line(Line), ScopeLine(ScopeLine), Type(Type),
         ContainingType(ContainingType), VirtualIndex(VirtualIndex),
         ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags),
         Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes),
-        Annotations(Annotations), TargetFuncName(TargetFuncName) {}
+        Annotations(Annotations), TargetFuncName(TargetFuncName),
+        UsesKeyInstructions(UsesKeyInstructions) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
-        Line(N->getLine()), Type(N->getRawType()), ScopeLine(N->getScopeLine()),
+        Line(N->getLine()), ScopeLine(N->getScopeLine()), Type(N->getRawType()),
         ContainingType(N->getRawContainingType()),
         VirtualIndex(N->getVirtualIndex()),
         ThisAdjustment(N->getThisAdjustment()), Flags(N->getFlags()),
@@ -967,7 +954,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         RetainedNodes(N->getRawRetainedNodes()),
         ThrownTypes(N->getRawThrownTypes()),
         Annotations(N->getRawAnnotations()),
-        TargetFuncName(N->getRawTargetFuncName()) {}
+        TargetFuncName(N->getRawTargetFuncName()),
+        UsesKeyInstructions(N->getKeyInstructionsEnabled()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
@@ -984,7 +972,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            RetainedNodes == RHS->getRawRetainedNodes() &&
            ThrownTypes == RHS->getRawThrownTypes() &&
            Annotations == RHS->getRawAnnotations() &&
-           TargetFuncName == RHS->getRawTargetFuncName();
+           TargetFuncName == RHS->getRawTargetFuncName() &&
+           UsesKeyInstructions == RHS->getKeyInstructionsEnabled();
   }
 
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
@@ -1329,20 +1318,33 @@ template <> struct MDNodeKeyImpl<DILabel> {
   MDString *Name;
   Metadata *File;
   unsigned Line;
+  unsigned Column;
+  bool IsArtificial;
+  std::optional<unsigned> CoroSuspendIdx;
 
-  MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line)
-      : Scope(Scope), Name(Name), File(File), Line(Line) {}
+  MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line,
+                unsigned Column, bool IsArtificial,
+                std::optional<unsigned> CoroSuspendIdx)
+      : Scope(Scope), Name(Name), File(File), Line(Line), Column(Column),
+        IsArtificial(IsArtificial), CoroSuspendIdx(CoroSuspendIdx) {}
   MDNodeKeyImpl(const DILabel *N)
       : Scope(N->getRawScope()), Name(N->getRawName()), File(N->getRawFile()),
-        Line(N->getLine()) {}
+        Line(N->getLine()), Column(N->getColumn()),
+        IsArtificial(N->isArtificial()),
+        CoroSuspendIdx(N->getCoroSuspendIdx()) {}
 
   bool isKeyOf(const DILabel *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
-           File == RHS->getRawFile() && Line == RHS->getLine();
+           File == RHS->getRawFile() && Line == RHS->getLine() &&
+           Column == RHS->getColumn() && IsArtificial == RHS->isArtificial() &&
+           CoroSuspendIdx == RHS->getCoroSuspendIdx();
   }
 
   /// Using name and line to get hash value. It should already be mostly unique.
-  unsigned getHashValue() const { return hash_combine(Scope, Name, Line); }
+  unsigned getHashValue() const {
+    return hash_combine(Scope, Name, Line, Column, IsArtificial,
+                        CoroSuspendIdx);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIExpression> {

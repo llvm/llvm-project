@@ -156,8 +156,8 @@ define void @PR42833() {
 ; SSE2-LABEL: PR42833:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl b(%rip), %eax
-; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE2-NEXT:    movdqa c+144(%rip), %xmm2
+; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE2-NEXT:    addl c+128(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movd %eax, %xmm3
@@ -166,7 +166,7 @@ define void @PR42833() {
 ; SSE2-NEXT:    psubd %xmm2, %xmm4
 ; SSE2-NEXT:    paddd %xmm2, %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    paddd %xmm0, %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm5
 ; SSE2-NEXT:    movss {{.*#+}} xmm5 = xmm3[0],xmm5[1,2,3]
 ; SSE2-NEXT:    movdqa %xmm2, c+144(%rip)
 ; SSE2-NEXT:    movaps %xmm5, c+128(%rip)
@@ -192,8 +192,8 @@ define void @PR42833() {
 ; SSE42-LABEL: PR42833:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl b(%rip), %eax
-; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE42-NEXT:    movdqa c+144(%rip), %xmm1
+; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE42-NEXT:    addl c+128(%rip), %eax
 ; SSE42-NEXT:    movd %eax, %xmm2
 ; SSE42-NEXT:    paddd %xmm0, %xmm2
@@ -201,7 +201,7 @@ define void @PR42833() {
 ; SSE42-NEXT:    psubd %xmm1, %xmm3
 ; SSE42-NEXT:    paddd %xmm1, %xmm1
 ; SSE42-NEXT:    movdqa %xmm0, %xmm4
-; SSE42-NEXT:    paddd %xmm0, %xmm4
+; SSE42-NEXT:    paddd %xmm4, %xmm4
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm2[0,1],xmm4[2,3,4,5,6,7]
 ; SSE42-NEXT:    movdqa %xmm1, c+144(%rip)
 ; SSE42-NEXT:    movdqa %xmm4, c+128(%rip)

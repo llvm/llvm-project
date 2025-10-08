@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O0 -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s --check-prefixes=CHECK,CHECK32
 ; RUN: llc < %s -O0 -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s --check-prefixes=CHECK,CHECK64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -O0 -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -O0 -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas-isa-6.0 && ptxas-ptr32 %{ llc < %s -O0 -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas-isa-6.0 %{ llc < %s -O0 -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
 
 ; CHECK: .address_size [[BITS:32|64]]
 
@@ -89,14 +89,14 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK-NEXT:    ld.param.b32 [[ARG_I32:%r[0-9]+]], [test_foo_param_0];
 
 ; Store arguments to an array
-; CHECK32:  .param .align 8 .b8 param1[28];
-; CHECK64:  .param .align 8 .b8 param1[32];
-; CHECK-NEXT:    st.param.b32 [param1], [[ARG_I32]];
-; CHECK-NEXT:    st.param.b64 [param1+8], [[ARG_I64]];
-; CHECK-NEXT:    st.param.b64 [param1+16], [[ARG_DOUBLE]];
-; CHECK-NEXT:    st.param.b[[BITS]] [param1+24], [[ARG_VOID_PTR]];
-; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .align 8 .b8 _[]
+; CHECK32:      .param .align 8 .b8 param1[28];
+; CHECK64:      .param .align 8 .b8 param1[32];
+; CHECK-DAG:    .param .b32 retval0;
+; CHECK-DAG:    st.param.b32 [param1], [[ARG_I32]];
+; CHECK-DAG:    st.param.b64 [param1+8], [[ARG_I64]];
+; CHECK-DAG:    st.param.b64 [param1+16], [[ARG_DOUBLE]];
+; CHECK-DAG:    st.param.b[[BITS]] [param1+24], [[ARG_VOID_PTR]];
+; CHECK-DAG:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .align 8 .b8 _[]
 
 entry:
   %ptr = load ptr, ptr addrspacecast (ptr addrspace(1) @foo_ptr to ptr), align 8

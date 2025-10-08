@@ -14,17 +14,17 @@ define void @test() nounwind {
 ; GISEL-NEXT:    b .LBB0_1
 ; GISEL-NEXT:  .LBB0_1: // %loop
 ; GISEL-NEXT:    // =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    ldr x8, [sp] // 8-byte Folded Reload
-; GISEL-NEXT:    ldr x9, [sp, #8] // 8-byte Folded Reload
-; GISEL-NEXT:    str x9, [sp, #8] // 8-byte Folded Spill
-; GISEL-NEXT:    str x8, [sp] // 8-byte Folded Spill
+; GISEL-NEXT:    ldr x8, [sp, #8] // 8-byte Folded Reload
+; GISEL-NEXT:    ldr x9, [sp] // 8-byte Folded Reload
+; GISEL-NEXT:    str x9, [sp] // 8-byte Folded Spill
+; GISEL-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
 ; GISEL-NEXT:    b .LBB0_1
 ;
 ; SDAG-LABEL: test:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    sub sp, sp, #16
-; SDAG-NEXT:    mov x0, xzr
-; SDAG-NEXT:    mov x1, x0
+; SDAG-NEXT:    mov x1, xzr
+; SDAG-NEXT:    mov x0, x1
 ; SDAG-NEXT:    str x1, [sp] // 8-byte Folded Spill
 ; SDAG-NEXT:    str x0, [sp, #8] // 8-byte Folded Spill
 ; SDAG-NEXT:    b .LBB0_1

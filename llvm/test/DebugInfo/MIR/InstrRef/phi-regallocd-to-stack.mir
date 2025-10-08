@@ -70,7 +70,8 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: bb.0:
-  ; CHECK:       MOV32mr %stack.[[SLOT:.+]], 1, $noreg, 0, $noreg, $edi
+  ; CHECK:       renamable $ebp = COPY $edi
+  ; CHECK:       MOV32mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $ebp
   bb.0:
     successors: %bb.2(0x50000000), %bb.1(0x30000000)
     liveins: $edi, $esi
@@ -141,8 +142,8 @@ body:             |
     %64:gr32 = PHI %24, %bb.0, %44, %bb.1, debug-location !18
 
     DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
-    ; CHECK:      DBG_PHI %stack.[[SLOT]], 1, 32
-    ; CHECK:      renamable $eax = MOV32rm %stack.[[SLOT]],
+    ; CHECK:      DBG_PHI %stack.1, 1, 32
+    ; CHECK:      renamable $eax = MOV32rm %stack.1,
     ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     $eax = COPY killed %0, debug-location !19
     RET 0, killed $eax, debug-location !19

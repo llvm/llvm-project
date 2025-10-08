@@ -38,7 +38,7 @@ static int my_strlen(const char *str) {
   return static_cast<int>(other - str);
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int argc, char **argv, [[maybe_unused]] char **envp) {
   ASSERT_EQ(argc, 5);
   ASSERT_TRUE(my_streq(argv[1], "%s %c %d"));
   ASSERT_EQ(my_strlen(argv[1]), 8);

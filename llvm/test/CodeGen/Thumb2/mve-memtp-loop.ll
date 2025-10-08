@@ -548,43 +548,44 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    letp lr, .LBB19_1
 ; CHECK-NEXT:  .LBB19_2: @ %entry
 ; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    movw r11, :lower16:arr_20
-; CHECK-NEXT:    adr r6, .LCPI19_0
-; CHECK-NEXT:    movt r11, :upper16:arr_20
+; CHECK-NEXT:    movw r6, :lower16:arr_20
+; CHECK-NEXT:    movt r6, :upper16:arr_20
+; CHECK-NEXT:    add.w r3, r6, #80
 ; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    movw r0, :lower16:arr_21
 ; CHECK-NEXT:    movt r0, :upper16:arr_21
 ; CHECK-NEXT:    add.w r5, r0, #36
-; CHECK-NEXT:    add.w r3, r11, #80
-; CHECK-NEXT:    add.w r9, r11, #128
-; CHECK-NEXT:    add.w r7, r11, #112
-; CHECK-NEXT:    add.w r2, r11, #96
-; CHECK-NEXT:    add.w r4, r11, #64
-; CHECK-NEXT:    add.w r0, r11, #48
-; CHECK-NEXT:    add.w r1, r11, #32
-; CHECK-NEXT:    add.w r12, r11, #16
-; CHECK-NEXT:    mov.w r8, #327685
+; CHECK-NEXT:    add.w r11, r6, #128
+; CHECK-NEXT:    add.w r7, r6, #112
+; CHECK-NEXT:    add.w r2, r6, #96
+; CHECK-NEXT:    add.w r4, r6, #64
+; CHECK-NEXT:    add.w r0, r6, #48
+; CHECK-NEXT:    add.w r1, r6, #32
+; CHECK-NEXT:    add.w r12, r6, #16
+; CHECK-NEXT:    adr r6, .LCPI19_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r6]
-; CHECK-NEXT:    mov r6, r8
-; CHECK-NEXT:    mov.w r10, #5
+; CHECK-NEXT:    movw r6, :lower16:arr_20
+; CHECK-NEXT:    mov.w r8, #327685
+; CHECK-NEXT:    mov.w r9, #5
 ; CHECK-NEXT:    vmov.i16 q1, #0x5
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    movt r6, :upper16:arr_20
 ; CHECK-NEXT:  .LBB19_3: @ %for.cond8.preheader
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str r6, [r5, #-4]
+; CHECK-NEXT:    str r8, [r5, #-4]
 ; CHECK-NEXT:    vstrh.16 q1, [r5, #-36]
-; CHECK-NEXT:    strh.w r10, [r5]
+; CHECK-NEXT:    strh.w r9, [r5]
 ; CHECK-NEXT:    vstrh.16 q1, [r5, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r3]
 ; CHECK-NEXT:    vstrh.16 q0, [r12], #152
-; CHECK-NEXT:    vstrh.16 q0, [r11], #152
+; CHECK-NEXT:    vstrh.16 q0, [r6], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r4], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r2], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r7], #152
-; CHECK-NEXT:    vstrh.16 q0, [r9], #152
-; CHECK-NEXT:    strd r10, r8, [r3, #64]
+; CHECK-NEXT:    vstrh.16 q0, [r11], #152
+; CHECK-NEXT:    strd r9, r10, [r3, #64]
 ; CHECK-NEXT:    adds r5, #38
 ; CHECK-NEXT:    adds r3, #152
 ; CHECK-NEXT:    le lr, .LBB19_3
@@ -600,46 +601,46 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    vstrb.8 q1, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB19_5
 ; CHECK-NEXT:  .LBB19_6: @ %for.cond.cleanup6
-; CHECK-NEXT:    movw r2, :lower16:arr_20
+; CHECK-NEXT:    movw r6, :lower16:arr_20
 ; CHECK-NEXT:    movw r0, #7376
-; CHECK-NEXT:    movt r2, :upper16:arr_20
-; CHECK-NEXT:    adds r3, r2, r0
+; CHECK-NEXT:    movt r6, :upper16:arr_20
+; CHECK-NEXT:    adds r3, r6, r0
 ; CHECK-NEXT:    movw r0, #7408
-; CHECK-NEXT:    add.w r12, r2, r0
+; CHECK-NEXT:    add.w r12, r6, r0
 ; CHECK-NEXT:    movw r0, #7344
-; CHECK-NEXT:    add.w r11, r2, r0
+; CHECK-NEXT:    add.w r9, r6, r0
 ; CHECK-NEXT:    movw r0, #7312
-; CHECK-NEXT:    add.w r9, r2, r0
+; CHECK-NEXT:    adds r2, r6, r0
 ; CHECK-NEXT:    movw r0, :lower16:arr_21
-; CHECK-NEXT:    add.w r1, r2, #7424
-; CHECK-NEXT:    add.w r7, r2, #7392
-; CHECK-NEXT:    add.w r4, r2, #7360
-; CHECK-NEXT:    add.w r5, r2, #7328
-; CHECK-NEXT:    add.w r6, r2, #7296
-; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    add.w r1, r6, #7424
+; CHECK-NEXT:    add.w r7, r6, #7392
+; CHECK-NEXT:    add.w r4, r6, #7360
+; CHECK-NEXT:    add.w r5, r6, #7328
+; CHECK-NEXT:    add.w r8, r6, #7296
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    movt r0, :upper16:arr_21
 ; CHECK-NEXT:    addw r0, r0, #1860
 ; CHECK-NEXT:    mov.w r10, #5
-; CHECK-NEXT:    dls lr, r2
-; CHECK-NEXT:    mov.w r2, #327685
+; CHECK-NEXT:    dls lr, r6
+; CHECK-NEXT:    mov.w r6, #327685
 ; CHECK-NEXT:    vmov.i16 q1, #0x5
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:  .LBB19_7: @ %for.cond8.preheader.1
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str r2, [r0, #-4]
+; CHECK-NEXT:    str r6, [r0, #-4]
 ; CHECK-NEXT:    vstrh.16 q1, [r0, #-36]
 ; CHECK-NEXT:    strh.w r10, [r0]
 ; CHECK-NEXT:    vstrh.16 q1, [r0, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r3]
-; CHECK-NEXT:    vstrh.16 q0, [r9], #152
-; CHECK-NEXT:    vstrh.16 q0, [r6], #152
+; CHECK-NEXT:    vstrh.16 q0, [r2], #152
+; CHECK-NEXT:    vstrh.16 q0, [r8], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r5], #152
-; CHECK-NEXT:    vstrh.16 q0, [r11], #152
+; CHECK-NEXT:    vstrh.16 q0, [r9], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r4], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r7], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r12], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #152
-; CHECK-NEXT:    strd r10, r8, [r3, #64]
+; CHECK-NEXT:    strd r10, r11, [r3, #64]
 ; CHECK-NEXT:    adds r0, #38
 ; CHECK-NEXT:    adds r3, #152
 ; CHECK-NEXT:    le lr, .LBB19_7
@@ -662,7 +663,7 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    movw r0, #14704
 ; CHECK-NEXT:    add.w r12, r7, r0
 ; CHECK-NEXT:    movw r0, #14688
-; CHECK-NEXT:    add.w r11, r7, r0
+; CHECK-NEXT:    add.w r8, r7, r0
 ; CHECK-NEXT:    movw r0, #14640
 ; CHECK-NEXT:    add.w r9, r7, r0
 ; CHECK-NEXT:    movw r0, #14624
@@ -680,7 +681,7 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    dls lr, r7
 ; CHECK-NEXT:    mov.w r7, #327685
 ; CHECK-NEXT:    vmov.i16 q1, #0x5
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:  .LBB19_11: @ %for.cond8.preheader.2
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str r7, [r1, #-4]
@@ -693,10 +694,10 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    vstrh.16 q0, [r2], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r9], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r5], #152
-; CHECK-NEXT:    vstrh.16 q0, [r11], #152
+; CHECK-NEXT:    vstrh.16 q0, [r8], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r12], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r4], #152
-; CHECK-NEXT:    strd r10, r8, [r3, #64]
+; CHECK-NEXT:    strd r10, r11, [r3, #64]
 ; CHECK-NEXT:    adds r1, #38
 ; CHECK-NEXT:    adds r3, #152
 ; CHECK-NEXT:    le lr, .LBB19_11
@@ -720,9 +721,9 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    movt r7, :upper16:arr_20
 ; CHECK-NEXT:    add.w r12, r7, r1
 ; CHECK-NEXT:    movw r1, #21984
-; CHECK-NEXT:    add.w r10, r7, r1
-; CHECK-NEXT:    movw r1, #21952
 ; CHECK-NEXT:    add.w r8, r7, r1
+; CHECK-NEXT:    movw r1, #21952
+; CHECK-NEXT:    add.w r9, r7, r1
 ; CHECK-NEXT:    movw r1, #21936
 ; CHECK-NEXT:    movw r0, #21968
 ; CHECK-NEXT:    adds r5, r7, r1
@@ -734,7 +735,7 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    add.w r3, r7, #22016
 ; CHECK-NEXT:    add.w r6, r7, #21888
 ; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mov.w r9, #5
+; CHECK-NEXT:    mov.w r10, #5
 ; CHECK-NEXT:    vmov.i16 q1, #0x5
 ; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    dls lr, r7
@@ -743,18 +744,18 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str r7, [r2, #-4]
 ; CHECK-NEXT:    vstrh.16 q1, [r2, #-36]
-; CHECK-NEXT:    strh.w r9, [r2]
+; CHECK-NEXT:    strh.w r10, [r2]
 ; CHECK-NEXT:    vstrh.16 q1, [r2, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrh.16 q0, [r4], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r6], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r5], #152
+; CHECK-NEXT:    vstrh.16 q0, [r9], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r8], #152
-; CHECK-NEXT:    vstrh.16 q0, [r10], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r12], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r3], #152
-; CHECK-NEXT:    strd r9, r11, [r0, #64]
+; CHECK-NEXT:    strd r10, r11, [r0, #64]
 ; CHECK-NEXT:    adds r2, #38
 ; CHECK-NEXT:    adds r0, #152
 ; CHECK-NEXT:    le lr, .LBB19_15

@@ -328,9 +328,9 @@ define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; SSE:       # %bb.0: # %start
 ; SSE-NEXT:    movd %esi, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
+; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB7_1: # %loop
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -469,11 +469,11 @@ define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; SSE-NEXT:    movslq %esi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psrlq $32, %xmm3
-; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB8_1: # %loop
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1

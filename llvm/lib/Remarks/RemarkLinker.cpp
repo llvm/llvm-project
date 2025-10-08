@@ -70,8 +70,8 @@ Error RemarkLinker::link(StringRef Buffer, Format RemarkFormat) {
   Expected<std::unique_ptr<RemarkParser>> MaybeParser =
       createRemarkParserFromMeta(
           RemarkFormat, Buffer,
-          PrependPath ? std::optional<StringRef>(StringRef(*PrependPath))
-                      : std::optional<StringRef>());
+          PrependPath ? std::make_optional<StringRef>(*PrependPath)
+                      : std::nullopt);
   if (!MaybeParser)
     return MaybeParser.takeError();
 
@@ -108,7 +108,7 @@ Error RemarkLinker::link(const object::ObjectFile &Obj, Format RemarkFormat) {
 
 Error RemarkLinker::serialize(raw_ostream &OS, Format RemarksFormat) const {
   Expected<std::unique_ptr<RemarkSerializer>> MaybeSerializer =
-      createRemarkSerializer(RemarksFormat, SerializerMode::Standalone, OS,
+      createRemarkSerializer(RemarksFormat, OS,
                              std::move(const_cast<StringTable &>(StrTab)));
   if (!MaybeSerializer)
     return MaybeSerializer.takeError();

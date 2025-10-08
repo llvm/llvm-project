@@ -641,53 +641,53 @@ define signext i32 @br_jt8_m(i32 signext %0, i32 signext %1) {
 ; PIC:       # %bb.0:
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
-; PIC-NEXT:    and %s0, %s0, (32)0
-; PIC-NEXT:    adds.w.sx %s3, -1, %s0
-; PIC-NEXT:    cmpu.w %s2, 8, %s3
+; PIC-NEXT:    and %s2, %s0, (32)0
+; PIC-NEXT:    adds.w.sx %s0, -1, %s2
+; PIC-NEXT:    cmpu.w %s3, 8, %s0
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
 ; PIC-NEXT:    lea.sl %s15, _GLOBAL_OFFSET_TABLE_@pc_hi(%s16, %s15)
-; PIC-NEXT:    brgt.w 0, %s2, .LBB7_9
+; PIC-NEXT:    brgt.w 0, %s3, .LBB7_9
 ; PIC-NEXT:  # %bb.1:
-; PIC-NEXT:    and %s2, %s1, (32)0
-; PIC-NEXT:    adds.w.zx %s1, %s3, (0)1
-; PIC-NEXT:    sll %s1, %s1, 2
+; PIC-NEXT:    and %s1, %s1, (32)0
+; PIC-NEXT:    adds.w.zx %s0, %s0, (0)1
+; PIC-NEXT:    sll %s0, %s0, 2
 ; PIC-NEXT:    lea %s3, .LJTI7_0@gotoff_lo
 ; PIC-NEXT:    and %s3, %s3, (32)0
 ; PIC-NEXT:    lea.sl %s3, .LJTI7_0@gotoff_hi(%s3, %s15)
-; PIC-NEXT:    ldl.sx %s1, (%s1, %s3)
+; PIC-NEXT:    ldl.sx %s0, (%s0, %s3)
 ; PIC-NEXT:    lea %s3, br_jt8_m@gotoff_lo
 ; PIC-NEXT:    and %s3, %s3, (32)0
 ; PIC-NEXT:    lea.sl %s3, br_jt8_m@gotoff_hi(%s3, %s15)
-; PIC-NEXT:    adds.l %s3, %s3, %s1
-; PIC-NEXT:    or %s1, 3, (0)1
+; PIC-NEXT:    adds.l %s3, %s3, %s0
+; PIC-NEXT:    or %s0, 3, (0)1
 ; PIC-NEXT:    b.l.t (, %s3)
 ; PIC-NEXT:  .LBB7_2:
-; PIC-NEXT:    or %s1, 0, (0)1
+; PIC-NEXT:    or %s0, 0, (0)1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_9:
-; PIC-NEXT:    or %s1, 0, %s0
+; PIC-NEXT:    or %s0, 0, %s2
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_6:
-; PIC-NEXT:    adds.w.sx %s1, -2, %s2
+; PIC-NEXT:    adds.w.sx %s0, -2, %s1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_8:
-; PIC-NEXT:    or %s1, 11, (0)1
+; PIC-NEXT:    or %s0, 11, (0)1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_7:
-; PIC-NEXT:    or %s1, 10, (0)1
+; PIC-NEXT:    or %s0, 10, (0)1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_3:
-; PIC-NEXT:    or %s1, 4, (0)1
+; PIC-NEXT:    or %s0, 4, (0)1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_4:
-; PIC-NEXT:    adds.w.sx %s1, 3, %s2
+; PIC-NEXT:    adds.w.sx %s0, 3, %s1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_5:
-; PIC-NEXT:    adds.w.sx %s1, -5, %s2
+; PIC-NEXT:    adds.w.sx %s0, -5, %s1
 ; PIC-NEXT:  .LBB7_10:
-; PIC-NEXT:    adds.w.sx %s0, %s1, (0)1
+; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)

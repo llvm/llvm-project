@@ -370,8 +370,11 @@ def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
 def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
   "", "Shorthand for +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
-def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
-  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
+def FeatureSVESM4 : ExtensionWithMArch<"sve-sm4", "SVESM4", "FEAT_SVE_SM4",
+  "Enable SVE SM4 instructions", [FeatureSM4]>;
+
+def FeatureAliasSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4",
+  "", "Shorthand for +sve2+sve-sm4", [FeatureSVE2, FeatureSVESM4]>;
 
 def FeatureSVESHA3 : ExtensionWithMArch<"sve-sha3", "SVESHA3", "FEAT_SVE_SHA3",
   "Enable SVE SHA3 instructions", [FeatureSHA3]>;
@@ -618,25 +621,30 @@ def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGP
 def FeatureZCRegMoveGPR32 : SubtargetFeature<"zcm-gpr32", "HasZeroCycleRegMoveGPR32", "true",
                                         "Has zero-cycle register moves for GPR32 registers">;
 
+def FeatureZCRegMoveFPR128 : SubtargetFeature<"zcm-fpr128", "HasZeroCycleRegMoveFPR128", "true",
+                                        "Has zero-cycle register moves for FPR128 registers">;
+
 def FeatureZCRegMoveFPR64 : SubtargetFeature<"zcm-fpr64", "HasZeroCycleRegMoveFPR64", "true",
                                         "Has zero-cycle register moves for FPR64 registers">;
 
 def FeatureZCRegMoveFPR32 : SubtargetFeature<"zcm-fpr32", "HasZeroCycleRegMoveFPR32", "true",
                                         "Has zero-cycle register moves for FPR32 registers">;
 
-def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
-                                        "Has zero-cycle zeroing instructions for generic registers">;
+def FeatureZCZeroingGPR64 : SubtargetFeature<"zcz-gpr64", "HasZeroCycleZeroingGPR64", "true",
+                                        "Has zero-cycle zeroing instructions for GPR64 registers">;
+
+def FeatureZCZeroingGPR32 : SubtargetFeature<"zcz-gpr32", "HasZeroCycleZeroingGPR32", "true",
+                                        "Has zero-cycle zeroing instructions for GPR32 registers">;
+
+def FeatureZCZeroingFPR128 : SubtargetFeature<"zcz-fpr128", "HasZeroCycleZeroingFPR128", "true",
+                                        "Has zero-cycle zeroing instructions for FPR128 registers">;
 
 // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
 // as movi is more efficient across all cores. Newer cores can eliminate
 // fmovs early and there is no difference with movi, but this not true for
 // all implementations.
-def FeatureNoZCZeroingFP : SubtargetFeature<"no-zcz-fp", "HasZeroCycleZeroingFP", "false",
-                                        "Has no zero-cycle zeroing instructions for FP registers">;
-
-def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
-                                        "Has zero-cycle zeroing instructions",
-                                        [FeatureZCZeroingGP]>;
+def FeatureNoZCZeroingFPR64 : SubtargetFeature<"no-zcz-fpr64", "HasZeroCycleZeroingFPR64", "false",
+                                        "Has no zero-cycle zeroing instructions for FPR64 registers">;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -727,9 +735,13 @@ def FeatureFuseArithmeticLogic : SubtargetFeature<
     "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
     "CPU fuses arithmetic and logic operations">;
 
-def FeatureFuseCCSelect : SubtargetFeature<
-    "fuse-csel", "HasFuseCCSelect", "true",
-    "CPU fuses conditional select operations">;
+def FeatureFuseCmpCSel : SubtargetFeature<
+    "fuse-csel", "HasFuseCmpCSel", "true",
+    "CPU can fuse CMP and CSEL operations">;
+
+def FeatureFuseCmpCSet : SubtargetFeature<
+    "fuse-cset", "HasFuseCmpCSet", "true",
+    "CPU can fuse CMP and CSET operations">;
 
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
@@ -836,6 +848,13 @@ def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
 def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
                                                "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
+
+// On most processors we want to avoid moving from WZR to vector registers
+// (relying on materializing 0 to a FPR and moving from there instead),
+// but on some (in-order) cores it's preferable to avoid the extra instruction instead.
+def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
+                                              "UseWzrToVecMove", "true",
+                                              "Move from WZR to insert 0 into vector registers">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

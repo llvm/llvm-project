@@ -359,11 +359,6 @@ GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
                                           AllowNonInbounds);
 }
 
-/// Returns true if the GEP is based on a pointer to a string (array of
-// \p CharSize integers) and is indexing into this string.
-LLVM_ABI bool isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                          unsigned CharSize = 8);
-
 /// Represents offset+length into a ConstantDataArray.
 struct ConstantDataArraySlice {
   /// ConstantDataArray pointer. nullptr indicates a zeroinitializer (a valid
@@ -618,6 +613,12 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+/// Returns true, if no instruction between \p Assume and \p CtxI may free
+/// memory and the function is marked as NoSync. The latter ensures the current
+/// function cannot arrange for another thread to free on its behalf.
+LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+                                 const Instruction *CtxI);
+
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
   AlwaysOverflowsLow,
@@ -726,6 +727,9 @@ LLVM_ABI bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 /// To filter out operands that raise UB on poison, you can use
 /// getGuaranteedNonPoisonOp.
 LLVM_ABI bool propagatesPoison(const Use &PoisonOp);
+
+/// Return whether this intrinsic propagates poison for all operands.
+LLVM_ABI bool intrinsicPropagatesPoison(Intrinsic::ID IID);
 
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding

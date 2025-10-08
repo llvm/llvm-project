@@ -431,7 +431,7 @@ The ``print`` method
   virtual void print(llvm::raw_ostream &O, const Module *M) const;
 
 The ``print`` method must be implemented by "analyses" in order to print a
-human readable version of the analysis results.  This is useful for debugging
+human-readable version of the analysis results.  This is useful for debugging
 an analysis itself, as well as for other people to figure out how an analysis
 works.  Use the opt ``-analyze`` argument to invoke this method.
 
@@ -441,6 +441,28 @@ program that has been analyzed.  Note however that this pointer may be ``NULL``
 in certain circumstances (such as calling the ``Pass::dump()`` from a
 debugger), so it should only be used to enhance debug output, it should not be
 depended on.
+
+Scheduling a MachineFunctionPass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Backends create a ``TargetPassConfig`` and use ``addPass`` to schedule
+``MachineFunctionPass``\ es. External plugins can register a callback to modify
+and insert additional passes:
+
+.. code-block:: c++
+
+  RegisterTargetPassConfigCallback X{[](auto &TM, auto &PM, auto *TPC) {
+    TPC->insertPass(/* ... */);
+    TPC->substitutePass(/* ... */);
+  }};
+
+Note that passes still have to be registered:
+
+.. code-block:: c++
+
+  __attribute__((constructor)) static void initCodeGenPlugin() {
+    initializeExamplePass(*PassRegistry::getPassRegistry());
+  }
 
 .. _writing-an-llvm-pass-interaction:
 

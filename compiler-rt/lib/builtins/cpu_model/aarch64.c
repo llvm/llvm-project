@@ -19,27 +19,25 @@
 #error This file is intended only for aarch64-based targets
 #endif
 
-#if __has_include(<sys/ifunc.h>)
-#include <sys/ifunc.h>
-#else
 typedef struct __ifunc_arg_t {
   unsigned long _size;
   unsigned long _hwcap;
   unsigned long _hwcap2;
+  unsigned long _hwcap3;
+  unsigned long _hwcap4;
 } __ifunc_arg_t;
-#endif // __has_include(<sys/ifunc.h>)
 
 // LSE support detection for out-of-line atomics
 // using HWCAP and Auxiliary vector
 _Bool __aarch64_have_lse_atomics
     __attribute__((visibility("hidden"), nocommon)) = false;
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 // clang-format off: should not reorder sys/auxv.h alphabetically
 #include <sys/auxv.h>
 // clang-format on
 #include "aarch64/hwcap.inc"
-#include "aarch64/lse_atomics/freebsd.inc"
+#include "aarch64/lse_atomics/elf_aux_info.inc"
 #elif defined(__Fuchsia__)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/fuchsia.inc"
@@ -68,16 +66,16 @@ struct {
 // clang-format off
 #if defined(__APPLE__)
 #include "aarch64/fmv/apple.inc"
-#elif defined(__FreeBSD__)
-#include "aarch64/fmv/mrs.inc"
-#include "aarch64/fmv/freebsd.inc"
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#include "aarch64/fmv/hwcap.inc"
+#include "aarch64/fmv/elf_aux_info.inc"
 #elif defined(__Fuchsia__)
 #include "aarch64/fmv/fuchsia.inc"
 #elif defined(__ANDROID__)
-#include "aarch64/fmv/mrs.inc"
+#include "aarch64/fmv/hwcap.inc"
 #include "aarch64/fmv/android.inc"
 #elif defined(__linux__) && __has_include(<sys/auxv.h>)
-#include "aarch64/fmv/mrs.inc"
+#include "aarch64/fmv/hwcap.inc"
 #include "aarch64/fmv/getauxval.inc"
 #elif defined(_WIN32)
 #include "aarch64/fmv/windows.inc"

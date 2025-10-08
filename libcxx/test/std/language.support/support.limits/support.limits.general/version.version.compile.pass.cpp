@@ -164,6 +164,14 @@
 #    error "__cpp_lib_clamp should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
+#  endif
+
 #  ifdef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should not be defined before c++14"
 #  endif
@@ -656,6 +664,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_iota
 #    error "__cpp_lib_ranges_iota should not be defined before c++23"
 #  endif
@@ -810,6 +822,10 @@
 
 #  ifdef __cpp_lib_string_resize_and_overwrite
 #    error "__cpp_lib_string_resize_and_overwrite should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_string_udls
@@ -1055,6 +1071,14 @@
 
 #  ifdef __cpp_lib_clamp
 #    error "__cpp_lib_clamp should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -1588,6 +1612,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_iota
 #    error "__cpp_lib_ranges_iota should not be defined before c++23"
 #  endif
@@ -1757,6 +1785,10 @@
 
 #  ifdef __cpp_lib_string_resize_and_overwrite
 #    error "__cpp_lib_string_resize_and_overwrite should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -2053,6 +2085,14 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -2691,6 +2731,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_iota
 #    error "__cpp_lib_ranges_iota should not be defined before c++23"
 #  endif
@@ -2890,6 +2934,10 @@
 
 #  ifdef __cpp_lib_string_resize_and_overwrite
 #    error "__cpp_lib_string_resize_and_overwrite should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -3279,6 +3327,20 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++20"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++20"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -4061,6 +4123,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_iota
 #    error "__cpp_lib_ranges_iota should not be defined before c++23"
 #  endif
@@ -4290,6 +4356,10 @@
 
 #  ifdef __cpp_lib_string_resize_and_overwrite
 #    error "__cpp_lib_string_resize_and_overwrite should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -4724,6 +4794,20 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++23"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++23"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -5626,6 +5710,10 @@
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges_iota
 #    error "__cpp_lib_ranges_iota should be defined in c++23"
 #  endif
@@ -5924,6 +6012,10 @@
 #  endif
 #  if __cpp_lib_string_resize_and_overwrite != 202110L
 #    error "__cpp_lib_string_resize_and_overwrite should have the value 202110L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -6399,6 +6491,20 @@
 #    error "__cpp_lib_clamp should have the value 201603L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++26"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should be defined in c++26"
 #  endif
@@ -6565,17 +6671,11 @@
 #    error "__cpp_lib_constexpr_vector should have the value 201907L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should be defined in c++26"
-#    endif
-#    if __cpp_lib_constrained_equality != 202411L
-#      error "__cpp_lib_constrained_equality should have the value 202411L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_constrained_equality
+#    error "__cpp_lib_constrained_equality should be defined in c++26"
+#  endif
+#  if __cpp_lib_constrained_equality != 202411L
+#    error "__cpp_lib_constrained_equality should have the value 202411L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_containers_ranges
@@ -7377,17 +7477,11 @@
 #    error "__cpp_lib_optional should have the value 202110L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_optional_range_support
-#      error "__cpp_lib_optional_range_support should be defined in c++26"
-#    endif
-#    if __cpp_lib_optional_range_support != 202406L
-#      error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_optional_range_support
-#      error "__cpp_lib_optional_range_support should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_optional_range_support
+#    error "__cpp_lib_optional_range_support should be defined in c++26"
+#  endif
+#  if __cpp_lib_optional_range_support != 202406L
+#    error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_out_ptr
@@ -7534,6 +7628,13 @@
 #  endif
 #  if __cpp_lib_ranges_find_last != 202207L
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_indices != 202506L
+#    error "__cpp_lib_ranges_indices should have the value 202506L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_iota
@@ -7881,6 +7982,13 @@
 #    error "__cpp_lib_string_resize_and_overwrite should have the value 202110L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should be defined in c++26"
+#  endif
+#  if __cpp_lib_string_subview != 202506L
+#    error "__cpp_lib_string_subview should have the value 202506L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_string_udls
 #    error "__cpp_lib_string_udls should be defined in c++26"
 #  endif
@@ -8088,4 +8196,3 @@
 #endif // TEST_STD_VER > 23
 
 // clang-format on
-

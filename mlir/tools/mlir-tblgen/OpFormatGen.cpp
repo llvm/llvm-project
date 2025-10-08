@@ -672,7 +672,7 @@ const char *const inferReturnTypesParserCode = R"(
 /// The code snippet used to generate a parser call for a region list.
 ///
 /// {0}: The name for the region list.
-const char *regionListParserCode = R"(
+static const char *regionListParserCode = R"(
   {
     std::unique_ptr<::mlir::Region> region;
     auto firstRegionResult = parser.parseOptionalRegion(region);
@@ -695,7 +695,7 @@ const char *regionListParserCode = R"(
 /// The code snippet used to ensure a list of regions have terminators.
 ///
 /// {0}: The name of the region list.
-const char *regionListEnsureTerminatorParserCode = R"(
+static const char *regionListEnsureTerminatorParserCode = R"(
   for (auto &region : {0}Regions)
     ensureTerminator(*region, parser.getBuilder(), result.location);
 )";
@@ -703,7 +703,7 @@ const char *regionListEnsureTerminatorParserCode = R"(
 /// The code snippet used to ensure a list of regions have a block.
 ///
 /// {0}: The name of the region list.
-const char *regionListEnsureSingleBlockParserCode = R"(
+static const char *regionListEnsureSingleBlockParserCode = R"(
   for (auto &region : {0}Regions)
     if (region->empty()) region->emplaceBlock();
 )";
@@ -711,7 +711,7 @@ const char *regionListEnsureSingleBlockParserCode = R"(
 /// The code snippet used to generate a parser call for an optional region.
 ///
 /// {0}: The name of the region.
-const char *optionalRegionParserCode = R"(
+static const char *optionalRegionParserCode = R"(
   {
      auto parseResult = parser.parseOptionalRegion(*{0}Region);
      if (parseResult.has_value() && failed(*parseResult))
@@ -722,7 +722,7 @@ const char *optionalRegionParserCode = R"(
 /// The code snippet used to generate a parser call for a region.
 ///
 /// {0}: The name of the region.
-const char *regionParserCode = R"(
+static const char *regionParserCode = R"(
   if (parser.parseRegion(*{0}Region))
     return ::mlir::failure();
 )";
@@ -730,21 +730,21 @@ const char *regionParserCode = R"(
 /// The code snippet used to ensure a region has a terminator.
 ///
 /// {0}: The name of the region.
-const char *regionEnsureTerminatorParserCode = R"(
+static const char *regionEnsureTerminatorParserCode = R"(
   ensureTerminator(*{0}Region, parser.getBuilder(), result.location);
 )";
 
 /// The code snippet used to ensure a region has a block.
 ///
 /// {0}: The name of the region.
-const char *regionEnsureSingleBlockParserCode = R"(
+static const char *regionEnsureSingleBlockParserCode = R"(
   if ({0}Region->empty()) {0}Region->emplaceBlock();
 )";
 
 /// The code snippet used to generate a parser call for a successor list.
 ///
 /// {0}: The name for the successor list.
-const char *successorListParserCode = R"(
+static const char *successorListParserCode = R"(
   {
     ::mlir::Block *succ;
     auto firstSucc = parser.parseOptionalSuccessor(succ);
@@ -766,7 +766,7 @@ const char *successorListParserCode = R"(
 /// The code snippet used to generate a parser call for a successor.
 ///
 /// {0}: The name of the successor.
-const char *successorParserCode = R"(
+static const char *successorParserCode = R"(
   if (parser.parseSuccessor({0}Successor))
     return ::mlir::failure();
 )";
@@ -774,7 +774,7 @@ const char *successorParserCode = R"(
 /// The code snippet used to generate a parser for OIList
 ///
 /// {0}: literal keyword corresponding to a case for oilist
-const char *oilistParserCode = R"(
+static const char *oilistParserCode = R"(
   if ({0}Clause) {
     return parser.emitError(parser.getNameLoc())
           << "`{0}` clause can appear at most once in the expansion of the "
@@ -852,6 +852,7 @@ static void genLiteralParser(StringRef value, MethodBody &body) {
               .Case("]", "RSquare()")
               .Case("?", "Question()")
               .Case("+", "Plus()")
+              .Case("-", "Minus()")
               .Case("*", "Star()")
               .Case("...", "Ellipsis()");
 }
@@ -1302,8 +1303,8 @@ if (!dict) {
 }
 // keep track of used keys in the input dictionary to be able to error out
 // if there are some unknown ones.
-DenseSet<StringAttr> usedKeys;
-MLIRContext *ctx = dict.getContext();
+::mlir::DenseSet<::mlir::StringAttr> usedKeys;
+::mlir::MLIRContext *ctx = dict.getContext();
 (void)ctx;
 )decl";
 
@@ -1315,7 +1316,7 @@ auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
          ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
   {0};
 };
-auto {1}AttrName = StringAttr::get(ctx, "{1}");
+auto {1}AttrName = ::mlir::StringAttr::get(ctx, "{1}");
 usedKeys.insert({1}AttrName);
 auto attr = dict.get({1}AttrName);
 if (!attr && {2}) {{
@@ -1363,7 +1364,7 @@ if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
     bool isRequired = !attr.isOptional() && !attr.hasDefaultValue();
     body << formatv(R"decl(
 auto &propStorage = prop.{0};
-auto {0}AttrName = StringAttr::get(ctx, "{0}");
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
 auto attr = dict.get({0}AttrName);
 usedKeys.insert({0}AttrName);
 if (attr || /*isRequired=*/{1}) {{
@@ -1384,7 +1385,7 @@ if (attr || /*isRequired=*/{1}) {{
                     namedAttr.name, isRequired);
   }
   body << R"decl(
-for (NamedAttribute attr : dict) {
+for (::mlir::NamedAttribute attr : dict) {
   if (!usedKeys.contains(attr.getName()))
     return emitError() << "unknown key '" << attr.getName() <<
         "' when parsing properties dictionary";
@@ -1976,7 +1977,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 // operation that has the SingleBlockImplicitTerminator trait.
 ///
 /// {0}: The name of the region.
-const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
+static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   {
     bool printTerminator = true;
     if (auto *term = {0}.empty() ? nullptr : {0}.begin()->getTerminator()) {{
@@ -1994,7 +1995,7 @@ const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
 ///
 /// {0}: The name of the enum attribute.
 /// {1}: The name of the enum attributes symbolToString function.
-const char *enumAttrBeginPrinterCode = R"(
+static const char *enumAttrBeginPrinterCode = R"(
   {
     auto caseValue = {0}();
     auto caseValueStr = {1}(caseValue);
@@ -2386,8 +2387,8 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       });
 }
 
-void collect(FormatElement *element,
-             SmallVectorImpl<VariableElement *> &variables) {
+static void collect(FormatElement *element,
+                    SmallVectorImpl<VariableElement *> &variables) {
   TypeSwitch<FormatElement *>(element)
       .Case([&](VariableElement *var) { variables.emplace_back(var); })
       .Case([&](CustomDirective *ele) {
@@ -3376,11 +3377,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllRegions || !seenRegions.insert(region).second)
         return emitError(loc, "region '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenRegions.count(region)) {
-      return emitError(loc, "region '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenRegions.count(region))
+        return emitError(loc, "region '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "regions can only be used at the top level");
+      return emitError(loc, "regions can only be used at the top level "
+                            "or in a ref directive");
     }
     return create<RegionVariable>(region);
   }
@@ -3396,11 +3399,13 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
       if (hasAllSuccessors || !seenSuccessors.insert(successor).second)
         return emitError(loc, "successor '" + name + "' is already bound");
-    } else if (ctx == RefDirectiveContext && !seenSuccessors.count(successor)) {
-      return emitError(loc, "successor '" + name +
-                                "' must be bound before it is referenced");
+    } else if (ctx == RefDirectiveContext) {
+      if (!seenSuccessors.count(successor))
+        return emitError(loc, "successor '" + name +
+                                  "' must be bound before it is referenced");
     } else {
-      return emitError(loc, "successors can only be used at the top level");
+      return emitError(loc, "successors can only be used at the top level "
+                            "or in a ref directive");
     }
 
     return create<SuccessorVariable>(successor);
@@ -3775,7 +3780,8 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
         Property prop = propEle->getVar()->prop;
         if (isAnchor && !(prop.hasDefaultValue() && prop.hasOptionalParser()))
           return emitError(loc, "only properties with default values "
-                                "that can be optionally parsed "
+                                "that can be optionally parsed (have the `let "
+                                "optionalParser = ...` field defined) "
                                 "can be used to anchor an optional group");
         return success();
       })
@@ -3848,8 +3854,14 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
-  if (!op.hasAssemblyFormat())
+  if (!op.hasAssemblyFormat()) {
+    // We still need to generate the parsed attribute properties setter for
+    // allowing it to be reused in custom assembly implementations.
+    OperationFormat format(op, hasProperties);
+    format.hasPropDict = true;
+    genParsedAttrPropertiesSetter(format, op, opClass);
     return;
+  }
 
   // Parse the format description.
   llvm::SourceMgr mgr;

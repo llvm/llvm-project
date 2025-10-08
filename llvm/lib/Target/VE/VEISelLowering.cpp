@@ -738,7 +738,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // necessary since all emitted instructions must be stuck together in order
   // to pass the live physical registers.
   SDValue InGlue;
-  for (const auto [Reg, N] : RegsToPass) {
+  for (const auto &[Reg, N] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
@@ -746,7 +746,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Build the operands for the call instruction itself.
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
-  for (const auto [Reg, N] : RegsToPass)
+  for (const auto &[Reg, N] : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
@@ -957,6 +957,8 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
 
 EVT VETargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
                                          EVT VT) const {
+  if (VT.isVector())
+    return VT.changeVectorElementType(MVT::i1);
   return MVT::i32;
 }
 
@@ -1649,14 +1651,11 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
 
   // Prepare arguments
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Node = Size;
-  Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-  Args.push_back(Entry);
+  Args.emplace_back(Size, Size.getValueType().getTypeForEVT(*DAG.getContext()));
   if (NeedsAlign) {
-    Entry.Node = DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT);
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Args.push_back(Entry);
+    SDValue Align = DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT);
+    Args.emplace_back(Align,
+                      Align.getValueType().getTypeForEVT(*DAG.getContext()));
   }
   Type *RetTy = Type::getVoidTy(*DAG.getContext());
 
@@ -1738,9 +1737,6 @@ static SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (TLI.verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   SDValue FrameAddr = lowerFRAMEADDR(Op, DAG, TLI, Subtarget);
 

@@ -1,4 +1,4 @@
-//===--- ProTypeMemberInitCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -99,7 +99,7 @@ toCommaSeparatedString(const R &OrderedDecls,
                        const SmallPtrSetImpl<const T *> &DeclsToInit) {
   SmallVector<StringRef, 16> Names;
   for (const T *Decl : OrderedDecls) {
-    if (DeclsToInit.count(Decl))
+    if (DeclsToInit.contains(Decl))
       Names.emplace_back(getName(Decl));
   }
   return llvm::join(Names.begin(), Names.end(), ", ");
@@ -189,8 +189,8 @@ struct InitializerInsertion {
 
 // Convenience utility to get a RecordDecl from a QualType.
 const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
-  if (const auto *RT = Type.getCanonicalType()->getAs<RecordType>())
-    return RT->getDecl();
+  if (const auto *RT = Type->getAsCanonical<RecordType>())
+    return RT->getOriginalDecl();
   return nullptr;
 }
 
@@ -373,8 +373,8 @@ static bool isEmpty(ASTContext &Context, const QualType &Type) {
   return isIncompleteOrZeroLengthArrayType(Context, Type);
 }
 
-static const char *getInitializer(QualType QT, bool UseAssignment) {
-  const char *DefaultInitializer = "{}";
+static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
+  static constexpr llvm::StringLiteral DefaultInitializer = "{}";
   if (!UseAssignment)
     return DefaultInitializer;
 
@@ -501,7 +501,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
                          AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
-                           if (!FieldsToInit.count(F))
+                           if (!FieldsToInit.contains(F))
                              return;
                            // Don't suggest fixes for enums because we don't
                            // know a good default. Don't suggest fixes for

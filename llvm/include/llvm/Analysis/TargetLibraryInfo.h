@@ -136,7 +136,7 @@ public:
     AMDLIBM      // AMD Math Vector library.
   };
 
-  LLVM_ABI TargetLibraryInfoImpl() = delete;
+  TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
 
   // Provide value semantics.
@@ -452,6 +452,12 @@ public:
       return true;
     }
     return false;
+  }
+
+  /// Return the canonical name for a LibFunc. This should not be used for
+  /// semantic purposes, use getName instead.
+  static StringRef getStandardName(LibFunc F) {
+    return TargetLibraryInfoImpl::StandardNames[F];
   }
 
   StringRef getName(LibFunc F) const {
