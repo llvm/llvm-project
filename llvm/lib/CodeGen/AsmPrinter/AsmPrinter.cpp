@@ -78,6 +78,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
@@ -472,11 +473,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   AddrLabelSymbols = nullptr;
 
   // Initialize TargetLoweringObjectFile.
-  const_cast<TargetLoweringObjectFile&>(getObjFileLowering())
-    .Initialize(OutContext, TM);
+  TM.getObjFileLowering()->Initialize(OutContext, TM);
 
-  const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
-      .getModuleMetadata(M);
+  TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
@@ -1673,7 +1672,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
 
 /// Emits .callgraph section.
 void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
-                                      FunctionInfo &FuncInfo) {
+                                      FunctionCallGraphInfo &FuncCGInfo) {
   if (!MF.getTarget().Options.EmitCallGraphSection)
     return;
 
@@ -1712,27 +1711,34 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // Emit function kind, and type id if available.
   if (!IsIndirectTarget) {
     OutStreamer->emitInt64(
-        static_cast<uint64_t>(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET));
+        static_cast<uint64_t>(FunctionKind::NOT_INDIRECT_TARGET));
   } else {
     if (const auto *TypeId = extractNumericCGTypeId(F)) {
-      OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID));
+      OutStreamer->emitInt64(
+          static_cast<uint64_t>(FunctionKind::INDIRECT_TARGET_KNOWN_TID));
       OutStreamer->emitInt64(TypeId->getZExtValue());
     } else {
-      OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
+      OutStreamer->emitInt64(
+          static_cast<uint64_t>(FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
     }
   }
 
   // Emit callsite labels, where each element is a pair of type id and
   // indirect callsite pc.
-  const auto &CallSiteLabels = FuncInfo.CallSiteLabels;
+  const auto &CallSiteLabels = FuncCGInfo.CallSiteLabels;
   OutStreamer->emitInt64(CallSiteLabels.size());
   for (const auto &[TypeId, Label] : CallSiteLabels) {
     OutStreamer->emitInt64(TypeId);
     OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
   }
-  FuncInfo.CallSiteLabels.clear();
+  FuncCGInfo.CallSiteLabels.clear();
+
+  const auto &DirectCallees = FuncCGInfo.DirectCallees;
+  OutStreamer->emitInt64(DirectCallees.size());
+  for (const auto &CalleeSymbol : DirectCallees) {
+    OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+  }
+  FuncCGInfo.DirectCallees.clear();
 
   OutStreamer->popSection();
 }
@@ -1867,20 +1873,40 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
-void AsmPrinter::emitIndirectCalleeLabels(
-    FunctionInfo &FuncInfo,
+void AsmPrinter::handleCallsiteForCallgraph(
+    FunctionCallGraphInfo &FuncCGInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
-  // Only indirect calls have type identifiers set.
+  assert(MI.isCall() &&
+         "Callsite labels are meant for call instructions only.");
+  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
+    // Handle direct calls.
+    MCSymbol *CalleeSymbol = nullptr;
+    switch (CalleeOperand.getType()) {
+    case llvm::MachineOperand::MO_GlobalAddress:
+      CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
+      break;
+    case llvm::MachineOperand::MO_ExternalSymbol:
+      CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
+      break;
+    default:
+      llvm_unreachable(
+          "Expected to only handle direct call instructions here.");
+    }
+    FuncCGInfo.DirectCallees.insert(CalleeSymbol);
+    return; // Early exit after handling the direct call instruction.
+  }
   const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
   if (CallSiteInfo == CallSitesInfoMap.end())
     return;
-
+  // Handle indirect callsite info.
+  // Only indirect calls have type identifiers set.
   for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-    FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+    FuncCGInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
   }
 }
 
@@ -1930,7 +1956,7 @@ void AsmPrinter::emitFunctionBody() {
     MBBSectionRanges[MF->front().getSectionID()] =
         MBBSectionRange{CurrentFnBegin, nullptr};
 
-  FunctionInfo FuncInfo;
+  FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
@@ -2067,7 +2093,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
-        emitIndirectCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
+        handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
@@ -2249,7 +2275,7 @@ void AsmPrinter::emitFunctionBody() {
   emitStackSizeSection(*MF);
 
   // Emit section containing call graph metadata.
-  emitCallGraphSection(*MF, FuncInfo);
+  emitCallGraphSection(*MF, FuncCGInfo);
 
   // Emit .su file containing function stack size information.
   emitStackUsage(*MF);
@@ -2840,9 +2866,11 @@ bool AsmPrinter::doFinalization(Module &M) {
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
   Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  if (!InitTrampolineIntrinsic || InitTrampolineIntrinsic->use_empty())
-    if (MCSection *S = MAI->getNonexecutableStackSection(OutContext))
-      OutStreamer->switchSection(S);
+  bool HasTrampolineUses =
+      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+  MCSection *S = MAI->getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
+  if (S)
+    OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.

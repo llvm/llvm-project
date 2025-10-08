@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Guards against use of setjmp/longjmp in C++ code
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-setjmp-longjmp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-setjmp-longjmp.html
 class AvoidSetjmpLongjmpCheck : public ClangTidyCheck {
 public:
   AvoidSetjmpLongjmpCheck(StringRef Name, ClangTidyContext *Context)

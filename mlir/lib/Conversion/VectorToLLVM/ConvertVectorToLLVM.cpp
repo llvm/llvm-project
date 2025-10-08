@@ -1342,7 +1342,7 @@ struct VectorScalableExtractOpLowering
 /// ```
 class VectorFMAOpNDRewritePattern : public OpRewritePattern<FMAOp> {
 public:
-  using OpRewritePattern<FMAOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern recursively unpacks one dimension at a time. The recursion
@@ -1987,17 +1987,13 @@ struct VectorScalableStepOpLowering
 ///    %e = add %c, %d
 /// ```
 /// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
-//
-/// This only kicks in when vectorContractLowering is set to Matmul and
-/// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
     : public vector::MaskableOpRewritePattern<vector::ContractionOp> {
 public:
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  ContractionOpToMatmulOpLowering(
-      vector::VectorContractLowering vectorContractLowering,
-      MLIRContext *context, PatternBenefit benefit = 100)
+  ContractionOpToMatmulOpLowering(MLIRContext *context,
+                                  PatternBenefit benefit = 100)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit) {}
 
   FailureOr<Value>
@@ -2005,23 +2001,22 @@ public:
                             PatternRewriter &rewriter) const override;
 };
 
-/// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
-/// semantics to:
+/// Lower a qualifying `vector.contract %a, %b, %c` (with row-major matmul
+/// semantics directly into `llvm.intr.matrix.multiply`:
+/// BEFORE:
+/// ```mlir
+///  %res = vector.contract #matmat_trait %lhs, %rhs, %acc
+///    : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
 /// ```
-///    %mta = maybe_transpose
-///    %mtb = maybe_transpose
-///    %flattened_a = vector.shape_cast %mta
-///    %flattened_b = vector.shape_cast %mtb
-///    %flattened_d = llvm.intr.matrix.multiply %flattened_a, %flattened_b
-///    %mtd = vector.shape_cast %flattened_d
-///    %d = maybe_untranspose %mtd
-///    %e = add %c, %d
+///
+/// AFTER:
+/// ```mlir
+///   %lhs = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
+///   %rhs = vector.shape_cast %arg1 : vector<4x3xf32> to vector<12xf32>
+///   %matmul = llvm.intr.matrix.multiply %lhs, %rhs
+///   %res = arith.addf %acc, %matmul : vector<2x3xf32>
 /// ```
 //
-/// This only kicks in when vectorContractLowering is set to `Matmul`.
-/// vector.transpose operations are inserted if the vector.contract op is not a
-/// row-major matrix multiply.
-///
 /// Scalable vectors are not supported.
 FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
     vector::ContractionOp op, MaskingOpInterface maskOp,
@@ -2116,11 +2111,23 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   return res;
 }
 
-/// Lowers vector.transpose to llvm.intr.matrix.transpose
+/// Lowers vector.transpose directly to llvm.intr.matrix.transpose
+///
+/// BEFORE:
+/// ```mlir
+///  %tr = vector.transpose %vec, [1, 0] : vector<2x4xf32> to vector<4x2xf32>
+/// ```
+/// AFTER:
+/// ```mlir
+///  %vec_cs = vector.shape_cast %vec : vector<2x4xf32> to vector<8xf32>
+///  %tr = llvm.intr.matrix.transpose %vec_sc
+///    {columns = 2 : i32, rows = 4 : i32} : vector<8xf32> into vector<8xf32>
+///  %res = vector.shape_cast %tr : vector<8xf32> to vector<4x2xf32>
+/// ```
 class TransposeOpToMatrixTransposeOpLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {

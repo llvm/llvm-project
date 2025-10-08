@@ -12,6 +12,7 @@
 
 #include "flang/Semantics/openmp-utils.h"
 
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
@@ -39,6 +40,24 @@
 
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
+
+const Scope &GetScopingUnit(const Scope &scope) {
+  const Scope *iter{&scope};
+  for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockConstruct:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::DerivedType:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+    case Scope::Kind::Subprogram:
+      return *iter;
+    default:
+      break;
+    }
+  }
+  return *iter;
+}
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
@@ -193,6 +212,46 @@ std::optional<evaluate::DynamicType> GetDynamicType(
   } else {
     return std::nullopt;
   }
+}
+
+namespace {
+struct LogicalConstantVistor : public evaluate::Traverse<LogicalConstantVistor,
+                                   std::optional<bool>, false> {
+  using Result = std::optional<bool>;
+  using Base = evaluate::Traverse<LogicalConstantVistor, Result, false>;
+  LogicalConstantVistor() : Base(*this) {}
+
+  Result Default() const { return std::nullopt; }
+
+  using Base::operator();
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    if constexpr (T::category == common::TypeCategory::Logical) {
+      return llvm::transformOptional(
+          x.GetScalarValue(), [](auto &&v) { return v.IsTrue(); });
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  template <typename... Rs> //
+  Result Combine(Result &&result, Rs &&...results) const {
+    if constexpr (sizeof...(results) == 0) {
+      return result;
+    } else {
+      if (result.has_value()) {
+        return result;
+      } else {
+        return Combine(std::move(results)...);
+      }
+    }
+  }
+};
+} // namespace
+
+std::optional<bool> GetLogicalValue(const SomeExpr &expr) {
+  return LogicalConstantVistor{}(expr);
 }
 
 namespace {

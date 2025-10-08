@@ -305,6 +305,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                          IntegerAttr::get(elementTy, 1));
     auto zero = arith::ConstantOp::create(rewriter, loc,
                                           IntegerAttr::get(elementTy, 0));
+    auto i1zero =
+        arith::ConstantOp::create(rewriter, loc, IntegerAttr::get(i1Ty, 0));
     auto i1one =
         arith::ConstantOp::create(rewriter, loc, IntegerAttr::get(i1Ty, 1));
 
@@ -322,9 +324,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                              ArrayRef<NamedAttribute>());
     auto isInputOdd =
         arith::AndIOp::create(rewriter, loc, i1Ty, truncated, i1one);
-
-    auto shouldRound = arith::AndIOp::create(
-        rewriter, loc, i1Ty, shiftValueGreaterThanZero, isInputOdd);
+    // shifted, truncated, isInputOdd can be poison when input2 is 0.
+    auto shouldRound = arith::SelectOp::create(
+        rewriter, loc, i1Ty, shiftValueGreaterThanZero, isInputOdd, i1zero);
     auto extended =
         arith::ExtUIOp::create(rewriter, loc, resultTypes, shouldRound);
     return arith::AddIOp::create(rewriter, loc, resultTypes, result, extended);

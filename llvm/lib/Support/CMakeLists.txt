@@ -207,6 +207,7 @@ add_llvm_component_library(LLVMSupport
   InstructionCost.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
+  Jobserver.cpp
   JSON.cpp
   KnownBits.cpp
   KnownFPClass.cpp

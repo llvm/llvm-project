@@ -3,18 +3,11 @@
 ; RUN: llc --mtriple=loongarch64 --mattr=+lasx < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
 define void @extract_32xi8(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: extract_32xi8:
-; LA32:       # %bb.0:
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; LA32-NEXT:    st.b $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extract_32xi8:
-; LA64:       # %bb.0:
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvstelm.b $xr0, $a1, 0, 1
-; LA64-NEXT:    ret
+; CHECK-LABEL: extract_32xi8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvstelm.b $xr0, $a1, 0, 1
+; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
   %e = extractelement <32 x i8> %v, i32 1
   store i8 %e, ptr %dst
@@ -22,18 +15,11 @@ define void @extract_32xi8(ptr %src, ptr %dst) nounwind {
 }
 
 define void @extract_16xi16(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: extract_16xi16:
-; LA32:       # %bb.0:
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; LA32-NEXT:    st.h $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extract_16xi16:
-; LA64:       # %bb.0:
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvstelm.h $xr0, $a1, 0, 1
-; LA64-NEXT:    ret
+; CHECK-LABEL: extract_16xi16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvstelm.h $xr0, $a1, 0, 1
+; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
   %e = extractelement <16 x i16> %v, i32 1
   store i16 %e, ptr %dst
@@ -111,8 +97,7 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-NEXT:    movgr2fr.w $fa1, $a2
 ; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
 ; LA32-NEXT:    xvshuf.b $xr0, $xr2, $xr0, $xr1
-; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; LA32-NEXT:    st.b $a0, $a1, 0
+; LA32-NEXT:    xvstelm.b $xr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: extract_32xi8_idx:
@@ -136,8 +121,7 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-NEXT:    movgr2fr.w $fa1, $a2
 ; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
 ; LA32-NEXT:    xvshuf.h $xr1, $xr2, $xr0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 0
-; LA32-NEXT:    st.h $a0, $a1, 0
+; LA32-NEXT:    xvstelm.h $xr1, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: extract_16xi16_idx:

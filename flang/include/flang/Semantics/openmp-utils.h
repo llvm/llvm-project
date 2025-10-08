@@ -37,6 +37,8 @@ template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
 
 template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 
+const Scope &GetScopingUnit(const Scope &scope);
+
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.
@@ -74,6 +76,8 @@ bool IsMapExitingType(parser::OmpMapType::Value type);
 std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
 std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
+
+std::optional<bool> GetLogicalValue(const SomeExpr &expr);
 
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
