@@ -194,37 +194,6 @@ jobs:
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
-    - name: Checkout Actions
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        # Check out outside of working directory so the source checkout doesn't
-        # remove it.
-        path: workflows
-
-    # actions/checkout does not support paths outside of the GITHUB_WORKSPACE.
-    # Also, anything that we put inside of GITHUB_WORKSPACE will be overwritten
-    # by future actions/checkout steps.  Therefore, in order to checkout the
-    # latest actions from main, we need to first checkout out the actions inside of
-    # GITHUB_WORKSPACE (see previous step), then use actions/checkout to checkout
-    # the code being built and the move the actions from main back into GITHUB_WORKSPACE,
-    # becasue the uses on composite actions only reads workflows from inside GITHUB_WORKSPACE.
-    - shell: bash
-      run: mv workflows  ../workflows-main
-
-    - name: Checkout LLVM
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      with:
-        ref: ${{ needs.prepare.outputs.ref }}
-
-    - name: Copy main workflows
-      shell: bash
-      run: |
-        mv ../workflows-main .
-
     - name: Install Ninja
       uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
 
