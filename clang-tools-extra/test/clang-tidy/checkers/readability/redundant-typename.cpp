@@ -5,11 +5,12 @@
 
 struct NotDependent {
   using R = int;
+  struct S {};
 };
 
-auto f(typename NotDependent::R)
+auto f(typename NotDependent::S)
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant 'typename' [readability-redundant-typename]
-  // CHECK-FIXES: auto f(NotDependent::R)
+  // CHECK-FIXES: auto f(NotDependent::S)
   -> typename NotDependent::R
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant 'typename' [readability-redundant-typename]
   // CHECK-FIXES: -> NotDependent::R
@@ -142,7 +143,9 @@ typename T::R f();
 // CHECK-FIXES-20: T::R f();
 
 template <typename T>
-void n(typename T::R);
+void n(typename T::R *) {}
+
+template void n<NotDependent>(int *);
 
 namespace ns {
 

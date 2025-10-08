@@ -7001,20 +7001,6 @@ extern const internal::VariadicDynCastAllOfMatcher<
     TypeLoc, TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
 
-/// Matches `TypedefTypeLoc`s.
-///
-/// Given
-/// \code
-///   using t1 = int;
-///   template <typename T> struct S { using t2 = int; };
-///   t1 var1;
-///   const S<char>::t2* var2;
-/// \endcode
-/// typedefTypeLoc()
-///   matches `t1` (in the declaration of var1) and `S<char>::t2`.
-extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc>
-    typedefTypeLoc;
-
 /// Matches template specialization `TypeLoc`s, class template specializations,
 /// variable template specializations, and function template specializations
 /// that have at least one `TemplateArgumentLoc` matching the given

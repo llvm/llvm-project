@@ -810,8 +810,6 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, TypedefTypeLoc>
-    typedefTypeLoc;
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;

@@ -20,7 +20,9 @@ using namespace clang::ast_matchers::internal;
 namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(typedefTypeLoc().bind("typedefTypeLoc"), this);
+  Finder->addMatcher(typeLoc(unless(hasAncestor(decl(isInstantiated()))))
+                         .bind("nonDependentTypeLoc"),
+                     this);
 
   if (!getLangOpts().CPlusPlus20)
     return;
@@ -38,25 +40,32 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
           // Match return types.
           functionDecl(unless(cxxConversionDecl()))))),
       hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));
-  Finder->addMatcher(typeLoc(InImplicitTypenameContext).bind("typeloc"), this);
+  Finder->addMatcher(
+      typeLoc(InImplicitTypenameContext).bind("dependentTypeLoc"), this);
 }
 
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation ElaboratedKeywordLoc = [&] {
-    if (const auto *TTL =
-            Result.Nodes.getNodeAs<TypedefTypeLoc>("typedefTypeLoc"))
-      return TTL->getElaboratedKeywordLoc();
+    if (const auto *NonDependentTypeLoc =
+            Result.Nodes.getNodeAs<TypeLoc>("nonDependentTypeLoc")) {
+      if (const auto TTL = NonDependentTypeLoc->getAs<TypedefTypeLoc>())
+        return TTL.getElaboratedKeywordLoc();
 
-    TypeLoc InnermostTypeLoc = *Result.Nodes.getNodeAs<TypeLoc>("typeloc");
-    while (const TypeLoc Next = InnermostTypeLoc.getNextTypeLoc())
-      InnermostTypeLoc = Next;
+      if (const auto TTL = NonDependentTypeLoc->getAs<TagTypeLoc>())
+        return TTL.getElaboratedKeywordLoc();
+    } else {
+      TypeLoc InnermostTypeLoc =
+          *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
+      while (const TypeLoc Next = InnermostTypeLoc.getNextTypeLoc())
+        InnermostTypeLoc = Next;
 
-    if (const auto DNTL = InnermostTypeLoc.getAs<DependentNameTypeLoc>())
-      return DNTL.getElaboratedKeywordLoc();
+      if (const auto DNTL = InnermostTypeLoc.getAs<DependentNameTypeLoc>())
+        return DNTL.getElaboratedKeywordLoc();
 
-    if (const auto TSTL =
-            InnermostTypeLoc.getAs<TemplateSpecializationTypeLoc>())
-      return TSTL.getElaboratedKeywordLoc();
+      if (const auto TSTL =
+              InnermostTypeLoc.getAs<TemplateSpecializationTypeLoc>())
+        return TSTL.getElaboratedKeywordLoc();
+    }
 
     return SourceLocation();
   }();
