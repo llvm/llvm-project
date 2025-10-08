@@ -398,12 +398,18 @@ namespace call_with_cf_constant {
   void baz(const NSDictionary *);
   void boo(NSNumber *);
   void boo(CFTypeRef);
-  void foo() {
+
+  struct Details {
+    int value;
+  };
+
+  void foo(Details* details) {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
     boo(@YES);
     boo(@NO);
+    boo(@(details->value));
   }
 }
 
@@ -582,6 +588,7 @@ struct Derived : Base {
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), OSObjectPtr { provide_dispatch() }.get()];
   [self doWork:__null];
   [self doWork:nil];
+  [NSApp run];
 }
 
 - (SomeObj *)getSomeObj {

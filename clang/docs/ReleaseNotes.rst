@@ -69,8 +69,6 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
-- Clang warning suppressions file, ``--warning-suppression-mappings=``, now will
-  use the last matching entry instead of the longest one.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -127,6 +125,8 @@ AST Dumping Potentially Breaking Changes
 
 - Pretty-printing of templates with inherited (i.e. specified in a previous
   redeclaration) default arguments has been fixed.
+
+- Default arguments of template template parameters are pretty-printed now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
