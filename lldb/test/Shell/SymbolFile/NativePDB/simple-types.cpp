@@ -71,6 +71,9 @@ int main() {
 // CHECK-DAG: Type{{.*}} , name = "char8_t", size = 1, compiler_type = 0x{{[0-9a-f]+}} char8_t
 
 // CHECK-DAG: Type{{.*}} , size = 2, compiler_type = 0x{{[0-9a-f]+}} short
+// CHECK-DAG: Type{{.*}} , name = "const volatile ", size = 2, compiler_type = 0x{{[0-9a-f]+}} const volatile short
+// CHECK-DAG: Type{{.*}} , name = "const ", size = 2, compiler_type = 0x{{[0-9a-f]+}} const short
+// CHECK-DAG: Type{{.*}} , name = "volatile ", size = 2, compiler_type = 0x{{[0-9a-f]+}} volatile short
 
 // CHECK-DAG: Type{{.*}} , name = "unsigned short", size = 2, compiler_type = 0x{{[0-9a-f]+}} unsigned short
 // CHECK-DAG: Type{{.*}} , name = "wchar_t", size = 2, compiler_type = 0x{{[0-9a-f]+}} wchar_t
@@ -86,7 +89,7 @@ int main() {
 // CHECK-DAG: Type{{.*}} , name = "uint64_t", size = 8, compiler_type = 0x{{[0-9a-f]+}} unsigned long long
 
 // CHECK-DAG: Type{{.*}} , name = "float", size = 4, compiler_type = 0x{{[0-9a-f]+}} float
-// CHECK-DAG: Type{{.*}} , name = "float", size = 4, compiler_type = 0x{{[0-9a-f]+}} const float
+// CHECK-DAG: Type{{.*}} , name = "const float", size = 4, compiler_type = 0x{{[0-9a-f]+}} const float
 // CHECK-DAG: Type{{.*}} , name = "double", size = 8, compiler_type = 0x{{[0-9a-f]+}} double
 
 // CHECK-DAG:  Type{{.*}} , name = "ReturnedStruct1", size = 1, decl = simple-types.cpp:20, compiler_type = 0x{{[0-9a-f]+}} struct ReturnedStruct1 {
@@ -98,17 +101,13 @@ int main() {
 // CHECK-DAG:  Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} volatile struct MyStruct *const
 // CHECK-DAG:  Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} struct MyStruct &
 
-// CHECK-DAG: Type{{.*}} , name = "bool", size = 1, compiler_type = 0x{{[0-9a-f]+}} const _Bool
+// CHECK-DAG: Type{{.*}} , name = "const bool", size = 1, compiler_type = 0x{{[0-9a-f]+}} const _Bool
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} _Bool &
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} _Bool *
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} _Bool *&
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} const _Bool &
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} _Bool *const
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} const _Bool *const
-
-// CHECK-DAG: Type{{.*}} , size = 2, compiler_type = 0x{{[0-9a-f]+}} const volatile short
-// CHECK-DAG: Type{{.*}} , size = 2, compiler_type = 0x{{[0-9a-f]+}} const short
-// CHECK-DAG: Type{{.*}} , size = 2, compiler_type = 0x{{[0-9a-f]+}} volatile short
 
 // CHECK-DAG: Type{{.*}} , name = "SomeTypedef", size = 4, compiler_type = 0x{{[0-9a-f]+}} typedef SomeTypedef
 // CHECK-DAG: Type{{.*}} , name = "Func", size = 0, compiler_type = 0x{{[0-9a-f]+}} typedef Func
