@@ -1,56 +1,38 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.5-vulkan-library %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-library %s -o - -filetype=obj | spirv-val %}
-
-; This test depends on llvm.svp.resource.nonuniformindex support (not yet implemented)
-; https://github.com/llvm/llvm-project/issues/160231
-; XFAIL: *
-
-@.str.b0 = private unnamed_addr constant [3 x i8] c"B0\00", align 1
+; RUN: llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s --match-full-lines
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability Shader
 ; CHECK-DAG: OpCapability ShaderNonUniformEXT
-; CHECK-DAG: OpCapability StorageImageArrayNonUniformIndexing
-; CHECK-DAG: OpCapability Image1D
-; CHECK-NOT: OpCapability
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate %[[#access1:]] NonUniformEXT
+@StructuredOut.str = private unnamed_addr constant [14 x i8] c"StructuredOut\00", align 1
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate {{%[0-9]+}} NonUniformEXT
+; CHECK-DAG: OpDecorate %[[#access2:]] NonUniformEXT
+; CHECK-DAG: OpDecorate %[[#load:]] NonUniformEXT
+@UnStructuredOut.str = private unnamed_addr constant [16 x i8] c"UnStructuredOut\00", align 1
 
-; CHECK-DAG: OpDecorate [[Var:%[0-9]+]] DescriptorSet 3
-; CHECK-DAG: OpDecorate [[Var]] Binding 4
-; CHECK: OpDecorate [[Zero:%[0-9]+]] NonUniform
-; CHECK: OpDecorate [[ac0:%[0-9]+]] NonUniform
-; CHECK: OpDecorate [[ld0:%[0-9]+]] NonUniform
-; CHECK: OpDecorate [[One:%[0-9]+]] NonUniform
-; CHECK: OpDecorate [[ac1:%[0-9]+]] NonUniform
-; CHECK: OpDecorate [[ld1:%[0-9]+]] NonUniform
-
-; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[BufferType:%[0-9]+]] = OpTypeImage [[int]] 1D 2 0 0 2 R32i {{$}}
-; CHECK-DAG: [[BufferPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferType]]
-; CHECK-DAG: [[ArraySize:%[0-9]+]] = OpConstant [[int]] 3
-; CHECK-DAG: [[One]] = OpConstant [[int]] 1
-; CHECK-DAG: [[Zero]] = OpConstant [[int]] 0{{$}}
-; CHECK-DAG: [[BufferArrayType:%[0-9]+]] = OpTypeArray [[BufferType]] [[ArraySize]]
-; CHECK-DAG: [[ArrayPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferArrayType]]
-; CHECK-DAG: [[Var]] = OpVariable [[ArrayPtrType]] UniformConstant
-
-; CHECK: {{%[0-9]+}} = OpFunction {{%[0-9]+}} DontInline {{%[0-9]+}}
-; CHECK-NEXT: OpLabel
-define void @main() #0 {
-; CHECK: [[ac0]] = OpAccessChain [[BufferPtrType]] [[Var]] [[Zero]]
-; CHECK: [[ld0]] = OpLoad [[BufferType]] [[ac0]]
-  %buffer0 = call target("spirv.Image", i32, 0, 2, 0, 0, 2, 24)
-      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_2_24(
-          i32 3, i32 4, i32 3, i32 0, ptr nonnull @.str.b0)
-  %ptr0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 0, 2, 0, 0, 2, 24) %buffer0, i32 0)
-  store i32 0, ptr %ptr0, align 4
-
-; CHECK: [[ac1:%[0-9]+]] = OpAccessChain [[BufferPtrType]] [[Var]] [[One]]
-; CHECK: [[ld1]] = OpLoad [[BufferType]] [[ac1]]
-  %buffer1 = call target("spirv.Image", i32, 0, 2, 0, 0, 2, 24)
-      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_2_24(
-          i32 3, i32 4, i32 3, i32 1, ptr nonnull @.str.b0)
-  %ptr1 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 0, 2, 0, 0, 2, 24) %buffer1, i32 0)
-  store i32 0, ptr %ptr1, align 4
+define void @main() local_unnamed_addr #0 {
+entry:
+  %0 = tail call i32 @llvm.spv.thread.id.in.group.i32(i32 0)
+  %add.i = add i32 %0, 1
+  %1 = tail call noundef i32 @llvm.spv.resource.nonuniformindex(i32 %add.i)
+  %2 = tail call target("spirv.VulkanBuffer", [0 x <4 x i32>], 12, 1) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_a0v4i32_12_1t(i32 0, i32 0, i32 64, i32 %1, ptr nonnull @StructuredOut.str)
+  %3 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v4i32_12_1t(target("spirv.VulkanBuffer", [0 x <4 x i32>], 12, 1) %2, i32 98)
+  %4 = load <4 x i32>, ptr addrspace(11) %3, align 16
+  %vecins.i = insertelement <4 x i32> %4, i32 99, i64 0
+; CHECK: OpStore %[[#access1]] {{%[0-9]+}} Aligned 16
+  store <4 x i32> %vecins.i, ptr addrspace(11) %3, align 16
+  %5 = tail call noundef i32 @llvm.spv.resource.nonuniformindex(i32 %0)
+  %6 = tail call target("spirv.Image", i32, 5, 2, 0, 0, 2, 33) @llvm.spv.resource.handlefromimplicitbinding.tspirv.Image_i32_5_2_0_0_2_33t(i32 1, i32 0, i32 64, i32 %5, ptr nonnull @UnStructuredOut.str)
+  %7 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_33t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 33) %6, i32 96)
+; CHECK: %[[#access2:]] = OpAccessChain {{.*}}
+; CHECK: %[[#load]] = OpLoad {{.*}}
+; CHECK: OpImageWrite %[[#load]] {{%[0-9]+}} {{%[0-9]+}}
+  store i32 95, ptr addrspace(11) %7, align 4
   ret void
 }
-
-attributes #0 = { convergent noinline norecurse "frame-pointer"="all" "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
