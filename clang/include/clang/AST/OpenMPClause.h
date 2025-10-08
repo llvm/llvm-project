@@ -2332,10 +2332,16 @@ public:
   /// Returns condition.
   Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
 
-  child_range children() { return child_range(&Condition, &Condition + 1); }
+  child_range children() {
+    if (Condition)
+      return child_range(&Condition, &Condition + 1);
+    return child_range(child_iterator(), child_iterator());
+  }
 
   const_child_range children() const {
-    return const_child_range(&Condition, &Condition + 1);
+    if (Condition)
+      return const_child_range(&Condition, &Condition + 1);
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
   child_range used_children();

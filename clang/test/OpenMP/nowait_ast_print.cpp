@@ -19,7 +19,6 @@ void nowait() {
 
   // DUMP: OMPTargetDirective
   // DUMP-NEXT: OMPNowaitClause
-  // DUMP-NEXT: <<<NULL>>>
   // PRINT: #pragma omp target nowait
   #pragma omp target nowait
   {
