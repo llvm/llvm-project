@@ -22,33 +22,31 @@ namespace {
 
 class SpecialCaseListTest : public ::testing::Test {
 protected:
-  std::unique_ptr<SpecialCaseList> makeSpecialCaseList(StringRef List,
-                                                       std::string &Error,
-                                                       bool UseGlobs = true) {
+  std::unique_ptr<SpecialCaseList>
+  makeSpecialCaseList(StringRef List, std::string &Error, int Version = 0) {
     auto S = List.str();
-    if (!UseGlobs)
-      S = (Twine("#!special-case-list-v1\n") + S).str();
+    if (Version)
+      S = (Twine("#!special-case-list-v") + Twine(Version) + "\n" + S).str();
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(S);
     return SpecialCaseList::create(MB.get(), Error);
   }
 
   std::unique_ptr<SpecialCaseList> makeSpecialCaseList(StringRef List,
-                                                       bool UseGlobs = true) {
+                                                       int Version = 0) {
     std::string Error;
-    auto SCL = makeSpecialCaseList(List, Error, UseGlobs);
+    auto SCL = makeSpecialCaseList(List, Error, Version);
     assert(SCL);
     assert(Error == "");
     return SCL;
   }
 
-  std::string makeSpecialCaseListFile(StringRef Contents,
-                                      bool UseGlobs = true) {
+  std::string makeSpecialCaseListFile(StringRef Contents, int Version = 0) {
     int FD;
     SmallString<64> Path;
     sys::fs::createTemporaryFile("SpecialCaseListTest", "temp", FD, Path);
     raw_fd_ostream OF(FD, true, true);
-    if (!UseGlobs)
-      OF << "#!special-case-list-v1\n";
+    if (Version)
+      OF << "#!special-case-list-v" << Version << "\n";
     OF << Contents;
     OF.close();
     return std::string(Path.str());
@@ -261,7 +259,7 @@ TEST_F(SpecialCaseListTest, Version1) {
                           "fun:foo.*\n"
                           "fun:abc|def\n"
                           "fun:b.r\n",
-                          /*UseGlobs=*/false);
+                          /*Version=*/1);
 
   EXPECT_TRUE(SCL->inSection("sect1", "fun", "fooz"));
   EXPECT_TRUE(SCL->inSection("sect2", "fun", "fooz"));
@@ -281,6 +279,47 @@ TEST_F(SpecialCaseListTest, Version1) {
   EXPECT_TRUE(SCL->inSection("sect1", "fun", "bar"));
   EXPECT_TRUE(SCL->inSection("sect2", "fun", "bar"));
   EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, DotSlash) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
+                                                             "fun:./foo\n"
+                                                             "src:./bar\n"
+                                                             "[sect2]\n"
+                                                             "fun:foo\n"
+                                                             "src:bar\n");
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "./foo"));
+  EXPECT_FALSE(SCL->inSection("sect1", "fun", "foo"));
+
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "./bar"));
+  EXPECT_FALSE(SCL->inSection("sect1", "src", "bar"));
+
+  EXPECT_FALSE(SCL->inSection("sect2", "fun", "./foo"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "foo"));
+
+  EXPECT_FALSE(SCL->inSection("sect2", "src", "./bar"));
+  EXPECT_TRUE(SCL->inSection("sect2", "src", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, DotSlashV3) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
+                                                             "fun:./foo\n"
+                                                             "src:./bar\n"
+                                                             "[sect2]\n"
+                                                             "fun:foo\n"
+                                                             "src:bar\n",
+                                                             /*Version=*/3);
+  EXPECT_TRUE(SCL->inSection("sect1", "fun", "./foo"));
+  EXPECT_FALSE(SCL->inSection("sect1", "fun", "foo"));
+
+  EXPECT_FALSE(SCL->inSection("sect1", "src", "./bar"));
+  EXPECT_FALSE(SCL->inSection("sect1", "src", "bar"));
+
+  EXPECT_FALSE(SCL->inSection("sect2", "fun", "./foo"));
+  EXPECT_TRUE(SCL->inSection("sect2", "fun", "foo"));
+
+  EXPECT_TRUE(SCL->inSection("sect2", "src", "./bar"));
+  EXPECT_TRUE(SCL->inSection("sect2", "src", "bar"));
 }
 
 TEST_F(SpecialCaseListTest, Version2) {
