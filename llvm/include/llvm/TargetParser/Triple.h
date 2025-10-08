@@ -200,7 +200,6 @@ public:
     SUSE,
     OpenEmbedded,
     Intel,
-    WALI,
     Meta,
     LastVendorType = Meta
   };
@@ -278,6 +277,7 @@ public:
     MuslF32,
     MuslSF,
     MuslX32,
+    MuslWALI,
     LLVM,
 
     MSVC,
@@ -801,8 +801,8 @@ public:
 
   /// Tests whether the target uses WALI Wasm
   bool isWALI() const {
-    return getArch() == Triple::wasm32 && getVendor() == Triple::WALI &&
-           getOS() == Triple::Linux;
+    return getArch() == Triple::wasm32 &&
+           isOSLinux() && getEnvironment() == Triple::MuslWALI;
   }
 
   /// Tests whether the target is the PS4 platform.
@@ -847,6 +847,7 @@ public:
            getEnvironment() == Triple::MuslF32 ||
            getEnvironment() == Triple::MuslSF ||
            getEnvironment() == Triple::MuslX32 ||
+           getEnvironment() == Triple::MuslWALI ||
            getEnvironment() == Triple::OpenHOS || isOSLiteOS();
   }
 

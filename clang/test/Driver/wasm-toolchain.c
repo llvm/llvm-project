@@ -297,9 +297,9 @@
 // LINK_WASIP2_USE_WASMLD: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WASIP2_USE_WASMLD: wasm-ld{{.*}}" "-m" "wasm32" {{.*}} "[[temp]]" {{.*}}
 
-// Basic `wasm32-wali-linux-musl` compile-link test.
+// Basic `wasm32-linux-muslwali` compile-link test.
 
-// RUN: %clang -### --target=wasm32-wali-linux-musl --sysroot=/foo %s 2>&1 \
+// RUN: %clang -### --target=wasm32-linux-muslwali --sysroot=/foo %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-musl" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
+// LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"

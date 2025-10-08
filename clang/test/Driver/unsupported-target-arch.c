@@ -77,13 +77,3 @@
 // RUN: not %clang_cl --target=x86-unknown-uefi -o %t.o %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-x86 %s
 // CHECK-x86: error: unknown target triple 'x86-unknown-uefi'{{$}}
-
-// Linux API for wasm must include `wali` vendor and `linux` OS
-//
-// RUN: not %clang -### --target=wasm32-linux-musl -o %t.o %s 2> %t.err \
-// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-WASM-WALI-NO-VENDOR %s
-// CHECK-WASM-WALI-NO-VENDOR: error: unknown target triple 'wasm32-unknown-linux-musl'
-//
-// RUN: not %clang -### --target=wasm32-wali-wasi-musl -o %t.o %s 2> %t.err \
-// RUN: FileCheck --input-file=%t.err -check-prefixes=CHECK-WASM-WALI-NO-LINUX %s
-// CHECK-WASM-WALI-NO-LINUX: error: unknown target triple 'wasm32-wali-wasi-musl'
