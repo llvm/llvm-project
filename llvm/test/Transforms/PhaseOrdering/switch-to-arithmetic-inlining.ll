@@ -436,10 +436,11 @@ bb104:                                            ; preds = %bb102
   br label %bb105
 }
 
+; Make sure the call is inlined.
 define i8 @test2(i8 %x) {
 ; CHECK-LABEL: define range(i8 0, 53) i8 @test2(
 ; CHECK-SAME: i8 [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8 @test(i8 [[X]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call range(i8 0, 53) i8 @llvm.umin.i8(i8 [[X]], i8 52)
 ; CHECK-NEXT:    ret i8 [[CALL]]
 ;
   %call = call i8 @test(i8 %x)

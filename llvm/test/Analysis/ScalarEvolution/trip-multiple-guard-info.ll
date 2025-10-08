@@ -615,22 +615,14 @@ define void @test_ptrs_aligned_by_4_via_assumption(ptr %start, ptr %end) {
 ; CHECK-LABEL: 'test_ptrs_aligned_by_4_via_assumption'
 ; CHECK-NEXT:  Classifying expressions for: @test_ptrs_aligned_by_4_via_assumption
 ; CHECK-NEXT:    %iv = phi ptr [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,4}<%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr i8, ptr %iv, i64 4
-; CHECK-NEXT:    --> {(4 + %start),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(4 + %start),+,4}<%loop> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ptrs_aligned_by_4_via_assumption
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %end to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %start to i64) to i2))) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387903
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %end to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %start to i64) to i2))) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %end to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %start to i64) to i2))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %start, i64 4) ]
@@ -652,22 +644,14 @@ define void @test_ptrs_aligned_by_8_via_assumption(ptr %start, ptr %end) {
 ; CHECK-LABEL: 'test_ptrs_aligned_by_8_via_assumption'
 ; CHECK-NEXT:  Classifying expressions for: @test_ptrs_aligned_by_8_via_assumption
 ; CHECK-NEXT:    %iv = phi ptr [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,4}<%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr i8, ptr %iv, i64 4
-; CHECK-NEXT:    --> {(4 + %start),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(4 + %start),+,4}<%loop> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ptrs_aligned_by_8_via_assumption
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %end to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %start to i64) to i2))) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387903
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %end to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %start to i64) to i2))) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %end to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %start to i64) to i2))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %start, i64 8) ]

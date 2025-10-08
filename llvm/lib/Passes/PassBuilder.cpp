@@ -1111,6 +1111,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.forwardSwitchCondToPhi(Enable);
     } else if (ParamName == "switch-range-to-icmp") {
       Result.convertSwitchRangeToICmp(Enable);
+    } else if (ParamName == "switch-to-arithmetic") {
+      Result.convertSwitchToArithmetic(Enable);
     } else if (ParamName == "switch-to-lookup") {
       Result.convertSwitchToLookupTable(Enable);
     } else if (ParamName == "keep-loops") {
