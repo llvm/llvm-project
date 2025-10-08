@@ -195,6 +195,30 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
   }
 }
 
+static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
+                                             AnnotationKind Kind) {
+  assert(Kind != llvm::memprof::AnnotationKind::AnnotationOK &&
+         "Should not handle AnnotationOK here");
+  SmallString<32> Reason;
+  switch (Kind) {
+  case llvm::memprof::AnnotationKind::ExplicitSection:
+    ++NumOfMemProfExplicitSectionGlobalVars;
+    Reason.append("explicit section name");
+    break;
+  case llvm::memprof::AnnotationKind::DeclForLinker:
+    Reason.append("linker declaration");
+    break;
+  case llvm::memprof::AnnotationKind::ReservedName:
+    Reason.append("name starts with `llvm.`");
+    break;
+  default:
+    llvm_unreachable("Unexpected annotation kind");
+  }
+  LLVM_DEBUG(dbgs() << "Skip annotation for " << GVar.getName() << " due to "
+                    << Reason << ".\n");
+  return;
+}
+
 struct AllocMatchInfo {
   uint64_t TotalSize = 0;
   AllocationType AllocType = AllocationType::None;
@@ -805,12 +829,8 @@ bool MemProfUsePass::annotateGlobalVariables(
     switch (Kind) {
     case llvm::memprof::AnnotationKind::AnnotationOK:
       break;
-    case llvm::memprof::AnnotationKind::ExplicitSection:
-      ++NumOfMemProfExplicitSectionGlobalVars;
-      LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
-                        << " has explicit section name. Skip annotating.\n");
-      [[fallthrough]];
     default:
+      HandleUnsupportedAnnotationKinds(GVar, Kind);
       continue;
     }
 
