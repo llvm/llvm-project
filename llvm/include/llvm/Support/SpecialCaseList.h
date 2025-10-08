@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -120,20 +121,33 @@ protected:
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
 private:
-  /// Represents a set of globs and their line numbers
-  class Matcher {
+  // Lagacy v1 matcher.
+  class RegexMatcher {
   public:
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
-                          bool UseRegex);
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
     LLVM_ABI void
     match(StringRef Query,
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
-    LLVM_ABI bool matchAny(StringRef Query) const {
-      bool R = false;
-      match(Query, [&](StringRef, unsigned) { R = true; });
-      return R;
-    }
+    struct Reg {
+      Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
+          : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
+      std::string Name;
+      unsigned LineNo;
+      Regex Rg;
+      Reg(Reg &&) = delete;
+      Reg() = default;
+    };
+
+    std::vector<std::unique_ptr<Reg>> RegExes;
+  };
+
+  class GlobMatcher {
+  public:
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
     struct Glob {
       Glob(StringRef Name, unsigned LineNo) : Name(Name), LineNo(LineNo) {}
@@ -146,27 +160,37 @@ private:
       Glob() = default;
     };
 
-    struct Reg {
-      Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
-          : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
-      std::string Name;
-      unsigned LineNo;
-      Regex Rg;
-      Reg(Reg &&) = delete;
-      Reg() = default;
-    };
+    std::vector<std::unique_ptr<Glob>> Globs;
+  };
 
-    std::vector<std::unique_ptr<Matcher::Glob>> Globs;
-    std::vector<std::unique_ptr<Reg>> RegExes;
-    bool RemoveDotSlash = false;
+  /// Represents a set of patterns and their line numbers
+  class Matcher {
+  public:
+    LLVM_ABI Matcher(bool UseGlobs, bool RemoveDotSlash);
+
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
+
+    LLVM_ABI bool matchAny(StringRef Query) const {
+      bool R = false;
+      match(Query, [&](StringRef, unsigned) { R = true; });
+      return R;
+    }
+
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+
+    std::variant<RegexMatcher, GlobMatcher> M;
+    bool RemoveDotSlash;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
 protected:
   struct Section {
-    Section(StringRef Str, unsigned FileIdx)
-        : SectionStr(Str), FileIdx(FileIdx) {};
+    Section(StringRef Str, unsigned FileIdx, bool UseGlobs)
+        : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false), SectionStr(Str),
+          FileIdx(FileIdx) {}
 
     Section(Section &&) = default;
 
@@ -197,7 +221,7 @@ private:
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
                                           unsigned FileIdx, unsigned LineNo,
-                                          bool UseGlobs = true);
+                                          bool UseGlobs);
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,

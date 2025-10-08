@@ -30,44 +30,70 @@
 
 namespace llvm {
 
-Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
-                                       bool UseGlobs) {
+Error SpecialCaseList::RegexMatcher::insert(StringRef Pattern,
+                                            unsigned LineNumber) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument,
-                             Twine("Supplied ") +
-                                 (UseGlobs ? "glob" : "regex") + " was blank");
+                             "Supplied regex was blank");
 
-  if (!UseGlobs) {
-    // Replace * with .*
-    auto Regexp = Pattern.str();
-    for (size_t pos = 0; (pos = Regexp.find('*', pos)) != std::string::npos;
-         pos += strlen(".*")) {
-      Regexp.replace(pos, strlen("*"), ".*");
-    }
-
-    Regexp = (Twine("^(") + StringRef(Regexp) + ")$").str();
-
-    // Check that the regexp is valid.
-    Regex CheckRE(Regexp);
-    std::string REError;
-    if (!CheckRE.isValid(REError))
-      return createStringError(errc::invalid_argument, REError);
-
-    auto Rg =
-        std::make_unique<Matcher::Reg>(Pattern, LineNumber, std::move(CheckRE));
-    RegExes.emplace_back(std::move(Rg));
-
-    return Error::success();
+  // Replace * with .*
+  auto Regexp = Pattern.str();
+  for (size_t pos = 0; (pos = Regexp.find('*', pos)) != std::string::npos;
+       pos += strlen(".*")) {
+    Regexp.replace(pos, strlen("*"), ".*");
   }
 
-  auto Glob = std::make_unique<Matcher::Glob>(Pattern, LineNumber);
+  Regexp = (Twine("^(") + StringRef(Regexp) + ")$").str();
+
+  // Check that the regexp is valid.
+  Regex CheckRE(Regexp);
+  std::string REError;
+  if (!CheckRE.isValid(REError))
+    return createStringError(errc::invalid_argument, REError);
+
+  auto Rg = std::make_unique<Reg>(Pattern, LineNumber, std::move(CheckRE));
+  RegExes.emplace_back(std::move(Rg));
+
+  return Error::success();
+}
+
+void SpecialCaseList::RegexMatcher::match(
+    StringRef Query,
+    llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
+  for (const auto &Regex : reverse(RegExes))
+    if (Regex->Rg.match(Query))
+      Cb(Regex->Name, Regex->LineNo);
+}
+
+Error SpecialCaseList::GlobMatcher::insert(StringRef Pattern,
+                                           unsigned LineNumber) {
+  if (Pattern.empty())
+    return createStringError(errc::invalid_argument, "Supplied glob was blank");
+
+  auto G = std::make_unique<Glob>(Pattern, LineNumber);
   // We must be sure to use the string in `Glob` rather than the provided
   // reference which could be destroyed before match() is called
-  if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
-                     .moveInto(Glob->Pattern))
+  if (auto Err = GlobPattern::create(G->Name, /*MaxSubPatterns=*/1024)
+                     .moveInto(G->Pattern))
     return Err;
-  Globs.push_back(std::move(Glob));
+  Globs.emplace_back(std::move(G));
   return Error::success();
+}
+
+void SpecialCaseList::GlobMatcher::match(
+    StringRef Query,
+    llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
+  for (const auto &Glob : reverse(Globs))
+    if (Glob->Pattern.match(Query))
+      Cb(Glob->Name, Glob->LineNo);
+}
+
+SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
+    : RemoveDotSlash(RemoveDotSlash) {
+  if (UseGlobs)
+    M.emplace<GlobMatcher>();
+  else
+    M.emplace<RegexMatcher>();
 }
 
 void SpecialCaseList::Matcher::match(
@@ -75,12 +101,11 @@ void SpecialCaseList::Matcher::match(
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
   if (RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
-  for (const auto &Glob : reverse(Globs))
-    if (Glob->Pattern.match(Query))
-      Cb(Glob->Name, Glob->LineNo);
-  for (const auto &Regex : reverse(RegExes))
-    if (Regex->Rg.match(Query))
-      Cb(Regex->Name, Regex->LineNo);
+  return std::visit([&](auto &V) { return V.match(Query, Cb); }, M);
+}
+
+Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber) {
+  return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
 // TODO: Refactor this to return Expected<...>
@@ -139,10 +164,10 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
                             unsigned LineNo, bool UseGlobs) {
-  Sections.emplace_back(SectionStr, FileNo);
+  Sections.emplace_back(SectionStr, FileNo, UseGlobs);
   auto &Section = Sections.back();
 
-  if (auto Err = Section.SectionMatcher.insert(SectionStr, LineNo, UseGlobs)) {
+  if (auto Err = Section.SectionMatcher.insert(SectionStr, LineNo)) {
     return createStringError(errc::invalid_argument,
                              "malformed section at line " + Twine(LineNo) +
                                  ": '" + SectionStr +
@@ -170,7 +195,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   bool RemoveDotSlash = Version > 2;
 
   Section *CurrentSection;
-  if (auto Err = addSection("*", FileIdx, 1).moveInto(CurrentSection)) {
+  if (auto Err = addSection("*", FileIdx, 1, true).moveInto(CurrentSection)) {
     Error = toString(std::move(Err));
     return false;
   }
@@ -213,10 +238,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     }
 
     auto [Pattern, Category] = Postfix.split("=");
-    auto &Entry = CurrentSection->Entries[Prefix][Category];
-    Entry.RemoveDotSlash =
-        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix);
-    if (auto Err = Entry.insert(Pattern, LineNo, UseGlobs)) {
+    auto [It, _] = CurrentSection->Entries[Prefix].try_emplace(
+        Category, UseGlobs,
+        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
+    if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
           (Twine("malformed ") + (UseGlobs ? "glob" : "regex") + " in line " +
            Twine(LineNo) + ": '" + Pattern + "': " + toString(std::move(Err)))
