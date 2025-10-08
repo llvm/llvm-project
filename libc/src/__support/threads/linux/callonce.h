@@ -28,8 +28,8 @@ LIBC_INLINE bool callonce_fastpath(CallOnceFlag *flag) {
 }
 
 template <class CallOnceCallback>
-[[gnu::noinline]] int callonce_slowpath(CallOnceFlag *flag,
-                                        CallOnceCallback callback) {
+[[gnu::noinline, gnu::cold]] int callonce_slowpath(CallOnceFlag *flag,
+                                                   CallOnceCallback callback) {
 
   auto *futex_word = reinterpret_cast<Futex *>(flag);
 

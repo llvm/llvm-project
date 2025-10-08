@@ -23,14 +23,6 @@
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
-
-// Common definitions
-namespace callonce_impl {
-template <class CallOnceCallback>
-[[gnu::noinline]] int callonce_slowpath(CallOnceFlag *flag,
-                                        CallOnceCallback callback);
-} // namespace callonce_impl
-
 template <class CallOnceCallback>
 LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback callback) {
   if (LIBC_LIKELY(callonce_impl::callonce_fastpath(flag)))
