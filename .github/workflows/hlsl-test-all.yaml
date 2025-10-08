@@ -80,7 +80,7 @@ jobs:
             ninja check-hlsl-unit
             ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/macos@170bf24d20d201b842d7a52403b73ed297e6645b # v2
+        uses: EnricoMi/publish-unit-test-result-action/macos@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6 # v2.20.0
         if: always() && runner.os == 'macOS'
         with:
           comment_mode: off

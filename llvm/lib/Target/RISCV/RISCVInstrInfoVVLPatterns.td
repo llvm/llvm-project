@@ -2322,8 +2322,6 @@ defm : VPatFPMulAddVL_VV_VF_RM<any_riscv_vfnmsub_vl, "PseudoVFNMSUB">;
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACC">;
-defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
-                                    AllWidenableBFloatToFloatVectors>;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmadd_vl, "PseudoVFWNMACC">;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmsub_vl, "PseudoVFWMSAC">;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmsub_vl, "PseudoVFWNMSAC">;
@@ -2425,10 +2423,10 @@ foreach vti = AllFloatVectors in {
   }
 }
 
-foreach fvti = AllFloatVectors in {
-  // Floating-point vselects:
-  // 11.15. Vector Integer Merge Instructions
-  // 13.15. Vector Floating-Point Merge Instruction
+// Floating-point vselects:
+// 11.15. Vector Integer Merge Instructions
+// 13.15. Vector Floating-Point Merge Instruction
+foreach fvti = AllFloatAndBF16Vectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
   def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
@@ -2439,7 +2437,12 @@ foreach fvti = AllFloatVectors in {
             (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
                  fvti.RegClass:$passthru, fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask VMV0:$vm),
                  GPR:$vl, fvti.Log2SEW)>;
+  }
+}
 
+foreach fvti = AllFloatVectors in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
   def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
                                           (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
                                           fvti.RegClass:$rs2,
@@ -2459,9 +2462,7 @@ foreach fvti = AllFloatVectors in {
                  fvti.RegClass:$passthru, fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm),
                  GPR:$vl, fvti.Log2SEW)>;
   }
-}
 
-foreach fvti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
                                             (SplatFPOp fvti.ScalarRegClass:$rs1),
@@ -2541,20 +2542,6 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                 GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
-foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
-  defvar fvti = fvtiToFWti.Vti;
-  defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16Minimal] in
-  def : Pat<(fwti.Vector (any_riscv_fpextend_vl
-                             (fvti.Vector fvti.RegClass:$rs1),
-                             (fvti.Mask VMV0:$vm),
-                             VLOpFrag)),
-            (!cast<Instruction>("PseudoVFWCVTBF16_F_F_V_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
-                (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
-                (fvti.Mask VMV0:$vm),
-                GPR:$vl, fvti.Log2SEW, TA_MA)>;
-}
-
 // 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
 defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
 defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_x_f_vl, "PseudoVFNCVT_X_F_W">;
@@ -2594,22 +2581,6 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
-}
-
-foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
-  defvar fvti = fvtiToFWti.Vti;
-  defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16Minimal] in
-    def : Pat<(fvti.Vector (any_riscv_fpround_vl
-                               (fwti.Vector fwti.RegClass:$rs1),
-                               (fwti.Mask VMV0:$vm), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
-                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
-                  (fwti.Mask VMV0:$vm),
-                  // Value to indicate no rounding mode change in
-                  // RISCVInsertReadWriteCSR
-                  FRM_DYN,
-                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
 // 14. Vector Reduction Operations
@@ -2799,7 +2770,7 @@ foreach vti = NoGroupFloatVectors in {
   }
 }
 
-foreach vti = AllFloatVectors in {
+foreach vti = AllFloatAndBF16Vectors in {
   defvar ivti = GetIntVTypeInfo<vti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(vti.Vector

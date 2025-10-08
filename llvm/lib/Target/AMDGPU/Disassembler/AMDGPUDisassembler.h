@@ -41,6 +41,7 @@ private:
   std::unique_ptr<MCInstrInfo const> const MCII;
   const MCRegisterInfo &MRI;
   const MCAsmInfo &MAI;
+  const unsigned HwModeRegClass;
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
@@ -142,12 +143,15 @@ public:
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
-  MCOperand decodeLiteralConstant(bool ExtendFP64) const;
-  MCOperand decodeLiteral64Constant() const;
+  MCOperand decodeLiteralConstant(const MCInstrDesc &Desc,
+                                  const MCOperandInfo &OpDesc,
+                                  bool ExtendFP64) const;
+  MCOperand decodeLiteral64Constant(const MCInst &Inst) const;
 
-  MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
+  MCOperand decodeSrcOp(const MCInst &Inst, unsigned Width, unsigned Val) const;
 
-  MCOperand decodeNonVGPRSrcOp(unsigned Width, unsigned Val) const;
+  MCOperand decodeNonVGPRSrcOp(const MCInst &Inst, unsigned Width,
+                               unsigned Val) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
@@ -159,8 +163,8 @@ public:
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
 
-  MCOperand decodeBoolReg(unsigned Val) const;
-  MCOperand decodeSplitBarrier(unsigned Val) const;
+  MCOperand decodeBoolReg(const MCInst &Inst, unsigned Val) const;
+  MCOperand decodeSplitBarrier(const MCInst &Inst, unsigned Val) const;
   MCOperand decodeDpp8FI(unsigned Val) const;
 
   MCOperand decodeVersionImm(unsigned Imm) const;

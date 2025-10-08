@@ -282,8 +282,7 @@ def Tosa_Shape : Tosa_Type<"shape", "shape"> {
      !tosa.shape<0>
     ```
   }];
-  let parameters = (ins "int" : $rank);
-  let builders = [TypeBuilder<(ins "int" : $rank)>];
+  let parameters = (ins "int":$rank);
   let assemblyFormat = "`<` $rank `>`";
 
   let genVerifyDecl = 1;

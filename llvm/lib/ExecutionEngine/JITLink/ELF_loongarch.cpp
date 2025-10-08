@@ -365,6 +365,10 @@ private:
     uint32_t Type = Rel.getType(false);
     int64_t Addend = Rel.r_addend;
 
+    // ignore
+    if (Type == ELF::R_LARCH_MARK_LA)
+      return Error::success();
+
     if (Type == ELF::R_LARCH_RELAX) {
       if (BlockToFix.edges_empty())
         return make_error<StringError>(

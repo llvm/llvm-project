@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn -passes="expand-fp<opt-level=0>" %s -S -o - | FileCheck --check-prefixes CHECK %s
-; RUN: opt -mtriple=amdgcn -passes="expand-fp<opt-level=1>" %s -S -o - | FileCheck --check-prefixes CHECK,OPT1 %s
+; RUN: opt -mtriple=amdgcn -passes="expand-fp<O0>" %s -S -o - | FileCheck --check-prefixes CHECK %s
+; RUN: opt -mtriple=amdgcn -passes="expand-fp<O1>" %s -S -o - | FileCheck --check-prefixes CHECK,OPT1 %s
 
 ; Check the handling of potentially infinite numerators in the frem
 ; expansion at different optimization levels and with different
