@@ -440,7 +440,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
       continue;
 
     if (!isValidRuntimeRelocation(rel.getType()))
-      error("invalid runtime relocation type in data section: " +
+      fatal("invalid runtime relocation type in data section: " +
             relocTypetoString(rel.Type));
 
     uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
