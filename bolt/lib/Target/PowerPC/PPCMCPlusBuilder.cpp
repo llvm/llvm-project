@@ -406,6 +406,24 @@ PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
     return R;
   }
 
+  if (L.find("toc16_lo_ds") != std::string::npos) {
+    // TOC16_LO_DS can be optimized to R_GOTREL if tocOptimize is on
+    R.Type = ELF::R_PPC64_TOC16_LO_DS;
+    return R;
+  }
+  if (L.find("toc16_ds") != std::string::npos) {
+    R.Type = ELF::R_PPC64_TOC16_DS;
+    return R;
+  }
+  if (L.find("addr16_lo_ds") != std::string::npos) {
+    R.Type = ELF::R_PPC64_ADDR16_LO_DS;
+    return R;
+  }
+  if (L.find("addr16_ds") != std::string::npos) {
+    R.Type = ELF::R_PPC64_ADDR16_DS;
+    return R;
+  }
+
   // --- Fallback heuristic: use PCRel + bit-size ---
   if (Fixup.isPCRel()) {
     switch (FKI.TargetSize) {
