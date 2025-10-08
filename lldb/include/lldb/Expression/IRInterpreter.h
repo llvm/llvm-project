@@ -17,8 +17,10 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
+class DataLayout;
 class Function;
 class Module;
+class Instruction;
 }
 
 namespace lldb_private {
@@ -37,7 +39,8 @@ class IRInterpreter {
 public:
   static bool CanInterpret(llvm::Module &module, llvm::Function &function,
                            lldb_private::Status &error,
-                           const bool support_function_calls);
+                           const bool support_function_calls,
+                           lldb_private::ExecutionContext &exe_ctx);
 
   static bool Interpret(llvm::Module &module, llvm::Function &function,
                         llvm::ArrayRef<lldb::addr_t> args,
@@ -51,6 +54,12 @@ public:
 private:
   static bool supportsFunction(llvm::Function &llvm_function,
                                lldb_private::Status &err);
+
+  static bool InterpretExtractElement(
+      const llvm::Instruction *inst, class InterpreterStackFrame &frame,
+      const llvm::DataLayout &data_layout, llvm::Module &module,
+      lldb_private::IRExecutionUnit &execution_unit,
+      lldb_private::Status &error, lldb_private::Log *log);
 };
 
 #endif

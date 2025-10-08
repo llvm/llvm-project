@@ -30,9 +30,14 @@ public:
   void AdjustBreakpointAddress(const Symbol &func,
                                Address &addr) const override;
 
+  lldb::ByteOrder GetVectorElementOrder() const override;
+
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);
-  ArchitecturePPC64() = default;
+  ArchitecturePPC64(lldb::ByteOrder vector_element_order)
+      : m_vector_element_order(vector_element_order) {}
+
+  lldb::ByteOrder m_vector_element_order;
 };
 
 } // namespace lldb_private

@@ -70,6 +70,75 @@ static std::string PrintType(const Type *type, bool truncate = false) {
   return s;
 }
 
+static bool
+isNonTrivialBitcast(const Instruction &inst,
+                    lldb_private::ExecutionContext &exe_ctx) {
+  auto *result_type = dyn_cast<VectorType>(inst.getType());
+  auto *operand = inst.getOperand(0);
+  auto *operand_type = dyn_cast<VectorType>(operand->getType());
+
+  // If neither type is a vector then the bitcast is trivial
+  if (!result_type && !operand_type)
+    return false;
+
+  // Get endianness and element order from the architecture
+  lldb::ByteOrder byte_order = lldb::eByteOrderLittle;
+  lldb::ByteOrder element_order = lldb::eByteOrderLittle;
+
+  lldb::TargetSP target_sp = exe_ctx.GetTargetSP();
+  if (target_sp) {
+    const auto *arch_plugin = target_sp->GetArchitecturePlugin();
+    if (arch_plugin) {
+      byte_order = target_sp->GetArchitecture().GetByteOrder();
+      element_order = arch_plugin->GetVectorElementOrder();
+    }
+  }
+
+  // Bitcast is trivial if endianness matches element order
+  if (byte_order == element_order)
+    return false;
+
+  // If the element order and value byte order disagree then vector bitcasts
+  // aren't no-ops when the element sizes change. For example given:
+  //   <2 x i32> <i32 0x00112233, i32 0x44556677>
+  // then bitcast's LangRef definition of
+  //   store <2 x i32>, ptr @loc
+  //   load <4 x i16>, ptr @loc
+  // gives:
+  // Order | Mem after Store  | <4 x i16> after Load        | Bitcast
+  // LF    | 3322110077665544 | 0x3322 0x0011 0x6677 0x4455 | no-op
+  // BN    | 0011223344556677 | 0x0011 0x2233 0x4455 0x6677 | shuffle
+  // LF    | 7766554433221100 | 0x6677 0x4455 0x3322 0x1100 | shuffle
+  // BN    | 4455667700112233 | 0x4455 0x6677 0x0011 0x2233 | no-op
+  // Order abbreviations:
+  //   L = Little Endian
+  //   B = Big Endian
+  //   F = Lane 0 is first
+  //   N = Lane N-1 is first
+
+  // If only one type is a vector, then we'll assume it's non-trivial on the
+  // basis that this changes the number of elements from N to 1 or the other
+  // way around.
+  if (!result_type || !operand_type)
+    return false;
+
+  // I'm not sure how scalable vectors behave in this situation.
+  // Reject them to be safe.
+  if (!result_type->getElementCount().isFixed() ||
+      !operand_type->getElementCount().isFixed())
+    return true;
+
+  // We can handle the cases that are no-op by virtue of the element
+  // sizes/counts not changing but the shuffle cases aren't
+  // implemented in IRInterpreter::Interpret so decline to interpret
+  // them.
+  if (result_type->getElementCount() != operand_type->getElementCount() ||
+      result_type->getScalarSizeInBits() != operand_type->getScalarSizeInBits())
+    return true;
+
+  return false;
+}
+
 static bool CanIgnoreCall(const CallInst *call) {
   const llvm::Function *called_function = call->getCalledFunction();
 
@@ -367,7 +436,62 @@ public:
     return true;
   }
 
+  bool ResolveVectorConstant(lldb::addr_t process_address,
+                             const Constant *constant) {
+    auto *vector_type = dyn_cast<FixedVectorType>(constant->getType());
+    if (!vector_type)
+      return false;
+
+    Type *element_type = vector_type->getElementType();
+    unsigned num_elements = vector_type->getNumElements();
+    size_t element_size = m_target_data.getTypeStoreSize(element_type);
+    size_t total_size = element_size * num_elements;
+
+    lldb_private::DataBufferHeap buf(total_size, 0);
+    uint8_t *data_ptr = buf.GetBytes();
+
+    if (isa<ConstantAggregateZero>(constant)) {
+      // Zero initializer - buffer is already zeroed, just write it
+      lldb_private::Status write_error;
+      m_execution_unit.WriteMemory(process_address, buf.GetBytes(),
+                                   buf.GetByteSize(), write_error);
+      return write_error.Success();
+    }
+
+    if (const ConstantDataVector *cdv =
+            dyn_cast<ConstantDataVector>(constant)) {
+      for (unsigned i = 0; i < num_elements; ++i) {
+        const Constant *element = cdv->getElementAsConstant(i);
+        APInt element_value;
+        if (!ResolveConstantValue(element_value, element))
+          return false;
+
+        size_t offset = i * element_size;
+
+        lldb_private::Scalar element_scalar(
+            element_value.zextOrTrunc(element_size * 8));
+        lldb_private::Status get_data_error;
+        if (!element_scalar.GetAsMemoryData(data_ptr + offset, element_size,
+                                            m_byte_order, get_data_error))
+          return false;
+      }
+      lldb_private::Status write_error;
+      m_execution_unit.WriteMemory(process_address, buf.GetBytes(),
+                                   buf.GetByteSize(), write_error);
+
+      return write_error.Success();
+    }
+
+    return false;
+  }
+
   bool ResolveConstant(lldb::addr_t process_address, const Constant *constant) {
+    // Handle vector constants specially since they can't be represented as a
+    // single APInt
+    if (constant->getType()->isVectorTy()) {
+      return ResolveVectorConstant(process_address, constant);
+    }
+
     APInt resolved_value;
 
     if (!ResolveConstantValue(resolved_value, constant))
@@ -484,8 +608,12 @@ static bool CanResolveConstant(llvm::Constant *constant) {
     return false;
   case Value::ConstantIntVal:
   case Value::ConstantFPVal:
+    return true;
   case Value::FunctionVal:
     return true;
+  case Value::ConstantDataVectorVal:
+  case Value::ConstantAggregateZeroVal:
+    return constant->getType()->getTypeID() == Type::FixedVectorTyID;
   case Value::ConstantExprVal:
     if (const ConstantExpr *constant_expr = dyn_cast<ConstantExpr>(constant)) {
       switch (constant_expr->getOpcode()) {
@@ -522,7 +650,8 @@ static bool CanResolveConstant(llvm::Constant *constant) {
 
 bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
                                  lldb_private::Status &error,
-                                 const bool support_function_calls) {
+                                 const bool support_function_calls,
+                                 lldb_private::ExecutionContext &exe_ctx) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   bool saw_function_with_body = false;
@@ -548,9 +677,13 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       }
       case Instruction::Add:
       case Instruction::Alloca:
-      case Instruction::BitCast:
       case Instruction::Br:
       case Instruction::PHI:
+      case Instruction::ExtractElement:
+        break;
+      case Instruction::BitCast:
+        if (isNonTrivialBitcast(ii, exe_ctx))
+          return false;
         break;
       case Instruction::Call: {
         CallInst *call_inst = dyn_cast<CallInst>(&ii);
@@ -645,6 +778,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         default:
           break;
         case Type::FixedVectorTyID:
+          break;
         case Type::ScalableVectorTyID: {
           LLDB_LOGF(log, "Unsupported operand type: %s",
                     PrintType(operand_type).c_str());
@@ -657,8 +791,9 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         // The IR interpreter currently doesn't know about
         // 128-bit integers. As they're not that frequent,
         // we can just fall back to the JIT rather than
-        // choking.
-        if (operand_type->getPrimitiveSizeInBits() > 64) {
+        // choking. However, allow vectors since we handle them above.
+        if (operand_type->getPrimitiveSizeInBits() > 64 &&
+            !operand_type->isVectorTy()) {
           LLDB_LOGF(log, "Unsupported operand type: %s",
                     PrintType(operand_type).c_str());
           error =
@@ -1543,9 +1678,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       // Void return type
       if (returnType->isVoidTy()) {
         // Cant assign to void types, so we leave the frame untouched
-      } else
-          // Integer or pointer return type
-          if (returnType->isIntegerTy() || returnType->isPointerTy()) {
+      } else if (returnType->isIntegerTy() || returnType->isPointerTy()) {
         // Get the encapsulated return value
         lldb::ValueObjectSP retVal = call_plan_sp.get()->GetReturnValueObject();
 
@@ -1567,10 +1700,113 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         frame.AssignValue(inst, returnVal, module);
       }
     } break;
+    case Instruction::ExtractElement: {
+      if (!InterpretExtractElement(inst, frame, data_layout, module,
+                                   execution_unit, error, log))
+        return false;
+    } break;
     }
 
     ++frame.m_ii;
   }
 
   return false;
+}
+
+bool IRInterpreter::InterpretExtractElement(
+    const llvm::Instruction *inst, InterpreterStackFrame &frame,
+    const llvm::DataLayout &data_layout, llvm::Module &module,
+    lldb_private::IRExecutionUnit &execution_unit, lldb_private::Status &error,
+    lldb_private::Log *log) {
+  const ExtractElementInst *extract_inst = cast<ExtractElementInst>(inst);
+
+  // Get the vector and index operands
+  const Value *vector_operand = extract_inst->getVectorOperand();
+  const Value *index_operand = extract_inst->getIndexOperand();
+
+  // Get the vector address
+  lldb::addr_t vector_addr =
+      frame.ResolveValue(vector_operand, module);
+
+  if (vector_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOGF(log, "ExtractElement's vector doesn't resolve to anything");
+    error = lldb_private::Status::FromErrorString(bad_value_error);
+    return false;
+  }
+
+  // Evaluate the index
+  lldb_private::Scalar index_scalar;
+  if (!frame.EvaluateValue(index_scalar, index_operand, module)) {
+    LLDB_LOGF(log, "Couldn't evaluate index %s",
+              PrintValue(index_operand).c_str());
+    error = lldb_private::Status::FromErrorString(bad_value_error);
+    return false;
+  }
+
+  uint64_t index = index_scalar.ULongLong();
+
+  // Get the vector type information
+  auto *vector_type = dyn_cast<FixedVectorType>(vector_operand->getType());
+  if (!vector_type) {
+    LLDB_LOGF(log, "ExtractElement instruction doesn't have a fixed vector "
+                   "operand type");
+    error = lldb_private::Status::FromErrorString(interpreter_internal_error);
+    return false;
+  }
+
+  unsigned num_elements = vector_type->getNumElements();
+  if (index >= num_elements) {
+    LLDB_LOG(log,
+             "ExtractElement index {0} is out of bounds for vector with "
+             "{1} elements",
+             index, num_elements);
+    error = lldb_private::Status::FromErrorString(bad_value_error);
+    return false;
+  }
+
+  Type *element_type = vector_type->getElementType();
+  size_t element_size = data_layout.getTypeStoreSize(element_type);
+
+  size_t element_offset = index * element_size;
+
+  // Allocate space for the result element
+  lldb::addr_t result_addr = frame.ResolveValue(extract_inst, module);
+  if (result_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "ExtractElement's result doesn't resolve to anything");
+    error = lldb_private::Status::FromErrorString(bad_value_error);
+    return false;
+  }
+
+  // Read the element from the vector
+  lldb_private::DataBufferHeap element_buffer(element_size, 0);
+  lldb_private::Status read_error;
+  execution_unit.ReadMemory(element_buffer.GetBytes(),
+                            vector_addr + element_offset, element_size,
+                            read_error);
+  if (!read_error.Success()) {
+    LLDB_LOG(log, "Couldn't read element data for ExtractElement");
+    error = lldb_private::Status::FromErrorString(memory_read_error);
+    return false;
+  }
+
+  // Write the element to the result location
+  lldb_private::Status write_error;
+  execution_unit.WriteMemory(result_addr, element_buffer.GetBytes(),
+                             element_size, write_error);
+  if (!write_error.Success()) {
+    LLDB_LOG(log, "Couldn't write result for ExtractElement");
+    error = lldb_private::Status::FromErrorString(memory_write_error);
+    return false;
+  }
+
+  if (log) {
+    LLDB_LOG(log,
+             "Interpreted an ExtractElement\n"
+             "  Vector: {0}\n"
+             "  Index: {1}\n"
+             "  Element offset: {2}\n"
+             "  Result: {3}\n",
+             vector_addr, index, element_offset, result_addr);
+  }
+  return true;
 }
