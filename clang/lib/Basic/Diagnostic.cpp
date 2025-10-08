@@ -587,13 +587,11 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
 
-  unsigned SuppressLineNo =
-      llvm::SpecialCaseList::inSectionBlame(DiagSection->Entries, "src", F, "");
+  unsigned SuppressLineNo = DiagSection->getLastMatch("src", F, "");
   if (!SuppressLineNo)
     return false;
 
-  unsigned EmitLineNo = llvm::SpecialCaseList::inSectionBlame(
-      DiagSection->Entries, "src", F, "emit");
+  unsigned EmitLineNo = DiagSection->getLastMatch("src", F, "emit");
   if (!EmitLineNo)
     return true;
 

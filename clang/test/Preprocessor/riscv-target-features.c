@@ -1531,12 +1531,12 @@
 
 // Experimental extensions
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zalasr0p1 -E -dM %s \
+// RUN:   -march=rv32i_zalasr0p9 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZALASR-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zalasr0p1 -E -dM %s \
+// RUN:   -march=rv64i_zalasr0p9 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZALASR-EXT %s
-// CHECK-ZALASR-EXT: __riscv_zalasr 1000{{$}}
+// CHECK-ZALASR-EXT: __riscv_zalasr 9000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izfbfmin1p0 -E -dM %s \

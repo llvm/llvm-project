@@ -9,8 +9,8 @@
 // This file describes the RISC-V instructions from the standard atomic 'Za*'
 // extensions:
 //   - Zawrs (v1.0) : Wait-on-Reservation-Set.
-//   - Zacas (v1.0-rc1) : Atomic Compare-and-Swap.
-//   - Zabha (v1.0-rc1) : Byte and Halfword Atomic Memory Operations.
+//   - Zacas (v1.0) : Atomic Compare-and-Swap.
+//   - Zabha (v1.0) : Byte and Halfword Atomic Memory Operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,10 +49,10 @@ class AMO_cas<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr,
 
 multiclass AMO_cas_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr,
                          DAGOperand RC> {
-  def ""     : AMO_cas<funct5, 0, 0, funct3, opcodestr, RC>;
-  def _AQ    : AMO_cas<funct5, 1, 0, funct3, opcodestr # ".aq", RC>;
-  def _RL    : AMO_cas<funct5, 0, 1, funct3, opcodestr # ".rl", RC>;
-  def _AQ_RL : AMO_cas<funct5, 1, 1, funct3, opcodestr # ".aqrl", RC>;
+  def ""    : AMO_cas<funct5, 0, 0, funct3, opcodestr, RC>;
+  def _AQ   : AMO_cas<funct5, 1, 0, funct3, opcodestr # ".aq", RC>;
+  def _RL   : AMO_cas<funct5, 0, 1, funct3, opcodestr # ".rl", RC>;
+  def _AQRL : AMO_cas<funct5, 1, 1, funct3, opcodestr # ".aqrl", RC>;
 }
 
 let Predicates = [HasStdExtZacas], IsSignExtendingOpW = 1 in {
@@ -86,11 +86,11 @@ multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
     def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (vt GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+              (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$addr, GPR:$new)>;
     def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
-              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+              (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$addr, GPR:$new)>;
   } // Predicates = !listconcat([HasStdExtZacas, NoStdExtZtso], ExtraPreds)
   let Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds) in {
     def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
@@ -140,7 +140,7 @@ def WRS_STO : WRSInst<0b000000011101, "wrs.sto">, Sched<[]>;
 // Zabha (Byte and Halfword Atomic Memory Operations)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZabha] in {
+let Predicates = [HasStdExtZabha], IsSignExtendingOpW = 1 in {
 defm AMOSWAP_B  : AMO_rr_aq_rl<0b00001, 0b000, "amoswap.b">,
                   Sched<[WriteAtomicB, ReadAtomicBA, ReadAtomicBD]>;
 defm AMOADD_B   : AMO_rr_aq_rl<0b00000, 0b000, "amoadd.b">,
@@ -181,7 +181,7 @@ defm AMOMAXU_H  : AMO_rr_aq_rl<0b11100, 0b001, "amomaxu.h">,
 }
 
 // If Zacas extension is also implemented, Zabha further provides AMOCAS.[B|H].
-let Predicates = [HasStdExtZabha, HasStdExtZacas] in {
+let Predicates = [HasStdExtZabha, HasStdExtZacas], IsSignExtendingOpW = 1 in {
 defm AMOCAS_B : AMO_cas_aq_rl<0b00101, 0b000, "amocas.b", GPR>;
 defm AMOCAS_H : AMO_cas_aq_rl<0b00101, 0b001, "amocas.h", GPR>;
 }
