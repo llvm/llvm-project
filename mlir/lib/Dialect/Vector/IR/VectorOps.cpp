@@ -2470,7 +2470,7 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
 ///   %src_elems:2 = vector.to_elements %src : vector<2xf32>
 ///   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
 ///   //       %src_elems#1, %src_elems#0, %src_elems#1
-class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
+struct ToElementsOfBroadcast final : OpRewritePattern<ToElementsOp> {
   using Base::Base;
 
   LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
