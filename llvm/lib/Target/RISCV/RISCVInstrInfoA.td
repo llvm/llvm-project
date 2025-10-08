@@ -195,27 +195,27 @@ multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                   list<Predicate> ExtraPreds = []> {
 let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_monotonic"),
-                  !cast<RVInst>(BaseInst), vt>;
+               !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acquire"),
-                  !cast<RVInst>(BaseInst#"_AQ"), vt>;
+               !cast<RVInst>(BaseInst#"_AQ"), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_release"),
-                  !cast<RVInst>(BaseInst#"_RL"), vt>;
+               !cast<RVInst>(BaseInst#"_RL"), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acq_rel"),
-                  !cast<RVInst>(BaseInst#"_AQRL"), vt>;
+               !cast<RVInst>(BaseInst#"_AQRL"), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_seq_cst"),
-                  !cast<RVInst>(BaseInst#"_AQRL"), vt>;
+               !cast<RVInst>(BaseInst#"_AQRL"), vt>;
 }
 let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_monotonic"),
-                  !cast<RVInst>(BaseInst), vt>;
+               !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acquire"),
-                  !cast<RVInst>(BaseInst), vt>;
+               !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_release"),
-                  !cast<RVInst>(BaseInst), vt>;
+               !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acq_rel"),
-                  !cast<RVInst>(BaseInst), vt>;
+               !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_seq_cst"),
-                  !cast<RVInst>(BaseInst), vt>;
+               !cast<RVInst>(BaseInst), vt>;
 }
 }
 
