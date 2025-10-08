@@ -7,18 +7,29 @@
 declare void @llvm.nvvm.tcgen05.shift.down.cg1(ptr addrspace(6) %tmem_addr)
 declare void @llvm.nvvm.tcgen05.shift.down.cg2(ptr addrspace(6) %tmem_addr)
 
-; CHECK-LABEL: test_tcgen05_shift
-define void @test_tcgen05_shift(ptr addrspace(6) %tmem_addr) {
-; CHECK-LABEL: test_tcgen05_shift(
+define void @test_tcgen05_shift_cg1(ptr addrspace(6) %tmem_addr) {
+; CHECK-LABEL: test_tcgen05_shift_cg1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_shift_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_shift_cg1_param_0];
 ; CHECK-NEXT:    tcgen05.shift.cta_group::1.down [%r1];
-; CHECK-NEXT:    tcgen05.shift.cta_group::2.down [%r1];
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.shift.down.cg1(ptr addrspace(6) %tmem_addr)
+
+  ret void
+}
+
+define void @test_tcgen05_shift_cg2(ptr addrspace(6) %tmem_addr) {
+; CHECK-LABEL: test_tcgen05_shift_cg2(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_shift_cg2_param_0];
+; CHECK-NEXT:    tcgen05.shift.cta_group::2.down [%r1];
+; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.shift.down.cg2(ptr addrspace(6) %tmem_addr)
 
   ret void
