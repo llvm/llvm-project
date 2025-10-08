@@ -80,9 +80,8 @@ struct MemRefPointerLikeModel
 
     // Check if this is a static memref (all dimensions are known) - if yes
     // then we can generate an alloca operation.
-    if (memrefTy.hasStaticShape()) {
+    if (memrefTy.hasStaticShape())
       return memref::AllocaOp::create(builder, loc, memrefTy).getResult();
-    }
 
     // For dynamic memrefs, extract sizes from the original variable if
     // provided. Otherwise they cannot be handled.
