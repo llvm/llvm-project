@@ -3000,7 +3000,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto MainAttrs = MainResType->getAttrs();
     assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
     MainAttrs.IsCounter = true;
-    QualType CounterHandleTy = getASTContext().getHLSLAttributedResourceType(
+    QualType CounterHandleTy = AST.getHLSLAttributedResourceType(
         MainResType->getWrappedType(), MainResType->getContainedType(),
         MainAttrs);
     TheCall->setType(CounterHandleTy);
@@ -3813,12 +3813,13 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
         uint32_t OrderID = getNextImplicitBindingOrderID();
         if (Binding.hasBinding())
           Binding.setImplicitOrderID(OrderID);
-        else
+        else {
           addImplicitBindingAttrToDecl(
               SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
               OrderID);
-        // Re-create the binding object to pick up the new attribute.
-        Binding = ResourceBindingAttrs(VD);
+          // Re-create the binding object to pick up the new attribute.
+          Binding = ResourceBindingAttrs(VD);
+        }
       }
 
       // Get to the base type of a potentially multi-dimensional array.
@@ -3855,7 +3856,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   llvm::SmallVector<Expr *> Args;
 
   bool HasCounter = hasCounterHandle(ResourceDecl);
-  std::string CreateMethodName;
+  const char *CreateMethodName;
   if (Binding.isExplicit())
     CreateMethodName = HasCounter ? "__createFromBindingWithImplicitCounter"
                                   : "__createFromBinding";
@@ -3866,10 +3867,6 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
 
   CreateMethod =
       lookupMethod(SemaRef, ResourceDecl, CreateMethodName, VD->getLocation());
-  if (!CreateMethod) {
-    llvm::dbgs() << "STEVEN: failed to get method " << CreateMethodName << "\n";
-    VD->dumpColor();
-  }
 
   if (!CreateMethod)
     // This can happen if someone creates a struct that looks like an HLSL

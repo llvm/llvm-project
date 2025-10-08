@@ -938,10 +938,24 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
       .finalize();
 }
 
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T>
+// __createFromBindingWithImplicitCounter(unsigned registerNo,
+//                                        unsigned spaceNo, int range,
+//                                        unsigned index, const char *name,
+//                                        unsigned counterOrderId) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefrombinding(
+//       tmp.__handle, registerNo, spaceNo, range, index, name);
+//   tmp.__counter_handle =
+//       __builtin_hlsl_resource_counterhandlefromimplicitbinding(
+//           tmp.__handle, counterOrderId, spaceNo);
+//   return tmp;
+// }
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addCreateFromBindingWithImplicitCounter() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
@@ -971,10 +985,25 @@ BuiltinTypeDeclBuilder::addCreateFromBindingWithImplicitCounter() {
       .finalize();
 }
 
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T>
+// __createFromImplicitBindingWithImplicitCounter(unsigned orderId,
+//                                                unsigned spaceNo, int range,
+//                                                unsigned index,
+//                                                const char *name,
+//                                                unsigned counterOrderId) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefromimplicitbinding(
+//       tmp.__handle, orderId, spaceNo, range, index, name);
+//   tmp.__counter_handle =
+//       __builtin_hlsl_resource_counterhandlefromimplicitbinding(
+//           tmp.__handle, counterOrderId, spaceNo);
+//   return tmp;
+// }
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addCreateFromImplicitBindingWithImplicitCounter() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();

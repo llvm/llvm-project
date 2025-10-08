@@ -38,7 +38,7 @@ export void foo() {
 // Buf1 initialization part 2 - body of StructuredBuffer<float>::::__createFromBinding
 
 // CHECK: define {{.*}} void @hlsl::StructuredBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
-// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::StructuredBuffer") align {{[0-9]+}} %[[RetValue1:.*]], i32 noundef %registerNo, 
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::StructuredBuffer") align {{(4|8)}} %[[RetValue1:.*]], i32 noundef %registerNo, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK: %[[Tmp1:.*]] = alloca %"class.hlsl::StructuredBuffer"
 // CHECK-DXIL: %[[Handle1:.*]] = call target("dx.RawBuffer", float, 0, 0) 
@@ -55,7 +55,7 @@ export void foo() {
 
 // Buf2 initialization part 2 - body of RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter
 // CHECK: define linkonce_odr hidden void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
-// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align {{[0-9]+}} %[[RetValue2:.*]], i32 noundef %orderId, 
+// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align {{(4|8)}} %[[RetValue2:.*]], i32 noundef %orderId, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name, i32 noundef %counterOrderId)
 // CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWStructuredBuffer"
 // CHECK-DXIL: %[[Handle2:.*]] = call target("dx.RawBuffer", float, 1, 0)
@@ -77,6 +77,15 @@ export void foo() {
 // CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", i32, 12, 1) %[[CounterHandle]], ptr %[[CounterHandlePtr]], align 8
 // CHECK: call void @hlsl::RWStructuredBuffer<float>::RWStructuredBuffer(hlsl::RWStructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
 
+// Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
+// AppendStructuredBuffer<float> C1 default constructor
+// CHECK: define {{.*}}void @foo()
+// CHECK-NEXT: entry:
+// CHECK: %Buf3 = alloca %"class.hlsl::AppendStructuredBuffer", align {{4|8}}
+// CHECK-NEXT: call void @hlsl::AppendStructuredBuffer<float>::AppendStructuredBuffer()(ptr {{.*}} %Buf3)
+
+// Buf3 initialization part 2 - body of AppendStructuredBuffer<float> default C1 constructor that calls
+// the default C2 constructor
 // CHECK: define linkonce_odr hidden void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this)
 // CHECK: call void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this1)
 
