@@ -30,6 +30,7 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -2102,6 +2103,16 @@ void VPlanTransforms::cse(VPlan &Plan) {
   }
 }
 
+static bool isSafeToSpeculativelyExecute(VPRecipeBase *R) {
+  if (auto *WC = dyn_cast<VPWidenCallRecipe>(R))
+    return WC->getCalledScalarFunction()->isSpeculatable();
+  if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(R))
+    return WI->isSafeToSpeculativelyExecute();
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R))
+    return isSafeToSpeculativelyExecute(RepR->getUnderlyingInstr());
+  return !R->mayHaveSideEffects();
+}
+
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
   VPBasicBlock *Preheader = Plan.getVectorPreheader();
@@ -2110,6 +2121,11 @@ static void licm(VPlan &Plan) {
   // out of a loop region. Does not address legality concerns such as aliasing
   // or speculation safety.
   auto CannotHoistRecipe = [](VPRecipeBase &R) {
+    // TODO: Relax checks in the future, e.g. we could also hoist reads, if
+    // their memory location is not modified in the vector loop.
+    if (R.mayReadOrWriteMemory() || R.isPhi())
+      return true;
+
     // Allocas cannot be hoisted.
     auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
     return RepR && RepR->getOpcode() == Instruction::Alloca;
@@ -2119,14 +2135,13 @@ static void licm(VPlan &Plan) {
   // preheader. Preform a shallow traversal of the vector loop region, to
   // exclude recipes in replicate regions.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  bool GuaranteedToExecute = Preheader->getSingleSuccessor() == LoopRegion;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (CannotHoistRecipe(R))
         continue;
-      // TODO: Relax checks in the future, e.g. we could also hoist reads, if
-      // their memory location is not modified in the vector loop.
-      if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
+      if ((!GuaranteedToExecute && !isSafeToSpeculativelyExecute(&R)) ||
           any_of(R.operands(), [](VPValue *Op) {
             return !Op->isDefinedOutsideLoopRegions();
           }))
