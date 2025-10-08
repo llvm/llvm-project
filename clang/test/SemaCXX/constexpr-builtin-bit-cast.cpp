@@ -510,6 +510,28 @@ constexpr bool9 bad_short_to_bool9 = __builtin_bit_cast(bool9, static_cast<unsig
 // expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(17)))' (vector of 17 'bool' values) is not allowed in a constant expression; element size 1 * element count 17 is not a multiple of the byte size 8}}
 constexpr bool17 bad_int_to_bool17 = __builtin_bit_cast(bool17, 0x0001CAFEU);
 
+template <int Bits, int N> using packed_vec_t = _BitInt(Bits) __attribute__((ext_vector_type(N)));
+
+static_assert(round_trip<packed_vec_t<2, 4>>(static_cast<unsigned char>(0)), "");
+static_assert(round_trip<packed_vec_t<2, 4>>(static_cast<unsigned char>(1)), "");
+static_assert(round_trip<packed_vec_t<2, 4>>(static_cast<unsigned char>(0x55)), "");
+static_assert(round_trip<packed_vec_t<2, 8>>(static_cast<short>(0)), "");
+static_assert(round_trip<packed_vec_t<2, 8>>(static_cast<short>(-1)), "");
+static_assert(round_trip<packed_vec_t<2, 8>>(static_cast<short>(0x5555)), "");
+
+static_assert(bit_cast<unsigned char>(packed_vec_t<2, 4>{1, -2, 0, -1}) == (LITTLE_END ? 0xC9 : 0x63), "");
+static_assert(bit_cast<unsigned short>(packed_vec_t<2, 8>{1, -2, 0, -1, -2, -1, 1, 0}) == (LITTLE_END ? 0x1EC9 : 0x63B4), "");
+
+static_assert(round_trip<packed_vec_t<4, 2>>(static_cast<unsigned char>(0)), "");
+static_assert(round_trip<packed_vec_t<4, 2>>(static_cast<unsigned char>(1)), "");
+static_assert(round_trip<packed_vec_t<4, 2>>(static_cast<unsigned char>(0x55)), "");
+static_assert(round_trip<packed_vec_t<4, 4>>(static_cast<short>(0)), "");
+static_assert(round_trip<packed_vec_t<4, 4>>(static_cast<short>(-1)), "");
+static_assert(round_trip<packed_vec_t<4, 4>>(static_cast<short>(0x5555)), "");
+
+static_assert(bit_cast<unsigned char>(packed_vec_t<4, 2>{-4, -7}) == (LITTLE_END ? 0x9C : 0xC9), "");
+static_assert(bit_cast<unsigned short>(packed_vec_t<4, 4>{3, -5, -1, 7}) == (LITTLE_END ? 0x7FB3 : 0x3BF7), "");
+
 }
 
 namespace test_complex {

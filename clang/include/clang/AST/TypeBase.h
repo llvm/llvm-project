@@ -2637,6 +2637,7 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isBitIntVectorType() const;              // Vector type with _BitInt element.
   // Extended vector type with bool element that is packed. HLSL doesn't pack
   // its bool vectors.
   bool isPackedVectorBoolType(const ASTContext &ctx) const;
@@ -8679,6 +8680,11 @@ inline bool Type::isExtVectorBoolType() const {
   if (!isExtVectorType())
     return false;
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
+}
+
+inline bool Type::isBitIntVectorType() const {
+  return isVectorType() &&
+         cast<VectorType>(CanonicalType)->getElementType()->isBitIntType();
 }
 
 inline bool Type::isSubscriptableVectorType() const {
