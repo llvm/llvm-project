@@ -997,6 +997,7 @@ LLVM_ABI StringRef VisibilityString(unsigned Visibility);
 LLVM_ABI StringRef VirtualityString(unsigned Virtuality);
 LLVM_ABI StringRef EnumKindString(unsigned EnumKind);
 LLVM_ABI StringRef LanguageString(unsigned Language);
+LLVM_ABI StringRef SourceLanguageNameString(SourceLanguageName Lang);
 LLVM_ABI StringRef CaseString(unsigned Case);
 LLVM_ABI StringRef ConventionString(unsigned Convention);
 LLVM_ABI StringRef InlineCodeString(unsigned Code);
@@ -1038,6 +1039,7 @@ LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_ABI unsigned getSourceLanguageName(StringRef SourceLanguageNameString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);
 LLVM_ABI unsigned getMacinfo(StringRef MacinfoString);
