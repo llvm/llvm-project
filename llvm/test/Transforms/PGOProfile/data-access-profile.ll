@@ -16,12 +16,6 @@
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR,STAT
 
-;; Tests that llc crashes on existing section prefixes.
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' \
-; RUN:   -memprof-annotate-static-data-prefix -S input.ll -o llc-input.ll
-; RUN: not llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections=true llc-input.ll -o - 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: Global variable var1 already has a section prefix hot
-
 ;; Run memprof without providing memprof data. Test that IR has module flag
 ;; `EnableDataAccessProf` as 0.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof-no-dap.profdata>' -memprof-annotate-static-data-prefix \
@@ -45,10 +39,10 @@
 ;; String literals are not annotated.
 ; IR: @.str = unnamed_addr constant [5 x i8] c"abcde"
 ; IR-NOT: section_prefix
-; IR: @var1 = global i32 123, !section_prefix ![[NUM1:[0-9]+]]
+; IR: @var1 = global i32 123, !section_prefix !0
 
 ;; @var.llvm.125 will be canonicalized to @var2 for profile look-up.
-; IR-NEXT: @var2.llvm.125 = global i64 0, !section_prefix ![[NUM1]]
+; IR-NEXT: @var2.llvm.125 = global i64 0, !section_prefix !0
 
 ;; @bar is not seen in hot symbol or known symbol set, so it won't get a section
 ;; prefix. Test this by testing that there is no section_prefix between @bar and
@@ -57,7 +51,7 @@
 ; IR-NOT: !section_prefix
 
 ;; @foo is unlikely.
-; IR-NEXT: @foo = global i8 2, !section_prefix ![[NUM2:[0-9]+]]
+; IR-NEXT: @foo = global i8 2, !section_prefix !1
 
 ; IR-NEXT: @var3 = constant [2 x i32] [i32 12345, i32 6789], section "sec1"
 ; IR-NEXT: @var4 = constant [1 x i64] [i64 98765] #0
@@ -69,10 +63,9 @@
 
 ; IR: attributes #0 = { "rodata-section"="sec2" }
 
-; IR: ![[NUM1]] = !{!"section_prefix", !"hot"}
-; IR-NEXT: ![[NUM2]] = !{!"section_prefix", !"unlikely"}
-;; Profile Summary module metadata can come in the middle here.
-; IR: !{i32 2, !"EnableDataAccessProf", i32 1}
+; IR: !0 = !{!"section_prefix", !"hot"}
+; IR-NEXT: !1 = !{!"section_prefix", !"unlikely"}
+; IR-NEXT: !2 = !{i32 2, !"EnableDataAccessProf", i32 1}
 
 ; FLAG: !{i32 2, !"EnableDataAccessProf", i32 0}
 ; FLAGLESS-NOT: EnableDataAccessProf
@@ -140,24 +133,6 @@ define i32 @func() {
 declare i32 @func_taking_arbitrary_param(...)
 
 attributes #0 = { "rodata-section"="sec2" }
-
-!llvm.module.flags = !{!1}
-
-!1 = !{i32 1, !"ProfileSummary", !2}
-!2 = !{!3, !4, !5, !6, !7, !8, !9, !10}
-!3 = !{!"ProfileFormat", !"InstrProf"}
-!4 = !{!"TotalCount", i64 1460183}
-!5 = !{!"MaxCount", i64 849024}
-!6 = !{!"MaxInternalCount", i64 32769}
-!7 = !{!"MaxFunctionCount", i64 849024}
-!8 = !{!"NumCounts", i64 23627}
-!9 = !{!"NumFunctions", i64 3271}
-!10 = !{!"DetailedSummary", !11}
-!11 = !{!12, !13}
-!12 = !{i32 990000, i64 166, i32 73}
-!13 = !{i32 999999, i64 3, i32 1443}
-!14 = !{!"function_entry_count", i64 100000}
-!15 = !{!"function_entry_count", i64 1}
 
 ;--- funcless-module.ll
 
