@@ -12,6 +12,7 @@
 #ifndef LLVM_SUPPORT_SPECIALCASELIST_H
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
@@ -118,6 +119,7 @@ protected:
   SpecialCaseList(SpecialCaseList const &) = delete;
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
+private:
   /// Represents a set of globs and their line numbers
   class Matcher {
   public:
@@ -161,6 +163,7 @@ protected:
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
+protected:
   struct Section {
     Section(StringRef Str, unsigned FileIdx)
         : SectionStr(Str), FileIdx(FileIdx) {};
@@ -187,6 +190,9 @@ protected:
     findMatcher(StringRef Prefix, StringRef Category) const;
   };
 
+  ArrayRef<const Section> sections() const { return Sections; }
+
+private:
   std::vector<Section> Sections;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
