@@ -580,7 +580,7 @@ public:
   }
 
   CleanupKind getCleanupKind(QualType::DestructionKind kind) {
-    return (needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup);
+    return needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup;
   }
 
   /// Set the address of a local variable.
