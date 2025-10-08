@@ -393,12 +393,13 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 
   switch (N->getMachineOpcode()) {
   default: {
-    const MCInstrDesc &Desc =
-        Subtarget->getInstrInfo()->get(N->getMachineOpcode());
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
+    const MCInstrDesc &Desc = TII->get(N->getMachineOpcode());
     unsigned OpIdx = Desc.getNumDefs() + OpNo;
     if (OpIdx >= Desc.getNumOperands())
       return nullptr;
-    int RegClass = Desc.operands()[OpIdx].RegClass;
+
+    int16_t RegClass = TII->getOpRegClassID(Desc.operands()[OpIdx]);
     if (RegClass == -1)
       return nullptr;
 
@@ -1089,10 +1090,17 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
   for (SDNode::user_iterator UI = N->user_begin(), E = N->user_end(); UI != E;
        ++UI)
     if (UI.getUse().getResNo() == 1) {
-      if ((IsAdd && (UI->getOpcode() != ISD::UADDO_CARRY)) ||
-          (!IsAdd && (UI->getOpcode() != ISD::USUBO_CARRY))) {
-        IsVALU = true;
-        break;
+      if (UI->isMachineOpcode()) {
+        if (UI->getMachineOpcode() !=
+            (IsAdd ? AMDGPU::S_ADD_CO_PSEUDO : AMDGPU::S_SUB_CO_PSEUDO)) {
+          IsVALU = true;
+          break;
+        }
+      } else {
+        if (UI->getOpcode() != (IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY)) {
+          IsVALU = true;
+          break;
+        }
       }
     }
 
@@ -4346,7 +4354,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
     if (!RC || SIRI->isSGPRClass(RC))
       return false;
 
-    if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass) {
+    if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass &&
+        RC != &AMDGPU::VS_64_Align2RegClass) {
       AllUsesAcceptSReg = false;
       SDNode *User = U->getUser();
       if (User->isMachineOpcode()) {
@@ -4360,7 +4369,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
             const TargetRegisterClass *CommutedRC =
                 getOperandRegClass(U->getUser(), CommutedOpNo);
             if (CommutedRC == &AMDGPU::VS_32RegClass ||
-                CommutedRC == &AMDGPU::VS_64RegClass)
+                CommutedRC == &AMDGPU::VS_64RegClass ||
+                CommutedRC == &AMDGPU::VS_64_Align2RegClass)
               AllUsesAcceptSReg = true;
           }
         }

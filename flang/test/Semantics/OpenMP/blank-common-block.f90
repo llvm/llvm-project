@@ -4,6 +4,7 @@ module m
   integer :: a
   common // a
   !ERROR: Blank common blocks are not allowed as directive or clause arguments
+  !ERROR: An argument to the DECLARE TARGET directive should be an extended-list-item
   !$omp declare_target(//)
   !ERROR: Blank common blocks are not allowed as directive or clause arguments
   !$omp threadprivate(//)

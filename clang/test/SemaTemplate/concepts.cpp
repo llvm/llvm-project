@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify=expected,cxx20 %s
+// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -verify=expected %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -1002,7 +1003,7 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; //#GH54678-ill-formed-concept
 // expected-error@-1 {{a concept definition cannot refer to itself}} \
 // expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
 // expected-note@-1 {{declared here}}
@@ -1023,8 +1024,7 @@ template<class T> void eee(T t) // expected-note {{candidate template ignored: c
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
 template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
-
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'False'}}
 void test() {
     aaa(42); // expected-error {{no matching function}}
     bbb(42L); // expected-error{{no matching function}}
@@ -1264,12 +1264,7 @@ C auto x = 0;
 // expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
 // expected-note@-1 {{in instantiation of default argument}}
 
-// This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
-// Which makes us behave like GCC.
 static_assert(f(0));
-// expected-error@-1 {{no matching function for call}} \
-// expected-note@#GH61824_f {{constraints not satisfied}} \
-// expected-note@#T_Type {{type 'int' cannot be used prior to '::'}}
 
 }
 
@@ -1278,4 +1273,174 @@ template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
 ([](auto) { return true; }) < PerfectSquare <class T>;
 // expected-error@-1 {{declaration of 'T' shadows template parameter}} \
 // expected-error@-1 {{a concept definition cannot refer to itself}}
+
+}
+namespace GH61811{
+template <class T> struct A { static const int x = 42; };
+template <class Ta> concept A42 = A<Ta>::x == 42;
+template <class Tv> concept Void = __is_same_as(Tv, void);
+template <class Tb, class Ub> concept A42b = Void<Tb> || A42<Ub>;
+template <class Tc> concept R42c = A42b<Tc, Tc&>;
+static_assert (R42c<void>);
+}
+
+namespace parameter_mapping_regressions {
+
+namespace case1 {
+
+template <template <class> class> using __meval = struct __q;
+template <template <class> class _Tp>
+concept __mvalid = requires { typename __meval<_Tp>; };
+template <class _Fn>
+concept __minvocable = __mvalid<_Fn::template __f>;
+template <class...> struct __mdefer_;
+template <class _Fn, class... _Args>
+  requires __minvocable<_Fn>
+struct __mdefer_<_Fn, _Args...> {};
+template <class = __q> struct __mtransform {
+  template <class> using __f = int;
+};
+struct __completion_domain_or_none_ : __mdefer_<__mtransform<>> {};
+
+}
+
+namespace case2 {
+
+template<auto& Q, class P> concept C = Q.template operator()<P>();
+template<class P> concept E = C<[]<class Ty>{ return false; }, P>;
+static_assert(!E<int>);
+
+}
+
+
+namespace case3 {
+template <class> constexpr bool is_move_constructible_v = false;
+
+template <class _Tp>
+concept __cpp17_move_constructible = is_move_constructible_v<_Tp>; // #is_move_constructible_v
+
+template <class _Tp>
+concept __cpp17_copy_constructible = __cpp17_move_constructible<_Tp>; // #__cpp17_move_constructible
+
+template <class _Iter>
+concept __cpp17_iterator = __cpp17_copy_constructible<_Iter>; // #__cpp17_copy_constructible
+
+struct not_move_constructible {};
+static_assert(__cpp17_iterator<not_move_constructible>); \
+// expected-error {{static assertion failed}} \
+// expected-note {{because 'not_move_constructible' does not satisfy '__cpp17_iterator'}} \
+// expected-note@#__cpp17_copy_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_copy_constructible'}} \
+// expected-note@#__cpp17_move_constructible {{because 'parameter_mapping_regressions::case3::not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
+// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
+}
+
+namespace case4 {
+
+template<bool b>
+concept bool_ = b;
+
+template<typename... Ts>
+concept unary = bool_<sizeof...(Ts) == 1>;
+
+static_assert(!unary<>);
+static_assert(unary<void>);
+
+}
+
+namespace case5 {
+
+template<int size>
+concept true1 = size == size;
+
+template<typename... Ts>
+concept true2 = true1<sizeof...(Ts)>;
+
+template<typename... Ts>
+concept true3 = true2<Ts...>;
+
+static_assert(true3<void>);
+
+}
+
+namespace case6 {
+
+namespace std {
+template <int __v>
+struct integral_constant {
+  static const int value = __v;
+};
+
+template <class _Tp, class... _Args>
+constexpr bool is_constructible_v = __is_constructible(_Tp, _Args...);
+
+template <class _From, class _To>
+constexpr bool is_convertible_v = __is_convertible(_From, _To);
+
+template <class>
+struct tuple_size;
+
+template <class _Tp>
+constexpr decltype(sizeof(int)) tuple_size_v = tuple_size<_Tp>::value;
+}  // namespace std
+
+template <int N, int X>
+concept FixedExtentConstructibleFromExtent = X == N;
+
+template <int Extent>
+struct span {
+  int static constexpr extent = Extent;
+  template <typename R, int N = std::tuple_size_v<R>>
+    requires(FixedExtentConstructibleFromExtent<extent, N>)
+  span(R);
+};
+
+template <class, int>
+struct array {};
+
+template <class _Tp, decltype(sizeof(int)) _Size>
+struct std::tuple_size<array<_Tp, _Size>> : integral_constant<_Size> {};
+
+static_assert(std::is_convertible_v<array<int, 3>, span<3>>);
+static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
+
+}
+
+}
+
+
+namespace GH162125 {
+template<typename, int size>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<void, sizeof...(Ts)>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<void, Ts...[0]{1}>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+void(*test)(int) = &s<bool>::f<int>;
+}
+
+namespace GH162125_reversed {
+template<int size, typename>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<sizeof...(Ts), void>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<Ts...[0]{1}, void>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+
+void(*test)(int) = &s<bool>::f<int>;
 }

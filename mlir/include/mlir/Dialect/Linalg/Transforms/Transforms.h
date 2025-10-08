@@ -1858,6 +1858,7 @@ void populateDecomposePadPatterns(RewritePatternSet &patterns);
 
 /// Populates patterns to transform linalg.conv_2d_xxx operations into
 /// linalg.generic (for img2col packing) and linalg.matmul.
+/// Note: currently limited to Tensor semantics only.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 

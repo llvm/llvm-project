@@ -6091,6 +6091,7 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeInterface",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
@@ -6295,6 +6296,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeInterface",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
@@ -6685,6 +6687,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":SMTIncGen",
+        ":SideEffectInterfaces",
         ":Support",
         "//llvm:Support",
     ],
@@ -11831,6 +11834,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/PDLExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/PDLExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":PDLDialect",
         ":PDLInterpDialect",
@@ -11945,6 +11949,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/IRDLExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IRDLExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":IRDLDialect",
         ":IRDLInterfacesIncGen",
@@ -11986,7 +11991,9 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/DebugExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformDebugExtensionOpsIncGen",
         ":TransformDialect",
@@ -12023,6 +12030,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/LoopExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":LoopLikeInterface",
         ":Rewrite",
@@ -13071,6 +13079,7 @@ cc_library(
         ":MPIOpsIncGen",
         ":MPITypesIncGen",
         ":MemRefDialect",
+        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
 )

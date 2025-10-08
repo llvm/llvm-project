@@ -150,6 +150,8 @@
 
 using namespace llvm;
 
+namespace llvm {
+
 static cl::opt<InliningAdvisorMode> UseInlineAdvisor(
     "enable-ml-inliner", cl::init(InliningAdvisorMode::Default), cl::Hidden,
     cl::desc("Enable ML policy for inliner. Currently trained for -Oz only"),
@@ -305,7 +307,6 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
-namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
@@ -610,7 +611,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Jump table to switch conversion.
   if (EnableJumpTableToSwitch)
-    FPM.addPass(JumpTableToSwitchPass());
+    FPM.addPass(JumpTableToSwitchPass(
+        /*InLTO=*/Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
+        Phase == ThinOrFullLTOPhase::FullLTOPostLink));
 
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
@@ -848,8 +851,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
                                     OptimizationLevel Level, bool RunProfileGen,
                                     bool IsCS, bool AtomicCounterUpdate,
                                     std::string ProfileFile,
-                                    std::string ProfileRemappingFile,
-                                    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+                                    std::string ProfileRemappingFile) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
 
   if (!RunProfileGen) {
@@ -884,10 +886,11 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
 }
 
-void PassBuilder::addPGOInstrPassesForO0(
-    ModulePassManager &MPM, bool RunProfileGen, bool IsCS,
-    bool AtomicCounterUpdate, std::string ProfileFile,
-    std::string ProfileRemappingFile, IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+void PassBuilder::addPGOInstrPassesForO0(ModulePassManager &MPM,
+                                         bool RunProfileGen, bool IsCS,
+                                         bool AtomicCounterUpdate,
+                                         std::string ProfileFile,
+                                         std::string ProfileRemappingFile) {
   if (!RunProfileGen) {
     assert(!ProfileFile.empty() && "Profile use expecting a profile file!");
     MPM.addPass(
@@ -1133,8 +1136,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (LoadSampleProfile) {
     // Annotate sample profile right after early FPM to ensure freshness of
     // the debug info.
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
-                                        PGOOpt->ProfileRemappingFile, Phase));
+    MPM.addPass(SampleProfileLoaderPass(
+        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile, Phase, FS));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
@@ -1230,8 +1233,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     addPGOInstrPasses(MPM, Level,
                       /*RunProfileGen=*/IsPGOInstrGen,
                       /*IsCS=*/false, PGOOpt->AtomicCounterUpdate,
-                      PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
-                      PGOOpt->FS);
+                      PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
   } else if (IsCtxProfGen || IsCtxProfUse) {
     MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
     // In pre-link, we just want the instrumented IR. We use the contextual
@@ -1254,10 +1256,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
   } else if (IsColdFuncOnlyInstrGen) {
-    addPGOInstrPasses(
-        MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
-        /* AtomicCounterUpdate */ false, InstrumentColdFuncOnlyPath,
-        /* ProfileRemappingFile */ "", IntrusiveRefCntPtr<vfs::FileSystem>());
+    addPGOInstrPasses(MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
+                      /* AtomicCounterUpdate */ false,
+                      InstrumentColdFuncOnlyPath,
+                      /* ProfileRemappingFile */ "");
   }
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
@@ -1268,7 +1270,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                EnableSampledInstr));
 
   if (IsMemprofUse)
-    MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
+    MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, FS));
 
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
                  PGOOpt->Action == PGOOptions::SampleUse))
@@ -1477,13 +1479,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     if (PGOOpt->CSAction == PGOOptions::CSIRInstr)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/true,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile);
     else if (PGOOpt->CSAction == PGOOptions::CSIRUse)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/false,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
   }
 
   // Re-compute GlobalsAA here prior to function passes. This is particularly
@@ -1960,6 +1960,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // is fixed.
   MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
 
+  MPM.addPass(NoRecurseLTOInferencePass());
   // Stop here at -O1.
   if (Level == OptimizationLevel::O1) {
     // The LowerTypeTestsPass needs to run to lower type metadata and the
@@ -2071,13 +2072,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     if (PGOOpt->CSAction == PGOOptions::CSIRInstr)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/true,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->CSProfileGenFile, PGOOpt->ProfileRemappingFile);
     else if (PGOOpt->CSAction == PGOOptions::CSIRUse)
       addPGOInstrPasses(MPM, Level, /*RunProfileGen=*/false,
                         /*IsCS=*/true, PGOOpt->AtomicCounterUpdate,
-                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile,
-                        PGOOpt->FS);
+                        PGOOpt->ProfileFile, PGOOpt->ProfileRemappingFile);
   }
 
   // Break up allocas
@@ -2237,7 +2236,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
         MPM,
         /*RunProfileGen=*/(PGOOpt->Action == PGOOptions::IRInstr),
         /*IsCS=*/false, PGOOpt->AtomicCounterUpdate, PGOOpt->ProfileFile,
-        PGOOpt->ProfileRemappingFile, PGOOpt->FS);
+        PGOOpt->ProfileRemappingFile);
 
   // Instrument function entry and exit before all inlining.
   MPM.addPass(createModuleToFunctionPassAdaptor(

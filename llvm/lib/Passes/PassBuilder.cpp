@@ -240,6 +240,7 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
@@ -503,8 +504,9 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
-                         PassInstrumentationCallbacks *PIC)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
+                         PassInstrumentationCallbacks *PIC,
+                         IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

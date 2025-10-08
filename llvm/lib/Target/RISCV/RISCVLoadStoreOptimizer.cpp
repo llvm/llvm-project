@@ -116,7 +116,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
 
-  if (Subtarget.useLoadStorePairs()) {
+  if (Subtarget.useMIPSLoadStorePairs()) {
     for (MachineBasicBlock &MBB : Fn) {
       LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
 

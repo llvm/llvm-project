@@ -8,9 +8,8 @@ define void @and_not_combine_v32i8(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    xvld $xr0, $a2, 0
 ; CHECK-NEXT:    xvld $xr1, $a3, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, 0
-; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
-; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvand.v $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -30,10 +29,8 @@ define void @and_not_combine_v16i16(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwin
 ; CHECK-NEXT:    xvld $xr0, $a2, 0
 ; CHECK-NEXT:    xvld $xr1, $a3, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, 0
-; CHECK-NEXT:    xvrepli.b $xr3, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr3
-; CHECK-NEXT:    xvadd.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvand.v $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvsub.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -53,10 +50,8 @@ define void @and_not_combine_v8i32(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    xvld $xr0, $a2, 0
 ; CHECK-NEXT:    xvld $xr1, $a3, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, 0
-; CHECK-NEXT:    xvrepli.b $xr3, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr3
-; CHECK-NEXT:    xvadd.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvand.v $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvsub.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -76,10 +71,8 @@ define void @and_not_combine_v4i64(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    xvld $xr0, $a2, 0
 ; CHECK-NEXT:    xvld $xr1, $a3, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, 0
-; CHECK-NEXT:    xvrepli.b $xr3, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr3
-; CHECK-NEXT:    xvadd.d $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvand.v $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvsub.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
