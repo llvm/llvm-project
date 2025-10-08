@@ -17,7 +17,6 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/ImmutableMap.h"
@@ -32,10 +31,6 @@ namespace internal {
 // TODO(opt): Consider using a bitset to represent the set of loans.
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
-
-// ========================================================================= //
-//                          Loan Propagation Analysis
-// ========================================================================= //
 
 /// Represents the dataflow lattice for loan propagation.
 ///
@@ -58,20 +53,9 @@ struct LoanPropagationLattice {
     return !(*this == Other);
   }
 
-  void dump(llvm::raw_ostream &OS) const {
-    OS << "LoanPropagationLattice State:\n";
-    if (Origins.isEmpty())
-      OS << "  <empty>\n";
-    for (const auto &Entry : Origins) {
-      if (Entry.second.isEmpty())
-        OS << "  Origin " << Entry.first << " contains no loans\n";
-      for (const LoanID &LID : Entry.second)
-        OS << "  Origin " << Entry.first << " contains Loan " << LID << "\n";
-    }
-  }
+  void dump(llvm::raw_ostream &OS) const;
 };
 
-/// The analysis that tracks which loans belong to which origins.
 class LoanPropagationAnalysis
     : public DataflowAnalysis<LoanPropagationAnalysis, LoanPropagationLattice,
                               Direction::Forward> {
@@ -91,49 +75,10 @@ public:
 
   Lattice getInitialState() { return Lattice{}; }
 
-  /// Merges two lattices by taking the union of loans for each origin.
-  // TODO(opt): Keep the state small by removing origins which become dead.
-  Lattice join(Lattice A, Lattice B) {
-    OriginLoanMap JoinedOrigins = utils::join(
-        A.Origins, B.Origins, OriginLoanMapFactory,
-        [&](const LoanSet *S1, const LoanSet *S2) {
-          assert((S1 || S2) && "unexpectedly merging 2 empty sets");
-          if (!S1)
-            return *S2;
-          if (!S2)
-            return *S1;
-          return utils::join(*S1, *S2, LoanSetFactory);
-        },
-        // Asymmetric join is a performance win. For origins present only on one
-        // branch, the loan set can be carried over as-is.
-        utils::JoinKind::Asymmetric);
-    return Lattice(JoinedOrigins);
-  }
+  Lattice join(Lattice A, Lattice B);
 
-  /// A new loan is issued to the origin. Old loans are erased.
-  Lattice transfer(Lattice In, const IssueFact &F) {
-    OriginID OID = F.getOriginID();
-    LoanID LID = F.getLoanID();
-    return LoanPropagationLattice(OriginLoanMapFactory.add(
-        In.Origins, OID,
-        LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID)));
-  }
-
-  /// A flow from source to destination. If `KillDest` is true, this replaces
-  /// the destination's loans with the source's. Otherwise, the source's loans
-  /// are merged into the destination's.
-  Lattice transfer(Lattice In, const OriginFlowFact &F) {
-    OriginID DestOID = F.getDestOriginID();
-    OriginID SrcOID = F.getSrcOriginID();
-
-    LoanSet DestLoans =
-        F.getKillDest() ? LoanSetFactory.getEmptySet() : getLoans(In, DestOID);
-    LoanSet SrcLoans = getLoans(In, SrcOID);
-    LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
-
-    return LoanPropagationLattice(
-        OriginLoanMapFactory.add(In.Origins, DestOID, MergedLoans));
-  }
+  Lattice transfer(Lattice In, const IssueFact &F);
+  Lattice transfer(Lattice In, const OriginFlowFact &F);
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const {
     return getLoans(getState(P), OID);

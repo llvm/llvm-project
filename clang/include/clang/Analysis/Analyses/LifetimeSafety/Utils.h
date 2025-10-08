@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// This file provides utilities for the lifetime safety analysis, including 
+// This file provides utilities for the lifetime safety analysis, including
 // join operations for LLVM's immutable data structures.
 //
 //===----------------------------------------------------------------------===//

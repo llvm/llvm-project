@@ -18,6 +18,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
@@ -64,7 +65,7 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
 
-  FactGenerator FactGen(*FactMgr, AC);
+  FactsGenerator FactGen(*FactMgr, AC);
   FactGen.run();
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
 
@@ -89,9 +90,7 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), getTestPoints()));
 
-  LifetimeChecker Checker(*LoanPropagation, *LiveOrigins, *FactMgr, AC,
-                          Reporter);
-  Checker.run();
+  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
 }
 
 LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,

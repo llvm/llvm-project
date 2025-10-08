@@ -1,14 +1,9 @@
 add_clang_library(clangAnalysisLifetimeSafety
+  Checker.cpp
+  FactsGenerator.cpp
+  LiveOrigins.cpp
   LifetimeAnnotations.cpp
   LifetimeSafety.cpp
-
-  LINK_LIBS
-  clangAST
-  clangASTMatchers
-  clangBasic
-  clangLex
-
-  DEPENDS
-  omp_gen
-  ClangDriverOptions
+  LoanPropagation.cpp
   )
+

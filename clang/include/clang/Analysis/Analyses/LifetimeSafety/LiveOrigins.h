@@ -7,28 +7,27 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the LiveOriginAnalysis, a backward dataflow analysis that
-// determines which origins are "live" at each program point. An origin is live
-// if there's a potential future use of the pointer it represents. This
-// information is used to detect use-after-free errors by checking if live
-// origins hold loans to objects that have already expired.
+// determines which origins are "live" at each program point. An origin is
+// "live" at a program point if there's a potential future use of the pointer it
+// represents. Liveness is "generated" by a read of origin's loan set (e.g., a
+// `UseFact`) and is "killed" (i.e., it stops being live) when its loan set is
+// overwritten (e.g. a OriginFlow killing the destination origin).
+//
+// This information is used for detecting use-after-free errors, as it allows us
+// to check if a live origin holds a loan to an object that has already expired.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 
 namespace clang::lifetimes {
 namespace internal {
@@ -40,21 +39,6 @@ enum class LivenessKind : uint8_t {
   Maybe, // Live on some path but not all paths (may-be-live)
   Must   // Live on all paths (must-be-live)
 };
-
-// ========================================================================= //
-//                         Live Origins Analysis
-// ========================================================================= //
-//
-// A backward dataflow analysis that determines which origins are "live" at each
-// program point. An origin is "live" at a program point if there's a potential
-// future use of the pointer it represents. Liveness is "generated" by a read of
-// origin's loan set (e.g., a `UseFact`) and is "killed" (i.e., it stops being
-// live) when its loan set is overwritten (e.g. a OriginFlow killing the
-// destination origin).
-//
-// This information is used for detecting use-after-free errors, as it allows us
-// to check if a live origin holds a loan to an object that has already expired.
-// ========================================================================= //
 
 /// Information about why an origin is live at a program point.
 struct LivenessInfo {
@@ -109,28 +93,7 @@ struct LivenessLattice {
     return !(*this == Other);
   }
 
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const {
-    if (LiveOrigins.isEmpty())
-      OS << "  <empty>\n";
-    for (const auto &Entry : LiveOrigins) {
-      OriginID OID = Entry.first;
-      const LivenessInfo &Info = Entry.second;
-      OS << "  ";
-      OM.dump(OID, OS);
-      OS << " is ";
-      switch (Info.Kind) {
-      case LivenessKind::Must:
-        OS << "definitely";
-        break;
-      case LivenessKind::Maybe:
-        OS << "maybe";
-        break;
-      case LivenessKind::Dead:
-        llvm_unreachable("liveness kind of live origins should not be dead.");
-      }
-      OS << " live at this point\n";
-    }
-  }
+  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const;
 };
 
 /// The analysis that tracks which origins are live, with granular information
@@ -139,8 +102,6 @@ struct LivenessLattice {
 class LiveOriginAnalysis
     : public DataflowAnalysis<LiveOriginAnalysis, LivenessLattice,
                               Direction::Backward> {
-  FactManager &FactMgr;
-  LivenessMap::Factory &Factory;
 
 public:
   LiveOriginAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
@@ -153,69 +114,11 @@ public:
 
   Lattice getInitialState() { return Lattice(Factory.getEmptyMap()); }
 
-  /// Merges two lattices by combining liveness information.
-  /// When the same origin has different confidence levels, we take the lower
-  /// one.
-  Lattice join(Lattice L1, Lattice L2) const {
-    LivenessMap Merged = L1.LiveOrigins;
-    // Take the earliest UseFact to make the join hermetic and commutative.
-    auto CombineUseFact = [](const UseFact &A,
-                             const UseFact &B) -> const UseFact * {
-      return A.getUseExpr()->getExprLoc() < B.getUseExpr()->getExprLoc() ? &A
-                                                                         : &B;
-    };
-    auto CombineLivenessKind = [](LivenessKind K1,
-                                  LivenessKind K2) -> LivenessKind {
-      assert(K1 != LivenessKind::Dead && "LivenessKind should not be dead.");
-      assert(K2 != LivenessKind::Dead && "LivenessKind should not be dead.");
-      // Only return "Must" if both paths are "Must", otherwise Maybe.
-      if (K1 == LivenessKind::Must && K2 == LivenessKind::Must)
-        return LivenessKind::Must;
-      return LivenessKind::Maybe;
-    };
-    auto CombineLivenessInfo = [&](const LivenessInfo *L1,
-                                   const LivenessInfo *L2) -> LivenessInfo {
-      assert((L1 || L2) && "unexpectedly merging 2 empty sets");
-      if (!L1)
-        return LivenessInfo(L2->CausingUseFact, LivenessKind::Maybe);
-      if (!L2)
-        return LivenessInfo(L1->CausingUseFact, LivenessKind::Maybe);
-      return LivenessInfo(
-          CombineUseFact(*L1->CausingUseFact, *L2->CausingUseFact),
-          CombineLivenessKind(L1->Kind, L2->Kind));
-    };
-    return Lattice(utils::join(
-        L1.LiveOrigins, L2.LiveOrigins, Factory, CombineLivenessInfo,
-        // A symmetric join is required here. If an origin is live on one
-        // branch but not the other, its confidence must be demoted to `Maybe`.
-        utils::JoinKind::Symmetric));
-  }
+  Lattice join(Lattice L1, Lattice L2) const;
 
-  /// A read operation makes the origin live with definite confidence, as it
-  /// dominates this program point. A write operation kills the liveness of
-  /// the origin since it overwrites the value.
-  Lattice transfer(Lattice In, const UseFact &UF) {
-    OriginID OID = UF.getUsedOrigin(FactMgr.getOriginMgr());
-    // Write kills liveness.
-    if (UF.isWritten())
-      return Lattice(Factory.remove(In.LiveOrigins, OID));
-    // Read makes origin live with definite confidence (dominates this point).
-    return Lattice(Factory.add(In.LiveOrigins, OID,
-                               LivenessInfo(&UF, LivenessKind::Must)));
-  }
-
-  /// Issuing a new loan to an origin kills its liveness.
-  Lattice transfer(Lattice In, const IssueFact &IF) {
-    return Lattice(Factory.remove(In.LiveOrigins, IF.getOriginID()));
-  }
-
-  /// An OriginFlow kills the liveness of the destination origin if `KillDest`
-  /// is true. Otherwise, it propagates liveness from destination to source.
-  Lattice transfer(Lattice In, const OriginFlowFact &OF) {
-    if (!OF.getKillDest())
-      return In;
-    return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
-  }
+  Lattice transfer(Lattice In, const UseFact &UF);
+  Lattice transfer(Lattice In, const IssueFact &IF);
+  Lattice transfer(Lattice In, const OriginFlowFact &OF);
 
   LivenessMap getLiveOrigins(ProgramPoint P) const {
     return getState(P).LiveOrigins;
@@ -223,15 +126,11 @@ public:
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const {
-    llvm::dbgs() << "==========================================\n";
-    llvm::dbgs() << getAnalysisName() << " results:\n";
-    llvm::dbgs() << "==========================================\n";
-    for (const auto &Entry : TestPoints) {
-      OS << "TestPoint: " << Entry.getKey() << "\n";
-      getState(Entry.getValue()).dump(OS, FactMgr.getOriginMgr());
-    }
-  }
+            llvm::StringMap<ProgramPoint> TestPoints) const;
+
+private:
+  FactManager &FactMgr;
+  LivenessMap::Factory &Factory;
 };
 } // namespace internal
 } // namespace clang::lifetimes
