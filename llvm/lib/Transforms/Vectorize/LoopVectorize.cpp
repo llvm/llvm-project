@@ -4264,8 +4264,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
-        RecurKind RK = Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-        return RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum;
+        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind());
       }))
     return false;
 
@@ -7282,8 +7282,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     if (!Exit->hasPredecessors())
       continue;
     for (VPRecipeBase &PhiR : Exit->phis())
-      SE.forgetLcssaPhiWithNewPredecessor(
-          OrigLoop, cast<PHINode>(&cast<VPIRPhi>(PhiR).getInstruction()));
+      SE.forgetLcssaPhiWithNewPredecessor(OrigLoop,
+                                          &cast<VPIRPhi>(PhiR).getIRPhi());
   }
   // Forget the original loop and block dispositions.
   SE.forgetLoop(OrigLoop);

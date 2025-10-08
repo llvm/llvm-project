@@ -2413,6 +2413,73 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
 }
 
+static void buildCtorDtorList(
+    mlir::ModuleOp module, StringRef globalXtorName, StringRef llvmXtorName,
+    llvm::function_ref<std::pair<StringRef, int>(mlir::Attribute)> createXtor) {
+  llvm::SmallVector<std::pair<StringRef, int>> globalXtors;
+  for (const mlir::NamedAttribute namedAttr : module->getAttrs()) {
+    if (namedAttr.getName() == globalXtorName) {
+      for (auto attr : mlir::cast<mlir::ArrayAttr>(namedAttr.getValue()))
+        globalXtors.emplace_back(createXtor(attr));
+      break;
+    }
+  }
+
+  if (globalXtors.empty())
+    return;
+
+  mlir::OpBuilder builder(module.getContext());
+  builder.setInsertionPointToEnd(&module.getBodyRegion().back());
+
+  // Create a global array llvm.global_ctors with element type of
+  // struct { i32, ptr, ptr }
+  auto ctorPFTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  llvm::SmallVector<mlir::Type> ctorStructFields;
+  ctorStructFields.push_back(builder.getI32Type());
+  ctorStructFields.push_back(ctorPFTy);
+  ctorStructFields.push_back(ctorPFTy);
+
+  auto ctorStructTy = mlir::LLVM::LLVMStructType::getLiteral(
+      builder.getContext(), ctorStructFields);
+  auto ctorStructArrayTy =
+      mlir::LLVM::LLVMArrayType::get(ctorStructTy, globalXtors.size());
+
+  mlir::Location loc = module.getLoc();
+  auto newGlobalOp = mlir::LLVM::GlobalOp::create(
+      builder, loc, ctorStructArrayTy, /*constant=*/false,
+      mlir::LLVM::Linkage::Appending, llvmXtorName, mlir::Attribute());
+
+  builder.createBlock(&newGlobalOp.getRegion());
+  builder.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
+
+  mlir::Value result =
+      mlir::LLVM::UndefOp::create(builder, loc, ctorStructArrayTy);
+
+  for (auto [index, fn] : llvm::enumerate(globalXtors)) {
+    mlir::Value structInit =
+        mlir::LLVM::UndefOp::create(builder, loc, ctorStructTy);
+    mlir::Value initPriority = mlir::LLVM::ConstantOp::create(
+        builder, loc, ctorStructFields[0], fn.second);
+    mlir::Value initFuncAddr = mlir::LLVM::AddressOfOp::create(
+        builder, loc, ctorStructFields[1], fn.first);
+    mlir::Value initAssociate =
+        mlir::LLVM::ZeroOp::create(builder, loc, ctorStructFields[2]);
+    // Literal zero makes the InsertValueOp::create ambiguous.
+    llvm::SmallVector<int64_t> zero{0};
+    structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
+                                                   initPriority, zero);
+    structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
+                                                   initFuncAddr, 1);
+    // TODO: handle associated data for initializers.
+    structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
+                                                   initAssociate, 2);
+    result = mlir::LLVM::InsertValueOp::create(builder, loc, result, structInit,
+                                               index);
+  }
+
+  builder.create<mlir::LLVM::ReturnOp>(loc, result);
+}
+
 // The applyPartialConversion function traverses blocks in the dominance order,
 // so it does not lower and operations that are not reachachable from the
 // operations passed in as arguments. Since we do need to lower such code in
@@ -2519,6 +2586,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+
+  // Emit the llvm.global_ctors array.
+  buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
+                    "llvm.global_ctors", [](mlir::Attribute attr) {
+                      auto ctorAttr = mlir::cast<cir::GlobalCtorAttr>(attr);
+                      return std::make_pair(ctorAttr.getName(),
+                                            ctorAttr.getPriority());
+                    });
 }
 
 mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
