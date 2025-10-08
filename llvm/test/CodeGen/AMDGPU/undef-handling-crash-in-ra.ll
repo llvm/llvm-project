@@ -51,7 +51,6 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    v_mov_b32_e32 v62, s66
 ; CHECK-NEXT:    v_mov_b32_e32 v63, s67
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], a[32:33]
-; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 v[60:61], v[58:59]
@@ -68,7 +67,6 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    flat_store_dwordx2 v[46:47], v[44:45]
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], a[32:33]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 v[0:1], v[56:57] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

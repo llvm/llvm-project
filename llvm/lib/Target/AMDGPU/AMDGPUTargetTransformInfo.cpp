@@ -1301,6 +1301,90 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
     if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value())))
       Ops.push_back(&Op);
+
+    // Zero cost vector instructions (e.g. extractelement 0 of i32 vectors)
+    // will be optimized away, and sinking them can help SDAG combines.
+    DataLayout DL = I->getModule()->getDataLayout();
+    auto IsFreeExtractInsert = [&DL, this](VectorType *VecType,
+                                           unsigned VecIndex) {
+      unsigned EltSize = DL.getTypeSizeInBits(VecType->getElementType());
+      return EltSize >= 32 ||
+             (EltSize == 16 && VecIndex == 0 && ST->has16BitInsts());
+    };
+
+    uint64_t VecIndex;
+    Value *Vec;
+    if (match(Op.get(), m_ExtractElt(m_Value(Vec), m_ConstantInt(VecIndex)))) {
+      Instruction *VecOpInst =
+          dyn_cast<Instruction>(cast<Instruction>(Op.get())->getOperand(0));
+      // If a zero cost extractvector instruction is the only use of the vector,
+      // then it may be combined with the def.
+      if (VecOpInst && VecOpInst->hasOneUse())
+        continue;
+
+      if (IsFreeExtractInsert(cast<VectorType>(Vec->getType()), VecIndex))
+        Ops.push_back(&Op);
+
+      continue;
+    }
+
+    if (match(Op.get(),
+              m_InsertElt(m_Value(Vec), m_Value(), m_ConstantInt(VecIndex)))) {
+      if (IsFreeExtractInsert(cast<VectorType>(Vec->getType()), VecIndex))
+        Ops.push_back(&Op);
+
+      continue;
+    }
+
+    if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(Op.get())) {
+      if (Shuffle->isIdentity()) {
+        Ops.push_back(&Op);
+        continue;
+      }
+
+      unsigned EltSize = DL.getTypeSizeInBits(
+          cast<VectorType>(cast<VectorType>(Shuffle->getType()))
+              ->getElementType());
+
+      // For i32 (or greater) shufflevectors, these will be lowered into a
+      // series of insert / extract elements, which will be coalesced away.
+      if (EltSize >= 32) {
+        Ops.push_back(&Op);
+        continue;
+      }
+
+      if (EltSize < 16 || !ST->has16BitInsts())
+        continue;
+
+      int NumSubElts, SubIndex;
+      if (Shuffle->changesLength()) {
+        if (Shuffle->increasesLength() && Shuffle->isIdentityWithPadding()) {
+          Ops.push_back(&Op);
+          continue;
+        }
+
+        if (Shuffle->isExtractSubvectorMask(SubIndex) ||
+            Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex)) {
+          if (!(SubIndex % 2)) {
+            Ops.push_back(&Op);
+            continue;
+          }
+        }
+      }
+
+      if (Shuffle->isReverse() || Shuffle->isZeroEltSplat() ||
+          Shuffle->isSingleSource()) {
+        Ops.push_back(&Op);
+        continue;
+      }
+
+      if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex)) {
+        if (!(SubIndex % 2)) {
+          Ops.push_back(&Op);
+          continue;
+        }
+      }
+    }
   }
 
   return !Ops.empty();
