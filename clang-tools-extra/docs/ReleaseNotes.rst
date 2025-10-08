@@ -49,6 +49,10 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
+  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+  in the 24th release.
+
 - Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
   `StrictMode`, which were documented as deprecated since
   :program:`clang-tidy-20`. Users should use the check-specific options of the
@@ -162,6 +166,10 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
+
+- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
+  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+  in the 24th release.
 
 New checks
 ^^^^^^^^^^
