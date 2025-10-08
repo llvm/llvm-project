@@ -175,6 +175,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     return false;
   }
 
+  // This is the current list of prefixes for all existing users matching file
+  // path. We may need parametrization in constructor in future.
   constexpr StringRef PathPrefixes[] = {"src", "!src", "mainfile", "source"};
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
@@ -214,8 +216,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     auto &Entry = CurrentSection->Entries[Prefix][Category];
     Entry.RemoveDotSlash =
         RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix);
-    if (Entry.RemoveDotSlash)
+    if (Entry.RemoveDotSlash) {
+      // FIXME: On Windows remove_leading_dotslash will break escape sequences.
       Pattern = llvm::sys::path::remove_leading_dotslash(Pattern);
+    }
     if (auto Err = Entry.insert(Pattern, LineNo, UseGlobs)) {
       Error =
           (Twine("malformed ") + (UseGlobs ? "glob" : "regex") + " in line " +
