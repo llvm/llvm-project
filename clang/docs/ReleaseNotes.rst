@@ -123,6 +123,11 @@ AST Dumping Potentially Breaking Changes
 
     ``__atomic_test_and_set(p, 0)``
 
+- Pretty-printing of templates with inherited (i.e. specified in a previous
+  redeclaration) default arguments has been fixed.
+
+- Default arguments of template template parameters are pretty-printed now.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -249,6 +254,8 @@ Non-comprehensive list of changes in this release
   specifiers, it also must be used within a template context.
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
+
+- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
 New Compiler Flags
 ------------------
@@ -440,6 +447,8 @@ Bug Fixes to C++ Support
 - Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
 - Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
 - Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
+- Fix for clang incorrectly rejecting the default construction of a union with
+  nontrivial member when another member has an initializer. (#GH81774)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -452,6 +461,7 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed missing diagnostics of ``diagnose_if`` on templates involved in initialization. (#GH160776)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

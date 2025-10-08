@@ -3348,6 +3348,9 @@ public:
   SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                              SanitizerHandler Handler);
 
+  /// Emit additional metadata used by the AllocToken instrumentation.
+  void EmitAllocToken(llvm::CallBase *CB, QualType AllocType);
+
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
@@ -4464,10 +4467,8 @@ public:
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
-  void FlattenAccessAndType(
-      Address Addr, QualType AddrTy,
-      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-      SmallVectorImpl<QualType> &FlatTypes);
+  void FlattenAccessAndTypeLValue(LValue LVal,
+                                  SmallVectorImpl<LValue> &AccessList);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);
