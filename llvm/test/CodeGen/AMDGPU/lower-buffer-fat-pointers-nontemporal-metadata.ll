@@ -85,7 +85,7 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX942-SDAG-NEXT:    s_or_b64 s[8:9], s[2:3], s[12:13]
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-SDAG-NEXT:    buffer_load_dword v1, v0, s[8:11], 0 offen nt
+; GFX942-SDAG-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen nt
 ; GFX942-SDAG-NEXT:    s_load_dword s13, s[4:5], 0x30
 ; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
 ; GFX942-SDAG-NEXT:    s_mov_b32 s5, s12
@@ -96,9 +96,9 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-SDAG-NEXT:    s_mov_b32 s2, s1
 ; GFX942-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX942-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-SDAG-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen nt
+; GFX942-SDAG-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen nt
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: buffer_nontemporal_load_store:
@@ -115,7 +115,7 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, s3
 ; GFX942-GISEL-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GISEL-NEXT:    buffer_load_dword v1, v0, s[8:11], 0 offen nt
+; GFX942-GISEL-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen nt
 ; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
 ; GFX942-GISEL-NEXT:    s_load_dword s9, s[4:5], 0x30
 ; GFX942-GISEL-NEXT:    s_mov_b32 s4, s7
@@ -126,9 +126,9 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, s3
 ; GFX942-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-GISEL-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen nt
+; GFX942-GISEL-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen nt
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX10-SDAG-LABEL: buffer_nontemporal_load_store:
@@ -413,7 +413,7 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX942-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX942-SDAG-NEXT:    s_or_b64 s[8:9], s[2:3], s[12:13]
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-SDAG-NEXT:    buffer_load_dword v1, v0, s[8:11], 0 offen sc0 sc1
+; GFX942-SDAG-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen sc0 sc1
 ; GFX942-SDAG-NEXT:    s_load_dword s13, s[4:5], 0x30
 ; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
 ; GFX942-SDAG-NEXT:    s_mov_b32 s5, s12
@@ -424,9 +424,9 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX942-SDAG-NEXT:    s_mov_b32 s2, s1
 ; GFX942-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX942-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-SDAG-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen sc0 sc1
+; GFX942-SDAG-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen sc0 sc1
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: buffer_nontemporal_and_volatile_load_store:
@@ -443,7 +443,7 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, s3
 ; GFX942-GISEL-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-GISEL-NEXT:    buffer_load_dword v1, v0, s[8:11], 0 offen sc0 sc1
+; GFX942-GISEL-NEXT:    buffer_load_dword v0, v0, s[8:11], 0 offen sc0 sc1
 ; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
 ; GFX942-GISEL-NEXT:    s_load_dword s9, s[4:5], 0x30
 ; GFX942-GISEL-NEXT:    s_mov_b32 s4, s7
@@ -454,9 +454,9 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX942-GISEL-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GFX942-GISEL-NEXT:    s_mov_b32 s6, s3
 ; GFX942-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-GISEL-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen sc0 sc1
+; GFX942-GISEL-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen sc0 sc1
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX10-SDAG-LABEL: buffer_nontemporal_and_volatile_load_store:

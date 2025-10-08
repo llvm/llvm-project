@@ -74,7 +74,7 @@ body:             |
   ; COALESCE-NEXT:   successors: %bb.3(0x80000000)
   ; COALESCE-NEXT: {{  $}}
   ; COALESCE-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = COPY [[S_MOV_B32_]].sub0
-  ; COALESCE-NEXT:   [[COPY1:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B32_]].sub0_sub1
+  ; COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[S_MOV_B32_]].sub0_sub1
   ; COALESCE-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], 0, 0, 0, 0, implicit $mode, implicit $exec
   ; COALESCE-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_1:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
   ; COALESCE-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_2:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
@@ -116,7 +116,7 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[AV_MOV_1:%[0-9]+]].sub2:areg_128_align2 = COPY [[AV_MOV_1]].sub0
   ; GFX908-COALESCE-NEXT:   [[AV_MOV_1:%[0-9]+]].sub3:areg_128_align2 = COPY [[AV_MOV_1]].sub0
   ; GFX908-COALESCE-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = COPY [[S_MOV_B32_]].sub0
-  ; GFX908-COALESCE-NEXT:   [[COPY1:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B32_]].sub0_sub1
+  ; GFX908-COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[S_MOV_B32_]].sub0_sub1
   ; GFX908-COALESCE-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[AV_MOV_1]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX908-COALESCE-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_1:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX908-COALESCE-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_2:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_MFMA_F32_16X16X16F16_e64_1]], 0, 0, 0, implicit $mode, implicit $exec

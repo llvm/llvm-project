@@ -472,46 +472,49 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__a(ptr %ptr) #0 {
 ; CHECK-LABEL: flat_atomic_cmpxchg_i64_ret_av_av__a:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, 0x50, v0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
+; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB14_2
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[6:7], v[0:3] glc
+; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:  .LBB14_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB14_4
 ; CHECK-NEXT:  ; %bb.3: ; %atomicrmw.private
-; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, -1, v6, vcc
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, -1, v4, vcc
 ; CHECK-NEXT:    buffer_load_dword v4, v6, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v5, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
-; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
 ; CHECK-NEXT:  .LBB14_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -530,50 +533,53 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-LABEL: flat_atomic_cmpxchg_i64_ret_a_a__a:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, 0x50, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
-; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
+; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB15_2
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[6:7], v[0:3] glc
+; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:  .LBB15_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB15_4
 ; CHECK-NEXT:  ; %bb.3: ; %atomicrmw.private
-; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, -1, v6, vcc
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, -1, v4, vcc
 ; CHECK-NEXT:    buffer_load_dword v4, v6, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v5, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
-; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
 ; CHECK-NEXT:  .LBB15_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -768,46 +774,49 @@ define void @flat_atomic_cmpxchg_i64_ret_v_v__a(ptr %ptr) #0 {
 ; CHECK-LABEL: flat_atomic_cmpxchg_i64_ret_v_v__a:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, 0x50, v0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
+; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB19_2
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[6:7], v[0:3] glc
+; CHECK-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:  .LBB19_2: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB19_4
 ; CHECK-NEXT:  ; %bb.3: ; %atomicrmw.private
-; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, -1, v6, vcc
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, -1, v4, vcc
 ; CHECK-NEXT:    buffer_load_dword v4, v6, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v5, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
-; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    buffer_store_dword v1, v6, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    buffer_store_dword v0, v6, s[0:3], 0 offen
 ; CHECK-NEXT:  .LBB19_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND

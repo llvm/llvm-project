@@ -52,26 +52,27 @@ define amdgpu_kernel void @test_mfma_i32_32x32x8i8(ptr addrspace(1) %arg) #0 {
 ; GFX908-NEXT:    v_mfma_i32_32x32x8i8 a[0:15], v0, v1, a[0:15] cbsz:1 abid:2 blgp:3
 ; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_read_b32 v0, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v1, a13
-; GFX908-NEXT:    v_accvgpr_read_b32 v2, a14
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a15
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a9
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a10
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a11
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v9, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v10, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v11, a7
-; GFX908-NEXT:    v_accvgpr_read_b32 v12, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v13, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a3
-; GFX908-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17] offset:48
-; GFX908-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:32
-; GFX908-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:16
-; GFX908-NEXT:    global_store_dwordx4 v16, v[12:15], s[16:17]
+; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a13
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a12
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a6
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v11, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v10, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v9, a9
+; GFX908-NEXT:    v_accvgpr_read_b32 v8, a8
+; GFX908-NEXT:    global_store_dwordx4 v16, v[12:15], s[16:17] offset:48
+; GFX908-NEXT:    s_nop 0
+; GFX908-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:32
+; GFX908-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:16
+; GFX908-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
 ; GFX908-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: test_mfma_i32_32x32x8i8:

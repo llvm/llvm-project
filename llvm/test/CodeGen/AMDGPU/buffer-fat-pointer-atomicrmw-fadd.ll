@@ -423,8 +423,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX942-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v6, v5
-; GFX942-NEXT:    buffer_atomic_add_f32 v6, v4, s[4:7], 0 offen offset:1024 sc0
+; GFX942-NEXT:    buffer_atomic_add_f32 v5, v4, s[4:7], 0 offen offset:1024 sc0
 ; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX942-NEXT:    ; implicit-def: $vgpr4
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
@@ -432,7 +431,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v6
+; GFX942-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX942-NEXT:    buffer_inv sc1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -542,8 +541,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX90A-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v5
-; GFX90A-NEXT:    buffer_atomic_add_f32 v6, v4, s[8:11], 0 offen offset:1024 glc
+; GFX90A-NEXT:    buffer_atomic_add_f32 v5, v4, s[8:11], 0 offen offset:1024 glc
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -551,7 +549,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX90A-NEXT:  ; %bb.2:
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v6
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX90A-NEXT:    buffer_wbinvl1
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2443,8 +2441,8 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX942-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdgpu_no_fine_grained_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v9, v6
-; GFX942-NEXT:    v_mov_b32_e32 v8, v5
+; GFX942-NEXT:    v_mov_b32_e32 v7, v6
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX942-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
@@ -2458,7 +2456,6 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX942-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[8:9]
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[6:7], v4, s[4:7], 0 offen offset:2048 sc0
 ; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX942-NEXT:    ; implicit-def: $vgpr4
@@ -2610,8 +2607,8 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v9, v6
-; GFX90A-NEXT:    v_mov_b32_e32 v8, v5
+; GFX90A-NEXT:    v_mov_b32_e32 v7, v6
+; GFX90A-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX90A-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_readfirstlane_b32 s8, v0
@@ -2623,7 +2620,6 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX90A-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[8:9], v[8:9] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_atomic_add_f64 v[6:7], v4, s[8:11], 0 offen offset:2048 glc
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4
@@ -4489,6 +4485,7 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v6, v4, v6
 ; GFX942-NEXT:    v_and_or_b32 v6, v7, v11, v6
 ; GFX942-NEXT:    s_mov_b64 s[8:9], exec
+; GFX942-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:  .LBB15_4: ; Parent Loop BB15_3 Depth=1
 ; GFX942-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -4502,7 +4499,6 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX942-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[8:9], v[6:7]
 ; GFX942-NEXT:    buffer_atomic_cmpswap v[8:9], v10, s[4:7], 0 offen sc0
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB15_4
@@ -4778,6 +4774,7 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v6, v4, v6
 ; GFX90A-NEXT:    v_and_or_b32 v6, v7, v11, v6
 ; GFX90A-NEXT:    s_mov_b64 s[12:13], exec
+; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB15_4: ; Parent Loop BB15_3 Depth=1
 ; GFX90A-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX90A-NEXT:    v_readfirstlane_b32 s8, v0
@@ -4789,7 +4786,6 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX90A-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_atomic_cmpswap v[8:9], v10, s[8:11], 0 offen glc
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB15_4
@@ -6352,6 +6348,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, v5, v6, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v8, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v6, v7, v10, v4
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
 ; GFX942-NEXT:  .LBB18_4: ; Parent Loop BB18_3 Depth=1
 ; GFX942-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX942-NEXT:    v_readfirstlane_b32 s4, v0
@@ -6364,7 +6361,6 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX942-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
 ; GFX942-NEXT:    buffer_atomic_cmpswap v[4:5], v9, s[4:7], 0 offen sc0
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB18_4
@@ -6678,6 +6674,7 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX90A-NEXT:    v_lshlrev_b32_sdwa v4, v8, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX90A-NEXT:    v_and_or_b32 v6, v7, v10, v4
 ; GFX90A-NEXT:    s_mov_b64 s[12:13], exec
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB18_4: ; Parent Loop BB18_3 Depth=1
 ; GFX90A-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX90A-NEXT:    v_readfirstlane_b32 s8, v0
@@ -6689,7 +6686,6 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX90A-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_atomic_cmpswap v[4:5], v9, s[8:11], 0 offen glc
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB18_4
@@ -7532,8 +7528,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX942-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v6, v5
-; GFX942-NEXT:    buffer_atomic_pk_add_f16 v6, v4, s[4:7], 0 offen offset:1024 sc0
+; GFX942-NEXT:    buffer_atomic_pk_add_f16 v5, v4, s[4:7], 0 offen offset:1024 sc0
 ; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX942-NEXT:    ; implicit-def: $vgpr4
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
@@ -7541,7 +7536,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v6
+; GFX942-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX942-NEXT:    buffer_inv sc1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7687,8 +7682,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX90A-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v5
-; GFX90A-NEXT:    buffer_atomic_pk_add_f16 v6, v4, s[8:11], 0 offen offset:1024 glc
+; GFX90A-NEXT:    buffer_atomic_pk_add_f16 v5, v4, s[8:11], 0 offen offset:1024 glc
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -7696,7 +7690,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX90A-NEXT:  ; %bb.2:
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v6
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX90A-NEXT:    buffer_wbinvl1
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -9981,6 +9975,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v5, v6, v11, vcc
 ; GFX942-NEXT:    v_perm_b32 v6, v5, v4, s11
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
 ; GFX942-NEXT:  .LBB28_4: ; Parent Loop BB28_3 Depth=1
 ; GFX942-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX942-NEXT:    v_readfirstlane_b32 s4, v0
@@ -9993,7 +9988,6 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX942-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
 ; GFX942-NEXT:    buffer_atomic_cmpswap v[4:5], v8, s[4:7], 0 offen sc0
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB28_4
@@ -10307,6 +10301,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v5, v6, v11, vcc
 ; GFX90A-NEXT:    v_perm_b32 v6, v5, v4, s15
 ; GFX90A-NEXT:    s_mov_b64 s[12:13], exec
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB28_4: ; Parent Loop BB28_3 Depth=1
 ; GFX90A-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX90A-NEXT:    v_readfirstlane_b32 s8, v0
@@ -10318,7 +10313,6 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX90A-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_atomic_cmpswap v[4:5], v8, s[8:11], 0 offen glc
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB28_4

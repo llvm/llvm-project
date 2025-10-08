@@ -8,10 +8,10 @@ define <4 x float> @default(<8 x half> %arg0, <8 x half> %arg1, <4 x float> %arg
 ; HEURRC-LABEL: default:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; HEURRC-NEXT:    v_accvgpr_write_b32 a3, v11
-; HEURRC-NEXT:    v_accvgpr_write_b32 a2, v10
-; HEURRC-NEXT:    v_accvgpr_write_b32 a1, v9
 ; HEURRC-NEXT:    v_accvgpr_write_b32 a0, v8
+; HEURRC-NEXT:    v_accvgpr_write_b32 a1, v9
+; HEURRC-NEXT:    v_accvgpr_write_b32 a2, v10
+; HEURRC-NEXT:    v_accvgpr_write_b32 a3, v11
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], v[0:3], v[4:7], a[0:3]
 ; HEURRC-NEXT:    s_nop 7
@@ -34,10 +34,10 @@ define <4 x float> @request_agpr(<8 x half> %arg0, <8 x half> %arg1, <4 x float>
 ; HEURRC-LABEL: request_agpr:
 ; HEURRC:       ; %bb.0:
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; HEURRC-NEXT:    v_accvgpr_write_b32 a3, v11
-; HEURRC-NEXT:    v_accvgpr_write_b32 a2, v10
-; HEURRC-NEXT:    v_accvgpr_write_b32 a1, v9
 ; HEURRC-NEXT:    v_accvgpr_write_b32 a0, v8
+; HEURRC-NEXT:    v_accvgpr_write_b32 a1, v9
+; HEURRC-NEXT:    v_accvgpr_write_b32 a2, v10
+; HEURRC-NEXT:    v_accvgpr_write_b32 a3, v11
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], v[0:3], v[4:7], a[0:3]
 ; HEURRC-NEXT:    s_nop 7

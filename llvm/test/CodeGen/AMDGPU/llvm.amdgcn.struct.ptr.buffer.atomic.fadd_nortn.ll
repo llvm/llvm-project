@@ -246,6 +246,7 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX90A-NEXT:    buffer_atomic_add_f32 v0, v[8:9], s[8:11], s12 idxen offen
 ; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX90A-NEXT:    ; implicit-def: $vgpr7
+; GFX90A-NEXT:    ; implicit-def: $vgpr0
 ; GFX90A-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB4_1
@@ -279,6 +280,7 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX942-NEXT:    buffer_atomic_add_f32 v0, v[8:9], s[4:7], s8 idxen offen
 ; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    ; implicit-def: $vgpr0
 ; GFX942-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB4_1
@@ -418,6 +420,7 @@ define void @struct_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__vgpr_rsrc__vgpr
 ; GFX90A-NEXT:    buffer_atomic_pk_add_f16 v0, v[8:9], s[8:11], s12 idxen offen
 ; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX90A-NEXT:    ; implicit-def: $vgpr7
+; GFX90A-NEXT:    ; implicit-def: $vgpr0
 ; GFX90A-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB5_1
@@ -451,6 +454,7 @@ define void @struct_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__vgpr_rsrc__vgpr
 ; GFX942-NEXT:    buffer_atomic_pk_add_f16 v0, v[8:9], s[4:7], s8 idxen offen
 ; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    ; implicit-def: $vgpr0
 ; GFX942-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB5_1

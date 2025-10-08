@@ -1012,6 +1012,7 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB12_2
 ; GFX950-SDAG-NEXT:  .LBB12_4: ; %atomicrmw.private
@@ -1044,6 +1045,7 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    buffer_inv sc1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX950-GISEL-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB12_2
 ; GFX950-GISEL-NEXT:  .LBB12_4: ; %atomicrmw.private
@@ -1167,6 +1169,7 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    buffer_inv sc1
 ; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX950-SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX950-SDAG-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_cbranch_execz .LBB13_2
 ; GFX950-SDAG-NEXT:  .LBB13_4: ; %atomicrmw.private
@@ -1203,6 +1206,7 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    buffer_inv sc1
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX950-GISEL-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_cbranch_execz .LBB13_2
 ; GFX950-GISEL-NEXT:  .LBB13_4: ; %atomicrmw.private

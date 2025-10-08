@@ -521,8 +521,8 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    v_readlane_b32 s16, v39, 22
 ; GFX908-NEXT:    s_mov_b32 s12, s24
 ; GFX908-NEXT:    s_mov_b32 s13, s23
-; GFX908-NEXT:    v_mov_b32_e32 v31, v32
 ; GFX908-NEXT:    s_mov_b32 s14, s22
+; GFX908-NEXT:    v_mov_b32_e32 v31, v32
 ; GFX908-NEXT:    s_mov_b32 s15, s21
 ; GFX908-NEXT:    s_mov_b64 s[10:11], s[26:27]
 ; GFX908-NEXT:    v_readlane_b32 s17, v39, 23

@@ -617,30 +617,30 @@ define amdgpu_kernel void @v8i8_multi_block(ptr addrspace(1) %src1, ptr addrspac
 ; GFX942-LABEL: v8i8_multi_block:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX942-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v2, 3, v1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v1
+; GFX942-NEXT:    v_and_b32_e32 v3, 0x3ff, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v4, 3, v3
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v3
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx2 v[6:7], v2, s[8:9]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v4, s[8:9]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
+; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX942-NEXT:  ; %bb.1: ; %bb.1
-; GFX942-NEXT:    global_load_dwordx2 v[4:5], v2, s[10:11]
-; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v1
+; GFX942-NEXT:    global_load_dwordx2 v[6:7], v4, s[10:11]
+; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v3
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB11_3
 ; GFX942-NEXT:  ; %bb.2: ; %bb.2
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0
-; GFX942-NEXT:    global_store_dwordx2 v1, v[6:7], s[12:13]
+; GFX942-NEXT:    v_mov_b32_e32 v3, 0
+; GFX942-NEXT:    global_store_dwordx2 v3, v[0:1], s[12:13]
 ; GFX942-NEXT:  .LBB11_3: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:  .LBB11_4: ; %bb.3
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v0, v[4:5], s[14:15]
+; GFX942-NEXT:    global_store_dwordx2 v2, v[6:7], s[14:15]
 ; GFX942-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
