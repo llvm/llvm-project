@@ -472,6 +472,26 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName lname) {
   return "Unknown";
 }
 
+llvm::StringRef llvm::dwarf::SourceLanguageNameString(SourceLanguageName Lang) {
+  switch (Lang) {
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  case DW_LNAME_##NAME:                                                        \
+    return "DW_LNAME_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+
+  return {};
+}
+
+unsigned
+llvm::dwarf::getSourceLanguageName(StringRef SourceLanguageNameString) {
+  return StringSwitch<unsigned>(SourceLanguageNameString)
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  .Case("DW_LNAME_" #NAME, DW_LNAME_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(0);
+}
+
 StringRef llvm::dwarf::CaseString(unsigned Case) {
   switch (Case) {
   case DW_ID_case_sensitive:
