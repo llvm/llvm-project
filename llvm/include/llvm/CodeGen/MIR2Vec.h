@@ -8,8 +8,8 @@
 ///
 /// \file
 /// This file defines the MIR2Vec vocabulary
-/// analysis(MIR2VecVocabLegacyAnalysis), the core mir2vec::Embedder interface
-/// for generating Machine IR embeddings, and related utilities.
+/// analysis(MIR2VecVocabLegacyAnalysis), the core mir2vec::MIREmbedder
+/// interface for generating Machine IR embeddings, and related utilities.
 ///
 /// MIR2Vec extends IR2Vec to support Machine IR embeddings. It represents the
 /// LLVM Machine IR as embeddings which can be used as input to machine learning
@@ -71,25 +71,31 @@ private:
     size_t TotalEntries = 0;
   } Layout;
 
+  enum class Section : unsigned { Opcodes = 0, MaxSections };
+
   ir2vec::VocabStorage Storage;
   mutable std::set<std::string> UniqueBaseOpcodeNames;
-  void generateStorage(const VocabMap &OpcodeMap, const TargetInstrInfo &TII);
-  void buildCanonicalOpcodeMapping(const TargetInstrInfo &TII);
+  const TargetInstrInfo &TII;
+  void generateStorage(const VocabMap &OpcodeMap);
+  void buildCanonicalOpcodeMapping();
+
+  /// Get canonical index for a machine opcode
+  unsigned getCanonicalOpcodeIndex(unsigned Opcode) const;
 
 public:
-  /// Static helper method for extracting base opcode names (public for testing)
+  /// Static method for extracting base opcode names (public for testing)
   static std::string extractBaseOpcodeName(StringRef InstrName);
 
-  /// Helper method for getting canonical index for base name (public for
-  /// testing)
+  /// Get canonical index for base name (public for testing)
   unsigned getCanonicalIndexForBaseName(StringRef BaseName) const;
 
   /// Get the string key for a vocabulary entry at the given position
   std::string getStringKey(unsigned Pos) const;
 
-  MIRVocabulary() = default;
+  MIRVocabulary() = delete;
   MIRVocabulary(VocabMap &&Entries, const TargetInstrInfo *TII);
-  MIRVocabulary(ir2vec::VocabStorage &&Storage) : Storage(std::move(Storage)) {}
+  MIRVocabulary(ir2vec::VocabStorage &&Storage, const TargetInstrInfo &TII)
+      : Storage(std::move(Storage)), TII(TII) {}
 
   bool isValid() const {
     return UniqueBaseOpcodeNames.size() > 0 &&
@@ -103,11 +109,10 @@ public:
   }
 
   // Accessor methods
-  const Embedding &operator[](unsigned Index) const {
+  const Embedding &operator[](unsigned Opcode) const {
     assert(isValid() && "MIR2Vec Vocabulary is invalid");
-    assert(Index < Layout.TotalEntries && "Index out of bounds");
-    // Fixme: For now, use section 0 for all entries
-    return Storage[0][Index];
+    unsigned LocalIndex = getCanonicalOpcodeIndex(Opcode);
+    return Storage[static_cast<unsigned>(Section::Opcodes)][LocalIndex];
   }
 
   // Iterator access

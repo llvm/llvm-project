@@ -27,8 +27,8 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
 
   unsigned long hwcap = getauxval(AT_HWCAP);
   unsigned long hwcap2 = getauxval(AT_HWCAP2);
-  unsigned long hwcap2 = getauxval(AT_HWCAP3);
-  unsigned long hwcap2 = getauxval(AT_HWCAP4);
+  unsigned long hwcap3 = getauxval(AT_HWCAP3);
+  unsigned long hwcap4 = getauxval(AT_HWCAP4);
 
   __ifunc_arg_t arg;
   arg._size = sizeof(__ifunc_arg_t);
