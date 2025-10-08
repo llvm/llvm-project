@@ -532,7 +532,7 @@ WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
 
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
-  for (const auto &SectionEntry : Sections) {
+  for (const auto &SectionEntry : sections()) {
     StringRef DiagGroup = SectionEntry.SectionStr;
     if (DiagGroup == "*") {
       // Drop the default section introduced by special case list, we only
@@ -587,17 +587,15 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
 
-  unsigned SuppressLineNo =
-      llvm::SpecialCaseList::inSectionBlame(DiagSection->Entries, "src", F, "");
-  if (!SuppressLineNo)
+  StringRef LongestSup = DiagSection->getLongestMatch("src", F, "");
+  if (LongestSup.empty())
     return false;
 
-  unsigned EmitLineNo = llvm::SpecialCaseList::inSectionBlame(
-      DiagSection->Entries, "src", F, "emit");
-  if (!EmitLineNo)
+  StringRef LongestEmit = DiagSection->getLongestMatch("src", F, "emit");
+  if (LongestEmit.empty())
     return true;
 
-  return SuppressLineNo > EmitLineNo;
+  return LongestSup.size() > LongestEmit.size();
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,

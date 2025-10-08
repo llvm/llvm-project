@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/DeclCXX.h"
@@ -210,6 +211,19 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
+static CharUnits calculateCookiePadding(CIRGenFunction &cgf,
+                                        const CXXNewExpr *e) {
+  if (!e->isArray())
+    return CharUnits::Zero();
+
+  // No cookie is required if the operator new[] being used is the
+  // reserved placement operator new[].
+  if (e->getOperatorNew()->isReservedGlobalPlacementOperator())
+    return CharUnits::Zero();
+
+  return cgf.cgm.getCXXABI().getArrayCookieSize(e);
+}
+
 static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
                                        unsigned minElements,
                                        mlir::Value &numElements,
@@ -224,8 +238,98 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     return sizeWithoutCookie;
   }
 
-  cgf.cgm.errorNYI(e->getSourceRange(), "emitCXXNewAllocSize: array");
-  return {};
+  // The width of size_t.
+  unsigned sizeWidth = cgf.cgm.getDataLayout().getTypeSizeInBits(cgf.SizeTy);
+
+  // The number of elements can be have an arbitrary integer type;
+  // essentially, we need to multiply it by a constant factor, add a
+  // cookie size, and verify that the result is representable as a
+  // size_t.  That's just a gloss, though, and it's wrong in one
+  // important way: if the count is negative, it's an error even if
+  // the cookie size would bring the total size >= 0.
+  //
+  // If the array size is constant, Sema will have prevented negative
+  // values and size overflow.
+
+  // Compute the constant factor.
+  llvm::APInt arraySizeMultiplier(sizeWidth, 1);
+  while (const ConstantArrayType *cat =
+             cgf.getContext().getAsConstantArrayType(type)) {
+    type = cat->getElementType();
+    arraySizeMultiplier *= cat->getSize();
+  }
+
+  CharUnits typeSize = cgf.getContext().getTypeSizeInChars(type);
+  llvm::APInt typeSizeMultiplier(sizeWidth, typeSize.getQuantity());
+  typeSizeMultiplier *= arraySizeMultiplier;
+
+  // Figure out the cookie size.
+  llvm::APInt cookieSize(sizeWidth,
+                         calculateCookiePadding(cgf, e).getQuantity());
+
+  // This will be a size_t.
+  mlir::Value size;
+
+  // Emit the array size expression.
+  // We multiply the size of all dimensions for NumElements.
+  // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
+  const Expr *arraySize = *e->getArraySize();
+  mlir::Attribute constNumElements =
+      ConstantEmitter(cgf.cgm, &cgf)
+          .emitAbstract(arraySize, arraySize->getType());
+  if (constNumElements) {
+    // Get an APInt from the constant
+    const llvm::APInt &count =
+        mlir::cast<cir::IntAttr>(constNumElements).getValue();
+
+    unsigned numElementsWidth = count.getBitWidth();
+
+    // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
+    // overflow, but that should never happen. The size argument is implicitly
+    // cast to a size_t, so it can never be negative and numElementsWidth will
+    // always equal sizeWidth.
+    assert(!count.isNegative() && "Expected non-negative array size");
+    assert(numElementsWidth == sizeWidth &&
+           "Expected a size_t array size constant");
+
+    // Okay, compute a count at the right width.
+    llvm::APInt adjustedCount = count.zextOrTrunc(sizeWidth);
+
+    // Scale numElements by that.  This might overflow, but we don't
+    // care because it only overflows if allocationSize does too, and
+    // if that overflows then we shouldn't use this.
+    // This emits a constant that may not be used, but we can't tell here
+    // whether it will be needed or not.
+    numElements =
+        cgf.getBuilder().getConstInt(loc, adjustedCount * arraySizeMultiplier);
+
+    // Compute the size before cookie, and track whether it overflowed.
+    bool overflow;
+    llvm::APInt allocationSize =
+        adjustedCount.umul_ov(typeSizeMultiplier, overflow);
+
+    // Sema prevents us from hitting this case
+    assert(!overflow && "Overflow in array allocation size");
+
+    // Add in the cookie, and check whether it's overflowed.
+    if (cookieSize != 0) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "emitCXXNewAllocSize: array cookie");
+    }
+
+    size = cgf.getBuilder().getConstInt(loc, allocationSize);
+  } else {
+    // TODO: Handle the variable size case
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitCXXNewAllocSize: variable array size");
+  }
+
+  if (cookieSize == 0)
+    sizeWithoutCookie = size;
+  else
+    assert(sizeWithoutCookie && "didn't set sizeWithoutCookie?");
+
+  return size;
 }
 
 static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
@@ -254,13 +358,26 @@ static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
   llvm_unreachable("bad evaluation kind");
 }
 
+void CIRGenFunction::emitNewArrayInitializer(
+    const CXXNewExpr *e, QualType elementType, mlir::Type elementTy,
+    Address beginPtr, mlir::Value numElements,
+    mlir::Value allocSizeWithoutCookie) {
+  // If we have a type with trivial initialization and no initializer,
+  // there's nothing to do.
+  if (!e->hasInitializer())
+    return;
+
+  cgm.errorNYI(e->getSourceRange(), "emitNewArrayInitializer");
+}
+
 static void emitNewInitializer(CIRGenFunction &cgf, const CXXNewExpr *e,
                                QualType elementType, mlir::Type elementTy,
                                Address newPtr, mlir::Value numElements,
                                mlir::Value allocSizeWithoutCookie) {
   assert(!cir::MissingFeatures::generateDebugInfo());
   if (e->isArray()) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "emitNewInitializer: array");
+    cgf.emitNewArrayInitializer(e, elementType, elementTy, newPtr, numElements,
+                                allocSizeWithoutCookie);
   } else if (const Expr *init = e->getInitializer()) {
     storeAnyExprIntoOneUnit(cgf, init, e->getAllocatedType(), newPtr,
                             AggValueSlot::DoesNotOverlap);
@@ -536,7 +653,14 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   if (allocSize != allocSizeWithoutCookie)
     cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: array with cookies");
 
-  mlir::Type elementTy = convertTypeForMem(allocType);
+  mlir::Type elementTy;
+  if (e->isArray()) {
+    // For array new, use the allocated type to handle multidimensional arrays
+    // correctly
+    elementTy = convertTypeForMem(e->getAllocatedType());
+  } else {
+    elementTy = convertTypeForMem(allocType);
+  }
   Address result = builder.createElementBitCast(getLoc(e->getSourceRange()),
                                                 allocation, elementTy);
 
