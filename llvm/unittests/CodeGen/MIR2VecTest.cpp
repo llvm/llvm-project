@@ -95,6 +95,15 @@ protected:
   }
 };
 
+// Function to find an opcode by name
+static int findOpcodeByName(const TargetInstrInfo *TII, StringRef Name) {
+  for (unsigned Opcode = 1; Opcode < TII->getNumOpcodes(); ++Opcode) {
+    if (TII->getName(Opcode) == Name)
+      return Opcode;
+  }
+  return -1; // Not found
+}
+
 TEST_F(MIR2VecVocabTestFixture, CanonicalOpcodeMappingTest) {
   // Test that same base opcodes get same canonical indices
   std::string BaseName1 = MIRVocabulary::extractBaseOpcodeName("ADD16ri");
@@ -106,10 +115,10 @@ TEST_F(MIR2VecVocabTestFixture, CanonicalOpcodeMappingTest) {
 
   // Create a MIRVocabulary instance to test the mapping
   // Use a minimal MIRVocabulary to trigger canonical mapping construction
-  VocabMap VM;
+  VocabMap VMap;
   Embedding Val = Embedding(64, 1.0f);
-  VM["ADD"] = Val;
-  MIRVocabulary TestVocab(std::move(VM), TII);
+  VMap["ADD"] = Val;
+  MIRVocabulary TestVocab(std::move(VMap), TII);
 
   unsigned Index1 = TestVocab.getCanonicalIndexForBaseName(BaseName1);
   unsigned Index2 = TestVocab.getCanonicalIndexForBaseName(BaseName2);
@@ -140,9 +149,19 @@ TEST_F(MIR2VecVocabTestFixture, CanonicalOpcodeMappingTest) {
             6880u); // X86 has >6880 unique base opcodes
 
   // Check that the embeddings for opcodes not in the vocab are zero vectors
-  EXPECT_TRUE(TestVocab[AddIndex].approximatelyEquals(Val));
-  EXPECT_TRUE(TestVocab[SubIndex].approximatelyEquals(Embedding(64, 0.0f)));
-  EXPECT_TRUE(TestVocab[MovIndex].approximatelyEquals(Embedding(64, 0.0f)));
+  int Add32rrOpcode = findOpcodeByName(TII, "ADD32rr");
+  ASSERT_NE(Add32rrOpcode, -1) << "ADD32rr opcode not found";
+  EXPECT_TRUE(TestVocab[Add32rrOpcode].approximatelyEquals(Val));
+
+  int Sub32rrOpcode = findOpcodeByName(TII, "SUB32rr");
+  ASSERT_NE(Sub32rrOpcode, -1) << "SUB32rr opcode not found";
+  EXPECT_TRUE(
+      TestVocab[Sub32rrOpcode].approximatelyEquals(Embedding(64, 0.0f)));
+
+  int Mov32rrOpcode = findOpcodeByName(TII, "MOV32rr");
+  ASSERT_NE(Mov32rrOpcode, -1) << "MOV32rr opcode not found";
+  EXPECT_TRUE(
+      TestVocab[Mov32rrOpcode].approximatelyEquals(Embedding(64, 0.0f)));
 }
 
 // Test deterministic mapping
@@ -152,9 +171,9 @@ TEST_F(MIR2VecVocabTestFixture, DeterministicMapping) {
 
   // Create a MIRVocabulary instance to test deterministic mapping
   // Use a minimal MIRVocabulary to trigger canonical mapping construction
-  VocabMap VM;
-  VM["ADD"] = Embedding(64, 1.0f);
-  MIRVocabulary TestVocab(std::move(VM), TII);
+  VocabMap VMap;
+  VMap["ADD"] = Embedding(64, 1.0f);
+  MIRVocabulary TestVocab(std::move(VMap), TII);
 
   unsigned Index1 = TestVocab.getCanonicalIndexForBaseName(BaseName);
   unsigned Index2 = TestVocab.getCanonicalIndexForBaseName(BaseName);
@@ -172,16 +191,11 @@ TEST_F(MIR2VecVocabTestFixture, DeterministicMapping) {
 
 // Test MIRVocabulary construction
 TEST_F(MIR2VecVocabTestFixture, VocabularyConstruction) {
-  // Test empty MIRVocabulary
-  MIRVocabulary EmptyVocab;
-  EXPECT_FALSE(EmptyVocab.isValid());
+  VocabMap VMap;
+  VMap["ADD"] = Embedding(128, 1.0f); // Dimension 128, all values 1.0
+  VMap["SUB"] = Embedding(128, 2.0f); // Dimension 128, all values 2.0
 
-  // Test MIRVocabulary with embeddings via VocabMap
-  VocabMap VM;
-  VM["ADD"] = Embedding(128, 1.0f); // Dimension 128, all values 1.0
-  VM["SUB"] = Embedding(128, 2.0f); // Dimension 128, all values 2.0
-
-  MIRVocabulary Vocab(std::move(VM), TII);
+  MIRVocabulary Vocab(std::move(VMap), TII);
   EXPECT_TRUE(Vocab.isValid());
   EXPECT_EQ(Vocab.getDimension(), 128u);
 
