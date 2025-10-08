@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s zircon-temporary-objects %t -- \
-// RUN:   -config="{CheckOptions: {zircon-temporary-objects.Names: 'Foo;NS::Bar'}}" \
+// RUN: %check_clang_tidy %s fuchsia-temporary-objects %t -- \
+// RUN:   -config="{CheckOptions: {fuchsia-temporary-objects.Names: 'Foo;NS::Bar'}}" \
 // RUN:   -header-filter=.*
 
 // Should flag instances of Foo, NS::Bar.

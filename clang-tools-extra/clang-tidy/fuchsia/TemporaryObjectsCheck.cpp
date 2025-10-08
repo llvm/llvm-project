@@ -15,7 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::zircon {
+namespace clang::tidy::fuchsia {
 
 namespace {
 
@@ -55,4 +55,4 @@ void TemporaryObjectsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Names", utils::options::serializeStringList(Names));
 }
 
-} // namespace clang::tidy::zircon
+} // namespace clang::tidy::fuchsia
