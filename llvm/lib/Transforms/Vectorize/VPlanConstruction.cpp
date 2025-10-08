@@ -836,8 +836,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       HasUnsupportedPhi = true;
       continue;
     }
-    if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+    if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Cur->getRecurrenceKind())) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -880,10 +880,9 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (!MinMaxOp)
       return false;
 
-    RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
-    assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
-           "unsupported reduction");
-    (void)RedPhiRK;
+  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+             RedPhiR->getRecurrenceKind()) &&
+         "unsupported reduction");
 
     VPValue *IsNaN = Builder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
     VPValue *HasNaN = Builder.createNaryOp(VPInstruction::AnyOf, {IsNaN});
