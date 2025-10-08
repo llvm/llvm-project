@@ -7800,6 +7800,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
