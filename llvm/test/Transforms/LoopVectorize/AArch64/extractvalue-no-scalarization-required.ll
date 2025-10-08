@@ -45,8 +45,9 @@ define void @test1(ptr %dst, {i64, i64} %sv) {
 ; FORCED-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; FORCED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
-; FORCED-NEXT:    br [[EXIT:label %.*]]
-; FORCED:       [[SCALAR_PH:.*:]]
+; FORCED-NEXT:    br label %[[EXIT:.*]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
 ;
 entry:
   br label %loop.body
@@ -91,18 +92,19 @@ define void @test_getVectorCallCost(ptr %dst, {float, float} %sv) {
 ; FORCED-NEXT:    [[TMP4:%.*]] = extractvalue { float, float } [[SV]], 1
 ; FORCED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
 ; FORCED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
+; FORCED-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT2]])
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[DST]], i32 [[INDEX]]
-; FORCED-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT2]])
 ; FORCED-NEXT:    store <2 x float> [[TMP2]], ptr [[TMP1]], align 4
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; FORCED-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; FORCED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; FORCED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
-; FORCED-NEXT:    br [[EXIT:label %.*]]
-; FORCED:       [[SCALAR_PH:.*:]]
+; FORCED-NEXT:    br label %[[EXIT:.*]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
 ;
 entry:
   br label %loop.body
