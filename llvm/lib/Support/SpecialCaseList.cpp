@@ -175,6 +175,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     return false;
   }
 
+  // This is the current list of prefixes for all existing users matching file
+  // path. We may need parametrization in constructor in future.
   constexpr StringRef PathPrefixes[] = {"src", "!src", "mainfile", "source"};
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
