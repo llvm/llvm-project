@@ -7008,10 +7008,34 @@ SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT WideAccVT = TLI.getTypeToTransformTo(*DAG.getContext(),
                                            N->getOperand(0).getValueType());
-  SDValue Zero = DAG.getConstant(0, DL, WideAccVT);
+  ElementCount WideAccEC = WideAccVT.getVectorElementCount();
+
+  // Widen mul-operands if needed, otherwise we'll end up with a
+  // node that isn't legal because the accumulator vector will not
+  // be a known multiple of the input vector.
   SDValue MulOp1 = N->getOperand(1);
   SDValue MulOp2 = N->getOperand(2);
-  SDValue Acc = DAG.getInsertSubvector(DL, Zero, N->getOperand(0), 0);
+  EVT MulOpVT = MulOp1.getValueType();
+  ElementCount MulOpEC = MulOpVT.getVectorElementCount();
+  if (getTypeAction(MulOpVT) == TargetLowering::TypeWidenVector) {
+    EVT WideMulVT = GetWidenedVector(MulOp1).getValueType();
+    assert(WideMulVT.getVectorElementCount().isKnownMultipleOf(WideAccEC) &&
+           "Widening to a vector with less elements than accumulator?");
+    SDValue Zero = DAG.getConstant(0, DL, WideMulVT);
+    MulOp1 = DAG.getInsertSubvector(DL, Zero, MulOp1, 0);
+    MulOp2 = DAG.getInsertSubvector(DL, Zero, MulOp2, 0);
+  } else if (!MulOpEC.isKnownMultipleOf(WideAccEC)) {
+    assert(getTypeAction(MulOpVT) != TargetLowering::TypeLegal &&
+           "Expected Mul operands to need legalisation");
+    EVT WideMulVT = EVT::getVectorVT(*DAG.getContext(),
+                                     MulOpVT.getVectorElementType(), WideAccEC);
+    SDValue Zero = DAG.getConstant(0, DL, WideMulVT);
+    MulOp1 = DAG.getInsertSubvector(DL, Zero, MulOp1, 0);
+    MulOp2 = DAG.getInsertSubvector(DL, Zero, MulOp2, 0);
+  }
+
+  SDValue Acc = DAG.getInsertSubvector(DL, DAG.getConstant(0, DL, WideAccVT),
+                                       N->getOperand(0), 0);
   SDValue WidenedRes =
       DAG.getNode(N->getOpcode(), DL, WideAccVT, Acc, MulOp1, MulOp2);
   while (ElementCount::isKnownLT(
@@ -8069,6 +8093,9 @@ SDValue DAGTypeLegalizer::WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   EVT WideOpVT = TLI.getTypeToTransformTo(*DAG.getContext(),
                                           N->getOperand(1).getValueType());
   SDValue Acc = N->getOperand(0);
+  assert(WideOpVT.getVectorElementCount().isKnownMultipleOf(
+             Acc.getValueType().getVectorElementCount()) &&
+         "Expected AccVT to have been legalised");
   SDValue WidenedOp1 = DAG.getInsertSubvector(
       DL, DAG.getConstant(0, DL, WideOpVT), N->getOperand(1), 0);
   SDValue WidenedOp2 = DAG.getInsertSubvector(
