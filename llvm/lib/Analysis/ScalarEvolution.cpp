@@ -15758,6 +15758,11 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // DividesBy.
     std::function<bool(const SCEV *, const SCEV *&)> HasDivisibiltyInfo =
         [&](const SCEV *Expr, const SCEV *&DividesBy) {
+          const APInt &Multiple = SE.getConstantMultiple(Expr);
+          if (!Multiple.isOne()) {
+            DividesBy = SE.getConstant(Multiple);
+            return true;
+          }
           if (auto *Mul = dyn_cast<SCEVMulExpr>(Expr)) {
             if (Mul->getNumOperands() != 2)
               return false;
@@ -15780,7 +15785,8 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // Return true if Expr known to divide by \p DividesBy.
     std::function<bool(const SCEV *, const SCEV *&)> IsKnownToDivideBy =
         [&](const SCEV *Expr, const SCEV *DividesBy) {
-          if (SE.getURemExpr(Expr, DividesBy)->isZero())
+          if (Expr->getType()->isIntegerTy() &&
+              SE.getURemExpr(Expr, DividesBy)->isZero())
             return true;
           if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr))
             return IsKnownToDivideBy(MinMax->getOperand(0), DividesBy) &&
@@ -15865,22 +15871,23 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           EnqueueOperands(SMax);
         break;
       case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_UGE:
-        To = SE.getUMaxExpr(FromRewritten, RHS);
+      case CmpInst::ICMP_UGE: {
+        const SCEV *OpAlignedUp =
+            DividesBy ? GetNextSCEVDividesByDivisor(RHS, DividesBy) : RHS;
+        To = SE.getUMaxExpr(FromRewritten, OpAlignedUp);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
-        if (RHS->isOne())
-          ExprsToRewrite.push_back(From);
         break;
+      }
       case CmpInst::ICMP_SGT:
-      case CmpInst::ICMP_SGE:
-        To = SE.getSMaxExpr(FromRewritten, RHS);
-        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten)) {
+      case CmpInst::ICMP_SGE: {
+        const SCEV *OpAlignedUp =
+            DividesBy ? GetNextSCEVDividesByDivisor(RHS, DividesBy) : RHS;
+        To = SE.getSMaxExpr(FromRewritten, OpAlignedUp);
+        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
           EnqueueOperands(SMin);
-        }
-        if (RHS->isOne())
-          ExprsToRewrite.push_back(From);
         break;
+      }
       case CmpInst::ICMP_EQ:
         if (isa<SCEVConstant>(RHS))
           To = RHS;
@@ -16011,20 +16018,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       const SCEV *RewriteTo = Guards.RewriteMap[Expr];
       Guards.RewriteMap.erase(Expr);
       const SCEV *Rewritten = Guards.rewrite(RewriteTo);
-
-      // Try to strengthen divisibility of SMax/UMax expressions coming from >=
-      // 1 conditions.
-      auto *Max = dyn_cast<SCEVMinMaxExpr>(Rewritten);
-      if (Max && isa<SCEVSMaxExpr, SCEVUMaxExpr>(Rewritten) &&
-          Rewritten->getType()->isIntegerTy() && Max->getOperand(0)->isOne()) {
-        APInt CommonMultiple = SE.getConstantMultiple(Max->getOperand(1));
-        for (const SCEV *Op : drop_begin(Max->operands(), 2)) {
-          CommonMultiple = APIntOps::GreatestCommonDivisor(
-              CommonMultiple, SE.getConstantMultiple(Op));
-        }
-        SmallVector<const SCEV *> Ops = {SE.getConstant(CommonMultiple), Max};
-        Rewritten = SE.getMinMaxExpr(Max->getSCEVType(), Ops);
-      }
       Guards.RewriteMap.insert({Expr, Rewritten});
     }
   }
