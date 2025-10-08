@@ -417,15 +417,14 @@ define <8 x half> @fadd_fmul_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x h
 ; RELAXED-LABEL: fadd_fmul_contract_8xf16:
 ; RELAXED:         .functype fadd_fmul_contract_8xf16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $1, $0, $2
+; RELAXED-NEXT:    f16x8.madd $push0=, $1, $0, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fadd_fmul_contract_8xf16:
 ; STRICT:         .functype fadd_fmul_contract_8xf16 (v128, v128, v128) -> (v128)
 ; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f16x8.mul $push0=, $1, $0
-; STRICT-NEXT:    f16x8.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
+; STRICT-NEXT:    f16x8.madd $push0=, $1, $0, $2
+; STRICT-NEXT:    return $pop0
 ;
 ; NOFP16-LABEL: fadd_fmul_contract_8xf16:
 ; NOFP16:         .functype fadd_fmul_contract_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
@@ -648,15 +647,14 @@ define <8 x half> @fmuladd_contract_8xf16(<8 x half> %a, <8 x half> %b, <8 x hal
 ; RELAXED-LABEL: fmuladd_contract_8xf16:
 ; RELAXED:         .functype fmuladd_contract_8xf16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    f16x8.madd $push0=, $0, $1, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fmuladd_contract_8xf16:
 ; STRICT:         .functype fmuladd_contract_8xf16 (v128, v128, v128) -> (v128)
 ; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f16x8.mul $push0=, $0, $1
-; STRICT-NEXT:    f16x8.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
+; STRICT-NEXT:    f16x8.madd $push0=, $0, $1, $2
+; STRICT-NEXT:    return $pop0
 ;
 ; NOFP16-LABEL: fmuladd_contract_8xf16:
 ; NOFP16:         .functype fmuladd_contract_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
@@ -835,15 +833,14 @@ define <8 x half> @fmuladd_8xf16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; RELAXED-LABEL: fmuladd_8xf16:
 ; RELAXED:         .functype fmuladd_8xf16 (v128, v128, v128) -> (v128)
 ; RELAXED-NEXT:  # %bb.0:
-; RELAXED-NEXT:    f16x8.relaxed_madd $push0=, $0, $1, $2
+; RELAXED-NEXT:    f16x8.madd $push0=, $0, $1, $2
 ; RELAXED-NEXT:    return $pop0
 ;
 ; STRICT-LABEL: fmuladd_8xf16:
 ; STRICT:         .functype fmuladd_8xf16 (v128, v128, v128) -> (v128)
 ; STRICT-NEXT:  # %bb.0:
-; STRICT-NEXT:    f16x8.mul $push0=, $0, $1
-; STRICT-NEXT:    f16x8.add $push1=, $pop0, $2
-; STRICT-NEXT:    return $pop1
+; STRICT-NEXT:    f16x8.madd $push0=, $0, $1, $2
+; STRICT-NEXT:    return $pop0
 ;
 ; NOFP16-LABEL: fmuladd_8xf16:
 ; NOFP16:         .functype fmuladd_8xf16 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
