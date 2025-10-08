@@ -497,3 +497,93 @@ define <4 x i8> @strict_align_unaligned(ptr %v4i8_ptr) "target-features"="+stric
   %v4i8 = load <4 x i8>, ptr %v4i8_ptr, align 1
   ret <4 x i8> %v4i8
 }
+
+; Optimized load+zext patterns that would otherwise be scalarized
+
+define <2 x i32> @fzext_v2i8_v2i32(ptr %a) {
+; CHECK-LE-LABEL: fzext_v2i8_v2i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldr h0, [x0]
+; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: fzext_v2i8_v2i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldr h0, [x0]
+; CHECK-BE-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ret
+  %x = load <2 x i8>, ptr %a
+  %y = zext <2 x i8> %x to <2 x i32>
+  ret <2 x i32> %y
+}
+
+define <2 x i32> @fzext_v2i16_v2i32(ptr %a) {
+; CHECK-LE-LABEL: fzext_v2i16_v2i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldr s0, [x0]
+; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: fzext_v2i16_v2i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ret
+  %x = load <2 x i16>, ptr %a
+  %y = zext <2 x i16> %x to <2 x i32>
+  ret <2 x i32> %y
+}
+
+define <2 x i64> @fzext_v2i16_v2i64(ptr %a) {
+; CHECK-LE-LABEL: fzext_v2i16_v2i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldr s0, [x0]
+; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: fzext_v2i16_v2i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %x = load <2 x i16>, ptr %a
+  %y = zext <2 x i16> %x to <2 x i64>
+  ret <2 x i64> %y
+}
+
+; Verify that volatile loads are not optimized
+define <2 x i32> @fzext_v2i8_v2i32_volatile(ptr %a) {
+; CHECK-LE-LABEL: fzext_v2i8_v2i32_volatile:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ld1 { v1.b }[0], [x0]
+; CHECK-LE-NEXT:    movi d0, #0x0000ff000000ff
+; CHECK-LE-NEXT:    add x8, x0, #1
+; CHECK-LE-NEXT:    ld1 { v1.b }[4], [x8]
+; CHECK-LE-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: fzext_v2i8_v2i32_volatile:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v1.b }[0], [x0]
+; CHECK-BE-NEXT:    movi d0, #0x0000ff000000ff
+; CHECK-BE-NEXT:    add x8, x0, #1
+; CHECK-BE-NEXT:    ld1 { v1.b }[4], [x8]
+; CHECK-BE-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-BE-NEXT:    ret
+  %x = load volatile <2 x i8>, ptr %a
+  %y = zext <2 x i8> %x to <2 x i32>
+  ret <2 x i32> %y
+}

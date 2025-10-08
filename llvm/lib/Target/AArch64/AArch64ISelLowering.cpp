@@ -23252,6 +23252,96 @@ static SDValue performExtendCombine(SDNode *N,
                        NewAnyExtend);
   }
 
+  // Optimize small vector loads + zero extends that would otherwise be scalarized.
+  // Examples:
+  //   (v2i32 (zext (v2i8 (load ...)))) -> ldr h-reg + ushll.8h + ushll.4s
+  //   (v2i32 (zext (v2i16 (load ...)))) -> ldr s-reg + ushll.4s
+  //   (v2i64 (zext (v2i16 (load ...)))) -> ldr s-reg + ushll.4s + ushll.2d
+  if (N->getOpcode() == ISD::ZERO_EXTEND && N->getOperand(0).getOpcode() == ISD::LOAD) {
+    LoadSDNode *LD = cast<LoadSDNode>(N->getOperand(0));
+    EVT MemVT = LD->getMemoryVT();
+    EVT ResVT = N->getValueType(0);
+
+    if (LD->getExtensionType() == ISD::NON_EXTLOAD &&
+        LD->hasOneUse() && !LD->isVolatile()) {
+      SDLoc DL(N);
+
+      // Handle v2i8 -> v2i32
+      if (MemVT == MVT::v2i8 && ResVT == MVT::v2i32) {
+        SDValue Chain = LD->getChain();
+        SDValue BasePtr = LD->getBasePtr();
+
+        // Load 2 bytes as i16
+        SDValue Load = DAG.getLoad(MVT::i16, DL, Chain, BasePtr,
+                                   LD->getPointerInfo(), LD->getAlign());
+        Chain = Load.getValue(1);
+
+        // i16 -> v4i16 -> v8i8
+        SDValue VecI16 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i16, Load);
+        SDValue VecI8 = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, VecI16);
+
+        // v8i8 -> v8i16 -> v4i16
+        SDValue ExtI16 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, VecI8);
+        SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16,
+                                     ExtI16, DAG.getConstant(0, DL, MVT::i64));
+
+        // v4i16 -> v4i32 -> v2i32
+        SDValue ExtI32 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v4i32, SubVec);
+        SDValue Result = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                                     ExtI32, DAG.getConstant(0, DL, MVT::i64));
+
+        return DAG.getMergeValues({Result, Chain}, DL);
+      }
+
+      // Handle v2i16 -> v2i32
+      if (MemVT == MVT::v2i16 && ResVT == MVT::v2i32) {
+        SDValue Chain = LD->getChain();
+        SDValue BasePtr = LD->getBasePtr();
+
+        // Load 4 bytes as i32
+        SDValue Load = DAG.getLoad(MVT::i32, DL, Chain, BasePtr,
+                                   LD->getPointerInfo(), LD->getAlign());
+        Chain = Load.getValue(1);
+
+        // i32 -> v2i32 -> v4i16
+        SDValue VecI32 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Load);
+        SDValue VecI16 = DAG.getNode(ISD::BITCAST, DL, MVT::v4i16, VecI32);
+
+        // v4i16 -> v4i32 -> v2i32
+        SDValue ExtI32 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v4i32, VecI16);
+        SDValue Result = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                                     ExtI32, DAG.getConstant(0, DL, MVT::i64));
+
+        return DAG.getMergeValues({Result, Chain}, DL);
+      }
+
+      // Handle v2i16 -> v2i64
+      if (MemVT == MVT::v2i16 && ResVT == MVT::v2i64) {
+        SDValue Chain = LD->getChain();
+        SDValue BasePtr = LD->getBasePtr();
+
+        // Load 4 bytes as i32
+        SDValue Load = DAG.getLoad(MVT::i32, DL, Chain, BasePtr,
+                                   LD->getPointerInfo(), LD->getAlign());
+        Chain = Load.getValue(1);
+
+        // i32 -> v2i32 -> v4i16
+        SDValue VecI32 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Load);
+        SDValue VecI16 = DAG.getNode(ISD::BITCAST, DL, MVT::v4i16, VecI32);
+
+        // v4i16 -> v4i32 -> v2i32
+        SDValue ExtI32 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v4i32, VecI16);
+        SDValue SubI32 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                                     ExtI32, DAG.getConstant(0, DL, MVT::i64));
+
+        // v2i32 -> v2i64
+        SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v2i64, SubI32);
+
+        return DAG.getMergeValues({Result, Chain}, DL);
+      }
+    }
+  }
+
   return SDValue();
 }
 
