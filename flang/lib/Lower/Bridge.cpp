@@ -3222,7 +3222,8 @@ private:
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
-        std::tie(collapseForce, collapseDepth) = parseCollapse(clauseList);
+        collapseDepth = Fortran::lower::getLoopCountForCollapse(clauseList);
+        std::tie(collapseForce, std::ignore) = parseCollapse(clauseList);
       } else if (accCombined) {
         const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
             std::get<Fortran::parser::AccBeginCombinedDirective>(
@@ -3230,7 +3231,8 @@ private:
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
-        std::tie(collapseForce, collapseDepth) = parseCollapse(clauseList);
+        collapseDepth = Fortran::lower::getLoopCountForCollapse(clauseList);
+        std::tie(collapseForce, std::ignore) = parseCollapse(clauseList);
       }
 
       if (curEval->lowerAsStructured()) {

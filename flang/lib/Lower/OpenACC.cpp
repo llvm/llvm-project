@@ -4889,6 +4889,20 @@ uint64_t Fortran::lower::getLoopCountForCollapseAndTile(
   return collapseLoopCount;
 }
 
+uint64_t Fortran::lower::getLoopCountForCollapse(
+    const Fortran::parser::AccClauseList &clauseList) {
+  for (const Fortran::parser::AccClause &clause : clauseList.v) {
+    if (const auto *collapseClause =
+            std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
+      const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
+      const auto &collapseValue =
+          std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
+      return *Fortran::semantics::GetIntValue(collapseValue);
+    }
+  }
+  return 1;
+}
+
 /// Create an ACC loop operation for a DO construct when inside ACC compute
 /// constructs This serves as a bridge between regular DO construct handling and
 /// ACC loop creation
