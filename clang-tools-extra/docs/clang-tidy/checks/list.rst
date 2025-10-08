@@ -87,6 +87,7 @@ Clang-Tidy Checks
    :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
+   :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
@@ -156,6 +157,7 @@ Clang-Tidy Checks
    :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
    :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
+   :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
    :doc:`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>`,
    :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
@@ -171,12 +173,8 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
-   :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
-   :doc:`cert-err52-cpp <cert/err52-cpp>`,
-   :doc:`cert-err58-cpp <cert/err58-cpp>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
@@ -288,6 +286,8 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
+   :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
+   :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
    :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`modernize-deprecated-ios-base-aliases <modernize/deprecated-ios-base-aliases>`, "Yes"
@@ -404,6 +404,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
+   :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
@@ -435,11 +436,15 @@ Check aliases
    :doc:`cert-dcl03-c <cert/dcl03-c>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`cert-dcl16-c <cert/dcl16-c>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`cert-dcl37-c <cert/dcl37-c>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
+   :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`, :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`cert-dcl51-cpp <cert/dcl51-cpp>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
+   :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
+   :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,

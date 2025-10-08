@@ -708,7 +708,6 @@ class CursorKind(BaseEnumeration):
         """Test if this is an unexposed kind."""
         return conf.lib.clang_isUnexposed(self)  # type: ignore [no-any-return]
 
-
     ###
     # Declaration Kinds
 
@@ -834,7 +833,6 @@ class CursorKind(BaseEnumeration):
 
     # A C++ access specifier decl.
     CXX_ACCESS_SPEC_DECL = 39
-
 
     ###
     # Reference Kinds
@@ -1436,11 +1434,62 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP reverse directive.
+    OMP_REVERSE_DIRECTIVE = 307
+
+    # OpenMP interchange directive.
+    OMP_INTERCHANGE_DIRECTIVE = 308
+
+    # OpenMP assume directive.
+    OMP_ASSUME_DIRECTIVE = 309
+
     # OpenMP stripe directive.
     OMP_STRIPE_DIRECTIVE = 310
 
+    # OpenMP fuse directive.
+    OMP_FUSE_DIRECTIVE = 311
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
+
+    # OpenACC Loop Construct.
+    OPEN_ACC_LOOP_CONSTRUCT = 321
+
+    # OpenACC Combined Constructs.
+    OPEN_ACC_COMBINED_CONSTRUCT = 322
+
+    # OpenACC data Construct.
+    OPEN_ACC_DATA_CONSTRUCT = 323
+
+    # OpenACC enter data Construct.
+    OPEN_ACC_ENTER_DATA_CONSTRUCT = 324
+
+    # OpenACC exit data Construct.
+    OPEN_ACC_EXIT_DATA_CONSTRUCT = 325
+
+    # OpenACC host_data Construct.
+    OPEN_ACC_HOST_DATA_CONSTRUCT = 326
+
+    # OpenACC wait Construct.
+    OPEN_ACC_WAIT_CONSTRUCT = 327
+
+    # OpenACC init Construct.
+    OPEN_ACC_INIT_CONSTRUCT = 328
+
+    # OpenACC shutdown Construct.
+    OPEN_ACC_SHUTDOWN_CONSTRUCT = 329
+
+    # OpenACC set Construct.
+    OPEN_ACC_SET_CONSTRUCT = 330
+
+    # OpenACC update Construct.
+    OPEN_ACC_UPDATE_CONSTRUCT = 331
+
+    # OpenACC atomic Construct.
+    OPEN_ACC_ATOMIC_CONSTRUCT = 332
+
+    # OpenACC cache Construct.
+    OPEN_ACC_CACHE_CONSTRUCT = 333
 
     ###
     # Other Kinds
@@ -1560,6 +1609,7 @@ class ExceptionSpecificationKind(BaseEnumeration):
     UNEVALUATED = 6
     UNINSTANTIATED = 7
     UNPARSED = 8
+    NOTHROW = 9
 
 ### Cursors ###
 
@@ -2444,7 +2494,6 @@ class AccessSpecifier(BaseEnumeration):
     PUBLIC = 1
     PROTECTED = 2
     PRIVATE = 3
-    NONE = 4
 
 ### Type Kinds ###
 
@@ -2492,7 +2541,16 @@ class TypeKind(BaseEnumeration):
     FLOAT128 = 30
     HALF = 31
     FLOAT16 = 32
+    SHORTACCUM = 33
+    ACCUM = 34
+    LONGACCUM = 35
+    USHORTACCUM = 36
+    UACCUM = 37
+    ULONGACCUM = 38
+    BFLOAT16 = 39
     IBM128 = 40
+    FIRSTBUILTIN = VOID
+    LASTBUILTIN = IBM128
     COMPLEX = 100
     POINTER = 101
     BLOCKPOINTER = 102
@@ -2575,6 +2633,10 @@ class TypeKind(BaseEnumeration):
     EXTVECTOR = 176
     ATOMIC = 177
     BTFTAGATTRIBUTED = 178
+
+    HLSLRESOURCE = 179
+    HLSLATTRIBUTEDRESOURCE = 180
+    HLSLINLINESPIRV = 181
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""

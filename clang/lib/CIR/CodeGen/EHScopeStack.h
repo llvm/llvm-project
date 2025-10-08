@@ -175,6 +175,10 @@ public:
     return stable_iterator(endOfBuffer - startOfData);
   }
 
+  /// Turn a stable reference to a scope depth into a unstable pointer
+  /// to the EH stack.
+  iterator find(stable_iterator savePoint) const;
+
   /// Create a stable reference to the bottom of the EH stack.
   static stable_iterator stable_end() { return stable_iterator(0); }
 };

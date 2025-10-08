@@ -308,7 +308,13 @@ llvm::StringRef ProcessElfCore::GetMainExecutablePath() {
 }
 
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
-  return m_uuids[std::string(path)];
+  // Lookup the UUID for the given path in the map.
+  // Note that this could be called by multiple threads so make sure
+  // we access the map in a thread safe way (i.e. don't use operator[]).
+  auto it = m_uuids.find(std::string(path));
+  if (it != m_uuids.end())
+    return it->second;
+  return UUID();
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
@@ -952,7 +958,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
-      m_executable_name = prpsinfo.pr_fname;
+      m_executable_name = thread_data.name;
       break;
     }
     case ELF::NT_SIGINFO: {

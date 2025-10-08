@@ -4297,10 +4297,18 @@ static bool isModuleLocalDecl(NamedDecl *D) {
     if (auto *CDGD = dyn_cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl()))
       return isModuleLocalDecl(CDGD->getDeducedTemplate());
 
-  if (D->getFormalLinkage() == Linkage::Module)
-    return true;
+  if (D->getFormalLinkage() != Linkage::Module)
+    return false;
 
-  return false;
+  // It is hard for the serializer to judge if the in-class friend declaration
+  // is visible or not, so we just transfer the task to Sema. It should be a
+  // safe decision since Sema is able to handle the lookup rules for in-class
+  // friend declarations good enough already.
+  if (D->getFriendObjectKind() &&
+      isa<CXXRecordDecl>(D->getLexicalDeclContext()))
+    return false;
+
+  return true;
 }
 
 static bool isTULocalInNamedModules(NamedDecl *D) {
@@ -7874,6 +7882,14 @@ void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  Record.AddStmt(C->getFirst());
+  Record.AddStmt(C->getCount());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getFirstLoc());
+  Record.AddSourceLocation(C->getCountLoc());
+}
+
 void OMPClauseWriter::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   Record.AddStmt(C->getAllocator());
   Record.AddSourceLocation(C->getLParenLoc());
@@ -8763,9 +8779,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(PC);
 
     for (const OpenACCPrivateRecipe &R : PC->getInitRecipes()) {
-      static_assert(sizeof(R) == 2 * sizeof(int *));
+      static_assert(sizeof(R) == 1 * sizeof(int *));
       AddDeclRef(R.AllocaDecl);
-      AddStmt(const_cast<Expr *>(R.InitExpr));
     }
     return;
   }
@@ -8787,9 +8802,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
 
     for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
-      static_assert(sizeof(R) == 3 * sizeof(int *));
+      static_assert(sizeof(R) == 2 * sizeof(int *));
       AddDeclRef(R.AllocaDecl);
-      AddStmt(const_cast<Expr *>(R.InitExpr));
       AddDeclRef(R.InitFromTemporary);
     }
     return;
@@ -8911,9 +8925,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
 
     for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
-      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
+      static_assert(sizeof(OpenACCReductionRecipe) == 1 * sizeof(int *));
       AddDeclRef(R.AllocaDecl);
-      AddStmt(const_cast<Expr *>(R.InitExpr));
     }
     return;
   }

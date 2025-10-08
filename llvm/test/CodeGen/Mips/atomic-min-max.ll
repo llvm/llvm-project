@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=mips-elf -O0 -mcpu=mips32r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSR6
 ; RUN: llc -mtriple=mips-elf -O0 -mcpu=mips32r2 -mattr=+micromips -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MM
 ; RUN: llc -mtriple=mips-elf -O0 -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MMR6
-; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips2 %s -o - | FileCheck %s --check-prefix=MIPS2
+; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS2
 ; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips32 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS32
 ; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips32r2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSEL
 ; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips32r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSELR6
@@ -44,7 +44,7 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; MIPS2-NEXT:    b $BB0_4
+; MIPS2-NEXT:    j $BB0_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB0_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -291,7 +291,7 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; MIPS2-NEXT:    b $BB1_4
+; MIPS2-NEXT:    j $BB1_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB1_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
@@ -538,7 +538,7 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; MIPS2-NEXT:    b $BB2_4
+; MIPS2-NEXT:    j $BB2_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB2_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
@@ -785,7 +785,7 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; MIPS2-NEXT:    b $BB3_4
+; MIPS2-NEXT:    j $BB3_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB3_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -1073,7 +1073,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
-; MIPS2-NEXT:    b $BB4_4
+; MIPS2-NEXT:    j $BB4_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB4_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
@@ -1088,7 +1088,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB4_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -1665,7 +1665,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
-; MIPS2-NEXT:    b $BB5_4
+; MIPS2-NEXT:    j $BB5_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB5_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
@@ -1680,7 +1680,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB5_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -2255,7 +2255,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
-; MIPS2-NEXT:    b $BB6_4
+; MIPS2-NEXT:    j $BB6_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB6_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
@@ -2270,7 +2270,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB6_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -2844,7 +2844,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
-; MIPS2-NEXT:    b $BB7_4
+; MIPS2-NEXT:    j $BB7_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB7_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
@@ -2859,7 +2859,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB7_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -3435,7 +3435,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
-; MIPS2-NEXT:    b $BB8_4
+; MIPS2-NEXT:    j $BB8_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB8_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
@@ -3450,7 +3450,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB8_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -4026,7 +4026,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
-; MIPS2-NEXT:    b $BB9_4
+; MIPS2-NEXT:    j $BB9_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB9_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
@@ -4041,7 +4041,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB9_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -4616,7 +4616,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
-; MIPS2-NEXT:    b $BB10_4
+; MIPS2-NEXT:    j $BB10_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB10_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
@@ -4631,7 +4631,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB10_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
@@ -5205,7 +5205,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1
-; MIPS2-NEXT:    b $BB11_4
+; MIPS2-NEXT:    j $BB11_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB11_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1
@@ -5220,7 +5220,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.5: # %entry
 ; MIPS2-NEXT:    .insn
-; MIPS2-NEXT:  $BB11_6: # %entry
+; MIPS2-NEXT:  # %bb.6: # %entry
 ; MIPS2-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS2-NEXT:  # %bb.7: # %entry
 ; MIPS2-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload

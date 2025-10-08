@@ -899,10 +899,34 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
   // Nothing to do.
 }
 
+llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
+                                                   const Expr *Message,
+                                                   SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_message);
+  return nullptr;
+}
+
+llvm::Value *
+CGOpenMPRuntimeGPU::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                       SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_severity);
+  return nullptr;
+}
+
 void CGOpenMPRuntimeGPU::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
+  if (Modifier == OMPC_NUMTHREADS_strict) {
+    CGM.getDiags().Report(Loc,
+                          diag::warn_omp_gpu_unsupported_modifier_for_clause)
+        << "strict" << getOpenMPClauseName(OMPC_num_threads);
+    return;
+  }
+
   // Nothing to do.
 }
 
@@ -2336,6 +2360,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
+      case OffloadArch::GFX1251:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

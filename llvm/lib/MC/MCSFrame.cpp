@@ -37,7 +37,7 @@ struct SFrameFRE {
   FREInfo<endianness::native> Info;
   bool CFARegSet = false;
 
-  SFrameFRE(const MCSymbol *Start) : Label(Start) {}
+  SFrameFRE(const MCSymbol *Start) : Label(Start) { Info.Info = 0; }
 
   void emitOffset(MCObjectStreamer &S, FREOffset OffsetSize, size_t Offset) {
     switch (OffsetSize) {
@@ -62,9 +62,9 @@ struct SFrameFRE {
     // fre_offset_count
     unsigned RegsTracked = 1; // always track the cfa.
     if (FPOffset != 0)
-      RegsTracked++;
+      ++RegsTracked;
     if (RAOffset != 0)
-      RegsTracked++;
+      ++RegsTracked;
     Info.setOffsetCount(RegsTracked);
 
     // fre_offset_size
@@ -88,11 +88,11 @@ struct SFrameFRE {
     [[maybe_unused]] unsigned OffsetsEmitted = 1;
     emitOffset(S, Info.getOffsetSize(), CFAOffset);
     if (FPOffset) {
-      OffsetsEmitted++;
+      ++OffsetsEmitted;
       emitOffset(S, Info.getOffsetSize(), FPOffset);
     }
     if (RAOffset) {
-      OffsetsEmitted++;
+      ++OffsetsEmitted;
       emitOffset(S, Info.getOffsetSize(), RAOffset);
     }
     assert(OffsetsEmitted == RegsTracked &&
@@ -111,6 +111,8 @@ struct SFrameFDE {
   MCFragment *Frag;
   // Unwinding fres
   SmallVector<SFrameFRE> FREs;
+  // .cfi_remember_state stack
+  SmallVector<SFrameFRE> SaveState;
 
   SFrameFDE(const MCDwarfFrameInfo &DF, MCSymbol *FRES)
       : DFrame(DF), FREStart(FRES), Frag(nullptr) {}
@@ -198,7 +200,7 @@ class SFrameEmitterImpl {
     return false;
   }
 
-  bool setCFAOffset(SFrameFRE &FRE, const SMLoc &Loc, size_t Offset) {
+  bool setCFAOffset(SFrameFRE &FRE, SMLoc Loc, size_t Offset) {
     if (!FRE.CFARegSet) {
       Streamer.getContext().reportWarning(
           Loc, "adjusting CFA offset without a base register. "
@@ -237,13 +239,30 @@ class SFrameEmitterImpl {
     case MCCFIInstruction::OpAdjustCfaOffset:
       return setCFAOffset(FRE, CFI.getLoc(), FRE.CFAOffset + CFI.getOffset());
     case MCCFIInstruction::OpRememberState:
-      // TODO: Implement. Will use FDE.
+      if (FDE.FREs.size() == 1) {
+        // Error for gas compatibility: If the initial FRE isn't complete,
+        // then any state is incomplete.  FIXME: Dwarf doesn't error here.
+        // Why should sframe?
+        Streamer.getContext().reportWarning(
+            CFI.getLoc(), "skipping SFrame FDE; .cfi_remember_state without "
+                          "prior SFrame FRE state");
+        return false;
+      }
+      FDE.SaveState.push_back(FRE);
       return true;
     case MCCFIInstruction::OpRestore:
-      // TODO: Implement. Will use FDE.
+      // The first FRE generated has the original state.
+      if (CFI.getRegister() == FPReg)
+        FRE.FPOffset = FDE.FREs.front().FPOffset;
+      else if (CFI.getRegister() == RAReg)
+        FRE.RAOffset = FDE.FREs.front().RAOffset;
       return true;
     case MCCFIInstruction::OpRestoreState:
-      // TODO: Implement. Will use FDE.
+      // The cfi parser will have caught unbalanced directives earlier, so a
+      // mismatch here is an implementation error.
+      assert(!FDE.SaveState.empty() &&
+             "cfi_restore_state without cfi_save_state");
+      FRE = FDE.SaveState.pop_back_val();
       return true;
     case MCCFIInstruction::OpEscape:
       // TODO: Implement. Will use FDE.
@@ -394,8 +413,8 @@ public:
     // shf_fdeoff. With no sfh_auxhdr, these immediately follow this header.
     Streamer.emitInt32(0);
     // shf_freoff
-    Streamer.emitAbsoluteSymbolDiff(FRESubSectionStart, FDESubSectionStart,
-                                    sizeof(uint32_t));
+    Streamer.emitInt32(FDEs.size() *
+                       sizeof(sframe::FuncDescEntry<endianness::native>));
   }
 
   void emitFDEs() {

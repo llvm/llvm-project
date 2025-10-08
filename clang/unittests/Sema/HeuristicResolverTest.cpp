@@ -558,6 +558,24 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateTemplateArgument) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct vector {
+      void push_back(T);
+    };
+    template <typename Element, template <typename> class Container = vector>
+    void foo(Container<Element> c, Element e) {
+      c.push_back(e);
+    }
+  )cpp";
+  // Test resolution of "push_back" in "c.push_back(e)".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("push_back")).bind("input"),
+      cxxMethodDecl(hasName("push_back")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_ExplicitObjectParameter) {
   std::string Code = R"cpp(
     struct Foo {

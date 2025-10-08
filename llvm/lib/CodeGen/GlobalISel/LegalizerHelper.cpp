@@ -471,6 +471,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(TANH_F);
   case TargetOpcode::G_FSINCOS:
     RTLIBCASE(SINCOS_F);
+  case TargetOpcode::G_FMODF:
+    RTLIBCASE(MODF_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -697,6 +699,46 @@ LegalizerHelper::LegalizeResult LegalizerHelper::emitSincosLibcall(
 
   MIRBuilder.buildLoad(DstSin, StackPtrSin, *LoadMMOSin);
   MIRBuilder.buildLoad(DstCos, StackPtrCos, *LoadMMOCos);
+  MI.eraseFromParent();
+
+  return LegalizerHelper::Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                                 unsigned Size, Type *OpType,
+                                 LostDebugLocObserver &LocObserver) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register DstFrac = MI.getOperand(0).getReg();
+  Register DstInt = MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstFrac);
+
+  int MemSize = DstTy.getSizeInBytes();
+  Align Alignment = getStackTemporaryAlignment(DstTy);
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AddrSpace = DL.getAllocaAddrSpace();
+  MachinePointerInfo PtrInfo;
+
+  Register StackPtrInt =
+      createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
+
+  auto &Ctx = MF.getFunction().getContext();
+  auto LibcallResult = createLibcall(
+      MIRBuilder, getRTLibDesc(MI.getOpcode(), Size), {DstFrac, OpType, 0},
+      {{Src, OpType, 0}, {StackPtrInt, PointerType::get(Ctx, AddrSpace), 1}},
+      LocObserver, &MI);
+
+  if (LibcallResult != LegalizeResult::Legalized)
+    return LegalizerHelper::UnableToLegalize;
+
+  MachineMemOperand *LoadMMOInt = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
+
+  MIRBuilder.buildLoad(DstInt, StackPtrInt, *LoadMMOInt);
   MI.eraseFromParent();
 
   return LegalizerHelper::Legalized;
@@ -1340,6 +1382,16 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return UnableToLegalize;
     }
     return emitSincosLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
+  }
+  case TargetOpcode::G_FMODF: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    return emitModfLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
   }
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
@@ -2935,6 +2987,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
     widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
     widenScalarDst(MI, WideTy);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
     widenScalarDst(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
@@ -2972,6 +3025,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
     widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ZEXT);
     widenScalarDst(MI, WideTy);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
     widenScalarDst(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
@@ -3331,6 +3385,16 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_FMODF: {
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
+
+    widenScalarDst(MI, WideTy, 1, TargetOpcode::G_FPTRUNC);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_FPOWI:
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_STRICT_FLDEXP: {
@@ -4457,6 +4521,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerSADDO_SSUBO(MI);
   case TargetOpcode::G_SADDE:
     return lowerSADDE(MI);
+  case TargetOpcode::G_SSUBE:
+    return lowerSSUBE(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -5468,6 +5534,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_LROUND:
   case G_LLROUND:
   case G_INTRINSIC_TRUNC:
+  case G_FMODF:
   case G_FCOS:
   case G_FSIN:
   case G_FTAN:
@@ -8596,7 +8663,8 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
   auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);
-  if (TLI.shouldExpandCmpUsingSelects(getApproximateEVTForLLT(SrcTy, Ctx)) ||
+  if (TLI.preferSelectsOverBooleanArithmetic(
+          getApproximateEVTForLLT(SrcTy, Ctx)) ||
       BC == TargetLowering::UndefinedBooleanContent) {
     auto One = MIRBuilder.buildConstant(DstTy, 1);
     auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
@@ -9323,6 +9391,27 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
   auto BX = MIRBuilder.buildXor(Ty, Sum, RHS);
   auto T = MIRBuilder.buildAnd(Ty, AX, BX);
 
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSSUBE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+
+  // Diff = LHS - (RHS + zext(CarryIn))
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto RHSPlusCI = MIRBuilder.buildAdd(Ty, RHS, CarryZ);
+  auto Diff = MIRBuilder.buildSub(Ty, LHS, RHSPlusCI);
+  MIRBuilder.buildCopy(Res, Diff);
+
+  // ov = msb((LHS ^ RHS) & (LHS ^ Diff))
+  auto X1 = MIRBuilder.buildXor(Ty, LHS, RHS);
+  auto X2 = MIRBuilder.buildXor(Ty, LHS, Diff);
+  auto T = MIRBuilder.buildAnd(Ty, X1, X2);
   auto Zero = MIRBuilder.buildConstant(Ty, 0);
   MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
 
