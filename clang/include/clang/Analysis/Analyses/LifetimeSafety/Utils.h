@@ -1,14 +1,11 @@
-//===- Utils.h - Utility Functions for Immutable Collections ---*- C++ -*-===//
+//===- Utils.h - Utility Functions for Lifetime Safety --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
-//
-// This file provides utility functions for working with LLVM's immutable data
-// structures, including join operations for ImmutableSet and ImmutableMap
-// used throughout the lifetime safety analysis.
+// This file provides utilities for the lifetime safety analysis, including 
+// join operations for LLVM's immutable data structures.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_UTILS_H
