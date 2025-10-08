@@ -2145,25 +2145,23 @@ static void processDoLoopBounds(
             Fortran::parser::FindSourceLocation(outerDoConstruct)));
       } else {
         // Safely locate the next inner DoConstruct within this eval.
-        const Fortran::parser::DoConstruct *doCons = nullptr;
+        const Fortran::parser::DoConstruct *innerDo = nullptr;
         if (crtEval && crtEval->hasNestedEvaluations()) {
-          for (Fortran::lower::pft::Evaluation &child :
-               crtEval->getNestedEvaluations()) {
-            if (auto *cand = child.getIf<Fortran::parser::DoConstruct>()) {
-              doCons = cand;
+          for (Fortran::lower::pft::Evaluation &child : crtEval->getNestedEvaluations()) {
+            if (auto *stmt = child.getIf<Fortran::parser::DoConstruct>()) {
+              innerDo = stmt;
               // Prepare to descend for the next iteration
               crtEval = &child;
               break;
             }
           }
         }
-        if (!doCons) {
-          // No deeper loop; stop collecting collapsed bounds.
-          break;
-        }
-        loopControl = &*doCons->GetLoopControl();
+        if (!innerDo)
+          break; // No deeper loop; stop collecting collapsed bounds.
+
+        loopControl = &*innerDo->GetLoopControl();
         locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(*doCons)));
+            Fortran::parser::FindSourceLocation(*innerDo)));
       }
 
       const Fortran::parser::LoopControl::Bounds *bounds =
