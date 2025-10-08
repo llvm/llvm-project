@@ -35,6 +35,25 @@ Visibility Macros
   used on class templates. On classes it should only be used if the vtable
   lives in the built library.
 
+**_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE**
+  Mark a symbol as exported from the libc++ library, while still providing an
+  inlineable definition that can be used by the compiler for optimization
+  purposes.
+
+  To use this macro on a class method, define the method body
+  *outside* of the class definition and annotate that definition with
+  `_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE`. Make sure to include the
+  header in at least one translation unit linked into the libc++ library.
+
+  This macro works by applying `[[gnu::gnu_inline]] inline` to the funciton
+  in the header, thereby suppressing code generation while still allowing the
+  compiler to use the function for optimization purposes.
+  During the build of libc++, we trigger code generation by not expanding the
+  macro to `_LIBCPP_EXPORTED_FROM_ABI`. Since the function is no longer marked
+  as `inline`, it will be emitted even if not called. (For this reason its
+  paramount to not define methods in the class definition, since those definitions
+  would be implicitly `inline`.)
+
 **_LIBCPP_OVERRIDABLE_FUNC_VIS**
   Mark a symbol as being exported by the libc++ library, but allow it to be
   overridden locally. On non-Windows, this is equivalent to `_LIBCPP_FUNC_VIS`.

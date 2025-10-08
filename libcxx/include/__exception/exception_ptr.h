@@ -23,9 +23,29 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_ABI_MICROSOFT
+// Previously, parts of exception_ptr were defined out-of-line, which prevented
+// useful compiler optimizations. Changing the out-of-line definitions to inline
+// definitions is an ABI break, however. To prevent this, we have to make sure
+// the symbols remain available in the libc++ library, in addition to being
+// defined inline here in this header.
+// To this end, we use _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE macro:
+// The macro is defined as empty for src/exception.cpp, forcing the definitions of
+// the functions to be emitted and included in the library. When users of libc++
+// compile their code, the __gnu_inline__ attribute will suppress generation of
+// these functions while making their definitions available for inlining.
+#  ifdef _LIBCPP_EMIT_CODE_FOR_EXCEPTION_PTR
+#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_EXPORTED_FROM_ABI
+#  else
+#    if !__has_cpp_attribute(gnu::gnu_inline)
+#      error "GNU inline attribute is not supported"
+#    endif
+#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[gnu::gnu_inline]] inline
+#  endif
 
-#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgnu-inline-cpp-without-extern")
+
+#ifdef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 
 namespace __cxxabiv1 {
 
@@ -49,18 +69,25 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
 
 } // namespace __cxxabiv1
 
-#  endif
-
 #endif
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
-#ifndef _LIBCPP_ABI_MICROSOFT
+class _LIBCPP_EXPORTED_FROM_ABI exception_ptr;
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr current_exception() _NOEXCEPT;
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE void rethrow_exception(exception_ptr);
+
+#ifndef _LIBCPP_CXX_ABI_VCRUNTIME
 
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-  static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
+  // Customization points to adjust the reference counting for cxxabi or
+  // libsupc++/libstdc++
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static void __increment_refcount(void* __ptr) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static void __decrement_refcount(void* __ptr) _NOEXCEPT;
+
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
   template <class _Ep>
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep&) _NOEXCEPT;
@@ -74,9 +101,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
 
-  exception_ptr(const exception_ptr&) _NOEXCEPT;
-  exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
-  ~exception_ptr() _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr(exception_ptr&&) _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(exception_ptr&&) _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE ~exception_ptr() _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __ptr_ != nullptr; }
 
@@ -88,9 +117,52 @@ public:
     return !(__x == __y);
   }
 
+  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) {
+    void* __tmp = __x.__ptr_;
+    __x.__ptr_ = __y.__ptr_;
+    __y.__ptr_ = __tmp;
+  }
+
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
+  __increment_refcount(__e);
+  exception_ptr __ptr;
+  __ptr.__ptr_ = __e;
+  return __ptr;
+}
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) noexcept : __ptr_(__other.__ptr_) {
+  __increment_refcount(__ptr_);
+}
+
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr::exception_ptr(exception_ptr&& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
+  __other.__ptr_ = nullptr;
+}
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(const exception_ptr& __other) noexcept {
+  if (__ptr_ != __other.__ptr_) {
+    __increment_refcount(__other.__ptr_);
+    __decrement_refcount(__ptr_);
+    __ptr_ = __other.__ptr_;
+  }
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) noexcept {
+  __decrement_refcount(__ptr_);
+  __ptr_ = __other.__ptr_;
+  __other.__ptr_ = nullptr;
+  return *this;
+}
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() noexcept { __decrement_refcount(__ptr_); }
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
@@ -167,26 +239,26 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   _LIBCPP_DIAGNOSTIC_POP
 
 public:
-  exception_ptr() _NOEXCEPT;
-  exception_ptr(nullptr_t) _NOEXCEPT;
-  exception_ptr(const exception_ptr& __other) _NOEXCEPT;
-  exception_ptr& operator=(const exception_ptr& __other) _NOEXCEPT;
-  exception_ptr& operator=(nullptr_t) _NOEXCEPT;
-  ~exception_ptr() _NOEXCEPT;
-  explicit operator bool() const _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr() _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr(nullptr_t) _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr(const exception_ptr& __other) _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& operator=(const exception_ptr& __other) _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& operator=(nullptr_t) _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE ~exception_ptr() _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE explicit operator bool() const _NOEXCEPT;
 };
 
-_LIBCPP_EXPORTED_FROM_ABI bool operator==(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE bool operator==(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT;
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT {
   return !(__x == __y);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void swap(exception_ptr&, exception_ptr&) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE void swap(exception_ptr&, exception_ptr&) _NOEXCEPT;
 
-_LIBCPP_EXPORTED_FROM_ABI exception_ptr __copy_exception_ptr(void* __except, const void* __ptr);
-_LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
-[[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr __copy_exception_ptr(void* __except, const void* __ptr);
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr current_exception() _NOEXCEPT;
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE void rethrow_exception(exception_ptr);
 
 // This is a built-in template function which automagically extracts the required
 // information.
@@ -199,6 +271,21 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 }
 
 #endif // _LIBCPP_ABI_MICROSOFT
+
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+
+#  if defined(_LIBCPP_CXX_ABI_NONE)
+#    include <__exception/exception_ptr_unimplemented.ipp>
+#  elif defined(_LIBCPP_CXX_ABI_LIBCXXABI) || defined(_LIBCPP_CXX_ABI_LIBCXXRT)
+#    include <__exception/exception_ptr_cxxabi.ipp>
+#  elif defined(_LIBCPP_CXX_ABI_LIBSTDCXX) || defined(_LIBCPP_CXX_ABI_LIBSUPCXX)
+#    include <__exception/exception_ptr_glibcxx.ipp>
+#  elif defined(_LIBCPP_CXX_ABI_VCRUNTIME)
+#    include <__exception/exception_ptr_msvc.ipp>
+#  else
+#    error "Unsupported C++ ABI library"
+#  endif
+
+_LIBCPP_DIAGNOSTIC_POP
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H

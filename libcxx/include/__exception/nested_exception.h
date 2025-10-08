@@ -35,7 +35,9 @@ class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
 public:
   nested_exception() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI nested_exception(const nested_exception&) _NOEXCEPT            = default;
+  _LIBCPP_HIDE_FROM_ABI nested_exception(nested_exception&&) _NOEXCEPT                 = default;
   _LIBCPP_HIDE_FROM_ABI nested_exception& operator=(const nested_exception&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI nested_exception& operator=(nested_exception&&) _NOEXCEPT      = default;
   virtual ~nested_exception() _NOEXCEPT;
 
   // access functions

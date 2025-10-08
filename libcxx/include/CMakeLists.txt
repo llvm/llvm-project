@@ -343,6 +343,10 @@ set(files
   __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
   __exception/exception_ptr.h
+  __exception/exception_ptr_cxxabi.ipp
+  __exception/exception_ptr_glibcxx.ipp
+  __exception/exception_ptr_msvc.ipp
+  __exception/exception_ptr_unimplemented.ipp
   __exception/nested_exception.h
   __exception/operations.h
   __exception/terminate.h
