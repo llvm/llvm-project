@@ -109,13 +109,12 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
 
     // Now test all candidates
     for (const auto &candidate : candidates) {
-      if (testMode == "alloc") {
+      if (testMode == "alloc")
         testGenAllocate(candidate.op, candidate.result, candidate.pointerType,
                         builder);
-      } else if (testMode == "free") {
+      else if (testMode == "free")
         testGenFree(candidate.op, candidate.result, candidate.pointerType,
                     builder);
-      }
     }
   } else if (testMode == "copy") {
     // Collect all source and destination candidates
@@ -143,12 +142,10 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
     });
 
     // Try copying from each source to each destination
-    for (const auto &src : sources) {
-      for (const auto &dest : destinations) {
+    for (const auto &src : sources)
+      for (const auto &dest : destinations)
         testGenCopy(src.op, dest.op, src.result, dest.result, src.pointerType,
                     builder);
-      }
-    }
   }
 }
 
@@ -179,9 +176,8 @@ void TestPointerLikeTypeInterfacePass::walkAndPrint() {
         }
       }
 
-      if (op->getNumResults() == 0) {
+      if (op->getNumResults() == 0)
         llvm::errs() << "  Operation has no results\n";
-      }
 
       llvm::errs() << "\n";
     }
