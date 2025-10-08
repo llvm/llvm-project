@@ -3274,19 +3274,19 @@ private:
       for (auto *e : prologue)  sunk.insert(e);
       for (auto *e : epilogue)  sunk.insert(e);
 
-      auto emit = [&](llvm::SmallVector<Fortran::lower::pft::Evaluation *> &lst) {
-        for (auto *e : lst) genFIR(*e);
-      };
+      auto sink =
+          [&](llvm::SmallVector<Fortran::lower::pft::Evaluation *> &lst) {
+            for (auto *e : lst)
+              genFIR(*e);
+          };
 
-      // Sink prologue
-      emit(prologue);
+      sink(prologue);
 
       // Lower innermost loop body, skipping sunk
       for (Fortran::lower::pft::Evaluation &e : innermostLoopEval->getNestedEvaluations())
         if (!sunk.contains(&e)) genFIR(e);
 
-      // Sink epilogue
-      emit(epilogue);
+      sink(epilogue);
     } else {
       // Normal lowering
       for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
