@@ -98,7 +98,6 @@ CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
-extern Class NSClassFromString(NSString *aClassName);
 
 #if __has_feature(objc_arc)
 id CFBridgingRelease(CFTypeRef X) {
