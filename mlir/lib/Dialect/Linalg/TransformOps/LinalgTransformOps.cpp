@@ -759,21 +759,21 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
 }
 
 LogicalResult transform::FuseOp::verify() {
-  auto iterspace_dim = getStaticTileSizes().size();
+  auto iterspace_rank = getStaticTileSizes().size();
   ArrayRef<int64_t> permutation = getStaticTileInterchange();
-  if (permutation.size() > iterspace_dim)
+  if (permutation.size() > iterspace_rank)
     return emitOpError()
            << "interchange length exceeds iteration space dimensions ("
-           << iterspace_dim << "), found " << getTileInterchange();
-  llvm::SmallDenseSet<int64_t, 4> seen;
+           << iterspace_rank << "), found " << getTileInterchange();
+  SmallVector<bool> seen(iterspace_rank, false);
   for (int64_t v : permutation) {
     if (!ShapedType::isDynamic(v)) {
-      if (v < 0 || v >= static_cast<int64_t>(iterspace_dim))
+      if (v < 0 || v >= static_cast<int64_t>(iterspace_rank))
         return emitOpError() << "expects interchange values to be in range [0, "
-                             << iterspace_dim << "), found: " << v;
-      auto result = seen.insert(v);
-      if (!result.second)
+                             << iterspace_rank << "), found: " << v;
+      if (seen[v])
         return emitOpError() << "found duplicate interchange value: " << v;
+      seen[v] = true;
     }
   }
 
