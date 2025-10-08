@@ -236,39 +236,33 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
+    # We will use Wix to generate the installer on Windows, because this supports
+    # installers > 2GB.
     - name: Install Wix
+      if: runner.os == 'Windows'
       run: |
         dotnet tool install --global wix
     - name: Configure
       id: build
+      shell: bash
       env:
         CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
-        CMAKE: /c/Android/android-sdk/cmake/3.31.5/bin/cmake.exe
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        #export PATH=C:\Strawberry\c\bin\:$PATH
-        subst S: ${{ github.workspace }}
-        cmake -G Ninja -S S:\llvm -B S:\build `
-            ${{ needs.prepare.outputs.target-cmake-flags }} `
-            -C clang\cmake\caches\Release.cmake `
-            -DBOOTSTRAP_BOOTSTRAP_CPACK_GENERATOR=WIX `
+        cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+            ${{ needs.prepare.outputs.target-cmake-flags }} \
+            -C clang/cmake/caches/Release.cmake \
+            -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
-    - name: Build Unix
+    - name: Build
       shell: bash
       run: |
-        ninja -v -C /s/build stage2-package
-        release_dir=`find /s/build -iname 'stage2-bins'`
+        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
+        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-
-    # There is an issue with building on Windows with bash so we use power shell.
-    # ninja: error: mkdir(tools/clang/tools/extra/clang-tidy/misc/ConfusableTable/CMakeFiles/clang-tidy-confusable-chars-gen.dir/C_/actions-runner/llvm-project/llvm-project/llvm): No such file or directory
-    #- name: Build Windows
-    #  if: runner.os == 'Windows'
-    #  run: |
-    #    ninja -v -C "S:\build" stage2-package
-
+    
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary

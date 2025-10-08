@@ -30,6 +30,13 @@ runs:
       with:
         arch: amd64
 
+    # In order to avoid some errors with long paths names, we need to shorten
+    # the path names for the build.
+    - name: Shorten paths on Windows
+      if: startsWith(runner.os, 'Windows')
+      run: |
+        subst S: ${{ github.workspace }}
+
     - name: Set Build Prefix
       id: build-prefix
       shell: bash
@@ -38,6 +45,8 @@ runs:
         if [ "${{ runner.os }}" = "Linux" ]; then
           sudo chown $USER:$USER /mnt/
           build_prefix=/mnt/
+        elif [ "${{ runner.os }}" = "Windows" ]; then
+          build_prefix=/s/
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
