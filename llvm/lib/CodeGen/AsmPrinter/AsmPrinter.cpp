@@ -1696,13 +1696,19 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   const auto &DirectCallees = FuncCGInfo.DirectCallees;
   const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
 
+  enum CallGraphFlags : uint8_t {
+    IsIndirectTargetFlag = 1u << 0,
+    HasDirectCalleesFlag = 1u << 1,
+    HasIndirectCalleesFlag = 1u << 2,
+  };
+
   uint8_t Flags = 0;
   if (IsIndirectTarget)
-    Flags |= 1u << 0; // Set the first LSB bit to 1.
+    Flags |= IsIndirectTargetFlag;
   if (DirectCallees.size() > 0)
-    Flags |= 1u << 1; // Set the second LSB bit to 1.
+    Flags |= HasDirectCalleesFlag;
   if (IndirectCalleeTypeIDs.size() > 0)
-    Flags |= 1u << 2; // Set the third LSB bit to 1.
+    Flags |= HasIndirectCalleesFlag;
 
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
