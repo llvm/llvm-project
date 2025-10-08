@@ -799,6 +799,22 @@ Error RewriteInstance::run() {
   if (opts::Instrument && !BC->IsStaticExecutable) {
     if (Error E = discoverRtInitAddress())
       return E;
+  }
+  if (BC->isPPC64()) {
+    if (auto GOrErr = BC->getUniqueSectionByName(".got")) {
+      const BinarySection &G = *GOrErr;
+      PPC64TOCBase = G.getAddress() + 0x8000; // ELFv2 ABI
+      HavePPC64TOCBase = true;
+      if (opts::Verbosity >= 1)
+        BC->outs() << "BOLT-INFO: PPC64 TOC base: 0x"
+                   << Twine::utohexstr(PPC64TOCBase) << "\n";
+    } else if (opts::Verbosity >= 1) {
+      BC->errs()
+          << "BOLT-WARNING: .got not found; PPC64 TOC base unavailable\n";
+    }
+  }
+
+  if (opts::Instrument && !BC->IsStaticExecutable){
     if (Error E = discoverRtFiniAddress())
       return E;
   }
@@ -2669,11 +2685,63 @@ bool RewriteInstance::analyzeRelocation(
     IsSectionRelocation = false;
   } else {
     const SymbolRef &Symbol = *SymbolIter;
-    SymbolName = std::string(cantFail(Symbol.getName()));
-    SymbolAddress = cantFail(Symbol.getAddress());
-    SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
-    // Section symbols are marked as ST_Debug.
-    IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
+
+    if (IsPPC64) {
+      // --- Safe guarded path for PPC64 ---
+      auto NameOrErr = Symbol.getName();
+      if (!NameOrErr) {
+        consumeError(NameOrErr.takeError());
+        SymbolName = "<unknown>";
+        SymbolAddress = 0;
+        IsSectionRelocation = false;
+        SkipVerification = true;
+        return true;
+      }
+      SymbolName = std::string(*NameOrErr);
+
+      auto AddrOrErr = Symbol.getAddress();
+      if (!AddrOrErr) {
+        consumeError(AddrOrErr.takeError());
+        SymbolAddress = 0;
+        IsSectionRelocation = false;
+        SkipVerification = true;
+        return true;
+      }
+      SymbolAddress = *AddrOrErr;
+
+      auto TypeOrErr = Symbol.getType();
+      if (!TypeOrErr) {
+        consumeError(TypeOrErr.takeError());
+        IsSectionRelocation = false;
+        SkipVerification = true;
+      } else {
+        SkipVerification |= (*TypeOrErr == SymbolRef::ST_Other);
+        IsSectionRelocation = (*TypeOrErr == SymbolRef::ST_Debug);
+      }
+
+      if (HavePPC64TOCBase) {
+        switch (RType) {
+        case ELF::R_PPC64_TOC16:
+        case ELF::R_PPC64_TOC16_LO:
+        case ELF::R_PPC64_TOC16_HI:
+        case ELF::R_PPC64_TOC16_HA:
+        case ELF::R_PPC64_TOC16_DS:
+        case ELF::R_PPC64_TOC16_LO_DS:
+          SymbolAddress = PPC64TOCBase;
+          break;
+        default:
+          break;
+        }
+      }
+
+    } else {
+      // --- Original fast path for other arches ---
+      SymbolName = std::string(cantFail(Symbol.getName()));
+      SymbolAddress = cantFail(Symbol.getAddress());
+      SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
+      // Section symbols are marked as ST_Debug.
+      IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
+    }
     // Check for PLT entry registered with symbol name
     if (!SymbolAddress && !IsWeakReference(Symbol) &&
         (IsAArch64 || BC->isRISCV())) {
