@@ -788,13 +788,13 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
   // FIXME: false positive if the pointee does not change in lambda
   const auto CaptureNoConst = lambdaExpr(hasCaptureInit(Exp));
 
-  const auto ReturnNoCost =
+  const auto ReturnNoConst =
       returnStmt(hasReturnValue(canResolveToExprPointee(Exp)));
 
   const auto Matches = match(
       stmt(anyOf(forEachDescendant(
                      stmt(anyOf(AssignToNonConst, PassAsNonConstArg,
-                                CastToNonConst, CaptureNoConst, ReturnNoCost))
+                                CastToNonConst, CaptureNoConst, ReturnNoConst))
                          .bind("stmt")),
                  forEachDescendant(InitToNonConst))),
       Stm, Context);
