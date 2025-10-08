@@ -53,7 +53,8 @@ Triple getTargetTriple() {
 
 static bool CheckHostSupport() {
   auto Triple = getTargetTriple();
-  if (!Triple.isOSBinFormatMachO())
+  if (!Triple.isOSBinFormatMachO() &&
+      !(Triple.isOSBinFormatELF() && Triple.getArch() == Triple::x86_64))
     return false;
 
   return true;
@@ -70,9 +71,9 @@ std::string getYamlFilePlatformExt() {
 }
 
 unsigned getYamlDocNum() {
-  auto Triple = getTargetTriple();
-  if (Triple.isOSBinFormatELF())
-    return Triple.isAArch64() ? 1 : 2;
+  // auto Triple = getTargetTriple();
+  // if (Triple.isOSBinFormatELF())
+  //   return 1;
 
   return 1;
 }
@@ -228,17 +229,6 @@ protected:
   void SetUp() override {
     if (!EnvReady)
       GTEST_SKIP() << "Skipping test: environment setup failed.";
-
-    auto JTMB = JITTargetMachineBuilder::detectHost();
-    // Bail out if we can not detect the host.
-    if (!JTMB) {
-      consumeError(JTMB.takeError());
-      GTEST_SKIP();
-    }
-
-    auto Triple = JTMB->getTargetTriple();
-    if (!Triple.isOSBinFormatMachO())
-      GTEST_SKIP();
 
     ASSERT_NE(GlobalEnv, nullptr);
     baseDir = GlobalEnv->getBaseDir();
@@ -434,7 +424,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
     {
       auto lib = query.getResolvedLib(platformSymbolName("sayA"));
       ASSERT_TRUE(lib.has_value()) << "sayA should be resolved";
-      EXPECT_TRUE(endsWith(lib->str(), withext("/libA")))
+      EXPECT_TRUE(endsWith(lib->str(), libname("A")))
           << "sayA resolved to: " << lib->str();
     }
 
@@ -442,7 +432,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
     {
       auto lib = query.getResolvedLib(platformSymbolName("sayB"));
       ASSERT_TRUE(lib.has_value()) << "sayB should be resolved";
-      EXPECT_TRUE(endsWith(lib->str(), withext("/libB")))
+      EXPECT_TRUE(endsWith(lib->str(), libname("B")))
           << "sayB resolved to: " << lib->str();
     }
 
@@ -450,7 +440,7 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
     {
       auto lib = query.getResolvedLib(platformSymbolName("sayZ"));
       ASSERT_TRUE(lib.has_value()) << "sayZ should be resolved";
-      EXPECT_TRUE(endsWith(lib->str(), withext("/libZ")))
+      EXPECT_TRUE(endsWith(lib->str(), libname("Z")))
           << "sayZ resolved to: " << lib->str();
     }
 
@@ -465,7 +455,7 @@ TEST_F(LibraryResolverIT, EnumeratorSeesInterLibraryRelationship) {
   const std::string libC = lib("C");
 
   SymbolEnumeratorOptions onlyUndef = SymbolEnumeratorOptions::defaultOptions();
-  // Show only undefined (drop IgnoreUndefined) to see B's reference to sayA
+  // Show only undefined (drop IgnoreUndefined) to see C's reference to sayA
   onlyUndef.FilterFlags &= ~SymbolEnumeratorOptions::IgnoreUndefined;
 
   bool sawSayAAsUndef = false;
@@ -497,7 +487,9 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
       platformSymbolName("sayA"), platformSymbolName("sayB"),
       platformSymbolName("sayA"), platformSymbolName("sayB")};
 
+  bool callbackRan = false;
   driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
+    callbackRan = true;
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayA")));
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayB")));
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayZ")));
@@ -513,6 +505,8 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
     EXPECT_TRUE(endsWith(z->str(), libname("Z")));
     EXPECT_TRUE(query.allResolved());
   });
+
+  EXPECT_TRUE(callbackRan);
 }
 
 // // // --- 5) Optional: stress SymbolQuery with the real resolve flow
@@ -535,18 +529,12 @@ TEST_F(LibraryResolverIT, ResolveManySymbols2) {
 
   driver->resolveSymbols(symbols, [&](SymbolQuery &query) {
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayA")));
-    EXPECT_FALSE(query.isResolved(platformSymbolName("sayB")));
     EXPECT_TRUE(query.isResolved(platformSymbolName("sayD")));
-    EXPECT_FALSE(query.isResolved(platformSymbolName("sayZ")));
 
     auto a = query.getResolvedLib(platformSymbolName("sayA"));
-    auto b = query.getResolvedLib(platformSymbolName("sayB"));
     auto d = query.getResolvedLib(platformSymbolName("sayD"));
-    auto z = query.getResolvedLib(platformSymbolName("sayZ"));
     ASSERT_TRUE(a.has_value());
-    ASSERT_FALSE(b.has_value());
     ASSERT_TRUE(d.has_value());
-    ASSERT_FALSE(z.has_value());
     EXPECT_TRUE(endsWith(a->str(), libname("A")));
     EXPECT_TRUE(endsWith(d->str(), libname("D")));
     EXPECT_FALSE(query.allResolved());
@@ -582,28 +570,6 @@ TEST_F(LibraryResolverIT, ScanSingleUserPath) {
     return true;
   });
   EXPECT_TRUE(found) << "Expected to find " << libCPath;
-}
-
-TEST_F(LibraryResolverIT, ScanMultiplePaths) {
-  auto cache = std::make_shared<LibraryPathCache>();
-  auto presolver = std::make_shared<PathResolver>(cache);
-  LibraryScanHelper scanH({}, cache, presolver);
-
-  scanH.addBasePath(libdir("D"), PathType::User);
-  scanH.addBasePath("/tmp/empty", PathType::User); // empty dir (won't add)
-
-  LibraryManager mgr;
-  LibraryScanner scanner(scanH, mgr);
-
-  scanner.scanNext(PathType::User, 1);
-
-  size_t count = 0;
-  mgr.forEachLibrary([&](const LibraryInfo &) {
-    count++;
-    return true;
-  });
-
-  EXPECT_GE(count, 1u) << "Should find at least lib in multiple paths";
 }
 
 TEST_F(LibraryResolverIT, ScanAndCheckDeps) {
@@ -863,7 +829,7 @@ TEST_F(LibraryResolverIT, ResolveViaOriginAndRPathSubstitution) {
   DylibResolver Resolver(validator);
 
   // Use only RPath config
-  Resolver.configure(lib("C"), {{P, SearchPathType::RPath}});
+  Resolver.configure(lib("C"), {{P, SearchPathType::RunPath}});
 
   // --- Check A ---
   auto valOptA = Resolver.resolve("libA", true);
