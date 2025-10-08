@@ -96,8 +96,9 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
   }
   size_t avaiable_size = AUXV_MMAP_SIZE - sizeof(Entry);
 
-  // Attempt 1: use PRCTL to get the auxv.
-  // We guarantee that the vector is always padded with AT_NULL entries.
+// Attempt 1: use PRCTL to get the auxv.
+// We guarantee that the vector is always padded with AT_NULL entries.
+#ifdef PR_GET_AUXV
   long prctl_ret = syscall_impl<long>(SYS_prctl, PR_GET_AUXV,
                                       reinterpret_cast<unsigned long>(vector),
                                       avaiable_size, 0, 0);
@@ -105,6 +106,7 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
     entries = vector;
     return;
   }
+#endif
 
   // Attempt 2: read /proc/self/auxv.
 #ifdef SYS_openat
