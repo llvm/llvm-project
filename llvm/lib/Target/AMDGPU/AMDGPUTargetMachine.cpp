@@ -966,7 +966,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(InternalizePass(mustPreserveGV));
             PM.addPass(GlobalDCEPass());
           }
-          if (EnableAMDGPUAttributor) {
+          if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
               Opt.IsClosedWorld = true;
