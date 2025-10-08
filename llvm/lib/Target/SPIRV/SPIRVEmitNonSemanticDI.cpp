@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Metadata.h"
@@ -29,6 +30,71 @@
 using namespace llvm;
 
 namespace {
+struct SPIRVCodeGenContext {
+  MachineIRBuilder &MIRBuilder;
+  MachineRegisterInfo &MRI;
+  SPIRVGlobalRegistry *GR;
+  const SPIRVType *VoidTy;
+  const SPIRVType *I32Ty;
+  const SPIRVInstrInfo *TII;
+  const SPIRVRegisterInfo *TRI;
+  const RegisterBankInfo *RBI;
+  MachineFunction &MF;
+  const Register &I32ZeroReg;
+  SPIRVTargetMachine *TM;
+  SmallVector<std::pair<const DIFile *const, const Register>, 12>
+      &SourceRegPairs;
+  SmallVector<std::pair<const DIScope *const, const Register>, 12>
+      &ScopeRegPairs;
+  SmallVector<std::pair<const DISubroutineType *const, const Register>, 12>
+      &SubRoutineTypeRegPairs;
+  SmallVector<std::pair<const DIBasicType *const, const Register>, 12>
+      &BasicTypeRegPairs;
+  SmallVector<std::pair<const DICompositeType *const, const Register>, 12>
+      &CompositeTypeRegPairs;
+
+  SPIRVCodeGenContext(
+      MachineIRBuilder &Builder, MachineRegisterInfo &RegInfo,
+      SPIRVGlobalRegistry *Registry, const SPIRVType *VTy,
+      const SPIRVType *I32Ty, const SPIRVInstrInfo *TI,
+      const SPIRVRegisterInfo *TR, const RegisterBankInfo *RB,
+      MachineFunction &Function, const Register &ZeroReg,
+      SPIRVTargetMachine *TargetMachine,
+      SmallVector<std::pair<const DIFile *const, const Register>, 12>
+          &SourceRegisterPairs,
+      SmallVector<std::pair<const DIScope *const, const Register>, 12>
+          &ScopeRegisterPairs,
+      SmallVector<std::pair<const DISubroutineType *const, const Register>, 12>
+          &SubRoutineTypeRegisterPairs,
+      SmallVector<std::pair<const DIBasicType *const, const Register>, 12>
+          &BasicTypePairs,
+      SmallVector<std::pair<const DICompositeType *const, const Register>, 12>
+          &CompositeTypePairs)
+      : MIRBuilder(Builder), MRI(RegInfo), GR(Registry), VoidTy(VTy),
+        I32Ty(I32Ty), TII(TI), TRI(TR), RBI(RB), MF(Function),
+        I32ZeroReg(ZeroReg), TM(TargetMachine),
+        SourceRegPairs(SourceRegisterPairs), ScopeRegPairs(ScopeRegisterPairs),
+        SubRoutineTypeRegPairs(SubRoutineTypeRegisterPairs),
+        BasicTypeRegPairs(BasicTypePairs),
+        CompositeTypeRegPairs(CompositeTypePairs) {}
+};
+struct DebugInfoCollector {
+  SmallPtrSet<DIBasicType *, 12> BasicTypes;
+  SmallPtrSet<DIDerivedType *, 12> PointerDerivedTypes;
+  SmallPtrSet<DIDerivedType *, 12> QualifiedDerivedTypes;
+  SmallPtrSet<DIDerivedType *, 12> TypedefTypes;
+  SmallPtrSet<DIDerivedType *, 12> InheritedTypes;
+  SmallPtrSet<DIDerivedType *, 12> PtrToMemberTypes;
+  SmallVector<const DIImportedEntity *, 5> ImportedEntities;
+  SmallPtrSet<DISubprogram *, 12> SubPrograms;
+  SmallPtrSet<DISubroutineType *, 12> SubRoutineTypes;
+  SmallPtrSet<DIScope *, 12> LexicalScopes;
+  SmallPtrSet<DICompositeType *, 12> ArrayTypes;
+  SmallPtrSet<const DICompositeType *, 8> CompositeTypesWithTemplates;
+  SmallPtrSet<const DICompositeType *, 8> CompositeTypes;
+  SmallPtrSet<const DICompositeType *, 8> EnumTypes;
+  DenseSet<const DIType *> visitedTypes;
+};
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
@@ -40,6 +106,111 @@ struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
 private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
+  Register EmitOpString(StringRef, SPIRVCodeGenContext &Ctx);
+  uint32_t transDebugFlags(const DINode *DN);
+  uint32_t mapTagToCompositeEncoding(const DICompositeType *CT);
+  uint32_t mapTagToQualifierEncoding(unsigned Tag);
+  uint32_t mapDebugFlags(DINode::DIFlags DFlags);
+  uint32_t mapImportedTagToEncoding(const DIImportedEntity *Imported);
+
+  Register EmitDIInstruction(SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
+                             ArrayRef<Register> Operands,
+                             SPIRVCodeGenContext &Ctx);
+
+  Register findEmittedBasicTypeReg(
+      const DIType *BaseType,
+      const SmallVectorImpl<std::pair<const DIBasicType *const, const Register>>
+          &BasicTypeRegPairs);
+
+  Register findEmittedCompositeTypeReg(
+      const DIType *BaseType,
+      const SmallVectorImpl<std::pair<const DICompositeType *const,
+                                      const Register>> &CompositeTypeRegPairs);
+
+  void extractTypeMetadata(DIType *Ty, DebugInfoCollector &Collector);
+
+  void handleCompositeType(DICompositeType *CT, DebugInfoCollector &Collector);
+  void handleDerivedType(DIDerivedType *DT, DebugInfoCollector &Collector);
+
+  void emitDebugBuildIdentifier(StringRef BuildIdentifier,
+                                SPIRVCodeGenContext &Ctx);
+
+  void emitDebugStoragePath(StringRef BuildStoragePath,
+                            SPIRVCodeGenContext &Ctx);
+
+  void emitDebugBasicTypes(const SmallPtrSetImpl<DIBasicType *> &BasicTypes,
+                           SPIRVCodeGenContext &Ctx);
+
+  void emitDebugPointerTypes(
+      const SmallPtrSetImpl<DIDerivedType *> &PointerDerivedTypes,
+      SPIRVCodeGenContext &Ctx);
+
+  void emitSingleCompilationUnit(StringRef FilePath, int64_t SourceLanguage,
+                                 SPIRVCodeGenContext &Ctx,
+                                 Register DebugInfoVersionReg,
+                                 Register DwarfVersionReg,
+                                 Register &DebugSourceResIdReg,
+                                 Register &DebugCompUnitResIdReg);
+
+  void emitLexicalScopes(const SmallPtrSetImpl<DIScope *> &LexicalScopes,
+                         SPIRVCodeGenContext &Ctx);
+
+  void emitDebugArrayTypes(const SmallPtrSetImpl<DICompositeType *> &ArrayTypes,
+                           SPIRVCodeGenContext &Ctx);
+
+  void emitDebugVectorTypes(DICompositeType *ArrayTy, Register BaseTypeReg,
+                            SPIRVCodeGenContext &Ctx);
+
+  void emitDebugTypeComposite(const DICompositeType *CompTy,
+                              SPIRVCodeGenContext &Ctx);
+
+  void emitAllTemplateDebugInstructions(
+      const SmallPtrSetImpl<const DICompositeType *> &TemplatedTypes,
+      SPIRVCodeGenContext &Ctx);
+
+  void emitAllDebugTypeComposites(
+      const SmallPtrSetImpl<const DICompositeType *> &CompositeTypes,
+      SPIRVCodeGenContext &Ctx);
+
+  void emitSubroutineTypes(
+      const SmallPtrSet<DISubroutineType *, 12> &SubRoutineTypes,
+      SPIRVCodeGenContext &Ctx);
+
+  void emitSubprograms(const SmallPtrSet<DISubprogram *, 12> &SubPrograms,
+                       SPIRVCodeGenContext &Ctx);
+
+  void emitDebugTypeMember(const DIDerivedType *Member,
+                           SPIRVCodeGenContext &Ctx,
+                           const Register &CompositeReg,
+                           SmallVectorImpl<Register> &MemberRegs,
+                           Register DebugSourceReg);
+
+  void emitDebugMacroDefs(MachineFunction &MF, SPIRVCodeGenContext &Ctx);
+
+  void emitDebugMacroUndef(const DIMacro *MacroUndef, StringRef FileName,
+                           SPIRVCodeGenContext &Ctx,
+                           const DenseMap<StringRef, Register> &MacroDefRegs);
+
+  void emitDebugQualifiedTypes(
+      const SmallPtrSetImpl<DIDerivedType *> &QualifiedDerivedTypes,
+      SPIRVCodeGenContext &Ctx);
+
+  void emitDebugTypedefs(const SmallPtrSetImpl<DIDerivedType *> &TypedefTypes,
+                         SPIRVCodeGenContext &Ctx);
+
+  void emitDebugImportedEntities(
+      const SmallVectorImpl<const DIImportedEntity *> &ImportedEntities,
+      SPIRVCodeGenContext &Ctx);
+
+  Register emitDebugGlobalVariable(const DIGlobalVariableExpression *GVE,
+                                   SPIRVCodeGenContext &Ctx);
+
+  void emitAllDebugGlobalVariables(MachineFunction &MF,
+                                   SPIRVCodeGenContext &Ctx);
+
+  void emitDebugTypePtrToMember(
+      const SmallPtrSetImpl<DIDerivedType *> &PtrToMemberTypes,
+      SPIRVCodeGenContext &Ctx);
 };
 } // anonymous namespace
 
@@ -64,6 +235,12 @@ enum BaseTypeAttributeEncoding {
   UnsignedChar = 7
 };
 
+enum CompositeTypeAttributeEncoding { Class = 0, Struct = 1, Union = 2 };
+enum ImportedEnityAttributeEncoding {
+  ImportedModule = 0,
+  ImportedDeclaration = 1
+};
+
 enum SourceLanguage {
   Unknown = 0,
   ESSL = 1,
@@ -77,8 +254,52 @@ enum SourceLanguage {
   NZSL = 9,
   WGSL = 10,
   Slang = 11,
-  Zig = 12
+  Zig = 12,
+  CPP = 13
 };
+
+enum QualifierTypeAttributeEncoding {
+  ConstType = 0,
+  VolatileType = 1,
+  RestrictType = 2,
+  AtomicType = 3
+};
+
+enum Flag {
+  FlagIsProtected = 1 << 0,
+  FlagIsPrivate = 1 << 1,
+  FlagIsPublic = FlagIsPrivate | FlagIsProtected,
+  FlagAccess = FlagIsPublic,
+  FlagIsLocal = 1 << 2,
+  FlagIsDefinition = 1 << 3,
+  FlagIsFwdDecl = 1 << 4,
+  FlagIsArtificial = 1 << 5,
+  FlagIsExplicit = 1 << 6,
+  FlagIsPrototyped = 1 << 7,
+  FlagIsObjectPointer = 1 << 8,
+  FlagIsStaticMember = 1 << 9,
+  FlagIsIndirectVariable = 1 << 10,
+  FlagIsLValueReference = 1 << 11,
+  FlagIsRValueReference = 1 << 12,
+  FlagIsOptimized = 1 << 13,
+  FlagIsEnumClass = 1 << 14,
+  FlagTypePassByValue = 1 << 15,
+  FlagTypePassByReference = 1 << 16,
+  FlagUnknownPhysicalLayout = 1 << 17,
+  FlagBitField = 1 << 18
+};
+
+template <typename T, typename Container>
+Register findRegisterFromMap(const T *DIType, const Container &RegPairs,
+                             Register DefaultReg = Register()) {
+  if (!DIType)
+    return DefaultReg;
+  for (const auto &[DefinedType, Reg] : RegPairs) {
+    if (DefinedType == DIType)
+      return Reg;
+  }
+  return DefaultReg;
+}
 
 bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // If this MachineFunction doesn't have any BB repeat procedure
@@ -88,16 +309,17 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     return false;
   }
 
-  // Required variables to get from metadata search
   LLVMContext *Context;
   SmallVector<SmallString<128>> FilePaths;
   SmallVector<int64_t> LLVMSourceLanguages;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
-  SmallPtrSet<DIBasicType *, 12> BasicTypes;
-  SmallPtrSet<DIDerivedType *, 12> PointerDerivedTypes;
-  // Searching through the Module metadata to find nescessary
-  // information like DwarfVersion or SourceLanguage
+  SmallString<128> BuildIdentifier;
+  SmallString<128> BuildStoragePath;
+  Register DebugCompUnitResIdReg;
+  Register DebugSourceResIdReg;
+  DebugInfoCollector Collector;
+
   {
     const MachineModuleInfo &MMI =
         getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
@@ -108,6 +330,22 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return false;
     for (const auto *Op : DbgCu->operands()) {
       if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
+        if (CompileUnit->getDWOId())
+          BuildIdentifier = std::to_string(CompileUnit->getDWOId());
+        if (!CompileUnit->getSplitDebugFilename().empty())
+          BuildStoragePath = CompileUnit->getSplitDebugFilename();
+
+        for (auto *GVE : CompileUnit->getGlobalVariables()) {
+          if (auto *DIGV = dyn_cast<DIGlobalVariable>(GVE->getVariable())) {
+            extractTypeMetadata(DIGV->getType(), Collector);
+          }
+        }
+        for (const auto *IE : CompileUnit->getImportedEntities()) {
+          if (const auto *Imported = dyn_cast<DIImportedEntity>(IE)) {
+            Collector.ImportedEntities.push_back(Imported);
+          }
+        }
+
         DIFile *File = CompileUnit->getFile();
         FilePaths.emplace_back();
         sys::path::append(FilePaths.back(), File->getDirectory(),
@@ -135,25 +373,25 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     // This traversal is the only supported way to access
     // instruction related DI metadata like DIBasicType
     for (auto &F : *M) {
+      if (DISubprogram *SP = F.getSubprogram()) {
+        Collector.SubPrograms.insert(SP);
+        if (auto *SubType = dyn_cast<DISubroutineType>(SP->getType()))
+          Collector.SubRoutineTypes.insert(SubType);
+      }
       for (auto &BB : F) {
         for (auto &I : BB) {
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-            DILocalVariable *LocalVariable = DVR.getVariable();
-            if (auto *BasicType =
-                    dyn_cast<DIBasicType>(LocalVariable->getType())) {
-              BasicTypes.insert(BasicType);
-            } else if (auto *DerivedType =
-                           dyn_cast<DIDerivedType>(LocalVariable->getType())) {
-              if (DerivedType->getTag() == dwarf::DW_TAG_pointer_type) {
-                PointerDerivedTypes.insert(DerivedType);
-                // DIBasicType can be unreachable from DbgRecord and only
-                // pointed on from other DI types
-                // DerivedType->getBaseType is null when pointer
-                // is representing a void type
-                if (auto *BT = dyn_cast_or_null<DIBasicType>(
-                        DerivedType->getBaseType()))
-                  BasicTypes.insert(BT);
-              }
+            if (DILocalVariable *LocalVariable = DVR.getVariable())
+              extractTypeMetadata(LocalVariable->getType(), Collector);
+          }
+          if (const DebugLoc &DL = I.getDebugLoc()) {
+            if (const DILocation *Loc = DL.get()) {
+              DIScope *Scope = Loc->getScope();
+              if (auto *SP = dyn_cast<DISubprogram>(Scope))
+                Collector.SubPrograms.insert(SP);
+              else if (isa<DILexicalBlock>(Scope) ||
+                       isa<DILexicalBlockFile>(Scope))
+                Collector.LexicalScopes.insert(Scope);
             }
           }
         }
@@ -175,43 +413,26 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     // and before first terminator
     MachineIRBuilder MIRBuilder(MBB, MBB.getFirstTerminator());
 
-    const auto EmitOpString = [&](StringRef SR) {
-      const Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
-      MRI.setType(StrReg, LLT::scalar(32));
-      MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
-      MIB.addDef(StrReg);
-      addStringImm(SR, MIB);
-      return StrReg;
-    };
+    SmallVector<std::pair<const DIBasicType *const, const Register>, 12>
+        BasicTypeRegPairs;
+    SmallVector<std::pair<const DICompositeType *const, const Register>, 12>
+        CompositeTypeRegPairs;
+    SmallVector<std::pair<const DIFile *const, const Register>, 12>
+        SourceRegPairs;
+    SmallVector<std::pair<const DIScope *const, const Register>, 12>
+        ScopeRegPairs;
+    SmallVector<std::pair<const DISubroutineType *const, const Register>, 12>
+        SubRoutineTypeRegPairs;
 
     const SPIRVType *VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
-
-    const auto EmitDIInstruction =
-        [&](SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
-            std::initializer_list<Register> Registers) {
-          const Register InstReg =
-              MRI.createVirtualRegister(&SPIRV::IDRegClass);
-          MRI.setType(InstReg, LLT::scalar(32));
-          MachineInstrBuilder MIB =
-              MIRBuilder.buildInstr(SPIRV::OpExtInst)
-                  .addDef(InstReg)
-                  .addUse(GR->getSPIRVTypeID(VoidTy))
-                  .addImm(static_cast<int64_t>(
-                      SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100))
-                  .addImm(Inst);
-          for (auto Reg : Registers) {
-            MIB.addUse(Reg);
-          }
-          MIB.constrainAllUses(*TII, *TRI, *RBI);
-          GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MF);
-          return InstReg;
-        };
-
     const SPIRVType *I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
+
+    const Register I32ZeroReg =
+        GR->buildConstantInt(1, MIRBuilder, I32Ty, false);
 
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);
@@ -219,141 +440,1107 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
 
+    SPIRVCodeGenContext Ctx(MIRBuilder, MRI, GR, VoidTy, I32Ty, TII, TRI, RBI,
+                            MF, I32ZeroReg, TM, SourceRegPairs, ScopeRegPairs,
+                            SubRoutineTypeRegPairs, BasicTypeRegPairs,
+                            CompositeTypeRegPairs);
+
     for (unsigned Idx = 0; Idx < LLVMSourceLanguages.size(); ++Idx) {
-      const Register FilePathStrReg = EmitOpString(FilePaths[Idx]);
+      emitSingleCompilationUnit(FilePaths[Idx], LLVMSourceLanguages[Idx], Ctx,
+                                DebugInfoVersionReg, DwarfVersionReg,
+                                DebugSourceResIdReg, DebugCompUnitResIdReg);
 
-      const Register DebugSourceResIdReg = EmitDIInstruction(
-          SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
-
-      SourceLanguage SpirvSourceLanguage = SourceLanguage::Unknown;
-      switch (LLVMSourceLanguages[Idx]) {
-      case dwarf::DW_LANG_OpenCL:
-        SpirvSourceLanguage = SourceLanguage::OpenCL_C;
-        break;
-      case dwarf::DW_LANG_OpenCL_CPP:
-        SpirvSourceLanguage = SourceLanguage::OpenCL_CPP;
-        break;
-      case dwarf::DW_LANG_CPP_for_OpenCL:
-        SpirvSourceLanguage = SourceLanguage::CPP_for_OpenCL;
-        break;
-      case dwarf::DW_LANG_GLSL:
-        SpirvSourceLanguage = SourceLanguage::GLSL;
-        break;
-      case dwarf::DW_LANG_HLSL:
-        SpirvSourceLanguage = SourceLanguage::HLSL;
-        break;
-      case dwarf::DW_LANG_SYCL:
-        SpirvSourceLanguage = SourceLanguage::SYCL;
-        break;
-      case dwarf::DW_LANG_Zig:
-        SpirvSourceLanguage = SourceLanguage::Zig;
-      }
-
-      const Register SourceLanguageReg =
-          GR->buildConstantInt(SpirvSourceLanguage, MIRBuilder, I32Ty, false);
-
-      [[maybe_unused]]
-      const Register DebugCompUnitResIdReg =
-          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
-                            {DebugInfoVersionReg, DwarfVersionReg,
-                             DebugSourceResIdReg, SourceLanguageReg});
-    }
-
-    // We aren't extracting any DebugInfoFlags now so we
-    // emitting zero to use as <id>Flags argument for DebugBasicType
-    const Register I32ZeroReg =
-        GR->buildConstantInt(0, MIRBuilder, I32Ty, false, false);
-
-    // We need to store pairs because further instructions reference
-    // the DIBasicTypes and size will be always small so there isn't
-    // need for any kind of map
-    SmallVector<std::pair<const DIBasicType *const, const Register>, 12>
-        BasicTypeRegPairs;
-    for (auto *BasicType : BasicTypes) {
-      const Register BasicTypeStrReg = EmitOpString(BasicType->getName());
-
-      const Register ConstIntBitwidthReg = GR->buildConstantInt(
-          BasicType->getSizeInBits(), MIRBuilder, I32Ty, false);
-
-      uint64_t AttributeEncoding = BaseTypeAttributeEncoding::Unspecified;
-      switch (BasicType->getEncoding()) {
-      case dwarf::DW_ATE_signed:
-        AttributeEncoding = BaseTypeAttributeEncoding::Signed;
-        break;
-      case dwarf::DW_ATE_unsigned:
-        AttributeEncoding = BaseTypeAttributeEncoding::Unsigned;
-        break;
-      case dwarf::DW_ATE_unsigned_char:
-        AttributeEncoding = BaseTypeAttributeEncoding::UnsignedChar;
-        break;
-      case dwarf::DW_ATE_signed_char:
-        AttributeEncoding = BaseTypeAttributeEncoding::SignedChar;
-        break;
-      case dwarf::DW_ATE_float:
-        AttributeEncoding = BaseTypeAttributeEncoding::Float;
-        break;
-      case dwarf::DW_ATE_boolean:
-        AttributeEncoding = BaseTypeAttributeEncoding::Boolean;
-        break;
-      case dwarf::DW_ATE_address:
-        AttributeEncoding = BaseTypeAttributeEncoding::Address;
-      }
-
-      const Register AttributeEncodingReg =
-          GR->buildConstantInt(AttributeEncoding, MIRBuilder, I32Ty, false);
-
-      const Register BasicTypeReg =
-          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeBasic,
-                            {BasicTypeStrReg, ConstIntBitwidthReg,
-                             AttributeEncodingReg, I32ZeroReg});
-      BasicTypeRegPairs.emplace_back(BasicType, BasicTypeReg);
-    }
-
-    if (PointerDerivedTypes.size()) {
-      for (const auto *PointerDerivedType : PointerDerivedTypes) {
-
-        assert(PointerDerivedType->getDWARFAddressSpace().has_value());
-        const Register StorageClassReg = GR->buildConstantInt(
-            addressSpaceToStorageClass(
-                PointerDerivedType->getDWARFAddressSpace().value(),
-                *TM->getSubtargetImpl()),
-            MIRBuilder, I32Ty, false);
-
-        // If the Pointer is representing a void type it's getBaseType
-        // is a nullptr
-        const auto *MaybeNestedBasicType =
-            dyn_cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
-        if (MaybeNestedBasicType) {
-          for (const auto &BasicTypeRegPair : BasicTypeRegPairs) {
-            const auto &[DefinedBasicType, BasicTypeReg] = BasicTypeRegPair;
-            if (DefinedBasicType == MaybeNestedBasicType) {
-              [[maybe_unused]]
-              const Register DebugPointerTypeReg = EmitDIInstruction(
-                  SPIRV::NonSemanticExtInst::DebugTypePointer,
-                  {BasicTypeReg, StorageClassReg, I32ZeroReg});
-            }
-          }
-        } else {
-          const Register DebugInfoNoneReg =
-              EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {});
-          [[maybe_unused]]
-          const Register DebugPointerTypeReg = EmitDIInstruction(
-              SPIRV::NonSemanticExtInst::DebugTypePointer,
-              {DebugInfoNoneReg, StorageClassReg, I32ZeroReg});
-        }
+      if (const DISubprogram *SP = Ctx.MF.getFunction().getSubprogram()) {
+        if (const DIFile *File = SP->getFile())
+          Ctx.GR->addDebugValue(File, DebugCompUnitResIdReg);
+        if (const DICompileUnit *Unit = SP->getUnit())
+          Ctx.GR->addDebugValue(Unit, DebugCompUnitResIdReg);
       }
     }
+    emitDebugMacroDefs(MF, Ctx);
+    emitSubroutineTypes(Collector.SubRoutineTypes, Ctx);
+    emitSubprograms(Collector.SubPrograms, Ctx);
+    emitLexicalScopes(Collector.LexicalScopes, Ctx);
+    emitDebugBuildIdentifier(BuildIdentifier, Ctx);
+    emitDebugStoragePath(BuildStoragePath, Ctx);
+    emitDebugBasicTypes(Collector.BasicTypes, Ctx);
+    emitDebugPointerTypes(Collector.PointerDerivedTypes, Ctx);
+    emitDebugArrayTypes(Collector.ArrayTypes, Ctx);
+    emitAllDebugTypeComposites(Collector.CompositeTypes, Ctx);
+    emitAllTemplateDebugInstructions(Collector.CompositeTypesWithTemplates,
+                                     Ctx);
+    emitAllDebugGlobalVariables(MF, Ctx);
+    emitDebugQualifiedTypes(Collector.QualifiedDerivedTypes, Ctx);
+    emitDebugTypedefs(Collector.TypedefTypes, Ctx);
+    emitDebugImportedEntities(Collector.ImportedEntities, Ctx);
+    emitDebugTypePtrToMember(Collector.PtrToMemberTypes, Ctx);
   }
   return true;
 }
 
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
   bool Res = false;
-  // emitGlobalDI needs to be executed only once to avoid
-  // emitting duplicates
   if (!IsGlobalDIEmitted) {
     IsGlobalDIEmitted = true;
     Res = emitGlobalDI(MF);
   }
   return Res;
+}
+
+Register SPIRVEmitNonSemanticDI::EmitOpString(StringRef SR,
+                                              SPIRVCodeGenContext &Ctx) {
+  const Register StrReg = Ctx.MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  Ctx.MRI.setType(StrReg, LLT::scalar(32));
+  MachineInstrBuilder MIB = Ctx.MIRBuilder.buildInstr(SPIRV::OpString);
+  MIB.addDef(StrReg);
+  addStringImm(SR, MIB);
+  return StrReg;
+}
+
+Register SPIRVEmitNonSemanticDI::EmitDIInstruction(
+    SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
+    ArrayRef<Register> Operands, SPIRVCodeGenContext &Ctx) {
+  const Register InstReg = Ctx.MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  Ctx.MRI.setType(InstReg, LLT::scalar(32));
+  MachineInstrBuilder MIB =
+      Ctx.MIRBuilder.buildInstr(SPIRV::OpExtInst)
+          .addDef(InstReg)
+          .addUse(Ctx.GR->getSPIRVTypeID(Ctx.VoidTy))
+          .addImm(static_cast<int64_t>(
+              SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100))
+          .addImm(Inst);
+  for (auto Reg : Operands)
+    MIB.addUse(Reg);
+  MIB.constrainAllUses(*Ctx.TII, *Ctx.TRI, *Ctx.RBI);
+  Ctx.GR->assignSPIRVTypeToVReg(Ctx.VoidTy, InstReg, Ctx.MF);
+  return InstReg;
+}
+
+uint32_t SPIRVEmitNonSemanticDI::transDebugFlags(const DINode *DN) {
+  uint32_t Flags = 0;
+  if (const DIGlobalVariable *GV = dyn_cast<DIGlobalVariable>(DN)) {
+    if (GV->isLocalToUnit())
+      Flags |= Flag::FlagIsLocal;
+    if (GV->isDefinition())
+      Flags |= Flag::FlagIsDefinition;
+  }
+  if (const DISubprogram *DS = dyn_cast<DISubprogram>(DN)) {
+    if (DS->isLocalToUnit())
+      Flags |= Flag::FlagIsLocal;
+    if (DS->isOptimized())
+      Flags |= Flag::FlagIsOptimized;
+    if (DS->isDefinition())
+      Flags |= Flag::FlagIsDefinition;
+    Flags |= mapDebugFlags(DS->getFlags());
+  }
+  if (DN->getTag() == dwarf::DW_TAG_reference_type)
+    Flags |= Flag::FlagIsLValueReference;
+  if (DN->getTag() == dwarf::DW_TAG_rvalue_reference_type)
+    Flags |= Flag::FlagIsRValueReference;
+  if (const DIType *DT = dyn_cast<DIType>(DN))
+    Flags |= mapDebugFlags(DT->getFlags());
+  if (const DILocalVariable *DLocVar = dyn_cast<DILocalVariable>(DN))
+    Flags |= mapDebugFlags(DLocVar->getFlags());
+
+  return Flags;
+}
+
+uint32_t SPIRVEmitNonSemanticDI::mapDebugFlags(DINode::DIFlags DFlags) {
+  uint32_t Flags = 0;
+  if ((DFlags & DINode::FlagAccessibility) == DINode::FlagPublic)
+    Flags |= Flag::FlagIsPublic;
+  if ((DFlags & DINode::FlagAccessibility) == DINode::FlagProtected)
+    Flags |= Flag::FlagIsProtected;
+  if ((DFlags & DINode::FlagAccessibility) == DINode::FlagPrivate)
+    Flags |= Flag::FlagIsPrivate;
+
+  if (DFlags & DINode::FlagFwdDecl)
+    Flags |= Flag::FlagIsFwdDecl;
+  if (DFlags & DINode::FlagArtificial)
+    Flags |= Flag::FlagIsArtificial;
+  if (DFlags & DINode::FlagExplicit)
+    Flags |= Flag::FlagIsExplicit;
+  if (DFlags & DINode::FlagPrototyped)
+    Flags |= Flag::FlagIsPrototyped;
+  if (DFlags & DINode::FlagObjectPointer)
+    Flags |= Flag::FlagIsObjectPointer;
+  if (DFlags & DINode::FlagStaticMember)
+    Flags |= Flag::FlagIsStaticMember;
+  // inderect variable flag ?
+  if (DFlags & DINode::FlagLValueReference)
+    Flags |= Flag::FlagIsLValueReference;
+  if (DFlags & DINode::FlagRValueReference)
+    Flags |= Flag::FlagIsRValueReference;
+  if (DFlags & DINode::FlagTypePassByValue)
+    Flags |= Flag::FlagTypePassByValue;
+  if (DFlags & DINode::FlagTypePassByReference)
+    Flags |= Flag::FlagTypePassByReference;
+  if (DFlags & DINode::FlagEnumClass)
+    Flags |= Flag::FlagIsEnumClass;
+  return Flags;
+}
+
+void SPIRVEmitNonSemanticDI::emitSingleCompilationUnit(
+    StringRef FilePath, int64_t Language, SPIRVCodeGenContext &Ctx,
+    Register DebugInfoVersionReg, Register DwarfVersionReg,
+    Register &DebugSourceResIdReg, Register &DebugCompUnitResIdReg) {
+
+  const Register FilePathStrReg = EmitOpString(FilePath, Ctx);
+
+  const Function *F = &Ctx.MF.getFunction();
+  const DISubprogram *SP = F ? F->getSubprogram() : nullptr;
+  const DIFile *FileMDNode = nullptr;
+  if (SP)
+    FileMDNode = SP->getFile();
+
+  std::string FileMDContents;
+  if (FileMDNode && FileMDNode->getRawFile() &&
+      FileMDNode->getSource().has_value())
+    FileMDContents = FileMDNode->getSource().value().str();
+
+  if (FileMDContents.empty()) {
+    DebugSourceResIdReg = EmitDIInstruction(
+        SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg}, Ctx);
+  } else {
+    constexpr size_t MaxNumWords = UINT16_MAX - 2;
+    constexpr size_t MaxStrSize = MaxNumWords * 4 - 1;
+    std::string RemainingSource = FileMDContents;
+    std::string FirstChunk = RemainingSource.substr(0, MaxStrSize);
+    const Register FirstTextStrReg = EmitOpString(FirstChunk, Ctx);
+    DebugSourceResIdReg =
+        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugSource,
+                          {FilePathStrReg, FirstTextStrReg}, Ctx);
+
+    RemainingSource.erase(0, FirstChunk.size());
+
+    while (!RemainingSource.empty()) {
+      std::string NextChunk = RemainingSource.substr(0, MaxStrSize);
+      const Register ContinuedStrReg = EmitOpString(NextChunk, Ctx);
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugSourceContinued,
+                        {ContinuedStrReg}, Ctx);
+      RemainingSource.erase(0, NextChunk.size());
+    }
+  }
+  Ctx.SourceRegPairs.emplace_back(FileMDNode, DebugSourceResIdReg);
+
+  SourceLanguage SpirvSourceLanguage = SourceLanguage::Unknown;
+  switch (Language) {
+  case dwarf::DW_LANG_OpenCL:
+    SpirvSourceLanguage = SourceLanguage::OpenCL_C;
+    break;
+  case dwarf::DW_LANG_OpenCL_CPP:
+    SpirvSourceLanguage = SourceLanguage::OpenCL_CPP;
+    break;
+  case dwarf::DW_LANG_CPP_for_OpenCL:
+    SpirvSourceLanguage = SourceLanguage::CPP_for_OpenCL;
+    break;
+  case dwarf::DW_LANG_GLSL:
+    SpirvSourceLanguage = SourceLanguage::GLSL;
+    break;
+  case dwarf::DW_LANG_HLSL:
+    SpirvSourceLanguage = SourceLanguage::HLSL;
+    break;
+  case dwarf::DW_LANG_SYCL:
+    SpirvSourceLanguage = SourceLanguage::SYCL;
+    break;
+  case dwarf::DW_LANG_Zig:
+    SpirvSourceLanguage = SourceLanguage::Zig;
+    break;
+  case dwarf::DW_LANG_C_plus_plus_14:
+    SpirvSourceLanguage = SourceLanguage::CPP;
+    break;
+  default:
+    SpirvSourceLanguage = SourceLanguage::Unknown;
+    break;
+  }
+
+  const Register SourceLanguageReg = Ctx.GR->buildConstantInt(
+      SpirvSourceLanguage, Ctx.MIRBuilder, Ctx.I32Ty, false);
+
+  DebugCompUnitResIdReg =
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
+                        {DebugInfoVersionReg, DwarfVersionReg,
+                         DebugSourceResIdReg, SourceLanguageReg},
+                        Ctx);
+}
+
+Register SPIRVEmitNonSemanticDI::findEmittedBasicTypeReg(
+    const DIType *BaseType,
+    const SmallVectorImpl<std::pair<const DIBasicType *const, const Register>>
+        &BasicTypeRegPairs) {
+  const DIType *Ty = BaseType;
+
+  while (Ty && !isa<DIBasicType>(Ty)) {
+    if (auto *Derived = dyn_cast<DIDerivedType>(Ty))
+      if (Derived->getBaseType())
+        Ty = Derived->getBaseType();
+      else
+        return Register();
+    else
+      return Register();
+  }
+
+  if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
+    StringRef Name = BT->getName();
+    uint64_t Size = BT->getSizeInBits();
+
+    for (const auto &[DefinedBT, Reg] : BasicTypeRegPairs) {
+      if (DefinedBT->getName() == Name && DefinedBT->getSizeInBits() == Size)
+        return Reg;
+    }
+  }
+  return Register();
+}
+
+Register SPIRVEmitNonSemanticDI::findEmittedCompositeTypeReg(
+    const DIType *BaseType,
+    const SmallVectorImpl<std::pair<const DICompositeType *const,
+                                    const Register>> &CompositeTypeRegPairs) {
+
+  StringRef Name = BaseType->getName();
+  uint64_t Size = BaseType->getSizeInBits();
+  unsigned Tag = BaseType->getTag();
+
+  for (const auto &[DefinedCT, Reg] : CompositeTypeRegPairs) {
+    if (DefinedCT->getName() == Name && DefinedCT->getSizeInBits() == Size &&
+        DefinedCT->getTag() == Tag)
+      return Reg;
+  }
+
+  return Register();
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugBuildIdentifier(
+    StringRef BuildIdentifier, SPIRVCodeGenContext &Ctx) {
+  if (BuildIdentifier.empty())
+    return;
+
+  const Register BuildIdStrReg = EmitOpString(BuildIdentifier, Ctx);
+  uint32_t Flags = 0;
+  if (BuildIdentifier.contains("IdentifierPossibleDuplicates"))
+    Flags |= (1 << 0);
+  const Register FlagsReg =
+      Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+  EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugBuildIdentifier,
+                    {BuildIdStrReg, FlagsReg}, Ctx);
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugStoragePath(StringRef BuildStoragePath,
+                                                  SPIRVCodeGenContext &Ctx) {
+  if (!BuildStoragePath.empty()) {
+    const Register PathStrReg = EmitOpString(BuildStoragePath, Ctx);
+    EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugStoragePath, {PathStrReg},
+                      Ctx);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugBasicTypes(
+    const SmallPtrSetImpl<DIBasicType *> &BasicTypes,
+    SPIRVCodeGenContext &Ctx) {
+  // We need to store pairs because further instructions reference
+  // the DIBasicTypes and size will be always small so there isn't
+  // need for any kind of map
+  for (auto *BasicType : BasicTypes) {
+    if (!BasicType)
+      continue;
+    const Register BasicTypeStrReg = EmitOpString(BasicType->getName(), Ctx);
+
+    const Register ConstIntBitwidthReg = Ctx.GR->buildConstantInt(
+        BasicType->getSizeInBits(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+    uint64_t AttributeEncoding = BaseTypeAttributeEncoding::Unspecified;
+    switch (BasicType->getEncoding()) {
+    case dwarf::DW_ATE_signed:
+      AttributeEncoding = BaseTypeAttributeEncoding::Signed;
+      break;
+    case dwarf::DW_ATE_unsigned:
+      AttributeEncoding = BaseTypeAttributeEncoding::Unsigned;
+      break;
+    case dwarf::DW_ATE_unsigned_char:
+      AttributeEncoding = BaseTypeAttributeEncoding::UnsignedChar;
+      break;
+    case dwarf::DW_ATE_signed_char:
+      AttributeEncoding = BaseTypeAttributeEncoding::SignedChar;
+      break;
+    case dwarf::DW_ATE_float:
+      AttributeEncoding = BaseTypeAttributeEncoding::Float;
+      break;
+    case dwarf::DW_ATE_boolean:
+      AttributeEncoding = BaseTypeAttributeEncoding::Boolean;
+      break;
+    case dwarf::DW_ATE_address:
+      AttributeEncoding = BaseTypeAttributeEncoding::Address;
+    }
+
+    const Register AttributeEncodingReg = Ctx.GR->buildConstantInt(
+        AttributeEncoding, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+    const Register FlagsReg = Ctx.GR->buildConstantInt(
+        transDebugFlags(BasicType), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+    [[maybe_unused]]
+    const Register BasicTypeReg = EmitDIInstruction(
+        SPIRV::NonSemanticExtInst::DebugTypeBasic,
+        {BasicTypeStrReg, ConstIntBitwidthReg, AttributeEncodingReg, FlagsReg},
+        Ctx);
+    Ctx.GR->addDebugValue(BasicType, BasicTypeReg);
+    Ctx.BasicTypeRegPairs.emplace_back(BasicType, BasicTypeReg);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugPointerTypes(
+    const SmallPtrSetImpl<DIDerivedType *> &PointerDerivedTypes,
+    SPIRVCodeGenContext &Ctx) {
+  if (PointerDerivedTypes.size()) {
+    for (const auto *PointerDerivedType : PointerDerivedTypes) {
+
+      assert(PointerDerivedType->getDWARFAddressSpace().has_value());
+      const Register StorageClassReg = Ctx.GR->buildConstantInt(
+          addressSpaceToStorageClass(
+              PointerDerivedType->getDWARFAddressSpace().value(),
+              *Ctx.TM->getSubtargetImpl()),
+          Ctx.MIRBuilder, Ctx.I32Ty, false);
+      const uint32_t Flags = transDebugFlags(PointerDerivedType);
+      Register FlagsReg = Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder,
+                                                   Ctx.I32Ty, false, false);
+
+      // If the Pointer is representing a void type it's getBaseType
+      // is a nullptr
+      const auto *MaybeNestedBasicType =
+          dyn_cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
+      if (MaybeNestedBasicType) {
+        for (const auto &BasicTypeRegPair : Ctx.BasicTypeRegPairs) {
+          const auto &[DefinedBasicType, BasicTypeReg] = BasicTypeRegPair;
+          if (DefinedBasicType == MaybeNestedBasicType) {
+            [[maybe_unused]]
+            const Register DebugPointerTypeReg =
+                EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypePointer,
+                                  {BasicTypeReg, StorageClassReg, FlagsReg},
+                                  Ctx);
+          }
+        }
+      } else {
+        const Register DebugInfoNoneReg = EmitDIInstruction(
+            SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx);
+        [[maybe_unused]]
+        const Register DebugPointerTypeReg = EmitDIInstruction(
+            SPIRV::NonSemanticExtInst::DebugTypePointer,
+            {DebugInfoNoneReg, StorageClassReg, Ctx.I32ZeroReg}, Ctx);
+      }
+    }
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitLexicalScopes(
+    const SmallPtrSetImpl<DIScope *> &LexicalScopes, SPIRVCodeGenContext &Ctx) {
+  for (DIScope *Scope : LexicalScopes) {
+    if (!Scope)
+      continue;
+
+    SmallVector<Register, 4> Operands;
+    Register ScopeSourceReg =
+        findRegisterFromMap(Scope->getFile(), Ctx.SourceRegPairs);
+    Register ScopeParentReg =
+        findRegisterFromMap(Scope->getScope(), Ctx.ScopeRegPairs);
+
+    Operands.push_back(ScopeSourceReg);
+
+    if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope)) {
+      Register Discriminator = Ctx.GR->buildConstantInt(
+          LBF->getDiscriminator(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+      Operands.push_back(Discriminator);
+      Operands.push_back(ScopeParentReg);
+
+      EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugLexicalBlockDiscriminator, Operands,
+          Ctx);
+
+    } else if (auto *LB = dyn_cast<DILexicalBlock>(Scope)) {
+      Operands.push_back(Ctx.GR->buildConstantInt(LB->getLine(), Ctx.MIRBuilder,
+                                                  Ctx.I32Ty, false, false));
+      Operands.push_back(Ctx.GR->buildConstantInt(
+          LB->getColumn(), Ctx.MIRBuilder, Ctx.I32Ty, false, false));
+      Operands.push_back(ScopeParentReg);
+
+      Register LexicalScopeReg = EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugLexicalBlock, Operands, Ctx);
+
+      Ctx.ScopeRegPairs.emplace_back(Scope, LexicalScopeReg);
+    }
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitSubroutineTypes(
+    const SmallPtrSet<DISubroutineType *, 12> &SubRoutineTypes,
+    SPIRVCodeGenContext &Ctx) {
+
+  for (const auto *SubroutineType : SubRoutineTypes) {
+    SmallVector<Register, 6> Operands;
+
+    const Register FlagsReg = Ctx.GR->buildConstantInt(
+        SubroutineType->getFlags(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+    Operands.push_back(FlagsReg);
+
+    DITypeRefArray Types = SubroutineType->getTypeArray();
+    bool noRetTy = true;
+
+    for (unsigned I = 0; I < Types.size(); ++I) {
+      if (const DIType *BT = dyn_cast_or_null<DIType>(Types[I])) {
+        Register TypeReg = findEmittedBasicTypeReg(BT, Ctx.BasicTypeRegPairs);
+        if (TypeReg.isValid()) {
+          Operands.push_back(TypeReg);
+          noRetTy = false;
+        }
+      }
+    }
+
+    if (Types.size() == 0 || noRetTy) {
+      const SPIRVType *VoidTy = Ctx.GR->getOrCreateSPIRVType(
+          Type::getVoidTy(Ctx.MF.getFunction().getContext()), Ctx.MIRBuilder,
+          SPIRV::AccessQualifier::ReadWrite, false);
+      Operands.push_back(VoidTy->getOperand(0).getReg());
+    }
+
+    const Register FuncTypeReg = EmitDIInstruction(
+        SPIRV::NonSemanticExtInst::DebugTypeFunction, Operands, Ctx);
+
+    Ctx.SubRoutineTypeRegPairs.emplace_back(SubroutineType, FuncTypeReg);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitSubprograms(
+    const SmallPtrSet<DISubprogram *, 12> &SubPrograms,
+    SPIRVCodeGenContext &Ctx) {
+
+  for (const auto *SubProgram : SubPrograms) {
+    SmallVector<Register, 10> Operands;
+
+    Operands.push_back(EmitOpString(SubProgram->getName(), Ctx));
+    Operands.push_back(
+        findRegisterFromMap(SubProgram->getType(), Ctx.SubRoutineTypeRegPairs));
+    Operands.push_back(
+        findRegisterFromMap(SubProgram->getFile(), Ctx.SourceRegPairs));
+    Operands.push_back(Ctx.GR->buildConstantInt(
+        SubProgram->getLine(), Ctx.MIRBuilder, Ctx.I32Ty, false, false));
+    Operands.push_back(Ctx.I32ZeroReg);
+    Operands.push_back(Ctx.GR->getDebugValue(SubProgram->getFile()));
+    Operands.push_back(EmitOpString(SubProgram->getLinkageName(), Ctx));
+    Operands.push_back(Ctx.GR->buildConstantInt(
+        SubProgram->getFlags(), Ctx.MIRBuilder, Ctx.I32Ty, false, false));
+
+    if (!SubProgram->isDefinition()) {
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugFunctionDeclaration,
+                        Operands, Ctx);
+    } else {
+      Operands.push_back(Ctx.GR->buildConstantInt(
+          SubProgram->getScopeLine(), Ctx.MIRBuilder, Ctx.I32Ty, false, false));
+      const Register FuncReg = EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugFunction, Operands, Ctx);
+
+      Ctx.ScopeRegPairs.emplace_back(dynamic_cast<const DIScope *>(SubProgram),
+                                     FuncReg);
+    }
+  }
+}
+
+uint32_t SPIRVEmitNonSemanticDI::mapTagToQualifierEncoding(unsigned Tag) {
+  switch (Tag) {
+  case dwarf::DW_TAG_const_type:
+    return QualifierTypeAttributeEncoding::ConstType;
+  case dwarf::DW_TAG_volatile_type:
+    return QualifierTypeAttributeEncoding::VolatileType;
+  case dwarf::DW_TAG_restrict_type:
+    return QualifierTypeAttributeEncoding::RestrictType;
+  case dwarf::DW_TAG_atomic_type:
+    return QualifierTypeAttributeEncoding::AtomicType;
+  default:
+    llvm_unreachable("Unknown DWARF tag for DebugTypeQualifier");
+  }
+}
+
+uint32_t SPIRVEmitNonSemanticDI::mapImportedTagToEncoding(
+    const DIImportedEntity *Imported) {
+  switch (Imported->getTag()) {
+  case dwarf::DW_TAG_imported_module:
+    return ImportedEnityAttributeEncoding::ImportedModule;
+  case dwarf::DW_TAG_imported_declaration:
+    return ImportedEnityAttributeEncoding::ImportedDeclaration;
+  default:
+    llvm_unreachable("Unknown DWARF tag for DebugImportedEntity");
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugQualifiedTypes(
+    const SmallPtrSetImpl<DIDerivedType *> &QualifiedDerivedTypes,
+    SPIRVCodeGenContext &Ctx) {
+  if (!QualifiedDerivedTypes.empty()) {
+    for (const auto *QualifiedDT : QualifiedDerivedTypes) {
+      Register BaseTypeReg = findEmittedBasicTypeReg(QualifiedDT->getBaseType(),
+                                                     Ctx.BasicTypeRegPairs);
+      if (!BaseTypeReg)
+        continue;
+
+      const uint32_t QualifierValue =
+          mapTagToQualifierEncoding(QualifiedDT->getTag());
+      const Register QualifierConstReg = Ctx.GR->buildConstantInt(
+          QualifierValue, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+      [[maybe_unused]]
+      const Register DebugQualifiedTypeReg =
+          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeQualifier,
+                            {BaseTypeReg, QualifierConstReg}, Ctx);
+    }
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugTypedefs(
+    const SmallPtrSetImpl<DIDerivedType *> &TypedefTypes,
+    SPIRVCodeGenContext &Ctx) {
+  for (const auto *TypedefDT : TypedefTypes) {
+    Register BaseTypeReg = findEmittedBasicTypeReg(TypedefDT->getBaseType(),
+                                                   Ctx.BasicTypeRegPairs);
+    if (!BaseTypeReg)
+      continue;
+    Register DebugSourceReg =
+        findRegisterFromMap(TypedefDT->getFile(), Ctx.SourceRegPairs);
+    const Register TypedefNameReg = EmitOpString(TypedefDT->getName(), Ctx);
+    const Register LineReg = Ctx.GR->buildConstantInt(
+        TypedefDT->getLine(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+    const Register ColumnReg =
+        Ctx.GR->buildConstantInt(1, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+    Register ScopeReg = Ctx.GR->getDebugValue(TypedefDT->getFile());
+    [[maybe_unused]]
+    const Register DebugTypedefReg =
+        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypedef,
+                          {TypedefNameReg, BaseTypeReg, DebugSourceReg, LineReg,
+                           ColumnReg, ScopeReg},
+                          Ctx);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugImportedEntities(
+    const SmallVectorImpl<const DIImportedEntity *> &ImportedEntities,
+    SPIRVCodeGenContext &Ctx) {
+  for (const auto *Imported : ImportedEntities) {
+    if (!Imported->getEntity())
+      continue;
+
+    const Register NameStrReg = EmitOpString(Imported->getName(), Ctx);
+    const Register DebugSourceReg =
+        findRegisterFromMap(Imported->getFile(), Ctx.SourceRegPairs);
+    // TODO: Handle Entity as there are no current instructions for DINamespace,
+    // so replaced by DebugInfoNone
+    const Register EntityReg =
+        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx);
+    const Register LineReg = Ctx.GR->buildConstantInt(
+        Imported->getLine(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+    const Register ColumnReg =
+        Ctx.GR->buildConstantInt(1, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+    const Register ScopeReg = Ctx.GR->getDebugValue(Imported->getScope());
+    uint32_t Tag = mapImportedTagToEncoding(Imported);
+    Register TagReg =
+        Ctx.GR->buildConstantInt(Tag, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+    [[maybe_unused]]
+    const Register DebugImportedEntityReg =
+        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugImportedEntity,
+                          {NameStrReg, TagReg, DebugSourceReg, EntityReg,
+                           LineReg, ColumnReg, ScopeReg},
+                          Ctx);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitAllDebugGlobalVariables(
+    MachineFunction &MF, SPIRVCodeGenContext &Ctx) {
+
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (!SP)
+    return;
+
+  const DICompileUnit *CU = SP->getUnit();
+  if (!CU)
+    return;
+
+  auto GlobalVars = CU->getGlobalVariables();
+
+  for (auto *GVE : GlobalVars) {
+    if (GVE)
+      emitDebugGlobalVariable(GVE, Ctx);
+  }
+}
+
+Register SPIRVEmitNonSemanticDI::emitDebugGlobalVariable(
+    const DIGlobalVariableExpression *GVE, SPIRVCodeGenContext &Ctx) {
+
+  const DIGlobalVariable *DIGV = GVE->getVariable();
+  StringRef Name = DIGV->getName();
+  StringRef LinkageName = DIGV->getLinkageName();
+  unsigned Line = DIGV->getLine();
+  unsigned Column = 1;
+  const DIScope *ParentScope = DIGV->getFile();
+  uint32_t Flags = transDebugFlags(DIGV);
+  Register NameStrReg = EmitOpString(Name, Ctx);
+  Register LinkageStrReg = EmitOpString(LinkageName, Ctx);
+  Register LineReg =
+      Ctx.GR->buildConstantInt(Line, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  Register ColumnReg =
+      Ctx.GR->buildConstantInt(Column, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  Register FlagsReg =
+      Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  const DIType *Ty = DIGV->getType();
+  Register TypeReg;
+  if (isa<DICompositeType>(Ty)) {
+    TypeReg = findEmittedCompositeTypeReg(Ty, Ctx.CompositeTypeRegPairs);
+  } else {
+    TypeReg = findEmittedBasicTypeReg(Ty, Ctx.BasicTypeRegPairs);
+  }
+  Register DebugSourceReg =
+      findRegisterFromMap(DIGV->getFile(), Ctx.SourceRegPairs);
+  Register ParentReg;
+  if (ParentScope) {
+    ParentReg = Ctx.GR->getDebugValue(ParentScope);
+  } else {
+    llvm::errs() << "Warning: DIGlobalVariable has no parent scope\n";
+    ParentReg =
+        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx);
+  }
+  // TODO: Handle Variable Location operand
+  Register VariableReg =
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx);
+
+  SmallVector<Register, 9> Ops = {NameStrReg,    TypeReg,     DebugSourceReg,
+                                  LineReg,       ColumnReg,   ParentReg,
+                                  LinkageStrReg, VariableReg, FlagsReg};
+
+  return EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugGlobalVariable, Ops,
+                           Ctx);
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugArrayTypes(
+    const SmallPtrSetImpl<DICompositeType *> &ArrayTypes,
+    SPIRVCodeGenContext &Ctx) {
+  for (auto *ArrayTy : ArrayTypes) {
+    DIType *ElementType = ArrayTy->getBaseType();
+    Register BaseTypeReg =
+        findEmittedBasicTypeReg(ElementType, Ctx.BasicTypeRegPairs);
+    if (!BaseTypeReg)
+      continue;
+    DINodeArray Subranges = ArrayTy->getElements();
+    if (ArrayTy->isVector()) {
+      assert(Subranges.size() == 1 && "Only 1D vectors supported!");
+      emitDebugVectorTypes(ArrayTy, BaseTypeReg, Ctx);
+      continue;
+    }
+
+    SmallVector<Register, 4> ComponentCountRegs;
+    for (Metadata *M : Subranges) {
+      if (auto *SR = dyn_cast<DISubrange>(M)) {
+        auto CountValUnion = SR->getCount();
+        if (auto *CountCI = CountValUnion.dyn_cast<ConstantInt *>()) {
+          uint64_t CountVal = CountCI->getZExtValue();
+          Register ConstCountReg = Ctx.GR->buildConstantInt(
+              CountVal, Ctx.MIRBuilder, Ctx.I32Ty, false);
+          ComponentCountRegs.push_back(ConstCountReg);
+        } else {
+          // Runtime-sized or unknown count — emit 0 constant
+          Register ConstZero = Ctx.GR->buildConstantInt(
+              0, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+          ComponentCountRegs.push_back(ConstZero);
+        }
+      }
+    }
+    SmallVector<Register, 6> Ops;
+    Ops.push_back(BaseTypeReg);
+    llvm::append_range(Ops, ComponentCountRegs);
+
+    [[maybe_unused]]
+    Register DebugArrayTypeReg =
+        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeArray, Ops, Ctx);
+    Ctx.CompositeTypeRegPairs.emplace_back(ArrayTy, DebugArrayTypeReg);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugVectorTypes(DICompositeType *ArrayTy,
+                                                  Register BaseTypeReg,
+                                                  SPIRVCodeGenContext &Ctx) {
+  DINodeArray Subranges = ArrayTy->getElements();
+  Register ComponentCountReg;
+  if (auto *SR = dyn_cast<DISubrange>(Subranges[0])) {
+    auto CountValUnion = SR->getCount();
+    if (auto *CountCI = CountValUnion.dyn_cast<ConstantInt *>()) {
+      uint64_t CountVal = CountCI->getZExtValue();
+      ComponentCountReg = Ctx.GR->buildConstantInt(CountVal, Ctx.MIRBuilder,
+                                                   Ctx.I32Ty, false, false);
+    } else {
+      ComponentCountReg = Ctx.GR->buildConstantInt(0, Ctx.MIRBuilder, Ctx.I32Ty,
+                                                   false, false); // fallback
+    }
+  }
+
+  SmallVector<Register, 4> Ops;
+  Ops.push_back(BaseTypeReg);
+  Ops.push_back(ComponentCountReg);
+
+  [[maybe_unused]]
+  Register DebugVectorTypeReg =
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeVector, Ops, Ctx);
+}
+
+void SPIRVEmitNonSemanticDI::emitAllTemplateDebugInstructions(
+    const SmallPtrSetImpl<const DICompositeType *> &TemplatedTypes,
+    SPIRVCodeGenContext &Ctx) {
+
+  for (const DICompositeType *CompTy : TemplatedTypes) {
+    const DINodeArray TemplateParams = CompTy->getTemplateParams();
+    // If a type has no template params, skip to the next one in the collection.
+    if (TemplateParams.empty())
+      continue;
+    Register DebugSourceReg =
+        findRegisterFromMap(CompTy->getFile(), Ctx.SourceRegPairs);
+    Register LineReg = Ctx.GR->buildConstantInt(
+        CompTy->getLine(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+    Register ColumnReg =
+        Ctx.GR->buildConstantInt(1, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+    SmallVector<Register, 4> ParamRegs;
+
+    for (const auto *MD : TemplateParams) {
+      if (auto *TTP = dyn_cast<DITemplateTypeParameter>(MD)) {
+        Register NameStr = EmitOpString(TTP->getName(), Ctx);
+        Register TypeReg =
+            findEmittedBasicTypeReg(TTP->getType(), Ctx.BasicTypeRegPairs);
+        if (!TypeReg) {
+          llvm::errs() << "Cannot emit DebugTypeTemplateParameter: type not "
+                          "found for param "
+                       << TTP->getName() << "\n";
+          continue;
+        }
+        Register NoneReg = EmitDIInstruction(
+            SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx);
+
+        ParamRegs.push_back(EmitDIInstruction(
+            SPIRV::NonSemanticExtInst::DebugTypeTemplateParameter,
+            {NameStr, TypeReg, NoneReg, DebugSourceReg, LineReg, ColumnReg},
+            Ctx));
+
+      } else if (auto *TVP = dyn_cast<DITemplateValueParameter>(MD)) {
+        Register NameStr = EmitOpString(TVP->getName(), Ctx);
+        Register TypeReg =
+            findEmittedBasicTypeReg(TVP->getType(), Ctx.BasicTypeRegPairs);
+        if (!TypeReg)
+          continue;
+
+        int64_t ActualValue = 0;
+        if (auto *CAM = dyn_cast_or_null<ConstantAsMetadata>(TVP->getValue())) {
+          if (auto *CI = dyn_cast<ConstantInt>(CAM->getValue())) {
+            ActualValue = CI->getSExtValue();
+          }
+        }
+        Register ValueReg = Ctx.GR->buildConstantInt(
+            ActualValue, Ctx.MIRBuilder, Ctx.I32Ty, false);
+
+        ParamRegs.push_back(EmitDIInstruction(
+            SPIRV::NonSemanticExtInst::DebugTypeTemplateParameter,
+            {NameStr, TypeReg, ValueReg, DebugSourceReg, LineReg, ColumnReg},
+            Ctx));
+      }
+    }
+
+    Register CompositeReg = Ctx.GR->getDebugValue(CompTy);
+    if (!CompositeReg.isValid()) {
+      llvm::errs() << "Missing DebugTypeComposite for templated type: "
+                   << CompTy->getName() << "\n";
+      break;
+    }
+
+    ParamRegs.insert(ParamRegs.begin(), CompositeReg);
+
+    EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeTemplate, ParamRegs,
+                      Ctx);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitAllDebugTypeComposites(
+    const SmallPtrSetImpl<const DICompositeType *> &CompositeTypes,
+    SPIRVCodeGenContext &Ctx) {
+
+  for (auto *CT : CompositeTypes) {
+    emitDebugTypeComposite(CT, Ctx);
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugTypeComposite(
+    const DICompositeType *CompTy, SPIRVCodeGenContext &Ctx) {
+
+  if (!CompTy)
+    return;
+
+  Register NameStr = EmitOpString(CompTy->getName(), Ctx);
+  Register LinkageNameStr = EmitOpString(CompTy->getIdentifier(), Ctx);
+  uint32_t Tag = mapTagToCompositeEncoding(CompTy);
+  Register Tags =
+      Ctx.GR->buildConstantInt(Tag, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  Register DebugSourceReg =
+      findRegisterFromMap(CompTy->getFile(), Ctx.SourceRegPairs);
+  Register CURegLocal = Ctx.GR->getDebugValue(CompTy->getFile());
+  Register Line = Ctx.GR->buildConstantInt(CompTy->getLine(), Ctx.MIRBuilder,
+                                           Ctx.I32Ty, false, false);
+  Register Column =
+      Ctx.GR->buildConstantInt(1, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  Register SizeReg = Ctx.GR->buildConstantInt(
+      CompTy->getSizeInBits(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  uint32_t Flags = transDebugFlags(CompTy);
+  Register FlagsReg =
+      Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+  Register Res = Ctx.MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  Ctx.MRI.setType(Res, LLT::scalar(32));
+
+  SmallVector<Register, 4> MemberRegs;
+
+  for (Metadata *El : CompTy->getElements()) {
+    if (auto *DTM = dyn_cast<DIDerivedType>(El)) {
+      emitDebugTypeMember(DTM, Ctx, Res, MemberRegs, DebugSourceReg);
+    }
+  }
+
+  SmallVector<Register, 12> Ops = {NameStr,        Tags,    DebugSourceReg,
+                                   Line,           Column,  CURegLocal,
+                                   LinkageNameStr, SizeReg, FlagsReg};
+  Ops.append(MemberRegs);
+
+  Res = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeComposite, Ops,
+                          Ctx);
+
+  Ctx.GR->addDebugValue(CompTy, Res);
+  Ctx.CompositeTypeRegPairs.emplace_back(CompTy, Res);
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugTypeMember(
+    const DIDerivedType *Member, SPIRVCodeGenContext &Ctx,
+    const Register &CompositeReg, SmallVectorImpl<Register> &MemberRegs,
+    Register DebugSourceReg) {
+
+  if (!Member || Member->getTag() != dwarf::DW_TAG_member)
+    return;
+
+  Register NameStr = EmitOpString(Member->getName(), Ctx);
+  const DIType *Ty = Member->getBaseType();
+  Register TypeReg;
+  if (isa<DICompositeType>(Ty)) {
+    TypeReg = findEmittedCompositeTypeReg(Ty, Ctx.CompositeTypeRegPairs);
+  } else {
+    TypeReg = findEmittedBasicTypeReg(Ty, Ctx.BasicTypeRegPairs);
+  }
+
+  Register LineReg = Ctx.GR->buildConstantInt(Member->getLine(), Ctx.MIRBuilder,
+                                              Ctx.I32Ty, false, false);
+  Register ColumnReg =
+      Ctx.GR->buildConstantInt(1, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  Register OffsetReg =
+      Ctx.GR->buildConstantInt(1
+                               /*Member->getOffsetInBits()*/,
+                               Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  Register SizeReg = Ctx.GR->buildConstantInt(
+      Member->getSizeInBits(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+  uint32_t Flags = transDebugFlags(Member);
+  Register FlagsReg =
+      Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
+
+  SmallVector<Register, 10> Ops = {NameStr, TypeReg,   DebugSourceReg,
+                                   LineReg, ColumnReg, OffsetReg,
+                                   SizeReg, FlagsReg};
+
+  Register MemberReg =
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeMember, Ops, Ctx);
+
+  MemberRegs.push_back(MemberReg);
+}
+
+uint32_t
+SPIRVEmitNonSemanticDI::mapTagToCompositeEncoding(const DICompositeType *CT) {
+  switch (CT->getTag()) {
+  case dwarf::DW_TAG_structure_type:
+    return CompositeTypeAttributeEncoding::Struct;
+  case dwarf::DW_TAG_class_type:
+    return CompositeTypeAttributeEncoding::Class;
+  case dwarf::DW_TAG_union_type:
+    return CompositeTypeAttributeEncoding::Union;
+  default:
+    llvm_unreachable("Unknown DWARF tag for DebugTypeComposite");
+  }
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugMacroDefs(MachineFunction &MF,
+                                                SPIRVCodeGenContext &Ctx) {
+
+  DenseMap<StringRef, Register> MacroDefRegs;
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (!SP)
+    return;
+
+  const DICompileUnit *CU = SP->getUnit();
+  if (!CU)
+    return;
+
+  if (!CU || !CU->getMacros())
+    return;
+  const StringRef FileName =
+      CU->getFile() ? CU->getFile()->getFilename() : "<unknown>";
+
+  std::function<void(const MDNode *)> WalkMacroTree;
+  WalkMacroTree = [&](const MDNode *Node) {
+    if (const auto *Macro = dyn_cast<DIMacro>(Node)) {
+      if (Macro->getMacinfoType() == dwarf::DW_MACINFO_define) {
+        if (Macro->getLine() == 0)
+          return;
+
+        const StringRef Name = Macro->getName();
+        const StringRef Value = Macro->getValue();
+        const unsigned Line = Macro->getLine();
+        const Register SourceStrReg = EmitOpString(FileName, Ctx);
+        const Register LineConstReg =
+            Ctx.GR->buildConstantInt(Line, Ctx.MIRBuilder, Ctx.I32Ty, false);
+        const Register NameStrReg = EmitOpString(Name, Ctx);
+        const Register ValueStrReg = EmitOpString(Value, Ctx);
+
+        [[maybe_unused]] const Register DebugMacroDefReg = EmitDIInstruction(
+            SPIRV::NonSemanticExtInst::DebugMacroDef,
+            {SourceStrReg, LineConstReg, NameStrReg, ValueStrReg}, Ctx);
+        MacroDefRegs[Macro->getName()] = DebugMacroDefReg;
+      } else if (Macro->getMacinfoType() == dwarf::DW_MACINFO_undef) {
+        emitDebugMacroUndef(Macro, FileName, Ctx, MacroDefRegs);
+      }
+    } else if (const auto *MacroFile = dyn_cast<DIMacroFile>(Node)) {
+      for (const auto &Child : MacroFile->getElements())
+        WalkMacroTree(Child);
+    }
+  };
+
+  for (const auto &MacroNode : CU->getMacros()->operands()) {
+    if (const auto *MD = dyn_cast<MDNode>(MacroNode.get()))
+      WalkMacroTree(MD);
+  }
+}
+void SPIRVEmitNonSemanticDI::emitDebugMacroUndef(
+    const DIMacro *MacroUndef, StringRef FileName, SPIRVCodeGenContext &Ctx,
+    const DenseMap<StringRef, Register> &MacroDefRegs) {
+
+  const StringRef Name = MacroUndef->getName();
+  const unsigned Line = MacroUndef->getLine();
+  auto It = MacroDefRegs.find(Name);
+  if (It == MacroDefRegs.end())
+    return;
+
+  Register MacroDefReg = It->second;
+  Register SourceStrReg = EmitOpString(FileName, Ctx);
+  Register LineConstReg =
+      Ctx.GR->buildConstantInt(Line, Ctx.MIRBuilder, Ctx.I32Ty, false);
+
+  [[maybe_unused]] Register MacroUndefReg =
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugMacroUndef,
+                        {SourceStrReg, LineConstReg, MacroDefReg}, Ctx);
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugTypePtrToMember(
+    const SmallPtrSetImpl<DIDerivedType *> &PtrToMemberTypes,
+    SPIRVCodeGenContext &Ctx) {
+  if (!PtrToMemberTypes.empty()) {
+    for (const auto *PtrToMemberType : PtrToMemberTypes) {
+      assert(PtrToMemberType->getTag() == dwarf::DW_TAG_ptr_to_member_type &&
+             "emitDebugTypePtrToMember expects DW_TAG_ptr_to_member_type");
+      Register MemberTypeReg =
+          Ctx.GR->getDebugValue(PtrToMemberType->getBaseType());
+      Register ParentReg =
+          Ctx.GR->getDebugValue(PtrToMemberType->getClassType());
+
+      SmallVector<Register, 3> Ops;
+      Ops.push_back(MemberTypeReg);
+      Ops.push_back(ParentReg);
+
+      EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypePtrToMember, Ops,
+                        Ctx);
+    }
+  }
+}
+
+void SPIRVEmitNonSemanticDI::handleDerivedType(DIDerivedType *DT,
+                                               DebugInfoCollector &Collector) {
+  switch (DT->getTag()) {
+  case dwarf::DW_TAG_pointer_type:
+    Collector.PointerDerivedTypes.insert(DT);
+    break;
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_atomic_type:
+    Collector.QualifiedDerivedTypes.insert(DT);
+    break;
+  case dwarf::DW_TAG_typedef:
+    Collector.TypedefTypes.insert(DT);
+    break;
+  case dwarf::DW_TAG_inheritance:
+    Collector.InheritedTypes.insert(DT);
+    break;
+  case dwarf::DW_TAG_ptr_to_member_type:
+    Collector.PtrToMemberTypes.insert(DT);
+    break;
+  case dwarf::DW_TAG_member:
+    break;
+  default:
+    break;
+  }
+  extractTypeMetadata(DT->getBaseType(), Collector);
+}
+
+void SPIRVEmitNonSemanticDI::handleCompositeType(
+    DICompositeType *CT, DebugInfoCollector &Collector) {
+  if (!CT->getTemplateParams().empty()) {
+    Collector.CompositeTypesWithTemplates.insert(CT);
+    for (const auto *MD : CT->getTemplateParams()) {
+      if (const auto *TTP = dyn_cast<DITemplateTypeParameter>(MD)) {
+        extractTypeMetadata(TTP->getType(), Collector);
+      } else if (const auto *TVP = dyn_cast<DITemplateValueParameter>(MD)) {
+        extractTypeMetadata(TVP->getType(), Collector);
+      }
+    }
+  }
+
+  if (CT->getTag() == dwarf::DW_TAG_array_type) {
+    Collector.ArrayTypes.insert(CT);
+  } else if (CT->getTag() == dwarf::DW_TAG_structure_type ||
+             CT->getTag() == dwarf::DW_TAG_class_type ||
+             CT->getTag() == dwarf::DW_TAG_union_type) {
+    Collector.CompositeTypes.insert(CT);
+  } else if (CT->getTag() == dwarf::DW_TAG_enumeration_type) {
+    Collector.EnumTypes.insert(CT);
+  }
+
+  for (Metadata *Element : CT->getElements()) {
+    if (auto *Member = dyn_cast<DIDerivedType>(Element)) {
+      extractTypeMetadata(Member, Collector);
+    } else if (auto *SR = dyn_cast<DISubrange>(Element)) {
+      if (auto *CountVar = SR->getCount().dyn_cast<DIVariable *>()) {
+        extractTypeMetadata(CountVar->getType(), Collector);
+      }
+    }
+  }
+  extractTypeMetadata(CT->getBaseType(), Collector);
+}
+
+void SPIRVEmitNonSemanticDI::extractTypeMetadata(
+    DIType *Ty, DebugInfoCollector &Collector) {
+  if (!Ty)
+    return;
+  if (!Collector.visitedTypes.insert(Ty).second)
+    return;
+  if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
+    handleCompositeType(CT, Collector);
+  } else if (auto *BT = dyn_cast<DIBasicType>(Ty)) {
+    Collector.BasicTypes.insert(BT);
+  } else if (auto *DT = dyn_cast<DIDerivedType>(Ty)) {
+    handleDerivedType(DT, Collector);
+  }
 }

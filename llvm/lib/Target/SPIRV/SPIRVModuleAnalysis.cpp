@@ -654,8 +654,32 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
-              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
-              NS::DebugTypeBasic, NS::DebugTypePointer};
+              NS::DebugSource,
+              NS::DebugCompilationUnit,
+              NS::DebugInfoNone,
+              NS::DebugTypeBasic,
+              NS::DebugTypePointer,
+              NS::DebugBuildIdentifier,
+              NS::DebugStoragePath,
+              NS::DebugSourceContinued,
+              NS::DebugFunction,
+              NS::DebugTypeFunction,
+              NS::DebugFunctionDeclaration,
+              NS::DebugLexicalBlock,
+              NS::DebugLexicalBlockDiscriminator,
+              NS::DebugTypeQualifier,
+              NS::DebugImportedEntity,
+              NS::DebugTypedef,
+              NS::DebugGlobalVariable,
+              NS::DebugTypeArray,
+              NS::DebugTypeComposite,
+              NS::DebugTypeTemplate,
+              NS::DebugTypeTemplateParameter,
+              NS::DebugTypeMember,
+              NS::DebugMacroDef,
+              NS::DebugMacroUndef,
+              NS::DebugTypePtrToMember,
+              NS::DebugTypeInheritance};
           bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
