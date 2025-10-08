@@ -430,6 +430,10 @@ private:
   bool optimizeInst(Instruction *I, ModifyDT &ModifiedDT);
   bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr, Type *AccessTy,
                           unsigned AddrSpace);
+  Value *splitLastVectorIndex(Instruction *MemoryInst,
+                              const GetElementPtrInst *GEP);
+  Value *reassociateVectorOps(Instruction *MemoryInst,
+                              const GetElementPtrInst *GEP);
   bool optimizeGatherScatterInst(Instruction *MemoryInst, Value *Ptr);
   bool optimizeInlineAsmInst(CallInst *CS);
   bool optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT);
@@ -6257,23 +6261,176 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   return true;
 }
 
+Value *CodeGenPrepare::splitLastVectorIndex(Instruction *MemoryInst,
+                                            const GetElementPtrInst *GEP) {
+  SmallVector<Value *, 2> Ops(GEP->operands());
+
+  bool RewriteGEP = false;
+
+  if (Ops[0]->getType()->isVectorTy()) {
+    Ops[0] = getSplatValue(Ops[0]);
+    if (!Ops[0])
+      return nullptr;
+    RewriteGEP = true;
+  }
+
+  unsigned FinalIndex = Ops.size() - 1;
+
+  // Ensure all but the last index is 0.
+  // FIXME: This isn't strictly required. All that's required is that they are
+  // all scalars or splats.
+  for (unsigned i = 1; i < FinalIndex; ++i) {
+    auto *C = dyn_cast<Constant>(Ops[i]);
+    if (!C)
+      return nullptr;
+    if (isa<VectorType>(C->getType()))
+      C = C->getSplatValue();
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    if (!CI || !CI->isZero())
+      return nullptr;
+    // Scalarize the index if needed.
+    Ops[i] = CI;
+  }
+
+  // Try to scalarize the final index.
+  if (Ops[FinalIndex]->getType()->isVectorTy()) {
+    if (Value *V = getSplatValue(Ops[FinalIndex])) {
+      auto *C = dyn_cast<ConstantInt>(V);
+      // Don't scalarize all zeros vector.
+      if (!C || !C->isZero()) {
+        Ops[FinalIndex] = V;
+        RewriteGEP = true;
+      }
+    }
+  }
+
+  // If we made any changes or the we have extra operands, we need to generate
+  // new instructions.
+  if (!RewriteGEP && Ops.size() == 2)
+    return nullptr;
+
+  auto NumElts = cast<VectorType>(GEP->getType())->getElementCount();
+
+  IRBuilder<> Builder(MemoryInst);
+
+  Type *SourceTy = GEP->getSourceElementType();
+  Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
+
+  // If the final index isn't a vector, emit a scalar GEP containing all ops
+  // and a vector GEP with all zeroes final index.
+  if (!Ops[FinalIndex]->getType()->isVectorTy()) {
+    Value *NewAddr =
+        Builder.CreateGEP(SourceTy, Ops[0], ArrayRef(Ops).drop_front());
+    auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
+    auto *SecondTy =
+        GetElementPtrInst::getIndexedType(SourceTy, ArrayRef(Ops).drop_front());
+    return Builder.CreateGEP(SecondTy, NewAddr,
+                             Constant::getNullValue(IndexTy));
+  }
+
+  Value *Base = Ops[0];
+  Value *Index = Ops[FinalIndex];
+
+  // Create a scalar GEP if there are more than 2 operands.
+  if (Ops.size() != 2) {
+    // Replace the last index with 0.
+    Ops[FinalIndex] =
+        Constant::getNullValue(Ops[FinalIndex]->getType()->getScalarType());
+    Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
+    SourceTy =
+        GetElementPtrInst::getIndexedType(SourceTy, ArrayRef(Ops).drop_front());
+  }
+
+  // Now create the GEP with scalar pointer and vector index.
+  return Builder.CreateGEP(SourceTy, Base, Index);
+}
+
+/// The addressing performed by a GEP is simply a set of adds.  Adds are
+/// by definition reassociable.  If the indices of a this gep contain
+/// both scalar and vector indices, we can split the result into two
+/// GEPs (zeroing out a subset of indices in each) while computing the
+/// same results.  We do have to be careful to only zero indices where
+/// that doesn't change the type traversed (i.e. not for structs). Doing
+/// so has the effect of grouping all vector arithmetic after all scalar
+/// arithmetic, and encourages scalar base identification.
+Value *CodeGenPrepare::reassociateVectorOps(Instruction *MemoryInst,
+                                            const GetElementPtrInst *GEP) {
+  SmallVector<Value *, 2> Ops(GEP->operands());
+  const unsigned E = Ops.size();
+
+  if (Ops[0]->getType()->isVectorTy()) {
+    Ops[0] = getSplatValue(Ops[0]);
+    if (!Ops[0])
+      return nullptr;
+  }
+
+  // Check for at least one non-zero scalar index and one vector index each,
+  // and aren't trying to iterate through a struct type where changing the
+  // index to zero would be illegal.
+  bool HasNonZeroScalar = false, HasNonZeroVector = false;
+  gep_type_iterator GTI = gep_type_begin(GEP);
+  for (unsigned i = 1; i < E; ++i, ++GTI) {
+    if (Value *V = getSplatValue(Ops[i]))
+      Ops[i] = V;
+
+    // Zeros don't count in terms of splitting, and zero struct
+    // indices are fine
+    if (match(Ops[i], m_Zero()))
+      continue;
+
+    if (GTI.getStructTypeOrNull())
+      return nullptr;
+
+    if (isa<VectorType>(Ops[i]->getType()))
+      HasNonZeroVector = true;
+    else
+      HasNonZeroScalar = true;
+  }
+
+  if (!HasNonZeroVector || !HasNonZeroScalar)
+    return nullptr;
+
+  SmallVector<Value *, 2> ScalarOps(Ops);
+  SmallVector<Value *, 2> VectorOps(Ops);
+  for (unsigned i = 1; i < E; i++) {
+    auto *IdxTy = Ops[i]->getType()->getScalarType();
+    auto *ScalarZero = Constant::getNullValue(IdxTy);
+    if (isa<VectorType>(Ops[i]->getType()))
+      ScalarOps[i] = ScalarZero;
+    else
+      VectorOps[i] = ScalarZero;
+  }
+
+  IRBuilder<> Builder(MemoryInst);
+  Type *SourceTy = GEP->getSourceElementType();
+  Value *Base = Ops[0];
+  Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(ScalarOps).drop_front());
+  Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(VectorOps).drop_front());
+  return Base;
+}
+
 /// Rewrite GEP input to gather/scatter to enable SelectionDAGBuilder to find
 /// a uniform base to use for ISD::MGATHER/MSCATTER. SelectionDAGBuilder can
-/// only handle a 2 operand GEP in the same basic block or a splat constant
-/// vector. The 2 operands to the GEP must have a scalar pointer and a vector
-/// index.
+/// only handle a GEP with a scalar pointer and one non-zero vector index in
+/// the same basic block or a splat constant vector.  We use GEP with a
+/// vector zeroinitializer input for canonical splat as SelectionDAG has
+/// trouble with splats which might be in different blocks.
 ///
 /// If the existing GEP has a vector base pointer that is splat, we can look
 /// through the splat to find the scalar pointer. If we can't find a scalar
 /// pointer there's nothing we can do.
 ///
-/// If we have a GEP with more than 2 indices where the middle indices are all
-/// zeroes, we can replace it with 2 GEPs where the second has 2 operands.
-///
-/// If the final index isn't a vector or is a splat, we can emit a scalar GEP
-/// followed by a GEP with an all zeroes vector index. This will enable
-/// SelectionDAGBuilder to use the scalar GEP as the uniform base and have a
-/// zero index.
+/// With this goal in mind, we perform three related transforms:
+/// 1) If the GEP could be entirely scalarized, we do so and emit a separate
+///    getelementptr p, zeroinitializer to splat the result.
+/// 2) If the GEP can be scalarized all except for the last index, we split
+///    the gep into a scalar prefix, and a base + vectoridx GEP for the
+///    final index.
+/// 3) If the GEP has a mixture of scalar and vector indices, we split the
+///    GEP into a pair of GEPs with some of the indices zeroed out in each.
+///    This essentially reassociates the GEP such that all scalar addressing
+///    is done before all vector addressing.  This transform has restrictions
+///    when indexing through struct types.
 bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
                                                Value *Ptr) {
   Value *NewAddr;
@@ -6288,85 +6445,12 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     if (MemoryInst->getParent() != GEP->getParent())
       return false;
 
-    SmallVector<Value *, 2> Ops(GEP->operands());
-
-    bool RewriteGEP = false;
-
-    if (Ops[0]->getType()->isVectorTy()) {
-      Ops[0] = getSplatValue(Ops[0]);
-      if (!Ops[0])
-        return false;
-      RewriteGEP = true;
-    }
-
-    unsigned FinalIndex = Ops.size() - 1;
-
-    // Ensure all but the last index is 0.
-    // FIXME: This isn't strictly required. All that's required is that they are
-    // all scalars or splats.
-    for (unsigned i = 1; i < FinalIndex; ++i) {
-      auto *C = dyn_cast<Constant>(Ops[i]);
-      if (!C)
-        return false;
-      if (isa<VectorType>(C->getType()))
-        C = C->getSplatValue();
-      auto *CI = dyn_cast_or_null<ConstantInt>(C);
-      if (!CI || !CI->isZero())
-        return false;
-      // Scalarize the index if needed.
-      Ops[i] = CI;
-    }
-
-    // Try to scalarize the final index.
-    if (Ops[FinalIndex]->getType()->isVectorTy()) {
-      if (Value *V = getSplatValue(Ops[FinalIndex])) {
-        auto *C = dyn_cast<ConstantInt>(V);
-        // Don't scalarize all zeros vector.
-        if (!C || !C->isZero()) {
-          Ops[FinalIndex] = V;
-          RewriteGEP = true;
-        }
-      }
-    }
-
-    // If we made any changes or the we have extra operands, we need to generate
-    // new instructions.
-    if (!RewriteGEP && Ops.size() == 2)
+    if (auto *V = splitLastVectorIndex(MemoryInst, GEP))
+      NewAddr = V;
+    else if (auto *V = reassociateVectorOps(MemoryInst, GEP))
+      NewAddr = V;
+    else
       return false;
-
-    auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
-
-    IRBuilder<> Builder(MemoryInst);
-
-    Type *SourceTy = GEP->getSourceElementType();
-    Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
-
-    // If the final index isn't a vector, emit a scalar GEP containing all ops
-    // and a vector GEP with all zeroes final index.
-    if (!Ops[FinalIndex]->getType()->isVectorTy()) {
-      NewAddr = Builder.CreateGEP(SourceTy, Ops[0], ArrayRef(Ops).drop_front());
-      auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
-      auto *SecondTy = GetElementPtrInst::getIndexedType(
-          SourceTy, ArrayRef(Ops).drop_front());
-      NewAddr =
-          Builder.CreateGEP(SecondTy, NewAddr, Constant::getNullValue(IndexTy));
-    } else {
-      Value *Base = Ops[0];
-      Value *Index = Ops[FinalIndex];
-
-      // Create a scalar GEP if there are more than 2 operands.
-      if (Ops.size() != 2) {
-        // Replace the last index with 0.
-        Ops[FinalIndex] =
-            Constant::getNullValue(Ops[FinalIndex]->getType()->getScalarType());
-        Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
-        SourceTy = GetElementPtrInst::getIndexedType(
-            SourceTy, ArrayRef(Ops).drop_front());
-      }
-
-      // Now create the GEP with scalar pointer and vector index.
-      NewAddr = Builder.CreateGEP(SourceTy, Base, Index);
-    }
   } else if (!isa<Constant>(Ptr)) {
     // Not a GEP, maybe its a splat and we can create a GEP to enable
     // SelectionDAGBuilder to use it as a uniform base.
