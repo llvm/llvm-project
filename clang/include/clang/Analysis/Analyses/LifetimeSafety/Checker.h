@@ -5,7 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// TODO: Complete me.
+//
+// This file defines the LifetimeChecker, which detects use-after-free errors
+// by checking if live origins hold loans that have expired. It combines the
+// results of loan propagation and liveness analysis to report violations with
+// appropriate confidence levels.
+//
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_CHECKER_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_CHECKER_H
