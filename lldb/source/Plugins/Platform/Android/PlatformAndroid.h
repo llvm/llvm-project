@@ -89,6 +89,14 @@ protected:
 private:
   std::string m_device_id;
   uint32_t m_sdk_version;
+
+  // Helper functions for process information gathering
+  void PopulateProcessStatusInfo(lldb::pid_t pid,
+                                 ProcessInstanceInfo &process_info);
+  void PopulateProcessCommandLine(lldb::pid_t pid,
+                                  ProcessInstanceInfo &process_info);
+  void PopulateProcessArchitecture(lldb::pid_t pid,
+                                   ProcessInstanceInfo &process_info);
 };
 
 } // namespace platform_android
