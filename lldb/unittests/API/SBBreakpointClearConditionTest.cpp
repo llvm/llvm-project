@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestingSupport/SubsystemRAII.h"
-#include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDebugger.h"
