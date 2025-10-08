@@ -87,9 +87,6 @@ DataAccessProfiles:
       AccessCount:     145
   KnownColdSymbols:
     - foo
-    # The llvm.fake_var entry is added to test optimizer won't annotate it with section prefix.
-    # In real profiles, llvm.* variables may not have entries in the first place.
-    - llvm.fake_var
   KnownColdStrHashes: [ 999, 1001 ]
 ...
 ;--- memprof-no-dap.yaml
