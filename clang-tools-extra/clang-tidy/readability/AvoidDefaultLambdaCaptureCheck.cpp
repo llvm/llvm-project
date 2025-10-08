@@ -44,15 +44,18 @@ void AvoidDefaultLambdaCaptureCheck::check(
   if (DefaultCaptureLoc.isInvalid())
     return;
 
+  std::vector<std::string> ImplicitCaptures;
+  for (const auto &Capture : Lambda->implicit_captures()) {
+    // It is impossible to explicitly capture a VLA in C++, since VLAs don't
+    // exist in ISO C++ and so the syntax was never created to capture them.
+    if (Capture.getCaptureKind() == LCK_VLAType)
+      return;
+    ImplicitCaptures.push_back(generateCaptureText(Capture));
+  }
+
   auto Diag = diag(DefaultCaptureLoc,
                    "lambda default captures are discouraged; "
                    "prefer to capture specific variables explicitly");
-
-  std::vector<std::string> ImplicitCaptures;
-
-  for (const auto &Capture : Lambda->implicit_captures()) {
-    ImplicitCaptures.push_back(generateCaptureText(Capture));
-  }
 
   // For template-dependent lambdas, the list of captures hasn't been created
   // yet, so the list of implicit captures is empty.

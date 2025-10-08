@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-avoid-default-lambda-capture %t
+// RUN: %check_clang_tidy %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
 
 void test_default_captures() {
   int value = 42;
@@ -128,4 +128,16 @@ void test_init_captures() {
 
   (void)y1;
   (void)y2;
+}
+
+void test_vla_no_crash() {
+  // VLAs create implicit VLA bound captures that cannot be written explicitly.
+  // No warning should be issued.
+  int n = 5;
+  int vla[n];
+  for (int i = 0; i < n; ++i) {
+    vla[i] = i * 10;
+  }
+
+  auto lambda = [&]() { return vla[0]; };
 }

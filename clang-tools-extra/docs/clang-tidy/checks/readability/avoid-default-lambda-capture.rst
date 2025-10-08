@@ -13,6 +13,10 @@ Coding guidelines that recommend against defaulted lambda captures include:
 
 * Item 31 of Effective Modern C++ by Scott Meyers
 
+This check does not lint for variable-length array (VLA) captures. VLAs are not
+ISO C++, and it is impossible to explicitly capture them as the syntax does not
+exist.
+
 Example
 -------
 
