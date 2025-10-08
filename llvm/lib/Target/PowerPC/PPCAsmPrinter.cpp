@@ -444,11 +444,17 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
     }
   }
 
+  // Assert that this an register input operand to an inline asm statement.
   assert(MI->getOperand(OpNo).isReg());
+  // The ConstraintInfo for this Operand is encounted in Op - 1 operand
+  // as a part of the InlineAsm Flags.
   const MachineOperand &FlagsOP = MI->getOperand(OpNo - 1);
   if (!FlagsOP.isImm())
     return true;
   const InlineAsm::Flag Flags(FlagsOP.getImm());
+  // Address operand is a Register for an X-form instruction, similar to the
+  // 'y' Extra Code. Constraint 'a' allows reg+reg Addressing without using
+  // a 'y' input modifier in Extended GCC ASM.
   if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::a) {
     printOperand(MI, OpNo, O);
     return false;

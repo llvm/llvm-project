@@ -1,5 +1,10 @@
 // RUN: %clang_cc1 -emit-llvm -triple powerpc64-ibm-aix-xcoff \
 // RUN:   %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple powerpc-ibm-aix-xcoff \
+// RUN:   %s -o - | FileCheck %s
+// This test file checks that we represent common C inline assembly
+// PowerPC load address mode operations accureately in the platform
+// agnostic LLVM IR.
 
 char loadAddressAConstrained(char* ptr) {
 // CHECK-LABEL: define{{.*}} i8 @loadAddressAConstrained(ptr noundef %ptr)
@@ -34,7 +39,7 @@ char loadIndirectAddressZConstrained(char* ptr) {
 }
 
 char loadIndirectAddressAConstrained(char** ptr, unsigned index) {
-// CHECK-LABEL: define{{.*}} i8 @loadIndirectAddressAConstrained(ptr noundef %ptr, i32 noundef zeroext %index)
+// CHECK-LABEL: define{{.*}} i8 @loadIndirectAddressAConstrained(ptr noundef %ptr, i32 noundef{{[ zeroext]*}} %index)
 // CHECK:  %2 = call ptr asm "ldx $0,$1,$2", "=r,a,r"(ptr %0, i32 %1)
   char* result;
   asm ("ldx %0,%1,%2" : "=r"(result) : "a"(ptr), "r"(index) :);
@@ -50,7 +55,7 @@ char dFormLoadZConstrained(char* ptr) {
 }
 
 char xFormRegRegLoadZyConstrained(char* ptr, unsigned index) {
-// CHECK-LABEL: define{{.*}} i8 @xFormRegRegLoadZyConstrained(ptr noundef %ptr, i32 noundef zeroext %index)
+// CHECK-LABEL: define{{.*}} i8 @xFormRegRegLoadZyConstrained(ptr noundef %ptr, i32 noundef{{[ zeroext]*}} %index)
 // CHECK:  %2 = call i8 asm "lbzx $0, ${1:y}", "=r,*Z"(ptr elementtype(i8) %arrayidx)
   char result;
   asm("lbzx %0, %y1" : "=r"(result) : "Z"(ptr[index]) :);
@@ -58,7 +63,7 @@ char xFormRegRegLoadZyConstrained(char* ptr, unsigned index) {
 }
 
 char xFormRegRegLoadAConstrained(char* ptr, unsigned index) {
-// CHECK-LABEL: define{{.*}} i8 @xFormRegRegLoadAConstrained(ptr noundef %ptr, i32 noundef zeroext %index)
+// CHECK-LABEL: define{{.*}} i8 @xFormRegRegLoadAConstrained(ptr noundef %ptr, i32 noundef{{[ zeroext]*}} %index)
 // CHECK:  %2 = call i8 asm "lbzx $0,$1,$2", "=r,a,r"(ptr %0, i32 %1)
   char result;
   asm ("lbzx %0,%1,%2" : "=r"(result) : "a"(ptr), "r"(index) :);
