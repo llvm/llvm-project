@@ -607,6 +607,7 @@ bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
                      allowOverwrite))
       return false;
   }
+  sizeSoFar = totalSize;
   return true;
 }
 
