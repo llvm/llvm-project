@@ -82,6 +82,8 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Intrinsic::spv_assign_ptr_type instructions.
   DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
 
+  DenseMap<const Metadata *, Register> MDMap;
+
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
@@ -132,6 +134,15 @@ public:
     auto It = FunResPointerTypes.find(ArgF);
     return It == FunResPointerTypes.end() ? nullptr : It->second;
   }
+
+  Register getDebugValue(const Metadata *MD) const {
+    auto It = MDMap.find(MD);
+    if (It != MDMap.end())
+      return It->second;
+    return Register();
+  }
+
+  void addDebugValue(const Metadata *MD, Register Reg) { MDMap[MD] = Reg; }
 
   // A registry of "assign type" records:
   // - Add a record.

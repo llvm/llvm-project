@@ -9,6 +9,7 @@
 ; CHECK-MIR-DAG: [[encoding_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 3
 ; CHECK-MIR-DAG: [[flag_zero:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 0
 ; CHECK-MIR-DAG: [[str_bool:%[0-9]+\:id\(s32\)]] = OpString 1819242338, 0
+; CHECK-MIR-DAG: [[encoding_extra:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 256
 ; CHECK-MIR-DAG: [[size_8bits:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 8
 ; CHECK-MIR-DAG: [[encoding_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i32]], 2
 ; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 2, [[str_bool]], [[size_8bits]], [[encoding_boolean]], [[flag_zero]]

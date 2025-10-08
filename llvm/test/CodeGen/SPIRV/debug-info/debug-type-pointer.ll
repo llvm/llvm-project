@@ -42,7 +42,7 @@
 ; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[double]], [[i32_8]], [[i32_0]]
 ; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[int]], [[i32_5]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[debug_info_none:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 0
-; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[debug_info_none]], [[i32_5]], [[i32_0]]
+; CHECK-MIR-DAG:   OpExtInst [[void_type]], 3, 3, [[debug_info_none]], [[i32_5]]
 
 ; CHECK-SPIRV:	[[i32type:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8{{$}}
@@ -79,7 +79,7 @@
 ; CHECK-SPIRV-DAG:	OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypePointer [[double]] [[i32_8]] [[i32_0]]
 ; CHECK-SPIRV-DAG:	OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypePointer [[int]] [[i32_5]] [[i32_0]]
 ; CHECK-SPIRV-DAG:	[[debug_info_none:%[0-9]+]] = OpExtInst {{%[0-9]+ %[0-9]+}} DebugInfoNone
-; CHECK-SPIRV-DAG:	OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypePointer [[debug_info_none]] [[i32_5]] [[i32_0]]
+; CHECK-SPIRV-DAG:	OpExtInst {{%[0-9]+ %[0-9]+}} DebugTypePointer [[debug_info_none]] [[i32_5]]
 
 ; CHECK-OPTION-NOT: DebugTypePointer
 
