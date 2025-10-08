@@ -41,7 +41,10 @@ LLVM_LIBC_FUNCTION(int, strfroml,
   if (n > 0)
     wb.buff[wb.buff_cur] = '\0';
 
-  // TODO overflow
+  if (writer.get_chars_written() > cpp::numeric_limits<int>::max()) {
+    libc_errno = EOVERFLOW;
+    return -1;
+  }
   return static_cast<int>(writer.get_chars_written());
 }
 
