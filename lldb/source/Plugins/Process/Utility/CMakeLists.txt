@@ -36,7 +36,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextLinux_s390x.cpp
   RegisterContextMach_arm.cpp
   RegisterContextMach_x86_64.cpp
-  RegisterContextMemory.cpp
   RegisterContextNetBSD_i386.cpp
   RegisterContextNetBSD_x86_64.cpp
   RegisterContextOpenBSD_i386.cpp

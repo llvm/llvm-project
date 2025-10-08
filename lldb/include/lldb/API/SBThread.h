@@ -231,6 +231,11 @@ public:
 
   SBValue GetSiginfo();
 
+  SBError RegisterFrameProvider(const char *class_name,
+                                SBStructuredData &args_data);
+
+  void ClearScriptedFrameProvider();
+
 private:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
