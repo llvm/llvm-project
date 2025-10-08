@@ -10,7 +10,7 @@
 // RUN:     | FileCheck %s -DPREFIX=%/t
 
 // CHECK:            "command-line": [
-// CHECK:              "-fmodule-map-file=[[PREFIX]]/remapped/module.modulemap"
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/remapped{{[/\\]}}module.modulemap"
 // CHECK:            "file-deps": [
 // CHECK:              "[[PREFIX]]/remapped/module.modulemap"
 
