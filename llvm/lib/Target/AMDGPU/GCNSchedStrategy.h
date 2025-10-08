@@ -467,7 +467,7 @@ public:
 ///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
 private:
-  /// Groups information about a rematerializable register.
+  /// A rematerializable register.
   struct RematReg {
     /// Single MI defining the rematerializable register.
     MachineInstr *DefMI;
@@ -479,13 +479,10 @@ private:
     LaneBitmask Mask;
     /// Defining and using regions.
     unsigned DefRegion, UseRegion;
-    /// Frequency of defining/using regions. 0 when unknown.
-    uint64_t DefFrequency, UseFrequency;
 
     RematReg(MachineInstr *DefMI, MachineInstr *UseMI,
              GCNScheduleDAGMILive &DAG,
-             const DenseMap<MachineInstr *, unsigned> &MIRegion,
-             ArrayRef<uint64_t> RegionFreq);
+             const DenseMap<MachineInstr *, unsigned> &MIRegion);
 
     /// Returns the rematerializable register. Do not call after deleting the
     /// original defining instruction.
@@ -521,15 +518,26 @@ private:
     /// The rematerializable register under consideration.
     const RematReg *Remat;
 
+    /// Execution frequency information required by scoring heuristics.
+    struct FreqInfo {
+      /// Per-region execution frequencies, normalized to minimum observed
+      /// frequency. 0 when unknown.
+      SmallVector<uint64_t> Regions;
+      /// Maximum observed frequency, normalized to minimum observed frequency.
+      uint64_t MaxFreq;
+
+      FreqInfo(MachineFunction &MF, const GCNScheduleDAGMILive &DAG);
+    };
+
     /// This only initializes state-independent characteristics of \p Remat, not
     /// the actual score.
-    ScoredRemat(const RematReg *Remat, uint64_t MinFreq, uint64_t MaxFreq,
+    ScoredRemat(const RematReg *Remat, const FreqInfo &Freq,
                 const GCNScheduleDAGMILive &DAG);
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
     /// \p RegionFreq indicates the frequency of each region
     void update(const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets,
-                ArrayRef<uint64_t> RegionFreq, bool ReduceSpill);
+                const FreqInfo &Freq, bool ReduceSpill);
 
     /// Returns whether the current score is null.
     bool hasNullScore() const { return !Score; }
@@ -560,8 +568,8 @@ private:
     const uint64_t FreqDiff;
 
     using ScoreTy = uint64_t;
-    /// Overall rematerialization score. Scoring components are mapped to bit
-    /// ranges in the overall score.
+    /// Rematerialization score. Scoring components are mapped to bit ranges in
+    /// the score.
     ///
     /// [63:32] : maximum frequency in benefiting target region (spilling only)
     /// [31:16] : frequency difference between defining and using region
@@ -591,7 +599,7 @@ private:
 
     unsigned getNumRegs(const GCNScheduleDAGMILive &DAG) const;
 
-    uint64_t getFreqDiff(uint64_t MinFreq, uint64_t MaxFreq) const;
+    uint64_t getFreqDiff(const FreqInfo &Freq) const;
   };
 
   /// Holds enough information to rollback a rematerialization decision post
@@ -643,11 +651,9 @@ private:
   bool updateAndVerifyRPTargets(const BitVector &Regions);
 
   /// Collects all rematerializable registers and appends them to \ref
-  /// RematRegs. \p MIRegion maps MIs to their region and \p RegionFreq contains
-  /// the frequency of each region, 0 indicating an unknown frequency. Returns
-  /// whether any rematerializable register was found.
-  bool collectRematRegs(const DenseMap<MachineInstr *, unsigned> &MIRegion,
-                        ArrayRef<uint64_t> RegionFreq);
+  /// RematRegs. \p MIRegion maps MIs to their region. Returns whether any
+  /// rematerializable register was found.
+  bool collectRematRegs(const DenseMap<MachineInstr *, unsigned> &MIRegion);
 
   /// Rematerializes \p Remat. This removes the rematerialized register from
   /// live-in/out lists in the DAG and updates RP targets in all affected
