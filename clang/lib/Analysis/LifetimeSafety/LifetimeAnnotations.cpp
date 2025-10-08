@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Analysis/Analyses/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"

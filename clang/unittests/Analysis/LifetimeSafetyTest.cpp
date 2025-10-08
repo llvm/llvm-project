@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Analyses/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/TestAST.h"
