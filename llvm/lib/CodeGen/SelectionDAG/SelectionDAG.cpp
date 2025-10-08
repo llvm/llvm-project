@@ -8615,7 +8615,10 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
   if (TLI->shouldPreservePtrArith(this->getMachineFunction().getFunction(),
                                   BasePtrVT))
     return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
-  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
+  // InBounds only applies to PTRADD, don't set it if we generate ADD.
+  SDNodeFlags AddFlags = Flags;
+  AddFlags.setInBounds(false);
+  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, AddFlags);
 }
 
 /// Returns true if memcpy source is constant data.
