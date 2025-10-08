@@ -1230,6 +1230,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ActiveLaneMask:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -2777,7 +2778,7 @@ VPExpressionRecipe::VPExpressionRecipe(
   // Recipes in the expression, except the last one, must only be used by
   // (other) recipes inside the expression. If there are other users, external
   // to the expression, use a clone of the recipe for external users.
-  for (VPSingleDefRecipe *R : ExpressionRecipes) {
+  for (VPSingleDefRecipe *R : reverse(ExpressionRecipes)) {
     if (R != ExpressionRecipes.back() &&
         any_of(R->users(), [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
           return !ExpressionRecipesAsSetOfUsers.contains(U);
@@ -3140,7 +3141,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
   while (!WorkList.empty()) {
     auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
-    if (!Cur || !Seen.insert(Cur).second)
+    if (!Cur || !Seen.insert(Cur).second || isa<VPBlendRecipe>(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {

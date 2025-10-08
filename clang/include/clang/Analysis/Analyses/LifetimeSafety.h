@@ -29,10 +29,16 @@
 namespace clang::lifetimes {
 
 /// Enum to track the confidence level of a potential error.
-enum class Confidence {
+enum class Confidence : uint8_t {
   None,
   Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
+};
+
+enum class LivenessKind : uint8_t {
+  Dead,  // Not alive
+  Maybe, // Live on some path but not all paths (may-be-live)
+  Must   // Live on all paths (must-be-live)
 };
 
 class LifetimeSafetyReporter {
@@ -55,6 +61,7 @@ class Fact;
 class FactManager;
 class LoanPropagationAnalysis;
 class ExpiredLoansAnalysis;
+class LiveOriginAnalysis;
 struct LifetimeFactory;
 
 /// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
@@ -89,6 +96,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
 // TODO(opt): Consider using a bitset to represent the set of loans.
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginSet = llvm::ImmutableSet<OriginID>;
+using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
 /// A `ProgramPoint` identifies a location in the CFG by pointing to a specific
 /// `Fact`. identified by a lifetime-related event (`Fact`).
@@ -110,8 +118,16 @@ public:
   /// Returns the set of loans an origin holds at a specific program point.
   LoanSet getLoansAtPoint(OriginID OID, ProgramPoint PP) const;
 
-  /// Returns the set of loans that have expired at a specific program point.
-  std::vector<LoanID> getExpiredLoansAtPoint(ProgramPoint PP) const;
+  /// Returns the set of origins that are live at a specific program point,
+  /// along with the confidence level of their liveness.
+  ///
+  /// An origin is considered live if there are potential future uses of that
+  /// origin after the given program point. The confidence level indicates
+  /// whether the origin is definitely live (Definite) due to being domintated
+  /// by a set of uses or only possibly live (Maybe) only on some but not all
+  /// control flow paths.
+  std::vector<std::pair<OriginID, LivenessKind>>
+  getLiveOriginsAtPoint(ProgramPoint PP) const;
 
   /// Finds the OriginID for a given declaration.
   /// Returns a null optional if not found.
@@ -138,7 +154,7 @@ private:
   std::unique_ptr<LifetimeFactory> Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
-  std::unique_ptr<ExpiredLoansAnalysis> ExpiredLoans;
+  std::unique_ptr<LiveOriginAnalysis> LiveOrigins;
 };
 } // namespace internal
 } // namespace clang::lifetimes
