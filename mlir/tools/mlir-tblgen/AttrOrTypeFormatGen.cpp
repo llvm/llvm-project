@@ -141,6 +141,15 @@ public:
 
 } // namespace
 
+/// Return true if the provided parameter should always be printed in qualified
+/// form (i.e., with dialect/type prefixes). Attribute and type parameters fall
+/// into this category to avoid ambiguity when nested within structured
+/// properties.
+static bool shouldPrintQualified(ParameterElement *param) {
+  StringRef cppType = param->getParam().getCppType();
+  return cppType.contains("Attr") || cppType.contains("Type");
+}
+
 //===----------------------------------------------------------------------===//
 // Format Strings
 //===----------------------------------------------------------------------===//
@@ -155,7 +164,8 @@ static const char *const defaultParameterPrinter =
 
 /// Qualified printer for attribute or type parameters: it does not elide
 /// dialect and mnemonic.
-static const char *const qualifiedParameterPrinter = "$_printer << $_self";
+static const char *const qualifiedParameterPrinter =
+  "$_printer.printQualifiedAttrOrType($_self)";
 
 /// Print an error when failing to parse an element.
 ///
@@ -849,13 +859,13 @@ static void guardOnAnyOptional(FmtContext &ctx, MethodBody &os,
 }
 
 void DefFormat::genCommaSeparatedPrinter(
-    ArrayRef<FormatElement *> args, FmtContext &ctx, MethodBody &os,
+    ArrayRef<FormatElement *> params, FmtContext &ctx, MethodBody &os,
     function_ref<void(FormatElement *)> extra) {
   // Emit a space if necessary, but only if the struct is present.
   if (shouldEmitSpace || !lastWasPunctuation) {
-    bool allOptional = llvm::all_of(args, formatIsOptional);
+    bool allOptional = llvm::all_of(params, formatIsOptional);
     if (allOptional)
-      guardOnAnyOptional(ctx, os, args);
+      guardOnAnyOptional(ctx, os, params);
     os << tgfmt("$_printer << ' ';\n", &ctx);
     if (allOptional)
       os.unindent() << "}\n";
@@ -864,7 +874,7 @@ void DefFormat::genCommaSeparatedPrinter(
   // The first printed element does not need to emit a comma.
   os << "{\n";
   os.indent() << "bool _firstPrinted = true;\n";
-  for (FormatElement *arg : args) {
+  for (FormatElement *arg : params) {
     ParameterElement *param = getEncapsulatedParameterElement(arg);
     if (param->isOptional()) {
       param->genPrintGuard(ctx, os << "if (") << ") {\n";
@@ -872,6 +882,8 @@ void DefFormat::genCommaSeparatedPrinter(
     }
     os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
     os << "_firstPrinted = false;\n";
+    if (param && shouldPrintQualified(param))
+      param->setShouldBeQualified();
     extra(arg);
     shouldEmitSpace = false;
     lastWasPunctuation = true;

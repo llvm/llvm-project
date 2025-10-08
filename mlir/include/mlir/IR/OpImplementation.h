@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>
+#include <type_traits>
 
 namespace {
 // reference https://stackoverflow.com/a/16000226
@@ -200,6 +201,43 @@ public:
             std::enable_if_t<!detect_has_print_method<AttrOrType>::value>
                 *sfinae = nullptr>
   void printStrippedAttrOrType(AttrOrType attrOrType) {
+    *this << attrOrType;
+  }
+
+  /// Print the provided attribute or type ensuring that any dialect-specific
+  /// prefixes (e.g. `#dialect.mnemonic`) are retained. This is used in
+  /// contexts, such as structured property dictionaries, where the fully
+  /// qualified form is required for disambiguation.
+  template <typename AttrOrType,
+            std::enable_if_t<std::is_convertible_v<AttrOrType, Attribute>> *
+                sfinae = nullptr>
+  void printQualifiedAttrOrType(AttrOrType attrOrType) {
+    printAttribute(attrOrType);
+  }
+
+  template <typename AttrOrType,
+            std::enable_if_t<std::is_convertible_v<AttrOrType, Type> &&
+                             !std::is_convertible_v<AttrOrType, Attribute>> *
+                sfinae = nullptr>
+  void printQualifiedAttrOrType(AttrOrType attrOrType) {
+    printType(attrOrType);
+  }
+
+  template <typename ElementT,
+            std::enable_if_t<std::is_convertible_v<ElementT, Attribute> ||
+                             std::is_convertible_v<ElementT, Type>> *sfinae =
+                nullptr>
+  void printQualifiedAttrOrType(ArrayRef<ElementT> attrOrTypes) {
+    llvm::interleaveComma(attrOrTypes, getStream(), [&](ElementT element) {
+      printQualifiedAttrOrType(element);
+    });
+  }
+
+  template <typename AttrOrType,
+            std::enable_if_t<!std::is_convertible_v<AttrOrType, Attribute> &&
+                             !std::is_convertible_v<AttrOrType, Type>> *
+                sfinae = nullptr>
+  void printQualifiedAttrOrType(AttrOrType attrOrType) {
     *this << attrOrType;
   }
 
