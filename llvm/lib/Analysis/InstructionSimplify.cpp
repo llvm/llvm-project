@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -1812,6 +1813,46 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
+/// Test if a pair of compares with a shared operand and 2 constants has an
+/// empty set intersection, full set union, or if one compare is a superset of
+/// the other.
+static Value *simplifyAndOrOfFCmpsWithConstants(FCmpInst *Cmp0, FCmpInst *Cmp1,
+                                                bool IsAnd) {
+  // Look for this pattern: {and/or} (fcmp X, C0), (fcmp X, C1)).
+  if (Cmp0->getOperand(0) != Cmp1->getOperand(0))
+    return nullptr;
+
+  const APFloat *C0, *C1;
+  if (!match(Cmp0->getOperand(1), m_APFloat(C0)) ||
+      !match(Cmp1->getOperand(1), m_APFloat(C1)))
+    return nullptr;
+
+  auto Range0 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp0->getPredicate() : Cmp0->getInversePredicate(), *C0);
+  auto Range1 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp1->getPredicate() : Cmp1->getInversePredicate(), *C1);
+
+  if (!Range0 || !Range1)
+    return nullptr;
+
+  // For and-of-compares, check if the intersection is empty:
+  // (fcmp X, C0) && (fcmp X, C1) --> empty set --> false
+  if (Range0->intersectWith(*Range1).isEmptySet())
+    return ConstantInt::getBool(Cmp0->getType(), !IsAnd);
+
+  // Is one range a superset of the other?
+  // If this is and-of-compares, take the smaller set:
+  // (fcmp ogt X, 4) && (fcmp ogt X, 42) --> fcmp ogt X, 42
+  // If this is or-of-compares, take the larger set:
+  // (fcmp ogt X, 4) || (fcmp ogt X, 42) --> fcmp ogt X, 4
+  if (Range0->contains(*Range1))
+    return Cmp1;
+  if (Range1->contains(*Range0))
+    return Cmp0;
+
+  return nullptr;
+}
+
 static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                                    FCmpInst *RHS, bool IsAnd) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
@@ -1850,34 +1891,8 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
   }
 
-  Value *V0;
-  const APFloat *V0Op1, *V1Op1;
-  // (fcmp olt V0, V0Op1) || (fcmp olt V0, V1Op1)
-  //                      --> fcmp olt V0, max(V0Op1, V1Op1)
-  // (fcmp ogt V0, V0Op1) || (fcmp ogt V0, V1Op1)
-  //                      --> fcmp ogt V0, max(V0Op1, V1Op1)
-  //
-  // (fcmp olt V0, V0Op1) && (fcmp olt V0, V1Op1)
-  //                      --> fcmp olt V0, min(V0Op1, V1Op1)
-  // (fcmp ogt V0, V0Op1) && (fcmp ogt V0, V1Op1)
-  //                      --> fcmp ogt V0, min(V0Op1, V1Op1)
-  if (match(LHS, m_SpecificFCmp(FCmpInst::FCMP_OLT, m_Value(V0),
-                                m_APFloat(V0Op1))) &&
-      match(RHS, m_SpecificFCmp(FCmpInst::FCMP_OLT, m_Specific(V0),
-                                m_APFloat(V1Op1)))) {
-    if (*V0Op1 > *V1Op1)
-      return IsAnd ? RHS : LHS;
-    if (*V1Op1 > *V0Op1)
-      return IsAnd ? LHS : RHS;
-  } else if (match(LHS, m_SpecificFCmp(FCmpInst::FCMP_OGT, m_Value(V0),
-                                       m_APFloat(V0Op1))) &&
-             match(RHS, m_SpecificFCmp(FCmpInst::FCMP_OGT, m_Specific(V0),
-                                       m_APFloat(V1Op1)))) {
-    if (*V0Op1 < *V1Op1)
-      return IsAnd ? RHS : LHS;
-    if (*V1Op1 < *V0Op1)
-      return IsAnd ? LHS : RHS;
-  }
+  if (auto *V = simplifyAndOrOfFCmpsWithConstants(LHS, RHS, IsAnd))
+    return V;
 
   return nullptr;
 }
@@ -4149,6 +4164,10 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
       return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
   }
 
+  if (std::optional<bool> Res =
+          isImpliedByDomCondition(Pred, LHS, RHS, Q.CxtI, Q.DL))
+    return ConstantInt::getBool(RetTy, *Res);
+
   const APFloat *C = nullptr;
   match(RHS, m_APFloatAllowPoison(C));
   std::optional<KnownFPClass> FullKnownClassLHS;
@@ -5406,15 +5425,8 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     if (Src->getType() == Ty) {
       auto FirstOp = CI->getOpcode();
       auto SecondOp = static_cast<Instruction::CastOps>(CastOpc);
-      Type *SrcIntPtrTy =
-          SrcTy->isPtrOrPtrVectorTy() ? Q.DL.getIntPtrType(SrcTy) : nullptr;
-      Type *MidIntPtrTy =
-          MidTy->isPtrOrPtrVectorTy() ? Q.DL.getIntPtrType(MidTy) : nullptr;
-      Type *DstIntPtrTy =
-          DstTy->isPtrOrPtrVectorTy() ? Q.DL.getIntPtrType(DstTy) : nullptr;
       if (CastInst::isEliminableCastPair(FirstOp, SecondOp, SrcTy, MidTy, DstTy,
-                                         SrcIntPtrTy, MidIntPtrTy,
-                                         DstIntPtrTy) == Instruction::BitCast)
+                                         &Q.DL) == Instruction::BitCast)
         return Src;
     }
   }
@@ -6454,7 +6466,8 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
 static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
                                          Value *Op1) {
   assert((IID == Intrinsic::maxnum || IID == Intrinsic::minnum ||
-          IID == Intrinsic::maximum || IID == Intrinsic::minimum) &&
+          IID == Intrinsic::maximum || IID == Intrinsic::minimum ||
+          IID == Intrinsic::maximumnum || IID == Intrinsic::minimumnum) &&
          "Unsupported intrinsic");
 
   auto *M0 = dyn_cast<IntrinsicInst>(Op0);
@@ -6493,16 +6506,109 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   return nullptr;
 }
 
+enum class MinMaxOptResult {
+  CannotOptimize = 0,
+  UseNewConstVal = 1,
+  UseOtherVal = 2,
+  // For undef/poison, we can choose to either propgate undef/poison or
+  // use the LHS value depending on what will allow more optimization.
+  UseEither = 3
+};
+// Get the optimized value for a min/max instruction with a single constant
+// input (either undef or scalar constantFP). The result may indicate to
+// use the non-const LHS value, use a new constant value instead (with NaNs
+// quieted), or to choose either option in the case of undef/poison.
+static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
+                                           const Intrinsic::ID IID,
+                                           const CallBase *Call,
+                                           Constant **OutNewConstVal) {
+  assert(OutNewConstVal != nullptr);
+
+  bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
+  bool PropagateSNaN = IID == Intrinsic::minnum || IID == Intrinsic::maxnum;
+  bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
+               IID == Intrinsic::minimumnum;
+
+  // min/max(x, poison) -> either x or poison
+  if (isa<UndefValue>(RHSConst)) {
+    *OutNewConstVal = const_cast<Constant *>(RHSConst);
+    return MinMaxOptResult::UseEither;
+  }
+
+  const ConstantFP *CFP = dyn_cast<ConstantFP>(RHSConst);
+  if (!CFP)
+    return MinMaxOptResult::CannotOptimize;
+  APFloat CAPF = CFP->getValueAPF();
+
+  // minnum(x, qnan) -> x
+  // maxnum(x, qnan) -> x
+  // minnum(x, snan) -> qnan
+  // maxnum(x, snan) -> qnan
+  // minimum(X, nan) -> qnan
+  // maximum(X, nan) -> qnan
+  // minimumnum(X, nan) -> x
+  // maximumnum(X, nan) -> x
+  if (CAPF.isNaN()) {
+    if (PropagateNaN || (PropagateSNaN && CAPF.isSignaling())) {
+      *OutNewConstVal = ConstantFP::get(CFP->getType(), CAPF.makeQuiet());
+      return MinMaxOptResult::UseNewConstVal;
+    }
+    return MinMaxOptResult::UseOtherVal;
+  }
+
+  if (CAPF.isInfinity() || (Call && Call->hasNoInfs() && CAPF.isLargest())) {
+    // minnum(X, -inf) -> -inf (ignoring sNaN -> qNaN propagation)
+    // maxnum(X, +inf) -> +inf (ignoring sNaN -> qNaN propagation)
+    // minimum(X, -inf) -> -inf if nnan
+    // maximum(X, +inf) -> +inf if nnan
+    // minimumnum(X, -inf) -> -inf
+    // maximumnum(X, +inf) -> +inf
+    if (CAPF.isNegative() == IsMin &&
+        (!PropagateNaN || (Call && Call->hasNoNaNs()))) {
+      *OutNewConstVal = const_cast<Constant *>(RHSConst);
+      return MinMaxOptResult::UseNewConstVal;
+    }
+
+    // minnum(X, +inf) -> X if nnan
+    // maxnum(X, -inf) -> X if nnan
+    // minimum(X, +inf) -> X (ignoring quieting of sNaNs)
+    // maximum(X, -inf) -> X (ignoring quieting of sNaNs)
+    // minimumnum(X, +inf) -> X if nnan
+    // maximumnum(X, -inf) -> X if nnan
+    if (CAPF.isNegative() != IsMin &&
+        (PropagateNaN || (Call && Call->hasNoNaNs())))
+      return MinMaxOptResult::UseOtherVal;
+  }
+  return MinMaxOptResult::CannotOptimize;
+}
+
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                      Value *Op0, Value *Op1,
                                      const SimplifyQuery &Q,
                                      const CallBase *Call) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
-  case Intrinsic::get_active_lane_mask:
+  case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
+
+    const Function *F = Call->getFunction();
+    auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
+    Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
+    if (ScalableTy && Attr.isValid()) {
+      std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      if (!VScaleMax)
+        break;
+      uint64_t MaxPossibleMaskElements =
+          (uint64_t)ScalableTy->getMinNumElements() * (*VScaleMax);
+
+      const APInt *Op1Val;
+      if (match(Op0, m_Zero()) && match(Op1, m_APInt(Op1Val)) &&
+          Op1Val->uge(MaxPossibleMaskElements))
+        return ConstantInt::getAllOnesValue(ReturnType);
+    }
     break;
+  }
   case Intrinsic::abs:
     // abs(abs(x)) -> abs(x). We don't need to worry about the nsw arg here.
     // It is always ok to pick the earlier abs. We'll just lose nsw if its only
@@ -6744,8 +6850,17 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
   case Intrinsic::maximum:
-  case Intrinsic::minimum: {
-    // If the arguments are the same, this is a no-op.
+  case Intrinsic::minimum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum: {
+    // In several cases here, we deviate from exact IEEE 754 semantics
+    // to enable optimizations (as allowed by the LLVM IR spec).
+    //
+    // For instance, we may return one of the arguments unmodified instead of
+    // inserting an llvm.canonicalize to transform input sNaNs into qNaNs,
+    // or may assume all NaN inputs are qNaNs.
+
+    // If the arguments are the same, this is a no-op (ignoring NaN quieting)
     if (Op0 == Op1)
       return Op0;
 
@@ -6753,40 +6868,55 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (isa<Constant>(Op0))
       std::swap(Op0, Op1);
 
-    // If an argument is undef, return the other argument.
-    if (Q.isUndefValue(Op1))
-      return Op0;
+    if (Constant *C = dyn_cast<Constant>(Op1)) {
+      MinMaxOptResult OptResult = MinMaxOptResult::CannotOptimize;
+      Constant *NewConst = nullptr;
 
-    bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
-    bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum;
+      if (VectorType *VTy = dyn_cast<VectorType>(C->getType())) {
+        ElementCount ElemCount = VTy->getElementCount();
 
-    // minnum(X, nan) -> X
-    // maxnum(X, nan) -> X
-    // minimum(X, nan) -> nan
-    // maximum(X, nan) -> nan
-    if (match(Op1, m_NaN()))
-      return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
+        if (Constant *SplatVal = C->getSplatValue()) {
+          // Handle splat vectors (including scalable vectors)
+          OptResult = OptimizeConstMinMax(SplatVal, IID, Call, &NewConst);
+          if (OptResult == MinMaxOptResult::UseNewConstVal)
+            NewConst = ConstantVector::getSplat(ElemCount, NewConst);
 
-    // In the following folds, inf can be replaced with the largest finite
-    // float, if the ninf flag is set.
-    const APFloat *C;
-    if (match(Op1, m_APFloat(C)) &&
-        (C->isInfinity() || (Call && Call->hasNoInfs() && C->isLargest()))) {
-      // minnum(X, -inf) -> -inf
-      // maxnum(X, +inf) -> +inf
-      // minimum(X, -inf) -> -inf if nnan
-      // maximum(X, +inf) -> +inf if nnan
-      if (C->isNegative() == IsMin &&
-          (!PropagateNaN || (Call && Call->hasNoNaNs())))
-        return ConstantFP::get(ReturnType, *C);
+        } else if (ElemCount.isFixed()) {
+          // Storage to build up new const return value (with NaNs quieted)
+          SmallVector<Constant *, 16> NewC(ElemCount.getFixedValue());
 
-      // minnum(X, +inf) -> X if nnan
-      // maxnum(X, -inf) -> X if nnan
-      // minimum(X, +inf) -> X
-      // maximum(X, -inf) -> X
-      if (C->isNegative() != IsMin &&
-          (PropagateNaN || (Call && Call->hasNoNaNs())))
-        return Op0;
+          // Check elementwise whether we can optimize to either a constant
+          // value or return the LHS value. We cannot mix and match LHS +
+          // constant elements, as this would require inserting a new
+          // VectorShuffle instruction, which is not allowed in simplifyBinOp.
+          OptResult = MinMaxOptResult::UseEither;
+          for (unsigned i = 0; i != ElemCount.getFixedValue(); ++i) {
+            auto ElemResult = OptimizeConstMinMax(C->getAggregateElement(i),
+                                                  IID, Call, &NewConst);
+            if (ElemResult == MinMaxOptResult::CannotOptimize ||
+                (ElemResult != OptResult &&
+                 OptResult != MinMaxOptResult::UseEither &&
+                 ElemResult != MinMaxOptResult::UseEither)) {
+              OptResult = MinMaxOptResult::CannotOptimize;
+              break;
+            }
+            NewC[i] = NewConst;
+            if (ElemResult != MinMaxOptResult::UseEither)
+              OptResult = ElemResult;
+          }
+          if (OptResult == MinMaxOptResult::UseNewConstVal)
+            NewConst = ConstantVector::get(NewC);
+        }
+      } else {
+        // Handle scalar inputs
+        OptResult = OptimizeConstMinMax(C, IID, Call, &NewConst);
+      }
+
+      if (OptResult == MinMaxOptResult::UseOtherVal ||
+          OptResult == MinMaxOptResult::UseEither)
+        return Op0; // Return the other arg (ignoring NaN quieting)
+      else if (OptResult == MinMaxOptResult::UseNewConstVal)
+        return NewConst;
     }
 
     // Min/max of the same operation with common operand:

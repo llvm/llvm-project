@@ -123,11 +123,18 @@ protected:
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
                           bool UseRegex);
-    // Returns the line number in the source file that this query matches to.
-    // Returns zero if no match is found.
-    LLVM_ABI unsigned match(StringRef Query) const;
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
+
+    LLVM_ABI bool matchAny(StringRef Query) const {
+      bool R = false;
+      match(Query, [&](StringRef, unsigned) { R = true; });
+      return R;
+    }
 
     struct Glob {
+      Glob(StringRef Name, unsigned LineNo) : Name(Name), LineNo(LineNo) {}
       std::string Name;
       unsigned LineNo;
       GlobPattern Pattern;
@@ -137,8 +144,18 @@ protected:
       Glob() = default;
     };
 
+    struct Reg {
+      Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
+          : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
+      std::string Name;
+      unsigned LineNo;
+      Regex Rg;
+      Reg(Reg &&) = delete;
+      Reg() = default;
+    };
+
     std::vector<std::unique_ptr<Matcher::Glob>> Globs;
-    std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
+    std::vector<std::unique_ptr<Reg>> RegExes;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
@@ -147,10 +164,26 @@ protected:
     Section(StringRef Str, unsigned FileIdx)
         : SectionStr(Str), FileIdx(FileIdx) {};
 
-    std::unique_ptr<Matcher> SectionMatcher = std::make_unique<Matcher>();
+    Section(Section &&) = default;
+
+    Matcher SectionMatcher;
     SectionEntries Entries;
     std::string SectionStr;
     unsigned FileIdx;
+
+    // Helper method to search by Prefix, Query, and Category. Returns
+    // 1-based line number on which rule is defined, or 0 if there is no match.
+    LLVM_ABI unsigned getLastMatch(StringRef Prefix, StringRef Query,
+                                   StringRef Category) const;
+
+    // Helper method to search by Prefix, Query, and Category. Returns
+    // matching rule, or empty string if there is no match.
+    LLVM_ABI StringRef getLongestMatch(StringRef Prefix, StringRef Query,
+                                       StringRef Category) const;
+
+  private:
+    LLVM_ABI const SpecialCaseList::Matcher *
+    findMatcher(StringRef Prefix, StringRef Category) const;
   };
 
   std::vector<Section> Sections;
@@ -162,12 +195,6 @@ protected:
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
                       std::string &Error);
-
-  // Helper method for derived classes to search by Prefix, Query, and Category
-  // once they have already resolved a section entry.
-  LLVM_ABI unsigned inSectionBlame(const SectionEntries &Entries,
-                                   StringRef Prefix, StringRef Query,
-                                   StringRef Category) const;
 };
 
 } // namespace llvm

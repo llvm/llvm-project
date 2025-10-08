@@ -496,6 +496,11 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
         })) {
       return emitOpError("unable to handle loop ranges with strides != 1");
     }
+    // Check number of tile sizes is equal to loop dimensions.
+    if (loopRanges.size() != givenTileSizes.size()) {
+      return emitOpError("expected number of tile sizes to be same as the "
+                         "number of loops in the operation");
+    }
     // For testing disallow any of the tile sizes being 0.
     if (llvm::any_of(givenTileSizes, isZeroInteger)) {
       return emitOpError("unhandled case of zero tile size");
@@ -520,19 +525,19 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
       allNumIters.push_back(numIters);
     }
     if (allNumIters.empty()) {
-      return emitOpError("unhandled case where all tile sizes are zero");
+      return emitOpError("invalid empty tile sizes and loop ranges");
     }
 
     AffineExpr mulExpr = s0 * s1;
-    OpFoldResult cummulative = oneOfr;
+    OpFoldResult cumulative = oneOfr;
     for (auto numIters : allNumIters) {
-      cummulative = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, mulExpr, {cummulative, numIters});
+      cumulative = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, mulExpr, {cumulative, numIters});
     }
 
     Value zeroVal = arith::ConstantIndexOp::create(rewriter, loc, 0);
     Value oneVal = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    Value ub = getValueOrCreateConstantIndexOp(rewriter, loc, cummulative);
+    Value ub = getValueOrCreateConstantIndexOp(rewriter, loc, cumulative);
 
     SmallVector<OpFoldResult> offsets;
     SmallVector<OpFoldResult> sizes;
@@ -576,7 +581,8 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
   };
 
   scf::SCFTilingOptions::GenerateLoopTerminatorFn terminatorFn =
-      [&](RewriterBase &rewriter, Location loc, ValueRange tiledResults,
+      [&](RewriterBase &rewriter, Location loc,
+          ArrayRef<LoopLikeOpInterface> loops, ValueRange tiledResults,
           ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
           ArrayRef<SmallVector<OpFoldResult>> resultSizes,
           ValueRange destinationTensors) -> LogicalResult {

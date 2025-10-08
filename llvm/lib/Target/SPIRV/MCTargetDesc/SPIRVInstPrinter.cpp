@@ -269,6 +269,21 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpSDot:
+        case SPIRV::OpUDot:
+        case SPIRV::OpSUDot:
+        case SPIRV::OpSDotAccSat:
+        case SPIRV::OpUDotAccSat:
+        case SPIRV::OpSUDotAccSat: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::PackedVectorFormatsOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;

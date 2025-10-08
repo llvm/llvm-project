@@ -152,13 +152,13 @@ struct SCFTilingOptions {
   // ```
   //
 
-  // Information that is to be returned by the callback to generate the loop
-  // header needed for the rest of the tiled codegeneration.
+  // Information that is to be returned by loop header callback needed for the
+  // rest of the tiled codegeneration.
   // - `loops`: The generated loops
   // - `tileOffset`: The values that represent the offset of the iteration space
-  // tile
+  //                 tile.
   // - `tileSizes` : The values that represent the size of the iteration space
-  // tile.
+  //                 tile.
   // - `destinationTensors` : The tensors to use as destinations during tiling.
   struct CustomLoopHeaderInfo {
     SmallVector<LoopLikeOpInterface> loops;
@@ -170,9 +170,8 @@ struct SCFTilingOptions {
   // Type of the callback function that generates the loop headers.
   // - `loopRanges` : Values that represent the full size of the iteration space
   //                  being tiled.
-  // - `giveTileSizes` : The tile sizes that are to be used to tile the
-  // iteration
-  //                     space.
+  // - `givenTileSizes` : The tile sizes that are to be used to tile the
+  //                      iteration space.
   // - `destinationTensors` : The tensors to use as destinations for the results
   //                          of the tiled loop for loops that implement
   //                          `DestinationStyleOpInterface`.
@@ -184,18 +183,19 @@ struct SCFTilingOptions {
       ArrayRef<OpFoldResult> givenTileSizes, ValueRange destinationTensors)>;
 
   // Type of the callback function that generates the loop terminator.
+  // - `loops` : generated loops from the GenerateLoopHeaderFn callback
   // - `tiledResults` : Tiles of the result computed for the iteration space
-  // tile
+  //                    tile.
   // - `resultOffsets` : For each of the `tiledResults`, the offset at which
   //                     the result tile is to be "inserted" back into the
   //                     destination tensor.
   // - `resultSizes` : For each of the `tiledResults`, the size of the result
-  // tile
-  //                   that is to be "inserted" back into the destination
+  //                   tile that is to be "inserted" back into the destination
   //                   tensor.
   // Returns the `CustomLoopHeaderInfo` object (described above)
   using GenerateLoopTerminatorFn = std::function<LogicalResult(
-      RewriterBase &rewriter, Location loc, ValueRange tiledResults,
+      RewriterBase &rewriter, Location loc, ArrayRef<LoopLikeOpInterface> loops,
+      ValueRange tiledResults,
       ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
       ArrayRef<SmallVector<OpFoldResult>> resultSizes,
       ValueRange destinationTensors)>;

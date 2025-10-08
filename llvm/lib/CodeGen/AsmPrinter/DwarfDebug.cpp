@@ -548,6 +548,16 @@ bool DwarfDebug::shareAcrossDWOCUs() const {
   return SplitDwarfCrossCuReferences;
 }
 
+DwarfCompileUnit &
+DwarfDebug::getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
+                                            DwarfCompileUnit &SrcCU) {
+  auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
+  if (CU.getSkeleton())
+    return shareAcrossDWOCUs() ? CU : SrcCU;
+
+  return CU;
+}
+
 void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
                                                      LexicalScope *Scope) {
   assert(Scope && Scope->getScopeNode());
@@ -559,14 +569,11 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
   auto &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
-  if (auto *SkelCU = CU.getSkeleton()) {
-    (shareAcrossDWOCUs() ? CU : SrcCU)
-        .constructAbstractSubprogramScopeDIE(Scope);
+  auto &TargetCU = getOrCreateAbstractSubprogramCU(SP, SrcCU);
+  TargetCU.constructAbstractSubprogramScopeDIE(Scope);
+  if (auto *SkelCU = CU.getSkeleton())
     if (CU.getCUNode()->getSplitDebugInlining())
       SkelCU->constructAbstractSubprogramScopeDIE(Scope);
-  } else {
-    CU.constructAbstractSubprogramScopeDIE(Scope);
-  }
 }
 
 /// Represents a parameter whose call site value can be described by applying a
