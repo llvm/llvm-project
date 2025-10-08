@@ -7282,8 +7282,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     if (!Exit->hasPredecessors())
       continue;
     for (VPRecipeBase &PhiR : Exit->phis())
-      SE.forgetLcssaPhiWithNewPredecessor(
-          OrigLoop, cast<PHINode>(&cast<VPIRPhi>(PhiR).getInstruction()));
+      SE.forgetLcssaPhiWithNewPredecessor(OrigLoop,
+                                          &cast<VPIRPhi>(PhiR).getIRPhi());
   }
   // Forget the original loop and block dispositions.
   SE.forgetLoop(OrigLoop);
