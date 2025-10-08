@@ -678,30 +678,6 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame,
-                                   const CallExpr *Call) {
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.popcount() % 2, Call->getType());
-  return true;
-}
-
-static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
-                                  const InterpFrame *Frame,
-                                  const CallExpr *Call) {
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.getBitWidth() - Val.getSignificantBits(), Call->getType());
-  return true;
-}
-
-static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.reverseBits(), Call->getType());
-  return true;
-}
-
 static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
                                           const InterpFrame *Frame,
                                           const CallExpr *Call) {
@@ -733,16 +709,6 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
 
   APSInt Val = popToAPSInt(S.Stk, ArgT);
   pushInteger(S, Val, Call->getType());
-  return true;
-}
-
-static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame,
-                                const CallExpr *Call) {
-  APSInt Value = popToAPSInt(S, Call->getArg(0));
-
-  uint64_t N = Value.countr_zero();
-  pushInteger(S, N == Value.getBitWidth() ? 0 : N + 1, Call->getType());
   return true;
 }
 
@@ -3158,18 +3124,25 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
   case Builtin::BI__builtin_parityll:
-    return interp__builtin_parity(S, OpPC, Frame, Call);
-
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Val) -> APInt {
+          return APInt(Val.getBitWidth(), Val.popcount() % 2);
+        });
   case Builtin::BI__builtin_clrsb:
   case Builtin::BI__builtin_clrsbl:
   case Builtin::BI__builtin_clrsbll:
-    return interp__builtin_clrsb(S, OpPC, Frame, Call);
-
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Val) -> APInt {
+          return APInt(Val.getBitWidth(),
+                       Val.getBitWidth() - Val.getSignificantBits());
+        });
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
   case Builtin::BI__builtin_bitreverse64:
-    return interp__builtin_bitreverse(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call,
+        [](const APSInt &Val) -> APInt { return Val.reverseBits(); });
 
   case Builtin::BI__builtin_classify_type:
     return interp__builtin_classify_type(S, OpPC, Frame, Call);
@@ -3209,7 +3182,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll:
-    return interp__builtin_ffs(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Val) {
+          return APInt(Val.getBitWidth(),
+                       Val.isZero() ? 0u : Val.countTrailingZeros() + 1u);
+        });
 
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
