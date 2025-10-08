@@ -22,6 +22,8 @@
 
 #include "fx_rep.h"
 
+#include <stdio.h>
+
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
 namespace LIBC_NAMESPACE_DECL {
@@ -244,8 +246,35 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   if (LIBC_UNLIKELY(n == 0)) {
     return FXRep<XType>::ZERO();
   }
-  bool result_is_negative = ((n < 0) != (d < 0));
+  auto isPowerOfTwo = [](int n) { return (n > 0) && ((n & (n - 1)) == 0); };
+  long accum max_val = static_cast<long accum>(FXRep<XType>::MAX());
+  long accum min_val = static_cast<long accum>(FXRep<XType>::MIN());
 
+  if (isPowerOfTwo(cpp::abs(d))) {
+    int k = cpp::countr_zero<uint32_t>(static_cast<uint32_t>(cpp::abs(d)));
+    constexpr int F = FXRep<XType>::FRACTION_LEN;
+    int64_t scaled_n = static_cast<int64_t>(n) << F;
+    int64_t res64 = scaled_n >> k;
+    constexpr int TotalBits = sizeof(XType) * 8;
+    const int64_t max_limit = (1LL << (TotalBits - 1)) - 1;
+    const int64_t min_limit = -(1LL << (TotalBits - 1));
+    if (res64 > max_limit) {
+      return FXRep<XType>::MAX();
+    } else if (res64 < min_limit) {
+      return FXRep<XType>::MIN();
+    }
+    long accum res_accum =
+        static_cast<long accum>(res64) / static_cast<long accum>(1 << F);
+    res_accum = (d < 0) ? static_cast<long accum>(-1) * res_accum : res_accum;
+    if (res_accum > max_val) {
+      return FXRep<XType>::MAX();
+    } else if (res_accum < min_val) {
+      return FXRep<XType>::MIN();
+    }
+    return static_cast<XType>(res_accum);
+  }
+
+  bool result_is_negative = ((n < 0) != (d < 0));
   int64_t n64 = static_cast<int64_t>(n);
   int64_t d64 = static_cast<int64_t>(d);
 
@@ -281,14 +310,10 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   // to quadratic convergence. So,
   // E1 = (0.059)^2 = 0.0034
   long accum val = nrstep(d_scaled_val, initial_approx);
-  auto isPowerOfTwo = [](int n) { return (n > 0) && ((n & (n - 1)) == 0); };
-  // Division with a power of 2 would generally be expected to be
-  // exact, we handle this by specially treating po2 cases and having
-  // extra iterations for them.
-  if (FXRep<XType>::FRACTION_LEN > 8 || isPowerOfTwo(cpp::abs(d))) {
+  if constexpr (FXRep<XType>::FRACTION_LEN > 8) {
     // E2 = 0.0000121
     val = nrstep(d_scaled_val, val);
-    if (FXRep<XType>::FRACTION_LEN > 16 || isPowerOfTwo(cpp::abs(d))) {
+    if constexpr (FXRep<XType>::FRACTION_LEN > 16) {
       // E3 = 1.468e−10
       val = nrstep(d_scaled_val, val);
     }
@@ -298,10 +323,6 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   if (result_is_negative) {
     res *= static_cast<long accum>(-1);
   }
-
-  // Check for overflow before returning
-  long accum max_val = static_cast<long accum>(FXRep<XType>::MAX());
-  long accum min_val = static_cast<long accum>(FXRep<XType>::MIN());
 
   // Per clause 7.18a.6.1, saturate values on overflow
   if (res > max_val) {
