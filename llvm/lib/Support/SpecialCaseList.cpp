@@ -273,4 +273,17 @@ unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
   return LastLine;
 }
 
+StringRef SpecialCaseList::Section::getLongestMatch(StringRef Prefix,
+                                                    StringRef Query,
+                                                    StringRef Category) const {
+  StringRef LongestRule;
+  if (const Matcher *M = findMatcher(Prefix, Category)) {
+    M->match(Query, [&](StringRef Rule, unsigned) {
+      if (LongestRule.size() < Rule.size())
+        LongestRule = Rule;
+    });
+  }
+  return LongestRule;
+}
+
 } // namespace llvm
