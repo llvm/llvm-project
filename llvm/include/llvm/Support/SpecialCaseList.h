@@ -158,6 +158,7 @@ private:
 
     std::vector<std::unique_ptr<Matcher::Glob>> Globs;
     std::vector<std::unique_ptr<Reg>> RegExes;
+    bool RemoveDotSlash = false;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
