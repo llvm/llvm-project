@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -342,6 +343,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
+  PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
 }
 } // namespace test
 } // namespace mlir
