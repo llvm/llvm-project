@@ -4868,25 +4868,16 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
 
 uint64_t Fortran::lower::getLoopCountForCollapseAndTile(
     const Fortran::parser::AccClauseList &clauseList) {
-  uint64_t collapseLoopCount = 1;
+  uint64_t collapseLoopCount = getLoopCountForCollapse(clauseList);
   uint64_t tileLoopCount = 1;
   for (const Fortran::parser::AccClause &clause : clauseList.v) {
-    if (const auto *collapseClause =
-            std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
-      const parser::AccCollapseArg &arg = collapseClause->v;
-      const auto &collapseValue{std::get<parser::ScalarIntConstantExpr>(arg.t)};
-      collapseLoopCount = *Fortran::semantics::GetIntValue(collapseValue);
-    }
     if (const auto *tileClause =
             std::get_if<Fortran::parser::AccClause::Tile>(&clause.u)) {
       const parser::AccTileExprList &tileExprList = tileClause->v;
-      const std::list<parser::AccTileExpr> &listTileExpr = tileExprList.v;
-      tileLoopCount = listTileExpr.size();
+      tileLoopCount = tileExprList.v.size();
     }
   }
-  if (tileLoopCount > collapseLoopCount)
-    return tileLoopCount;
-  return collapseLoopCount;
+  return tileLoopCount > collapseLoopCount ? tileLoopCount : collapseLoopCount;
 }
 
 uint64_t Fortran::lower::getLoopCountForCollapse(
