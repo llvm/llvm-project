@@ -1,11 +1,14 @@
-//===- Reporter.h - TODO: FILL ME -*----------- C++-*-===//
+//===- Reporter.h - Lifetime Safety Error Reporter -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// TODO: FILLME
+//
+// This file defines the LifetimeSafetyReporter interface for reporting
+// lifetime safety violations and the Confidence enum for diagnostic severity.
+//
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_REPORTER_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_REPORTER_H
