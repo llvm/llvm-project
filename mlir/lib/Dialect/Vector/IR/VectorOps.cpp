@@ -2471,7 +2471,7 @@ ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
 ///   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
 ///   //       %src_elems#1, %src_elems#0, %src_elems#1
 class ToElementsOfBroadcast final : public OpRewritePattern<ToElementsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
                                 PatternRewriter &rewriter) const override {
