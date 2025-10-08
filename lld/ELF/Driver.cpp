@@ -2483,10 +2483,14 @@ static void writeDependencyFile(Ctx &ctx) {
   // We use the same escape rules as Clang/GCC which are accepted by Make/Ninja:
   // * A space is escaped by a backslash which itself must be escaped.
   // * A hash sign is escaped by a single backslash.
-  // * $ is escapes as $$.
+  // * $ is escaped as $$.
   auto printFilename = [](raw_fd_ostream &os, StringRef filename) {
     llvm::SmallString<256> nativePath;
+#ifdef _WIN32
     llvm::sys::path::native(filename.str(), nativePath);
+#else
+    nativePath = filename;
+#endif
     llvm::sys::path::remove_dots(nativePath, /*remove_dot_dot=*/true);
     for (unsigned i = 0, e = nativePath.size(); i != e; ++i) {
       if (nativePath[i] == '#') {
@@ -2503,9 +2507,10 @@ static void writeDependencyFile(Ctx &ctx) {
     }
   };
 
-  os << ctx.arg.outputFile << ":";
+  printFilename(os, ctx.arg.outputFile);
+  os << ":";
   for (StringRef path : ctx.arg.dependencyFiles) {
-    os << " \\\n ";
+    os << " \\\n  ";
     printFilename(os, path);
   }
   os << "\n";
