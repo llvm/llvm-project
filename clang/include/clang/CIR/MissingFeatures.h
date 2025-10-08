@@ -37,6 +37,11 @@ struct MissingFeatures {
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
   static bool opGlobalUsedOrCompilerUsed() { return false; }
+  static bool opGlobalAnnotations() { return false; }
+  static bool opGlobalDtorLowering() { return false; }
+  static bool opGlobalCtorAttr() { return false; }
+  static bool opGlobalCtorPriority() { return false; }
+  static bool opGlobalCtorList() { return false; }
   static bool setDSOLocal() { return false; }
   static bool setComdat() { return false; }
 
@@ -136,6 +141,13 @@ struct MissingFeatures {
   static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
+  // Coroutines
+  static bool coroAllocBuiltinCall() { return false; }
+  static bool coroBeginBuiltinCall() { return false; }
+  static bool coroEndBuiltinCall() { return false; }
+  static bool coroSizeBuiltinCall() { return false; }
+  static bool coroutineFrame() { return false; }
+
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
   static bool deferredVtables() { return false; }
@@ -209,6 +221,7 @@ struct MissingFeatures {
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
+  static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeMemberFunction() { return false; }

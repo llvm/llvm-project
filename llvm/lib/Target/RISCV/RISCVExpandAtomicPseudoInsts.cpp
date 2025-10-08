@@ -166,7 +166,7 @@ static unsigned getLRForRMW32(AtomicOrdering Ordering,
       return RISCV::LR_W;
     return RISCV::LR_W_AQ;
   case AtomicOrdering::SequentiallyConsistent:
-    return RISCV::LR_W_AQ_RL;
+    return RISCV::LR_W_AQRL;
   }
 }
 
@@ -210,7 +210,7 @@ static unsigned getLRForRMW64(AtomicOrdering Ordering,
       return RISCV::LR_D;
     return RISCV::LR_D_AQ;
   case AtomicOrdering::SequentiallyConsistent:
-    return RISCV::LR_D_AQ_RL;
+    return RISCV::LR_D_AQRL;
   }
 }
 
