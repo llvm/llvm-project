@@ -136,6 +136,10 @@ const RegisterInfo *ABISysV_riscv::GetRegisterInfoArray(uint32_t &count) {
 // Static Functions
 //------------------------------------------------------------------
 
+static inline size_t DeriveRegSizeInBytes(bool is_rv64) {
+  return is_rv64 ? 8 : 4;
+}
+
 ABISP
 ABISysV_riscv::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   llvm::Triple::ArchType machine = arch.GetTriple().getArch();
@@ -151,14 +155,14 @@ ABISysV_riscv::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
 }
 
 static inline size_t AugmentArgSize(bool is_rv64, size_t size_in_bytes) {
-  size_t word_size = is_rv64 ? 8 : 4;
+  size_t word_size = DeriveRegSizeInBytes(is_rv64);
   return llvm::alignTo(size_in_bytes, word_size);
 }
 
 static size_t
 TotalArgsSizeInWords(bool is_rv64,
                      const llvm::ArrayRef<ABI::CallArgument> &args) {
-  size_t reg_size = is_rv64 ? 8 : 4;
+  size_t reg_size = DeriveRegSizeInBytes(is_rv64);
   size_t word_size = reg_size;
   size_t total_size = 0;
   for (const auto &arg : args)
@@ -275,7 +279,7 @@ bool ABISysV_riscv::PrepareTrivialCall(
   if (!process)
     return false;
 
-  size_t reg_size = m_is_rv64 ? 8 : 4;
+  size_t reg_size = DeriveRegSizeInBytes(m_is_rv64);
   size_t word_size = reg_size;
   // Push host data onto target.
   for (const auto &arg : args) {
@@ -397,7 +401,7 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
     return result;
   }
 
-  size_t reg_size = m_is_rv64 ? 8 : 4;
+  size_t reg_size = DeriveRegSizeInBytes(m_is_rv64);
   if (num_bytes <= 2 * reg_size) {
     offset_t offset = 0;
     uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
@@ -752,7 +756,7 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   }
   // Aggregate return type
   if (compiler_type.IsAggregateType()) {
-    size_t xlen_byte_size = m_is_rv64 ? 8 : 4;
+    size_t xlen_byte_size = DeriveRegSizeInBytes(m_is_rv64);
 
     return GetAggregateObj(thread, reg_ctx, compiler_type, xlen_byte_size,
                            byte_size);
@@ -801,9 +805,7 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   // Define the CFA as the current frame pointer value.
   row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
 
-  int reg_size = 4;
-  if (m_is_rv64)
-    reg_size = 8;
+  int reg_size = DeriveRegSizeInBytes(m_is_rv64);
 
   // Assume the ra reg (return pc) and caller's frame pointer 
   // have been spilled to stack already.
