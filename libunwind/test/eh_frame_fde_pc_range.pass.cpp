@@ -53,7 +53,7 @@ void f() {
   assert(fde_fpc == fde_fpc1);
 }
 
-int main(int, char**) {
+int main(int, char **) {
   f();
   return 0;
 }

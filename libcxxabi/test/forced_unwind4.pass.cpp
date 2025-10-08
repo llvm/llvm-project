@@ -17,9 +17,7 @@
 
 // Android/Bionic does not support pthread_cancel.
 #ifdef __BIONIC__
-int main(int, char**) {
-  return 0;
-}
+int main(int, char**) { return 0; }
 #else
 
 #include <chrono>
