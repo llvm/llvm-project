@@ -145,7 +145,7 @@ typename T::R f();
 template <typename T>
 void n(typename T::R *) {}
 
-template void n<NotDependent>(int *);
+template void n<NotDependent>(NotDependent::R *);
 
 namespace ns {
 
