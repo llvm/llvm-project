@@ -42,13 +42,24 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
       buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
-  int retval = printf_core::printf_main(&writer, format, args);
+  auto retval = printf_core::printf_main(&writer, format, args);
+  if (retval.has_error()) {
+    libc_errno = retval.error;
+    return -1;
+  }
 
   int flushval = wb.overflow_write("");
-  if (flushval != printf_core::WRITE_OK)
-    retval = flushval;
-    
-  return retval;
+  if (flushval != printf_core::WRITE_OK) {
+    libc_errno = -flushval;
+    return -1;
+  }
+
+  if (retval.value >= cpp::numeric_limits<int>::max()) {
+    libc_errno = EOVERFLOW;
+    return -1;
+  }
+
+  return static_cast<int>(retval.value);  
 }
 
 } // namespace LIBC_NAMESPACE_DECL

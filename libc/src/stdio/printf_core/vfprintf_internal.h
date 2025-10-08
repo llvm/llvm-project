@@ -78,6 +78,10 @@ LIBC_INLINE PrintfResult vfprintf_internal(::FILE *__restrict stream,
   Writer writer(wb);
   internal::flockfile(stream);
   auto retval = printf_main(&writer, format, args);
+  if (retval.has_error()) {
+    internal::funlockfile(stream);
+    return retval;
+  }
   int flushval = wb.overflow_write("");
   if (flushval != WRITE_OK)
     retval.error = -flushval;
