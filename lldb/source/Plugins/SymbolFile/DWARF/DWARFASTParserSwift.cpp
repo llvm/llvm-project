@@ -184,10 +184,9 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         if (TypeSP desugared_type = get_type(die)) {
           // For a typedef, store the once desugared type as the name.
           CompilerType type = desugared_type->GetForwardCompilerType();
-          if (auto swift_ast_ctx =
+          if (auto ts =
                   type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
-            preferred_name =
-                swift_ast_ctx->GetMangledTypeName(type.GetOpaqueQualType());
+            preferred_name = ts->GetMangledTypeName(type.GetOpaqueQualType());
         }
     }
   }

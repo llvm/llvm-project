@@ -582,6 +582,10 @@ protected:
   llvm::Expected<const swift::reflection::TypeRef &>
   GetTypeRef(CompilerType type, TypeSystemSwiftTypeRef *module_holder);
 
+  /// Returns a non-null type system or an error.
+  static llvm::Expected<TypeSystemSwiftTypeRefSP>
+  GetReflectionTypeSystem(CompilerType for_type, ExecutionContext exe_ctx);
+
   /// Ask Remote Mirrors for the type info about a Swift type.
   /// This will return a nullptr if the lookup fails.
   llvm::Expected<const swift::reflection::TypeInfo &>
