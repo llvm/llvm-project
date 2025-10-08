@@ -120,6 +120,20 @@ bool isaConv1DNcwFcwOp(LinalgOp op);
 bool isaDepthwiseConv1DNcwCwOp(LinalgOp op);
 bool isaDepthwiseConv1DNwcWcOp(LinalgOp op);
 bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op);
+bool isaConv2DOp(LinalgOp op);
+bool isaConv2DNhwcFhwcOp(LinalgOp op);
+bool isaConv2DNhwcHwcfOp(LinalgOp op);
+bool isaConv2DNchwFchwOp(LinalgOp op);
+bool isaConv2DNhwcFhwcQOp(LinalgOp op);
+bool isaConv2DNchwFchwQOp(LinalgOp op);
+bool isaConv2DNgchwFgchwOp(LinalgOp op);
+bool isaConv2DNgchwGfchwOp(LinalgOp op);
+bool isaConv2DNgchwGfchwQOp(LinalgOp op);
+bool isaConv2DNhwgcGfhwcOp(LinalgOp op);
+bool isaDepthwiseConv2DNchwChwOp(LinalgOp op);
+bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op);
+bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op);
+bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
