@@ -7,7 +7,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-
 // constexpr T* address() const noexcept;
 
 #include <atomic>
