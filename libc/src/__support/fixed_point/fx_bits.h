@@ -256,9 +256,9 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
     constexpr int F = FXRep<XType>::FRACTION_LEN;
     int64_t scaled_n = static_cast<int64_t>(n) << F;
     int64_t res64 = scaled_n >> k;
-    constexpr int TotalBits = sizeof(XType) * 8;
-    const int64_t max_limit = (1LL << (TotalBits - 1)) - 1;
-    const int64_t min_limit = -(1LL << (TotalBits - 1));
+    constexpr int TOTAL_BITS = sizeof(XType) * 8;
+    const int64_t max_limit = (1LL << (TOTAL_BITS - 1)) - 1;
+    const int64_t min_limit = -(1LL << (TOTAL_BITS - 1));
     if (res64 > max_limit) {
       return FXRep<XType>::MAX();
     } else if (res64 < min_limit) {
