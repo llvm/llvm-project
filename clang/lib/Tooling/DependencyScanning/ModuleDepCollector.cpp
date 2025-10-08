@@ -689,7 +689,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (OptionalFileEntryRef CurrentModuleMap =
             PP.getHeaderSearchInfo().getModuleMap().getModuleMapFileForUniquing(
                 CurrentModule))
-      MDC.addFileDep(CurrentModuleMap->getName());
+      MDC.addFileDep(CurrentModuleMap->getNameAsRequested());
   }
 
   for (const Module *M :
