@@ -12,7 +12,8 @@ define amdgpu_kernel void @runningSum(ptr addrspace(1) %out0, ptr addrspace(1) %
 ; OPT:       [[LOOPBODY]]:
 ; OPT-NEXT:    [[PREVIOUSSUM:%.*]] = phi <2 x i32> [ [[TMP1]], %[[PREHEADER]] ], [ [[RUNNINGSUM:%.*]], %[[LOOPBODY]] ]
 ; OPT-NEXT:    [[ITERCOUNT:%.*]] = phi i32 [ [[INPUTITER]], %[[PREHEADER]] ], [ [[ITERSLEFT:%.*]], %[[LOOPBODY]] ]
-; OPT-NEXT:    [[RUNNINGSUM]] = add <2 x i32> [[TMP1]], [[PREVIOUSSUM]]
+; OPT-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[VECELEMENT1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; OPT-NEXT:    [[RUNNINGSUM]] = add <2 x i32> [[TMP0]], [[PREVIOUSSUM]]
 ; OPT-NEXT:    [[ITERSLEFT]] = sub i32 [[ITERCOUNT]], 1
 ; OPT-NEXT:    [[COND:%.*]] = icmp eq i32 [[ITERSLEFT]], 0
 ; OPT-NEXT:    br i1 [[COND]], label %[[LOOPEXIT:.*]], label %[[LOOPBODY]]
@@ -83,12 +84,12 @@ define amdgpu_kernel void @test_sink_extract_operands(ptr addrspace(1) %out0, pt
 ; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], ptr addrspace(1) [[OUT1:%.*]], <4 x i32> [[INPUT_VEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[VEC_FULL:%.*]] = add <4 x i32> [[INPUT_VEC]], <i32 42, i32 43, i32 44, i32 45>
-; OPT-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 0
-; OPT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 1
 ; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
 ; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 0
 ; OPT-NEXT:    [[RESULT0:%.*]] = add i32 [[TMP0]], 100
+; OPT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[VEC_FULL]], i64 1
 ; OPT-NEXT:    [[RESULT1:%.*]] = add i32 [[TMP1]], 200
 ; OPT-NEXT:    store i32 [[RESULT0]], ptr addrspace(1) [[OUT0]], align 4
 ; OPT-NEXT:    store i32 [[RESULT1]], ptr addrspace(1) [[OUT1]], align 4
@@ -121,14 +122,14 @@ define amdgpu_kernel void @test_shuffle_insert_subvector(ptr addrspace(1) %ptr, 
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> [[VEC2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> [[VEC2]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-; OPT-NEXT:    [[SHUFFLE3:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; OPT-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <4 x i16> [[VEC2]], <4 x i16> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; OPT-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <4 x i16> [[SHUFFLE]], <4 x i16> [[SHUFFLE2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
 ; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; OPT:       [[IF_THEN]]:
 ; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <4 x i16> [[SHUFFLE5]], <i16 100, i16 200, i16 300, i16 400>
+; OPT-NEXT:    [[SHUFFLE3:%.*]] = shufflevector <4 x i16> [[VEC1]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; OPT-NEXT:    [[OTHER_RESULT:%.*]] = mul <4 x i16> [[SHUFFLE3]], splat (i16 2)
+; OPT-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <4 x i16> [[VEC2]], <4 x i16> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; OPT-NEXT:    [[MORE_RESULT:%.*]] = sub <4 x i16> [[SHUFFLE4]], splat (i16 5)
 ; OPT-NEXT:    store <4 x i16> [[RESULT_VEC]], ptr addrspace(1) [[PTR]], align 8
 ; OPT-NEXT:    store <4 x i16> [[OTHER_RESULT]], ptr addrspace(1) [[PTR]], align 8
@@ -164,14 +165,14 @@ define amdgpu_kernel void @test_shuffle_extract_subvector(ptr addrspace(1) %ptr,
 ; OPT-LABEL: define amdgpu_kernel void @test_shuffle_extract_subvector(
 ; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x i16> [[INPUT_VEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
-; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
-; OPT-NEXT:    [[SHUFFLE3:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
 ; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
 ; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <2 x i16> [[SHUFFLE]], <i16 100, i16 200>
+; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
 ; OPT-NEXT:    [[RESULT_VEC2:%.*]] = mul <2 x i16> [[SHUFFLE2]], splat (i16 3)
+; OPT-NEXT:    [[SHUFFLE3:%.*]] = shufflevector <4 x i16> [[INPUT_VEC]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; OPT-NEXT:    [[RESULT_VEC3:%.*]] = sub <4 x i16> [[SHUFFLE3]], splat (i16 10)
 ; OPT-NEXT:    store <2 x i16> [[RESULT_VEC]], ptr addrspace(1) [[PTR]], align 4
 ; OPT-NEXT:    store <2 x i16> [[RESULT_VEC2]], ptr addrspace(1) [[PTR]], align 4
@@ -205,12 +206,12 @@ define amdgpu_kernel void @test_shuffle_sink_operands(ptr addrspace(1) %ptr, <2 
 ; OPT-LABEL: define amdgpu_kernel void @test_shuffle_sink_operands(
 ; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x i16> [[INPUT_VEC:%.*]], <2 x i16> [[INPUT_VEC2:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[INPUT_VEC]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <2 x i16> [[INPUT_VEC2]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; OPT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TID]], [[COND]]
 ; OPT-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; OPT:       [[IF_THEN]]:
+; OPT-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[INPUT_VEC]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; OPT-NEXT:    [[RESULT_VEC:%.*]] = add <4 x i16> [[SHUFFLE]], <i16 100, i16 200, i16 300, i16 400>
+; OPT-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <2 x i16> [[INPUT_VEC2]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; OPT-NEXT:    [[RESULT_VEC2:%.*]] = mul <4 x i16> [[SHUFFLE2]], splat (i16 5)
 ; OPT-NEXT:    store <4 x i16> [[RESULT_VEC]], ptr addrspace(1) [[PTR]], align 8
 ; OPT-NEXT:    store <4 x i16> [[RESULT_VEC2]], ptr addrspace(1) [[PTR]], align 8

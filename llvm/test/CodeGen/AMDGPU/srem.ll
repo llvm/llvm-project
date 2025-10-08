@@ -3328,177 +3328,152 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-LABEL: srem_v2i64:
 ; TONGA:       ; %bb.0:
 ; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; TONGA-NEXT:    v_mov_b32_e32 v8, 0
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    s_add_u32 s0, s6, 16
+; TONGA-NEXT:    v_mov_b32_e32 v4, s6
 ; TONGA-NEXT:    s_addc_u32 s1, s7, 0
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s0
-; TONGA-NEXT:    v_mov_b32_e32 v4, s6
-; TONGA-NEXT:    v_mov_b32_e32 v1, s1
 ; TONGA-NEXT:    v_mov_b32_e32 v5, s7
+; TONGA-NEXT:    v_mov_b32_e32 v1, s1
 ; TONGA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; TONGA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; TONGA-NEXT:    s_waitcnt vmcnt(1)
-; TONGA-NEXT:    v_readfirstlane_b32 s1, v1
-; TONGA-NEXT:    v_readfirstlane_b32 s0, v0
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
-; TONGA-NEXT:    v_readfirstlane_b32 s3, v5
-; TONGA-NEXT:    v_readfirstlane_b32 s2, v4
-; TONGA-NEXT:    s_or_b64 s[6:7], s[2:3], s[0:1]
-; TONGA-NEXT:    s_mov_b32 s6, 0
-; TONGA-NEXT:    s_cmp_lg_u64 s[6:7], 0
-; TONGA-NEXT:    s_cbranch_scc0 .LBB10_3
+; TONGA-NEXT:    v_or_b32_e32 v9, v5, v1
+; TONGA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
+; TONGA-NEXT:    s_cbranch_vccz .LBB10_7
 ; TONGA-NEXT:  ; %bb.1:
-; TONGA-NEXT:    s_ashr_i32 s6, s1, 31
-; TONGA-NEXT:    s_add_u32 s8, s0, s6
-; TONGA-NEXT:    s_mov_b32 s7, s6
-; TONGA-NEXT:    s_addc_u32 s9, s1, s6
-; TONGA-NEXT:    s_xor_b64 s[6:7], s[8:9], s[6:7]
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v0, s6
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v1, s7
-; TONGA-NEXT:    s_sub_u32 s1, 0, s6
-; TONGA-NEXT:    s_subb_u32 s10, 0, s7
-; TONGA-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
-; TONGA-NEXT:    v_rcp_f32_e32 v0, v0
-; TONGA-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
-; TONGA-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; TONGA-NEXT:    v_trunc_f32_e32 v1, v1
-; TONGA-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v8, v1
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v9, v0
-; TONGA-NEXT:    v_mul_lo_u32 v4, s1, v8
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s1, v9, 0
-; TONGA-NEXT:    v_mul_lo_u32 v5, s10, v9
-; TONGA-NEXT:    v_add_u32_e32 v1, vcc, v1, v4
-; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v1, v5
-; TONGA-NEXT:    v_mul_hi_u32 v10, v9, v0
-; TONGA-NEXT:    v_mad_u64_u32 v[4:5], s[8:9], v9, v11, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v8, v0, 0
-; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v10, v4
-; TONGA-NEXT:    v_addc_u32_e32 v12, vcc, 0, v5, vcc
-; TONGA-NEXT:    v_mad_u64_u32 v[4:5], s[8:9], v8, v11, 0
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, v10, v0
-; TONGA-NEXT:    v_addc_u32_e32 v0, vcc, v12, v1, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, v0, v4
-; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v9, v0
-; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, v8, v1, vcc
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s1, v10, 0
-; TONGA-NEXT:    v_mul_lo_u32 v8, s1, v11
-; TONGA-NEXT:    v_mul_lo_u32 v9, s10, v10
-; TONGA-NEXT:    v_mul_hi_u32 v12, v10, v0
-; TONGA-NEXT:    v_mad_u64_u32 v[4:5], s[8:9], v11, v0, 0
-; TONGA-NEXT:    v_add_u32_e32 v1, vcc, v8, v1
-; TONGA-NEXT:    v_add_u32_e32 v1, vcc, v9, v1
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], v10, v1, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v11, v1, 0
-; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v12, v8
+; TONGA-NEXT:    v_ashrrev_i32_e32 v8, 31, v1
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v0, v8
+; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, v1, v8, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v14, v9, v8
+; TONGA-NEXT:    v_xor_b32_e32 v1, v1, v8
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v8, v14
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v9, v1
+; TONGA-NEXT:    v_sub_u32_e32 v15, vcc, 0, v14
+; TONGA-NEXT:    v_subb_u32_e32 v16, vcc, 0, v1, vcc
+; TONGA-NEXT:    v_madmk_f32 v8, v9, 0x4f800000, v8
+; TONGA-NEXT:    v_rcp_f32_e32 v8, v8
+; TONGA-NEXT:    v_mul_f32_e32 v8, 0x5f7ffffc, v8
+; TONGA-NEXT:    v_mul_f32_e32 v9, 0x2f800000, v8
+; TONGA-NEXT:    v_trunc_f32_e32 v9, v9
+; TONGA-NEXT:    v_madmk_f32 v8, v9, 0xcf800000, v8
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v12, v9
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v13, v8
+; TONGA-NEXT:    v_mul_lo_u32 v10, v15, v12
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v15, v13, 0
+; TONGA-NEXT:    v_mul_lo_u32 v11, v16, v13
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v9, v10
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v9, v11
+; TONGA-NEXT:    v_mad_u64_u32 v[9:10], s[0:1], v13, v11, 0
+; TONGA-NEXT:    v_mul_hi_u32 v17, v13, v8
+; TONGA-NEXT:    v_add_u32_e32 v17, vcc, v17, v9
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v12, v8, 0
+; TONGA-NEXT:    v_addc_u32_e32 v18, vcc, 0, v10, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v12, v11, 0
+; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v17, v8
+; TONGA-NEXT:    v_addc_u32_e32 v8, vcc, v18, v9, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v8, v10
 ; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
-; TONGA-NEXT:    v_add_u32_e32 v4, vcc, v8, v4
-; TONGA-NEXT:    v_addc_u32_e32 v4, vcc, v9, v5, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, v4, v0
-; TONGA-NEXT:    s_ashr_i32 s10, s3, 31
-; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; TONGA-NEXT:    s_add_u32 s8, s2, s10
-; TONGA-NEXT:    v_add_u32_e32 v4, vcc, v10, v0
-; TONGA-NEXT:    s_mov_b32 s11, s10
-; TONGA-NEXT:    s_addc_u32 s9, s3, s10
-; TONGA-NEXT:    v_addc_u32_e32 v5, vcc, v11, v1, vcc
-; TONGA-NEXT:    s_xor_b64 s[12:13], s[8:9], s[10:11]
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s12, v5, 0
-; TONGA-NEXT:    v_mul_hi_u32 v8, s12, v4
-; TONGA-NEXT:    v_readfirstlane_b32 s1, v1
-; TONGA-NEXT:    v_readfirstlane_b32 s3, v0
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s13, v5, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[4:5], s[8:9], s13, v4, 0
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v8
-; TONGA-NEXT:    s_add_u32 s3, s14, s3
-; TONGA-NEXT:    s_addc_u32 s1, 0, s1
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v4
-; TONGA-NEXT:    v_readfirstlane_b32 s9, v5
-; TONGA-NEXT:    s_add_u32 s3, s3, s14
-; TONGA-NEXT:    v_readfirstlane_b32 s8, v1
-; TONGA-NEXT:    s_addc_u32 s1, s1, s9
-; TONGA-NEXT:    s_addc_u32 s3, s8, 0
-; TONGA-NEXT:    v_readfirstlane_b32 s8, v0
-; TONGA-NEXT:    s_add_u32 s1, s1, s8
-; TONGA-NEXT:    v_mov_b32_e32 v0, s1
-; TONGA-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], s6, v0, 0
-; TONGA-NEXT:    s_addc_u32 s3, 0, s3
-; TONGA-NEXT:    s_mul_i32 s3, s6, s3
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v1
-; TONGA-NEXT:    s_add_i32 s3, s14, s3
-; TONGA-NEXT:    s_mul_i32 s1, s7, s1
-; TONGA-NEXT:    s_add_i32 s3, s3, s1
-; TONGA-NEXT:    s_sub_i32 s1, s13, s3
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v0
-; TONGA-NEXT:    s_sub_u32 s12, s12, s14
-; TONGA-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; TONGA-NEXT:    s_subb_u32 s1, s1, s7
-; TONGA-NEXT:    s_sub_u32 s18, s12, s6
-; TONGA-NEXT:    s_cselect_b64 s[16:17], -1, 0
-; TONGA-NEXT:    s_subb_u32 s19, s1, 0
-; TONGA-NEXT:    s_cmp_ge_u32 s19, s7
-; TONGA-NEXT:    s_cselect_b32 s20, -1, 0
-; TONGA-NEXT:    s_cmp_ge_u32 s18, s6
-; TONGA-NEXT:    s_cselect_b32 s21, -1, 0
-; TONGA-NEXT:    s_cmp_eq_u32 s19, s7
-; TONGA-NEXT:    s_cselect_b32 s20, s21, s20
-; TONGA-NEXT:    s_cmp_lg_u64 s[16:17], 0
-; TONGA-NEXT:    s_subb_u32 s1, s1, s7
-; TONGA-NEXT:    s_sub_u32 s16, s18, s6
-; TONGA-NEXT:    s_subb_u32 s1, s1, 0
-; TONGA-NEXT:    s_cmp_lg_u32 s20, 0
-; TONGA-NEXT:    s_cselect_b32 s16, s16, s18
-; TONGA-NEXT:    s_cselect_b32 s1, s1, s19
-; TONGA-NEXT:    s_cmp_lg_u64 s[14:15], 0
-; TONGA-NEXT:    s_subb_u32 s3, s13, s3
-; TONGA-NEXT:    s_cmp_ge_u32 s3, s7
-; TONGA-NEXT:    s_cselect_b32 s13, -1, 0
-; TONGA-NEXT:    s_cmp_ge_u32 s12, s6
-; TONGA-NEXT:    s_cselect_b32 s6, -1, 0
-; TONGA-NEXT:    s_cmp_eq_u32 s3, s7
-; TONGA-NEXT:    s_cselect_b32 s6, s6, s13
-; TONGA-NEXT:    s_cmp_lg_u32 s6, 0
-; TONGA-NEXT:    s_cselect_b32 s7, s1, s3
-; TONGA-NEXT:    s_cselect_b32 s6, s16, s12
-; TONGA-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; TONGA-NEXT:    s_sub_u32 s6, s6, s10
-; TONGA-NEXT:    s_subb_u32 s7, s7, s10
-; TONGA-NEXT:    s_cbranch_execnz .LBB10_4
+; TONGA-NEXT:    v_add_u32_e32 v17, vcc, v13, v8
+; TONGA-NEXT:    v_addc_u32_e32 v18, vcc, v12, v9, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v15, v17, 0
+; TONGA-NEXT:    v_mul_lo_u32 v12, v15, v18
+; TONGA-NEXT:    v_mul_lo_u32 v13, v16, v17
+; TONGA-NEXT:    v_mul_hi_u32 v15, v17, v8
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v18, v8, 0
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v12, v9
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v13, v9
+; TONGA-NEXT:    v_mad_u64_u32 v[12:13], s[0:1], v17, v9, 0
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v18, v9, 0
+; TONGA-NEXT:    v_add_u32_e32 v12, vcc, v15, v12
+; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v13, vcc
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v12, v10
+; TONGA-NEXT:    v_addc_u32_e32 v10, vcc, v13, v11, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
+; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v10, v8
+; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v17, v8
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, v18, v9, vcc
+; TONGA-NEXT:    v_ashrrev_i32_e32 v12, 31, v5
+; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v4, v12
+; TONGA-NEXT:    v_xor_b32_e32 v13, v8, v12
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v13, v11, 0
+; TONGA-NEXT:    v_mul_hi_u32 v15, v13, v10
+; TONGA-NEXT:    v_addc_u32_e32 v5, vcc, v5, v12, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v5, v5, v12
+; TONGA-NEXT:    v_add_u32_e32 v15, vcc, v15, v8
+; TONGA-NEXT:    v_addc_u32_e32 v16, vcc, 0, v9, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v5, v10, 0
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v5, v11, 0
+; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v15, v8
+; TONGA-NEXT:    v_addc_u32_e32 v8, vcc, v16, v9, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v8, v10
+; TONGA-NEXT:    v_addc_u32_e32 v8, vcc, 0, v9, vcc
+; TONGA-NEXT:    v_mul_lo_u32 v11, v14, v8
+; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v14, v10, 0
+; TONGA-NEXT:    v_mul_lo_u32 v10, v1, v10
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v11, v9
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v10, v9
+; TONGA-NEXT:    v_sub_u32_e32 v10, vcc, v5, v9
+; TONGA-NEXT:    v_sub_u32_e32 v8, vcc, v13, v8
+; TONGA-NEXT:    v_subb_u32_e64 v10, s[0:1], v10, v1, vcc
+; TONGA-NEXT:    v_sub_u32_e64 v11, s[0:1], v8, v14
+; TONGA-NEXT:    v_subbrev_u32_e64 v13, s[2:3], 0, v10, s[0:1]
+; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v13, v1
+; TONGA-NEXT:    v_cndmask_b32_e64 v15, 0, -1, s[2:3]
+; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v11, v14
+; TONGA-NEXT:    v_cndmask_b32_e64 v16, 0, -1, s[2:3]
+; TONGA-NEXT:    v_cmp_eq_u32_e64 s[2:3], v13, v1
+; TONGA-NEXT:    v_subb_u32_e64 v10, s[0:1], v10, v1, s[0:1]
+; TONGA-NEXT:    v_cndmask_b32_e64 v15, v15, v16, s[2:3]
+; TONGA-NEXT:    v_sub_u32_e64 v16, s[0:1], v11, v14
+; TONGA-NEXT:    v_subb_u32_e32 v5, vcc, v5, v9, vcc
+; TONGA-NEXT:    v_subbrev_u32_e64 v10, s[0:1], 0, v10, s[0:1]
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v1
+; TONGA-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v15
+; TONGA-NEXT:    v_cndmask_b32_e64 v9, 0, -1, vcc
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v8, v14
+; TONGA-NEXT:    v_cndmask_b32_e64 v10, v13, v10, s[0:1]
+; TONGA-NEXT:    v_cndmask_b32_e64 v13, 0, -1, vcc
+; TONGA-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v1
+; TONGA-NEXT:    v_cndmask_b32_e32 v1, v9, v13, vcc
+; TONGA-NEXT:    v_cndmask_b32_e64 v11, v11, v16, s[0:1]
+; TONGA-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; TONGA-NEXT:    v_cndmask_b32_e32 v1, v5, v10, vcc
+; TONGA-NEXT:    v_cndmask_b32_e32 v5, v8, v11, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v5, v5, v12
+; TONGA-NEXT:    v_xor_b32_e32 v1, v1, v12
+; TONGA-NEXT:    v_sub_u32_e32 v8, vcc, v5, v12
+; TONGA-NEXT:    v_subb_u32_e32 v9, vcc, v1, v12, vcc
+; TONGA-NEXT:    s_cbranch_execnz .LBB10_3
 ; TONGA-NEXT:  .LBB10_2:
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v0, s0
-; TONGA-NEXT:    s_sub_i32 s1, 0, s0
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v1, v0
+; TONGA-NEXT:    v_sub_u32_e32 v5, vcc, 0, v0
 ; TONGA-NEXT:    v_mov_b32_e32 v9, 0
-; TONGA-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; TONGA-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; TONGA-NEXT:    v_mul_lo_u32 v1, s1, v0
-; TONGA-NEXT:    v_mul_hi_u32 v1, v0, v1
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
-; TONGA-NEXT:    v_mul_hi_u32 v0, s2, v0
-; TONGA-NEXT:    v_mul_lo_u32 v0, v0, s0
-; TONGA-NEXT:    v_sub_u32_e32 v0, vcc, s2, v0
-; TONGA-NEXT:    v_subrev_u32_e32 v1, vcc, s0, v0
-; TONGA-NEXT:    v_cmp_le_u32_e32 vcc, s0, v0
-; TONGA-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; TONGA-NEXT:    v_subrev_u32_e32 v1, vcc, s0, v0
-; TONGA-NEXT:    v_cmp_le_u32_e32 vcc, s0, v0
-; TONGA-NEXT:    v_cndmask_b32_e32 v8, v0, v1, vcc
-; TONGA-NEXT:    s_branch .LBB10_5
+; TONGA-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; TONGA-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; TONGA-NEXT:    v_mul_lo_u32 v5, v5, v1
+; TONGA-NEXT:    v_mul_hi_u32 v5, v1, v5
+; TONGA-NEXT:    v_add_u32_e32 v1, vcc, v1, v5
+; TONGA-NEXT:    v_mul_hi_u32 v1, v4, v1
+; TONGA-NEXT:    v_mul_lo_u32 v1, v1, v0
+; TONGA-NEXT:    v_sub_u32_e32 v1, vcc, v4, v1
+; TONGA-NEXT:    v_subrev_u32_e32 v4, vcc, v0, v1
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v0
+; TONGA-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; TONGA-NEXT:    v_sub_u32_e32 v4, vcc, v1, v0
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v0
+; TONGA-NEXT:    v_cndmask_b32_e32 v8, v1, v4, vcc
 ; TONGA-NEXT:  .LBB10_3:
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
-; TONGA-NEXT:    s_branch .LBB10_2
-; TONGA-NEXT:  .LBB10_4:
-; TONGA-NEXT:    v_mov_b32_e32 v9, s7
-; TONGA-NEXT:    v_mov_b32_e32 v8, s6
-; TONGA-NEXT:  .LBB10_5:
 ; TONGA-NEXT:    v_or_b32_e32 v1, v7, v3
 ; TONGA-NEXT:    v_mov_b32_e32 v0, 0
 ; TONGA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; TONGA-NEXT:    s_cbranch_vccz .LBB10_9
-; TONGA-NEXT:  ; %bb.6:
+; TONGA-NEXT:    s_cbranch_vccz .LBB10_8
+; TONGA-NEXT:  ; %bb.4:
 ; TONGA-NEXT:    v_ashrrev_i32_e32 v0, 31, v3
 ; TONGA-NEXT:    v_add_u32_e32 v1, vcc, v2, v0
 ; TONGA-NEXT:    v_addc_u32_e32 v3, vcc, v3, v0, vcc
@@ -3604,8 +3579,8 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_xor_b32_e32 v1, v1, v11
 ; TONGA-NEXT:    v_sub_u32_e32 v10, vcc, v0, v11
 ; TONGA-NEXT:    v_subb_u32_e32 v11, vcc, v1, v11, vcc
-; TONGA-NEXT:    s_cbranch_execnz .LBB10_8
-; TONGA-NEXT:  .LBB10_7:
+; TONGA-NEXT:    s_cbranch_execnz .LBB10_6
+; TONGA-NEXT:  .LBB10_5:
 ; TONGA-NEXT:    v_cvt_f32_u32_e32 v0, v2
 ; TONGA-NEXT:    v_sub_u32_e32 v1, vcc, 0, v2
 ; TONGA-NEXT:    v_mov_b32_e32 v11, 0
@@ -3624,13 +3599,16 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_subrev_u32_e32 v1, vcc, v2, v0
 ; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; TONGA-NEXT:    v_cndmask_b32_e32 v10, v0, v1, vcc
-; TONGA-NEXT:  .LBB10_8:
+; TONGA-NEXT:  .LBB10_6:
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s4
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s5
 ; TONGA-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
 ; TONGA-NEXT:    s_endpgm
-; TONGA-NEXT:  .LBB10_9:
-; TONGA-NEXT:    s_branch .LBB10_7
+; TONGA-NEXT:  .LBB10_7:
+; TONGA-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; TONGA-NEXT:    s_branch .LBB10_2
+; TONGA-NEXT:  .LBB10_8:
+; TONGA-NEXT:    s_branch .LBB10_5
 ;
 ; EG-LABEL: srem_v2i64:
 ; EG:       ; %bb.0:
@@ -6118,6 +6096,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-LABEL: srem_v4i64:
 ; TONGA:       ; %bb.0:
 ; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; TONGA-NEXT:    v_mov_b32_e32 v8, 0
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
 ; TONGA-NEXT:    s_add_u32 s0, s6, 48
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s6
@@ -6137,275 +6116,249 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mov_b32_e32 v4, s0
 ; TONGA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; TONGA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; TONGA-NEXT:    s_waitcnt vmcnt(3)
-; TONGA-NEXT:    v_readfirstlane_b32 s3, v15
-; TONGA-NEXT:    v_readfirstlane_b32 s2, v14
 ; TONGA-NEXT:    s_waitcnt vmcnt(2)
-; TONGA-NEXT:    v_readfirstlane_b32 s1, v11
-; TONGA-NEXT:    v_readfirstlane_b32 s0, v10
-; TONGA-NEXT:    s_or_b64 s[6:7], s[2:3], s[0:1]
-; TONGA-NEXT:    s_mov_b32 s6, 0
-; TONGA-NEXT:    s_cmp_lg_u64 s[6:7], 0
-; TONGA-NEXT:    s_cbranch_scc0 .LBB12_3
+; TONGA-NEXT:    v_or_b32_e32 v9, v15, v11
+; TONGA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
+; TONGA-NEXT:    s_cbranch_vccz .LBB12_13
 ; TONGA-NEXT:  ; %bb.1:
-; TONGA-NEXT:    s_ashr_i32 s6, s1, 31
-; TONGA-NEXT:    s_add_u32 s8, s0, s6
-; TONGA-NEXT:    s_mov_b32 s7, s6
-; TONGA-NEXT:    s_addc_u32 s9, s1, s6
-; TONGA-NEXT:    s_xor_b64 s[6:7], s[8:9], s[6:7]
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v8, s6
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v9, s7
-; TONGA-NEXT:    s_sub_u32 s1, 0, s6
-; TONGA-NEXT:    s_subb_u32 s10, 0, s7
-; TONGA-NEXT:    v_madmk_f32 v8, v9, 0x4f800000, v8
-; TONGA-NEXT:    v_rcp_f32_e32 v8, v8
-; TONGA-NEXT:    v_mul_f32_e32 v8, 0x5f7ffffc, v8
-; TONGA-NEXT:    v_mul_f32_e32 v9, 0x2f800000, v8
-; TONGA-NEXT:    v_trunc_f32_e32 v9, v9
-; TONGA-NEXT:    v_madmk_f32 v8, v9, 0xcf800000, v8
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v14, v9
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v15, v8
-; TONGA-NEXT:    v_mul_lo_u32 v10, s1, v14
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], s1, v15, 0
-; TONGA-NEXT:    v_mul_lo_u32 v11, s10, v15
-; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v9, v10
-; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v9, v11
-; TONGA-NEXT:    v_mul_hi_u32 v18, v15, v8
-; TONGA-NEXT:    v_mad_u64_u32 v[9:10], s[8:9], v15, v11, 0
-; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v18, v9
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], v14, v8, 0
-; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, 0, v10, vcc
-; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v14, v11, 0
-; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v18, v8
-; TONGA-NEXT:    v_addc_u32_e32 v8, vcc, v19, v9, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v11, vcc
-; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v8, v10
-; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
-; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v15, v8
-; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, v14, v9, vcc
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], s1, v18, 0
-; TONGA-NEXT:    v_mul_lo_u32 v14, s1, v19
-; TONGA-NEXT:    v_mul_lo_u32 v15, s10, v18
-; TONGA-NEXT:    v_mul_hi_u32 v20, v18, v8
-; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], v19, v8, 0
-; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v14, v9
-; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v15, v9
-; TONGA-NEXT:    v_mad_u64_u32 v[14:15], s[8:9], v18, v9, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], v19, v9, 0
-; TONGA-NEXT:    v_add_u32_e32 v14, vcc, v20, v14
-; TONGA-NEXT:    v_addc_u32_e32 v15, vcc, 0, v15, vcc
-; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v14, v10
-; TONGA-NEXT:    v_addc_u32_e32 v10, vcc, v15, v11, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
-; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v10, v8
-; TONGA-NEXT:    s_ashr_i32 s10, s3, 31
-; TONGA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
-; TONGA-NEXT:    s_add_u32 s8, s2, s10
-; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v18, v8
-; TONGA-NEXT:    s_mov_b32 s11, s10
-; TONGA-NEXT:    s_addc_u32 s9, s3, s10
-; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, v19, v9, vcc
-; TONGA-NEXT:    s_xor_b64 s[12:13], s[8:9], s[10:11]
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], s12, v11, 0
-; TONGA-NEXT:    v_mul_hi_u32 v14, s12, v10
-; TONGA-NEXT:    v_readfirstlane_b32 s1, v9
-; TONGA-NEXT:    v_readfirstlane_b32 s3, v8
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], s13, v11, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[8:9], s13, v10, 0
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v14
-; TONGA-NEXT:    s_add_u32 s3, s14, s3
-; TONGA-NEXT:    s_addc_u32 s1, 0, s1
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v10
-; TONGA-NEXT:    v_readfirstlane_b32 s9, v11
-; TONGA-NEXT:    s_add_u32 s3, s3, s14
-; TONGA-NEXT:    v_readfirstlane_b32 s8, v9
-; TONGA-NEXT:    s_addc_u32 s1, s1, s9
-; TONGA-NEXT:    s_addc_u32 s3, s8, 0
-; TONGA-NEXT:    v_readfirstlane_b32 s8, v8
-; TONGA-NEXT:    s_add_u32 s1, s1, s8
-; TONGA-NEXT:    v_mov_b32_e32 v8, s1
-; TONGA-NEXT:    v_mad_u64_u32 v[8:9], s[8:9], s6, v8, 0
-; TONGA-NEXT:    s_addc_u32 s3, 0, s3
-; TONGA-NEXT:    s_mul_i32 s3, s6, s3
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v9
-; TONGA-NEXT:    s_add_i32 s3, s14, s3
-; TONGA-NEXT:    s_mul_i32 s1, s7, s1
-; TONGA-NEXT:    s_add_i32 s3, s3, s1
-; TONGA-NEXT:    s_sub_i32 s1, s13, s3
-; TONGA-NEXT:    v_readfirstlane_b32 s14, v8
-; TONGA-NEXT:    s_sub_u32 s12, s12, s14
-; TONGA-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; TONGA-NEXT:    s_subb_u32 s1, s1, s7
-; TONGA-NEXT:    s_sub_u32 s18, s12, s6
-; TONGA-NEXT:    s_cselect_b64 s[16:17], -1, 0
-; TONGA-NEXT:    s_subb_u32 s19, s1, 0
-; TONGA-NEXT:    s_cmp_ge_u32 s19, s7
-; TONGA-NEXT:    s_cselect_b32 s20, -1, 0
-; TONGA-NEXT:    s_cmp_ge_u32 s18, s6
-; TONGA-NEXT:    s_cselect_b32 s21, -1, 0
-; TONGA-NEXT:    s_cmp_eq_u32 s19, s7
-; TONGA-NEXT:    s_cselect_b32 s20, s21, s20
-; TONGA-NEXT:    s_cmp_lg_u64 s[16:17], 0
-; TONGA-NEXT:    s_subb_u32 s1, s1, s7
-; TONGA-NEXT:    s_sub_u32 s16, s18, s6
-; TONGA-NEXT:    s_subb_u32 s1, s1, 0
-; TONGA-NEXT:    s_cmp_lg_u32 s20, 0
-; TONGA-NEXT:    s_cselect_b32 s16, s16, s18
-; TONGA-NEXT:    s_cselect_b32 s1, s1, s19
-; TONGA-NEXT:    s_cmp_lg_u64 s[14:15], 0
-; TONGA-NEXT:    s_subb_u32 s3, s13, s3
-; TONGA-NEXT:    s_cmp_ge_u32 s3, s7
-; TONGA-NEXT:    s_cselect_b32 s13, -1, 0
-; TONGA-NEXT:    s_cmp_ge_u32 s12, s6
-; TONGA-NEXT:    s_cselect_b32 s6, -1, 0
-; TONGA-NEXT:    s_cmp_eq_u32 s3, s7
-; TONGA-NEXT:    s_cselect_b32 s6, s6, s13
-; TONGA-NEXT:    s_cmp_lg_u32 s6, 0
-; TONGA-NEXT:    s_cselect_b32 s7, s1, s3
-; TONGA-NEXT:    s_cselect_b32 s6, s16, s12
-; TONGA-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; TONGA-NEXT:    s_sub_u32 s6, s6, s10
-; TONGA-NEXT:    s_subb_u32 s7, s7, s10
-; TONGA-NEXT:    s_cbranch_execnz .LBB12_4
+; TONGA-NEXT:    v_ashrrev_i32_e32 v8, 31, v11
+; TONGA-NEXT:    v_add_u32_e32 v9, vcc, v10, v8
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, v11, v8, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v9, v9, v8
+; TONGA-NEXT:    v_xor_b32_e32 v8, v11, v8
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v11, v9
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v18, v8
+; TONGA-NEXT:    v_sub_u32_e32 v23, vcc, 0, v9
+; TONGA-NEXT:    v_subb_u32_e32 v24, vcc, 0, v8, vcc
+; TONGA-NEXT:    v_madmk_f32 v11, v18, 0x4f800000, v11
+; TONGA-NEXT:    v_rcp_f32_e32 v11, v11
+; TONGA-NEXT:    v_mul_f32_e32 v11, 0x5f7ffffc, v11
+; TONGA-NEXT:    v_mul_f32_e32 v18, 0x2f800000, v11
+; TONGA-NEXT:    v_trunc_f32_e32 v18, v18
+; TONGA-NEXT:    v_madmk_f32 v11, v18, 0xcf800000, v11
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v22, v18
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v11, v11
+; TONGA-NEXT:    v_mul_lo_u32 v20, v23, v22
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v23, v11, 0
+; TONGA-NEXT:    v_mul_lo_u32 v21, v24, v11
+; TONGA-NEXT:    v_add_u32_e32 v19, vcc, v19, v20
+; TONGA-NEXT:    v_add_u32_e32 v21, vcc, v19, v21
+; TONGA-NEXT:    v_mad_u64_u32 v[19:20], s[0:1], v11, v21, 0
+; TONGA-NEXT:    v_mul_hi_u32 v25, v11, v18
+; TONGA-NEXT:    v_add_u32_e32 v25, vcc, v25, v19
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v22, v18, 0
+; TONGA-NEXT:    v_addc_u32_e32 v26, vcc, 0, v20, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[20:21], s[0:1], v22, v21, 0
+; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v25, v18
+; TONGA-NEXT:    v_addc_u32_e32 v18, vcc, v26, v19, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, 0, v21, vcc
+; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v18, v20
+; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, 0, v19, vcc
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v11, v18
+; TONGA-NEXT:    v_addc_u32_e32 v25, vcc, v22, v19, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v23, v11, 0
+; TONGA-NEXT:    v_mul_lo_u32 v22, v23, v25
+; TONGA-NEXT:    v_mul_lo_u32 v23, v24, v11
+; TONGA-NEXT:    v_mul_hi_u32 v24, v11, v18
+; TONGA-NEXT:    v_mad_u64_u32 v[20:21], s[0:1], v25, v18, 0
+; TONGA-NEXT:    v_add_u32_e32 v19, vcc, v22, v19
+; TONGA-NEXT:    v_add_u32_e32 v19, vcc, v23, v19
+; TONGA-NEXT:    v_mad_u64_u32 v[22:23], s[0:1], v11, v19, 0
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v25, v19, 0
+; TONGA-NEXT:    v_add_u32_e32 v22, vcc, v24, v22
+; TONGA-NEXT:    v_addc_u32_e32 v23, vcc, 0, v23, vcc
+; TONGA-NEXT:    v_add_u32_e32 v20, vcc, v22, v20
+; TONGA-NEXT:    v_addc_u32_e32 v20, vcc, v23, v21, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, 0, v19, vcc
+; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v20, v18
+; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, 0, v19, vcc
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v11, v18
+; TONGA-NEXT:    v_addc_u32_e32 v20, vcc, v25, v19, vcc
+; TONGA-NEXT:    v_ashrrev_i32_e32 v22, 31, v15
+; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v14, v22
+; TONGA-NEXT:    v_xor_b32_e32 v23, v18, v22
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v23, v20, 0
+; TONGA-NEXT:    v_mul_hi_u32 v21, v23, v11
+; TONGA-NEXT:    v_addc_u32_e32 v15, vcc, v15, v22, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v15, v15, v22
+; TONGA-NEXT:    v_add_u32_e32 v24, vcc, v21, v18
+; TONGA-NEXT:    v_addc_u32_e32 v25, vcc, 0, v19, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v15, v11, 0
+; TONGA-NEXT:    v_mad_u64_u32 v[20:21], s[0:1], v15, v20, 0
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v24, v18
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, v25, v19, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v18, vcc, 0, v21, vcc
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v11, v20
+; TONGA-NEXT:    v_addc_u32_e32 v18, vcc, 0, v18, vcc
+; TONGA-NEXT:    v_mul_lo_u32 v20, v9, v18
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v9, v11, 0
+; TONGA-NEXT:    v_mul_lo_u32 v11, v8, v11
+; TONGA-NEXT:    v_add_u32_e32 v19, vcc, v20, v19
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v11, v19
+; TONGA-NEXT:    v_sub_u32_e32 v19, vcc, v15, v11
+; TONGA-NEXT:    v_sub_u32_e32 v18, vcc, v23, v18
+; TONGA-NEXT:    v_subb_u32_e64 v19, s[0:1], v19, v8, vcc
+; TONGA-NEXT:    v_sub_u32_e64 v20, s[0:1], v18, v9
+; TONGA-NEXT:    v_subbrev_u32_e64 v21, s[2:3], 0, v19, s[0:1]
+; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v21, v8
+; TONGA-NEXT:    v_cndmask_b32_e64 v23, 0, -1, s[2:3]
+; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v20, v9
+; TONGA-NEXT:    v_subb_u32_e32 v11, vcc, v15, v11, vcc
+; TONGA-NEXT:    v_cndmask_b32_e64 v24, 0, -1, s[2:3]
+; TONGA-NEXT:    v_cmp_eq_u32_e64 s[2:3], v21, v8
+; TONGA-NEXT:    v_subb_u32_e64 v19, s[0:1], v19, v8, s[0:1]
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v11, v8
+; TONGA-NEXT:    v_cndmask_b32_e64 v23, v23, v24, s[2:3]
+; TONGA-NEXT:    v_sub_u32_e64 v24, s[0:1], v20, v9
+; TONGA-NEXT:    v_cndmask_b32_e64 v15, 0, -1, vcc
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v18, v9
+; TONGA-NEXT:    v_subbrev_u32_e64 v19, s[0:1], 0, v19, s[0:1]
+; TONGA-NEXT:    v_cndmask_b32_e64 v9, 0, -1, vcc
+; TONGA-NEXT:    v_cmp_eq_u32_e32 vcc, v11, v8
+; TONGA-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v23
+; TONGA-NEXT:    v_cndmask_b32_e32 v8, v15, v9, vcc
+; TONGA-NEXT:    v_cndmask_b32_e64 v20, v20, v24, s[0:1]
+; TONGA-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v8
+; TONGA-NEXT:    v_cndmask_b32_e64 v19, v21, v19, s[0:1]
+; TONGA-NEXT:    v_cndmask_b32_e32 v9, v18, v20, vcc
+; TONGA-NEXT:    v_cndmask_b32_e32 v8, v11, v19, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v9, v9, v22
+; TONGA-NEXT:    v_xor_b32_e32 v11, v8, v22
+; TONGA-NEXT:    v_sub_u32_e32 v8, vcc, v9, v22
+; TONGA-NEXT:    v_subb_u32_e32 v9, vcc, v11, v22, vcc
+; TONGA-NEXT:    s_cbranch_execnz .LBB12_3
 ; TONGA-NEXT:  .LBB12_2:
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v8, s0
-; TONGA-NEXT:    s_sub_i32 s1, 0, s0
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v8, v10
+; TONGA-NEXT:    v_sub_u32_e32 v9, vcc, 0, v10
 ; TONGA-NEXT:    v_rcp_iflag_f32_e32 v8, v8
 ; TONGA-NEXT:    v_mul_f32_e32 v8, 0x4f7ffffe, v8
 ; TONGA-NEXT:    v_cvt_u32_f32_e32 v8, v8
-; TONGA-NEXT:    v_mul_lo_u32 v9, s1, v8
+; TONGA-NEXT:    v_mul_lo_u32 v9, v9, v8
 ; TONGA-NEXT:    v_mul_hi_u32 v9, v8, v9
 ; TONGA-NEXT:    v_add_u32_e32 v8, vcc, v8, v9
-; TONGA-NEXT:    v_mul_hi_u32 v8, s2, v8
-; TONGA-NEXT:    v_mul_lo_u32 v8, v8, s0
-; TONGA-NEXT:    v_sub_u32_e32 v8, vcc, s2, v8
-; TONGA-NEXT:    v_subrev_u32_e32 v9, vcc, s0, v8
-; TONGA-NEXT:    v_cmp_le_u32_e32 vcc, s0, v8
+; TONGA-NEXT:    v_mul_hi_u32 v8, v14, v8
+; TONGA-NEXT:    v_mul_lo_u32 v8, v8, v10
+; TONGA-NEXT:    v_sub_u32_e32 v8, vcc, v14, v8
+; TONGA-NEXT:    v_sub_u32_e32 v9, vcc, v8, v10
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v8, v10
 ; TONGA-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc
-; TONGA-NEXT:    v_subrev_u32_e32 v9, vcc, s0, v8
-; TONGA-NEXT:    v_cmp_le_u32_e32 vcc, s0, v8
+; TONGA-NEXT:    v_sub_u32_e32 v9, vcc, v8, v10
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v8, v10
 ; TONGA-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc
 ; TONGA-NEXT:    v_mov_b32_e32 v9, 0
-; TONGA-NEXT:    s_branch .LBB12_5
 ; TONGA-NEXT:  .LBB12_3:
-; TONGA-NEXT:    ; implicit-def: $sgpr6_sgpr7
-; TONGA-NEXT:    s_branch .LBB12_2
-; TONGA-NEXT:  .LBB12_4:
-; TONGA-NEXT:    v_mov_b32_e32 v9, s7
-; TONGA-NEXT:    v_mov_b32_e32 v8, s6
-; TONGA-NEXT:  .LBB12_5:
 ; TONGA-NEXT:    v_or_b32_e32 v11, v17, v13
 ; TONGA-NEXT:    v_mov_b32_e32 v10, 0
 ; TONGA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
-; TONGA-NEXT:    s_cbranch_vccz .LBB12_15
-; TONGA-NEXT:  ; %bb.6:
+; TONGA-NEXT:    s_cbranch_vccz .LBB12_14
+; TONGA-NEXT:  ; %bb.4:
 ; TONGA-NEXT:    v_ashrrev_i32_e32 v10, 31, v13
 ; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v12, v10
 ; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, v13, v10, vcc
-; TONGA-NEXT:    v_xor_b32_e32 v11, v11, v10
-; TONGA-NEXT:    v_xor_b32_e32 v10, v13, v10
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v13, v11
-; TONGA-NEXT:    v_cvt_f32_u32_e32 v14, v10
-; TONGA-NEXT:    v_sub_u32_e32 v22, vcc, 0, v11
-; TONGA-NEXT:    v_subb_u32_e32 v23, vcc, 0, v10, vcc
-; TONGA-NEXT:    v_madmk_f32 v13, v14, 0x4f800000, v13
-; TONGA-NEXT:    v_rcp_f32_e32 v13, v13
-; TONGA-NEXT:    v_mul_f32_e32 v13, 0x5f7ffffc, v13
-; TONGA-NEXT:    v_mul_f32_e32 v14, 0x2f800000, v13
-; TONGA-NEXT:    v_trunc_f32_e32 v14, v14
-; TONGA-NEXT:    v_madmk_f32 v13, v14, 0xcf800000, v13
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v20, v14
-; TONGA-NEXT:    v_cvt_u32_f32_e32 v21, v13
-; TONGA-NEXT:    v_mul_lo_u32 v15, v22, v20
-; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v22, v21, 0
-; TONGA-NEXT:    v_mul_lo_u32 v18, v23, v21
-; TONGA-NEXT:    v_add_u32_e32 v14, vcc, v14, v15
-; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v14, v18
-; TONGA-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v21, v18, 0
-; TONGA-NEXT:    v_mul_hi_u32 v19, v21, v13
-; TONGA-NEXT:    v_add_u32_e32 v24, vcc, v19, v14
-; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v20, v13, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v20, v18, 0
-; TONGA-NEXT:    v_addc_u32_e32 v15, vcc, 0, v15, vcc
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v24, v13
-; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, v15, v14, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, 0, v19, vcc
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v13, v18
-; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, 0, v14, vcc
-; TONGA-NEXT:    v_add_u32_e32 v24, vcc, v21, v13
-; TONGA-NEXT:    v_addc_u32_e32 v25, vcc, v20, v14, vcc
-; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v22, v24, 0
-; TONGA-NEXT:    v_mul_lo_u32 v15, v22, v25
-; TONGA-NEXT:    v_mul_lo_u32 v20, v23, v24
-; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v25, v13, 0
-; TONGA-NEXT:    v_add_u32_e32 v14, vcc, v15, v14
-; TONGA-NEXT:    v_add_u32_e32 v20, vcc, v20, v14
-; TONGA-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v24, v20, 0
-; TONGA-NEXT:    v_mul_hi_u32 v13, v24, v13
-; TONGA-NEXT:    v_mad_u64_u32 v[20:21], s[0:1], v25, v20, 0
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v13, v14
-; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, 0, v15, vcc
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v13, v18
-; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, v14, v19, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, 0, v21, vcc
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v13, v20
-; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, 0, v14, vcc
-; TONGA-NEXT:    v_add_u32_e32 v15, vcc, v24, v13
-; TONGA-NEXT:    v_addc_u32_e32 v18, vcc, v25, v14, vcc
-; TONGA-NEXT:    v_ashrrev_i32_e32 v19, 31, v17
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v16, v19
-; TONGA-NEXT:    v_xor_b32_e32 v20, v13, v19
-; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v20, v18, 0
-; TONGA-NEXT:    v_mul_hi_u32 v21, v20, v15
-; TONGA-NEXT:    v_addc_u32_e32 v17, vcc, v17, v19, vcc
-; TONGA-NEXT:    v_xor_b32_e32 v22, v17, v19
-; TONGA-NEXT:    v_add_u32_e32 v21, vcc, v21, v13
-; TONGA-NEXT:    v_addc_u32_e32 v23, vcc, 0, v14, vcc
-; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v22, v15, 0
-; TONGA-NEXT:    v_mad_u64_u32 v[17:18], s[0:1], v22, v18, 0
-; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v21, v13
-; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, v23, v14, vcc
-; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, 0, v18, vcc
-; TONGA-NEXT:    v_add_u32_e32 v15, vcc, v13, v17
-; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, 0, v14, vcc
-; TONGA-NEXT:    v_mul_lo_u32 v17, v11, v13
-; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v11, v15, 0
-; TONGA-NEXT:    v_mul_lo_u32 v15, v10, v15
-; TONGA-NEXT:    v_add_u32_e32 v14, vcc, v17, v14
-; TONGA-NEXT:    v_add_u32_e32 v14, vcc, v15, v14
-; TONGA-NEXT:    v_sub_u32_e32 v15, vcc, v22, v14
-; TONGA-NEXT:    v_sub_u32_e32 v13, vcc, v20, v13
-; TONGA-NEXT:    v_subb_u32_e64 v15, s[0:1], v15, v10, vcc
-; TONGA-NEXT:    v_sub_u32_e64 v17, s[0:1], v13, v11
-; TONGA-NEXT:    v_subbrev_u32_e64 v18, s[2:3], 0, v15, s[0:1]
-; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v18, v10
-; TONGA-NEXT:    v_cndmask_b32_e64 v20, 0, -1, s[2:3]
-; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v17, v11
+; TONGA-NEXT:    v_xor_b32_e32 v15, v11, v10
+; TONGA-NEXT:    v_xor_b32_e32 v20, v13, v10
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v10, v15
+; TONGA-NEXT:    v_cvt_f32_u32_e32 v11, v20
+; TONGA-NEXT:    v_sub_u32_e32 v21, vcc, 0, v15
+; TONGA-NEXT:    v_subb_u32_e32 v22, vcc, 0, v20, vcc
+; TONGA-NEXT:    v_madmk_f32 v10, v11, 0x4f800000, v10
+; TONGA-NEXT:    v_rcp_f32_e32 v10, v10
+; TONGA-NEXT:    v_mul_f32_e32 v10, 0x5f7ffffc, v10
+; TONGA-NEXT:    v_mul_f32_e32 v11, 0x2f800000, v10
+; TONGA-NEXT:    v_trunc_f32_e32 v11, v11
+; TONGA-NEXT:    v_madmk_f32 v10, v11, 0xcf800000, v10
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v18, v11
+; TONGA-NEXT:    v_cvt_u32_f32_e32 v19, v10
+; TONGA-NEXT:    v_mul_lo_u32 v13, v21, v18
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v21, v19, 0
+; TONGA-NEXT:    v_mul_lo_u32 v14, v22, v19
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v11, v13
+; TONGA-NEXT:    v_add_u32_e32 v23, vcc, v11, v14
+; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v19, v23, 0
+; TONGA-NEXT:    v_mul_hi_u32 v11, v19, v10
+; TONGA-NEXT:    v_add_u32_e32 v24, vcc, v11, v13
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v18, v10, 0
+; TONGA-NEXT:    v_addc_u32_e32 v25, vcc, 0, v14, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v18, v23, 0
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v24, v10
+; TONGA-NEXT:    v_addc_u32_e32 v10, vcc, v25, v11, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, 0, v14, vcc
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v10, v13
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_add_u32_e32 v23, vcc, v19, v10
+; TONGA-NEXT:    v_addc_u32_e32 v24, vcc, v18, v11, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v21, v23, 0
+; TONGA-NEXT:    v_mul_lo_u32 v18, v21, v24
+; TONGA-NEXT:    v_mul_lo_u32 v19, v22, v23
+; TONGA-NEXT:    v_mul_hi_u32 v21, v23, v10
+; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v24, v10, 0
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v18, v11
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v19, v11
+; TONGA-NEXT:    v_mad_u64_u32 v[18:19], s[0:1], v23, v11, 0
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v24, v11, 0
+; TONGA-NEXT:    v_add_u32_e32 v18, vcc, v21, v18
+; TONGA-NEXT:    v_addc_u32_e32 v19, vcc, 0, v19, vcc
+; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v18, v13
+; TONGA-NEXT:    v_addc_u32_e32 v13, vcc, v19, v14, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v13, v10
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v23, v10
+; TONGA-NEXT:    v_addc_u32_e32 v14, vcc, v24, v11, vcc
+; TONGA-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v16, v18
+; TONGA-NEXT:    v_xor_b32_e32 v19, v10, v18
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v19, v14, 0
+; TONGA-NEXT:    v_mul_hi_u32 v21, v19, v13
+; TONGA-NEXT:    v_addc_u32_e32 v17, vcc, v17, v18, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v17, v17, v18
+; TONGA-NEXT:    v_add_u32_e32 v21, vcc, v21, v10
+; TONGA-NEXT:    v_addc_u32_e32 v22, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v17, v13, 0
+; TONGA-NEXT:    v_mad_u64_u32 v[13:14], s[0:1], v17, v14, 0
+; TONGA-NEXT:    v_add_u32_e32 v10, vcc, v21, v10
+; TONGA-NEXT:    v_addc_u32_e32 v10, vcc, v22, v11, vcc
+; TONGA-NEXT:    v_addc_u32_e32 v11, vcc, 0, v14, vcc
+; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v10, v13
+; TONGA-NEXT:    v_addc_u32_e32 v10, vcc, 0, v11, vcc
+; TONGA-NEXT:    v_mul_lo_u32 v14, v15, v10
+; TONGA-NEXT:    v_mad_u64_u32 v[10:11], s[0:1], v15, v13, 0
+; TONGA-NEXT:    v_mul_lo_u32 v13, v20, v13
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v14, v11
+; TONGA-NEXT:    v_add_u32_e32 v11, vcc, v13, v11
+; TONGA-NEXT:    v_sub_u32_e32 v13, vcc, v17, v11
+; TONGA-NEXT:    v_sub_u32_e32 v10, vcc, v19, v10
+; TONGA-NEXT:    v_subb_u32_e64 v13, s[0:1], v13, v20, vcc
+; TONGA-NEXT:    v_sub_u32_e64 v14, s[0:1], v10, v15
+; TONGA-NEXT:    v_subbrev_u32_e64 v19, s[2:3], 0, v13, s[0:1]
+; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v19, v20
 ; TONGA-NEXT:    v_cndmask_b32_e64 v21, 0, -1, s[2:3]
-; TONGA-NEXT:    v_cmp_eq_u32_e64 s[2:3], v18, v10
-; TONGA-NEXT:    v_subb_u32_e64 v15, s[0:1], v15, v10, s[0:1]
-; TONGA-NEXT:    v_cndmask_b32_e64 v20, v20, v21, s[2:3]
-; TONGA-NEXT:    v_sub_u32_e64 v21, s[0:1], v17, v11
-; TONGA-NEXT:    v_subbrev_u32_e64 v15, s[0:1], 0, v15, s[0:1]
-; TONGA-NEXT:    v_subb_u32_e32 v14, vcc, v22, v14, vcc
-; TONGA-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v20
-; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v14, v10
-; TONGA-NEXT:    v_cndmask_b32_e64 v15, v18, v15, s[0:1]
-; TONGA-NEXT:    v_cndmask_b32_e64 v18, 0, -1, vcc
-; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v13, v11
-; TONGA-NEXT:    v_cndmask_b32_e64 v11, 0, -1, vcc
-; TONGA-NEXT:    v_cmp_eq_u32_e32 vcc, v14, v10
-; TONGA-NEXT:    v_cndmask_b32_e32 v10, v18, v11, vcc
-; TONGA-NEXT:    v_cndmask_b32_e64 v17, v17, v21, s[0:1]
-; TONGA-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v10
-; TONGA-NEXT:    v_cndmask_b32_e32 v11, v13, v17, vcc
-; TONGA-NEXT:    v_cndmask_b32_e32 v10, v14, v15, vcc
-; TONGA-NEXT:    v_xor_b32_e32 v11, v11, v19
-; TONGA-NEXT:    v_xor_b32_e32 v13, v10, v19
-; TONGA-NEXT:    v_sub_u32_e32 v10, vcc, v11, v19
-; TONGA-NEXT:    v_subb_u32_e32 v11, vcc, v13, v19, vcc
-; TONGA-NEXT:    s_cbranch_execnz .LBB12_8
-; TONGA-NEXT:  .LBB12_7:
+; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v14, v15
+; TONGA-NEXT:    v_subb_u32_e32 v11, vcc, v17, v11, vcc
+; TONGA-NEXT:    v_cndmask_b32_e64 v22, 0, -1, s[2:3]
+; TONGA-NEXT:    v_cmp_eq_u32_e64 s[2:3], v19, v20
+; TONGA-NEXT:    v_subb_u32_e64 v13, s[0:1], v13, v20, s[0:1]
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v11, v20
+; TONGA-NEXT:    v_cndmask_b32_e64 v21, v21, v22, s[2:3]
+; TONGA-NEXT:    v_sub_u32_e64 v22, s[0:1], v14, v15
+; TONGA-NEXT:    v_cndmask_b32_e64 v17, 0, -1, vcc
+; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v10, v15
+; TONGA-NEXT:    v_subbrev_u32_e64 v13, s[0:1], 0, v13, s[0:1]
+; TONGA-NEXT:    v_cndmask_b32_e64 v15, 0, -1, vcc
+; TONGA-NEXT:    v_cmp_eq_u32_e32 vcc, v11, v20
+; TONGA-NEXT:    v_cmp_ne_u32_e64 s[0:1], 0, v21
+; TONGA-NEXT:    v_cndmask_b32_e32 v15, v17, v15, vcc
+; TONGA-NEXT:    v_cndmask_b32_e64 v14, v14, v22, s[0:1]
+; TONGA-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v15
+; TONGA-NEXT:    v_cndmask_b32_e64 v13, v19, v13, s[0:1]
+; TONGA-NEXT:    v_cndmask_b32_e32 v10, v10, v14, vcc
+; TONGA-NEXT:    v_cndmask_b32_e32 v11, v11, v13, vcc
+; TONGA-NEXT:    v_xor_b32_e32 v10, v10, v18
+; TONGA-NEXT:    v_xor_b32_e32 v11, v11, v18
+; TONGA-NEXT:    v_sub_u32_e32 v10, vcc, v10, v18
+; TONGA-NEXT:    v_subb_u32_e32 v11, vcc, v11, v18, vcc
+; TONGA-NEXT:    s_cbranch_execnz .LBB12_6
+; TONGA-NEXT:  .LBB12_5:
 ; TONGA-NEXT:    v_cvt_f32_u32_e32 v10, v12
 ; TONGA-NEXT:    v_sub_u32_e32 v11, vcc, 0, v12
 ; TONGA-NEXT:    v_rcp_iflag_f32_e32 v10, v10
@@ -6424,13 +6377,13 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v10, v12
 ; TONGA-NEXT:    v_cndmask_b32_e32 v10, v10, v11, vcc
 ; TONGA-NEXT:    v_mov_b32_e32 v11, 0
-; TONGA-NEXT:  .LBB12_8:
+; TONGA-NEXT:  .LBB12_6:
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
 ; TONGA-NEXT:    v_or_b32_e32 v13, v5, v1
 ; TONGA-NEXT:    v_mov_b32_e32 v12, 0
 ; TONGA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[12:13]
-; TONGA-NEXT:    s_cbranch_vccz .LBB12_16
-; TONGA-NEXT:  ; %bb.9:
+; TONGA-NEXT:    s_cbranch_vccz .LBB12_15
+; TONGA-NEXT:  ; %bb.7:
 ; TONGA-NEXT:    v_ashrrev_i32_e32 v12, 31, v1
 ; TONGA-NEXT:    v_add_u32_e32 v13, vcc, v0, v12
 ; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, v1, v12, vcc
@@ -6536,8 +6489,8 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_xor_b32_e32 v1, v1, v16
 ; TONGA-NEXT:    v_sub_u32_e32 v12, vcc, v5, v16
 ; TONGA-NEXT:    v_subb_u32_e32 v13, vcc, v1, v16, vcc
-; TONGA-NEXT:    s_cbranch_execnz .LBB12_11
-; TONGA-NEXT:  .LBB12_10:
+; TONGA-NEXT:    s_cbranch_execnz .LBB12_9
+; TONGA-NEXT:  .LBB12_8:
 ; TONGA-NEXT:    v_cvt_f32_u32_e32 v1, v0
 ; TONGA-NEXT:    v_sub_u32_e32 v5, vcc, 0, v0
 ; TONGA-NEXT:    v_mov_b32_e32 v13, 0
@@ -6556,12 +6509,12 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_subrev_u32_e32 v4, vcc, v0, v1
 ; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v0
 ; TONGA-NEXT:    v_cndmask_b32_e32 v12, v1, v4, vcc
-; TONGA-NEXT:  .LBB12_11:
+; TONGA-NEXT:  .LBB12_9:
 ; TONGA-NEXT:    v_or_b32_e32 v1, v7, v3
 ; TONGA-NEXT:    v_mov_b32_e32 v0, 0
 ; TONGA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; TONGA-NEXT:    s_cbranch_vccz .LBB12_17
-; TONGA-NEXT:  ; %bb.12:
+; TONGA-NEXT:    s_cbranch_vccz .LBB12_16
+; TONGA-NEXT:  ; %bb.10:
 ; TONGA-NEXT:    v_ashrrev_i32_e32 v0, 31, v3
 ; TONGA-NEXT:    v_add_u32_e32 v1, vcc, v2, v0
 ; TONGA-NEXT:    v_addc_u32_e32 v3, vcc, v3, v0, vcc
@@ -6667,8 +6620,8 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_xor_b32_e32 v1, v1, v15
 ; TONGA-NEXT:    v_sub_u32_e32 v14, vcc, v0, v15
 ; TONGA-NEXT:    v_subb_u32_e32 v15, vcc, v1, v15, vcc
-; TONGA-NEXT:    s_cbranch_execnz .LBB12_14
-; TONGA-NEXT:  .LBB12_13:
+; TONGA-NEXT:    s_cbranch_execnz .LBB12_12
+; TONGA-NEXT:  .LBB12_11:
 ; TONGA-NEXT:    v_cvt_f32_u32_e32 v0, v2
 ; TONGA-NEXT:    v_sub_u32_e32 v1, vcc, 0, v2
 ; TONGA-NEXT:    v_mov_b32_e32 v15, 0
@@ -6687,7 +6640,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_subrev_u32_e32 v1, vcc, v2, v0
 ; TONGA-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
 ; TONGA-NEXT:    v_cndmask_b32_e32 v14, v0, v1, vcc
-; TONGA-NEXT:  .LBB12_14:
+; TONGA-NEXT:  .LBB12_12:
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s4
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s5
 ; TONGA-NEXT:    s_add_u32 s0, s4, 16
@@ -6697,13 +6650,16 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s1
 ; TONGA-NEXT:    flat_store_dwordx4 v[0:1], v[12:15]
 ; TONGA-NEXT:    s_endpgm
+; TONGA-NEXT:  .LBB12_13:
+; TONGA-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; TONGA-NEXT:    s_branch .LBB12_2
+; TONGA-NEXT:  .LBB12_14:
+; TONGA-NEXT:    s_branch .LBB12_5
 ; TONGA-NEXT:  .LBB12_15:
-; TONGA-NEXT:    s_branch .LBB12_7
-; TONGA-NEXT:  .LBB12_16:
 ; TONGA-NEXT:    ; implicit-def: $vgpr12_vgpr13
-; TONGA-NEXT:    s_branch .LBB12_10
-; TONGA-NEXT:  .LBB12_17:
-; TONGA-NEXT:    s_branch .LBB12_13
+; TONGA-NEXT:    s_branch .LBB12_8
+; TONGA-NEXT:  .LBB12_16:
+; TONGA-NEXT:    s_branch .LBB12_11
 ;
 ; EG-LABEL: srem_v4i64:
 ; EG:       ; %bb.0:
