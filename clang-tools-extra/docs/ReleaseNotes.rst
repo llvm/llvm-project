@@ -314,6 +314,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+  
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by omitting the custom 
+  replacement string, when the Reason starts with the character `>` in the
+  `CustomFunctions` option.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
