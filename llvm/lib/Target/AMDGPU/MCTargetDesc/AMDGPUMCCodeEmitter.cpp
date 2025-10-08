@@ -452,13 +452,16 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     // Yes! Encode it
     int64_t Imm = 0;
 
+    bool IsLit = false;
     if (Op.isImm())
       Imm = Op.getImm();
     else if (Op.isExpr()) {
-      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
+      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr())) {
         Imm = C->getValue();
-      else if (AMDGPU::isLitExpr(Op.getExpr()))
+      } else if (AMDGPU::isLitExpr(Op.getExpr())) {
+        IsLit = true;
         Imm = AMDGPU::getLitValue(Op.getExpr());
+      }
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
@@ -468,7 +471,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else {
       auto OpType =
           static_cast<AMDGPU::OperandType>(Desc.operands()[i].OperandType);
-      Imm = AMDGPU::encode32BitLiteral(Imm, OpType);
+      Imm = AMDGPU::encode32BitLiteral(Imm, OpType, IsLit);
       support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
     }
 
