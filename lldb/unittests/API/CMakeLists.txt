@@ -4,6 +4,8 @@ add_lldb_unittest(APITests
   SBMutexTest.cpp
   SBBreakpointClearConditionTest.cpp
 
+  SBAPITEST
+
   LINK_LIBS
     liblldb
   )
