@@ -20,6 +20,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <algorithm>
 #include <limits>
 #include <stdio.h>
 #include <string>
@@ -51,15 +52,14 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
     if (!CheckRE.isValid(REError))
       return createStringError(errc::invalid_argument, REError);
 
-    RegExes.emplace_back(std::make_pair(
-        std::make_unique<Regex>(std::move(CheckRE)), LineNumber));
+    auto Rg =
+        std::make_unique<Matcher::Reg>(Pattern, LineNumber, std::move(CheckRE));
+    RegExes.emplace_back(std::move(Rg));
 
     return Error::success();
   }
 
-  auto Glob = std::make_unique<Matcher::Glob>();
-  Glob->Name = Pattern.str();
-  Glob->LineNo = LineNumber;
+  auto Glob = std::make_unique<Matcher::Glob>(Pattern, LineNumber);
   // We must be sure to use the string in `Glob` rather than the provided
   // reference which could be destroyed before match() is called
   if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
@@ -69,14 +69,15 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
   return Error::success();
 }
 
-unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
+void SpecialCaseList::Matcher::match(
+    StringRef Query,
+    llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
   for (const auto &Glob : reverse(Globs))
     if (Glob->Pattern.match(Query))
-      return Glob->LineNo;
-  for (const auto &[Regex, LineNumber] : reverse(RegExes))
-    if (Regex->match(Query))
-      return LineNumber;
-  return 0;
+      Cb(Glob->Name, Glob->LineNo);
+  for (const auto &Regex : reverse(RegExes))
+    if (Regex->Rg.match(Query))
+      Cb(Regex->Name, Regex->LineNo);
 }
 
 // TODO: Refactor this to return Expected<...>
@@ -227,7 +228,7 @@ std::pair<unsigned, unsigned>
 SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
   for (const auto &S : reverse(Sections)) {
-    if (S.SectionMatcher.match(Section)) {
+    if (S.SectionMatcher.matchAny(Section)) {
       unsigned Blame = S.getLastMatch(Prefix, Query, Category);
       if (Blame)
         return {S.FileIdx, Blame};
@@ -236,17 +237,29 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
   return NotFound;
 }
 
+const SpecialCaseList::Matcher *
+SpecialCaseList::Section::findMatcher(StringRef Prefix,
+                                      StringRef Category) const {
+  SectionEntries::const_iterator I = Entries.find(Prefix);
+  if (I == Entries.end())
+    return nullptr;
+  StringMap<Matcher>::const_iterator II = I->second.find(Category);
+  if (II == I->second.end())
+    return nullptr;
+
+  return &II->second;
+}
+
 unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
                                                 StringRef Query,
                                                 StringRef Category) const {
-  SectionEntries::const_iterator I = Entries.find(Prefix);
-  if (I == Entries.end())
-    return 0;
-  StringMap<Matcher>::const_iterator II = I->second.find(Category);
-  if (II == I->second.end())
-    return 0;
-
-  return II->getValue().match(Query);
+  unsigned LastLine = 0;
+  if (const Matcher *M = findMatcher(Prefix, Category)) {
+    M->match(Query, [&](StringRef, unsigned LineNo) {
+      LastLine = std::max(LastLine, LineNo);
+    });
+  }
+  return LastLine;
 }
 
 } // namespace llvm
