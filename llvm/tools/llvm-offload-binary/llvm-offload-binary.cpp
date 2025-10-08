@@ -92,10 +92,9 @@ static Error bundleImages() {
     StringSaver Saver(Alloc);
     DenseMap<StringRef, StringRef> Args = getImageArguments(Image, Saver);
 
-    if (!Args.count("triple") || !Args.count("file"))
-      return createStringError(
-          inconvertibleErrorCode(),
-          "'file' and 'triple' are required image arguments");
+    if (!Args.count("file"))
+      return createStringError(inconvertibleErrorCode(),
+                               "'file' is a required image arguments");
 
     // Permit using multiple instances of `file` in a single string.
     for (auto &File : llvm::split(Args["file"], ",")) {

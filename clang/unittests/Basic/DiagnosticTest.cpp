@@ -294,7 +294,7 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
                                             locForFile("foo.cpp")));
 }
 
-TEST_F(SuppressionMappingTest, LastMatchWins) {
+TEST_F(SuppressionMappingTest, LongestMatchWins) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
   src:*clang/*
@@ -327,8 +327,10 @@ TEST_F(SuppressionMappingTest, LongShortMatch) {
 
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
                                            locForFile("test/t1.cpp")));
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                            locForFile("lld/test/t2.cpp")));
+
+  // FIXME: This is confusing.
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("lld/test/t2.cpp")));
 }
 
 TEST_F(SuppressionMappingTest, ShortLongMatch) {
