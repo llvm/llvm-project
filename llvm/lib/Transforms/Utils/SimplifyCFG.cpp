@@ -7943,6 +7943,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
     return requestResimplify();
 
+  // The conversion of switches to arithmetic or lookup table is disabled in
+  // the early optimization pipeline, as it may lose information or make the
+  // resulting code harder to analyze.
   if (Options.ConvertSwitchToArithmetic || Options.ConvertSwitchToLookupTable)
     if (simplifySwitchLookup(SI, Builder, DTU, DL, TTI,
                              Options.ConvertSwitchToLookupTable))
