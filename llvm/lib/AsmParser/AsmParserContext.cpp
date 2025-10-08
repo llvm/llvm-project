@@ -12,23 +12,23 @@ namespace llvm {
 
 std::optional<FileLocRange>
 AsmParserContext::getFunctionLocation(const Function *F) const {
-  if (!Functions.contains(F))
-    return std::nullopt;
-  return Functions.at(F);
+  if (auto FIt = Functions.find(F); FIt != Functions.end())
+    return FIt->second;
+  return std::nullopt;
 }
 
 std::optional<FileLocRange>
 AsmParserContext::getBlockLocation(const BasicBlock *BB) const {
-  if (!Blocks.contains(BB))
-    return std::nullopt;
-  return Blocks.at(BB);
+  if (auto BBIt = Blocks.find(BB); BBIt != Blocks.end())
+    return BBIt->second;
+  return std::nullopt;
 }
 
 std::optional<FileLocRange>
 AsmParserContext::getInstructionLocation(const Instruction *I) const {
-  if (!Instructions.contains(I))
-    return std::nullopt;
-  return Instructions.at(I);
+  if (auto IIt = Instructions.find(I); IIt != Instructions.end())
+    return IIt->second;
+  return std::nullopt;
 }
 
 Function *
