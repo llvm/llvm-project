@@ -403,8 +403,8 @@ struct Allocate : public Effect::Base<Allocate> {
 /// has been allocated. An 'allocate' effect implies only de-allocation of the
 /// resource, and not any visible allocation, mutation or dereference.
 struct Free : public Effect::Base<Free> {
-  Free() : Effect::Base<Free>() { 
-    this->priority = Priority::FreePriority; 
+  Free() : Effect::Base<Free>() {
+    this->priority = Priority::FreePriority;
     this->effectName = "<MemFree>";
   }
 };
@@ -413,8 +413,8 @@ struct Free : public Effect::Base<Free> {
 /// A 'read' effect implies only dereferencing of the resource, and not any
 /// visible mutation.
 struct Read : public Effect::Base<Read> {
-  Read() : Effect::Base<Read>() { 
-    this->priority = Priority::ReadPriority; 
+  Read() : Effect::Base<Read>() {
+    this->priority = Priority::ReadPriority;
     this->effectName = "<MemRead>";
   }
 };
@@ -423,8 +423,8 @@ struct Read : public Effect::Base<Read> {
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
 struct Write : public Effect::Base<Write> {
-  Write() : Effect::Base<Write>() { 
-    this->priority = Priority::WritePriority; 
+  Write() : Effect::Base<Write>() {
+    this->priority = Priority::WritePriority;
     this->effectName = "<MemWrite>";
   }
 };

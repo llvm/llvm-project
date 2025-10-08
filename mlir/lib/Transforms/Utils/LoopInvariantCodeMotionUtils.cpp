@@ -70,24 +70,27 @@ static bool canBeHoisted(Operation *op,
 /// on higher level analysis.
 ///
 /// resourceConflicts is modified by the function and will be non-empty
-static void
-mergeResource(MemoryConflictMap &resourceConflicts,
-              const MemoryEffects::EffectInstance &srcEffect,
-              bool srcHasConflict) {
+static void mergeResource(MemoryConflictMap &resourceConflicts,
+                          const MemoryEffects::EffectInstance &srcEffect,
+                          bool srcHasConflict) {
 
   TypeID srcResourceID = srcEffect.getResource()->getResourceID();
 
   bool srcIsAllocOrFree = isa<MemoryEffects::Allocate>(srcEffect.getEffect()) ||
                           isa<MemoryEffects::Free>(srcEffect.getEffect());
 
-  LDBG() << "<Merging Effect> : \"" << srcEffect.getEffect()->getEffectName() << " on resource <" << srcEffect.getResource()->getName() << ">\"" << "\n";
+  LDBG() << "<Merging Effect> : \"" << srcEffect.getEffect()->getEffectName()
+         << " on resource <" << srcEffect.getResource()->getName() << ">\""
+         << "\n";
 
   bool conflict = srcHasConflict || srcIsAllocOrFree;
 
   auto [dstIt, inserted] = resourceConflicts.insert(
         std::make_pair(srcResourceID, std::make_pair(conflict, srcEffect)));
   if (inserted) {
-    LDBG() << ". . . . " << "Effect inserted to map" << "\n";
+    LDBG() << ". . . . "
+           << "Effect inserted to map"
+           << "\n";
     return;
   }
 
@@ -96,7 +99,9 @@ mergeResource(MemoryConflictMap &resourceConflicts,
   auto dstEffect = dstIt->second.second;
 
   if (dstHasConflict) {
-    LDBG() << ". . . . " << "Resource has existing conflict from Effect Mem" << dstEffect.getValue() << "\n";
+    LDBG() << ". . . . "
+           << "Resource has existing conflict from Effect Mem"
+           << dstEffect.getValue() << "\n";
     return;
   }
 
@@ -106,7 +111,8 @@ mergeResource(MemoryConflictMap &resourceConflicts,
 
   conflict = conflict || readBeforeWrite;
 
-  LDBG() << ". . . . " << "Resource conflict status updated to = " << conflict << "\n";
+  LDBG() << ". . . . "
+         << "Resource conflict status updated to = " << conflict << "\n";
 
   dstIt->second = std::make_pair(conflict, srcEffect);
 }
@@ -123,7 +129,8 @@ static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
 /// flagged as having a conflict within the resourceConflicts map OR
 /// (b) op doesn't have a MemoryEffectOpInterface or has one but
 /// without any specific effects.
-static bool mayHaveMemoryEffectConflict(Operation *op, MemoryConflictMap *resourceConflicts) {
+static bool mayHaveMemoryEffectConflict(Operation *op,
+                                        MemoryConflictMap *resourceConflicts) {
   LDBG() << "<Checking for memory effect conflict on op> : "
          << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
@@ -142,10 +149,10 @@ static bool mayHaveMemoryEffectConflict(Operation *op, MemoryConflictMap *resour
 
   // Ops with Recursive Memory Effects are special-cased here.
   // For now we'll only allow them to be moved if they're effect
-  // free. 
-  // A potential solution is to recursively gather all resources on all contained
-  // ops and then run the for-loop further below. Requires
-  // discussions re: obscure corner cases.
+  // free.
+  // A potential solution is to recursively gather all resources on all
+  // contained ops and then run the for-loop further below. Requires discussions
+  // re: obscure corner cases.
   if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     return !isMemoryEffectFree(op);
   }
@@ -167,8 +174,10 @@ static bool mayHaveMemoryEffectConflict(Operation *op, MemoryConflictMap *resour
 
     bool hasConflict = resConIter->second.first;
     if (hasConflict) {
-      LDBG() << ". . . . " << "Conflict deteceted on resource <" << effect.getResource()->getName() 
-             << "> from Memory Effect Mem" << effect.getValue() << "\n";
+      LDBG() << ". . . . "
+             << "Conflict deteceted on resource <"
+             << effect.getResource()->getName() << "> from Memory Effect Mem"
+             << effect.getValue() << "\n";
       return true;
     }
   }
@@ -176,24 +185,26 @@ static bool mayHaveMemoryEffectConflict(Operation *op, MemoryConflictMap *resour
   return false;
 }
 
-static void mapLoopResourceUsage(
-    LoopLikeOpInterface loopLike, Operation *op,
-    MemoryConflictMap &resourceConflicts,
-    llvm::SmallSet<Operation *, 8> &opsWithReadBeforeWrite
-  ) {
+static void
+mapLoopResourceUsage(LoopLikeOpInterface loopLike, Operation *op,
+                     MemoryConflictMap &resourceConflicts,
+                     llvm::SmallSet<Operation *, 8> &opsWithReadBeforeWrite) {
 
-  LDBG() << "<Mapping resource usage on op> : " 
-    << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "\n";
+  LDBG() << "<Mapping resource usage on op> : "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "\n";
 
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-    LDBG() << ". . . . " << "op has MemoryEffectsOpInterface" << "\n";
+    LDBG() << ". . . . "
+           << "op has MemoryEffectsOpInterface"
+           << "\n";
 
     // gather all effects on op
     SmallVector<MemoryEffects::EffectInstance> effects =
         MemoryEffects::getMemoryEffectsSorted(op);
-    
-    LDBG() << ". . . . " << "# of effects = " << effects.size();
-    
+
+    LDBG() << ". . . . "
+           << "# of effects = " << effects.size();
+
     if (!effects.empty()) {
       // Any input to the op could be the input data source
       // for write effects in the same op. E.g.,
@@ -207,7 +218,8 @@ static void mapLoopResourceUsage(
       // A more complex analysis would be needed to determine
       // if this is a true conflict or not.
       bool writesConflict = hasLoopVariantInput(loopLike, op);
-      LDBG() << ". . . . " << "Has loop-variant input = "
+      LDBG() << ". . . . "
+             << "Has loop-variant input = "
              << (writesConflict ? "true" : "false") << "\n";
 
       bool hasRead = false;
@@ -217,8 +229,13 @@ static void mapLoopResourceUsage(
 
         if (isa<MemoryEffects::Write>(effect.getEffect())) {
           if (hasRead) {
-            LDBG() << ". . . . " << "read-before-write detected!" << "\n";
-            LDBG() << ". . . . " << ". . . . " << "Inserting op into set for later checks!" << "\n";
+            LDBG() << ". . . . "
+                   << "read-before-write detected!"
+                   << "\n";
+            LDBG() << ". . . . "
+                   << ". . . . "
+                   << "Inserting op into set for later checks!"
+                   << "\n";
             opsWithReadBeforeWrite.insert(op);
           }
 
@@ -229,15 +246,14 @@ static void mapLoopResourceUsage(
 
         // All writes to a resource that follow a read on any other resource
         // need additional logic to check if the read will result in a conflict
-        // on the following write op(s)'s resource(s). 
+        // on the following write op(s)'s resource(s).
         // Need to keep track of ops that have read before writes.
         // If the resource for the read effect has a conflict after all loop
-        // resource usages have been mapped, then the conflict will be propagated to the
-        // resources used by the following writes.
-        // LOGIC: if the read resource is in conflict,
-        // that means the value stored is no longer loop invariant --> the read could
-        // be the data source for the write --> the write is not guaranteed to be 
-        // loop invariant.
+        // resource usages have been mapped, then the conflict will be
+        // propagated to the resources used by the following writes. LOGIC: if
+        // the read resource is in conflict, that means the value stored is no
+        // longer loop invariant --> the read could be the data source for the
+        // write --> the write is not guaranteed to be loop invariant.
         if (isa<MemoryEffects::Read>(effect.getEffect())) {
           TypeID resourceID = effect.getResource()->getResourceID();
           auto resConIter = resourceConflicts.find(resourceID);
@@ -252,13 +268,14 @@ static void mapLoopResourceUsage(
 
   for (Region &region : op->getRegions())
     for (Operation &opInner : region.getOps())
-    mapLoopResourceUsage(loopLike, &opInner, resourceConflicts, opsWithReadBeforeWrite);
+      mapLoopResourceUsage(loopLike, &opInner, resourceConflicts,
+                           opsWithReadBeforeWrite);
 }
 
 static void propagateSameOpReadBeforeWriteConflicts(
-  LoopLikeOpInterface loopLike, Operation *op,
-  MemoryConflictMap &resourceConflicts,
-  llvm::SmallSet<Operation *, 8> &opsWithReadBeforeWrite) {
+    LoopLikeOpInterface loopLike, Operation *op,
+    MemoryConflictMap &resourceConflicts,
+    llvm::SmallSet<Operation *, 8> &opsWithReadBeforeWrite) {
 
   for (auto *opInner : opsWithReadBeforeWrite) {
     // gather all effects on op
@@ -274,7 +291,7 @@ static void propagateSameOpReadBeforeWriteConflicts(
         auto resConIter = resourceConflicts.find(resourceID);
 
         // already has conflict, move on
-        if (resConIter->getSecond().first) 
+        if (resConIter->getSecond().first)
           continue;
 
         resConIter->getSecond().first = true;
@@ -285,22 +302,23 @@ static void propagateSameOpReadBeforeWriteConflicts(
         TypeID resourceID = effect.getResource()->getResourceID();
         auto resConIter = resourceConflicts.find(resourceID);
 
-        if (resConIter != resourceConflicts.end() && resConIter->getSecond().first) {
+        if (resConIter != resourceConflicts.end() &&
+            resConIter->getSecond().first) {
           writesConflict = true;
         }
       }
     }
-    
   }
 }
 
-void mlir::mapResourceConflicts(
-  LoopLikeOpInterface loopLike, Operation *op,
-  MemoryConflictMap &resourceConflicts
-) {
+void mlir::mapResourceConflicts(LoopLikeOpInterface loopLike, Operation *op,
+                                MemoryConflictMap &resourceConflicts) {
   llvm::SmallSet<Operation *, 8> opsWithReadBeforeWrite;
-  mapLoopResourceUsage(loopLike, loopLike.getOperation(), resourceConflicts, opsWithReadBeforeWrite);
-  propagateSameOpReadBeforeWriteConflicts(loopLike, loopLike.getOperation(), resourceConflicts, opsWithReadBeforeWrite);
+  mapLoopResourceUsage(loopLike, loopLike.getOperation(), resourceConflicts,
+                       opsWithReadBeforeWrite);
+  propagateSameOpReadBeforeWriteConflicts(loopLike, loopLike.getOperation(),
+                                          resourceConflicts,
+                                          opsWithReadBeforeWrite);
 }
 
 size_t mlir::moveLoopInvariantCode(
@@ -317,15 +335,23 @@ size_t mlir::moveLoopInvariantCode(
   auto isMaybeDead = loopLike.isZeroTrip();
   auto tripCount = loopLike.getStaticTripCount();
 
-  bool confirmedDead = (isMaybeDead.has_value() && isMaybeDead.value()) || (tripCount.has_value() && tripCount.value() == 0);
+  bool confirmedDead = (isMaybeDead.has_value() && isMaybeDead.value()) ||
+                       (tripCount.has_value() && tripCount.value() == 0);
   bool ambiguousLiveness = !isMaybeDead.has_value() && !tripCount.has_value();
   bool loopIsLive = !confirmedDead && !ambiguousLiveness;
 
-  LDBG() << "Running LICM on loop op. . . ." << "\n";
-  LDBG() << "<LoopLikeOp> : " << OpWithFlags(loopLike.getOperation(), OpPrintingFlags().skipRegions()) << "\n";
-  LDBG() << ". . . . " << "confirmedDead = " << confirmedDead << "\n";
-  LDBG() << ". . . . " << "ambiguousLiveness = " << ambiguousLiveness << "\n";
-  LDBG() << ". . . . " << "loopIsLive = " << loopIsLive << "\n";
+  LDBG() << "Running LICM on loop op. . . ."
+         << "\n";
+  LDBG() << "<LoopLikeOp> : "
+         << OpWithFlags(loopLike.getOperation(),
+                        OpPrintingFlags().skipRegions())
+         << "\n";
+  LDBG() << ". . . . "
+         << "confirmedDead = " << confirmedDead << "\n";
+  LDBG() << ". . . . "
+         << "ambiguousLiveness = " << ambiguousLiveness << "\n";
+  LDBG() << ". . . . "
+         << "loopIsLive = " << loopIsLive << "\n";
 
   int iteration = 0;
   int numMoved = 0;
@@ -344,8 +370,8 @@ size_t mlir::moveLoopInvariantCode(
     //
     // loop "do" and "then" regions also merged.
     if (loopIsLive)
-      mapResourceConflicts(loopLike,loopLike.getOperation(), resourceConflicts);
-
+      mapResourceConflicts(loopLike, loopLike.getOperation(),
+                           resourceConflicts);
 
     auto regions = loopLike.getLoopRegions();
     for (Region *region : regions) {
@@ -369,16 +395,29 @@ size_t mlir::moveLoopInvariantCode(
 
         bool isHoistable = canBeHoisted(op, definedOutside);
         bool movableUnderSpeculabilityPath = shouldMoveSpeculatable(op, region);
-        bool movableUnderMemoryEffectsPath = loopIsLive && shouldMoveMemoryEffect(op, &resourceConflicts);
-        bool isNotMovable = !isHoistable || (!movableUnderSpeculabilityPath && !movableUnderMemoryEffectsPath);
+        bool movableUnderMemoryEffectsPath =
+            loopIsLive && shouldMoveMemoryEffect(op, &resourceConflicts);
+        bool isNotMovable = !isHoistable || (!movableUnderSpeculabilityPath &&
+                                             !movableUnderMemoryEffectsPath);
 
-        LDBG() << ". . . . " << "<Checking Op> : "
-          << OpWithFlags(op, OpPrintingFlags().skipRegions());
-        LDBG() << ". . . . " << ". . . . " << "isHoistable = " << isHoistable << "\n";
-        LDBG() << ". . . . " << ". . . . " << "movableUnderSpeculabilityPath = " << movableUnderSpeculabilityPath << "\n";
-        LDBG() << ". . . . " << ". . . . " << "movableUnderMemoryEffectsPath = " << movableUnderMemoryEffectsPath << "\n";
-        LDBG() << ". . . . " << ". . . . " << "isNotMovable = " << isNotMovable << "\n";
-              
+        LDBG() << ". . . . "
+               << "<Checking Op> : "
+               << OpWithFlags(op, OpPrintingFlags().skipRegions());
+        LDBG() << ". . . . "
+               << ". . . . "
+               << "isHoistable = " << isHoistable << "\n";
+        LDBG() << ". . . . "
+               << ". . . . "
+               << "movableUnderSpeculabilityPath = "
+               << movableUnderSpeculabilityPath << "\n";
+        LDBG() << ". . . . "
+               << ". . . . "
+               << "movableUnderMemoryEffectsPath = "
+               << movableUnderMemoryEffectsPath << "\n";
+        LDBG() << ". . . . "
+               << ". . . . "
+               << "isNotMovable = " << isNotMovable << "\n";
+
         if (isNotMovable)
           continue;
 
@@ -395,9 +434,15 @@ size_t mlir::moveLoopInvariantCode(
 
     numMovedTotal += numMoved;
 
-    LDBG() << ". . . . " << "Finishing LICM iteration " << iteration++ << "\n";
-    LDBG() << ". . . . " << ". . . . " << "Number of ops moved = " << numMoved << "\n";
-    LDBG() << ". . . . " << ". . . . " << "Total number of ops moved across iterations = " << numMovedTotal << "\n";
+    LDBG() << ". . . . "
+           << "Finishing LICM iteration " << iteration++ << "\n";
+    LDBG() << ". . . . "
+           << ". . . . "
+           << "Number of ops moved = " << numMoved << "\n";
+    LDBG() << ". . . . "
+           << ". . . . "
+           << "Total number of ops moved across iterations = " << numMovedTotal
+           << "\n";
 
   } while (numMoved > 0);
 
@@ -410,8 +455,12 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
-      [&](Operation *op, Region *) { return isMemoryEffectFree(op) && isSpeculatable(op); },
-      [&](Operation *op, MemoryConflictMap *resourceConflicts) { return !mayHaveMemoryEffectConflict(op, resourceConflicts); },
+      [&](Operation *op, Region *) {
+        return isMemoryEffectFree(op) && isSpeculatable(op);
+      },
+      [&](Operation *op, MemoryConflictMap *resourceConflicts) {
+        return !mayHaveMemoryEffectConflict(op, resourceConflicts);
+      },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
 }
 

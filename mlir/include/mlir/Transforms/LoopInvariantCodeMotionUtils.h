@@ -27,7 +27,7 @@ class Value;
 /// Alias for map used in LICM pass to track which memory resources have
 /// conflicts due to sequence of memory effects applied to them in the region of
 /// interest.  
-using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>; 
+using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>;
 
 /// Gathers potential conflicts on all memory resources used within loop.
 ///
@@ -40,7 +40,7 @@ using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::Effect
 /// \code
 ///   LoopLikeOpInterface myLoop = ...;
 ///   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
-///   myConflicts; 
+///   myConflicts;
 ///   gatherResourceConflicts(myLoop, myLoop.getOperation(), resourceConflicts);
 /// \endcode
 ///
