@@ -7,10 +7,10 @@
 // RUN:   %clang -ivfsoverlay %t/vfs.yaml -fmodules -fimplicit-module-maps \
 // RUN:     -fmodules-cache-path=%t/cache -fmodule-name=ModuleName \
 // RUN:     -I %/t/remapped -c %t/header-impl.c -o %t/header-impl.o \
-// RUN:     | FileCheck %s -DPREFIX=%/t
+// RUN:     | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:            "command-line": [
-// CHECK:              "-fmodule-map-file=[[PREFIX]]/remapped{{[/\\]}}module.modulemap"
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/remapped/module.modulemap"
 // CHECK:            "file-deps": [
 // CHECK:              "[[PREFIX]]/remapped/module.modulemap"
 
