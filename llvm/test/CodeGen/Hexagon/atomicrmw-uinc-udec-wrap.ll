@@ -184,53 +184,53 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = and(#24,asl(r0,#3))
-; CHECK-NEXT:     r3 = and(r0,#-4)
-; CHECK-NEXT:     r4 = #255
-; CHECK-NEXT:     r5 = and(r1,#255)
+; CHECK-NEXT:     r2 = and(r0,#-4)
+; CHECK-NEXT:     r3 = #255
+; CHECK-NEXT:     r4 = and(r1,#255)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = asl(r4,r0)
+; CHECK-NEXT:     r5 = asl(r3,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = sub(#-1,r2)
+; CHECK-NEXT:     r5 = sub(#-1,r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = memw_locked(r3)
+; CHECK-NEXT:     r7 = #255
+; CHECK-NEXT:     r6 = memw_locked(r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = lsr(r7,r0)
-; CHECK-NEXT:     r7 = and(r7,r6)
+; CHECK-NEXT:     r7 &= lsr(r6,r0)
+; CHECK-NEXT:     r8 = and(r6,r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = bitsclr(r2,r4)
-; CHECK-NEXT:     r8 = and(r2,#255)
+; CHECK-NEXT:     p0 = cmp.gtu(r7,r4)
+; CHECK-NEXT:     r7 = add(r7,#-1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = cmp.gtu(r8,r5)
-; CHECK-NEXT:     if (p1.new) r8 = add(r1,#0)
-; CHECK-NEXT:     if (!p1.new) r8 = add(r2,#-1)
+; CHECK-NEXT:     p1 = !bitsset(r3,r7)
+; CHECK-NEXT:     r9 = mux(p0,r1,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) r8 = add(r1,#0)
+; CHECK-NEXT:     if (p1) r9 = add(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r8 = and(r8,#255)
+; CHECK-NEXT:     r7 = and(r9,#255)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 |= asl(r8,r0)
+; CHECK-NEXT:     r8 |= asl(r7,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memw_locked(r3,p0) = r7
+; CHECK-NEXT:     memw_locked(r2,p0) = r8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     if (!p0) jump:nt .LBB4_1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = r2
+; CHECK-NEXT:     r0 = lsr(r6,r0)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = atomicrmw udec_wrap ptr %ptr, i8 %val seq_cst
@@ -243,53 +243,53 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = and(#24,asl(r0,#3))
-; CHECK-NEXT:     r3 = and(r0,#-4)
-; CHECK-NEXT:     r4 = ##65535
+; CHECK-NEXT:     r2 = and(r0,#-4)
+; CHECK-NEXT:     r3 = ##65535
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = asl(r4,r0)
-; CHECK-NEXT:     r5 = zxth(r1)
+; CHECK-NEXT:     r5 = asl(r3,r0)
+; CHECK-NEXT:     r4 = zxth(r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = sub(#-1,r2)
+; CHECK-NEXT:     r5 = sub(#-1,r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = memw_locked(r3)
+; CHECK-NEXT:     r7 = ##65535
+; CHECK-NEXT:     r6 = memw_locked(r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = lsr(r7,r0)
-; CHECK-NEXT:     r7 = and(r7,r6)
+; CHECK-NEXT:     r7 &= lsr(r6,r0)
+; CHECK-NEXT:     r8 = and(r6,r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = bitsclr(r2,r4)
-; CHECK-NEXT:     r8 = zxth(r2)
+; CHECK-NEXT:     p0 = cmp.gtu(r7,r4)
+; CHECK-NEXT:     r7 = add(r7,#-1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = cmp.gtu(r8,r5)
-; CHECK-NEXT:     if (p1.new) r8 = add(r1,#0)
-; CHECK-NEXT:     if (!p1.new) r8 = add(r2,#-1)
+; CHECK-NEXT:     p1 = !bitsset(r3,r7)
+; CHECK-NEXT:     r9 = mux(p0,r1,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) r8 = add(r1,#0)
+; CHECK-NEXT:     if (p1) r9 = add(r1,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r8 = zxth(r8)
+; CHECK-NEXT:     r7 = zxth(r9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 |= asl(r8,r0)
+; CHECK-NEXT:     r8 |= asl(r7,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memw_locked(r3,p0) = r7
+; CHECK-NEXT:     memw_locked(r2,p0) = r8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     if (!p0) jump:nt .LBB5_1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = r2
+; CHECK-NEXT:     r0 = lsr(r6,r0)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = atomicrmw udec_wrap ptr %ptr, i16 %val seq_cst
@@ -308,15 +308,17 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = cmp.gtu(r2,r1)
-; CHECK-NEXT:     p1 = cmp.eq(r2,#0)
-; CHECK-NEXT:     if (p0.new) r3 = add(r1,#0)
-; CHECK-NEXT:     if (!p0.new) r3 = add(r2,#-1)
+; CHECK-NEXT:     r3 = add(r2,#-1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p1) r3 = add(r1,#0)
+; CHECK-NEXT:     p1 = cmp.eq(r3,#-1)
+; CHECK-NEXT:     r4 = mux(p0,r1,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memw_locked(r0,p0) = r3
+; CHECK-NEXT:     if (p1) r4 = add(r1,#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     memw_locked(r0,p0) = r4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     if (!p0) jump:nt .LBB6_1
@@ -336,7 +338,6 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r7:6 = combine(#-1,#-1)
-; CHECK-NEXT:     r9:8 = combine(#0,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_1: // %atomicrmw.start
@@ -345,22 +346,20 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:     r5:4 = memd_locked(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = cmp.gtu(r5:4,r3:2)
-; CHECK-NEXT:     p0 = cmp.eq(r5:4,r9:8)
+; CHECK-NEXT:     p0 = cmp.gtu(r5:4,r3:2)
+; CHECK-NEXT:     r9:8 = add(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r13:12 = add(r5:4,r7:6)
+; CHECK-NEXT:     p1 = cmp.eq(r9:8,r7:6)
+; CHECK-NEXT:     r1 = mux(p0,r2,r8)
+; CHECK-NEXT:     r12 = mux(p0,r3,r9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = mux(p1,r2,r12)
-; CHECK-NEXT:     r14 = mux(p1,r3,r13)
+; CHECK-NEXT:     r14 = mux(p1,r2,r1)
+; CHECK-NEXT:     r15 = mux(p1,r3,r12)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r10 = mux(p0,r2,r1)
-; CHECK-NEXT:     r11 = mux(p0,r3,r14)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     memd_locked(r0,p0) = r11:10
+; CHECK-NEXT:     memd_locked(r0,p0) = r15:14
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     if (!p0) jump:nt .LBB7_1
