@@ -24,8 +24,8 @@ void f2() {
   // CHECK-MESSAGES: [[@LINE-4]]:3: warning: multiple declarations in a single statement reduces readability
   // CHECK-FIXES: int /* here is a comment */ v1;
   // CHECK-FIXES: int /* here is a comment */ // another comment
-  // CHECK-FIXES: v2 = 42 // Ok, more comments
-  // CHECK-FIXES: ;
+  // CHECK-FIXES:     v2 = 42 // Ok, more comments
+  // CHECK-FIXES:     ;
 
   auto int1 = 42, int2 = 0, int3 = 43;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: multiple declarations in a single statement reduces readability
@@ -334,12 +334,12 @@ void complex_typedefs() {
   // CHECK-MESSAGES: [[@LINE-7]]:3: warning: multiple declarations in a single statement reduces readability
   // CHECK-FIXES: int intfunction = returner();
   // CHECK-FIXES: int intarray[] =
-  // CHECK-FIXES: {
-  // CHECK-FIXES: 1,
-  // CHECK-FIXES: 2,
-  // CHECK-FIXES: 3,
-  // CHECK-FIXES: 4
-  // CHECK-FIXES: };
+  // CHECK-FIXES:         {
+  // CHECK-FIXES:                 1,
+  // CHECK-FIXES:                 2,
+  // CHECK-FIXES:                 3,
+  // CHECK-FIXES:                 4
+  // CHECK-FIXES:         };
   // CHECK-FIXES: int bb = 4;
   // clang-format on
 
@@ -368,7 +368,7 @@ void complex_typedefs() {
              *literal2 = "empty", literal3[] = "three";
   // CHECK-MESSAGES: [[@LINE-3]]:3: warning: multiple declarations in a single statement reduces readability
   // CHECK-FIXES: const char *literal1 = "clang"   "test"\
-  // CHECK-FIXES: "one";
+  // CHECK-FIXES:                        "one";
   // CHECK-FIXES: const char *literal2 = "empty";
   // CHECK-FIXES: const char literal3[] = "three";
   // clang-format on

@@ -42,7 +42,7 @@ void S::operator_equals() {
   m_b1 = (i > 2);
   if (m_b1 == true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b1)
+    // CHECK-FIXES: if (m_b1) {
     i = 5;
   } else {
     i = 6;
@@ -50,7 +50,7 @@ void S::operator_equals() {
   m_b2 = (i > 4);
   if (m_b2 == false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (!m_b2)
+    // CHECK-FIXES: if (!m_b2) {
     i = 7;
   } else {
     i = 9;
@@ -58,7 +58,7 @@ void S::operator_equals() {
   m_b3 = (i > 6);
   if (true == m_b3) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b3)
+    // CHECK-FIXES: if (m_b3) {
     i = 10;
   } else {
     i = 11;
@@ -66,7 +66,7 @@ void S::operator_equals() {
   m_b4 = (i > 8);
   if (false == m_b4) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (!m_b4)
+    // CHECK-FIXES: if (!m_b4) {
     i = 12;
   } else {
     i = 13;
@@ -78,7 +78,7 @@ void S::operator_or() {
   m_b1 = (i > 10);
   if (m_b1 || false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b1)
+    // CHECK-FIXES: if (m_b1) {
     i = 14;
   } else {
     i = 15;
@@ -86,7 +86,7 @@ void S::operator_or() {
   m_b2 = (i > 10);
   if (m_b2 || true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (true)
+    // CHECK-FIXES: if (true) {
     i = 16;
   } else {
     i = 17;
@@ -94,7 +94,7 @@ void S::operator_or() {
   m_b3 = (i > 10);
   if (false || m_b3) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b3)
+    // CHECK-FIXES: if (m_b3) {
     i = 18;
   } else {
     i = 19;
@@ -102,7 +102,7 @@ void S::operator_or() {
   m_b4 = (i > 10);
   if (true || m_b4) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (true)
+    // CHECK-FIXES: if (true) {
     i = 20;
   } else {
     i = 21;
@@ -114,7 +114,7 @@ void S::operator_and() {
   m_b1 = (i > 20);
   if (m_b1 && false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (false)
+    // CHECK-FIXES: if (false) {
     i = 22;
   } else {
     i = 23;
@@ -122,7 +122,7 @@ void S::operator_and() {
   m_b2 = (i > 20);
   if (m_b2 && true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b2)
+    // CHECK-FIXES: if (m_b2) {
     i = 24;
   } else {
     i = 25;
@@ -130,7 +130,7 @@ void S::operator_and() {
   m_b3 = (i > 20);
   if (false && m_b3) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (false)
+    // CHECK-FIXES: if (false) {
     i = 26;
   } else {
     i = 27;
@@ -138,7 +138,7 @@ void S::operator_and() {
   m_b4 = (i > 20);
   if (true && m_b4) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b4)
+    // CHECK-FIXES: if (m_b4) {
     i = 28;
   } else {
     i = 29;
@@ -165,7 +165,7 @@ void S::operator_not_equal() {
   m_b1 = (i > 20);
   if (false != m_b1) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b1)
+    // CHECK-FIXES: if (m_b1) {
     i = 30;
   } else {
     i = 31;
@@ -173,7 +173,7 @@ void S::operator_not_equal() {
   m_b2 = (i > 20);
   if (true != m_b2) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (!m_b2)
+    // CHECK-FIXES: if (!m_b2) {
     i = 32;
   } else {
     i = 33;
@@ -181,7 +181,7 @@ void S::operator_not_equal() {
   m_b3 = (i > 20);
   if (m_b3 != false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (m_b3)
+    // CHECK-FIXES: if (m_b3) {
     i = 34;
   } else {
     i = 35;
@@ -189,7 +189,7 @@ void S::operator_not_equal() {
   m_b4 = (i > 20);
   if (m_b4 != true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: if (!m_b4)
+    // CHECK-FIXES: if (!m_b4) {
     i = 36;
   } else {
     i = 37;

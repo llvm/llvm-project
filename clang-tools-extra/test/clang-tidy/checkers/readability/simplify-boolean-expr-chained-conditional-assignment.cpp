@@ -29,6 +29,6 @@ void chained_conditional_assignment(int i) {
     b = false;
   // CHECK-MESSAGES: :[[@LINE-3]]:9: warning: {{.*}} in conditional assignment
   // CHECK-FIXES:      else if (i < 10)
-  // CHECK-FIXES-NEXT: b = false;
+  // CHECK-FIXES-NEXT:   b = false;
   // CHECK-FIXES-NEXT: else b = i > 20;
 }

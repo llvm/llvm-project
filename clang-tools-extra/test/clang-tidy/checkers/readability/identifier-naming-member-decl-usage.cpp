@@ -203,7 +203,7 @@ template <typename T>
 struct DependentBase {
   int depValue;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for member 'depValue'
-  // CHECK-FIXES:  int DepValue;
+  // CHECK-FIXES: int DepValue;
 };
 
 template <typename T>
