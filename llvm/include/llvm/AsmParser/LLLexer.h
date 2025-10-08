@@ -109,12 +109,7 @@ namespace llvm {
   private:
     lltok::Kind LexToken();
 
-    // Return closest pointer after `Ptr` that is an end of a label.
-    // Returns nullptr if `Ptr` doesn't point into a label.
-    const char *getLabelTail(const char *Ptr);
     int getNextChar();
-    const char *skipNChars(unsigned N);
-    void advancePositionTo(const char *Ptr);
     void SkipLineComment();
     bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
