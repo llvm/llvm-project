@@ -2824,10 +2824,10 @@ bool CastInst::isNoopCast(const DataLayout &DL) const {
 /// The function returns a resultOpcode so these two casts can be replaced with:
 /// *  %Replacement = resultOpcode %SrcTy %x to DstTy
 /// If no such cast is permitted, the function returns 0.
-unsigned CastInst::isEliminableCastPair(
-  Instruction::CastOps firstOp, Instruction::CastOps secondOp,
-  Type *SrcTy, Type *MidTy, Type *DstTy, Type *SrcIntPtrTy, Type *MidIntPtrTy,
-  Type *DstIntPtrTy) {
+unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
+                                        Instruction::CastOps secondOp,
+                                        Type *SrcTy, Type *MidTy, Type *DstTy,
+                                        const DataLayout *DL) {
   // Define the 144 possibilities for these two cast instructions. The values
   // in this matrix determine what to do in a given situation and select the
   // case in the switch below.  The rows correspond to firstOp, the columns
@@ -2936,24 +2936,16 @@ unsigned CastInst::isEliminableCastPair(
         return 0;
 
       // Cannot simplify if address spaces are different!
-      if (SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace())
+      if (SrcTy != DstTy)
         return 0;
 
-      unsigned MidSize = MidTy->getScalarSizeInBits();
-      // We can still fold this without knowing the actual sizes as long we
-      // know that the intermediate pointer is the largest possible
+      // Cannot simplify if the intermediate integer size is smaller than the
       // pointer size.
-      // FIXME: Is this always true?
-      if (MidSize == 64)
-        return Instruction::BitCast;
-
-      // ptrtoint, inttoptr -> bitcast (ptr -> ptr) if int size is >= ptr size.
-      if (!SrcIntPtrTy || DstIntPtrTy != SrcIntPtrTy)
+      unsigned MidSize = MidTy->getScalarSizeInBits();
+      if (!DL || MidSize < DL->getPointerTypeSizeInBits(SrcTy))
         return 0;
-      unsigned PtrSize = SrcIntPtrTy->getScalarSizeInBits();
-      if (MidSize >= PtrSize)
-        return Instruction::BitCast;
-      return 0;
+
+      return Instruction::BitCast;
     }
     case 8: {
       // ext, trunc -> bitcast,    if the SrcTy and DstTy are the same
@@ -2973,14 +2965,17 @@ unsigned CastInst::isEliminableCastPair(
       // zext, sext -> zext, because sext can't sign extend after zext
       return Instruction::ZExt;
     case 11: {
-      // inttoptr, ptrtoint/ptrtoaddr -> bitcast if SrcSize<=PtrSize and
-      // SrcSize==DstSize
-      if (!MidIntPtrTy)
+      // inttoptr, ptrtoint/ptrtoaddr -> bitcast if SrcSize<=PtrSize/AddrSize
+      // and SrcSize==DstSize
+      if (!DL)
         return 0;
-      unsigned PtrSize = MidIntPtrTy->getScalarSizeInBits();
+      unsigned MidSize = secondOp == Instruction::PtrToAddr
+                             ? DL->getAddressSizeInBits(MidTy)
+                             : DL->getPointerTypeSizeInBits(MidTy);
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = DstTy->getScalarSizeInBits();
-      if (SrcSize <= PtrSize && SrcSize == DstSize)
+      // TODO: Could also produce zext or trunc here.
+      if (SrcSize <= MidSize && SrcSize == DstSize)
         return Instruction::BitCast;
       return 0;
     }

@@ -16,7 +16,9 @@
 #include "orc-rt-c/WrapperFunction.h"
 #include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Error.h"
+#include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/bind.h"
+#include "orc-rt/move_only_function.h"
 
 #include <utility>
 
@@ -204,6 +206,128 @@ struct ResultDeserializer<std::tuple<Error>, Serializer> {
 /// Provides call and handle utilities to simplify writing and invocation of
 /// wrapper functions in C++.
 struct WrapperFunction {
+
+  /// Wraps an asynchronous method (a method returning void, and taking a
+  /// return callback as its first argument) for use with
+  /// WrapperFunction::handle.
+  ///
+  /// AsyncMethod's call operator takes an ExecutorAddr as its second argument,
+  /// casts it to a ClassT*, and then calls the wrapped method on that pointer,
+  /// forwarding the return callback and any subsequent arguments (after the
+  /// second argument representing the object address).
+  ///
+  /// This utility removes some of the boilerplate from writing wrappers for
+  /// method calls.
+  template <typename ClassT, typename ReturnT, typename... ArgTs>
+  struct AsyncMethod {
+    AsyncMethod(void (ClassT::*M)(ReturnT, ArgTs...)) : M(M) {}
+    void operator()(ReturnT &&Return, ExecutorAddr Obj, ArgTs &&...Args) {
+      (Obj.toPtr<ClassT *>()->*M)(std::forward<ReturnT>(Return),
+                                  std::forward<ArgTs>(Args)...);
+    }
+
+  private:
+    void (ClassT::*M)(ReturnT, ArgTs...);
+  };
+
+  /// Create an AsyncMethod wrapper for the given method pointer. The given
+  /// method should be asynchronous: returning void, and taking a return
+  /// callback as its first argument.
+  ///
+  /// The handWithAsyncMethod function can be used to remove some of the
+  /// boilerplate from writing wrappers for method calls:
+  ///
+  ///   @code{.cpp}
+  ///   class MyClass {
+  ///   public:
+  ///     void myMethod(move_only_function<void(std::string)> Return,
+  //                    uint32_t X, bool Y) { ... }
+  ///   };
+  ///
+  ///   // SPS Method signature -- note MyClass object address as first
+  ///   // argument.
+  ///   using SPSMyMethodWrapperSignature =
+  ///     SPSString(SPSExecutorAddr, uint32_t, bool);
+  ///
+  ///
+  ///   static void adder_add_async_sps_wrapper(
+  ///       orc_rt_SessionRef Session, void *CallCtx,
+  ///       orc_rt_WrapperFunctionReturn Return,
+  ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
+  ///     SPSWrapperFunction<SPSSig>::handle(
+  ///         Session, CallCtx, Return, ArgBytes,
+  ///         WrapperFunction::handleWithAsyncMethod(&MyClass::myMethod));
+  ///   }
+  ///   @endcode
+  ///
+  template <typename ClassT, typename ReturnT, typename... ArgTs>
+  static AsyncMethod<ClassT, ReturnT, ArgTs...>
+  handleWithAsyncMethod(void (ClassT::*M)(ReturnT, ArgTs...)) {
+    return AsyncMethod<ClassT, ReturnT, ArgTs...>(M);
+  }
+
+  /// Wraps a synchronous method (an ordinary method that returns its result,
+  /// as opposed to an asynchronous method, see AsyncMethod) for use with
+  /// WrapperFunction::handle.
+  ///
+  /// SyncMethod's call operator takes a return callback as its first argument
+  /// and an ExecutorAddr as its second argument. The ExecutorAddr argument is
+  /// cast to a ClassT*, and then called passing the subsequent arguments
+  /// (after the second argument representing the object address). The Return
+  /// callback is then called on the value returned from the method.
+  ///
+  /// This utility removes some of the boilerplate from writing wrappers for
+  /// method calls.
+  template <typename ClassT, typename RetT, typename... ArgTs>
+  class SyncMethod {
+  public:
+    SyncMethod(RetT (ClassT::*M)(ArgTs...)) : M(M) {}
+
+    void operator()(move_only_function<void(RetT)> Return, ExecutorAddr Obj,
+                    ArgTs &&...Args) {
+      Return((Obj.toPtr<ClassT *>()->*M)(std::forward<ArgTs>(Args)...));
+    }
+
+  private:
+    RetT (ClassT::*M)(ArgTs...);
+  };
+
+  /// Create an SyncMethod wrapper for the given method pointer. The given
+  /// method should be synchronous, i.e. returning its result (as opposed to
+  /// asynchronous, see AsyncMethod).
+  ///
+  /// The handWithAsyncMethod function can be used to remove some of the
+  /// boilerplate from writing wrappers for method calls:
+  ///
+  ///   @code{.cpp}
+  ///   class MyClass {
+  ///   public:
+  ///     std::string myMethod(uint32_t X, bool Y) { ... }
+  ///   };
+  ///
+  ///   // SPS Method signature -- note MyClass object address as first
+  ///   // argument.
+  ///   using SPSMyMethodWrapperSignature =
+  ///     SPSString(SPSExecutorAddr, uint32_t, bool);
+  ///
+  ///
+  ///   static void adder_add_sync_sps_wrapper(
+  ///       orc_rt_SessionRef Session, void *CallCtx,
+  ///       orc_rt_WrapperFunctionReturn Return,
+  ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
+  ///     SPSWrapperFunction<SPSSig>::handle(
+  ///         Session, CallCtx, Return, ArgBytes,
+  ///         WrapperFunction::handleWithSyncMethod(&Adder::addSync));
+  ///   }
+  ///   @endcode
+  ///
+  template <typename ClassT, typename RetT, typename... ArgTs>
+  static SyncMethod<ClassT, RetT, ArgTs...>
+  handleWithSyncMethod(RetT (ClassT::*M)(ArgTs...)) {
+    return SyncMethod<ClassT, RetT, ArgTs...>(M);
+  }
 
   /// Make a call to a wrapper function.
   ///
