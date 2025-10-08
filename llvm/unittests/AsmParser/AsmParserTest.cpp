@@ -495,8 +495,6 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   } while (false)
 
 TEST(AsmParserTest, ParserObjectLocations) {
-  // Expected to fail with function location starting one character later, needs
-  // a fix
   StringRef Source = "define i32 @main() {\n"
                      "entry:\n"
                      "    %a = add i32 1, 2\n"
