@@ -269,16 +269,6 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
-  for (Value val : op->getResults()) {
-    if (liveSet.contains(val)) {
-      LDBG() << "Simple op is used by a public function, "
-                "preserving it: "
-             << OpWithFlags(op, OpPrintingFlags().skipRegions());
-      liveSet.insert_range(op->getOperands());
-      return;
-    }
-  }
-
   if (!isMemoryEffectFree(op) ||
       hasLive(op->getResults(), nonLiveSet, liveSet, la)) {
     LDBG() << "Simple op is not memory effect free or has live results, "
@@ -412,6 +402,82 @@ static Value createDummyArgument(CallOpInterface callOp, Value oldVal) {
   return {};
 }
 
+// When you mark a call operand as live, also mark its definition chain, recursively.
+// We handle RegionBranchOpInterface here. I think we should handle BranchOpInterface as well.
+void propagateBackward(Value val, DenseSet<Value> &liveSet) {
+  if (liveSet.contains(val)) return;
+  liveSet.insert(val);
+
+  if (auto defOp = val.getDefiningOp()) {
+    // Mark operands of live results as live
+    for (Value operand : defOp->getOperands()) {
+      propagateBackward(operand, liveSet);
+    }
+
+    // Handle RegionBranchOpInterface specially
+    if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(defOp)) {
+      // If this is a result of a RegionBranchOpInterface, we need to trace back
+      // through the control flow to find the sources that contribute to this result
+
+      OpResult result = cast<OpResult>(val);
+      unsigned resultIndex = result.getResultNumber();
+
+      // Find all possible sources that can contribute to this result
+      // by examining all regions and their terminators
+      for (Region &region : regionBranchOp->getRegions()) {
+        if (region.empty()) continue;
+
+        // Get the successors from this region
+        SmallVector<RegionSuccessor> successors;
+        regionBranchOp.getSuccessorRegions(RegionBranchPoint(&region), successors);
+
+        // Check if any successor can produce this result
+        for (const RegionSuccessor &successor : successors) {
+          if (successor.isParent()) {
+            // This region can return to the parent operation
+            ValueRange successorInputs = successor.getSuccessorInputs();
+            if (resultIndex < successorInputs.size()) {
+              // Find the terminator that contributes to this result
+              Operation *terminator = region.back().getTerminator();
+              if (auto regionBranchTerm =
+                  dyn_cast<RegionBranchTerminatorOpInterface>(terminator)) {
+                OperandRange terminatorOperands =
+                    regionBranchTerm.getSuccessorOperands(RegionBranchPoint::parent());
+                if (resultIndex < terminatorOperands.size()) {
+                  // This terminator operand contributes to our result
+                  propagateBackward(terminatorOperands[resultIndex], liveSet);
+                }
+              }
+            }
+          }
+        }
+
+        // Also mark region arguments as live if they might contribute to this result
+        // Find which operand of the parent operation corresponds to region arguments
+        Block &entryBlock = region.front();
+        for (BlockArgument arg : entryBlock.getArguments()) {
+          // Get entry successor operands - these are the operands that flow
+          // from the parent operation to this region
+          SmallVector<RegionSuccessor> entrySuccessors;
+          regionBranchOp.getSuccessorRegions(RegionBranchPoint::parent(), entrySuccessors);
+
+          for (const RegionSuccessor &entrySuccessor : entrySuccessors) {
+            if (entrySuccessor.getSuccessor() == &region) {
+              // Get the operands that are forwarded to this region
+              OperandRange entryOperands =
+                  regionBranchOp.getEntrySuccessorOperands(RegionBranchPoint::parent());
+              unsigned argIndex = arg.getArgNumber();
+              if (argIndex < entryOperands.size()) {
+                propagateBackward(entryOperands[argIndex], liveSet);
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 static void processCallOp(CallOpInterface callOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           DenseSet<Value> &liveSet) {
@@ -439,13 +505,8 @@ static void processCallOp(CallOpInterface callOp, Operation *module,
 
     for (int index : nonLiveArgs.set_bits()) {
       OpOperand *operand = callOpOperands[index];
-      Value oldVal = operand->get();
-      if (Value dummy = createDummyArgument(callOp, oldVal)) {
-        callOp->setOperand(operand->getOperandNumber(), dummy);
-        nonLiveSet.insert(oldVal);
-      } else {
-        liveSet.insert(oldVal);
-      }
+      LDBG() << "mark operand " << index << " live " << operand->get();
+      propagateBackward(operand->get(), liveSet);
     }
   }
 }

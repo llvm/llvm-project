@@ -45,7 +45,7 @@ struct BackwardIterator {
   static auto makeIterable(T &range) {
     if constexpr (std::is_same<T, Operation>()) {
       /// Make operations iterable: return the list of regions.
-      return llvm::reverse(range.getRegions());
+      return range.getRegions();
     } else {
       /// Regions and block are already iterable.
       return llvm::reverse(range);

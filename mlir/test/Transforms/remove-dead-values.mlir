@@ -576,8 +576,9 @@ module @return_void_with_unused_argument {
   }
 
   // CHECK-LABEL: func.func @main2
+  // CHECK: %[[ONE:.*]] = arith.constant 1 : i32
+  // CHECK: %[[UNUSED:.*]] = arith.addi %[[ONE]], %[[ONE]] : i32
   // CHECK: %[[MEM:.*]] = memref.alloc() : memref<4xf32>
-  // CHECK: %[[UNUSED:.*]] = arith.constant 0 : i32
   // CHECK: call @immutable_fn_with_unused_argument(%[[UNUSED]], %[[MEM]]) : (i32, memref<4xf32>) -> ()
   func.func @main2() -> () {
     %one = arith.constant 1 : i32
@@ -585,6 +586,24 @@ module @return_void_with_unused_argument {
     %mem = memref.alloc() : memref<4xf32>
 
     call @immutable_fn_with_unused_argument(%scalar, %mem) : (i32, memref<4xf32>) -> ()
+    return
+  }
+
+  // CHECK-LABEL: func.func @main3
+  // CHECK: %[[UNUSED:.*]] = scf.if %arg0 -> (i32)
+  // CHECK: %[[MEM:.*]] = memref.alloc() : memref<4xf32>
+  // CHECK: call @immutable_fn_with_unused_argument(%[[UNUSED]], %[[MEM]]) : (i32, memref<4xf32>) -> ()
+  func.func @main3(%arg0: i1) {
+    %0 = scf.if %arg0 -> (i32) {
+      %c1_i32 = arith.constant 1 : i32
+      scf.yield %c1_i32 : i32
+    } else {
+      %c0_i32 = arith.constant 0 : i32
+      scf.yield %c0_i32 : i32
+    }
+    %mem = memref.alloc() : memref<4xf32>
+
+    call @immutable_fn_with_unused_argument(%0, %mem) : (i32, memref<4xf32>) -> ()
     return
   }
 }
