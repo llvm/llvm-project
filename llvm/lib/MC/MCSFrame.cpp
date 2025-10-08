@@ -254,11 +254,8 @@ class SFrameEmitterImpl {
         // a problem, but allow others through. As an even more special case,
         // allow SP + 0.
         auto Reg = I.getOperandAsUnsigned(P, 0);
-        if (!Reg) {
-          Streamer.getContext().reportWarning(
-              CFI.getLoc(),
-              "skipping SFrame FDE; .cfi_escape with unknown effects");
-        }
+        // The parser should have failed in this case.
+        assert(Reg && "DW_CFA_val_offset with no register.");
         bool SPOk = true;
         if (*Reg == SPReg) {
           auto Opnd = I.getOperandAsSigned(P, 1);

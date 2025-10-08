@@ -23,7 +23,7 @@ cfi_escape_ok:
 cfi_escape_gnu_args_fp:
 	.cfi_startproc
 	.long 0
-# DW_CFA_GNU_args_size is OK arg size is zero
+# DW_CFA_GNU_args_size is OK if arg size is zero
 	.cfi_escape 0x2e, 0x0
 	.long 0
 	.cfi_def_cfa_register 6
