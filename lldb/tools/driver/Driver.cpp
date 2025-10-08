@@ -22,11 +22,15 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -426,6 +430,47 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
+#ifdef _WIN32
+// Returns the full path to the lldb.exe executable
+inline std::wstring GetPathToExecutableW() {
+  // Iterate until we reach the Windows max path length (32,767).
+  std::vector<WCHAR> buffer;
+  buffer.resize(MAX_PATH);
+  while (buffer.size() < 32767) {
+    if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
+      return std::wstring(buffer.begin(), buffer.end());
+    buffer.resize(buffer.size() * 2);
+  }
+  return L"";
+}
+
+// Resolve the full path of the directory defined by
+// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL search
+// directories.
+void AddPythonDLLToSearchPath() {
+  std::wstring modulePath = GetPathToExecutableW();
+  if (modulePath.empty()) {
+    WithColor::error() << "Unable to find python: " << GetLastError() << '\n';
+    return;
+  }
+
+  SmallVector<char, MAX_PATH> utf8Path;
+  if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
+                                utf8Path))
+    return;
+  sys::path::remove_filename(utf8Path);
+  sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
+  sys::fs::make_absolute(utf8Path);
+
+  SmallVector<wchar_t, 1> widePath;
+  if (sys::windows::widenPath(utf8Path.data(), widePath))
+    return;
+
+  if (sys::fs::exists(utf8Path))
+    SetDllDirectoryW(widePath.data());
+}
+#endif
+
 std::string EscapeString(std::string arg) {
   std::string::size_type pos = 0;
   while ((pos = arg.find_first_of("\"\\", pos)) != std::string::npos) {
@@ -726,6 +771,10 @@ int main(int argc, char const *argv[]) {
   llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
                         " and include the crash report from "
                         "~/Library/Logs/DiagnosticReports/.\n");
+#endif
+
+#ifdef _WIN32
+  AddPythonDLLToSearchPath();
 #endif
 
   // Parse arguments.

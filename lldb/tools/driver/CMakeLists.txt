@@ -34,6 +34,10 @@ add_dependencies(lldb
   ${tablegen_deps}
 )
 
+if(DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+  target_compile_definitions(lldb PRIVATE LLDB_PYTHON_DLL_RELATIVE_PATH="${LLDB_PYTHON_DLL_RELATIVE_PATH}")
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
