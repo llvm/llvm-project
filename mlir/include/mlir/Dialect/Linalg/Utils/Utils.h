@@ -114,6 +114,10 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 // Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// Fusion / Tiling utilities
+//===----------------------------------------------------------------------===//
+
 /// The type of loops to be generated during tiling.
 enum class LinalgTilingLoopType {
   Loops = 0,
