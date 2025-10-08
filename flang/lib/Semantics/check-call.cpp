@@ -58,29 +58,29 @@ static void CheckPassGlobalVariable(
     ownerType = "COMMON";
     ownerName = common->name().ToString();
     if (intrinsic) {
-      warn |= false;
+      // intrinsics can not change any global variable
     } else if (procedure && procedure->IsPure()) {
-      warn |= false;
+      // pure procedures can not affect global state
     } else if (dummyIsValue) {
-      warn |= false;
+      // copy of variable is passing
     } else if (!(actualFirstSymbol->Rank() == 1 &&
                    actualFirstSymbol->offset() == 0)) {
-      warn |= true;
+      warn = true;
     } else if (actualFirstSymbol->Rank() == 1) {
       bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
       if (!actualIsArrayElement) {
-        warn |= true;
+        warn = true;
       }
       if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
           dims && dims->IsExplicitShape()) {
         // tricky way to check that array has only one element
         if (!((*dims)[0].lbound().GetExplicit() ==
                 (*dims)[0].ubound().GetExplicit())) {
-          warn |= true;
+          warn = true;
         }
       }
       if (common->get<CommonBlockDetails>().objects().size() > 1) {
-        warn |= true;
+        warn = true;
       }
     }
   } else if (const auto &owner{actualFirstSymbol->GetUltimate().owner()};
@@ -90,32 +90,33 @@ static void CheckPassGlobalVariable(
     ownerName = module->GetName()->ToString();
     if (actualFirstSymbol->attrs().test(Attr::PARAMETER) ||
         actualFirstSymbol->attrs().test(Attr::PRIVATE)) {
-      warn |= false;
+      // parameter can not be changed anywhere
+      // private may be used for singletons
     } else if (auto type{characteristics::TypeAndShape::Characterize(
                    actualFirstSymbol, foldingContext)};
         type->type().category() == TypeCategory::Derived) {
-      warn |= false;
+      // derived types are easy to maintain
     } else if (intrinsic) {
-      warn |= false;
+      // intrinsics can not change any global variable
     } else if (procedure && procedure->IsPure()) {
-      warn |= false;
+      // pure procedures can not affect global state
     } else if (dummyIsValue) {
-      warn |= false;
+      // copy of variable is passing
     } else if (actualFirstSymbol->Rank() != 1) {
-      warn |= true;
+      warn = true;
     } else if (!actualFirstSymbol->attrs().test(Attr::ALLOCATABLE) &&
         !actualFirstSymbol->attrs().test(Attr::POINTER) &&
         !actualFirstSymbol->attrs().test(Attr::VOLATILE)) {
       bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
       if (!actualIsArrayElement) {
-        warn |= true;
+        warn = true;
       }
       if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
           dims && dims->IsExplicitShape()) {
         // tricky way to check that array has only one element
         if (!((*dims)[0].lbound().GetExplicit() ==
                 (*dims)[0].ubound().GetExplicit())) {
-          warn |= true;
+          warn = true;
         }
       }
     }
