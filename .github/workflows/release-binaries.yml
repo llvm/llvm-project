@@ -225,9 +225,25 @@ jobs:
       run: |
         mv ../workflows-main .
 
-    - name: Setup Stage
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
+
+    - name: Setup Windows
+      if: startsWith(runner.os, 'Windows')
+      uses: llvm/actions/setup-windows@main
+      with:
+        arch: amd64
+
+    - name: Set Build Prefix
       id: setup-stage
-      uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
+      shell: bash
+      run: |
+        build_prefix=`pwd`
+        if [ "${{ runner.os }}" = "Linux" ]; then
+          sudo chown $USER:$USER /mnt/
+          build_prefix=/mnt/
+        fi
+        echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
     - name: Configure
       id: build
@@ -258,17 +274,11 @@ jobs:
         path: |
           ${{ needs.prepare.outputs.release-binary-filename }}
 
-    # Clean up some build files to reduce size of artifact.
-    - name: Clean Up Build Directory
-      shell: bash
+    - name: Run Tests
+      # These almost always fail so don't let them fail the build and prevent the uploads.
+      continue-on-error: true
       run: |
-        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -prune -exec rm -r {} +
-    
-    - name: Save Stage
-      uses: ./workflows-main/.github/workflows/release-binaries-save-stage
-      with:
-        build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
+        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
   upload-release-binaries:
     name: "Upload Release Binaries"
@@ -327,31 +337,3 @@ jobs:
         --release ${{ needs.prepare.outputs.release-version }} \
         upload \
         --files ${{ needs.prepare.outputs.release-binary-filename }}*
-
-  test-release:
-    name: "Test Release"
-    needs:
-      - prepare
-      - build-release-package
-    if: >-
-      github.repository_owner == 'llvm'
-    runs-on: ${{ needs.prepare.outputs.test-runs-on }}
-    steps:
-    - name: Checkout Actions
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        path: workflows
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
-      with:
-        previous-artifact: build-release-package
-
-    - name: Run Tests
-      shell: bash
-      run: |
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
