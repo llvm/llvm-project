@@ -711,11 +711,6 @@ Transforms/CorrelatedValuePropagation/urem.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
-Transforms/DFAJumpThreading/dfa-jump-threading-analysis.ll
-Transforms/DFAJumpThreading/dfa-jump-threading-transform.ll
-Transforms/DFAJumpThreading/dfa-unfold-select.ll
-Transforms/DFAJumpThreading/max-path-length.ll
-Transforms/DFAJumpThreading/negative.ll
 Transforms/ExpandFp/AMDGPU/frem-inf.ll
 Transforms/ExpandFp/AMDGPU/frem.ll
 Transforms/ExpandLargeDivRem/X86/sdiv129.ll
