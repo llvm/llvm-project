@@ -80,7 +80,7 @@ Error DWARFDebugAddrTable::extractV5(const DWARFDataExtractor &Data,
   SegSize = Data.getU8(OffsetPtr);
 
   // Perform a basic validation of the header fields.
-  if (Version != 5)
+  if (Version < 5)
     return createStringError(errc::not_supported,
                              "address table at offset 0x%" PRIx64
                              " has unsupported version %" PRIu16,

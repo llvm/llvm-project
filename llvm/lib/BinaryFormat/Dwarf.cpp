@@ -740,6 +740,9 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return VirtualityString(Val);
   case DW_AT_language:
     return LanguageString(Val);
+  case DW_AT_language_name:
+    return LanguageDescription(
+        static_cast<llvm::dwarf::SourceLanguageName>(Val));
   case DW_AT_encoding:
     return AttributeEncodingString(Val);
   case DW_AT_decimal_sign:

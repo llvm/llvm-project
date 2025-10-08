@@ -2,8 +2,7 @@
 # RUN: not llvm-dwarfdump -debug-addr - 2> %t.err | FileCheck %s
 # RUN: FileCheck %s -input-file %t.err -check-prefix=ERR
 
-# ERR: address table at offset 0x0 has unsupported version 6
-# ERR: address table at offset 0x20 has unsupported version 4
+# ERR: address table at offset 0x10 has unsupported version 4
 # ERR-NOT: {{.}}
 
 # CHECK: .debug_addr contents
@@ -23,15 +22,6 @@
   .byte 1                       # DWARF unit type
 	.byte	4                       # Address Size (in bytes)
 	.long	.debug_abbrev           # Offset Into Abbrev. Section
-
-	.section	.debug_addr,"",@progbits
-.Ldebug_addr0:
-  .long 12 # unit_length = .short + .byte + .byte + .long + .long
-  .short 6 # version
-  .byte 4  # address_size
-  .byte 0  # segment_selector_size
-  .long 0x00000000
-  .long 0x00000001
 
 	.section	.debug_addr,"",@progbits
 .Ldebug_addr1:
