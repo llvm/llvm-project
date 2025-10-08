@@ -15,7 +15,7 @@ import re
 # Despite the test program printing correctly. See
 # https://github.com/llvm/llvm-project/issues/137599.
 
-
+@skipIf(bugnumber = "rdar://162151729")
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_default(self):
