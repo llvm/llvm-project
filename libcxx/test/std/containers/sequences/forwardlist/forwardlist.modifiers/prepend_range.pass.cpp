@@ -30,6 +30,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     });
   });
   test_sequence_prepend_range_move_only<std::forward_list>();
+  test_sequence_prepend_range_emplace_constructible<std::forward_list>();
 
   if (!TEST_IS_CONSTANT_EVALUATED) {
     test_prepend_range_exception_safety_throwing_copy<std::forward_list>();
