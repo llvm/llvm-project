@@ -416,6 +416,11 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
         __construct(std::forward<_That>(__opt).__get());
     }
   }
+
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val){
+    this->__get() = std::forward<_Up>(__val);
+  }
 };
 
 template <class _Tp>
@@ -468,6 +473,11 @@ struct __optional_storage_base<_Tp, true> {
       else
         __construct(std::forward<_That>(__opt).__get());
     }
+  }
+
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val){
+    __value_ = std::addressof(__val);
   }
 };
 
@@ -864,7 +874,7 @@ public:
                         int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(_Up&& __v) {
     if (this->has_value())
-      this->__get() = std::forward<_Up>(__v);
+      this->__assign_from_val(std::forward<_Up>(__v));
     else
       this->__construct(std::forward<_Up>(__v));
     return *this;
