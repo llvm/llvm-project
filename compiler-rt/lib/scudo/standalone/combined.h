@@ -780,11 +780,10 @@ public:
     return SecondaryT::getBlockEnd(BlockBegin) - UntaggedPtr;
   }
 
-  // Return the usable size for a given chunk. Technically we lie, as we just
-  // report the actual size of a chunk. This is done to counteract code actively
-  // writing past the end of a chunk (like sqlite3) when the usable size allows
-  // for it, which then forces realloc to copy the usable size of a chunk as
-  // opposed to its actual size.
+  // Return the usable size for a given chunk. If MTE is enabled or if the
+  // ExactUsableSize config parameter is true, we report the exact size of
+  // the original allocation size. Otherwise, we will return the total
+  // actual usable size.
   uptr getUsableSize(const void *Ptr) {
     if (UNLIKELY(!Ptr))
       return 0;
