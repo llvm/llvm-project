@@ -178,7 +178,7 @@ namespace llvm {
     // Map of module ID to path.
     std::map<unsigned, StringRef> ModuleIdMap;
 
-    /// Keeps track of source locations for Values, BasicBlocks, and Functions
+    /// Keeps track of source locations for Values, BasicBlocks, and Functions.
     AsmParserContext *ParserContext;
 
     /// Only the llvm-as tool may set this to false to bypass
