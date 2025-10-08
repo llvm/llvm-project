@@ -55,11 +55,11 @@ public:
   /// Iterate over the functions and promote the double fp constants that
   /// would otherwise go into the constant pool to a constant array.
   bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
     // TargetMachine and Subtarget are needed to query isFPImmlegal.
     const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
     const TargetMachine &TM = TPC.getTM<TargetMachine>();
-    if (skipModule(M))
-      return false;
     bool Changed = false;
     for (Function &F : M) {
       const RISCVSubtarget &ST = TM.getSubtarget<RISCVSubtarget>(F);
@@ -154,14 +154,14 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
       BasicBlock *InsertionBB;
       BasicBlock::iterator InsertionPt;
 
-      if (auto *PN = dyn_cast<PHINode>(UserInst)) {
-        // If the user is a PHI node, we must insert the load in the
-        // corresponding predecessor basic block.
-        unsigned OperandIdx = U->getOperandNo();
-        InsertionBB = PN->getIncomingBlock(OperandIdx);
-      } else {
+      // If the user is a PHI node, we must insert the load in the
+      // corresponding predecessor basic block. Otherwise, it's inserted into
+      // the same block as the use.
+      if (auto *PN = dyn_cast<PHINode>(UserInst))
+        InsertionBB = PN->getIncomingBlock(*U);
+      else
         InsertionBB = UserInst->getParent();
-      }
+
       // It is always safe to insert in the first insertion point in the BB,
       // so do that and let other passes reorder.
       InsertionPt = InsertionBB->getFirstInsertionPt();

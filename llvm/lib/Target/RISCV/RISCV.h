@@ -19,8 +19,8 @@
 
 namespace llvm {
 class FunctionPass;
-class ModulePass;
 class InstructionSelector;
+class ModulePass;
 class PassRegistry;
 class RISCVRegisterBankInfo;
 class RISCVSubtarget;
