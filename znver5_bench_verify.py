@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Parse llvm-exegesis measurements and compare with X86ScheduleZnver5.td definitions.
+Verify llvm-exegesis measurements against X86ScheduleZnver5.td scheduling model.
 """
 
 import yaml
-import re
+import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Tuple
@@ -80,86 +81,78 @@ def parse_measurements_test(measurements_file: str):
 
     return measurements
 
-def parse_tablegen(schedule_td_file: str = "llvm/lib/Target/X86/X86ScheduleZnver5.td") -> Tuple[Dict, Dict]:
-    """Parse X86ScheduleZnver5.td to extract scheduling definitions"""
-    print(f"\nParsing {schedule_td_file}...")
+def load_sched_info() -> Tuple[Dict, Dict]:
+    """
+    Run llvm-tblgen to generate scheduling info and parse the JSON output.
+    Returns: (schedule_info, instr_to_write_class)
+    """
+    print("\nGenerating scheduling info using llvm-tblgen...")
 
-    schedule_info = {}
-    instr_to_write_class = {}
+    # Run llvm-tblgen command
+    cmd = [
+        './build/bin/llvm-tblgen',
+        '-I', './llvm/lib/Target/X86',
+        '-I', './llvm/include',
+        '-I', './llvm',
+        'llvm/lib/Target/X86/X86.td',
+        '--gen-sched-info'
+    ]
 
-    with open(schedule_td_file, 'r') as f:
-        content = f.read()
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        json_data = json.loads(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running llvm-tblgen: {e}")
+        print(f"stderr: {e.stderr}")
+        return {}, {}
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON output: {e}")
+        return {}, {}
 
-    # Parse Write class definitions from Zn5WriteResIntPair/FPPair
-    # Example: defm : Zn5WriteResIntPair<WriteIMul32Reg, [Zn5Multiplier012], 3, [1], 1>;
-    pattern1 = r'defm?\s+:\s+Zn5WriteRes(?:Int|FP)?Pair<(Write\w+),\s*\[([^\]]+)\],\s*(\d+),\s*\[([^\]]+)\],\s*(\d+)'
+    # Extract Znver5Model.SchedWrites
+    znver5_model = json_data.get('Znver5Model', {})
+    schedule_info = znver5_model.get('SchedWrites', {})
 
-    for match in re.finditer(pattern1, content):
-        write_class = match.group(1)
-        resources = match.group(2)
-        latency = int(match.group(3))
-        release_cycles = match.group(4)
-        num_uops = int(match.group(5))
+    # Create instruction to write class mappings
+    # This is a simplified mapping - in production you would parse InstRW from TableGen
+    instr_to_write_class = {
+        # Integer multiply
+        'IMUL8r': 'WriteIMul8',
+        'IMUL16rr': 'WriteIMul16Reg',
+        'IMUL16rm': 'WriteIMul16RegLd',
+        'IMUL32rr': 'WriteIMul32Reg',
+        'IMUL32rm': 'WriteIMul32RegLd',
+        'IMUL64rr': 'WriteIMul64Reg',
+        'IMUL64rm': 'WriteIMul64RegLd',
 
-        schedule_info[write_class] = {
-            'resources': resources,
-            'latency': latency,
-            'release_cycles': release_cycles,
-            'num_uops': num_uops,
-            'type': 'pair'
-        }
+        # Basic ALU
+        'ADD32rr': 'WriteALU',
+        'ADD32rm': 'WriteALULd',
+        'ADD64rr': 'WriteALU',
+        'SUB32rr': 'WriteALU',
+        'XOR32rr': 'WriteALU',
+        'CMP32rr': 'WriteALU',
 
-    # Parse direct SchedWriteRes definitions
-    # Example: def Zn5WriteCMPXCHG8rr : SchedWriteRes<[Zn5ALU012345]> {
-    pattern2 = r'def\s+(Zn5Write\w+)\s*:\s*SchedWriteRes<\[([^\]]+)\]>\s*\{([^}]+)\}'
+        # FMA instructions
+        'VFMADD213PSr': 'WriteFMA',
+        'VFMADD213PSYr': 'WriteFMAY',
+        'VFMADD213PSZr': 'WriteFMAZ',
+        'VFMADD213PDr': 'WriteFMA',
+        'VFMADD213PDYr': 'WriteFMAY',
+        'VFMADD213PDZr': 'WriteFMAZ',
+    }
 
-    for match in re.finditer(pattern2, content, re.DOTALL):
-        zn5_write = match.group(1)
-        resources = match.group(2)
-        body = match.group(3)
-
-        # Extract fields from body
-        latency_match = re.search(r'Latency\s*=\s*(\d+)', body)
-        latency = int(latency_match.group(1)) if latency_match else 1
-
-        release_match = re.search(r'ReleaseAtCycles\s*=\s*\[([^\]]+)\]', body)
-        release_cycles = release_match.group(1) if release_match else str(latency)
-
-        uops_match = re.search(r'NumMicroOps\s*=\s*(\d+)', body)
-        num_uops = int(uops_match.group(1)) if uops_match else 1
-
-        schedule_info[zn5_write] = {
-            'resources': resources,
-            'latency': latency,
-            'release_cycles': release_cycles,
-            'num_uops': num_uops,
-            'type': 'direct'
-        }
-
-    # Parse InstRW mappings to find which instructions use which scheduling
-    # Example: def : InstRW<[Zn5WriteALUSlow], (instrs ADD8i8, ADD16i16)>;
-    pattern3 = r'def\s*:\s*InstRW<\[([\w\s,]+)\],\s*\(instrs\s+([^)]+)\)>'
-
-    for match in re.finditer(pattern3, content):
-        sched_writes = match.group(1).strip()
-        instrs_str = match.group(2)
-
-        # Parse instruction list - handle both comma and whitespace separation
-        instrs = [i.strip() for i in re.split(r'[,\s]+', instrs_str) if i.strip()]
-
-        for instr in instrs:
-            # Take the first scheduling write if multiple
-            write_class = sched_writes.split(',')[0].strip()
-            instr_to_write_class[instr] = write_class
-
-    print(f"Parsed {len(schedule_info)} scheduling definitions")
-    print(f"Parsed {len(instr_to_write_class)} instruction-to-write-class mappings")
+    print(f"Loaded {len(schedule_info)} scheduling definitions from TableGen")
+    print(f"Using {len(instr_to_write_class)} instruction-to-write-class mappings")
 
     return schedule_info, instr_to_write_class
 
 def compare_schedule_with_measurements(schedule_info: Dict, instr_to_write_class: Dict, measurements: Dict):
     """Compare schedule definitions with actual measurements"""
     print("\n=== Comparing Schedule Info with Measurements ===\n")
+
+    # Track mismatches for summary
+    mismatches = []
 
     # Create reverse mapping: Write class -> list of instructions
     write_class_to_instrs = {}
@@ -170,18 +163,16 @@ def compare_schedule_with_measurements(schedule_info: Dict, instr_to_write_class
 
     # For each schedule definition, find corresponding measurements
     for write_class, sched_def in schedule_info.items():
+        # Skip if not a proper schedule definition
+        if not isinstance(sched_def, dict) or 'Latency' not in sched_def:
+            continue
+
         # Find instructions that use this Write class
         instrs_using_write = []
 
         # Direct match in Write classes
         if write_class in write_class_to_instrs:
             instrs_using_write = write_class_to_instrs[write_class]
-
-        # Also check for Zn5Write* classes (custom Zen5 definitions)
-        for instr, wc in instr_to_write_class.items():
-            if wc == write_class or write_class in wc:
-                if instr not in instrs_using_write:
-                    instrs_using_write.append(instr)
 
         # Find measurements for these instructions
         measured_instrs = []
@@ -192,31 +183,56 @@ def compare_schedule_with_measurements(schedule_info: Dict, instr_to_write_class
         if measured_instrs:
             print(f"{write_class}:")
 
-            # Calculate expected throughput from release cycles
-            release_str = sched_def['release_cycles']
-            if release_str.isdigit():
-                expected_throughput = int(release_str)
-            else:
-                # Parse list like "1, 1, 2" and take the max
-                cycles = [int(x.strip()) for x in release_str.split(',') if x.strip().isdigit()]
-                expected_throughput = max(cycles) if cycles else 1
+            # Extract expected values from JSON format
+            expected_latency = sched_def.get('Latency', 0)
+            expected_throughput = sched_def.get('InverseThroughput', 0)
 
-            print(f"  Schedule: Latency={sched_def['latency']}, Resources={sched_def['resources']}, Release={sched_def['release_cycles']}, Throughput≈{expected_throughput}")
+            # Show resource info if available
+            resources = sched_def.get('Resources', [])
+            if resources:
+                res_str = ", ".join([f"{r['Name']}({r.get('NumUnits', 1)}u)" for r in resources[:2]])
+                print(f"  Schedule: Latency={expected_latency}, InverseThroughput={expected_throughput:.3f}, Resources=[{res_str}]")
+            else:
+                print(f"  Schedule: Latency={expected_latency}, InverseThroughput={expected_throughput:.3f}")
+
             print(f"  Found {len(measured_instrs)} measured instructions:")
 
             for instr, meas in measured_instrs:
                 output = f"    {instr}:"
-                if 'latency' in meas:
-                    lat_diff = abs(meas['latency'] - sched_def['latency'])
-                    status = "✓" if lat_diff <= 0.5 else "⚠"
-                    output += f" latency={meas['latency']:.4f} (expected={sched_def['latency']}) {status}"
-                if 'inverse_throughput' in meas:
+                has_mismatch = False
+
+                if 'latency' in meas and expected_latency > 0:
+                    lat_diff = abs(meas['latency'] - expected_latency)
+                    status = "✓" if lat_diff <= 0.5 else "MISMATCH"
+                    if status == "MISMATCH":
+                        has_mismatch = True
+                    output += f" latency={meas['latency']:.2f} (expected={expected_latency}) {status}"
+
+                if 'inverse_throughput' in meas and expected_throughput > 0:
                     thr_diff = abs(meas['inverse_throughput'] - expected_throughput)
-                    status = "✓" if thr_diff/expected_throughput <= 0.2 else "⚠"
-                    output += f" throughput={meas['inverse_throughput']:.4f} (expected≈{expected_throughput}) {status}"
+                    # Allow 10% tolerance for throughput
+                    relative_diff = thr_diff / expected_throughput if expected_throughput > 0 else thr_diff
+                    status = "✓" if relative_diff <= 0.1 else "MISMATCH"
+                    if status == "MISMATCH":
+                        has_mismatch = True
+                        mismatches.append({
+                            'write_class': write_class,
+                            'instruction': instr,
+                            'measured': meas['inverse_throughput'],
+                            'expected': expected_throughput
+                        })
+                    output += f" throughput={meas['inverse_throughput']:.3f} (expected={expected_throughput:.3f}) {status}"
+
                 print(output)
 
             print()
+
+    # Print summary of mismatches
+    if mismatches:
+        print("\n=== Summary of Throughput Mismatches ===")
+        for m in mismatches:
+            diff_pct = abs(m['measured'] - m['expected']) / m['expected'] * 100
+            print(f"  {m['write_class']}/{m['instruction']}: measured={m['measured']:.3f}, expected={m['expected']:.3f} ({diff_pct:.1f}% diff)")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -226,7 +242,7 @@ if __name__ == "__main__":
         # measurements_file = "znver5_latency.yaml"
 
     measurements = parse_measurements_test(measurements_file)
-    schedule_info, instr_to_write_class = parse_tablegen()
+    schedule_info, instr_to_write_class = load_sched_info()
 
     # Compare schedule definitions with measurements
     if measurements and schedule_info:
