@@ -1136,8 +1136,10 @@ libc_support_library(
         "src/__support/fixed_point/fx_rep.h",
     ],
     deps = [
+        ":__support_cpp_algorithm",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_libc_assert",
         ":__support_macros_attributes",
         ":__support_macros_null_check",
         ":__support_macros_optimization",
