@@ -795,6 +795,14 @@ namespace AArch64TLBI {
   #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64TLBIP {
+struct TLBIP : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_TLBIPTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TLBIP
+
 namespace AArch64II {
 /// Target Operand Flag enum.
 enum TOF {
