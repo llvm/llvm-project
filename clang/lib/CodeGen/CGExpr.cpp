@@ -3387,7 +3387,14 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       auto *FD = LambdaCaptureFields.lookup(BD);
       return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }
-    return EmitLValue(BD->getBinding());
+    // Suppress debug location updates when visiting the binding, since the
+    // binding may emit instructions that would otherwise be associated with the
+    // binding itself, rather than the expression referencing the binding. (this
+    // leads to jumpy debug stepping behavior where the location/debugger jump
+    // back to the binding declaration, then back to the expression referencing
+    // the binding)
+    DisableDebugLocationUpdates D(*this);
+    return EmitLValue(BD->getBinding(), NotKnownNonNull);
   }
 
   // We can form DeclRefExprs naming GUID declarations when reconstituting
@@ -3506,11 +3513,10 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
           CGM.getCXXABI().getMangleContext().getBlockId(BD, true);
       if (Discriminator)
         Name += "_" + Twine(Discriminator + 1).str();
-      auto C = CGM.GetAddrOfConstantCString(Name, GVName.c_str());
+      auto C = CGM.GetAddrOfConstantCString(Name, GVName);
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     } else {
-      auto C =
-          CGM.GetAddrOfConstantCString(std::string(FnName), GVName.c_str());
+      auto C = CGM.GetAddrOfConstantCString(std::string(FnName), GVName);
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     }
   }
@@ -3782,7 +3788,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
-    ArrayRef<llvm::Value *> DynamicArgs) {
+    ArrayRef<llvm::Value *> DynamicArgs, const TrapReason *TR) {
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
@@ -3821,7 +3827,7 @@ void CodeGenFunction::EmitCheck(
   }
 
   if (TrapCond)
-    EmitTrapCheck(TrapCond, CheckHandler, NoMerge);
+    EmitTrapCheck(TrapCond, CheckHandler, NoMerge, TR);
   if (!FatalCond && !RecoverableCond)
     return;
 
@@ -4133,7 +4139,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge) {
+                                    bool NoMerge, const TrapReason *TR) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4144,12 +4150,25 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+  llvm::StringRef TrapMessage;
+  llvm::StringRef TrapCategory;
+  auto DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
+  if (TR && !TR->isEmpty() &&
+      DebugTrapReasonKind ==
+          CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed) {
+    TrapMessage = TR->getMessage();
+    TrapCategory = TR->getCategory();
+  } else {
+    TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+    TrapCategory = "Undefined Behavior Sanitizer";
+  }
 
   if (getDebugInfo() && !TrapMessage.empty() &&
-      CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
+      DebugTrapReasonKind !=
+          CodeGenOptions::SanitizeDebugTrapReasonKind::None &&
+      TrapLocation) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+        TrapLocation, TrapCategory, TrapMessage);
   }
 
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
@@ -6477,11 +6496,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
-    llvm::Metadata *MD;
-    if (CGM.getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
-      MD = CGM.CreateMetadataIdentifierGeneralized(QualType(FnType, 0));
-    else
-      MD = CGM.CreateMetadataIdentifierForType(QualType(FnType, 0));
+    llvm::Metadata *MD =
+        CGM.CreateMetadataIdentifierForFnType(QualType(FnType, 0));
 
     llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
@@ -6768,29 +6784,26 @@ LValue CodeGenFunction::EmitPseudoObjectLValue(const PseudoObjectExpr *E) {
   return emitPseudoObjectExpr(*this, E, true, AggValueSlot::ignored()).LV;
 }
 
-void CodeGenFunction::FlattenAccessAndType(
-    Address Addr, QualType AddrType,
-    SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-    SmallVectorImpl<QualType> &FlatTypes) {
-  // WorkList is list of type we are processing + the Index List to access
-  // the field of that type in Addr for use in a GEP
-  llvm::SmallVector<std::pair<QualType, llvm::SmallVector<llvm::Value *, 4>>,
-                    16>
+void CodeGenFunction::FlattenAccessAndTypeLValue(
+    LValue Val, SmallVectorImpl<LValue> &AccessList) {
+
+  llvm::SmallVector<
+      std::tuple<LValue, QualType, llvm::SmallVector<llvm::Value *, 4>>, 16>
       WorkList;
   llvm::IntegerType *IdxTy = llvm::IntegerType::get(getLLVMContext(), 32);
-  // Addr should be a pointer so we need to 'dereference' it
-  WorkList.push_back({AddrType, {llvm::ConstantInt::get(IdxTy, 0)}});
+  WorkList.push_back({Val, Val.getType(), {llvm::ConstantInt::get(IdxTy, 0)}});
 
   while (!WorkList.empty()) {
-    auto [T, IdxList] = WorkList.pop_back_val();
+    auto [LVal, T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
     assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {
         llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
         IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
-        WorkList.emplace_back(CAT->getElementType(), IdxListCopy);
+        WorkList.emplace_back(LVal, CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
@@ -6798,44 +6811,75 @@ void CodeGenFunction::FlattenAccessAndType(
 
       const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);
 
-      llvm::SmallVector<QualType, 16> FieldTypes;
+      llvm::SmallVector<
+          std::tuple<LValue, QualType, llvm::SmallVector<llvm::Value *, 4>>, 16>
+          ReverseList;
       if (CXXD && CXXD->isStandardLayout())
         Record = CXXD->getStandardLayoutBaseWithFields();
 
       // deal with potential base classes
       if (CXXD && !CXXD->isStandardLayout()) {
-        for (auto &Base : CXXD->bases())
-          FieldTypes.push_back(Base.getType());
+        if (CXXD->getNumBases() > 0) {
+          assert(CXXD->getNumBases() == 1 &&
+                 "HLSL doesn't support multiple inheritance.");
+          auto Base = CXXD->bases_begin();
+          llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+          IdxListCopy.push_back(llvm::ConstantInt::get(
+              IdxTy, 0)); // base struct should be at index zero
+          ReverseList.emplace_back(LVal, Base->getType(), IdxListCopy);
+        }
       }
 
-      for (auto *FD : Record->fields())
-        FieldTypes.push_back(FD->getType());
+      const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(Record);
 
-      for (int64_t I = FieldTypes.size() - 1; I > -1; I--) {
-        llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
-        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
-        WorkList.insert(WorkList.end(), {FieldTypes[I], IdxListCopy});
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      LValue RLValue;
+      bool createdGEP = false;
+      for (auto *FD : Record->fields()) {
+        if (FD->isBitField()) {
+          if (FD->isUnnamedBitField())
+            continue;
+          if (!createdGEP) {
+            createdGEP = true;
+            Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList,
+                                                    LLVMT, Align, "gep");
+            RLValue = MakeAddrLValue(GEP, T);
+          }
+          LValue FieldLVal = EmitLValueForField(RLValue, FD, true);
+          ReverseList.push_back({FieldLVal, FD->getType(), {}});
+        } else {
+          llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
+          IdxListCopy.push_back(
+              llvm::ConstantInt::get(IdxTy, Layout.getLLVMFieldNo(FD)));
+          ReverseList.emplace_back(LVal, FD->getType(), IdxListCopy);
+        }
       }
+
+      std::reverse(ReverseList.begin(), ReverseList.end());
+      llvm::append_range(WorkList, ReverseList);
     } else if (const auto *VT = dyn_cast<VectorType>(T)) {
       llvm::Type *LLVMT = ConvertTypeForMem(T);
       CharUnits Align = getContext().getTypeAlignInChars(T);
-      Address GEP =
-          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "vector.gep");
+      Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
+                                              Align, "vector.gep");
+      LValue Base = MakeAddrLValue(GEP, T);
       for (unsigned I = 0, E = VT->getNumElements(); I < E; I++) {
-        llvm::Value *Idx = llvm::ConstantInt::get(IdxTy, I);
-        // gep on vector fields is not recommended so combine gep with
-        // extract/insert
-        AccessList.emplace_back(GEP, Idx);
-        FlatTypes.push_back(VT->getElementType());
+        llvm::Constant *Idx = llvm::ConstantInt::get(IdxTy, I);
+        LValue LV =
+            LValue::MakeVectorElt(Base.getAddress(), Idx, VT->getElementType(),
+                                  Base.getBaseInfo(), TBAAAccessInfo());
+        AccessList.emplace_back(LV);
       }
-    } else {
-      // a scalar/builtin type
-      llvm::Type *LLVMT = ConvertTypeForMem(T);
-      CharUnits Align = getContext().getTypeAlignInChars(T);
-      Address GEP =
-          Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "gep");
-      AccessList.emplace_back(GEP, nullptr);
-      FlatTypes.push_back(T);
+    } else { // a scalar/builtin type
+      if (!IdxList.empty()) {
+        llvm::Type *LLVMT = ConvertTypeForMem(T);
+        CharUnits Align = getContext().getTypeAlignInChars(T);
+        Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList,
+                                                LLVMT, Align, "gep");
+        AccessList.emplace_back(MakeAddrLValue(GEP, T));
+      } else // must be a bitfield we already created an lvalue for
+        AccessList.emplace_back(LVal);
     }
   }
 }

@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_SPIRV_IR_CONTROLFLOW_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -187,7 +188,8 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
 // -----
 
 def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
-    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>]> {
+    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call a function.";
 
   let description = [{

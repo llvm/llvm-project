@@ -753,6 +753,8 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       createSimpleFunction("__bolt_fini_trampoline",
                            BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
+    if (BC.isAArch64())
+      BC.MIB->createInstrCounterIncrFunc(BC);
   }
 }
 

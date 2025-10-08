@@ -477,10 +477,10 @@ reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
   return targetShard;
 }
 
-TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, GridOp grid,
-                               Sharding sourceSharding, Sharding targetSharding,
-                               TypedValue<ShapedType> sourceUnshardedValue,
-                               TypedValue<ShapedType> sourceShard) {
+static TypedValue<ShapedType>
+reshard(ImplicitLocOpBuilder &builder, GridOp grid, Sharding sourceSharding,
+        Sharding targetSharding, TypedValue<ShapedType> sourceUnshardedValue,
+        TypedValue<ShapedType> sourceShard) {
   // If source and destination sharding are the same, no need to do anything.
   if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
                                            isFullReplication(targetSharding))) {
@@ -535,7 +535,7 @@ using UnshardedToShardedValueMap = DenseMap<Value, Value>;
 // Get the types of block arguments for an partitioned block.
 // Reads the sharding annotations of the arguments to deduce the sharded types.
 // Types that are not ranked tensors are left unchanged.
-SmallVector<Type>
+static SmallVector<Type>
 shardedBlockArgumentTypes(Block &block,
                           SymbolTableCollection &symbolTableCollection) {
   SmallVector<Type> res;

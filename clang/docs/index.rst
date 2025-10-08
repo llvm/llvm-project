@@ -45,6 +45,7 @@ Using Clang as a Compiler
    BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
+   PointerAuthentication
    SafeStack
    ShadowCallStack
    SourceBasedCodeCoverage
@@ -100,7 +101,6 @@ Using Clang Tools
    ClangLinkerWrapper
    ClangNVLinkWrapper
    ClangOffloadBundler
-   ClangOffloadPackager
    ClangRepl
    ClangSYCLLinker
 

@@ -1552,9 +1552,11 @@ private:
   // BreakContinueStack - This keeps track of where break and continue
   // statements should jump to.
   struct BreakContinue {
-    BreakContinue(JumpDest Break, JumpDest Continue)
-        : BreakBlock(Break), ContinueBlock(Continue) {}
+    BreakContinue(const Stmt &LoopOrSwitch, JumpDest Break, JumpDest Continue)
+        : LoopOrSwitch(&LoopOrSwitch), BreakBlock(Break),
+          ContinueBlock(Continue) {}
 
+    const Stmt *LoopOrSwitch;
     JumpDest BreakBlock;
     JumpDest ContinueBlock;
   };
@@ -3606,6 +3608,8 @@ public:
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitAsmStmt(const AsmStmt &S);
 
+  const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
+
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
   void EmitObjCAtTryStmt(const ObjCAtTryStmt &S);
   void EmitObjCAtThrowStmt(const ObjCAtThrowStmt &S);
@@ -3690,8 +3694,9 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                     SourceLocation Loc);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
+                                     const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -3856,6 +3861,7 @@ public:
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPScopeDirective(const OMPScopeDirective &S);
@@ -4458,10 +4464,8 @@ public:
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
-  void FlattenAccessAndType(
-      Address Addr, QualType AddrTy,
-      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-      SmallVectorImpl<QualType> &FlatTypes);
+  void FlattenAccessAndTypeLValue(LValue LVal,
+                                  SmallVectorImpl<LValue> &AccessList);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);
@@ -5278,7 +5282,8 @@ public:
   EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>>
                 Checked,
             SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
-            ArrayRef<llvm::Value *> DynamicArgs);
+            ArrayRef<llvm::Value *> DynamicArgs,
+            const TrapReason *TR = nullptr);
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
@@ -5294,7 +5299,7 @@ public:
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
-                     bool NoMerge = false);
+                     bool NoMerge = false, const TrapReason *TR = nullptr);
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.

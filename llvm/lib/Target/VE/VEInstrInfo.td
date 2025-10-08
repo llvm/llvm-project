@@ -39,6 +39,8 @@ include "VEInstrFormats.td"
 //     e.g. 0.0 (0x00000000) or -2.0 (0xC0000000=(2)1).
 //===----------------------------------------------------------------------===//
 
+defvar ve_ptr_rc = I64;
+
 def ULO7 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0x7f,
                                    SDLoc(N), MVT::i32);
@@ -325,17 +327,17 @@ def VEMEMziiAsmOperand : AsmOperandClass {
 // ASX format uses single assembly instruction format.
 def MEMrri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc, i64imm);
+  let MIOperandInfo = (ops ve_ptr_rc, ve_ptr_rc, i64imm);
   let ParserMatchClass = VEMEMrriAsmOperand;
 }
 def MEMrii : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm, i64imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm, i64imm);
   let ParserMatchClass = VEMEMriiAsmOperand;
 }
 def MEMzri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
-  let MIOperandInfo = (ops i32imm /* = 0 */, ptr_rc, i64imm);
+  let MIOperandInfo = (ops i32imm /* = 0 */, ve_ptr_rc, i64imm);
   let ParserMatchClass = VEMEMzriAsmOperand;
 }
 def MEMzii : Operand<iPTR> {
@@ -358,7 +360,7 @@ def VEMEMziAsmOperand : AsmOperandClass {
 //   1. AS generic assembly instruction format:
 def MEMriASX : Operand<iPTR> {
   let PrintMethod = "printMemASOperandASX";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
 def MEMziASX : Operand<iPTR> {
@@ -370,7 +372,7 @@ def MEMziASX : Operand<iPTR> {
 //   2. AS RRM style assembly instruction format:
 def MEMriRRM : Operand<iPTR> {
   let PrintMethod = "printMemASOperandRRM";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
 def MEMziRRM : Operand<iPTR> {
@@ -382,7 +384,7 @@ def MEMziRRM : Operand<iPTR> {
 //   3. AS HM style assembly instruction format:
 def MEMriHM : Operand<iPTR> {
   let PrintMethod = "printMemASOperandHM";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ve_ptr_rc, i32imm);
   let ParserMatchClass = VEMEMriAsmOperand;
 }
 def MEMziHM : Operand<iPTR> {
@@ -642,7 +644,7 @@ multiclass RRIm<string opcStr, bits<8>opc,
 
 // Special RR multiclass for 128 bits shift left instruction.
 //   e.g. SLD
-let Constraints = "$hi = $sx", DisableEncoding = "$hi", hasSideEffects = 0 in
+let Constraints = "$hi = $sx", hasSideEffects = 0 in
 multiclass RRILDm<string opcStr, bits<8>opc, RegisterClass RC> {
   def rrr : RR<opc, (outs RC:$sx), (ins RC:$hi, RC:$sz, I32:$sy),
               !strconcat(opcStr, " $sx, $sz, $sy")>;
@@ -659,7 +661,7 @@ multiclass RRILDm<string opcStr, bits<8>opc, RegisterClass RC> {
 
 // Special RR multiclass for 128 bits shift right instruction.
 //   e.g. SRD
-let Constraints = "$low = $sx", DisableEncoding = "$low", hasSideEffects = 0 in
+let Constraints = "$low = $sx", hasSideEffects = 0 in
 multiclass RRIRDm<string opcStr, bits<8>opc, RegisterClass RC> {
   def rrr : RR<opc, (outs RC:$sx), (ins RC:$sz, RC:$low, I32:$sy),
               !strconcat(opcStr, " $sx, $sz, $sy")>;
@@ -689,7 +691,7 @@ multiclass RRI1m<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
 
 // Special RR multiclass for MRG instruction.
 //   e.g. MRG
-let Constraints = "$sx = $sd", DisableEncoding = "$sd", hasSideEffects = 0 in
+let Constraints = "$sx = $sd", hasSideEffects = 0 in
 multiclass RRMRGm<string opcStr, bits<8>opc, RegisterClass RC> {
   def rr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz, RC:$sd),
               !strconcat(opcStr, " $sx, $sy, $sz")>;
@@ -722,7 +724,7 @@ multiclass RRSWPm<string opcStr, bits<8>opc,
 
 // Multiclass for CMOV instructions.
 //   e.g. CMOVL, CMOVW, CMOVD, and etc.
-let Constraints = "$sx = $sd", DisableEncoding = "$sd", hasSideEffects = 0,
+let Constraints = "$sx = $sd", hasSideEffects = 0,
     cfw = ? in
 multiclass RRCMOVm<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
                    SDPatternOperator OpNode = null_frag,
@@ -805,7 +807,7 @@ multiclass PFCHm<string opcStr, bits<8>opc> {
 
 // Multiclass for CAS instructions.
 //   e.g. TS1AML, TS1AMW, TS2AM, and etc.
-let Constraints = "$sx = $sd", DisableEncoding = "$sd",
+let Constraints = "$sx = $sd",
     mayStore=1, mayLoad = 1, hasSideEffects = 0 in
 multiclass RRCAStgm<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
                     Operand immOp, Operand MEM, ComplexPattern ADDR,
@@ -920,7 +922,7 @@ multiclass STORECRm<string opcStr, bits<8>opc, RegisterClass RC> {
                !strconcat(opcStr, " $sx, $sy, $sz")>;
 }
 
-let hasSideEffects = 1, Constraints = "$sx = $sx_in", DisableEncoding = "$sx_in" in
+let hasSideEffects = 1, Constraints = "$sx = $sx_in" in
 multiclass TSCRm<string opcStr, bits<8>opc, RegisterClass RC> {
   def rrr : RR<opc, (outs RC:$sx), (ins RC:$sy, RC:$sz, RC:$sx_in),
                !strconcat(opcStr, " $sx, $sy, $sz")>;

@@ -25,12 +25,14 @@ template <typename Fn, typename... BoundArgTs> class BoundFn {
 private:
   template <size_t... Is, typename... ArgTs>
   auto callExpandingBound(std::index_sequence<Is...>, ArgTs &&...Args) {
-    return F(std::get<Is>(BoundArgs)..., std::move(Args)...);
+    return F(std::get<Is>(BoundArgs)..., std::forward<ArgTs>(Args)...);
   }
 
 public:
-  BoundFn(Fn &&F, BoundArgTs &&...BoundArgs)
-      : F(std::move(F)), BoundArgs(std::forward<BoundArgTs>(BoundArgs)...) {}
+  template <typename FnInit, typename... BoundArgInitTs>
+  BoundFn(FnInit &&F, BoundArgInitTs &&...BoundArgs)
+      : F(std::forward<FnInit>(F)),
+        BoundArgs(std::forward<BoundArgInitTs>(BoundArgs)...) {}
 
   template <typename... ArgTs> auto operator()(ArgTs &&...Args) {
     return callExpandingBound(std::index_sequence_for<BoundArgTs...>(),
@@ -38,16 +40,16 @@ public:
   }
 
 private:
-  std::decay_t<Fn> F;
-  std::tuple<std::decay_t<BoundArgTs>...> BoundArgs;
+  Fn F;
+  std::tuple<BoundArgTs...> BoundArgs;
 };
 
 } // namespace detail
 
 template <typename Fn, typename... BoundArgTs>
-detail::BoundFn<Fn, BoundArgTs...> bind_front(Fn &&F,
-                                              BoundArgTs &&...BoundArgs) {
-  return detail::BoundFn<Fn, BoundArgTs...>(
+detail::BoundFn<std::decay_t<Fn>, std::decay_t<BoundArgTs>...>
+bind_front(Fn &&F, BoundArgTs &&...BoundArgs) {
+  return detail::BoundFn<std::decay_t<Fn>, std::decay_t<BoundArgTs>...>(
       std::forward<Fn>(F), std::forward<BoundArgTs>(BoundArgs)...);
 }
 

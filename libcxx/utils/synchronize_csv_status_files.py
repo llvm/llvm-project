@@ -154,6 +154,12 @@ class PaperInfo:
     First version of LLVM in which this paper/issue was resolved.
     """
 
+    github_issue: Optional[str]
+    """
+    Optional number of the Github issue tracking the implementation status of this paper.
+    This is used to cross-reference rows in the status pages with Github issues.
+    """
+
     notes: Optional[str]
     """
     Optional plain text string representing notes to associate to the paper.
@@ -170,6 +176,7 @@ class PaperInfo:
                        status: PaperStatus,
                        meeting: Optional[str] = None,
                        first_released_version: Optional[str] = None,
+                       github_issue: Optional[str] = None,
                        notes: Optional[str] = None,
                        original: Optional[object] = None):
         self.paper_number = paper_number
@@ -177,16 +184,18 @@ class PaperInfo:
         self.status = status
         self.meeting = meeting
         self.first_released_version = first_released_version
+        self.github_issue = github_issue
         self.notes = notes
         self.original = original
 
-    def for_printing(self) -> Tuple[str, str, str, str, str, str]:
+    def for_printing(self) -> Tuple[str, str, str, str, str, str, str]:
         return (
             f'`{self.paper_number} <https://wg21.link/{self.paper_number}>`__',
             self.paper_name,
             self.meeting if self.meeting is not None else '',
             self.status.to_csv_entry(),
             self.first_released_version if self.first_released_version is not None else '',
+            f'`#{self.github_issue} <https://github.com/llvm/llvm-project/issues/{self.github_issue}>`__' if self.github_issue is not None else '',
             self.notes if self.notes is not None else '',
         )
 
@@ -203,13 +212,19 @@ class PaperInfo:
         if match is None:
             raise RuntimeError(f"Can't parse paper/issue number out of row: {row}")
 
+        # Match the issue number if present
+        github_issue = re.search(r'#([0-9]+)', row[5])
+        if github_issue:
+            github_issue = github_issue.group(1)
+
         return PaperInfo(
             paper_number=match.group(1),
             paper_name=row[1],
             status=PaperStatus.from_csv_entry(row[3]),
             meeting=row[2] or None,
             first_released_version=row[4] or None,
-            notes=row[5] or None,
+            github_issue=github_issue,
+            notes=row[6] or None,
             original=row,
         )
 
@@ -235,6 +250,7 @@ class PaperInfo:
             status=PaperStatus.from_github_issue(issue),
             meeting=issue.get('meeting Voted', None),
             first_released_version=None, # TODO
+            github_issue=str(issue['content']['number']),
             notes=notes,
             original=issue,
         )
@@ -252,19 +268,24 @@ def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
     is not useful.
 
     In case we don't update the CSV row's status, we still take any updated notes coming
-    from the Github issue.
+    from the Github issue and we add a link to the Github issue if it was previously missing.
     """
+    took_gh_in_full = False # Whether we updated the entire PaperInfo from the Github version
     if paper.status == PaperStatus(PaperStatus.TODO) and gh.status == PaperStatus(PaperStatus.IN_PROGRESS):
         result = copy.deepcopy(paper)
-        result.notes = gh.notes
     elif paper.status < gh.status:
         result = copy.deepcopy(gh)
+        took_gh_in_full = True
     elif paper.status == gh.status:
         result = copy.deepcopy(paper)
-        result.notes = gh.notes
     else:
         print(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
         result = copy.deepcopy(paper)
+
+    # If we didn't take the Github issue in full, make sure to update the notes, the link and anything else.
+    if not took_gh_in_full:
+        result.github_issue = gh.github_issue
+        result.notes = gh.notes
     return result
 
 def load_csv(file: pathlib.Path) -> List[Tuple]:
@@ -285,6 +306,8 @@ def create_github_issue(paper: PaperInfo, labels: List[str]) -> None:
     """
     Create a new Github issue representing the given PaperInfo.
     """
+    assert paper.github_issue is None, "Trying to create a Github issue for a paper that is already tracked"
+
     paper_name = paper.paper_name.replace('``', '`').replace('\\', '')
 
     create_cli = ['gh', 'issue', 'create', '--repo', 'llvm/llvm-project',
@@ -362,6 +385,17 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo], create_new: bool, 
             print(f"Found a row with more than one tracking issue: {row}\ntracked by: {tracking}")
             results.append(row)
             continue
+
+        # Validate the Github issue associated to the CSV row, if any
+        if paper.github_issue is not None:
+            if len(tracking) == 0:
+                print(f"Found row claiming to have a tracking issue, but failed to find a tracking issue on Github: {row}")
+                results.append(row)
+                continue
+            if len(tracking) == 1 and paper.github_issue != tracking[0].github_issue:
+                print(f"Found row with incorrect tracking issue: {row}\ntracked by: {tracking[0]}")
+                results.append(row)
+                continue
 
         # If there is no tracking issue for that row and we are creating new issues, do that.
         # Otherwise just log that we're missing an issue.

@@ -93,8 +93,8 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
     deviceTypes.push_back(
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
 
-  for (DeviceType DT : newDeviceTypes)
-    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+  for (DeviceType dt : newDeviceTypes)
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
 
   return mlir::ArrayAttr::get(context, deviceTypes);
 }
@@ -121,10 +121,10 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
   }
 
-  for (DeviceType DT : newDeviceTypes) {
+  for (DeviceType dt : newDeviceTypes) {
     argCollection.append(arguments);
     segments.push_back(arguments.size());
-    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
   }
 
   return mlir::ArrayAttr::get(context, deviceTypes);
@@ -173,9 +173,7 @@ void OpenACCDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
-  if (arrayAttr && *arrayAttr && arrayAttr->size() > 0)
-    return true;
-  return false;
+  return arrayAttr && *arrayAttr && arrayAttr->size() > 0;
 }
 
 static bool hasDeviceType(std::optional<mlir::ArrayAttr> arrayAttr,
@@ -2676,6 +2674,11 @@ LogicalResult acc::LoopOp::verify() {
           "privatizations", false)))
     return failure();
 
+  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
+          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+    return failure();
+
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
           "reductions", false)))
@@ -2739,7 +2742,8 @@ LogicalResult acc::LoopOp::verify() {
 }
 
 unsigned LoopOp::getNumDataOperands() {
-  return getReductionOperands().size() + getPrivateOperands().size();
+  return getReductionOperands().size() + getPrivateOperands().size() +
+         getFirstprivateOperands().size();
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
@@ -2964,10 +2968,10 @@ void acc::LoopOp::setCollapseForDeviceTypes(
     newDeviceTypes.push_back(
         acc::DeviceTypeAttr::get(context, DeviceType::None));
   } else {
-    for (DeviceType DT : effectiveDeviceTypes) {
+    for (DeviceType dt : effectiveDeviceTypes) {
       newValues.push_back(
           mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
-      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
     }
   }
 
@@ -3119,6 +3123,21 @@ void acc::LoopOp::addPrivatization(MLIRContext *context,
   setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
+void acc::LoopOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  getFirstprivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getFirstprivatizationRecipesAttr())
+    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
 void acc::LoopOp::addReduction(MLIRContext *context, mlir::acc::ReductionOp op,
                                mlir::acc::ReductionRecipeOp recipe) {
   getReductionOperandsMutable().append(op.getResult());
@@ -3146,7 +3165,8 @@ LogicalResult acc::DataOp::verify() {
                      "must appear on the data operation");
 
   for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
                    acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
             operand.getDefiningOp()))
@@ -3515,7 +3535,8 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
         "at least one operand must appear on the declare operation");
 
   for (mlir::Value operand : operands) {
-    if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
                    acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
             operand.getDefiningOp()))

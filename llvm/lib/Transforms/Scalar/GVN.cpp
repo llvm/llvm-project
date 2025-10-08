@@ -2287,6 +2287,35 @@ bool GVNPass::processLoad(LoadInst *L) {
   return true;
 }
 
+// Attempt to process masked loads which have loaded from
+// masked stores with the same mask
+bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
+  if (!MD)
+    return false;
+  MemDepResult Dep = MD->getDependency(I);
+  Instruction *DepInst = Dep.getInst();
+  if (!DepInst || !Dep.isLocal() || !Dep.isDef())
+    return false;
+
+  Value *Mask = I->getOperand(2);
+  Value *Passthrough = I->getOperand(3);
+  Value *StoreVal;
+  if (!match(DepInst, m_MaskedStore(m_Value(StoreVal), m_Value(), m_Value(),
+                                    m_Specific(Mask))) ||
+      StoreVal->getType() != I->getType())
+    return false;
+
+  // Remove the load but generate a select for the passthrough
+  Value *OpToForward = llvm::SelectInst::Create(Mask, StoreVal, Passthrough, "",
+                                                I->getIterator());
+
+  ICF->removeUsersOf(I);
+  I->replaceAllUsesWith(OpToForward);
+  salvageAndRemoveInstruction(I);
+  ++NumGVNLoad;
+  return true;
+}
+
 /// Return a pair the first field showing the value number of \p Exp and the
 /// second field showing whether it is a value number newly created.
 std::pair<uint32_t, bool>
@@ -2734,6 +2763,10 @@ bool GVNPass::processInstruction(Instruction *I) {
     return false;
   }
 
+  if (match(I, m_Intrinsic<Intrinsic::masked_load>()) &&
+      processMaskedLoad(cast<IntrinsicInst>(I)))
+    return true;
+
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
   if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
@@ -2982,7 +3015,8 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
 bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (isa<AllocaInst>(CurInst) || CurInst->isTerminator() ||
       isa<PHINode>(CurInst) || CurInst->getType()->isVoidTy() ||
-      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects())
+      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects() ||
+      CurInst->getType()->isTokenLikeTy())
     return false;
 
   // Don't do PRE on compares. The PHI would prevent CodeGenPrepare from

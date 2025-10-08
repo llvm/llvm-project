@@ -76,6 +76,9 @@ RUN sudo apt-get update \
     && sudo apt-get install -y \
         tzdata
 
+# Install various tools used by the build or the test suite
+# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual
+# installation below.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
@@ -108,9 +111,6 @@ RUN sudo apt-get update \
         xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
 
-# Install various tools used by the build or the test suite
-#RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
-# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
 RUN <<EOF
   set -e
   wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
