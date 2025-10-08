@@ -91,21 +91,23 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
 
 #if defined(_LIBCPP_ABI_ITANIUM)
 
-  size_t const* __cookie = reinterpret_cast<size_t const*>(__ptr) - 1;
-  return *__cookie;
+  using _ArrayCookie             = size_t;
+  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
+  char __cookie[sizeof(_ArrayCookie)];
+  __builtin_memcpy(&__cookie, __allocation_start, sizeof(_ArrayCookie)); // necessary to avoid violating strict aliasing
+  return *reinterpret_cast<_ArrayCookie const*>(&__cookie);
 
 #elif defined(_LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES)
 
-  struct _ArrayCookie {
+  struct [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(_Tp))]] _ArrayCookie {
     size_t __element_size;
     size_t __element_count;
   };
 
-  size_t __cookie_size_with_padding = // max(sizeof(_ArrayCookie), alignof(T))
-      sizeof(_ArrayCookie) < _LIBCPP_ALIGNOF(_Tp) ? _LIBCPP_ALIGNOF(_Tp) : sizeof(_ArrayCookie);
-  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - __cookie_size_with_padding;
-  _ArrayCookie const* __cookie   = reinterpret_cast<_ArrayCookie const*>(__allocation_start);
-  return __cookie->__element_count;
+  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
+  char __cookie[sizeof(_ArrayCookie)];
+  __builtin_memcpy(&__cookie, __allocation_start, sizeof(_ArrayCookie)); // necessary to avoid violating strict aliasing
+  return reinterpret_cast<_ArrayCookie const*>(&__cookie)->__element_count;
 
 #else
 
