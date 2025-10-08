@@ -876,38 +876,39 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   VPValue *AnyNaN = nullptr;
   SmallPtrSet<VPValue *, 2> RdxResults;
   for (VPReductionPHIRecipe *RedPhiR : ReductionsToConvert) {
-  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
-             RedPhiR->getRecurrenceKind()) &&
-         "unsupported reduction");
+    assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+               RedPhiR->getRecurrenceKind()) &&
+           "unsupported reduction");
 
-  VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
-  if (!MinMaxOp)
-    return false;
+    VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
+    if (!MinMaxOp)
+      return false;
 
-  VPValue *IsNaN = Builder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
-  VPValue *HasNaN = Builder.createNaryOp(VPInstruction::AnyOf, {IsNaN});
-  if (AnyNaN)
-    AnyNaN = Builder.createOr(AnyNaN, HasNaN);
-  else
-    AnyNaN = HasNaN;
+    VPValue *IsNaN = Builder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
+    VPValue *HasNaN = Builder.createNaryOp(VPInstruction::AnyOf, {IsNaN});
+    if (AnyNaN)
+      AnyNaN = Builder.createOr(AnyNaN, HasNaN);
+    else
+      AnyNaN = HasNaN;
 
-  // If we exit early due to NaNs, compute the final reduction result based
-  // on the reduction phi at the beginning of the last vector iteration.
-  auto *RdxResult = find_singleton<VPSingleDefRecipe>(
-      RedPhiR->getBackedgeValue()->users(),
-      [RedPhiR](VPUser *U, bool) -> VPSingleDefRecipe * {
-        auto *VPI = dyn_cast<VPInstruction>(U);
-        if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
-          return VPI;
-        assert(U == RedPhiR && "Backedge value must only be used by "
-                               "ComputeReductionResult and the reduction phi");
-        return nullptr;
-      });
+    // If we exit early due to NaNs, compute the final reduction result based
+    // on the reduction phi at the beginning of the last vector iteration.
+    auto *RdxResult = find_singleton<VPSingleDefRecipe>(
+        RedPhiR->getBackedgeValue()->users(),
+        [RedPhiR](VPUser *U, bool) -> VPSingleDefRecipe * {
+          auto *VPI = dyn_cast<VPInstruction>(U);
+          if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
+            return VPI;
+          assert(U == RedPhiR &&
+                 "Backedge value must only be used by "
+                 "ComputeReductionResult and the reduction phi");
+          return nullptr;
+        });
 
-  auto *NewSel =
-      MiddleBuilder.createSelect(HasNaN, RedPhiR, RdxResult->getOperand(1));
-  RdxResult->setOperand(1, NewSel);
-  RdxResults.insert(RdxResult);
+    auto *NewSel =
+        MiddleBuilder.createSelect(HasNaN, RedPhiR, RdxResult->getOperand(1));
+    RdxResult->setOperand(1, NewSel);
+    RdxResults.insert(RdxResult);
   }
 
   auto *LatchExitingBranch = LatchVPBB->getTerminator();
