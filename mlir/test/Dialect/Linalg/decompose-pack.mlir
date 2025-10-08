@@ -277,12 +277,14 @@ func.func @pack_with_adjacent_trailing_dimensions_inner_dims_pos_and_unit_outer(
 
 // -----
 
-func.func @pack_with_zero_pos_tile_size(%arg0: tensor<8x1x1x1xf32>, %arg1:tensor<1x1x1x1x8x1xf32>) -> tensor<1x1x1x1x8x1xf32> {
+// The following example shows a pack operation where the inner dims
+// positions are non-adjacent and non-permuted.
+func.func @pack_with_non_adjacent_and_non_permuted_inner_dims(%arg0: tensor<8x1x1x1xf32>, %arg1:tensor<1x1x1x1x8x1xf32>) -> tensor<1x1x1x1x8x1xf32> {
   %pack = linalg.pack %arg0 outer_dims_perm = [0, 1, 2, 3] inner_dims_pos = [0, 3] inner_tiles = [8, 1] into %arg1: tensor<8x1x1x1xf32> -> tensor<1x1x1x1x8x1xf32>
   return %pack : tensor<1x1x1x1x8x1xf32>
 }
 
-// CHECK-LABEL: func.func @pack_with_zero_pos_tile_size
+// CHECK-LABEL: func.func @pack_with_non_adjacent_and_non_permuted_inner_dims
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
 // CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x1x8x1xf32>
