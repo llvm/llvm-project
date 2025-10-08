@@ -206,8 +206,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
-      Name != "pauthtest")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
@@ -219,12 +218,6 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     // aapcs-soft is not allowed for targets with an FPU, to avoid there being
     // two incomatible ABIs.
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
-    return false;
-  }
-  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
-      getTriple().getOS() != llvm::Triple::Linux) {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << getTriple().getEnvironmentName() << getTriple().getTriple();
     return false;
   }
   return true;
