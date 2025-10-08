@@ -28,10 +28,9 @@ bb:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, emissionKind: FullDebug)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
 !1 = !DIFile(filename: "instr-ref-opt-bisect2.ll", directory: ".")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "instr-ref-opt-bisect2",  file: !1,  unit: !0)
+!3 = distinct !DISubprogram(name: "instr-ref-opt-bisect2", file: !1, unit: !0)
 !4 = !DILocalVariable(name: "arg", arg: 2, scope: !3)
 !5 = !DILocation(line: 0, scope: !3)
-
