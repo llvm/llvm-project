@@ -704,41 +704,41 @@ define amdgpu_kernel void @align2_align4_virtreg() {
 define amdgpu_kernel void @kernel_uses_write_register_a55() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_a55(
 ; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.write_register.i32(metadata !"a55", i32 0)
+; CHECK-NEXT:    call void @llvm.write_register.i32(metadata [[META0:![0-9]+]], i32 0)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.write_register.i64(metadata !"a55", i32 0)
+  call void @llvm.write_register.i64(metadata !0, i32 0)
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_write_register_v55() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_v55(
 ; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.write_register.i32(metadata !"v55", i32 0)
+; CHECK-NEXT:    call void @llvm.write_register.i32(metadata [[META1:![0-9]+]], i32 0)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.write_register.i64(metadata !"v55", i32 0)
+  call void @llvm.write_register.i64(metadata !1, i32 0)
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_write_register_a55_57() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_a55_57(
 ; CHECK-SAME: ) #[[ATTR3]] {
-; CHECK-NEXT:    call void @llvm.write_register.i96(metadata !"a[55:57]", i96 0)
+; CHECK-NEXT:    call void @llvm.write_register.i96(metadata [[META2:![0-9]+]], i96 0)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.write_register.i64(metadata !"a[55:57]", i96 0)
+  call void @llvm.write_register.i64(metadata !2, i96 0)
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_read_register_a55(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_register_a55(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[REG:%.*]] = call i32 @llvm.read_register.i32(metadata !"a55")
+; CHECK-NEXT:    [[REG:%.*]] = call i32 @llvm.read_register.i32(metadata [[META0]])
 ; CHECK-NEXT:    store i32 [[REG]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %reg = call i32 @llvm.read_register.i64(metadata !"a55")
+  %reg = call i32 @llvm.read_register.i64(metadata !0)
   store i32 %reg, ptr addrspace(1) %ptr
   ret void
 }
@@ -746,11 +746,11 @@ define amdgpu_kernel void @kernel_uses_read_register_a55(ptr addrspace(1) %ptr) 
 define amdgpu_kernel void @kernel_uses_read_volatile_register_a55(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_volatile_register_a55(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[REG:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata !"a55")
+; CHECK-NEXT:    [[REG:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata [[META0]])
 ; CHECK-NEXT:    store i32 [[REG]], ptr addrspace(1) [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %reg = call i32 @llvm.read_volatile_register.i64(metadata !"a55")
+  %reg = call i32 @llvm.read_volatile_register.i64(metadata !0)
   store i32 %reg, ptr addrspace(1) %ptr
   ret void
 }
@@ -758,11 +758,11 @@ define amdgpu_kernel void @kernel_uses_read_volatile_register_a55(ptr addrspace(
 define amdgpu_kernel void @kernel_uses_read_register_a56_59(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_register_a56_59(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[REG:%.*]] = call i128 @llvm.read_register.i128(metadata !"a[56:59]")
+; CHECK-NEXT:    [[REG:%.*]] = call i128 @llvm.read_register.i128(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    store i128 [[REG]], ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %reg = call i128 @llvm.read_register.i64(metadata !"a[56:59]")
+  %reg = call i128 @llvm.read_register.i64(metadata !3)
   store i128 %reg, ptr addrspace(1) %ptr
   ret void
 }
@@ -770,14 +770,21 @@ define amdgpu_kernel void @kernel_uses_read_register_a56_59(ptr addrspace(1) %pt
 define amdgpu_kernel void @kernel_uses_write_register_out_of_bounds_a256() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_out_of_bounds_a256(
 ; CHECK-SAME: ) #[[ATTR3]] {
-; CHECK-NEXT:    call void @llvm.write_register.i32(metadata !"a256", i32 0)
+; CHECK-NEXT:    call void @llvm.write_register.i32(metadata [[META4:![0-9]+]], i32 0)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.write_register.i64(metadata !"a256", i32 0)
+  call void @llvm.write_register.i64(metadata !4, i32 0)
   ret void
 }
 
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
+
+!0 = !{!"a55"}
+!1 = !{!"v55"}
+!2 = !{!"a[55:57]"}
+!3 = !{!"a[56:59]"}
+!4 = !{!"a256"}
+
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR1]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
@@ -790,4 +797,10 @@ attributes #0 = { "amdgpu-agpr-alloc"="0" }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR9:[0-9]+]] = { nocallback nounwind "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="0" }
+;.
+; CHECK: [[META0]] = !{!"a55"}
+; CHECK: [[META1]] = !{!"v55"}
+; CHECK: [[META2]] = !{!"a[55:57]"}
+; CHECK: [[META3]] = !{!"a[56:59]"}
+; CHECK: [[META4]] = !{!"a256"}
 ;.

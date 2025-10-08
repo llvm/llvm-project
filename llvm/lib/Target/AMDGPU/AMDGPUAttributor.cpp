@@ -1335,7 +1335,9 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
       case Intrinsic::read_register:
       case Intrinsic::read_volatile_register: {
         const MDString *RegName = cast<MDString>(
-            cast<MetadataAsValue>(CB.getArgOperand(0))->getMetadata());
+            cast<MDNode>(
+                cast<MetadataAsValue>(CB.getArgOperand(0))->getMetadata())
+                ->getOperand(0));
         auto [Kind, RegIdx, NumRegs] =
             AMDGPU::parseAsmPhysRegName(RegName->getString());
         return Kind != 'a';
