@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -87,6 +88,8 @@ struct MemIntrinsicInfo {
   bool ReadMem = false;
   bool WriteMem = false;
   bool IsVolatile = false;
+
+  SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
 
   bool isUnordered() const {
     return (Ordering == AtomicOrdering::NotAtomic ||
@@ -1328,7 +1331,7 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
+  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
   /// takes an accumulator of type \p AccumType and a second vector operand to
   /// be accumulated, whose element count is specified by \p VF. The type of
   /// reduction is specified by \p Opcode. The second operand passed to the
@@ -1546,12 +1549,6 @@ public:
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of VP Load and Store instructions.
-  LLVM_ABI InstructionCost getVPMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
 
   /// \return The cost of masked Load and Store instructions.

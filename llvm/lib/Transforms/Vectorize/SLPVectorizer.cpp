@@ -1100,7 +1100,9 @@ class BinOpSameOpcodeHelper {
       // constant + x cannot be -constant - x
       // instead, it should be x - -constant
       if (Pos == 1 ||
-          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
+          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
+            FromOpcode == Instruction::Xor) &&
+           ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
@@ -1187,6 +1189,10 @@ public:
       case Instruction::And:
         if (CIValue.isAllOnes())
           InterchangeableMask = CanBeAll;
+        break;
+      case Instruction::Xor:
+        if (CIValue.isZero())
+          InterchangeableMask = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT;
         break;
       default:
         if (CIValue.isZero())
@@ -2099,6 +2105,7 @@ public:
     UserIgnoreList = nullptr;
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
+    TreeEntryToStridedPtrInfoMap.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -2234,11 +2241,9 @@ public:
   /// TODO: If load combining is allowed in the IR optimizer, this analysis
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
-  bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-                     const DataLayout &DL, ScalarEvolution &SE,
-                     const bool IsAnyPointerUsedOutGraph, const int64_t Diff,
-                     StridedPtrInfo &SPtrInfo) const;
+  bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
+                     Align Alignment, const int64_t Diff, Value *Ptr0,
+                     Value *PtrN, StridedPtrInfo &SPtrInfo) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
@@ -6818,16 +6823,21 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// 4. Any pointer operand is an instruction with the users outside of the
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
-bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                            ArrayRef<unsigned> Order,
-                            const TargetTransformInfo &TTI,
-                            const DataLayout &DL, ScalarEvolution &SE,
-                            const bool IsAnyPointerUsedOutGraph,
-                            const int64_t Diff,
-                            StridedPtrInfo &SPtrInfo) const {
-  const size_t Sz = VL.size();
+bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
+                            Align Alignment, const int64_t Diff, Value *Ptr0,
+                            Value *PtrN, StridedPtrInfo &SPtrInfo) const {
+  const size_t Sz = PointerOps.size();
+  if (Diff % (Sz - 1) != 0)
+    return false;
+
+  // Try to generate strided load node.
+  auto IsAnyPointerUsedOutGraph = any_of(PointerOps, [&](Value *V) {
+    return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+             return !isVectorized(U) && !MustGather.contains(U);
+           });
+  });
+
   const uint64_t AbsoluteDiff = std::abs(Diff);
-  Type *ScalarTy = VL.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
@@ -6838,20 +6848,9 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
       return false;
-    Align Alignment =
-        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
-            ->getAlign();
-    if (!TTI.isLegalStridedLoadStore(VecTy, Alignment))
+    if (!TTI->isLegalStridedLoadStore(VecTy, Alignment))
       return false;
-    Value *Ptr0;
-    Value *PtrN;
-    if (Order.empty()) {
-      Ptr0 = PointerOps.front();
-      PtrN = PointerOps.back();
-    } else {
-      Ptr0 = PointerOps[Order.front()];
-      PtrN = PointerOps[Order.back()];
-    }
+
     // Iterate through all pointers and check if all distances are
     // unique multiple of Dist.
     SmallSet<int64_t, 4> Dists;
@@ -6860,14 +6859,14 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
       if (Ptr == PtrN)
         Dist = Diff;
       else if (Ptr != Ptr0)
-        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
       // If the strides are not the same or repeated, we can't
       // vectorize.
       if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
         break;
     }
     if (Dists.size() == Sz) {
-      Type *StrideTy = DL.getIndexType(Ptr0->getType());
+      Type *StrideTy = DL->getIndexType(Ptr0->getType());
       SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
       SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
       return true;
@@ -6956,18 +6955,11 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                                    cast<Instruction>(V), UserIgnoreList);
                              }))
       return LoadsState::CompressVectorize;
-    // Simple check if not a strided access - clear order.
-    bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
-    // Try to generate strided load node.
-    auto IsAnyPointerUsedOutGraph =
-        IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
-          return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
-                   return !isVectorized(U) && !MustGather.contains(U);
-                 });
-        });
-    if (IsPossibleStrided &&
-        isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
-                      IsAnyPointerUsedOutGraph, *Diff, SPtrInfo))
+    Align Alignment =
+        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
+            ->getAlign();
+    if (isStridedLoad(PointerOps, ScalarTy, Alignment, *Diff, Ptr0, PtrN,
+                      SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -8945,6 +8937,8 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         const SmallDenseSet<Value *> &UserIgnoreLst) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
@@ -8953,6 +8947,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   deleteTree();
+  assert(TreeEntryToStridedPtrInfoMap.empty() &&
+         "TreeEntryToStridedPtrInfoMap is not cleared");
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
@@ -10624,7 +10620,9 @@ class InstructionsCompatibilityAnalysis {
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
-    return Opcode == Instruction::Add || Opcode == Instruction::LShr;
+    return Opcode == Instruction::Add || Opcode == Instruction::LShr ||
+           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
+           Opcode == Instruction::UDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10941,6 +10939,9 @@ public:
       switch (MainOpcode) {
       case Instruction::Add:
       case Instruction::LShr:
+      case Instruction::Shl:
+      case Instruction::SDiv:
+      case Instruction::UDiv:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
@@ -17522,7 +17523,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
         all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) || E->isCopyableElement(V) ||
+          return isa<PoisonValue>(V) ||
+                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                 E->isCopyableElement(V) ||
                  (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
         }))
       Res = FindLastInst();
@@ -19122,7 +19125,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
-      Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      if (const TreeEntry *OpE = getOperandEntry(E, 1);
+          OpE && !OpE->isGather() && OpE->hasState() &&
+          !OpE->hasCopyableElements())
+        Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      else
+        setInsertPointAfterBundle(E);
       Value *V = vectorizeOperand(E, 1);
       ArrayRef<Value *> Op = E->getOperand(1);
       Type *ScalarTy = Op.front()->getType();
@@ -20804,12 +20812,45 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const EdgeInfo &EI) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
-  bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (isa<PHINode>(S.getMainOp()) ||
-      isVectorLikeInstWithConstOps(S.getMainOp()) ||
-      (!HasCopyables && doesNotNeedToSchedule(VL)) ||
-      all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))
+      isVectorLikeInstWithConstOps(S.getMainOp()))
     return nullptr;
+  bool HasCopyables = S.areInstructionsWithCopyableElements();
+  if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
+       all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {
+    // If all operands were replaced by copyables, the operands of this node
+    // might be not, so need to recalculate dependencies for schedule data,
+    // replaced by copyable schedule data.
+    SmallVector<ScheduleData *> ControlDependentMembers;
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || (HasCopyables && S.isCopyableElement(V)))
+        continue;
+      SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
+      for (const Use &U : I->operands()) {
+        unsigned &NumOps =
+            UserOpToNumOps.try_emplace(std::make_pair(I, U.get()), 0)
+                .first->getSecond();
+        ++NumOps;
+        if (auto *Op = dyn_cast<Instruction>(U.get());
+            Op && areAllOperandsReplacedByCopyableData(I, Op, *SLP, NumOps)) {
+          if (ScheduleData *OpSD = getScheduleData(Op);
+              OpSD && OpSD->hasValidDependencies()) {
+            OpSD->clearDirectDependencies();
+            if (RegionHasStackSave ||
+                !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+              ControlDependentMembers.push_back(OpSD);
+          }
+        }
+      }
+    }
+    if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
+                            ControlDependentMembers);
+    }
+    return nullptr;
+  }
 
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
@@ -21970,6 +22011,8 @@ bool BoUpSLP::collectValuesToDemote(
       return all_of(E.Scalars, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
+        if (E.isCopyableElement(V))
+          return true;
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
         return AmtKnownBits.getMaxValue().ult(BitWidth);
@@ -22026,8 +22069,10 @@ bool BoUpSLP::collectValuesToDemote(
     auto Checker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
       return all_of(E.Scalars, [&](Value *V) {
-        auto *I = cast<Instruction>(V);
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        if (E.hasCopyableElements() && E.isCopyableElement(V))
+          return MaskedValueIsZero(V, Mask, SimplifyQuery(*DL));
+        auto *I = cast<Instruction>(V);
         return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
                MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
       });
@@ -22409,10 +22454,10 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTruncRoot = true;
   }
   bool IsSignedCmp = false;
-  if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
-        return match(V, m_SMin(m_Value(), m_Value())) ||
-               match(V, m_SMax(m_Value(), m_Value()));
-      }))
+  if (UserIgnoreList &&
+      all_of(*UserIgnoreList,
+             match_fn(m_CombineOr(m_SMin(m_Value(), m_Value()),
+                                  m_SMax(m_Value(), m_Value())))))
     IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
@@ -24435,135 +24480,134 @@ public:
       VectorizedTree = GetNewVectorizedTree(
           VectorizedTree,
           emitReduction(Builder, *TTI, ReductionRoot->getType()));
-    if (VectorizedTree) {
-      // Reorder operands of bool logical op in the natural order to avoid
-      // possible problem with poison propagation. If not possible to reorder
-      // (both operands are originally RHS), emit an extra freeze instruction
-      // for the LHS operand.
-      // I.e., if we have original code like this:
-      // RedOp1 = select i1 ?, i1 LHS, i1 false
-      // RedOp2 = select i1 RHS, i1 ?, i1 false
 
-      // Then, we swap LHS/RHS to create a new op that matches the poison
-      // semantics of the original code.
-
-      // If we have original code like this and both values could be poison:
-      // RedOp1 = select i1 ?, i1 LHS, i1 false
-      // RedOp2 = select i1 ?, i1 RHS, i1 false
-
-      // Then, we must freeze LHS in the new op.
-      auto FixBoolLogicalOps = [&, VectorizedTree](Value *&LHS, Value *&RHS,
-                                                   Instruction *RedOp1,
-                                                   Instruction *RedOp2,
-                                                   bool InitStep) {
-        if (!AnyBoolLogicOp)
-          return;
-        if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
-                                      getRdxOperand(RedOp1, 0) == LHS ||
-                                      isGuaranteedNotToBePoison(LHS, AC)))
-          return;
-        if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
-                                      getRdxOperand(RedOp2, 0) == RHS ||
-                                      isGuaranteedNotToBePoison(RHS, AC))) {
-          std::swap(LHS, RHS);
-          return;
-        }
-        if (LHS != VectorizedTree)
-          LHS = Builder.CreateFreeze(LHS);
-      };
-      // Finish the reduction.
-      // Need to add extra arguments and not vectorized possible reduction
-      // values.
-      // Try to avoid dependencies between the scalar remainders after
-      // reductions.
-      auto FinalGen =
-          [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals,
-              bool InitStep) {
-            unsigned Sz = InstVals.size();
-            SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 +
-                                                                     Sz % 2);
-            for (unsigned I = 0, E = (Sz / 2) * 2; I < E; I += 2) {
-              Instruction *RedOp = InstVals[I + 1].first;
-              Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
-              Value *RdxVal1 = InstVals[I].second;
-              Value *StableRdxVal1 = RdxVal1;
-              auto It1 = TrackedVals.find(RdxVal1);
-              if (It1 != TrackedVals.end())
-                StableRdxVal1 = It1->second;
-              Value *RdxVal2 = InstVals[I + 1].second;
-              Value *StableRdxVal2 = RdxVal2;
-              auto It2 = TrackedVals.find(RdxVal2);
-              if (It2 != TrackedVals.end())
-                StableRdxVal2 = It2->second;
-              // To prevent poison from leaking across what used to be
-              // sequential, safe, scalar boolean logic operations, the
-              // reduction operand must be frozen.
-              FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
-                                RedOp, InitStep);
-              Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
-                                         StableRdxVal2, "op.rdx", ReductionOps);
-              ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
-            }
-            if (Sz % 2 == 1)
-              ExtraReds[Sz / 2] = InstVals.back();
-            return ExtraReds;
-          };
-      SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
-      ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
-                                   VectorizedTree);
-      SmallPtrSet<Value *, 8> Visited;
-      for (ArrayRef<Value *> Candidates : ReducedVals) {
-        for (Value *RdxVal : Candidates) {
-          if (!Visited.insert(RdxVal).second)
-            continue;
-          unsigned NumOps = VectorizedVals.lookup(RdxVal);
-          for (Instruction *RedOp :
-               ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
-            ExtraReductions.emplace_back(RedOp, RdxVal);
-        }
+    if (!VectorizedTree) {
+      if (!CheckForReusedReductionOps) {
+        for (ReductionOpsType &RdxOps : ReductionOps)
+          for (Value *RdxOp : RdxOps)
+            V.analyzedReductionRoot(cast<Instruction>(RdxOp));
       }
-      // Iterate through all not-vectorized reduction values/extra arguments.
-      bool InitStep = true;
-      while (ExtraReductions.size() > 1) {
-        SmallVector<std::pair<Instruction *, Value *>> NewReds =
-            FinalGen(ExtraReductions, InitStep);
-        ExtraReductions.swap(NewReds);
-        InitStep = false;
-      }
-      VectorizedTree = ExtraReductions.front().second;
+      return nullptr;
+    }
 
-      ReductionRoot->replaceAllUsesWith(VectorizedTree);
+    // Reorder operands of bool logical op in the natural order to avoid
+    // possible problem with poison propagation. If not possible to reorder
+    // (both operands are originally RHS), emit an extra freeze instruction
+    // for the LHS operand.
+    // I.e., if we have original code like this:
+    // RedOp1 = select i1 ?, i1 LHS, i1 false
+    // RedOp2 = select i1 RHS, i1 ?, i1 false
 
-      // The original scalar reduction is expected to have no remaining
-      // uses outside the reduction tree itself.  Assert that we got this
-      // correct, replace internal uses with undef, and mark for eventual
-      // deletion.
-#ifndef NDEBUG
-      SmallPtrSet<Value *, 4> IgnoreSet;
-      for (ArrayRef<Value *> RdxOps : ReductionOps)
-        IgnoreSet.insert_range(RdxOps);
-#endif
-      for (ArrayRef<Value *> RdxOps : ReductionOps) {
-        for (Value *Ignore : RdxOps) {
-          if (!Ignore)
-            continue;
-#ifndef NDEBUG
-          for (auto *U : Ignore->users()) {
-            assert(IgnoreSet.count(U) &&
-                   "All users must be either in the reduction ops list.");
+    // Then, we swap LHS/RHS to create a new op that matches the poison
+    // semantics of the original code.
+
+    // If we have original code like this and both values could be poison:
+    // RedOp1 = select i1 ?, i1 LHS, i1 false
+    // RedOp2 = select i1 ?, i1 RHS, i1 false
+
+    // Then, we must freeze LHS in the new op.
+    auto FixBoolLogicalOps =
+        [&, VectorizedTree](Value *&LHS, Value *&RHS, Instruction *RedOp1,
+                            Instruction *RedOp2, bool InitStep) {
+          if (!AnyBoolLogicOp)
+            return;
+          if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
+                                        getRdxOperand(RedOp1, 0) == LHS ||
+                                        isGuaranteedNotToBePoison(LHS, AC)))
+            return;
+          if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
+                                        getRdxOperand(RedOp2, 0) == RHS ||
+                                        isGuaranteedNotToBePoison(RHS, AC))) {
+            std::swap(LHS, RHS);
+            return;
           }
-#endif
-          if (!Ignore->use_empty()) {
-            Value *P = PoisonValue::get(Ignore->getType());
-            Ignore->replaceAllUsesWith(P);
-          }
-        }
-        V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
+          if (LHS != VectorizedTree)
+            LHS = Builder.CreateFreeze(LHS);
+        };
+    // Finish the reduction.
+    // Need to add extra arguments and not vectorized possible reduction values.
+    // Try to avoid dependencies between the scalar remainders after reductions.
+    auto FinalGen = [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals,
+                        bool InitStep) {
+      unsigned Sz = InstVals.size();
+      SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 + Sz % 2);
+      for (unsigned I = 0, E = (Sz / 2) * 2; I < E; I += 2) {
+        Instruction *RedOp = InstVals[I + 1].first;
+        Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
+        Value *RdxVal1 = InstVals[I].second;
+        Value *StableRdxVal1 = RdxVal1;
+        auto It1 = TrackedVals.find(RdxVal1);
+        if (It1 != TrackedVals.end())
+          StableRdxVal1 = It1->second;
+        Value *RdxVal2 = InstVals[I + 1].second;
+        Value *StableRdxVal2 = RdxVal2;
+        auto It2 = TrackedVals.find(RdxVal2);
+        if (It2 != TrackedVals.end())
+          StableRdxVal2 = It2->second;
+        // To prevent poison from leaking across what used to be sequential,
+        // safe, scalar boolean logic operations, the reduction operand must be
+        // frozen.
+        FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
+                          RedOp, InitStep);
+        Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
+                                   StableRdxVal2, "op.rdx", ReductionOps);
+        ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
       }
-    } else if (!CheckForReusedReductionOps) {
-      for (ReductionOpsType &RdxOps : ReductionOps)
-        for (Value *RdxOp : RdxOps)
-          V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      if (Sz % 2 == 1)
+        ExtraReds[Sz / 2] = InstVals.back();
+      return ExtraReds;
+    };
+    SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
+    ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
+                                 VectorizedTree);
+    SmallPtrSet<Value *, 8> Visited;
+    for (ArrayRef<Value *> Candidates : ReducedVals) {
+      for (Value *RdxVal : Candidates) {
+        if (!Visited.insert(RdxVal).second)
+          continue;
+        unsigned NumOps = VectorizedVals.lookup(RdxVal);
+        for (Instruction *RedOp :
+             ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
+          ExtraReductions.emplace_back(RedOp, RdxVal);
+      }
+    }
+    // Iterate through all not-vectorized reduction values/extra arguments.
+    bool InitStep = true;
+    while (ExtraReductions.size() > 1) {
+      SmallVector<std::pair<Instruction *, Value *>> NewReds =
+          FinalGen(ExtraReductions, InitStep);
+      ExtraReductions.swap(NewReds);
+      InitStep = false;
+    }
+    VectorizedTree = ExtraReductions.front().second;
+
+    ReductionRoot->replaceAllUsesWith(VectorizedTree);
+
+    // The original scalar reduction is expected to have no remaining
+    // uses outside the reduction tree itself.  Assert that we got this
+    // correct, replace internal uses with undef, and mark for eventual
+    // deletion.
+#ifndef NDEBUG
+    SmallPtrSet<Value *, 4> IgnoreSet;
+    for (ArrayRef<Value *> RdxOps : ReductionOps)
+      IgnoreSet.insert_range(RdxOps);
+#endif
+    for (ArrayRef<Value *> RdxOps : ReductionOps) {
+      for (Value *Ignore : RdxOps) {
+        if (!Ignore)
+          continue;
+#ifndef NDEBUG
+        for (auto *U : Ignore->users()) {
+          assert(IgnoreSet.count(U) &&
+                 "All users must be either in the reduction ops list.");
+        }
+#endif
+        if (!Ignore->use_empty()) {
+          Value *P = PoisonValue::get(Ignore->getType());
+          Ignore->replaceAllUsesWith(P);
+        }
+      }
+      V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
     }
     return VectorizedTree;
   }

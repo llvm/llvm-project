@@ -67,6 +67,7 @@ extern char ***_NSGetArgv(void);
 #  include <libkern/OSAtomic.h>
 #  include <mach-o/dyld.h>
 #  include <mach/mach.h>
+#  include <mach/mach_error.h>
 #  include <mach/mach_time.h>
 #  include <mach/vm_statistics.h>
 #  include <malloc/malloc.h>
@@ -1146,8 +1147,8 @@ static void PrintVmmap() {
         lastsz += vmsize;
       } else {
         if (lastsz)
-          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-                 last + lastsz, lastsz);
+          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+                 (void*)(last + lastsz), lastsz);
 
         last = address;
         lastsz = vmsize;
@@ -1157,8 +1158,8 @@ static void PrintVmmap() {
       // We've reached the end of the memory map. Print the last remaining
       // region, if there is one.
       if (lastsz)
-        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-               last + lastsz, lastsz);
+        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+               (void*)(last + lastsz), lastsz);
 
       break;
     }
@@ -1169,7 +1170,7 @@ static void ReportShadowAllocFail(uptr shadow_size_bytes, uptr alignment) {
   Report(
       "FATAL: Failed to allocate shadow memory. Tried to allocate %p bytes "
       "(alignment=%p).\n",
-      shadow_size_bytes, alignment);
+      (void*)shadow_size_bytes, (void*)alignment);
   PrintVmmap();
 }
 
@@ -1327,17 +1328,35 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
 
-    // There are cases where going beyond the processes' max vm does
-    // not return KERN_INVALID_ADDRESS so we check for going beyond that
-    // max address as well.
-    if (kr == KERN_INVALID_ADDRESS || address > max_vm_address) {
+    if (kr == KERN_SUCCESS) {
+      // There are cases where going beyond the processes' max vm does
+      // not return KERN_INVALID_ADDRESS so we check for going beyond that
+      // max address as well.
+      if (address > max_vm_address) {
+        address = max_vm_address;
+        kr = -1;  // break after this iteration.
+      }
+
+      if (max_occupied_addr)
+        *max_occupied_addr = address + vmsize;
+    } else if (kr == KERN_INVALID_ADDRESS) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
-      vmsize = 0;
-      kr = -1;  // break after this iteration.
+
+      // We will break after this iteration anyway since kr != KERN_SUCCESS
+    } else if (kr == KERN_DENIED) {
+      Report("ERROR: Unable to find a memory range for dynamic shadow.\n");
+      Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
+      Die();
     } else {
-      if (max_occupied_addr) *max_occupied_addr = address + vmsize;
+      Report(
+          "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
+          kr, mach_error_string(kr));
+      DCHECK(false && "mach_vm_region_recurse returned unexpected code");
+      break;  // address is not valid unless KERN_SUCCESS, therefore we must not
+              // use it.
     }
+
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
       uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
@@ -1358,6 +1377,29 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 
   // We looked at all free regions and could not find one large enough.
   return 0;
+}
+
+// Returns true if the address is definitely mapped, and false if it is not
+// mapped or could not be determined.
+bool IsAddressInMappedRegion(uptr addr) {
+  mach_vm_size_t vmsize = 0;
+  natural_t depth = 0;
+  vm_region_submap_short_info_data_64_t vminfo;
+  mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+  mach_vm_address_t address = addr;
+
+  kern_return_t kr =
+      mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
+                             (vm_region_info_t)&vminfo, &count);
+
+  if (kr == KERN_DENIED) {
+    Report(
+        "WARN: mach_vm_region_recurse returned KERN_DENIED when checking "
+        "whether an address is mapped.\n");
+    Report("HINT: Is mach_vm_region_recurse allowed by sandbox?\n");
+  }
+
+  return (kr == KERN_SUCCESS && addr >= address && addr < address + vmsize);
 }
 
 // FIXME implement on this platform.

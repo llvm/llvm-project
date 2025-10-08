@@ -599,3 +599,23 @@ define i32 @add_shl_moreOneUse_4(i32 %x) {
   %add = add i32 %mul, %or
   ret i32 %add
 }
+
+define i32 @select65(i1 zeroext %x) {
+; RV32IM-LABEL: select65:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 65
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select65:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select65:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 65, i32 0
+  ret i32 %select
+}

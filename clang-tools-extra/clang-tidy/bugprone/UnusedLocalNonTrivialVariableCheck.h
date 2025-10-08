@@ -24,7 +24,7 @@ namespace clang::tidy::bugprone {
 ///                     'IncludeTypes' matches.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-local-non-trivial-variable.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-local-non-trivial-variable.html
 class UnusedLocalNonTrivialVariableCheck : public ClangTidyCheck {
 public:
   UnusedLocalNonTrivialVariableCheck(StringRef Name, ClangTidyContext *Context);

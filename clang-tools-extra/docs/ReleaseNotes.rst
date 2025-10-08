@@ -54,12 +54,17 @@ Potentially Breaking Changes
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Renamed :program:`clang-tidy`'s option name of check
-  :doc:`bugprone-easily-swappable-parameters
-  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
-  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
-  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
-  correcting a spelling mistake.
+- Renamed a few :program:`clang-tidy` check options, as they
+  were misspelled:
+
+  - `NamePrefixSuffixSilenceDissimilarityTreshold` to
+    `NamePrefixSuffixSilenceDissimilarityThreshold` in
+    :doc:`bugprone-easily-swappable-parameters
+    <clang-tidy/checks/bugprone/easily-swappable-parameters>`
+
+  - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
+    :doc:`bugprone-signed-char-misuse
+    <clang-tidy/checks/bugprone/signed-char-misuse>`
 
 Improvements to clangd
 ----------------------
@@ -203,12 +208,37 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check.
+
+  Detect redundant parentheses.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- Renamed :doc:`cert-dcl50-cpp <clang-tidy/checks/cert/dcl50-cpp>` to
+  :doc:`modernize-avoid-variadic-functions
+  <clang-tidy/checks/modernize/avoid-variadic-functions>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
+  :doc:`bugprone-command-processor
+  <clang-tidy/checks/bugprone/command-processor>`
+  keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
   :doc:`bugprone-unchecked-string-to-number-conversion
   <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err52-cpp <clang-tidy/checks/cert/err52-cpp>` to
+  :doc:`modernize-avoid-setjmp-longjmp
+  <clang-tidy/checks/modernize/avoid-setjmp-longjmp>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
+  :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
 Changes in existing checks
@@ -219,9 +249,18 @@ Changes in existing checks
   correcting a spelling mistake on its option
   ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
+  exceptions from captures are now diagnosed, exceptions in the bodies of
+  lambdas that aren't actually invoked are not.
+
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
+
+- Improved :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` with new
+  `IgnoredEnums` option to ignore specified enums during analysis.
 
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
@@ -235,11 +274,20 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
+  a crash on ``sizeof`` of an array of dependent type.
+
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
   positive when enums or unions from system header files or the ``std``
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
+
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
+  the canonical types of base classes as written and adding a note on the base
+  class that triggered the warning.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
@@ -270,6 +318,10 @@ Changes in existing checks
 
   - ``for`` loops are supported.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check to avoid false
+  positives when pointers is tranferred to non-const references.
+
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
@@ -282,9 +334,18 @@ Changes in existing checks
   uses of non-standard ``enable_if`` with a signature different from
   ``std::enable_if`` (such as ``boost::enable_if``).
 
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check to
+  enhance the robustness of the member initializer detection.
+
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
+
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
+  on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
+  binary.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
@@ -307,6 +368,11 @@ Changes in existing checks
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to support string
+  comparisons to ``npos``. Internal changes may cause new rare false positives
+  in non-standard containers.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly

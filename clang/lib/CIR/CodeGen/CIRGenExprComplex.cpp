@@ -131,9 +131,7 @@ public:
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
                               e->getExprLoc());
-
-    // Otherwise, assume the mapping is the scalar directly.
-    return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
+    return cgf.getOrCreateOpaqueRValueMapping(e).getComplexValue();
   }
 
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
@@ -195,8 +193,7 @@ public:
   mlir::Value VisitUnaryNot(const UnaryOperator *e);
   // LNot,Real,Imag never return complex.
   mlir::Value VisitUnaryExtension(const UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitUnaryExtension");
-    return {};
+    return Visit(e->getSubExpr());
   }
   mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
     cgf.cgm.errorNYI(dae->getExprLoc(),
@@ -319,8 +316,7 @@ public:
   mlir::Value VisitVAArgExpr(VAArgExpr *e);
 
   mlir::Value VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitAtomicExpr");
-    return {};
+    return cgf.emitAtomicExpr(e).getComplexValue();
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {

@@ -96,7 +96,7 @@ namespace {
 /// matrix ops.
 struct WmmaConstantOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaConstantMatrixOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaConstantMatrixOp op, OpAdaptor adaptor,
@@ -115,7 +115,7 @@ struct WmmaConstantOpToSPIRVLowering final
 /// matrix ops.
 struct WmmaExtractOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaExtractThreadLocalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaExtractThreadLocalOp op, OpAdaptor adaptor,
@@ -147,7 +147,7 @@ struct WmmaExtractOpToSPIRVLowering final
 /// matrix ops.
 struct WmmaInsertOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaInsertThreadLocalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaInsertThreadLocalOp op, OpAdaptor adaptor,
@@ -177,7 +177,7 @@ struct WmmaInsertOpToSPIRVLowering final
 /// the default case.
 struct WmmaElementwiseOpToSPIRVDefaultLowering final
     : OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaElementwiseOp op, OpAdaptor adaptor,
@@ -201,7 +201,7 @@ struct WmmaElementwiseOpToSPIRVDefaultLowering final
 /// matrix times scalar case.
 struct WmmaElementwiseOpToSPIRVScalarMulLowering final
     : OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaElementwiseOp op, OpAdaptor adaptor,
@@ -265,7 +265,7 @@ namespace {
 /// dialect.
 struct WmmaLoadOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaLoadMatrixOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaLoadMatrixOp op, OpAdaptor adaptor,
@@ -303,7 +303,7 @@ struct WmmaLoadOpToSPIRVLowering final
 /// dialect.
 struct WmmaStoreOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaStoreMatrixOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaStoreMatrixOp op, OpAdaptor adaptor,
@@ -335,7 +335,7 @@ struct WmmaStoreOpToSPIRVLowering final
 /// dialect.
 struct WmmaMmaOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaComputeOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaComputeOp subgroupMmaComputeOp,

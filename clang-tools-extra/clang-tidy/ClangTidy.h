@@ -127,6 +127,10 @@ void exportReplacements(StringRef MainFilePath,
                         const std::vector<ClangTidyError> &Errors,
                         raw_ostream &OS);
 
+namespace custom {
+extern void (*RegisterCustomChecks)(const ClangTidyOptions &O,
+                                    ClangTidyCheckFactories &Factories);
+} // namespace custom
 } // end namespace tidy
 } // end namespace clang
 

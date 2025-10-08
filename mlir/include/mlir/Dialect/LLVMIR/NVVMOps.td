@@ -2160,8 +2160,9 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
          !or(!ne(a_type, b_type),
              !ne(c_type, d_type))): false,
 
-    // m16n8k8 requires C and D to be the same type.
-    !and(!eq(geom, "m16n8k8"),
+    // m16n8k16/m16n8k32 requires C and D to be the same type
+    !and(!or(!eq(geom, "m16n8k16"),
+             !eq(geom, "m16n8k32")),
          !ne(c_type, d_type)): false,
 
     // All other are OK.
@@ -2827,26 +2828,21 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments, NVVMRequiresSM<90>]>,
-  Arguments<(ins  LLVM_PointerShared:$dstMem,
-                  LLVM_AnyPointer:$tmaDescriptor,
+  Arguments<(ins  AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$dstMem,
+                  LLVM_PointerGeneric:$tmaDescriptor,
                   Variadic<I32>:$coordinates,
                   LLVM_PointerShared:$mbar,                  
                   Variadic<I16>:$im2colOffsets,
                   Optional<I16>:$multicastMask,
                   Optional<I64>:$l2CacheHint,
+                  DefaultValuedAttr<TMALoadModeAttr, "TMALoadMode::TILE">:$mode,
+                  DefaultValuedAttr<BoolAttr, "false">:$isCTAOnly,
+                  OptionalAttr<CTAGroupKindAttr>:$group,
                   PtxPredicate:$predicate)> {
   let description = [{
     Initiates an asynchronous copy operation on the tensor data from global 
-    memory to shared memory. 
-
-    The Op operates has two load modes:
-    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor 
-    layout is preserved at the destination. 
-
-    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
-    the elements in the Bounding Box of the source tensor are rearranged into
-    columns at the destination. In this mode, the tensor has to be at least 
-    3-dimensional. 
+    memory to shared::cluster (or) shared::cta memory. This Op supports all
+    the load modes specified in `TMALoadMode`.
 
     The `multicastMask` operand is optional. When it is present, the Op copies
     data from global memory to shared memory of multiple CTAs in the cluster.
@@ -2857,6 +2853,10 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     The `l2CacheHint` operand is optional, and it is used to specify cache 
     eviction policy that may be used during the memory access.
     
+    When the `isCTAOnly` attribute is set to true, the destination is
+    shared::cta only. Hence, `multicastMask` and `CTAGroup` are not applicable
+    when `isCTAOnly` is true.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
   }];
 
@@ -2904,6 +2904,23 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     }
   }];
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { return !getPredicate(); }
+
+    bool getAsmValues(RewriterBase &rewriter,
+      llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
 }
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
@@ -3191,35 +3208,17 @@ def NVVM_CpAsyncBulkTensorReduceOp :
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(int tensorDims,
-                                              NVVM::TMAReduxKind kind,
-                                              bool isIm2Col);
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase& builder);
   }];
 
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // shared_mem_ptr, tmaDesc, tensorDims
-    // cache_hint(if applicable) and flag(boolean)
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($tmaDescriptor);
-
-    for (auto v : op.getCoordinates())
-      translatedOperands.push_back(moduleTranslation.lookupValue(v));
-
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Undef = llvm::UndefValue::get(llvm::IntegerType::get(ctx, 64));
-
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Undef);
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    auto intId = NVVM::CpAsyncBulkTensorReduceOp::getIntrinsicID(
-                 op.getCoordinates().size(), $redKind,
-                 (op.getMode() == NVVM::TMAStoreMode::IM2COL));
-    createIntrinsicCall(builder, intId, translatedOperands);
+    auto [id, args] = NVVM::CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -4426,6 +4425,116 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
   
   string llvmBuilder = [{
     auto [id, args] = NVVM::DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM clusterlaunchcontrol Ops.
+//===----------------------------------------------------------------------===//
+
+def NVVM_ClusterLaunchControlTryCancelOp
+    : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
+  let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
+  let description = [{
+    `clusterlaunchcontrol.try.cancel` requests atomically canceling the launch 
+    of a cluster that has not started running yet. It asynchronously writes an 
+    opaque response to shared memory indicating whether the operation succeeded 
+    or failed.
+
+    Operand `smemAddress` specifies the naturally aligned address of the 
+    16-byte wide shared memory location where the request's response is written.
+
+    Operand `mbarrier` specifies the mbarrier object used to track the 
+    completion of the asynchronous operation.
+
+    If `multicast` is specified, the response is asynchronously written to the 
+    corresponding local shared memory location (specifed by `addr`) of each CTA 
+    in the requesting cluster.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel)
+  }];
+
+  let arguments = (ins UnitAttr:$multicast, 
+                       LLVM_PointerShared: $smemAddress,
+                       LLVM_PointerShared: $mbarrier);
+
+  let assemblyFormat = "(`multicast` $multicast^ `,`)? $smemAddress `,` $mbarrier attr-dict";
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+  
+  string llvmBuilder = [{
+    auto [id, args] = 
+    NVVM::ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def ClusterLaunchControlIsCanceled
+  : I32EnumCase<"IS_CANCELED", 0, "is_canceled">;
+def ClusterLaunchControlGetFirstCTAIDX
+  : I32EnumCase<"GET_FIRST_CTA_ID_X", 1, "get_first_cta_id_x">;
+def ClusterLaunchControlGetFirstCTAIDY
+  : I32EnumCase<"GET_FIRST_CTA_ID_Y", 2, "get_first_cta_id_y">;
+def ClusterLaunchControlGetFirstCTAIDZ
+  : I32EnumCase<"GET_FIRST_CTA_ID_Z", 3, "get_first_cta_id_z">;
+
+def ClusterLaunchControlQueryType
+  : I32Enum<"ClusterLaunchControlQueryType",
+      "NVVM ClusterLaunchControlQueryType", 
+      [ClusterLaunchControlIsCanceled, ClusterLaunchControlGetFirstCTAIDX,
+      ClusterLaunchControlGetFirstCTAIDY, ClusterLaunchControlGetFirstCTAIDZ]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ClusterLaunchControlQueryTypeAttr
+  : EnumAttr<NVVM_Dialect,
+      ClusterLaunchControlQueryType, "cluster_launch_control_query_type"> {
+  let assemblyFormat = "$value";
+}
+
+def NVVM_ClusterLaunchControlQueryCancelOp
+    : NVVM_Op<"clusterlaunchcontrol.query.cancel", [NVVMRequiresSM<100>]> {
+  let summary = "Query the response of a clusterlaunchcontrol.try.cancel operation";
+  let description = [{
+    `clusterlaunchcontrol.query.cancel` queries the response of a 
+    `clusterlaunchcontrol.try.cancel` operation specified by operand 
+    `try_cancel_response`.
+
+    Operand `query_type` specifies the type of query to perform and can be one 
+    of the following:
+    - `is_canceled` : Returns true if the try cancel request succeeded, 
+    and false otherwise.
+    - `get_first_cta_id_{x/y/z}` : Returns the x, y, or z coordinate of the 
+    first CTA in the canceled cluster. Behaviour is defined only if the try 
+    cancel request succeeded. 
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel)
+  }];
+
+  let arguments = (ins ClusterLaunchControlQueryTypeAttr:$query_type, 
+                       I128:$try_cancel_response);
+  let results = (outs AnyTypeOf<[I1, I32]>:$res);
+                                 
+  let assemblyFormat = "`query` `=` $query_type `,` $try_cancel_response attr-dict `:` type($res)";
+  
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+  
+  string llvmBuilder = [{
+    auto [id, args] = 
+    NVVM::ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
                         *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];

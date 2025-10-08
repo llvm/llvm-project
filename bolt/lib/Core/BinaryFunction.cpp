@@ -284,6 +284,33 @@ BinaryFunction::getBasicBlockContainingOffset(uint64_t Offset) {
   return (Offset < BB->getOffset() + BB->getOriginalSize()) ? BB : nullptr;
 }
 
+uint16_t BinaryFunction::getConstantIslandAlignment() const {
+  if (Islands == nullptr)
+    return 1;
+
+  // For constant island inside a function, the default 8-byte alignment is
+  // probably good enough.
+  const uint16_t DefaultAlignment = sizeof(uint64_t);
+  if (!isDataObject())
+    return DefaultAlignment;
+
+  // If the constant island itself is a binary function, get its alignment
+  // based on its size, original address, and its owning section's alignment.
+  const uint64_t MaxAlignment =
+      std::min(uint64_t(1) << llvm::countr_zero(getAddress()),
+               OriginSection->getAlignment());
+  const uint64_t MinAlignment =
+      std::max((uint64_t)DefaultAlignment,
+               uint64_t(1) << (63 - llvm::countl_zero(getSize())));
+  uint64_t Alignment = std::min(MinAlignment, MaxAlignment);
+  if (Alignment >> 16) {
+    BC.errs() << "BOLT-ERROR: the constant island's alignment is too big: 0x"
+              << Twine::utohexstr(Alignment) << "\n";
+    exit(1);
+  }
+  return (uint16_t)Alignment;
+}
+
 void BinaryFunction::markUnreachableBlocks() {
   std::stack<BinaryBasicBlock *> Stack;
 
@@ -2787,14 +2814,8 @@ private:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2809,6 +2830,7 @@ public:
   void advanceTo(int32_t State) {
     for (int32_t I = CurState, E = State; I != E; ++I) {
       const MCCFIInstruction &Instr = FDE[I];
+      assert(Instr.getOperation() != MCCFIInstruction::OpNegateRAState);
       if (Instr.getOperation() != MCCFIInstruction::OpRestoreState) {
         update(Instr, I);
         continue;
@@ -2933,15 +2955,9 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
+    case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
       return false;
-    case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
-      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3090,14 +3106,8 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
@@ -3598,7 +3608,9 @@ void BinaryFunction::fixBranches() {
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
-  for (BinaryBasicBlock *BB : BasicBlocks) {
+  for (auto BBI = Layout.block_begin(), BBE = Layout.block_end(); BBI != BBE;
+       ++BBI) {
+    BinaryBasicBlock *BB = *BBI;
     const MCSymbol *TBB = nullptr;
     const MCSymbol *FBB = nullptr;
     MCInst *CondBranch = nullptr;
@@ -3612,7 +3624,7 @@ void BinaryFunction::fixBranches() {
 
     // Basic block that follows the current one in the final layout.
     const BinaryBasicBlock *const NextBB =
-        Layout.getBasicBlockAfter(BB, /*IgnoreSplits=*/false);
+        Layout.getBasicBlockAfter(BBI, /*IgnoreSplits*/ false);
 
     if (BB->succ_size() == 1) {
       // __builtin_unreachable() could create a conditional branch that
