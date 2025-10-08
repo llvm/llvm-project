@@ -1097,6 +1097,72 @@ define <4 x float> @fmuladd_4xf32(<4 x float> %a, <4 x float> %b, <4 x float> %c
   ret <4 x float> %fma
 }
 
+define <8 x float> @fmuladd_8xf32(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
+; RELAXED-LABEL: fmuladd_8xf32:
+; RELAXED:         .functype fmuladd_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
+; RELAXED-NEXT:  # %bb.0:
+; RELAXED-NEXT:    f32x4.mul $push0=, $2, $4
+; RELAXED-NEXT:    f32x4.add $push1=, $pop0, $6
+; RELAXED-NEXT:    v128.store 16($0), $pop1
+; RELAXED-NEXT:    f32x4.mul $push2=, $1, $3
+; RELAXED-NEXT:    f32x4.add $push3=, $pop2, $5
+; RELAXED-NEXT:    v128.store 0($0), $pop3
+; RELAXED-NEXT:    return
+;
+; STRICT-LABEL: fmuladd_8xf32:
+; STRICT:         .functype fmuladd_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
+; STRICT-NEXT:  # %bb.0:
+; STRICT-NEXT:    f32x4.mul $push0=, $2, $4
+; STRICT-NEXT:    f32x4.add $push1=, $pop0, $6
+; STRICT-NEXT:    v128.store 16($0), $pop1
+; STRICT-NEXT:    f32x4.mul $push2=, $1, $3
+; STRICT-NEXT:    f32x4.add $push3=, $pop2, $5
+; STRICT-NEXT:    v128.store 0($0), $pop3
+; STRICT-NEXT:    return
+;
+; NOFP16-LABEL: fmuladd_8xf32:
+; NOFP16:         .functype fmuladd_8xf32 (i32, v128, v128, v128, v128, v128, v128) -> ()
+; NOFP16-NEXT:  # %bb.0:
+; NOFP16-NEXT:    f32x4.mul $push0=, $2, $4
+; NOFP16-NEXT:    f32x4.add $push1=, $pop0, $6
+; NOFP16-NEXT:    v128.store 16($0), $pop1
+; NOFP16-NEXT:    f32x4.mul $push2=, $1, $3
+; NOFP16-NEXT:    f32x4.add $push3=, $pop2, $5
+; NOFP16-NEXT:    v128.store 0($0), $pop3
+; NOFP16-NEXT:    return
+;
+; NOSIMD-LABEL: fmuladd_8xf32:
+; NOSIMD:         .functype fmuladd_8xf32 (i32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> ()
+; NOSIMD-NEXT:  # %bb.0:
+; NOSIMD-NEXT:    f32.mul $push0=, $8, $16
+; NOSIMD-NEXT:    f32.add $push1=, $pop0, $24
+; NOSIMD-NEXT:    f32.store 28($0), $pop1
+; NOSIMD-NEXT:    f32.mul $push2=, $7, $15
+; NOSIMD-NEXT:    f32.add $push3=, $pop2, $23
+; NOSIMD-NEXT:    f32.store 24($0), $pop3
+; NOSIMD-NEXT:    f32.mul $push4=, $6, $14
+; NOSIMD-NEXT:    f32.add $push5=, $pop4, $22
+; NOSIMD-NEXT:    f32.store 20($0), $pop5
+; NOSIMD-NEXT:    f32.mul $push6=, $5, $13
+; NOSIMD-NEXT:    f32.add $push7=, $pop6, $21
+; NOSIMD-NEXT:    f32.store 16($0), $pop7
+; NOSIMD-NEXT:    f32.mul $push8=, $4, $12
+; NOSIMD-NEXT:    f32.add $push9=, $pop8, $20
+; NOSIMD-NEXT:    f32.store 12($0), $pop9
+; NOSIMD-NEXT:    f32.mul $push10=, $3, $11
+; NOSIMD-NEXT:    f32.add $push11=, $pop10, $19
+; NOSIMD-NEXT:    f32.store 8($0), $pop11
+; NOSIMD-NEXT:    f32.mul $push12=, $2, $10
+; NOSIMD-NEXT:    f32.add $push13=, $pop12, $18
+; NOSIMD-NEXT:    f32.store 4($0), $pop13
+; NOSIMD-NEXT:    f32.mul $push14=, $1, $9
+; NOSIMD-NEXT:    f32.add $push15=, $pop14, $17
+; NOSIMD-NEXT:    f32.store 0($0), $pop15
+; NOSIMD-NEXT:    return
+  %fma = call <8 x float> @llvm.fmuladd(<8 x float> %a, <8 x float> %b, <8 x float> %c)
+  ret <8 x float> %fma
+}
+
 define <2 x double> @fmuladd_contract_2xf64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; RELAXED-LABEL: fmuladd_contract_2xf64:
 ; RELAXED:         .functype fmuladd_contract_2xf64 (v128, v128, v128) -> (v128)
