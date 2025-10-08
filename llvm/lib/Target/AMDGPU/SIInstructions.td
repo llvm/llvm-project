@@ -120,6 +120,8 @@ def ATOMIC_FENCE : SPseudoInstSI<
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 
 // For use in patterns
+// No align needed as it will be decomposed anyway
+// TODO: Remove alignment requirement from sources
 def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
   (ins VSrc_b64:$src0, VSrc_b64:$src1, SSrc_b64:$src2), "", []> {
   let isPseudo = 1;
@@ -129,7 +131,7 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
-def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
+def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64_AlignTarget:$vdst),
                                       (ins VSrc_b64:$src0)> {
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
@@ -163,9 +165,6 @@ def AV_MOV_B32_IMM_PSEUDO
 // 64-bit materialize immediate which supports AGPR or VGPR. This has
 // an unusual operand restriction which requires the two halves of the
 // immediate to each be 32-bit inline immediate values.
-//
-// FIXME: This unnecessarily has the even aligned vector register
-// requirement applied.
 def AV_MOV_B64_IMM_PSEUDO
     : VPseudoInstSI<(outs AV_64:$vdst), (ins AV_64_PSEUDO_IMM:$src0)> {
   let isReMaterializable = 1;
@@ -381,13 +380,13 @@ foreach Op = Operations in {
 
 let usesCustomInserter = 1, Defs = [VCC] in {
 def V_ADD_U64_PSEUDO : VPseudoInstSI <
-  (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
-  [(set VReg_64:$vdst, (DivergentBinFrag<add> i64:$src0, i64:$src1))]
+  (outs VReg_64_AlignTarget:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
+  [(set VReg_64_AlignTarget:$vdst, (DivergentBinFrag<add> i64:$src0, i64:$src1))]
 >;
 
 def V_SUB_U64_PSEUDO : VPseudoInstSI <
-  (outs VReg_64:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
-  [(set VReg_64:$vdst, (DivergentBinFrag<sub> i64:$src0, i64:$src1))]
+  (outs VReg_64_AlignTarget:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
+  [(set VReg_64_AlignTarget:$vdst, (DivergentBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 } // End usesCustomInserter = 1, Defs = [VCC]
 
@@ -1142,7 +1141,7 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
-multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
+multiclass SI_SPILL_VGPR <SIRegisterClassLike vgpr_class,
                           bit UsesTmp = 0, bit HasMask = 0> {
   let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
@@ -1177,21 +1176,25 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
   } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
 }
 
+// TODO: Technically the AlignTarget register class constraint is
+// overly conservative for gfx90a. There is an alignment requirement,
+// but the underlying spill will be lowered to 32-bit accesses.
+
 defm SI_SPILL_V16  : SI_SPILL_VGPR <VGPR_16>;
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
-defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
-defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
-defm SI_SPILL_V128 : SI_SPILL_VGPR <VReg_128>;
-defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160>;
-defm SI_SPILL_V192 : SI_SPILL_VGPR <VReg_192>;
-defm SI_SPILL_V224 : SI_SPILL_VGPR <VReg_224>;
-defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256>;
-defm SI_SPILL_V288 : SI_SPILL_VGPR <VReg_288>;
-defm SI_SPILL_V320 : SI_SPILL_VGPR <VReg_320>;
-defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
-defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
-defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
-defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
+defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64_AlignTarget>;
+defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96_AlignTarget>;
+defm SI_SPILL_V128 : SI_SPILL_VGPR <VReg_128_AlignTarget>;
+defm SI_SPILL_V160 : SI_SPILL_VGPR <VReg_160_AlignTarget>;
+defm SI_SPILL_V192 : SI_SPILL_VGPR <VReg_192_AlignTarget>;
+defm SI_SPILL_V224 : SI_SPILL_VGPR <VReg_224_AlignTarget>;
+defm SI_SPILL_V256 : SI_SPILL_VGPR <VReg_256_AlignTarget>;
+defm SI_SPILL_V288 : SI_SPILL_VGPR <VReg_288_AlignTarget>;
+defm SI_SPILL_V320 : SI_SPILL_VGPR <VReg_320_AlignTarget>;
+defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352_AlignTarget>;
+defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384_AlignTarget>;
+defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512_AlignTarget>;
+defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024_AlignTarget>;
 
 let Defs = [M0] in {
   // Spills a block of 32 VGPRs. M0 will contain a mask describing which
@@ -1200,34 +1203,34 @@ let Defs = [M0] in {
 }
 
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
-defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;
-defm SI_SPILL_A96  : SI_SPILL_VGPR <AReg_96, 1>;
-defm SI_SPILL_A128 : SI_SPILL_VGPR <AReg_128, 1>;
-defm SI_SPILL_A160 : SI_SPILL_VGPR <AReg_160, 1>;
-defm SI_SPILL_A192 : SI_SPILL_VGPR <AReg_192, 1>;
-defm SI_SPILL_A224 : SI_SPILL_VGPR <AReg_224, 1>;
-defm SI_SPILL_A256 : SI_SPILL_VGPR <AReg_256, 1>;
-defm SI_SPILL_A288 : SI_SPILL_VGPR <AReg_288, 1>;
-defm SI_SPILL_A320 : SI_SPILL_VGPR <AReg_320, 1>;
-defm SI_SPILL_A352 : SI_SPILL_VGPR <AReg_352, 1>;
-defm SI_SPILL_A384 : SI_SPILL_VGPR <AReg_384, 1>;
-defm SI_SPILL_A512 : SI_SPILL_VGPR <AReg_512, 1>;
-defm SI_SPILL_A1024 : SI_SPILL_VGPR <AReg_1024, 1>;
+defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64_AlignTarget, 1>;
+defm SI_SPILL_A96  : SI_SPILL_VGPR <AReg_96_AlignTarget, 1>;
+defm SI_SPILL_A128 : SI_SPILL_VGPR <AReg_128_AlignTarget, 1>;
+defm SI_SPILL_A160 : SI_SPILL_VGPR <AReg_160_AlignTarget, 1>;
+defm SI_SPILL_A192 : SI_SPILL_VGPR <AReg_192_AlignTarget, 1>;
+defm SI_SPILL_A224 : SI_SPILL_VGPR <AReg_224_AlignTarget, 1>;
+defm SI_SPILL_A256 : SI_SPILL_VGPR <AReg_256_AlignTarget, 1>;
+defm SI_SPILL_A288 : SI_SPILL_VGPR <AReg_288_AlignTarget, 1>;
+defm SI_SPILL_A320 : SI_SPILL_VGPR <AReg_320_AlignTarget, 1>;
+defm SI_SPILL_A352 : SI_SPILL_VGPR <AReg_352_AlignTarget, 1>;
+defm SI_SPILL_A384 : SI_SPILL_VGPR <AReg_384_AlignTarget, 1>;
+defm SI_SPILL_A512 : SI_SPILL_VGPR <AReg_512_AlignTarget, 1>;
+defm SI_SPILL_A1024 : SI_SPILL_VGPR <AReg_1024_AlignTarget, 1>;
 
 defm SI_SPILL_AV32  : SI_SPILL_VGPR <AV_32, 1>;
-defm SI_SPILL_AV64  : SI_SPILL_VGPR <AV_64, 1>;
-defm SI_SPILL_AV96  : SI_SPILL_VGPR <AV_96, 1>;
-defm SI_SPILL_AV128 : SI_SPILL_VGPR <AV_128, 1>;
-defm SI_SPILL_AV160 : SI_SPILL_VGPR <AV_160, 1>;
-defm SI_SPILL_AV192 : SI_SPILL_VGPR <AV_192, 1>;
-defm SI_SPILL_AV224 : SI_SPILL_VGPR <AV_224, 1>;
-defm SI_SPILL_AV256 : SI_SPILL_VGPR <AV_256, 1>;
-defm SI_SPILL_AV288 : SI_SPILL_VGPR <AV_288, 1>;
-defm SI_SPILL_AV320 : SI_SPILL_VGPR <AV_320, 1>;
-defm SI_SPILL_AV352 : SI_SPILL_VGPR <AV_352, 1>;
-defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
-defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
-defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
+defm SI_SPILL_AV64  : SI_SPILL_VGPR <AV_64_AlignTarget, 1>;
+defm SI_SPILL_AV96  : SI_SPILL_VGPR <AV_96_AlignTarget, 1>;
+defm SI_SPILL_AV128 : SI_SPILL_VGPR <AV_128_AlignTarget, 1>;
+defm SI_SPILL_AV160 : SI_SPILL_VGPR <AV_160_AlignTarget, 1>;
+defm SI_SPILL_AV192 : SI_SPILL_VGPR <AV_192_AlignTarget, 1>;
+defm SI_SPILL_AV224 : SI_SPILL_VGPR <AV_224_AlignTarget, 1>;
+defm SI_SPILL_AV256 : SI_SPILL_VGPR <AV_256_AlignTarget, 1>;
+defm SI_SPILL_AV288 : SI_SPILL_VGPR <AV_288_AlignTarget, 1>;
+defm SI_SPILL_AV320 : SI_SPILL_VGPR <AV_320_AlignTarget, 1>;
+defm SI_SPILL_AV352 : SI_SPILL_VGPR <AV_352_AlignTarget, 1>;
+defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384_AlignTarget, 1>;
+defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512_AlignTarget, 1>;
+defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024_AlignTarget, 1>;
 
 let isConvergent = 1 in {
   defm SI_SPILL_WWM_V32  : SI_SPILL_VGPR <VGPR_32>;
@@ -2383,18 +2386,24 @@ let True16Predicate = UseRealTrue16Insts in {
   }
 }
 
-// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
-// immediate and wil be expanded as needed, but we will only use these patterns
-// for values which can be encoded.
-def : GCNPat <
-  (VGPRImm<(i64 imm)>:$imm),
-  (V_MOV_B64_PSEUDO imm:$imm)
->;
+/// FIXME: Increasing the priority of VGPRImm over the scalar forms as
+/// a workaround for a phase ordering problem caused by overly
+/// conservative MachineCSE. If we end up with an s_mov_b64 + copy to
+/// vgpr pattern, MachineCSE will not perform the CSE which occurs
+/// after operand folding.
+let AddedComplexity = 1 in {
+ // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+  // immediate and wil be expanded as needed, but we will only use these patterns
+  // for values which can be encoded.
+  def : GCNPat <
+    (VGPRImm<(i64 imm)>:$imm),
+    (V_MOV_B64_PSEUDO imm:$imm)>;
 
-def : GCNPat <
-  (VGPRImm<(f64 fpimm)>:$imm),
-  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
->;
+  def : GCNPat <
+    (VGPRImm<(f64 fpimm)>:$imm),
+    (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
+  >;
+} // End let AddedComplexity = 2
 
 def : GCNPat <
   (i64 imm:$imm),
