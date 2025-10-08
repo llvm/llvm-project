@@ -84,8 +84,7 @@ class Mbarriers:
                 self.mbar_group_op, txcount_op, self.id_op, predicate=predicate
             )
         else:
-            nvgpu.mbarrier_arrive(self.mbar_group_op, self.id_op
-            )
+            nvgpu.mbarrier_arrive(self.mbar_group_op, self.id_op)
 
     def try_wait(self, phase: bool = False, ticks: int = 10000000):
         ticks_op = const(ticks)
@@ -143,7 +142,9 @@ class TMA:
             device_ptr,
         )
         self.tma_descriptor = nvgpu.TmaCreateDescriptorOp(
-            tma_descriptor_ty, device_unranked_memref, list(map(const, self.tma_box_shape))
+            tma_descriptor_ty,
+            device_unranked_memref,
+            list(map(const, self.tma_box_shape)),
         )
         return self.tma_descriptor.result
 
