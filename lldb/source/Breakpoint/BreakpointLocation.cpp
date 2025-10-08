@@ -691,8 +691,8 @@ void BreakpointLocation::GetDescription(Stream *s,
     }
   }
 
-  // FIXME: scripted breakpoint are currently always resolved.  Does this seem right?
-  // If they don't add any scripted locations, we shouldn't consider them
+  // FIXME: scripted breakpoint are currently always resolved.  Does this seem
+  // right? If they don't add any scripted locations, we shouldn't consider them
   // resolved.
   bool is_resolved = is_scripted_desc || IsResolved();
   // A scripted breakpoint might be resolved but not have a site.  Be sure to
