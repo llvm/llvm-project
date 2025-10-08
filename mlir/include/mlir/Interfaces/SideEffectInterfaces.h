@@ -374,9 +374,13 @@ struct Effect : public SideEffects::Effect {
   /// Return the priority associated with this memory effect.
   Priority getPriority() const { return priority; }
 
+  /// Return a human-readable name for the effect type.
+  StringRef getEffectName() const { return effectName; }
+
 protected:
   /// Priority value for this effect. Lower numbers indicate higher precedence.
   Priority priority = Priority::DefaultPriority;
+  StringRef effectName = "<DefaultMemEffect>";
 };
 using EffectInstance = SideEffects::EffectInstance<Effect>;
 
@@ -391,6 +395,7 @@ getMemoryEffectsSorted(Operation *op);
 struct Allocate : public Effect::Base<Allocate> {
   Allocate() : Effect::Base<Allocate>() {
     this->priority = Priority::AllocPriority;
+    this->effectName = "<MemAlloc>";
   }
 };
 
@@ -398,21 +403,30 @@ struct Allocate : public Effect::Base<Allocate> {
 /// has been allocated. An 'allocate' effect implies only de-allocation of the
 /// resource, and not any visible allocation, mutation or dereference.
 struct Free : public Effect::Base<Free> {
-  Free() : Effect::Base<Free>() { this->priority = Priority::FreePriority; }
+  Free() : Effect::Base<Free>() { 
+    this->priority = Priority::FreePriority; 
+    this->effectName = "<MemFree>";
+  }
 };
 
 /// The following effect indicates that the operation reads from some resource.
 /// A 'read' effect implies only dereferencing of the resource, and not any
 /// visible mutation.
 struct Read : public Effect::Base<Read> {
-  Read() : Effect::Base<Read>() { this->priority = Priority::ReadPriority; }
+  Read() : Effect::Base<Read>() { 
+    this->priority = Priority::ReadPriority; 
+    this->effectName = "<MemRead>";
+  }
 };
 
 /// The following effect indicates that the operation writes to some resource. A
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
 struct Write : public Effect::Base<Write> {
-  Write() : Effect::Base<Write>() { this->priority = Priority::WritePriority; }
+  Write() : Effect::Base<Write>() { 
+    this->priority = Priority::WritePriority; 
+    this->effectName = "<MemWrite>";
+  }
 };
 } // namespace MemoryEffects
 

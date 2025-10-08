@@ -12,6 +12,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
+#include "llvm/ADT/SmallSet.h"
 
 #include <utility>
 
@@ -39,8 +40,8 @@ using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::Effect
 /// \code
 ///   LoopLikeOpInterface myLoop = ...;
 ///   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
-///   myConflicts; gatherResourceConflicts(myLoop, myLoop.getOperation(),
-///   resourceConflicts);
+///   myConflicts; 
+///   gatherResourceConflicts(myLoop, myLoop.getOperation(), resourceConflicts);
 /// \endcode
 ///
 /// \param loop The loop to gather resource conflicts for.
@@ -50,14 +51,12 @@ using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::Effect
 /// Key is the resource ID that effects are applied to. Value is a pair of
 /// a boolean, indicating if the resource has a conflict, and the last effect
 /// that was applied to the resource (if no conflicts exist) or the effect
-/// that caused the conflict (if conflicts exist). This was done so we
-/// check the effect that causes the conflict for debugging purposes.
-/// First call should use loop = someLoop and op = someLoop.getOperation()
+/// that caused the conflict (if conflicts exist).
 ///
 /// resourceConflicts is modified by the function and will be non-empty
 /// as long as there are memory effects within the loop, even if there are
 /// no conflicts.
-void gatherResourceConflicts(
+void mapResourceConflicts(
     LoopLikeOpInterface loop, Operation *op,
     DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
         &resourceConflicts);
