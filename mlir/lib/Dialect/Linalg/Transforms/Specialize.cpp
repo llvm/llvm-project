@@ -343,27 +343,14 @@ static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
 }
 
 static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() != 3) return "";
-  // depthwise_conv_1d_ncw_cw
-  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1 + d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
   if (isaDepthwiseConv1DNcwCwOp(genericOp))
     return "linalg.depthwise_conv_1d_ncw_cw";
-  // depthwise_conv_1d_nwc_wc
-  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
-  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
   if (isaDepthwiseConv1DNwcWcOp(genericOp))
     return "linalg.depthwise_conv_1d_nwc_wc";
-  // conv_2d
-  // #map = affine_map<(d0, d1, d2, d3) -> (d0 + d2, d1 + d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
   if (isaConv2DOp(genericOp))
     return "linalg.conv_2d";
   
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
   Block *body = genericOp.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
@@ -401,45 +388,24 @@ static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
 }
 
 static std::string inferBasedOnRank5ConvIteratorTypes(GenericOp genericOp) {
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() != 3) return "";
-  // depthwise_conv_1d_nwc_wcm
-  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d4, d2)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d4, d2, d3)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
   if (isaDepthwiseConv1DNwcWcmOp(genericOp))
     return "linalg.depthwise_conv_1d_nwc_wcm";
-  // conv_1d_nwc_wcf
-  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d3, d4)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4, d2)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
   if (isaConv1DNwcWcfOp(genericOp))
     return "linalg.conv_1d_nwc_wcf";
-  // conv_1d_ncw_fcw
-  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d2 + d4)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d1, d3, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
   if (isaConv1DNcwFcwOp(genericOp))
     return "linalg.conv_1d_ncw_fcw";
   return "";
 }
 
 static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
+  if (isaDepthwiseConv2DNchwChwOp(genericOp))
+    return "linalg.depthwise_conv_2d_nchw_chw";
+  if (isaDepthwiseConv2DNhwcHwcOp(genericOp))
+    return "linalg.depthwise_conv_2d_nhwc_hwc";
+  
   ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   if (indexingMaps.size() < 3) return "";
   unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  // depthwise_conv_2d_nchw_chw
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d1 + d4, d2 + d5)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d1, d2)>
-  if (isaDepthwiseConv2DNchwChwOp(genericOp))
-    return "linalg.depthwise_conv_2d_nchw_chw";
-  // depthwise_conv_2d_nhwc_hwc
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  if (isaDepthwiseConv2DNhwcHwcOp(genericOp))
-    return "linalg.depthwise_conv_2d_nhwc_hwc";
   // conv_3d
   // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0 + d3, d1 + d4, d2 + d5)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>
@@ -501,83 +467,30 @@ static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
 }
 
 static std::string inferBasedOnRank7ConvIteratorTypes(GenericOp genericOp) {
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() < 3) return "";
-  // conv_2d_nhwc_fhwc
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
   if (isaConv2DNhwcFhwcOp(genericOp))
     return "linalg.conv_2d_nhwc_fhwc";
-  // conv_2d_nhwc_hwcf
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
   if (isaConv2DNhwcHwcfOp(genericOp))
     return "linalg.conv_2d_nhwc_hwcf";
-  // conv_2d_nchw_fchw
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
   if (isaConv2DNchwFchwOp(genericOp))
     return "linalg.conv_2d_nchw_fchw";
-  // conv_2d_nhwc_fhwc_q (same as conv_2d_nhwc_fhwc + check total 4 indexing maps)
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d4, d5, d6)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
   if (isaConv2DNhwcFhwcQOp(genericOp))
     return "linalg.conv_2d_nhwc_fhwc_q";
-  // conv_2d_nchw_fchw_q (same as conv_2d_nchw_fchw + check total 4 indexing maps)
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d4, d2 + d5, d3 + d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1, d4, d5, d6)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
   if (isaConv2DNchwFchwQOp(genericOp))
     return "linalg.conv_2d_nchw_fchw_q";
-  // depthwise_conv_2d_nhwc_hwcm
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6, d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4)>
   if (isaDepthwiseConv2DNhwcHwcmOp(genericOp))
     return "linalg.depthwise_conv_2d_nhwc_hwcm";
-  // depthwise_conv_2d_nhwc_hwcm_q
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6, d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d3, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3, d4)>
   if (isaDepthwiseConv2DNhwcHwcmQOp(genericOp))
     return "linalg.depthwise_conv_2d_nhwc_hwcm_q";
   return "";
 }
 
 static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() < 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  // conv_2d_ngchw_fgchw
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d2, d1, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   if (isaConv2DNgchwFgchwOp(genericOp))
     return "linalg.conv_2d_ngchw_fgchw";
-  // conv_2d_ngchw_gfchw
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   if (isaConv2DNgchwGfchwOp(genericOp))
     return "linalg.conv_2d_ngchw_gfchw";
-  // conv_2d_ngchw_gfchw_q
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 + d6, d4 + d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   if (isaConv2DNgchwGfchwQOp(genericOp))
     return "linalg.conv_2d_ngchw_gfchw_q";
-  // conv_2d_nhwgc_gfhwc
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3, d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   if (isaConv2DNhwgcGfhwcOp(genericOp))
     return "linalg.conv_2d_nhwgc_gfhwc";
   // depthwise_conv_3d_ncdhw_cdhw
