@@ -3240,58 +3240,58 @@ private:
       }
     }
 
-    // Collect prologue and tail (after-inner) statements if force
-    llvm::SmallVector<Fortran::lower::pft::Evaluation *> prologue, tail;
-    if (collapseForce && loopCount > 1 && getEval().lowerAsStructured()) {
-      auto hasKids = [](Fortran::lower::pft::Evaluation *ev) -> bool {
-        return ev && ev->hasNestedEvaluations();
-      };
+    const bool isStructured = curEval && curEval->lowerAsStructured();
+    if (isStructured && collapseForce && collapseDepth > 1) {
+      // force: collect prologue/epilogue for the first collapseDepth nested loops
+      // and sink them into the innermost loop body at that depth
+      llvm::SmallVector<Fortran::lower::pft::Evaluation *> prologue, epilogue;
       Fortran::lower::pft::Evaluation *parent = &getEval();
-      uint64_t levelsToProcess = std::min<uint64_t>(collapseDepth, loopCount);
-      for (uint64_t lvl = 0; lvl + 1 < levelsToProcess; ++lvl) {
-        if (!hasKids(parent)) break;
-        Fortran::lower::pft::Evaluation *childLoop = nullptr;
-        tail.clear();
+      Fortran::lower::pft::Evaluation *innermostLoopEval = nullptr;
+      for (uint64_t lvl = 0; lvl + 1 < collapseDepth; ++lvl) {
+        epilogue.clear();
         auto &kids = parent->getNestedEvaluations();
+        // Collect all non-loop statements before the next inner loop as prologue,
+        // then mark remaining siblings as epilogue and descend into the inner loop.
+        Fortran::lower::pft::Evaluation *childLoop = nullptr;
         for (auto it = kids.begin(); it != kids.end(); ++it) {
           if (it->getIf<Fortran::parser::DoConstruct>()) {
             childLoop = &*it;
             for (auto it2 = std::next(it); it2 != kids.end(); ++it2)
-              tail.push_back(&*it2);
+              epilogue.push_back(&*it2);
             break;
           }
           prologue.push_back(&*it);
         }
-        if (!childLoop) break;
+        // Semantics guarantees collapseDepth does not exceed nest depth
+        // so childLoop must be found here.
+        assert(childLoop && "Expected inner DoConstruct for collapse");
         parent = childLoop;
+        innermostLoopEval = childLoop;
       }
-    }
 
-    // Track sunk evaluations to avoid double-lowering
-    llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> sunk;
-    for (auto *e : prologue) sunk.insert(e);
-    for (auto *e : tail) sunk.insert(e);
+      // Track sunk evaluations (avoid double-lowering)
+      llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> sunk;
+      for (auto *e : prologue)  sunk.insert(e);
+      for (auto *e : epilogue)  sunk.insert(e);
 
-    // Prologue sink
-    for (auto *e : prologue)
-      genFIR(*e);
+      auto emit = [&](llvm::SmallVector<Fortran::lower::pft::Evaluation *> &lst) {
+        for (auto *e : lst) genFIR(*e);
+      };
 
-    // Lower the loop body as usual, skipping already-sunk evals
-    if (curEval && curEval->hasNestedEvaluations()) {
-      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations()) {
-        if (sunk.contains(&e)) continue;
+      // Sink prologue
+      emit(prologue);
+
+      // Lower innermost loop body, skipping sunk
+      for (Fortran::lower::pft::Evaluation &e : innermostLoopEval->getNestedEvaluations())
+        if (!sunk.contains(&e)) genFIR(e);
+
+      // Sink epilogue
+      emit(epilogue);
+    } else {
+      // Normal lowering
+      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
         genFIR(e);
-      }
-    } else if (getEval().hasNestedEvaluations()) {
-      for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations()) {
-        if (sunk.contains(&e)) continue;
-        genFIR(e);
-      }
     }
-
-    // Epilogue sink
-    for (auto *e : tail)
-      genFIR(*e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
