@@ -1472,27 +1472,34 @@ public:
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
-  LegalizeAction getLoadExtAction(unsigned ExtType, EVT ValVT,
-                                  EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
+  LegalizeAction getLoadExtAction(unsigned ExtType, EVT ValVT, EVT MemVT,
+                                  unsigned AddrSpace) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
            MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
     unsigned Shift = 4 * ExtType;
-    return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
+
+    if (!LoadExtActions.count(AddrSpace)) {
+      return Legal; // default
+    }
+    return (
+        LegalizeAction)((LoadExtActions.at(AddrSpace)[ValI][MemI] >> Shift) &
+                        0xf);
   }
 
   /// Return true if the specified load with extension is legal on this target.
-  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT, unsigned AddrSpace) const {
+    return getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
-  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal ||
-           getLoadExtAction(ExtType, ValVT, MemVT) == Custom;
+  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT, unsigned AddrSpace) const {
+    return getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Legal ||
+           getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Custom;
   }
 
   /// Same as getLoadExtAction, but for atomic loads.
@@ -2634,13 +2641,15 @@ protected:
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
   void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
-                        LegalizeAction Action) {
+                        LegalizeAction Action, unsigned AddrSpace) {
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
            MemVT.isValid() && "Table isn't big enough!");
     assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
     unsigned Shift = 4 * ExtType;
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &= ~((uint16_t)0xF << Shift);
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action << Shift;
+    LoadExtActions[AddrSpace][ValVT.SimpleTy][MemVT.SimpleTy] &=
+        ~((uint16_t)0xF << Shift);
+    LoadExtActions[AddrSpace][ValVT.SimpleTy][MemVT.SimpleTy] |=
+        (uint16_t)Action << Shift;
   }
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
                         LegalizeAction Action) {
@@ -3753,8 +3762,13 @@ private:
   /// For each load extension type and each value type, keep a LegalizeAction
   /// that indicates how instruction selection should deal with a load of a
   /// specific value type and extension type. Uses 4-bits to store the action
-  /// for each of the 4 load ext types.
-  uint16_t LoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
+  /// for each of the 4 load ext types. These actions can be specified for each
+  /// address space.
+  using LoadExtActionMapTy =
+      std::array<std::array<uint16_t, MVT::VALUETYPE_SIZE>,
+                 MVT::VALUETYPE_SIZE>;
+  using LoadExtActionMap = std::map<unsigned, LoadExtActionMapTy>;
+  LoadExtActionMap LoadExtActions;
 
   /// Similar to LoadExtActions, but for atomic loads. Only Legal or Expand
   /// (default) values are supported.
