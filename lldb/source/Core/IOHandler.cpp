@@ -177,10 +177,10 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
     }
   }
 
-  if (input.compare_insensitive("yes")) {
+  if (input.equals_insensitive("yes")) {
     m_user_response = true;
     io_handler.SetIsDone(true);
-  } else if (input.compare_insensitive("no")) {
+  } else if (input.equals_insensitive("no")) {
     m_user_response = false;
     io_handler.SetIsDone(true);
   }
