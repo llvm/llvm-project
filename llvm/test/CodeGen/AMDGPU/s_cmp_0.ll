@@ -581,5 +581,3 @@ define amdgpu_ps i32 @not64(i64 inreg %val0, ptr addrspace(1) %ptr) {
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
-
-
