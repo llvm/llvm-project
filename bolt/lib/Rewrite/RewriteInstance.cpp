@@ -743,6 +743,19 @@ Error RewriteInstance::run() {
   adjustCommandLineOptions();
   discoverFileObjects();
 
+  if (BC->isPPC64()) {
+    if (const auto *G = BC->getUniqueSectionByName(".got")) {
+      PPC64TOCBase = G->getAddress() + 0x8000; // ELFv2 ABI
+      HavePPC64TOCBase = true;
+      if (opts::Verbosity >= 1)
+        BC->outs() << "BOLT-INFO: PPC64 TOC base: 0x"
+                   << Twine::utohexstr(PPC64TOCBase) << "\n";
+    } else if (opts::Verbosity >= 1) {
+      BC->errs()
+          << "BOLT-WARNING: .got not found; PPC64 TOC base unavailable\n";
+    }
+  }
+
   if (opts::Instrument && !BC->IsStaticExecutable)
     if (Error E = discoverRtFiniAddress())
       return E;
@@ -2415,6 +2428,22 @@ bool RewriteInstance::analyzeRelocation(
         SkipVerification |= (*TypeOrErr == SymbolRef::ST_Other);
         IsSectionRelocation = (*TypeOrErr == SymbolRef::ST_Debug);
       }
+
+      if (HavePPC64TOCBase) {
+        switch (RType) {
+        case ELF::R_PPC64_TOC16:
+        case ELF::R_PPC64_TOC16_LO:
+        case ELF::R_PPC64_TOC16_HI:
+        case ELF::R_PPC64_TOC16_HA:
+        case ELF::R_PPC64_TOC16_DS:
+        case ELF::R_PPC64_TOC16_LO_DS:
+          SymbolAddress = PPC64TOCBase;
+          break;
+        default:
+          break;
+        }
+      }
+
     } else {
       // --- Original fast path for other arches ---
       SymbolName = std::string(cantFail(Symbol.getName()));
