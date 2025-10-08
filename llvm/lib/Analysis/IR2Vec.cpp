@@ -239,10 +239,21 @@ void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
       // If the operand is defined elsewhere, we use its embedding
       if (const auto *DefInst = dyn_cast<Instruction>(Op)) {
         auto DefIt = InstVecMap.find(DefInst);
-        assert(DefIt != InstVecMap.end() &&
-               "Instruction should have been processed before its operands");
-        ArgEmb += DefIt->second;
-        continue;
+        // Fixme (#159171): Ideally we should never miss an instruction
+        // embedding here.
+        // But when we have cyclic dependencies (e.g., phi
+        // nodes), we might miss the embedding. In such cases, we fall back to
+        // using the vocabulary embedding. This can be fixed by iterating to a
+        // fixed-point, or by using a simple solver for the set of simultaneous
+        // equations.
+        // Another case when we might miss an instruction embedding is when
+        // the operand instruction is in a different basic block that has not
+        // been processed yet. This can be fixed by processing the basic blocks
+        // in a topological order.
+        if (DefIt != InstVecMap.end())
+          ArgEmb += DefIt->second;
+        else
+          ArgEmb += Vocab[*Op];
       }
       // If the operand is not defined by an instruction, we use the vocabulary
       else {
