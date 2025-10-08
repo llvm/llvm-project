@@ -70,6 +70,11 @@ static Attribute opMTest(PatternRewriter &rewriter, Value val) {
   return rewriter.getIntegerAttr(rewriter.getIntegerType(32), i);
 }
 
+// Requires input value is of i32 type.
+static bool intIs32Bits(Value v) {
+  return mlir::dyn_cast<IntegerType>(v.getType()).getWidth() == 32;
+}
+
 namespace {
 #include "TestPatterns.inc"
 } // namespace
