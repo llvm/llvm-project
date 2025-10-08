@@ -52,15 +52,14 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
     if (!CheckRE.isValid(REError))
       return createStringError(errc::invalid_argument, REError);
 
-    RegExes.emplace_back(std::make_pair(
-        std::make_unique<Regex>(std::move(CheckRE)), LineNumber));
+    auto Rg =
+        std::make_unique<Matcher::Reg>(Pattern, LineNumber, std::move(CheckRE));
+    RegExes.emplace_back(std::move(Rg));
 
     return Error::success();
   }
 
-  auto Glob = std::make_unique<Matcher::Glob>();
-  Glob->Name = Pattern.str();
-  Glob->LineNo = LineNumber;
+  auto Glob = std::make_unique<Matcher::Glob>(Pattern, LineNumber);
   // We must be sure to use the string in `Glob` rather than the provided
   // reference which could be destroyed before match() is called
   if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
@@ -76,9 +75,9 @@ void SpecialCaseList::Matcher::match(
   for (const auto &Glob : reverse(Globs))
     if (Glob->Pattern.match(Query))
       Cb(Glob->Name, Glob->LineNo);
-  for (const auto &[Regex, LineNumber] : reverse(RegExes))
-    if (Regex->match(Query))
-      Cb(/*FIXME: there is no users of this param yet */ "", LineNumber);
+  for (const auto &Regex : reverse(RegExes))
+    if (Regex->Rg.match(Query))
+      Cb(Regex->Name, Regex->LineNo);
 }
 
 // TODO: Refactor this to return Expected<...>
