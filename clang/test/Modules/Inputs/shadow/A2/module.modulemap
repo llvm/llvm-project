@@ -2,6 +2,4 @@ module A {
   header "A.h"
 }
 
-module A2 {
-  header "A2.h"
-}
+module A2 {}

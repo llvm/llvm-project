@@ -599,13 +599,13 @@ struct ReadModuleNames : ASTReaderListener {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
     for (const std::string &LoadedModule : LoadedModules)
       MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
-                         MM.findOrLoadModule(LoadedModule));
+                         MM.findModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
     for (const std::string &LoadedModule : LoadedModules) {
-      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findOrLoadModule(
+      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
               LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
