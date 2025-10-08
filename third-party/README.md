@@ -1,6 +1,6 @@
 # Third-party LLVM dependencies
 
-This subfolder contains third-party dependencies used in various components of LLVM.
+This directory contains third-party dependencies used in various components of LLVM.
 Integrating a new third-party dependency generally requires it to be licensed under
 the Apache-with-LLVM-exception license. For integrating code under other licenses,
 please follow the process explained in the [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents).
