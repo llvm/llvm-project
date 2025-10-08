@@ -142,6 +142,7 @@
 ; CHECK-NEXT:   shvstvecd                        - 'Shvstvecd' (vstvec supports Direct mode).
 ; CHECK-NEXT:   shxadd-load-fusion               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   sifive7                          - SiFive 7-Series processors.
+; CHECK-NEXT:   single-element-vec-fp64          - Certain vector FP64 operations produce a single result element per cycle.
 ; CHECK-NEXT:   smaia                            - 'Smaia' (Advanced Interrupt Architecture Machine Level).
 ; CHECK-NEXT:   smcdeleg                         - 'Smcdeleg' (Counter Delegation Machine Level).
 ; CHECK-NEXT:   smcntrpmf                        - 'Smcntrpmf' (Cycle and Instret Privilege Mode Filtering).
@@ -179,7 +180,6 @@
 ; CHECK-NEXT:   svpbmt                           - 'Svpbmt' (Page-Based Memory Types).
 ; CHECK-NEXT:   svvptc                           - 'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
 ; CHECK-NEXT:   tagged-globals                   - Use an instruction sequence for taking the address of a global that allows a memory tag in the upper address bits.
-; CHECK-NEXT:   throttled-vec-fp64               - Certain vector FP64 operations have limited performance.
 ; CHECK-NEXT:   unaligned-scalar-mem             - Has reasonably performant unaligned scalar loads and stores.
 ; CHECK-NEXT:   unaligned-vector-mem             - Has reasonably performant unaligned vector loads and stores.
 ; CHECK-NEXT:   use-postra-scheduler             - Schedule again after register allocation.
