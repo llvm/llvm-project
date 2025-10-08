@@ -47,82 +47,83 @@ static void CheckPassGlobalVariable(
     const evaluate::SpecificIntrinsic *intrinsic,
     const characteristics::Procedure *procedure, bool dummyIsValue = false) {
   const Symbol *actualFirstSymbol{evaluate::GetFirstSymbol(actual)};
-  if (actualFirstSymbol) {
-    bool warn{false};
-    std::string ownerType{""};
-    std::string ownerName{""};
-    if (actualFirstSymbol->flags().test(Symbol::Flag::InCommonBlock)) {
-      const Symbol *common{FindCommonBlockContaining(*actualFirstSymbol)};
-      ownerType = "COMMON";
-      ownerName = common->name().ToString();
-      if (intrinsic) {
-        warn |= false;
-      } else if (procedure && procedure->IsPure()) {
-        warn |= false;
-      } else if (dummyIsValue) {
-        warn |= false;
-      } else if (!(actualFirstSymbol->Rank() == 1 &&
-                     actualFirstSymbol->offset() == 0)) {
+  if (!actualFirstSymbol) {
+    return;
+  }
+  bool warn{false};
+  std::string ownerType{""};
+  std::string ownerName{""};
+  if (actualFirstSymbol->flags().test(Symbol::Flag::InCommonBlock)) {
+    const Symbol *common{FindCommonBlockContaining(*actualFirstSymbol)};
+    ownerType = "COMMON";
+    ownerName = common->name().ToString();
+    if (intrinsic) {
+      warn |= false;
+    } else if (procedure && procedure->IsPure()) {
+      warn |= false;
+    } else if (dummyIsValue) {
+      warn |= false;
+    } else if (!(actualFirstSymbol->Rank() == 1 &&
+                   actualFirstSymbol->offset() == 0)) {
+      warn |= true;
+    } else if (actualFirstSymbol->Rank() == 1) {
+      bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
+      if (!actualIsArrayElement) {
         warn |= true;
-      } else if (actualFirstSymbol->Rank() == 1) {
-        bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
-        if (!actualIsArrayElement) {
-          warn |= true;
-        }
-        if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
-            dims && dims->IsExplicitShape()) {
-          // tricky way to check that array has only one element
-          if (!((*dims)[0].lbound().GetExplicit() ==
-                  (*dims)[0].ubound().GetExplicit())) {
-            warn |= true;
-          }
-        }
-        if (common->get<CommonBlockDetails>().objects().size() > 1) {
+      }
+      if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+          dims && dims->IsExplicitShape()) {
+        // tricky way to check that array has only one element
+        if (!((*dims)[0].lbound().GetExplicit() ==
+                (*dims)[0].ubound().GetExplicit())) {
           warn |= true;
         }
       }
-    } else if (const auto &owner{actualFirstSymbol->GetUltimate().owner()};
-        owner.IsModule() || owner.IsSubmodule()) {
-      const Scope *module{FindModuleContaining(owner)};
-      ownerType = "MODULE";
-      ownerName = module->GetName()->ToString();
-      if (actualFirstSymbol->attrs().test(Attr::PARAMETER) ||
-          actualFirstSymbol->attrs().test(Attr::PRIVATE)) {
-        warn |= false;
-      } else if (auto type{characteristics::TypeAndShape::Characterize(
-                     actualFirstSymbol, foldingContext)};
-          type->type().category() == TypeCategory::Derived) {
-        warn |= false;
-      } else if (intrinsic) {
-        warn |= false;
-      } else if (procedure && procedure->IsPure()) {
-        warn |= false;
-      } else if (dummyIsValue) {
-        warn |= false;
-      } else if (actualFirstSymbol->Rank() != 1) {
+      if (common->get<CommonBlockDetails>().objects().size() > 1) {
         warn |= true;
-      } else if (!actualFirstSymbol->attrs().test(Attr::ALLOCATABLE) &&
-          !actualFirstSymbol->attrs().test(Attr::POINTER) &&
-          !actualFirstSymbol->attrs().test(Attr::VOLATILE)) {
-        bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
-        if (!actualIsArrayElement) {
+      }
+    }
+  } else if (const auto &owner{actualFirstSymbol->GetUltimate().owner()};
+      owner.IsModule() || owner.IsSubmodule()) {
+    const Scope *module{FindModuleContaining(owner)};
+    ownerType = "MODULE";
+    ownerName = module->GetName()->ToString();
+    if (actualFirstSymbol->attrs().test(Attr::PARAMETER) ||
+        actualFirstSymbol->attrs().test(Attr::PRIVATE)) {
+      warn |= false;
+    } else if (auto type{characteristics::TypeAndShape::Characterize(
+                   actualFirstSymbol, foldingContext)};
+        type->type().category() == TypeCategory::Derived) {
+      warn |= false;
+    } else if (intrinsic) {
+      warn |= false;
+    } else if (procedure && procedure->IsPure()) {
+      warn |= false;
+    } else if (dummyIsValue) {
+      warn |= false;
+    } else if (actualFirstSymbol->Rank() != 1) {
+      warn |= true;
+    } else if (!actualFirstSymbol->attrs().test(Attr::ALLOCATABLE) &&
+        !actualFirstSymbol->attrs().test(Attr::POINTER) &&
+        !actualFirstSymbol->attrs().test(Attr::VOLATILE)) {
+      bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
+      if (!actualIsArrayElement) {
+        warn |= true;
+      }
+      if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+          dims && dims->IsExplicitShape()) {
+        // tricky way to check that array has only one element
+        if (!((*dims)[0].lbound().GetExplicit() ==
+                (*dims)[0].ubound().GetExplicit())) {
           warn |= true;
-        }
-        if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
-            dims && dims->IsExplicitShape()) {
-          // tricky way to check that array has only one element
-          if (!((*dims)[0].lbound().GetExplicit() ==
-                  (*dims)[0].ubound().GetExplicit())) {
-            warn |= true;
-          }
         }
       }
     }
-    if (warn) {
-      context.Warn(common::UsageWarning::PassGlobalVariable, messages.at(),
-          "Passing global variable '%s' from %s '%s' as function argument"_warn_en_US,
-          actualFirstSymbol->name(), ownerType, ownerName);
-    }
+  }
+  if (warn) {
+    context.Warn(common::UsageWarning::PassGlobalVariable, messages.at(),
+        "Passing global variable '%s' from %s '%s' as function argument"_warn_en_US,
+        actualFirstSymbol->name(), ownerType, ownerName);
   }
 }
 
