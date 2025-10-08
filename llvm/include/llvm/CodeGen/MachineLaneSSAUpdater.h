@@ -105,8 +105,15 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MachineLaneSSAUpdater: universal SSA repair for Machine IR (lane-aware)
-//   * addDefAndRepairNewDef   : for plain new defs (no prior pruneValue)
-//   * addDefAndRepairAfterSpill: for reloads (must consume CutEndPoints)
+//
+// Use Case 1 (Common): repairSSAForNewDef()
+//   - Caller creates a new instruction that defines an existing vreg (violating SSA)
+//   - This function creates a new vreg, replaces the operand, and repairs SSA
+//   - Example: User inserts "OrigVReg = ADD ..." and calls repairSSAForNewDef()
+//
+// Use Case 2 (Spill/Reload): addDefAndRepairAfterSpill()
+//   - Spiller has already created both instruction and new vreg
+//   - Must consume CutEndPoints from spill-time
 //===----------------------------------------------------------------------===//
 class MachineLaneSSAUpdater {
 public:
@@ -116,11 +123,20 @@ public:
                         const TargetRegisterInfo &TRI)
       : MF(MF), LIS(LIS), MDT(MDT), TRI(TRI) {}
 
-  // Plain new-def path (no EndPoints required). The updater derives any
-  // necessary data from the intact LIS.
-  Register addDefAndRepairNewDef(MachineInstr &NewDefMI,
-                                 Register OrigVReg,
-                                 LaneBitmask DefMask);
+  // Use Case 1 (Common): Repair SSA for a new definition
+  // 
+  // NewDefMI: Instruction with a def operand that currently defines OrigVReg (violating SSA)
+  // OrigVReg: The virtual register being redefined
+  //
+  // This function will:
+  //   1. Find the def operand in NewDefMI that defines OrigVReg
+  //   2. Derive the lane mask from the operand's subreg index (if any)
+  //   3. Create a new virtual register with appropriate register class
+  //   4. Replace the operand in NewDefMI to define the new vreg
+  //   5. Perform SSA repair (insert PHIs, rewrite uses)
+  //
+  // Returns: The newly created virtual register
+  Register repairSSAForNewDef(MachineInstr &NewDefMI, Register OrigVReg);
 
   // Reload-after-spill path (requires spill-time EndPoints). Will assert
   // if the token does not match the OrigVReg or if indices are inconsistent.
@@ -180,14 +196,14 @@ private:
 
   // Internal helper methods for use rewriting
   VNInfo *incomingOnEdge(LiveInterval &LI, MachineInstr *Phi, MachineOperand &PhiOp);
-  bool reachedByThisVNI(LiveInterval &LI, MachineInstr *DefMI, MachineInstr *UseMI, 
-                        MachineOperand &UseOp, VNInfo *VNI);
+  bool defReachesUse(MachineInstr *DefMI, MachineInstr *UseMI, MachineOperand &UseOp);
   LaneBitmask operandLaneMask(const MachineOperand &MO);
   Register buildRSForSuperUse(MachineInstr *UseMI, MachineOperand &MO,
                              Register OldVR, Register NewVR, LaneBitmask MaskToRewrite,
                              LiveInterval &LI, const TargetRegisterClass *OpRC,
                              SlotIndex &OutIdx, SmallVectorImpl<LaneBitmask> &LanesToExtend);
   void extendAt(LiveInterval &LI, SlotIndex Idx, ArrayRef<LaneBitmask> Lanes);
+  void updateDeadFlags(Register Reg);
 
   // --- Data members ---
   MachineFunction &MF;
