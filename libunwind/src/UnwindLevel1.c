@@ -94,12 +94,30 @@
 // integer and an authenticated function pointer, so we need this helper
 // function to keep things clean.
 static _Unwind_Personality_Fn get_handler_function(unw_proc_info_t *frameInfo) {
-  union {
-    void *opaque_handler;
-    _Unwind_Personality_Fn __ptrauth_unwind_upi_handler *handler;
-  } u;
-  u.opaque_handler = (void *)&frameInfo->handler;
-  return *u.handler;
+  // Converting from an authenticated integer to a _Unwind_Personality_Fn
+  // requires multiple steps, but as the schema of _Unwind_Personality_Fn is
+  // not address diversified we can mostly just rely on automatic re-signing
+  // by clang.
+
+  // Step 1. Assign from the address diversified integer in frameInfo->handler
+  //         to the non-address diversified schema of `_Unwind_Personality_Fn`
+  uintptr_t __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer,
+                                               0,
+                                               ptrauth_function_pointer_type_discriminator(_Unwind_Personality_Fn))
+    reauthenticatedIntegerHandler = frameInfo->handler;
+
+  // Step 2. Memcpy from our re-signed integer typed handler to an
+  //         _Unwind_Personality_Fn typed local - this avoids any confused
+  //         re-signing of values that already have a signature.
+  _Unwind_Personality_Fn handler;
+  uintptr_t __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 0,
+                  ptrauth_function_pointer_type_discriminator(_Unwind_Personality_Fn))
+                  f;
+  memcpy(&handler, (void *)&reauthenticatedIntegerHandler,
+         sizeof(_Unwind_Personality_Fn));
+
+  // Step 3. Finally return the correctly typed and signed value.
+  return handler;
 }
 
 static _Unwind_Reason_Code
