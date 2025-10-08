@@ -305,6 +305,12 @@ public:
     if (!NTTP)
       return TraverseDecl(D);
 
+    if (NTTP->getDepth() >= TemplateArgs.getNumLevels())
+      return true;
+
+    if (!TemplateArgs.hasTemplateArgument(NTTP->getDepth(), NTTP->getIndex()))
+      return true;
+
     TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
     if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
@@ -331,17 +337,25 @@ public:
     return inherited::TraverseDecl(D);
   }
 
+  bool TraverseCallExpr(CallExpr *CE) {
+    inherited::TraverseStmt(CE->getCallee());
+
+    for (Expr *Arg : CE->arguments())
+      inherited::TraverseStmt(Arg);
+
+    return true;
+  }
+
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     // We don't care about TypeLocs. So traverse Types instead.
-    return TraverseType(TL.getType(), TraverseQualifier);
+    return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
   }
 
   bool TraverseTagType(const TagType *T, bool TraverseQualifier) {
     // T's parent can be dependent while T doesn't have any template arguments.
     // We should have already traversed its qualifier.
     // FIXME: Add an assert to catch cases where we failed to profile the
-    // concept. assert(!T->isDependentType() && "We missed a case in profiling
-    // concepts!");
+    // concept.
     return true;
   }
 
@@ -706,7 +720,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
       Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
-
     auto &Cached = Iter->second.Satisfaction;
     Satisfaction.ContainsErrors = Cached.ContainsErrors;
     Satisfaction.IsSatisfied = Cached.IsSatisfied;
