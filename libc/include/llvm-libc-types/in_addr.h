@@ -11,7 +11,7 @@
 
 #include "in_addr_t.h"
 
-typedef struct in_addr {
+typedef struct {
   in_addr_t s_addr;
 } in_addr;
 
