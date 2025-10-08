@@ -7,7 +7,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// XFAIL: !has-64-bit-atomics
 
 // constexpr T* address() const noexcept;
 
