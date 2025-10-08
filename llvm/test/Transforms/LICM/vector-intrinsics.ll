@@ -38,18 +38,17 @@ define i32 @vp_umax(<2 x i32> %inv.l, <2 x i32> %inv.r, i1 %c) {
 ; CHECK-LABEL: define i32 @vp_umax(
 ; CHECK-SAME: <2 x i32> [[INV_L:%.*]], <2 x i32> [[INV_R:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[COND_TRUE:.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    br i1 [[C]], label %[[COND_TRUE]], label %[[EXIT:.*]]
-; CHECK:       [[COND_TRUE]]:
 ; CHECK-NEXT:    [[VP_UMAX:%.*]] = call <2 x i32> @llvm.vp.umax.v2i32(<2 x i32> [[INV_L]], <2 x i32> [[INV_R]], <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x i32> [[VP_UMAX]], i32 0
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[BACKEDGE_COND:%.*]] = icmp ult i32 [[IV]], [[EXTRACT]]
-; CHECK-NEXT:    br i1 [[BACKEDGE_COND]], label %[[LOOP]], label %[[EXIT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C]], i1 [[BACKEDGE_COND]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], %[[COND_TRUE]] ], [ [[IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
 ;
 entry:
