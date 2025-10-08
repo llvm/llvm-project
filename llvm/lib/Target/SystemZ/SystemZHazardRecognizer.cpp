@@ -352,8 +352,7 @@ int SystemZHazardRecognizer::groupingCost(SUnit *SU) const {
   // Similarly, a group-ending SU may either fit well (last in group), or
   // end the group prematurely.
   if (SC->EndGroup) {
-    unsigned ResultingGroupSize =
-      (CurrGroupSize + getNumDecoderSlots(SU));
+    unsigned ResultingGroupSize = (CurrGroupSize + getNumDecoderSlots(SU));
     if (ResultingGroupSize < 3)
       return (3 - ResultingGroupSize);
     return -1;
