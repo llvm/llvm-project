@@ -1,7 +1,21 @@
+//===- LiveOrigins.h - Live Origins Analysis -------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the LiveOriginAnalysis, a backward dataflow analysis that
+// determines which origins are "live" at each program point. An origin is live
+// if there's a potential future use of the pointer it represents. This
+// information is used to detect use-after-free errors by checking if live
+// origins hold loans to objects that have already expired.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H
 
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -18,6 +32,14 @@
 
 namespace clang::lifetimes {
 namespace internal {
+
+using OriginSet = llvm::ImmutableSet<OriginID>;
+
+enum class LivenessKind : uint8_t {
+  Dead,  // Not alive
+  Maybe, // Live on some path but not all paths (may-be-live)
+  Must   // Live on all paths (must-be-live)
+};
 
 // ========================================================================= //
 //                         Live Origins Analysis
@@ -200,11 +222,12 @@ public:
   }
 
   // Dump liveness values on all test points in the program.
-  void dump(llvm::raw_ostream &OS, const LifetimeSafetyAnalysis &LSA) const {
+  void dump(llvm::raw_ostream &OS,
+            llvm::StringMap<ProgramPoint> TestPoints) const {
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
-    for (const auto &Entry : LSA.getTestPoints()) {
+    for (const auto &Entry : TestPoints) {
       OS << "TestPoint: " << Entry.getKey() << "\n";
       getState(Entry.getValue()).dump(OS, FactMgr.getOriginMgr());
     }

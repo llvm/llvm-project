@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements the main LifetimeSafetyAnalysis class, which coordinates
+// the various components (fact generation, loan propagation, live origins
+// analysis, and checking) to detect lifetime safety violations in C++ code.
+//
+//===----------------------------------------------------------------------===//
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -80,7 +86,8 @@ void LifetimeSafetyAnalysis::run() {
   LiveOrigins = std::make_unique<LiveOriginAnalysis>(
       Cfg, AC, *FactMgr, Factory->LivenessMapFactory);
   LiveOrigins->run();
-  DEBUG_WITH_TYPE("LiveOrigins", LiveOrigins->dump(llvm::dbgs(), *this));
+  DEBUG_WITH_TYPE("LiveOrigins",
+                  LiveOrigins->dump(llvm::dbgs(), getTestPoints()));
 
   LifetimeChecker Checker(*LoanPropagation, *LiveOrigins, *FactMgr, AC,
                           Reporter);

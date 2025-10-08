@@ -1,9 +1,21 @@
+//===- Facts.h - Lifetime Analysis Facts and Fact Generation ---*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines Facts, which are atomic lifetime-relevant events (such as
+// loan issuance, loan expiration, origin flow, and use), and the FactGenerator,
+// which traverses the AST to generate these facts from CFG statements.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
@@ -63,6 +75,13 @@ public:
     OS << "Fact (Kind: " << static_cast<int>(K) << ")\n";
   }
 };
+
+/// A `ProgramPoint` identifies a location in the CFG by pointing to a specific
+/// `Fact`. identified by a lifetime-related event (`Fact`).
+///
+/// A `ProgramPoint` has "after" semantics: it represents the location
+/// immediately after its corresponding `Fact`.
+using ProgramPoint = const Fact *;
 
 class IssueFact : public Fact {
   LoanID LID;

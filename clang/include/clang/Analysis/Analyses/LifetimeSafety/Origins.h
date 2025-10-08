@@ -1,10 +1,30 @@
+//===- Origins.h - Origin and Origin Management ----------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines Origins, which represent the set of possible loans a
+// pointer-like object could hold, and the OriginManager, which manages the
+// creation, storage, and retrieval of origins for variables and expressions.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINS_H
 
-#include "LifetimeSafety.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 
 namespace clang::lifetimes {
 namespace internal {
+
+using OriginID = utils::ID<struct OriginTag>;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
+  return OS << ID.Value;
+}
 
 /// An Origin is a symbolic identifier that represents the set of possible
 /// loans a pointer-like object could hold at any given time.

@@ -1,3 +1,16 @@
+//===- Utils.h - Utility Functions for Immutable Collections ---*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides utility functions for working with LLVM's immutable data
+// structures, including join operations for ImmutableSet and ImmutableMap
+// used throughout the lifetime safety analysis.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_UTILS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_UTILS_H
 
@@ -8,6 +21,24 @@ namespace clang::lifetimes {
 namespace internal {
 
 namespace utils {
+
+/// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
+/// Used for giving ID to loans and origins.
+template <typename Tag> struct ID {
+  uint32_t Value = 0;
+
+  bool operator==(const ID<Tag> &Other) const { return Value == Other.Value; }
+  bool operator!=(const ID<Tag> &Other) const { return !(*this == Other); }
+  bool operator<(const ID<Tag> &Other) const { return Value < Other.Value; }
+  ID<Tag> operator++(int) {
+    ID<Tag> Tmp = *this;
+    ++Value;
+    return Tmp;
+  }
+  void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
+    IDBuilder.AddInteger(Value);
+  }
+};
 
 /// Computes the union of two ImmutableSets.
 template <typename T>
@@ -70,5 +101,26 @@ join(const llvm::ImmutableMap<K, V> &A, const llvm::ImmutableMap<K, V> &B,
 } // namespace utils
 } // namespace internal
 } // namespace clang::lifetimes
+
+namespace llvm {
+template <typename Tag>
+struct DenseMapInfo<clang::lifetimes::internal::utils::ID<Tag>> {
+  using ID = clang::lifetimes::internal::utils::ID<Tag>;
+
+  static inline ID getEmptyKey() {
+    return {DenseMapInfo<uint32_t>::getEmptyKey()};
+  }
+
+  static inline ID getTombstoneKey() {
+    return {DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const ID &Val) {
+    return DenseMapInfo<uint32_t>::getHashValue(Val.Value);
+  }
+
+  static bool isEqual(const ID &LHS, const ID &RHS) { return LHS == RHS; }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_UTILS_H

@@ -1,9 +1,30 @@
+//===- Loans.h - Loan and Access Path Definitions --------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the Loan and AccessPath structures, which represent
+// borrows of storage locations, and the LoanManager, which manages the
+// creation and retrieval of loans during lifetime analysis.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOANS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOANS_H
-#include "LifetimeSafety.h"
+
+#include "clang/AST/Decl.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes {
 namespace internal {
+
+using LoanID = utils::ID<struct LoanTag>;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
+  return OS << ID.Value;
+}
 
 /// Represents the storage location being borrowed, e.g., a specific stack
 /// variable.

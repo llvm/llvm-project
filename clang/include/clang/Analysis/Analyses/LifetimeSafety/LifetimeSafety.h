@@ -17,39 +17,17 @@
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
+
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Reporter.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 
 namespace clang::lifetimes {
-
-/// Enum to track the confidence level of a potential error.
-enum class Confidence : uint8_t {
-  None,
-  Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
-  Definite // Reported as a definite error (-Wlifetime-safety-permissive)
-};
-
-enum class LivenessKind : uint8_t {
-  Dead,  // Not alive
-  Maybe, // Live on some path but not all paths (may-be-live)
-  Must   // Live on all paths (must-be-live)
-};
-
-class LifetimeSafetyReporter {
-public:
-  LifetimeSafetyReporter() = default;
-  virtual ~LifetimeSafetyReporter() = default;
-
-  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  SourceLocation FreeLoc,
-                                  Confidence Confidence) {}
-};
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
@@ -57,53 +35,7 @@ void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
 
 namespace internal {
 // Forward declarations of internal types.
-class Fact;
-class FactManager;
-class LoanPropagationAnalysis;
-class ExpiredLoansAnalysis;
-class LiveOriginAnalysis;
 struct LifetimeFactory;
-
-/// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
-/// Used for giving ID to loans and origins.
-template <typename Tag> struct ID {
-  uint32_t Value = 0;
-
-  bool operator==(const ID<Tag> &Other) const { return Value == Other.Value; }
-  bool operator!=(const ID<Tag> &Other) const { return !(*this == Other); }
-  bool operator<(const ID<Tag> &Other) const { return Value < Other.Value; }
-  ID<Tag> operator++(int) {
-    ID<Tag> Tmp = *this;
-    ++Value;
-    return Tmp;
-  }
-  void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
-    IDBuilder.AddInteger(Value);
-  }
-};
-
-using LoanID = ID<struct LoanTag>;
-using OriginID = ID<struct OriginTag>;
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
-  return OS << ID.Value;
-}
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
-  return OS << ID.Value;
-}
-
-// Using LLVM's immutable collections is efficient for dataflow analysis
-// as it avoids deep copies during state transitions.
-// TODO(opt): Consider using a bitset to represent the set of loans.
-using LoanSet = llvm::ImmutableSet<LoanID>;
-using OriginSet = llvm::ImmutableSet<OriginID>;
-using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
-
-/// A `ProgramPoint` identifies a location in the CFG by pointing to a specific
-/// `Fact`. identified by a lifetime-related event (`Fact`).
-///
-/// A `ProgramPoint` has "after" semantics: it represents the location
-/// immediately after its corresponding `Fact`.
-using ProgramPoint = const Fact *;
 
 /// Running the lifetime safety analysis and querying its results. It
 /// encapsulates the various dataflow analyses.
@@ -158,26 +90,5 @@ private:
 };
 } // namespace internal
 } // namespace clang::lifetimes
-
-namespace llvm {
-template <typename Tag>
-struct DenseMapInfo<clang::lifetimes::internal::ID<Tag>> {
-  using ID = clang::lifetimes::internal::ID<Tag>;
-
-  static inline ID getEmptyKey() {
-    return {DenseMapInfo<uint32_t>::getEmptyKey()};
-  }
-
-  static inline ID getTombstoneKey() {
-    return {DenseMapInfo<uint32_t>::getTombstoneKey()};
-  }
-
-  static unsigned getHashValue(const ID &Val) {
-    return DenseMapInfo<uint32_t>::getHashValue(Val.Value);
-  }
-
-  static bool isEqual(const ID &LHS, const ID &RHS) { return LHS == RHS; }
-};
-} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H

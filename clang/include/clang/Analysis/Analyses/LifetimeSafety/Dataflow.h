@@ -1,3 +1,17 @@
+//===- Dataflow.h - Generic Dataflow Analysis Framework --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines a generic, policy-based driver for dataflow analyses.
+// It provides a flexible framework that combines the dataflow runner and
+// transfer functions, allowing derived classes to implement specific analyses
+// by defining their lattice, join, and transfer functions.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_DATAFLOW_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_DATAFLOW_H
 
@@ -12,10 +26,6 @@
 
 namespace clang::lifetimes {
 namespace internal {
-
-// ========================================================================= //
-//                         Generic Dataflow Analysis
-// ========================================================================= //
 
 enum class Direction { Forward, Backward };
 
