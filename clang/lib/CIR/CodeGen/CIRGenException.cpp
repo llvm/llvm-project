@@ -67,7 +67,7 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
-  auto loc = getLoc(s.getSourceRange());
+  mlir::Location loc = getLoc(s.getSourceRange());
 
   // Create a scope to hold try local storage for catch params.
   mlir::OpBuilder::InsertPoint scopeIP;
@@ -76,14 +76,10 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
                          scopeIP = builder.saveInsertionPoint();
                        });
 
-  mlir::LogicalResult result = mlir::success();
-  {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(scopeIP);
-    result = emitCXXTryStmtUnderScope(s);
-    cir::YieldOp::create(builder, loc);
-  }
-
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.restoreInsertionPoint(scopeIP);
+  mlir::LogicalResult result = emitCXXTryStmtUnderScope(s);
+  cir::YieldOp::create(builder, loc);
   return result;
 }
 
@@ -100,16 +96,8 @@ CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
     return mlir::success();
   }
 
-  auto hasCatchAll = [&]() {
-    if (!s.getNumHandlers())
-      return false;
-    unsigned lastHandler = s.getNumHandlers() - 1;
-    return s.getHandler(lastHandler)->getExceptionDecl() == nullptr;
-  };
-
   unsigned numHandlers = s.getNumHandlers();
   mlir::Location tryLoc = getLoc(s.getBeginLoc());
-
   mlir::OpBuilder::InsertPoint beginInsertTryBody;
 
   // Create the scope to represent only the C/C++ `try {}` part. However,
@@ -126,15 +114,25 @@ CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
       [&](mlir::OpBuilder &b, mlir::Location loc,
           mlir::OperationState &result) {
         mlir::OpBuilder::InsertionGuard guard(b);
-        unsigned numRegionsToCreate =
-            hasCatchAll() ? numHandlers : numHandlers + 1;
-        for (unsigned i = 0; i != numRegionsToCreate; ++i) {
-          builder.createBlock(result.addRegion());
+
+        bool hasCatchAll = false;
+        for (unsigned i = 0; i != numHandlers; ++i) {
+          hasCatchAll |= s.getHandler(i)->getExceptionDecl() == nullptr;
+          if (hasCatchAll)
+            break;
         }
+
+        // We create an extra region for an unwind catch handler in case the
+        // catch-all handler doesn't exists
+        unsigned numRegionsToCreate =
+            hasCatchAll ? numHandlers : numHandlers + 1;
+
+        for (unsigned i = 0; i != numRegionsToCreate; ++i)
+          builder.createBlock(result.addRegion());
       });
 
   // Finally emit the body for try/catch.
-  auto emitTryCatchBody = [&]() -> mlir::LogicalResult {
+  {
     mlir::Location loc = tryOp.getLoc();
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(beginInsertTryBody);
@@ -157,10 +155,9 @@ CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
 
     // Emit catch clauses.
     exitCXXTryStmt(s);
-    return mlir::success();
-  };
+  }
 
-  return emitTryCatchBody();
+  return mlir::success();
 }
 
 void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,

@@ -535,10 +535,9 @@ def CIR_StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-defvar CIR_ReturnableScopes = [
-  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
-  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
-];
+defvar CIR_ReturnableScopes = ["FuncOp", "ScopeOp", "IfOp", "SwitchOp",
+                               "CaseOp", "DoWhileOp", "WhileOp", "ForOp",
+                               "TryOp"];
 
 def CIR_ReturnOp : CIR_Op<"return", [
   ParentOneOf<CIR_ReturnableScopes>, Terminator
@@ -682,10 +681,9 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
-  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
-];
+defvar CIR_YieldableScopes = ["ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp",
+                              "ForOp", "GlobalOp", "IfOp", "ScopeOp",
+                              "SwitchOp", "TernaryOp", "WhileOp", "TryOp"];
 
 def CIR_YieldOp : CIR_Op<"yield", [
   ReturnLike, Terminator, ParentOneOf<CIR_YieldableScopes>
@@ -4206,25 +4204,12 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 // TryOp
 //===----------------------------------------------------------------------===//
 
-// Represents the unwind region where unwind continues or
-// the program std::terminate's.
-def CIR_CatchUnwind : CIR_UnitAttr<"CatchUnwind", "unwind"> {
-  let storageType = [{ CatchUnwind }];
-}
-
-// Represents the catch_all region.
-def CIR_CatchAll : CIR_UnitAttr<"CatchAll", "all"> {
-  let storageType = [{ CatchAllAttr }];
-}
-
 def CIR_TryOp : CIR_Op<"try",[
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "C++ try block";
   let description = [{
-    ```mlir
-
     Holds the lexical scope of `try {}`. Note that resources used on catch
     clauses are usually allocated in the same parent as `cir.try`.
 
@@ -4234,7 +4219,20 @@ def CIR_TryOp : CIR_Op<"try",[
     `cleanup`: signal to targets (LLVM for now) that this try/catch, needs
     to specially tag their landing pads as needing "cleanup".
 
-    Example: TBD
+    Example:
+
+    ```mlir
+    %0 = cir.alloc.exception 16 -> !cir.ptr<!some_record>
+    %1 = cir.get_global @d2 : !cir.ptr<!some_record>
+    cir.try synthetic cleanup {
+      cir.call exception @_ZN7test2_DC1ERKS_(%0, %1)
+            : (!cir.ptr<!some_record>, !cir.ptr<!some_record>) -> () cleanup {
+        %2 = cir.cast bitcast %0 : !cir.ptr<!some_record> -> !cir.ptr<!void>
+        cir.free.exception %2
+        cir.yield
+      }
+      ...
+    }
     ```
   }];
 
@@ -4252,12 +4250,11 @@ def CIR_TryOp : CIR_Op<"try",[
   }];
 
   // Everything already covered elsewhere.
-  let builders = [
-    OpBuilder<(ins
-              "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$tryBuilder,
-              "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, mlir::OperationState &)>"
-              :$catchBuilder)>,
-  ];
+  let builders = [OpBuilder<(ins 
+      "llvm::function_ref<void(mlir::OpBuilder &, " 
+        "mlir::Location)>":$tryBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, "
+        "mlir::OperationState &)>":$catchBuilder)>];
 
   let hasLLVMLowering = false;
 }

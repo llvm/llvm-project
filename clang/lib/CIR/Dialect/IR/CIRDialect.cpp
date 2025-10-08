@@ -1089,9 +1089,10 @@ LogicalResult cir::ScopeOp::verify() {
 
 void cir::TryOp::build(
     OpBuilder &builder, OperationState &result,
-    function_ref<void(OpBuilder &, Location)> tryBodyBuilder,
+    function_ref<void(OpBuilder &, Location)> tryBuilder,
     function_ref<void(OpBuilder &, Location, OperationState &)> catchBuilder) {
-  assert(tryBodyBuilder && "expected builder callback for 'cir.try' body");
+  assert(tryBuilder && "expected builder callback for 'cir.try' body");
+  assert(catchBuilder && "expected builder callback for 'catch' body");
 
   OpBuilder::InsertionGuard guard(builder);
 
@@ -1100,7 +1101,7 @@ void cir::TryOp::build(
 
   // Create try body region and set insertion point
   builder.createBlock(tryBodyRegion);
-  tryBodyBuilder(builder, result.location);
+  tryBuilder(builder, result.location);
   catchBuilder(builder, result.location, result);
 }
 
@@ -1119,7 +1120,7 @@ void cir::TryOp::getSuccessorRegions(
   // FIXME: optimize, ideas include:
   // - If we know a target function never throws a specific type, we can
   //   remove the catch handler.
-  for (auto &r : this->getCatchRegions())
+  for (mlir::Region &r : this->getCatchRegions())
     regions.push_back(RegionSuccessor(&r));
 }
 
