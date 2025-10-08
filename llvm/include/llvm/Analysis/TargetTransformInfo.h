@@ -277,7 +277,12 @@ class TargetTransformInfoImplBase;
 /// for IR-level transformations.
 class TargetTransformInfo {
 public:
-  enum PartialReductionExtendKind { PR_None, PR_SignExtend, PR_ZeroExtend };
+  enum PartialReductionExtendKind {
+    PR_None,
+    PR_SignExtend,
+    PR_ZeroExtend,
+    PR_FPExtend
+  };
 
   /// Get the kind of extension that an instruction represents.
   LLVM_ABI static PartialReductionExtendKind

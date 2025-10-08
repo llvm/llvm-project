@@ -1037,6 +1037,8 @@ TargetTransformInfo::getPartialReductionExtendKind(
     return PR_ZeroExtend;
   case Instruction::CastOps::SExt:
     return PR_SignExtend;
+  case Instruction::CastOps::FPExt:
+    return PR_FPExtend;
   default:
     return PR_None;
   }
