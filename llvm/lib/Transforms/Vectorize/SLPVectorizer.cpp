@@ -7135,7 +7135,9 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
-  }
+  } else if (StrideWithinGroup == 1)
+    // This is just a vectorized memory operation
+    return false;
 
   if (!isStridedLoad(PointerOps, NewScalarTy, Alignment, Diff, VecSz))
     return false;
