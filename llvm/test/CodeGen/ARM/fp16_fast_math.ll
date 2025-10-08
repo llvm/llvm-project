@@ -16,11 +16,11 @@ define half @normal_fadd(half %x, half %y) {
   ; CHECK-CVT-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:spr = COPY [[COPY1]]
   ; CHECK-CVT-NEXT:   [[COPY3:%[0-9]+]]:spr = COPY [[COPY]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = VCVTBHS killed [[COPY2]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = nofpexcept VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = nofpexcept VCVTBHS killed [[COPY2]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY killed [[VCVTBSH]]
   ; CHECK-CVT-NEXT:   $r0 = COPY [[COPY4]]
   ; CHECK-CVT-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
@@ -33,7 +33,7 @@ define half @normal_fadd(half %x, half %y) {
   ; CHECK-FP16-NEXT:   [[COPY1:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-FP16-NEXT:   [[VMOVHR:%[0-9]+]]:hpr = VMOVHR [[COPY]], 14, $noreg
   ; CHECK-FP16-NEXT:   [[VMOVHR1:%[0-9]+]]:hpr = VMOVHR [[COPY1]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = nofpexcept VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   $r0 = COPY [[VADDH]]
   ; CHECK-FP16-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 entry:
@@ -50,11 +50,11 @@ define half @fast_fadd(half %x, half %y) {
   ; CHECK-CVT-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:spr = COPY [[COPY1]]
   ; CHECK-CVT-NEXT:   [[COPY3:%[0-9]+]]:spr = COPY [[COPY]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VCVTBHS killed [[COPY2]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc nofpexcept VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc nofpexcept VCVTBHS killed [[COPY2]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc nofpexcept VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY killed [[VCVTBSH]]
   ; CHECK-CVT-NEXT:   $r0 = COPY [[COPY4]]
   ; CHECK-CVT-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
@@ -67,7 +67,7 @@ define half @fast_fadd(half %x, half %y) {
   ; CHECK-FP16-NEXT:   [[COPY1:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-FP16-NEXT:   [[VMOVHR:%[0-9]+]]:hpr = VMOVHR [[COPY]], 14, $noreg
   ; CHECK-FP16-NEXT:   [[VMOVHR1:%[0-9]+]]:hpr = VMOVHR [[COPY1]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = nnan ninf nsz arcp contract afn reassoc VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = nnan ninf nsz arcp contract afn reassoc nofpexcept VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   $r0 = COPY [[VADDH]]
   ; CHECK-FP16-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 entry:
@@ -84,11 +84,11 @@ define half @ninf_fadd(half %x, half %y) {
   ; CHECK-CVT-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:spr = COPY [[COPY1]]
   ; CHECK-CVT-NEXT:   [[COPY3:%[0-9]+]]:spr = COPY [[COPY]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = ninf VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = ninf VCVTBHS killed [[COPY2]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = ninf nofpexcept VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = ninf nofpexcept VCVTBHS killed [[COPY2]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf nofpexcept VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY killed [[VCVTBSH]]
   ; CHECK-CVT-NEXT:   $r0 = COPY [[COPY4]]
   ; CHECK-CVT-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
@@ -101,7 +101,7 @@ define half @ninf_fadd(half %x, half %y) {
   ; CHECK-FP16-NEXT:   [[COPY1:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-FP16-NEXT:   [[VMOVHR:%[0-9]+]]:hpr = VMOVHR [[COPY]], 14, $noreg
   ; CHECK-FP16-NEXT:   [[VMOVHR1:%[0-9]+]]:hpr = VMOVHR [[COPY1]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = ninf VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = ninf nofpexcept VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   $r0 = COPY [[VADDH]]
   ; CHECK-FP16-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 entry:
@@ -122,19 +122,19 @@ define half @normal_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-CVT-NEXT:   [[COPY3:%[0-9]+]]:spr = COPY [[COPY2]]
   ; CHECK-CVT-NEXT:   [[COPY4:%[0-9]+]]:spr = COPY [[COPY1]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = VCVTBHS killed [[COPY4]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = nofpexcept VCVTBHS killed [[COPY4]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = nofpexcept VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY5:%[0-9]+]]:spr = COPY [[COPY]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS2:%[0-9]+]]:spr = VCVTBHS killed [[COPY5]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS2:%[0-9]+]]:spr = nofpexcept VCVTBHS killed [[COPY5]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY6:%[0-9]+]]:gpr = COPY killed [[VCVTBSH]]
   ; CHECK-CVT-NEXT:   [[COPY7:%[0-9]+]]:spr = COPY killed [[COPY6]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS3:%[0-9]+]]:spr = VCVTBHS killed [[COPY7]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS1:%[0-9]+]]:spr = VADDS killed [[VCVTBHS3]], killed [[VCVTBHS2]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS3:%[0-9]+]]:spr = nofpexcept VCVTBHS killed [[COPY7]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS1:%[0-9]+]]:spr = nofpexcept VADDS killed [[VCVTBHS3]], killed [[VCVTBHS2]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF1:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH1:%[0-9]+]]:spr = VCVTBSH [[DEF1]], killed [[VADDS1]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH1:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF1]], killed [[VADDS1]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY8:%[0-9]+]]:gpr = COPY killed [[VCVTBSH1]]
   ; CHECK-CVT-NEXT:   $r0 = COPY [[COPY8]]
   ; CHECK-CVT-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
@@ -148,9 +148,9 @@ define half @normal_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-FP16-NEXT:   [[COPY2:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-FP16-NEXT:   [[VMOVHR:%[0-9]+]]:hpr = VMOVHR [[COPY1]], 14, $noreg
   ; CHECK-FP16-NEXT:   [[VMOVHR1:%[0-9]+]]:hpr = VMOVHR [[COPY2]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = nofpexcept VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   [[VMOVHR2:%[0-9]+]]:hpr = VMOVHR [[COPY]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH1:%[0-9]+]]:hpr = VADDH killed [[VADDH]], killed [[VMOVHR2]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH1:%[0-9]+]]:hpr = nofpexcept VADDH killed [[VADDH]], killed [[VMOVHR2]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   $r0 = COPY [[VADDH1]]
   ; CHECK-FP16-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 entry:
@@ -169,14 +169,14 @@ define half @nnan_ninf_contract_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-CVT-NEXT:   [[COPY3:%[0-9]+]]:spr = COPY [[COPY2]]
   ; CHECK-CVT-NEXT:   [[COPY4:%[0-9]+]]:spr = COPY [[COPY1]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = nnan ninf contract VCVTBHS killed [[COPY4]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = nnan ninf contract VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf contract VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = nnan ninf contract nofpexcept VCVTBHS killed [[COPY4]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = nnan ninf contract nofpexcept VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf contract nofpexcept VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY5:%[0-9]+]]:spr = COPY [[COPY]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS2:%[0-9]+]]:spr = nnan ninf contract VCVTBHS killed [[COPY5]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS1:%[0-9]+]]:spr = nnan ninf contract VADDS killed [[VADDS]], killed [[VCVTBHS2]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS2:%[0-9]+]]:spr = nnan ninf contract nofpexcept VCVTBHS killed [[COPY5]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS1:%[0-9]+]]:spr = nnan ninf contract nofpexcept VADDS killed [[VADDS]], killed [[VCVTBHS2]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = VCVTBSH [[DEF]], killed [[VADDS1]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF]], killed [[VADDS1]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY6:%[0-9]+]]:gpr = COPY killed [[VCVTBSH]]
   ; CHECK-CVT-NEXT:   $r0 = COPY [[COPY6]]
   ; CHECK-CVT-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
@@ -190,9 +190,9 @@ define half @nnan_ninf_contract_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-FP16-NEXT:   [[COPY2:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-FP16-NEXT:   [[VMOVHR:%[0-9]+]]:hpr = VMOVHR [[COPY1]], 14, $noreg
   ; CHECK-FP16-NEXT:   [[VMOVHR1:%[0-9]+]]:hpr = VMOVHR [[COPY2]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = nnan ninf contract VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = nnan ninf contract nofpexcept VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   [[VMOVHR2:%[0-9]+]]:hpr = VMOVHR [[COPY]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH1:%[0-9]+]]:hpr = nnan ninf contract VADDH killed [[VADDH]], killed [[VMOVHR2]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH1:%[0-9]+]]:hpr = nnan ninf contract nofpexcept VADDH killed [[VADDH]], killed [[VMOVHR2]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   $r0 = COPY [[VADDH1]]
   ; CHECK-FP16-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 entry:
@@ -211,19 +211,19 @@ define half @ninf_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-CVT-NEXT:   [[COPY3:%[0-9]+]]:spr = COPY [[COPY2]]
   ; CHECK-CVT-NEXT:   [[COPY4:%[0-9]+]]:spr = COPY [[COPY1]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = ninf VCVTBHS killed [[COPY4]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = ninf VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS:%[0-9]+]]:spr = ninf nofpexcept VCVTBHS killed [[COPY4]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VCVTBHS1:%[0-9]+]]:spr = ninf nofpexcept VCVTBHS killed [[COPY3]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf nofpexcept VADDS killed [[VCVTBHS1]], killed [[VCVTBHS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY5:%[0-9]+]]:spr = COPY [[COPY]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS2:%[0-9]+]]:spr = ninf VCVTBHS killed [[COPY5]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS2:%[0-9]+]]:spr = ninf nofpexcept VCVTBHS killed [[COPY5]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF]], killed [[VADDS]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY6:%[0-9]+]]:gpr = COPY killed [[VCVTBSH]]
   ; CHECK-CVT-NEXT:   [[COPY7:%[0-9]+]]:spr = COPY killed [[COPY6]]
-  ; CHECK-CVT-NEXT:   [[VCVTBHS3:%[0-9]+]]:spr = ninf VCVTBHS killed [[COPY7]], 14 /* CC::al */, $noreg
-  ; CHECK-CVT-NEXT:   [[VADDS1:%[0-9]+]]:spr = ninf VADDS killed [[VCVTBHS3]], killed [[VCVTBHS2]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBHS3:%[0-9]+]]:spr = ninf nofpexcept VCVTBHS killed [[COPY7]], 14 /* CC::al */, $noreg, implicit $fpscr
+  ; CHECK-CVT-NEXT:   [[VADDS1:%[0-9]+]]:spr = ninf nofpexcept VADDS killed [[VCVTBHS3]], killed [[VCVTBHS2]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[DEF1:%[0-9]+]]:spr = IMPLICIT_DEF
-  ; CHECK-CVT-NEXT:   [[VCVTBSH1:%[0-9]+]]:spr = VCVTBSH [[DEF1]], killed [[VADDS1]], 14 /* CC::al */, $noreg
+  ; CHECK-CVT-NEXT:   [[VCVTBSH1:%[0-9]+]]:spr = nofpexcept VCVTBSH [[DEF1]], killed [[VADDS1]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-CVT-NEXT:   [[COPY8:%[0-9]+]]:gpr = COPY killed [[VCVTBSH1]]
   ; CHECK-CVT-NEXT:   $r0 = COPY [[COPY8]]
   ; CHECK-CVT-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
@@ -237,9 +237,9 @@ define half @ninf_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-FP16-NEXT:   [[COPY2:%[0-9]+]]:rgpr = COPY $r0
   ; CHECK-FP16-NEXT:   [[VMOVHR:%[0-9]+]]:hpr = VMOVHR [[COPY1]], 14, $noreg
   ; CHECK-FP16-NEXT:   [[VMOVHR1:%[0-9]+]]:hpr = VMOVHR [[COPY2]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = ninf VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH:%[0-9]+]]:hpr = ninf nofpexcept VADDH killed [[VMOVHR1]], killed [[VMOVHR]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   [[VMOVHR2:%[0-9]+]]:hpr = VMOVHR [[COPY]], 14, $noreg
-  ; CHECK-FP16-NEXT:   [[VADDH1:%[0-9]+]]:hpr = ninf VADDH killed [[VADDH]], killed [[VMOVHR2]], 14, $noreg
+  ; CHECK-FP16-NEXT:   [[VADDH1:%[0-9]+]]:hpr = ninf nofpexcept VADDH killed [[VADDH]], killed [[VMOVHR2]], 14, $noreg, implicit $fpscr
   ; CHECK-FP16-NEXT:   $r0 = COPY [[VADDH1]]
   ; CHECK-FP16-NEXT:   MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 entry:

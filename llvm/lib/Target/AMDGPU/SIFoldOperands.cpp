@@ -712,12 +712,18 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
           TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
-    const TargetRegisterClass *ConstrainRC =
-        TRI->findCommonRegClass(OpRC, Old.getSubReg(), NewRC, New->getSubReg());
-    if (!ConstrainRC)
-      return false;
 
-    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+    const TargetRegisterClass *ConstrainRC = OpRC;
+    if (New->getSubReg()) {
+      ConstrainRC =
+          TRI->getMatchingSuperRegClass(NewRC, OpRC, New->getSubReg());
+
+      if (!ConstrainRC)
+        return false;
+    }
+
+    if (New->getReg().isVirtual() &&
+        !MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
                         << TRI->getRegClassName(ConstrainRC) << '\n');
       return false;
@@ -926,7 +932,9 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
        SubDef && TII.isFoldableCopy(*SubDef);
        SubDef = MRI.getVRegDef(Sub->getReg())) {
-    MachineOperand &SrcOp = SubDef->getOperand(1);
+    unsigned SrcIdx = TII.getFoldableCopySrcIdx(*SubDef);
+    MachineOperand &SrcOp = SubDef->getOperand(SrcIdx);
+
     if (SrcOp.isImm())
       return &SrcOp;
     if (!SrcOp.isReg() || SrcOp.getReg().isPhysical())
@@ -1069,7 +1077,7 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
-  int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
+  int16_t RCID = TII->getOpRegClassID(Desc.operands()[UseOpIdx]);
   if (RCID == -1)
     return false;
 
@@ -1291,10 +1299,8 @@ void SIFoldOperandsImpl::foldOperand(
           AMDGPU::V_ACCVGPR_WRITE_B32_e64, AMDGPU::AV_MOV_B32_IMM_PSEUDO,
           AMDGPU::AV_MOV_B64_IMM_PSEUDO}) {
       const MCInstrDesc &MovDesc = TII->get(MovOp);
-      assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
-
       const TargetRegisterClass *MovDstRC =
-          TRI->getRegClass(MovDesc.operands()[0].RegClass);
+          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[0]));
 
       // Fold if the destination register class of the MOV instruction (ResRC)
       // is a superclass of (or equal to) the destination register class of the
@@ -1304,10 +1310,20 @@ void SIFoldOperandsImpl::foldOperand(
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
       const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(MovDesc.operands()[SrcIdx].RegClass);
+          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
+
       if (MovSrcRC) {
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+
+        // FIXME: We should be able to directly check immediate operand legality
+        // for all cases, but gfx908 hacks break.
+        if (MovOp == AMDGPU::AV_MOV_B32_IMM_PSEUDO &&
+            (!OpToFold.isImm() ||
+             !TII->isImmOperandLegal(MovDesc, SrcIdx,
+                                     *OpToFold.getEffectiveImmVal())))
+          break;
+
         if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
           break;
 

@@ -287,7 +287,7 @@ private:
   /// moment we only make sure that there are no broadcast dimensions, but this
   /// might change if indexing maps evolve.
   bool isValidMaskingMap(AffineMap maskingMap) {
-    return maskingMap.getBroadcastDims().size() == 0;
+    return maskingMap.getBroadcastDims().empty();
   }
 
   /// Turn the input indexing map into a valid masking map.
@@ -923,7 +923,7 @@ static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
        llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) == 1) &&
       "For statically shaped Linalg Ops, only one "
       "non-unit loop dim is expected");
-  assert(loopRanges.size() != 0 && "Empty loops, nothing to analyse.");
+  assert(!loopRanges.empty() && "Empty loops, nothing to analyse.");
 
   size_t idx = loopRanges.size() - 1;
   for (; idx != 0; idx--)
