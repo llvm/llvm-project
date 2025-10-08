@@ -6046,7 +6046,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
     return N02;
   }
 
-  if (MaxC == 0 && MinCPlus1.isPowerOf2()) {
+  if (MaxC == 0 && MinC != 0 && MinCPlus1.isPowerOf2()) {
     BW = MinCPlus1.exactLogBase2();
     Unsigned = true;
     return N02;
@@ -19319,9 +19319,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
   // FIXME: This is duplicated in getNegatibleCost, but getNegatibleCost doesn't
   // know it was called from a context with a nsz flag if the input fsub does
   // not.
-  if (N0.getOpcode() == ISD::FSUB &&
-      (DAG.getTarget().Options.NoSignedZerosFPMath ||
-       N->getFlags().hasNoSignedZeros()) && N0.hasOneUse()) {
+  if (N0.getOpcode() == ISD::FSUB && N->getFlags().hasNoSignedZeros() &&
+      N0.hasOneUse()) {
     return DAG.getNode(ISD::FSUB, SDLoc(N), VT, N0.getOperand(1),
                        N0.getOperand(0));
   }

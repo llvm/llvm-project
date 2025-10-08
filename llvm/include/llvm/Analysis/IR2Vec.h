@@ -153,8 +153,11 @@ private:
   /// Section-based storage
   std::vector<std::vector<Embedding>> Sections;
 
-  const size_t TotalSize;
-  const unsigned Dimension;
+  // Fixme: Check if these members can be made const (and delete move
+  // assignment) after changing Vocabulary creation by using static factory
+  // methods.
+  size_t TotalSize = 0;
+  unsigned Dimension = 0;
 
 public:
   /// Default constructor creates empty storage (invalid state)
@@ -164,7 +167,7 @@ public:
   VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
 
   VocabStorage(VocabStorage &&) = default;
-  VocabStorage &operator=(VocabStorage &&) = delete;
+  VocabStorage &operator=(VocabStorage &&) = default;
 
   VocabStorage(const VocabStorage &) = delete;
   VocabStorage &operator=(const VocabStorage &) = delete;
@@ -210,6 +213,13 @@ public:
   const_iterator end() const {
     return const_iterator(this, getNumSections(), 0);
   }
+
+  using VocabMap = std::map<std::string, Embedding>;
+  /// Parse a vocabulary section from JSON and populate the target vocabulary
+  /// map.
+  static Error parseVocabSection(StringRef Key,
+                                 const json::Value &ParsedVocabValue,
+                                 VocabMap &TargetVocab, unsigned &Dim);
 };
 
 /// Class for storing and accessing the IR2Vec vocabulary.
@@ -600,8 +610,6 @@ class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
 
   Error readVocabulary(VocabMap &OpcVocab, VocabMap &TypeVocab,
                        VocabMap &ArgVocab);
-  Error parseVocabSection(StringRef Key, const json::Value &ParsedVocabValue,
-                          VocabMap &TargetVocab, unsigned &Dim);
   void generateVocabStorage(VocabMap &OpcVocab, VocabMap &TypeVocab,
                             VocabMap &ArgVocab);
   void emitError(Error Err, LLVMContext &Ctx);

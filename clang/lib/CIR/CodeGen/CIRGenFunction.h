@@ -47,6 +47,8 @@ class LoopOp;
 
 namespace clang::CIRGen {
 
+struct CGCoroData;
+
 class CIRGenFunction : public CIRGenTypeCache {
 public:
   CIRGenModule &cgm;
@@ -65,6 +67,18 @@ public:
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
+
+  // Holds coroutine data if the current function is a coroutine. We use a
+  // wrapper to manage its lifetime, so that we don't have to define CGCoroData
+  // in this header.
+  struct CGCoroInfo {
+    std::unique_ptr<CGCoroData> data;
+    CGCoroInfo();
+    ~CGCoroInfo();
+  };
+  CGCoroInfo curCoro;
+
+  bool isCoroutine() const { return curCoro.data != nullptr; }
 
   /// The temporary alloca to hold the return value. This is
   /// invalid iff the function has no return value.
@@ -1076,6 +1090,8 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  void emitAnyExprToExn(const Expr *e, Address addr);
+
   void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
@@ -1174,6 +1190,10 @@ public:
 
   void emitConstructorBody(FunctionArgList &args);
 
+  mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
+  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
@@ -1234,11 +1254,19 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
+  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
+                               mlir::Type ElementTy, Address BeginPtr,
+                               mlir::Value NumElements,
+                               mlir::Value AllocSizeWithoutCookie);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
+
+  void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
+                        Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
@@ -1278,6 +1306,8 @@ public:
 
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
+
+  LValue emitPredefinedLValue(const PredefinedExpr *e);
 
   mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
 
@@ -1473,7 +1503,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
-  LValue emitStringLiteralLValue(const StringLiteral *e);
+  LValue emitStringLiteralLValue(const StringLiteral *e,
+                                 llvm::StringRef name = ".str");
 
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,

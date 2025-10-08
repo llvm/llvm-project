@@ -602,6 +602,90 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicCastInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
+  let summary = "ABI specific information about a dynamic cast";
+  let description = [{
+    Provide ABI specific information about a dynamic cast operation.
+
+    The `src_rtti` and the `dest_rtti` parameters give the RTTI of the source
+    record type and the destination record type, respectively.
+
+    The `runtime_func` parameter gives the `__dynamic_cast` function which is
+    provided by the runtime. The `bad_cast_func` parameter gives the
+    `__cxa_bad_cast` function which is also provided by the runtime.
+
+    The `offset_hint` parameter gives the hint value that should be passed to
+    the `__dynamic_cast` runtime function.
+  }];
+
+  let parameters = (ins
+    CIR_GlobalViewAttr:$src_rtti,
+    CIR_GlobalViewAttr:$dest_rtti,
+    "mlir::FlatSymbolRefAttr":$runtime_func,
+    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+    CIR_IntAttr:$offset_hint
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+                                    "GlobalViewAttr":$src_rtti,
+                                    "GlobalViewAttr":$dest_rtti,
+                                    "mlir::FlatSymbolRefAttr":$runtime_func,
+                                    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+                                    "IntAttr":$offset_hint), [{
+      return $_get(src_rtti.getContext(), src_rtti, dest_rtti, runtime_func,
+                   bad_cast_func, offset_hint);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      struct(qualified($src_rtti),
+             qualified($dest_rtti),
+             $runtime_func,
+             $bad_cast_func,
+             qualified($offset_hint))
+    `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get attribute alias name for this attribute.
+    std::string getAlias() const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
+                                         "target_address_space"> {
+  let summary = "Represents a target-specific numeric address space";
+  let description = [{
+    The TargetAddressSpaceAttr represents a target-specific numeric address space,
+    corresponding to the LLVM IR `addressspace` qualifier and the clang
+     `address_space` attribute.
+    
+    A value of zero represents the default address space. The semantics of non-zero
+    address spaces are target-specific.
+
+    Example:
+    ```mlir
+    // Target-specific numeric address spaces
+    !cir.ptr<!s32i, addrspace(target<1>)>
+    !cir.ptr<!s32i, addrspace(target<10>)>
+    ```
+  }];
+
+  let parameters = (ins "mlir::IntegerAttr":$value);
+  let assemblyFormat = "`<` `target` `<` $value `>` `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 

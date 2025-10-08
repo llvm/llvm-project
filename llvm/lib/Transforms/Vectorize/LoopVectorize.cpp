@@ -3903,7 +3903,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
+                            *CM.PSE.getSE());
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -4160,7 +4161,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       // Add on other costs that are modelled in VPlan, but not in the legacy
       // cost model.
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind,
+                            *CM.PSE.getSE());
       VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
       assert(VectorRegion && "Expected to have a vector region!");
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -6852,7 +6854,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
                                                ElementCount VF) const {
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, *PSE.getSE());
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -7085,7 +7087,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // simplifications not accounted for in the legacy cost model. If that's the
   // case, don't trigger the assertion, as the extra simplifications may cause a
   // different VF to be picked by the VPlan-based cost model.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind,
+                        *CM.PSE.getSE());
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   // Verify that the VPlan-based and legacy cost models agree, except for VPlans
   // with early exits and plans with additional VPlan simplifications. The
@@ -7279,8 +7282,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     if (!Exit->hasPredecessors())
       continue;
     for (VPRecipeBase &PhiR : Exit->phis())
-      SE.forgetLcssaPhiWithNewPredecessor(
-          OrigLoop, cast<PHINode>(&cast<VPIRPhi>(PhiR).getInstruction()));
+      SE.forgetLcssaPhiWithNewPredecessor(OrigLoop,
+                                          &cast<VPIRPhi>(PhiR).getIRPhi());
   }
   // Forget the original loop and block dispositions.
   SE.forgetLoop(OrigLoop);
@@ -8201,211 +8204,6 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   }
 }
 
-/// Create and return a ResumePhi for \p WideIV, unless it is truncated. If the
-/// induction recipe is not canonical, creates a VPDerivedIVRecipe to compute
-/// the end value of the induction.
-static VPInstruction *addResumePhiRecipeForInduction(
-    VPWidenInductionRecipe *WideIV, VPBuilder &VectorPHBuilder,
-    VPBuilder &ScalarPHBuilder, VPTypeAnalysis &TypeInfo, VPValue *VectorTC) {
-  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-  // Truncated wide inductions resume from the last lane of their vector value
-  // in the last vector iteration which is handled elsewhere.
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
-    return nullptr;
-
-  VPValue *Start = WideIV->getStartValue();
-  VPValue *Step = WideIV->getStepValue();
-  const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-  VPValue *EndValue = VectorTC;
-  if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
-    EndValue = VectorPHBuilder.createDerivedIV(
-        ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
-        Start, VectorTC, Step);
-  }
-
-  // EndValue is derived from the vector trip count (which has the same type as
-  // the widest induction) and thus may be wider than the induction here.
-  Type *ScalarTypeOfWideIV = TypeInfo.inferScalarType(WideIV);
-  if (ScalarTypeOfWideIV != TypeInfo.inferScalarType(EndValue)) {
-    EndValue = VectorPHBuilder.createScalarCast(Instruction::Trunc, EndValue,
-                                                ScalarTypeOfWideIV,
-                                                WideIV->getDebugLoc());
-  }
-
-  auto *ResumePhiRecipe = ScalarPHBuilder.createScalarPhi(
-      {EndValue, Start}, WideIV->getDebugLoc(), "bc.resume.val");
-  return ResumePhiRecipe;
-}
-
-/// Create resume phis in the scalar preheader for first-order recurrences,
-/// reductions and inductions, and update the VPIRInstructions wrapping the
-/// original phis in the scalar header. End values for inductions are added to
-/// \p IVEndValues.
-static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
-                                DenseMap<VPValue *, VPValue *> &IVEndValues) {
-  VPTypeAnalysis TypeInfo(Plan);
-  auto *ScalarPH = Plan.getScalarPreheader();
-  auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
-  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  VPBuilder VectorPHBuilder(
-      cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPBuilder ScalarPHBuilder(ScalarPH);
-  for (VPRecipeBase &ScalarPhiR : Plan.getScalarHeader()->phis()) {
-    auto *ScalarPhiIRI = cast<VPIRPhi>(&ScalarPhiR);
-
-    // TODO: Extract final value from induction recipe initially, optimize to
-    // pre-computed end value together in optimizeInductionExitUsers.
-    auto *VectorPhiR =
-        cast<VPHeaderPHIRecipe>(Builder.getRecipe(&ScalarPhiIRI->getIRPhi()));
-    if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
-      if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
-              WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
-              &Plan.getVectorTripCount())) {
-        assert(isa<VPPhi>(ResumePhi) && "Expected a phi");
-        IVEndValues[WideIVR] = ResumePhi->getOperand(0);
-        ScalarPhiIRI->addOperand(ResumePhi);
-        continue;
-      }
-      // TODO: Also handle truncated inductions here. Computing end-values
-      // separately should be done as VPlan-to-VPlan optimization, after
-      // legalizing all resume values to use the last lane from the loop.
-      assert(cast<VPWidenIntOrFpInductionRecipe>(VectorPhiR)->getTruncInst() &&
-             "should only skip truncated wide inductions");
-      continue;
-    }
-
-    // The backedge value provides the value to resume coming out of a loop,
-    // which for FORs is a vector whose last element needs to be extracted. The
-    // start value provides the value if the loop is bypassed.
-    bool IsFOR = isa<VPFirstOrderRecurrencePHIRecipe>(VectorPhiR);
-    auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
-    assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
-           "Cannot handle loops with uncountable early exits");
-    if (IsFOR)
-      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
-          "vector.recur.extract");
-    StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
-    auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
-        {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
-    ScalarPhiIRI->addOperand(ResumePhiR);
-  }
-}
-
-/// Handle users in the exit block for first order reductions in the original
-/// exit block. The penultimate value of recurrences is fed to their LCSSA phi
-/// users in the original exit block using the VPIRInstruction wrapping to the
-/// LCSSA phi.
-static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
-  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  auto *ScalarPHVPBB = Plan.getScalarPreheader();
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder ScalarPHBuilder(ScalarPHVPBB);
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-
-  auto IsScalableOne = [](ElementCount VF) -> bool {
-    return VF == ElementCount::getScalable(1);
-  };
-
-  for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
-    if (!FOR)
-      continue;
-
-    assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
-           "Cannot handle loops with uncountable early exits");
-
-    // This is the second phase of vectorizing first-order recurrences, creating
-    // extract for users outside the loop. An overview of the transformation is
-    // described below. Suppose we have the following loop with some use after
-    // the loop of the last a[i-1],
-    //
-    //   for (int i = 0; i < n; ++i) {
-    //     t = a[i - 1];
-    //     b[i] = a[i] - t;
-    //   }
-    //   use t;
-    //
-    // There is a first-order recurrence on "a". For this loop, the shorthand
-    // scalar IR looks like:
-    //
-    //   scalar.ph:
-    //     s.init = a[-1]
-    //     br scalar.body
-    //
-    //   scalar.body:
-    //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [s.init, scalar.ph], [s2, scalar.body]
-    //     s2 = a[i]
-    //     b[i] = s2 - s1
-    //     br cond, scalar.body, exit.block
-    //
-    //   exit.block:
-    //     use = lcssa.phi [s1, scalar.body]
-    //
-    // In this example, s1 is a recurrence because it's value depends on the
-    // previous iteration. In the first phase of vectorization, we created a
-    // VPFirstOrderRecurrencePHIRecipe v1 for s1. Now we create the extracts
-    // for users in the scalar preheader and exit block.
-    //
-    //   vector.ph:
-    //     v_init = vector(..., ..., ..., a[-1])
-    //     br vector.body
-    //
-    //   vector.body
-    //     i = phi [0, vector.ph], [i+4, vector.body]
-    //     v1 = phi [v_init, vector.ph], [v2, vector.body]
-    //     v2 = a[i, i+1, i+2, i+3]
-    //     b[i] = v2 - v1
-    //     // Next, third phase will introduce v1' = splice(v1(3), v2(0, 1, 2))
-    //     b[i, i+1, i+2, i+3] = v2 - v1
-    //     br cond, vector.body, middle.block
-    //
-    //   middle.block:
-    //     vector.recur.extract.for.phi = v2(2)
-    //     vector.recur.extract = v2(3)
-    //     br cond, scalar.ph, exit.block
-    //
-    //   scalar.ph:
-    //     scalar.recur.init = phi [vector.recur.extract, middle.block],
-    //                             [s.init, otherwise]
-    //     br scalar.body
-    //
-    //   scalar.body:
-    //     i = phi [0, scalar.ph], [i+1, scalar.body]
-    //     s1 = phi [scalar.recur.init, scalar.ph], [s2, scalar.body]
-    //     s2 = a[i]
-    //     b[i] = s2 - s1
-    //     br cond, scalar.body, exit.block
-    //
-    //   exit.block:
-    //     lo = lcssa.phi [s1, scalar.body],
-    //                    [vector.recur.extract.for.phi, middle.block]
-    //
-    // Now update VPIRInstructions modeling LCSSA phis in the exit block.
-    // Extract the penultimate value of the recurrence and use it as operand for
-    // the VPIRInstruction modeling the phi.
-    for (VPUser *U : FOR->users()) {
-      using namespace llvm::VPlanPatternMatch;
-      if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
-        continue;
-      // For VF vscale x 1, if vscale = 1, we are unable to extract the
-      // penultimate value of the recurrence. Instead we rely on the existing
-      // extract of the last element from the result of
-      // VPInstruction::FirstOrderRecurrenceSplice.
-      // TODO: Consider vscale_range info and UF.
-      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalableOne,
-                                                             Range))
-        return;
-      VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
-          {}, "vector.recur.extract.for.phi");
-      cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
-    }
-  }
-}
-
 VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanPtr Plan, VFRange &Range, LoopVersioning *LVer) {
 
@@ -8598,9 +8396,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     R->setOperand(1, WideIV->getStepValue());
   }
 
-  addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  // TODO: We can't call runPass on these transforms yet, due to verifier
+  // failures.
+  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
+  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8621,7 +8421,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind);
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
+                          *CM.PSE.getSE());
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
@@ -8690,7 +8491,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
     Plan->addVF(VF);
 
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-          Plan,
+          *Plan,
           [this](PHINode *P) {
             return Legal->getIntOrFpInductionDescriptor(P);
           },
@@ -8711,7 +8512,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   DenseMap<VPValue *, VPValue *> IVEndValues;
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
   // values.
-  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
+  // TODO: We can't call runPass on the transform yet, due to verifier
+  // failures.
+  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -10075,7 +9878,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     VPCostContext CostCtx(CM.TTI, *CM.TLI, LVP.getPlanFor(VF.Width), CM,
-                          CM.CostKind);
+                          CM.CostKind, *CM.PSE.getSE());
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
                                      LVP.getPlanFor(VF.Width), SEL,
