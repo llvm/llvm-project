@@ -84,9 +84,7 @@ namespace llvm {
     // zero-indexed
     std::pair<unsigned, unsigned> getTokLineColumnPos() {
       auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(TokStart));
-      --LC.first;
-      --LC.second;
-      return LC;
+      return {LC.first - 1, LC.second - 1};
     }
     // Get the line, column position of the end of the previous token,
     // zero-indexed exclusive
