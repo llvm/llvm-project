@@ -728,7 +728,7 @@ TargetLoweringBase::~TargetLoweringBase() = default;
 void TargetLoweringBase::initActions() {
   // All operations default to being supported.
   memset(OpActions, 0, sizeof(OpActions));
-  memset(LoadExtActions, 0, sizeof(LoadExtActions));
+  LoadExtActions.clear();
   memset(TruncStoreActions, 0, sizeof(TruncStoreActions));
   memset(IndexedModeActions, 0, sizeof(IndexedModeActions));
   memset(CondCodeActions, 0, sizeof(CondCodeActions));
@@ -751,8 +751,6 @@ void TargetLoweringBase::initActions() {
   for (MVT AVT : MVT::all_valuetypes()) {
     for (MVT VT : {MVT::i2, MVT::i4, MVT::v128i2, MVT::v64i4}) {
       setTruncStoreAction(AVT, VT, Expand);
-      setLoadExtAction(ISD::EXTLOAD, AVT, VT, Expand);
-      setLoadExtAction(ISD::ZEXTLOAD, AVT, VT, Expand);
     }
   }
   for (unsigned IM = (unsigned)ISD::PRE_INC;

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -178,64 +179,85 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
 
-  // There are no 64-bit extloads. These should be done as a 32-bit extload and
-  // an extension to 64-bit.
-  for (MVT VT : MVT::integer_valuetypes())
-    setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64, VT,
-                     Expand);
+  for (unsigned AddrSpace : {
+           AMDGPUAS::MAX_AMDGPU_ADDRESS,     AMDGPUAS::FLAT_ADDRESS,
+           AMDGPUAS::GLOBAL_ADDRESS,         AMDGPUAS::REGION_ADDRESS,
+           AMDGPUAS::LOCAL_ADDRESS,          AMDGPUAS::CONSTANT_ADDRESS,
+           AMDGPUAS::PRIVATE_ADDRESS,        AMDGPUAS::CONSTANT_ADDRESS_32BIT,
+           AMDGPUAS::BUFFER_FAT_POINTER,     AMDGPUAS::BUFFER_RESOURCE,
+           AMDGPUAS::BUFFER_STRIDED_POINTER, AMDGPUAS::STREAMOUT_REGISTER,
+           AMDGPUAS::PARAM_D_ADDRESS,        AMDGPUAS::PARAM_I_ADDRESS,
 
-  for (MVT VT : MVT::integer_valuetypes()) {
-    if (VT == MVT::i64)
-      continue;
+           AMDGPUAS::CONSTANT_BUFFER_0,      AMDGPUAS::CONSTANT_BUFFER_1,
+           AMDGPUAS::CONSTANT_BUFFER_2,      AMDGPUAS::CONSTANT_BUFFER_3,
+           AMDGPUAS::CONSTANT_BUFFER_4,      AMDGPUAS::CONSTANT_BUFFER_5,
+           AMDGPUAS::CONSTANT_BUFFER_6,      AMDGPUAS::CONSTANT_BUFFER_7,
+           AMDGPUAS::CONSTANT_BUFFER_8,      AMDGPUAS::CONSTANT_BUFFER_9,
+           AMDGPUAS::CONSTANT_BUFFER_10,     AMDGPUAS::CONSTANT_BUFFER_11,
+           AMDGPUAS::CONSTANT_BUFFER_12,     AMDGPUAS::CONSTANT_BUFFER_13,
+           AMDGPUAS::CONSTANT_BUFFER_14,     AMDGPUAS::CONSTANT_BUFFER_15,
+           AMDGPUAS::CONSTANT_BUFFER_15,
+       }) { // TODO: find easier way to iterate all (relavent) addrspaces
 
-    for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}) {
-      setLoadExtAction(Op, VT, MVT::i1, Promote);
-      setLoadExtAction(Op, VT, MVT::i8, Legal);
-      setLoadExtAction(Op, VT, MVT::i16, Legal);
-      setLoadExtAction(Op, VT, MVT::i32, Expand);
+    // There are no 64-bit extloads. These should be done as a 32-bit extload
+    // and an extension to 64-bit.
+    for (MVT VT : MVT::integer_valuetypes())
+      setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
+                       VT, Expand, AddrSpace);
+
+    for (MVT VT : MVT::integer_valuetypes()) {
+      if (VT == MVT::i64)
+        continue;
+
+      for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}) {
+        setLoadExtAction(Op, VT, MVT::i1, Promote, AddrSpace);
+        setLoadExtAction(Op, VT, MVT::i8, Legal, AddrSpace);
+        setLoadExtAction(Op, VT, MVT::i16, Legal, AddrSpace);
+        setLoadExtAction(Op, VT, MVT::i32, Expand, AddrSpace);
+      }
     }
+
+    for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
+      for (auto MemVT :
+           {MVT::v2i8, MVT::v4i8, MVT::v2i16, MVT::v3i16, MVT::v4i16})
+        setLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}, VT,
+                         MemVT, Expand, AddrSpace);
+
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32bf16, Expand, AddrSpace);
+
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3f32, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f32, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f32, Expand, AddrSpace);
+
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f16, Expand, AddrSpace);
+    setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16bf16, Expand, AddrSpace);
   }
-
-  for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
-    for (auto MemVT :
-         {MVT::v2i8, MVT::v4i8, MVT::v2i16, MVT::v3i16, MVT::v4i16})
-      setLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}, VT, MemVT,
-                       Expand);
-
-  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v32f32, MVT::v32bf16, Expand);
-
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f32, Expand);
-
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v3f64, MVT::v3bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v16f64, MVT::v16bf16, Expand);
 
   setOperationAction(ISD::STORE, MVT::f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::f32, MVT::i32);

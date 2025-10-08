@@ -47,20 +47,38 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
   // spaces, so it is custom lowered to handle those where it isn't.
-  for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD})
-    for (MVT VT : MVT::integer_valuetypes()) {
-      setLoadExtAction(Op, VT, MVT::i1, Promote);
-      setLoadExtAction(Op, VT, MVT::i8, Custom);
-      setLoadExtAction(Op, VT, MVT::i16, Custom);
-    }
+  for (unsigned AddrSpace : {
+           AMDGPUAS::MAX_AMDGPU_ADDRESS,     AMDGPUAS::FLAT_ADDRESS,
+           AMDGPUAS::GLOBAL_ADDRESS,         AMDGPUAS::REGION_ADDRESS,
+           AMDGPUAS::LOCAL_ADDRESS,          AMDGPUAS::CONSTANT_ADDRESS,
+           AMDGPUAS::PRIVATE_ADDRESS,        AMDGPUAS::CONSTANT_ADDRESS_32BIT,
+           AMDGPUAS::BUFFER_FAT_POINTER,     AMDGPUAS::BUFFER_RESOURCE,
+           AMDGPUAS::BUFFER_STRIDED_POINTER, AMDGPUAS::STREAMOUT_REGISTER,
+           AMDGPUAS::PARAM_D_ADDRESS,        AMDGPUAS::PARAM_I_ADDRESS,
 
-  // Workaround for LegalizeDAG asserting on expansion of i1 vector loads.
-  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i32,
-                   MVT::v2i1, Expand);
+           AMDGPUAS::CONSTANT_BUFFER_0,      AMDGPUAS::CONSTANT_BUFFER_1,
+           AMDGPUAS::CONSTANT_BUFFER_2,      AMDGPUAS::CONSTANT_BUFFER_3,
+           AMDGPUAS::CONSTANT_BUFFER_4,      AMDGPUAS::CONSTANT_BUFFER_5,
+           AMDGPUAS::CONSTANT_BUFFER_6,      AMDGPUAS::CONSTANT_BUFFER_7,
+           AMDGPUAS::CONSTANT_BUFFER_8,      AMDGPUAS::CONSTANT_BUFFER_9,
+           AMDGPUAS::CONSTANT_BUFFER_10,     AMDGPUAS::CONSTANT_BUFFER_11,
+           AMDGPUAS::CONSTANT_BUFFER_12,     AMDGPUAS::CONSTANT_BUFFER_13,
+           AMDGPUAS::CONSTANT_BUFFER_14,     AMDGPUAS::CONSTANT_BUFFER_15,
+       }) { // TODO: find easier way to iterate all (relavent) addrspaces
+    for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD})
+      for (MVT VT : MVT::integer_valuetypes()) {
+        setLoadExtAction(Op, VT, MVT::i1, Promote, AddrSpace);
+        setLoadExtAction(Op, VT, MVT::i8, Custom, AddrSpace);
+        setLoadExtAction(Op, VT, MVT::i16, Custom, AddrSpace);
+      }
 
-  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v4i32,
-                   MVT::v4i1, Expand);
+    // Workaround for LegalizeDAG asserting on expansion of i1 vector loads.
+    setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i32,
+                     MVT::v2i1, Expand, AddrSpace);
 
+    setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v4i32,
+                     MVT::v4i1, Expand, AddrSpace);
+  }
   setOperationAction(ISD::STORE, {MVT::i8, MVT::i32, MVT::v2i32, MVT::v4i32},
                      Custom);
 

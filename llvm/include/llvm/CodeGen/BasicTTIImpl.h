@@ -28,6 +28,7 @@
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -1244,9 +1245,14 @@ public:
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
           ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
-        if (DstLT.first == SrcLT.first &&
-            TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
-          return 0;
+
+        if (I && isa<LoadInst>(I->getOperand(0))) {
+          auto *LI = cast<LoadInst>(I->getOperand(0));
+
+          if (DstLT.first == SrcLT.first &&
+              TLI->isLoadExtLegal(LType, ExtVT, LoadVT, LI->getPointerAddressSpace()))
+            return 0;
+        }
       }
       break;
     case Instruction::AddrSpaceCast:
@@ -1531,7 +1537,7 @@ public:
       if (Opcode == Instruction::Store)
         LA = getTLI()->getTruncStoreAction(LT.second, MemVT);
       else
-        LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT);
+        LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT, AddressSpace);
 
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.

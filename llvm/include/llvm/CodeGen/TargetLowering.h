@@ -1483,7 +1483,11 @@ public:
     unsigned Shift = 4 * ExtType;
 
     if (!LoadExtActions.count(AddrSpace)) {
-      return Legal; // default
+      if (MemVT == MVT::i2 || MemVT == MVT::i4 || MemVT == MVT::v128i2 ||
+          MemVT == MVT::v64i4)
+        return Expand;
+
+      return Legal;
     }
     return (
         LegalizeAction)((LoadExtActions.at(AddrSpace)[ValI][MemI] >> Shift) &
@@ -2641,10 +2645,22 @@ protected:
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
   void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
-                        LegalizeAction Action, unsigned AddrSpace) {
+                        LegalizeAction Action, unsigned AddrSpace = 0) {
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
            MemVT.isValid() && "Table isn't big enough!");
     assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+
+    if (!LoadExtActions.count(AddrSpace)) {
+      LoadExtActions[AddrSpace]; // Initialize the map for the addrspace
+
+      for (MVT AVT : MVT::all_valuetypes()) {
+        for (MVT VT : {MVT::i2, MVT::i4, MVT::v128i2, MVT::v64i4}) {
+          setLoadExtAction(ISD::EXTLOAD, AVT, VT, Expand, AddrSpace);
+          setLoadExtAction(ISD::ZEXTLOAD, AVT, VT, Expand, AddrSpace);
+        }
+      }
+    }
+
     unsigned Shift = 4 * ExtType;
     LoadExtActions[AddrSpace][ValVT.SimpleTy][MemVT.SimpleTy] &=
         ~((uint16_t)0xF << Shift);
@@ -2652,14 +2668,15 @@ protected:
         (uint16_t)Action << Shift;
   }
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
-                        LegalizeAction Action) {
+                        LegalizeAction Action, unsigned AddrSpace = 0) {
     for (auto ExtType : ExtTypes)
-      setLoadExtAction(ExtType, ValVT, MemVT, Action);
+      setLoadExtAction(ExtType, ValVT, MemVT, Action, AddrSpace);
   }
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT,
-                        ArrayRef<MVT> MemVTs, LegalizeAction Action) {
+                        ArrayRef<MVT> MemVTs, LegalizeAction Action,
+                        unsigned AddrSpace = 0) {
     for (auto MemVT : MemVTs)
-      setLoadExtAction(ExtTypes, ValVT, MemVT, Action);
+      setLoadExtAction(ExtTypes, ValVT, MemVT, Action, AddrSpace);
   }
 
   /// Let target indicate that an extending atomic load of the specified type
@@ -3135,7 +3152,7 @@ public:
       LType = ISD::SEXTLOAD;
     }
 
-    return isLoadExtLegal(LType, VT, LoadVT);
+    return isLoadExtLegal(LType, VT, LoadVT, Load->getPointerAddressSpace());
   }
 
   /// Return true if any actual instruction that defines a value of type FromTy
