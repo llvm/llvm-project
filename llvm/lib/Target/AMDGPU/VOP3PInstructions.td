@@ -67,7 +67,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
 class VOP3P_Mix_Profile_t16<VOPProfile P, VOP3Features Features = VOP3_REGULAR>
      :  VOP3P_Mix_Profile<P, Features, 0> {
   let IsTrue16 = 1;
-  let IsRealTrue16 = 1; 
+  let IsRealTrue16 = 1;
   let DstRC64 = getVALUDstForVT<P.DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
 }
 
@@ -705,16 +705,16 @@ foreach Type = ["U", "I"] in
     (!cast<VOP3P_Pseudo>("V_DOT8_"#Type#"32_"#Type#4) (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))>;
 
 def ADst_32   : VOPDstOperand<AGPR_32>;
-def ADst_64   : VOPDstOperand<AReg_64>;
-def ADst_128  : VOPDstOperand<AReg_128>;
-def ADst_256  : VOPDstOperand<AReg_256>;
-def ADst_512  : VOPDstOperand<AReg_512>;
-def ADst_1024 : VOPDstOperand<AReg_1024>;
-def VDst_64   : VOPDstOperand<VReg_64>;
-def VDst_128  : VOPDstOperand<VReg_128>;
-def VDst_256  : VOPDstOperand<VReg_256>;
-def VDst_512  : VOPDstOperand<VReg_512>;
-def VDst_1024 : VOPDstOperand<VReg_1024>;
+def ADst_64   : VOPDstOperand<AReg_64_AlignTarget>;
+def ADst_128  : VOPDstOperand<AReg_128_AlignTarget>;
+def ADst_256  : VOPDstOperand<AReg_256_AlignTarget>;
+def ADst_512  : VOPDstOperand<AReg_512_AlignTarget>;
+def ADst_1024 : VOPDstOperand<AReg_1024_AlignTarget>;
+def VDst_64   : VOPDstOperand<VReg_64_AlignTarget>;
+def VDst_128  : VOPDstOperand<VReg_128_AlignTarget>;
+def VDst_256  : VOPDstOperand<VReg_256_AlignTarget>;
+def VDst_512  : VOPDstOperand<VReg_512_AlignTarget>;
+def VDst_1024 : VOPDstOperand<VReg_1024_AlignTarget>;
 
 def VOPProfileAccRead : VOP3P_Profile<VOP_I32_I32, VOP3_MAI> {
   let Src0RC64 = ARegSrc_32;
@@ -811,23 +811,23 @@ def VOPProfileMAI_F32_V2F32_X32_VCD  : VOPProfileMAI<VOP_V16F32_V2F32_V2F32_V16F
 def VOPProfileMAI_F32_I64_X32_VCD    : VOPProfileMAI<VOP_V4F32_I64_I64_V4F32,       VISrc_128_b32,  VDst_128,  AVSrc_64>;
 def VOPProfileMAI_F32_I64_X16_VCD    : VOPProfileMAI<VOP_V16F32_I64_I64_V16F32,     VISrc_512_b32,  VDst_512,  AVSrc_64>;
 
-def VOPProfileSMFMAC_F32_16X16X32_F16 : VOPProfileSMFMAC<VOP_V4F32_V4F16_V8F16_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_16X16X64_F16 : VOPProfileSMFMAC<VOP_V4F32_V8F16_V16F16_I32, AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X32_F16 : VOPProfileSMFMAC<VOP_V16F32_V8F16_V16F16_I32, AVDst_512, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_16X16X64_BF16 : VOPProfileSMFMAC<VOP_V4F32_V8BF16_V16BF16_I32,  AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X32_BF16 : VOPProfileSMFMAC<VOP_V16F32_V8BF16_V16BF16_I32, AVDst_512, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X16_F16 : VOPProfileSMFMAC<VOP_V16F32_V4F16_V8F16_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_16X16X32_I16 : VOPProfileSMFMAC<VOP_V4F32_V4I16_V8I16_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_32X32X16_I16 : VOPProfileSMFMAC<VOP_V16F32_V4I16_V8I16_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_I32_16X16X64_I8  : VOPProfileSMFMAC<VOP_V4I32_V2I32_V4I32_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_I32_32X32X32_I8  : VOPProfileSMFMAC<VOP_V16I32_V2I32_V4I32_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_16X16X64_F8  : VOPProfileSMFMAC<VOP_V4F32_V2I32_V4I32_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_F32_32X32X32_F8  : VOPProfileSMFMAC<VOP_V16F32_V2I32_V4I32_I32, AVDst_512, AVSrc_64, AVSrc_128>;
-def VOPProfileSMFMAC_I32_16X16X128_I8 : VOPProfileSMFMAC<VOP_V4I32_V4I32_V8I32_I32, AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_I32_32X32X64_I8 : VOPProfileSMFMAC<VOP_V16I32_V4I32_V8I32_I32, AVDst_512, AVSrc_128, AVSrc_256>;
+def VOPProfileSMFMAC_F32_16X16X32_F16 : VOPProfileSMFMAC<VOP_V4F32_V4F16_V8F16_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_16X16X64_F16 : VOPProfileSMFMAC<VOP_V4F32_V8F16_V16F16_I32, AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X32_F16 : VOPProfileSMFMAC<VOP_V16F32_V8F16_V16F16_I32, AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_16X16X64_BF16 : VOPProfileSMFMAC<VOP_V4F32_V8BF16_V16BF16_I32,  AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X32_BF16 : VOPProfileSMFMAC<VOP_V16F32_V8BF16_V16BF16_I32, AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X16_F16 : VOPProfileSMFMAC<VOP_V16F32_V4F16_V8F16_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_16X16X32_I16 : VOPProfileSMFMAC<VOP_V4F32_V4I16_V8I16_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_32X32X16_I16 : VOPProfileSMFMAC<VOP_V16F32_V4I16_V8I16_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_I32_16X16X64_I8  : VOPProfileSMFMAC<VOP_V4I32_V2I32_V4I32_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_I32_32X32X32_I8  : VOPProfileSMFMAC<VOP_V16I32_V2I32_V4I32_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_16X16X64_F8  : VOPProfileSMFMAC<VOP_V4F32_V2I32_V4I32_I32,  AVDst_128_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_F32_32X32X32_F8  : VOPProfileSMFMAC<VOP_V16F32_V2I32_V4I32_I32, AVDst_512_Align2, AVSrc_64_Align2, AVSrc_128_Align2>;
+def VOPProfileSMFMAC_I32_16X16X128_I8 : VOPProfileSMFMAC<VOP_V4I32_V4I32_V8I32_I32, AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_I32_32X32X64_I8 : VOPProfileSMFMAC<VOP_V16I32_V4I32_V8I32_I32, AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
 
-def VOPProfileSMFMAC_F32_16X16X128_F8  : VOPProfileSMFMAC<VOP_V4F32_V4I32_V8I32_I32,  AVDst_128, AVSrc_128, AVSrc_256>;
-def VOPProfileSMFMAC_F32_32X32X64_F8  : VOPProfileSMFMAC<VOP_V16F32_V4I32_V8I32_I32,  AVDst_512, AVSrc_128, AVSrc_256>;
+def VOPProfileSMFMAC_F32_16X16X128_F8  : VOPProfileSMFMAC<VOP_V4F32_V4I32_V8I32_I32,  AVDst_128_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
+def VOPProfileSMFMAC_F32_32X32X64_F8  : VOPProfileSMFMAC<VOP_V16F32_V4I32_V8I32_I32,  AVDst_512_Align2, AVSrc_128_Align2, AVSrc_256_Align2>;
 
 def VOPProfileMAI_F32_V8F16_X32     : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_F32_V8F16_X32_VCD : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       VISrc_128_f32,  VDst_128, AVSrc_128>;
@@ -950,7 +950,7 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
 }
 
 // Currently assumes scaled instructions never have abid
-class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = false> : PatFrag <
+class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false> : PatFrag <
   !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
                    node:$src0_modifiers, node:$scale_src0,
                    node:$src1_modifiers, node:$scale_src1),
@@ -959,37 +959,30 @@ class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = 
                     (ops node:$blgp))),
   !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1),
               !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
-                           (Op $src0, $src1, $src2, $cbsz, $blgp))),
-  pred
->;
+                           (Op $src0, $src1, $src2, $cbsz, $blgp)))>;
 
-defvar MayNeedAGPRs = [{
-  return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
+class CanUseAGPR_MAI<ValueType vt> {
+  code PredicateCode = [{
+    return !Subtarget->hasGFX90AInsts() ||
+      (!SIMachineFunctionInfo::MFMAVGPRForm &&
+       MF->getInfo<SIMachineFunctionInfo>()->getMinNumAGPRs() >=
+  }] # !srl(vt.Size, 5) # ");";
 
-defvar MayNeedAGPRs_gisel = [{
-  return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
-
-defvar MayNotNeedAGPRs = [{
-  return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
-
-defvar MayNotNeedAGPRs_gisel = [{
-  return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
-}];
-
-class AgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                  bit Scaled = false> :
-  MAIFrag<Op, MayNeedAGPRs, HasAbid, Scaled> {
-  let GISelPredicateCode = MayNeedAGPRs_gisel;
+  code GISelPredicateCode = [{
+    return !Subtarget->hasGFX90AInsts() ||
+      (!SIMachineFunctionInfo::MFMAVGPRForm &&
+       MF.getInfo<SIMachineFunctionInfo>()->getMinNumAGPRs() >=
+  }] # !srl(vt.Size, 5) # ");";
 }
+
+class AgprMAIFrag<SDPatternOperator Op, ValueType vt, bit HasAbid = true,
+                  bit Scaled = false> :
+  MAIFrag<Op, HasAbid, Scaled>,
+  CanUseAGPR_MAI<vt>;
 
 class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                   bit Scaled = false> :
-  MAIFrag<Op, MayNotNeedAGPRs, HasAbid, Scaled> {
-  let GISelPredicateCode = MayNotNeedAGPRs_gisel;
-}
+                  bit Scaled = false> :
+  MAIFrag<Op, HasAbid, Scaled>;
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
   defm V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
@@ -1037,16 +1030,19 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                    bit HasAbid = true,
                    bit Scaled = false> {
   defvar NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap;
+  defvar ProfileAGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P);
+  defvar ProfileVGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD");
+
 
   let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
-      def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
+      def _e64 : MAIInst<OpName, ProfileAGPR,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled>), Scaled>,
                  MFMATable<0, "AGPR", NAME # "_e64">;
 
       let OtherPredicates = [isGFX90APlus], Mnemonic = OpName in
-      def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
+      def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", ProfileVGPR,
                                 !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                         MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
     }
@@ -1055,12 +1051,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
+        def "_mac_e64" : MAIInst<OpName # "_mac", ProfileAGPR,
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled>), Scaled>,
                          MFMATable<1, "AGPR", NAME # "_e64", NAME # "_mac_e64">;
 
         let OtherPredicates = [isGFX90APlus] in
-        def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
+        def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", ProfileVGPR,
                                       !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                               MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
       }
@@ -1074,11 +1070,11 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
   defvar UnscaledOpName = UnscaledOpName_#VariantSuffix;
 
   defvar HasAbid = false;
-
-  defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl).NoDstOverlap;
+  defvar Profile = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl);
+  defvar NoDstOverlap = Profile.NoDstOverlap;
 
   def _e64 : ScaledMAIInst<OpName,
-        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, HasAbid, true>)>,
+        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, Profile.DstVT, HasAbid, true>)>,
       MFMATable<0, "AGPR", NAME # "_e64">;
 
   def _vgprcd_e64 : ScaledMAIInst<OpName # "_vgprcd",
@@ -1090,7 +1086,7 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
        isConvertibleToThreeAddress = NoDstOverlap,
        Mnemonic = UnscaledOpName_ in {
      def _mac_e64 : ScaledMAIInst<OpName # "_mac",
-          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, HasAbid, true>>,
+          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, Profile.DstVT, HasAbid, true>>,
         MFMATable<1, "AGPR", NAME # "_e64">;
 
      def _mac_vgprcd_e64 : ScaledMAIInst<OpName # " _mac_vgprcd",
