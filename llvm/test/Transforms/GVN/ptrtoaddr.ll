@@ -4,10 +4,8 @@
 define i64 @ptrtoaddr_same(ptr %p) {
 ; CHECK-LABEL: define i64 @ptrtoaddr_same(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    [[J:%.*]] = ptrtoaddr ptr [[P]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[I]], [[J]]
-; CHECK-NEXT:    ret i64 [[SUB]]
+; CHECK-NEXT:    ret i64 0
 ;
   %i = ptrtoaddr ptr %p to i64
   %j = ptrtoaddr ptr %p to i64
