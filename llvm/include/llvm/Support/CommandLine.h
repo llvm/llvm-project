@@ -1193,6 +1193,31 @@ public:
 
 //--------------------------------------------------
 
+template <>
+class LLVM_ABI parser<std::optional<std::string>>
+    : public basic_parser<std::optional<std::string>> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &, StringRef, StringRef Arg,
+             std::optional<std::string> &Value) {
+    Value = Arg.str();
+    return false;
+  }
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "optional string"; }
+
+  void printOptionDiff(const Option &O, std::optional<StringRef> V,
+                       const OptVal &Default, size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
 extern template class LLVM_TEMPLATE_ABI basic_parser<char>;
 
 template <> class LLVM_ABI parser<char> : public basic_parser<char> {

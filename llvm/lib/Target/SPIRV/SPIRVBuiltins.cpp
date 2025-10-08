@@ -1096,6 +1096,41 @@ static bool build2DBlockIOINTELInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
+                          unsigned Scope, MachineIRBuilder &MIRBuilder,
+                          SPIRVGlobalRegistry *GR) {
+  switch (Opcode) {
+  case SPIRV::OpCommitReadPipe:
+  case SPIRV::OpCommitWritePipe:
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+  case SPIRV::OpGroupCommitReadPipe:
+  case SPIRV::OpGroupCommitWritePipe:
+  case SPIRV::OpGroupReserveReadPipePackets:
+  case SPIRV::OpGroupReserveWritePipePackets: {
+    Register ScopeConstReg =
+        MIRBuilder.buildConstant(LLT::scalar(32), Scope).getReg(0);
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    MRI->setRegClass(ScopeConstReg, &SPIRV::iIDRegClass);
+    MachineInstrBuilder MIB;
+    MIB = MIRBuilder.buildInstr(Opcode);
+    // Add Return register and type.
+    if (Opcode == SPIRV::OpGroupReserveReadPipePackets ||
+        Opcode == SPIRV::OpGroupReserveWritePipePackets)
+      MIB.addDef(Call->ReturnRegister)
+          .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+
+    MIB.addUse(ScopeConstReg);
+    for (unsigned int i = 0; i < Call->Arguments.size(); ++i)
+      MIB.addUse(Call->Arguments[i]);
+
+    return true;
+  }
+  default:
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+  }
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -1127,11 +1162,24 @@ static unsigned getNumSizeComponents(SPIRVType *imgType) {
 
 static bool generateExtInst(const SPIRV::IncomingCall *Call,
                             MachineIRBuilder &MIRBuilder,
-                            SPIRVGlobalRegistry *GR) {
+                            SPIRVGlobalRegistry *GR, const CallBase &CB) {
   // Lookup the extended instruction number in the TableGen records.
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   uint32_t Number =
       SPIRV::lookupExtendedBuiltin(Builtin->Name, Builtin->Set)->Number;
+  // fmin_common and fmax_common are now deprecated, and we should use fmin and
+  // fmax with NotInf and NotNaN flags instead. Keep original number to add
+  // later the NoNans and NoInfs flags.
+  uint32_t OrigNumber = Number;
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2) &&
+      (Number == SPIRV::OpenCLExtInst::fmin_common ||
+       Number == SPIRV::OpenCLExtInst::fmax_common)) {
+    Number = (Number == SPIRV::OpenCLExtInst::fmin_common)
+                 ? SPIRV::OpenCLExtInst::fmin
+                 : SPIRV::OpenCLExtInst::fmax;
+  }
 
   // Build extended instruction.
   auto MIB =
@@ -1143,6 +1191,13 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
 
   for (auto Argument : Call->Arguments)
     MIB.addUse(Argument);
+  MIB.getInstr()->copyIRFlags(CB);
+  if (OrigNumber == SPIRV::OpenCLExtInst::fmin_common ||
+      OrigNumber == SPIRV::OpenCLExtInst::fmax_common) {
+    // Add NoNans and NoInfs flags to fmin/fmax instruction.
+    MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoNans);
+    MIB.getInstr()->setFlag(MachineInstr::MIFlag::FmNoInfs);
+  }
   return true;
 }
 
@@ -2350,6 +2405,20 @@ static bool generate2DBlockIOINTELInst(const SPIRV::IncomingCall *Call,
   return build2DBlockIOINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generatePipeInst(const SPIRV::IncomingCall *Call,
+                             MachineIRBuilder &MIRBuilder,
+                             SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  unsigned Scope = SPIRV::Scope::Workgroup;
+  if (Builtin->Name.contains("sub_group"))
+    Scope = SPIRV::Scope::Subgroup;
+
+  return buildPipeInst(Call, Opcode, Scope, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2859,7 +2928,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  MachineIRBuilder &MIRBuilder,
                                  const Register OrigRet, const Type *OrigRetTy,
                                  const SmallVectorImpl<Register> &Args,
-                                 SPIRVGlobalRegistry *GR) {
+                                 SPIRVGlobalRegistry *GR, const CallBase &CB) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
 
   // Lookup the builtin in the TableGen records.
@@ -2882,7 +2951,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   // Match the builtin with implementation based on the grouping.
   switch (Call->Builtin->Group) {
   case SPIRV::Extended:
-    return generateExtInst(Call.get(), MIRBuilder, GR);
+    return generateExtInst(Call.get(), MIRBuilder, GR, CB);
   case SPIRV::Relational:
     return generateRelationalInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Group:
@@ -2948,6 +3017,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Block2DLoadStore:
     return generate2DBlockIOINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::Pipe:
+    return generatePipeInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

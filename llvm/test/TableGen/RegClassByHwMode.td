@@ -50,7 +50,7 @@ include "llvm/Target/Target.td"
 // INSTRINFO-NEXT: };
 
 // INSTRINFO: static inline void InitMyTargetMCInstrInfo(
-// INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, 321, &MyTargetRegClassByHwModeTables[0][0], 3);
+// INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, {{[0-9]+}}, &MyTargetRegClassByHwModeTables[0][0], 3);
 
 
 

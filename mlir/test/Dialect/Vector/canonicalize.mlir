@@ -3236,23 +3236,19 @@ func.func @rank_1_shuffle_to_interleave(%arg0: vector<6xi32>, %arg1: vector<6xi3
 
 // -----
 
-// CHECK-LABEL: func @extract_from_0d_splatlike_broadcast_regression(
+// CHECK-LABEL: func @extract_from_splatlike_broadcast(
 //  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: vector<f32>, %[[C:.*]]: vector<2xf32>)
-func.func @extract_from_0d_splatlike_broadcast_regression(%a: f32, %b: vector<f32>, %c: vector<2xf32>) -> (f32, f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>) {
-  // Splat/broadcast scalar to 0D and extract scalar.
+func.func @extract_from_splatlike_broadcast(%a: f32, %b: vector<f32>, %c: vector<2xf32>) -> (f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>) {
+  // Broadcast scalar to 0D and extract scalar.
   %0 = vector.broadcast %a : f32 to vector<f32>
   %1 = vector.extract %0[] : f32 from vector<f32>
-
-  // Broadcast scalar to 0D and extract scalar.
-  %2 = vector.broadcast %a : f32 to vector<f32>
-  %3 = vector.extract %2[] : f32 from vector<f32>
 
   // Broadcast 0D to 3D and extract scalar.
   // CHECK: %[[EXTRACT1:.*]] = vector.extract %[[B]][] : f32 from vector<f32>
   %4 = vector.broadcast %b : vector<f32> to vector<1x2x4xf32>
   %5 = vector.extract %4[0, 0, 1] : f32 from vector<1x2x4xf32>
 
-  // Splat/broadcast scalar to 2D and extract scalar.
+  // Broadcast scalar to 2D and extract scalar.
   %6 = vector.broadcast %a : f32 to vector<2x3xf32>
   %7 = vector.extract %6[0, 1] : f32 from vector<2x3xf32>
 
@@ -3268,8 +3264,8 @@ func.func @extract_from_0d_splatlike_broadcast_regression(%a: f32, %b: vector<f3
   // CHECK: %[[EXTRACT3:.*]] = vector.broadcast %[[A]] : f32 to vector<3xf32>
   %11 = vector.extract %6[1] : vector<3xf32> from vector<2x3xf32>
 
-  // CHECK:   return %[[A]], %[[A]], %[[EXTRACT1]], %[[A]], %[[A]], %[[EXTRACT2]], %[[EXTRACT3]]
-  return %1, %3, %5, %7, %9, %10, %11 : f32, f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>
+  // CHECK:   return %[[A]], %[[EXTRACT1]], %[[A]], %[[A]], %[[EXTRACT2]], %[[EXTRACT3]]
+  return %1, %5, %7, %9, %10, %11 : f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>
 }
 
 // -----
@@ -3377,6 +3373,9 @@ func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
 
 // -----
 
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
+
 // CHECK-LABEL: @negative_from_elements_poison
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xf32>
 //       CHECK:   return %[[VAL]] : vector<2xf32>
@@ -3387,6 +3386,9 @@ func.func @negative_from_elements_poison_f32() -> vector<2xf32> {
 }
 
 // -----
+
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
 
 // CHECK-LABEL: @negative_from_elements_poison_i32
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xi32>
@@ -3399,6 +3401,9 @@ func.func @negative_from_elements_poison_i32() -> vector<2xi32> {
 
 // -----
 
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
+
 // CHECK-LABEL: @negative_from_elements_poison_constant_mix
 //       CHECK:   %[[POISON:.*]] = ub.poison : f32
 //       CHECK:   %[[CONST:.*]] = arith.constant 1.000000e+00 : f32
@@ -3409,6 +3414,74 @@ func.func @negative_from_elements_poison_constant_mix() -> vector<2xf32> {
   %c = arith.constant 1.0 : f32
   %1 = vector.from_elements %0, %c : vector<2xf32>
   return %1 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_float8_to_i8_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 56, -72, 69, 127, -1]> : vector<6xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi8>
+func.func @from_elements_float8_to_i8_conversion() -> vector<6xi8> {
+  %cst0 = llvm.mlir.constant(0.0 : f8E4M3FN) : i8
+  %cst1 = llvm.mlir.constant(1.0 : f8E4M3FN) : i8
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f8E4M3FN) : i8
+  %cst_pi = llvm.mlir.constant(3.14 : f8E4M3FN) : i8
+  %cst_inf = llvm.mlir.constant(0x7F : f8E4M3FN) : i8
+  %cst_neg_inf = llvm.mlir.constant(0xFF : f8E4M3FN) : i8
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_inf, %cst_neg_inf : vector<6xi8>
+  return %v : vector<6xi8>
+}
+
+// CHECK-LABEL: func @from_elements_float16_to_i16_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 15360, -17408, 16968, 31743, -1025]> : vector<6xi16>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi16>
+func.func @from_elements_float16_to_i16_conversion() -> vector<6xi16> {
+  %cst0 = llvm.mlir.constant(0.0 : f16) : i16
+  %cst1 = llvm.mlir.constant(1.0 : f16) : i16
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f16) : i16
+  %cst_pi = llvm.mlir.constant(3.14 : f16) : i16
+  %cst_max = llvm.mlir.constant(65504.0	: f16) : i16
+  %cst_min = llvm.mlir.constant(-65504.0 : f16) : i16
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_max, %cst_min : vector<6xi16>
+  return %v : vector<6xi16>
+}
+
+// CHECK-LABEL: func @from_elements_f64_to_i64_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 4607182418800017408, -4616189618054758400, 4614253070214989087, 9218868437227405311, -4503599627370497]> : vector<6xi64>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi64>
+func.func @from_elements_f64_to_i64_conversion() -> vector<6xi64> {
+  %cst0 = llvm.mlir.constant(0.0 : f64) : i64
+  %cst1 = llvm.mlir.constant(1.0 : f64) : i64
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f64) : i64
+  %cst_pi = llvm.mlir.constant(3.14 : f64) : i64
+  %cst_max = llvm.mlir.constant(1.7976931348623157e+308 : f64) : i64
+  %cst_min = llvm.mlir.constant(-1.7976931348623157e+308 : f64) : i64
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_max, %cst_min : vector<6xi64>
+  return %v : vector<6xi64>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_i1_to_i8_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<1xi8>
+func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
+  %cst = llvm.mlir.constant(0: i1) : i8
+  %v = vector.from_elements %cst : vector<1xi8>
+  return %v : vector<1xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_index_to_i64_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 1, 42]> : vector<3xi64>
+// CHECK-NEXT:    return %[[CST]] : vector<3xi64>
+func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
+  %cst0 = llvm.mlir.constant(0 : index) : i64
+  %cst1 = llvm.mlir.constant(1 : index) : i64
+  %cst42 = llvm.mlir.constant(42 : index) : i64
+  %v = vector.from_elements %cst0, %cst1, %cst42 : vector<3xi64>
+  return %v : vector<3xi64>
 }
 
 // +---------------------------------------------------------------------------

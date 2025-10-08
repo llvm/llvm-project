@@ -983,10 +983,9 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
   case UninitUse::AfterDecl:
   case UninitUse::AfterCall:
     S.Diag(VD->getLocation(), diag::warn_sometimes_uninit_var)
-      << VD->getDeclName() << IsCapturedByBlock
-      << (Use.getKind() == UninitUse::AfterDecl ? 4 : 5)
-      << const_cast<DeclContext*>(VD->getLexicalDeclContext())
-      << VD->getSourceRange();
+        << VD->getDeclName() << IsCapturedByBlock
+        << (Use.getKind() == UninitUse::AfterDecl ? 4 : 5)
+        << VD->getLexicalDeclContext() << VD->getSourceRange();
     S.Diag(Use.getUser()->getBeginLoc(), diag::note_uninit_var_use)
         << IsCapturedByBlock << Use.getUser()->getSourceRange();
     return;

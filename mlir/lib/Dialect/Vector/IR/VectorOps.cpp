@@ -396,14 +396,31 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
   return {};
 }
 
-/// Converts an IntegerAttr to have the specified type if needed.
-/// This handles cases where integer constant attributes have a different type
-/// than the target element type.
-static IntegerAttr convertIntegerAttr(IntegerAttr intAttr, Type expectedType) {
-  if (intAttr.getType() == expectedType)
-    return intAttr; // Already correct type
+/// Converts numeric attributes to the expected type. Supports
+/// integer-to-integer and float-to-integer conversions. Returns the original
+/// attribute if no conversion is needed or supported.
+static Attribute convertNumericAttr(Attribute attr, Type expectedType) {
+  // Integer-to-integer conversion
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    if (auto intType = dyn_cast<IntegerType>(expectedType)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
+  }
 
-  return IntegerAttr::get(expectedType, intAttr.getInt());
+  // Float-to-integer bitcast (preserves bit representation)
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    auto intType = dyn_cast<IntegerType>(expectedType);
+    if (!intType)
+      return attr;
+
+    APFloat floatVal = floatAttr.getValue();
+    APInt intVal = floatVal.bitcastToAPInt();
+    return IntegerAttr::get(expectedType, intVal);
+  }
+
+  return attr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -563,7 +580,7 @@ namespace {
 // ElideSingleElementReduction for ReduceOp.
 struct ElideUnitDimsInMultiDimReduction
     : public OpRewritePattern<MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -713,7 +730,7 @@ std::optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
 
 namespace {
 struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -2180,7 +2197,7 @@ namespace {
 // Pattern to rewrite a ExtractOp(Broadcast) -> Broadcast.
 class ExtractOpFromBroadcast final : public OpRewritePattern<ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -2203,7 +2220,7 @@ public:
 // Pattern to rewrite a ExtractOp(CreateMask) -> CreateMask.
 class ExtractOpFromCreateMask final : public OpRewritePattern<ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -2473,16 +2490,11 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
     return {};
 
-  // Convert integer attributes to the target type if needed, leave others
-  // unchanged.
-  auto convertedElements =
-      llvm::map_to_vector(elements, [&](Attribute attr) -> Attribute {
-        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-          return convertIntegerAttr(intAttr, destEltType);
-        }
-        return attr; // Non-integer attributes (FloatAttr, etc.) returned
-                     // unchanged
-      });
+  // Constant attributes might have a different type than the return type.
+  // Convert them before creating the dense elements attribute.
+  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
+    return convertNumericAttr(attr, destEltType);
+  });
 
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
@@ -2534,7 +2546,7 @@ rewriteFromElementsAsBroadcast(FromElementsOp fromElementsOp,
 
 class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
 
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(FromElementsOp fromElements,
                                 PatternRewriter &rewriter) const override {
@@ -2926,7 +2938,7 @@ namespace {
 
 // Fold broadcast1(broadcast2(x)) into broadcast1(x).
 struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const override {
@@ -3097,7 +3109,7 @@ namespace {
 // Pattern to rewrite a 0-D shuffle with [0] or [1] mask returning a 1-D vector
 // to a broadcast.
 struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShuffleOp shuffleOp,
                                 PatternRewriter &rewriter) const override {
@@ -3153,7 +3165,7 @@ static Value getScalarSplatSource(Value value) {
 /// Pattern to rewrite shuffle(splat-like(v), splat-like(v)) as broadcast(v).
 class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShuffleOp op,
                                 PatternRewriter &rewriter) const override {
@@ -3170,7 +3182,7 @@ public:
 /// vector.interleave.
 class ShuffleInterleave : public OpRewritePattern<ShuffleOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShuffleOp op,
                                 PatternRewriter &rewriter) const override {
@@ -3314,7 +3326,7 @@ namespace {
 // broadcast.
 class InsertToBroadcast final : public OpRewritePattern<InsertOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -3332,7 +3344,7 @@ public:
 /// Pattern to rewrite a insert(splat-like(v), splat-like(v)) as broadcast(v).
 class InsertSplatToSplat final : public OpRewritePattern<InsertOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertOp op,
                                 PatternRewriter &rewriter) const override {
@@ -3368,7 +3380,7 @@ public:
 ///   %result = vector.from_elements %c1, %c2 : vector<2xi32>
 class InsertChainFullyInitialized final : public OpRewritePattern<InsertOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(InsertOp op,
                                 PatternRewriter &rewriter) const override {
 
@@ -3503,19 +3515,13 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   SmallVector<Attribute> insertedValues;
   Type destEltType = destTy.getElementType();
 
-  /// Converts integer attributes to the expected type if there's a mismatch.
-  /// Non-integer attributes are left unchanged.
+  /// Converts attribute to the expected type if there's
+  /// a mismatch.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
     for (auto value : denseSource.getValues<Attribute>())
-      if (auto intAttr = dyn_cast<IntegerAttr>(value))
-        insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-      else
-        insertedValues.push_back(value); // Non-integer attributes unchanged
+      insertedValues.push_back(convertNumericAttr(value, destEltType));
   } else {
-    if (auto intAttr = dyn_cast<IntegerAttr>(srcAttr))
-      insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-    else
-      insertedValues.push_back(srcAttr); // Non-integer attributes unchanged
+    insertedValues.push_back(convertNumericAttr(srcAttr, destEltType));
   }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
@@ -3742,7 +3748,7 @@ namespace {
 class FoldInsertStridedSliceSplat final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp insertStridedSliceOp,
                                 PatternRewriter &rewriter) const override {
@@ -3762,7 +3768,7 @@ public:
 class FoldInsertStridedSliceOfExtract final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp insertStridedSliceOp,
                                 PatternRewriter &rewriter) const override {
@@ -3792,7 +3798,7 @@ public:
 class InsertStridedSliceConstantFolder final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   // Do not create constants with more than `vectorSizeFoldThreashold` elements,
   // unless the source vector constant has a single use.
@@ -4244,7 +4250,7 @@ namespace {
 // %mask = vector.create_mask %new_ub : vector<8xi1>
 class StridedSliceCreateMaskFolder final
     : public OpRewritePattern<ExtractStridedSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
 public:
   LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
@@ -4304,7 +4310,7 @@ public:
 class StridedSliceConstantMaskFolder final
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
                                 PatternRewriter &rewriter) const override {
@@ -4359,7 +4365,7 @@ public:
 class StridedSliceBroadcast final
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -4410,7 +4416,7 @@ public:
 /// Rewrite extract_strided_slice(splat-like(v)) with broadcast(v).
 class StridedSliceSplat final : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -4442,7 +4448,7 @@ public:
 class ContiguousExtractStridedSliceToExtract final
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -5017,7 +5023,7 @@ namespace {
 /// ```
 struct TransferReadAfterWriteToBroadcast
     : public OpRewritePattern<TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -5452,7 +5458,7 @@ namespace {
 /// any other uses.
 class FoldWaw final : public OpRewritePattern<TransferWriteOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     if (!llvm::isa<RankedTensorType>(writeOp.getShapedType()))
@@ -5508,7 +5514,7 @@ public:
 struct SwapExtractSliceOfTransferWrite
     : public OpRewritePattern<tensor::InsertSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -5731,7 +5737,7 @@ LogicalResult MaskedLoadOp::verify() {
 namespace {
 class MaskedLoadFolder final : public OpRewritePattern<MaskedLoadOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(MaskedLoadOp load,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(load.getMask())) {
@@ -5788,7 +5794,7 @@ LogicalResult MaskedStoreOp::verify() {
 namespace {
 class MaskedStoreFolder final : public OpRewritePattern<MaskedStoreOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(MaskedStoreOp store,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(store.getMask())) {
@@ -5884,7 +5890,7 @@ static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
 namespace {
 class GatherFolder final : public OpRewritePattern<GatherOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherOp gather,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(gather.getMask())) {
@@ -5904,7 +5910,7 @@ public:
 /// maskedload. Only 1D fixed vectors are supported for now.
 class FoldContiguousGather final : public OpRewritePattern<GatherOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherOp op,
                                 PatternRewriter &rewriter) const override {
     if (!isa<MemRefType>(op.getBase().getType()))
@@ -5956,7 +5962,7 @@ LogicalResult ScatterOp::verify() {
 namespace {
 class ScatterFolder final : public OpRewritePattern<ScatterOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp scatter,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(scatter.getMask())) {
@@ -5976,7 +5982,7 @@ public:
 /// maskedstore. Only 1D fixed vectors are supported for now.
 class FoldContiguousScatter final : public OpRewritePattern<ScatterOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
@@ -6024,7 +6030,7 @@ LogicalResult ExpandLoadOp::verify() {
 namespace {
 class ExpandLoadFolder final : public OpRewritePattern<ExpandLoadOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ExpandLoadOp expand,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(expand.getMask())) {
@@ -6075,7 +6081,7 @@ LogicalResult CompressStoreOp::verify() {
 namespace {
 class CompressStoreFolder final : public OpRewritePattern<CompressStoreOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(CompressStoreOp compress,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(compress.getMask())) {
@@ -6254,7 +6260,7 @@ static VectorType trimTrailingOneDims(VectorType oldType) {
 class ShapeCastCreateMaskFolderTrailingOneDim final
     : public OpRewritePattern<ShapeCastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeOp,
                                 PatternRewriter &rewriter) const override {
@@ -6324,7 +6330,7 @@ public:
 /// If both (i) and (ii) are possible, (i) is chosen.
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
@@ -6608,7 +6614,7 @@ namespace {
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
 class TransposeFolder final : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -6640,7 +6646,7 @@ public:
 /// Replace transpose(splat-like(v)) with broadcast(v)
 class FoldTransposeSplat final : public OpRewritePattern<TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -6657,7 +6663,7 @@ public:
 /// Folds transpose(create_mask) into a new transposed create_mask.
 class FoldTransposeCreateMask final : public OpRewritePattern<TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransposeOp transpOp,
                                 PatternRewriter &rewriter) const override {
@@ -6694,7 +6700,7 @@ public:
 /// Folds transpose(shape_cast) into a new shape_cast.
 class FoldTransposeShapeCast final : public OpRewritePattern<TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -6744,7 +6750,7 @@ public:
 /// within the groups [0,1] and [3,4], like (1 0 2 4 3 5 6).
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   FoldTransposeBroadcast(MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
 
@@ -6965,7 +6971,7 @@ namespace {
 ///   %0 = vector.constant_mask [8, 16] : vector<8x[16]xi1>
 class CreateMaskFolder final : public OpRewritePattern<CreateMaskOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
@@ -7294,7 +7300,7 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
 ///   %0 = arith.select %mask, %a, %passthru : vector<8xf32>
 ///
 class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const override {
@@ -7404,7 +7410,7 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 // vector.broadcast.
 class SplatToBroadcastPattern final : public OpRewritePattern<SplatOp> {
 public:
-  using OpRewritePattern<SplatOp>::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(SplatOp splatOp,
                                 PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splatOp, splatOp.getType(),

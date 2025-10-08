@@ -84,18 +84,16 @@ end
 
 !UNPARSE: SUBROUTINE f03 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP DECLARE SIMD  LINEAR(x: UVAL)
+!UNPARSE: !$OMP DECLARE SIMD LINEAR(x: UVAL)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: SpecificationPart
-![...]
-!PARSE-TREE: | DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct
-!PARSE-TREE: | | Verbatim
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
-!PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | | Modifier -> OmpLinearModifier -> Value = Uval
-!PARSE-TREE: | | | bool = 'true'
-!PARSE-TREE: ExecutionPart -> Block
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
+!PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | Modifier -> OmpLinearModifier -> Value = Uval
+!PARSE-TREE: | | bool = 'true'
+!PARSE-TREE: | Flags = None
 
 subroutine f04(x)
   integer :: x
@@ -104,17 +102,15 @@ end
 
 !UNPARSE: SUBROUTINE f04 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP DECLARE SIMD  LINEAR(x: UVAL, STEP(3_4))
+!UNPARSE: !$OMP DECLARE SIMD LINEAR(x: UVAL, STEP(3_4))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: SpecificationPart
-![...]
-!PARSE-TREE: | DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct
-!PARSE-TREE: | | Verbatim
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
-!PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | | Modifier -> OmpLinearModifier -> Value = Uval
-!PARSE-TREE: | | | Modifier -> OmpStepComplexModifier -> Scalar -> Integer -> Expr = '3_4'
-!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '3'
-!PARSE-TREE: | | | bool = 'true'
-!PARSE-TREE: ExecutionPart -> Block
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareSimdConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare simd
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
+!PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | Modifier -> OmpLinearModifier -> Value = Uval
+!PARSE-TREE: | | Modifier -> OmpStepComplexModifier -> Scalar -> Integer -> Expr = '3_4'
+!PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '3'
+!PARSE-TREE: | | bool = 'true'
+!PARSE-TREE: | Flags = None
