@@ -3194,26 +3194,6 @@ private:
     bool collapseForce = false;
     uint64_t collapseDepth = 1;
     uint64_t loopCount = 1;
-    auto parseCollapse = [&](const Fortran::parser::AccClauseList &cl)
-        -> std::pair<bool, uint64_t> {
-      bool force = false;
-      uint64_t depth = 1;
-      for (const Fortran::parser::AccClause &clause : cl.v) {
-        if (const auto *collapseClause =
-                std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
-          const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
-          force = std::get<bool>(arg.t);
-          const auto &intExpr =
-              std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
-          if (const auto *expr = Fortran::semantics::GetExpr(intExpr)) {
-            if (auto v = Fortran::evaluate::ToInt64(*expr))
-              depth = *v;
-          }
-          break;
-        }
-      }
-      return {force, depth};
-    };
 
     if (accLoop || accCombined) {
       if (accLoop) {
@@ -3222,8 +3202,8 @@ private:
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
-        collapseDepth = Fortran::lower::getLoopCountForCollapse(clauseList);
-        std::tie(collapseForce, std::ignore) = parseCollapse(clauseList);
+        std::tie(collapseDepth, collapseForce) =
+            Fortran::lower::getCollapseSizeAndForce(clauseList);
       } else if (accCombined) {
         const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
             std::get<Fortran::parser::AccBeginCombinedDirective>(
@@ -3231,8 +3211,8 @@ private:
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
-        collapseDepth = Fortran::lower::getLoopCountForCollapse(clauseList);
-        std::tie(collapseForce, std::ignore) = parseCollapse(clauseList);
+        std::tie(collapseDepth, collapseForce) =
+            Fortran::lower::getCollapseSizeAndForce(clauseList);
       }
 
       if (curEval->lowerAsStructured()) {

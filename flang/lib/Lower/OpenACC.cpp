@@ -4869,7 +4869,7 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
 
 uint64_t Fortran::lower::getLoopCountForCollapseAndTile(
     const Fortran::parser::AccClauseList &clauseList) {
-  uint64_t collapseLoopCount = getLoopCountForCollapse(clauseList);
+  uint64_t collapseLoopCount = getCollapseSizeAndForce(clauseList).first;
   uint64_t tileLoopCount = 1;
   for (const Fortran::parser::AccClause &clause : clauseList.v) {
     if (const auto *tileClause =
@@ -4881,18 +4881,22 @@ uint64_t Fortran::lower::getLoopCountForCollapseAndTile(
   return tileLoopCount > collapseLoopCount ? tileLoopCount : collapseLoopCount;
 }
 
-uint64_t Fortran::lower::getLoopCountForCollapse(
+std::pair<uint64_t, bool> Fortran::lower::getCollapseSizeAndForce(
     const Fortran::parser::AccClauseList &clauseList) {
+  uint64_t size = 1;
+  bool force = false;
   for (const Fortran::parser::AccClause &clause : clauseList.v) {
     if (const auto *collapseClause =
             std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
       const Fortran::parser::AccCollapseArg &arg = collapseClause->v;
+      force = std::get<bool>(arg.t);
       const auto &collapseValue =
           std::get<Fortran::parser::ScalarIntConstantExpr>(arg.t);
-      return *Fortran::semantics::GetIntValue(collapseValue);
+      size = *Fortran::semantics::GetIntValue(collapseValue);
+      break;
     }
   }
-  return 1;
+  return {size, force};
 }
 
 /// Create an ACC loop operation for a DO construct when inside ACC compute
