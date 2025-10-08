@@ -742,7 +742,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       (SrcVT != MVT::i1 ||
        TLI.getLoadExtAction(ExtType, Node->getValueType(0), MVT::i1,
                             LD->getAddressSpace()) ==
-         TargetLowering::Promote)) {
+           TargetLowering::Promote)) {
     // Promote to a byte-sized load if not loading an integral number of
     // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
     unsigned NewWidth = SrcVT.getStoreSizeInBits();
@@ -1849,7 +1849,8 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   if ((SrcVT.bitsGT(SlotVT) &&
        !TLI.isTruncStoreLegalOrCustom(SrcOp.getValueType(), SlotVT)) ||
       (SlotVT.bitsLT(DestVT) &&
-       !TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, DestVT, SlotVT, DAG.getDataLayout().getAllocaAddrSpace())))
+       !TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, DestVT, SlotVT,
+                                   DAG.getDataLayout().getAllocaAddrSpace())))
     return SDValue();
 
   // Create the stack frame object.

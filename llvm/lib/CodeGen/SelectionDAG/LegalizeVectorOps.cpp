@@ -301,7 +301,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     ISD::LoadExtType ExtType = LD->getExtensionType();
     EVT LoadedVT = LD->getMemoryVT();
     if (LoadedVT.isVector() && ExtType != ISD::NON_EXTLOAD)
-      Action = TLI.getLoadExtAction(ExtType, LD->getValueType(0), LoadedVT, LD->getAddressSpace());
+      Action = TLI.getLoadExtAction(ExtType, LD->getValueType(0), LoadedVT,
+                                    LD->getAddressSpace());
     break;
   }
   case ISD::STORE: {

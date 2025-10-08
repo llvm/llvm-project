@@ -1493,13 +1493,15 @@ public:
   }
 
   /// Return true if the specified load with extension is legal on this target.
-  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT, unsigned AddrSpace) const {
+  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT,
+                      unsigned AddrSpace) const {
     return getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
-  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT, unsigned AddrSpace) const {
+  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT,
+                              unsigned AddrSpace) const {
     return getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Legal ||
            getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Custom;
   }
