@@ -1877,7 +1877,7 @@ class NVVM_ConvertF8x2ToFP16x2Op_Base <string dstType>
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction.
     
-    For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstType)]>:$dst);
   let arguments = !if(!eq(dstType, "F16"),
@@ -1901,10 +1901,8 @@ class NVVM_ConvertF8x2ToFP16x2Op_Base <string dstType>
     $dst = createIntrinsicCall(builder, intId, args);
   }];
 }
-
 def NVVM_ConvertF8x2ToF16x2Op : NVVM_ConvertF8x2ToFP16x2Op_Base<"F16">;
 def NVVM_ConvertF8x2ToBF16x2Op : NVVM_ConvertF8x2ToFP16x2Op_Base<"BF16">;
-
 
 def NVVM_ConvertF6x2ToF16x2Op : NVVM_Op<"convert.f6x2.to.f16x2"> {
   let summary = "Convert a pair of f6 inputs to f16x2";
@@ -1916,7 +1914,7 @@ def NVVM_ConvertF6x2ToF16x2Op : NVVM_Op<"convert.f6x2.to.f16x2"> {
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction.
 
-    For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   let results = (outs VectorOfLengthAndType<[2], [F16]>:$dst);
   let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
@@ -1951,7 +1949,7 @@ def NVVM_ConvertF4x2ToF16x2Op : NVVM_Op<"convert.f4x2.to.f16x2"> {
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction.
 
-    For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   let results = (outs VectorOfLengthAndType<[2], [F16]>:$dst);
   let arguments = (ins I8:$src,

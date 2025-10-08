@@ -2215,7 +2215,7 @@ ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
 NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::ConvertF8x2ToF16x2Op>(op);
-  
+
   bool hasRelu = curOp.getRelu();
 
   llvm::Intrinsic::ID intId =
