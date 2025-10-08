@@ -247,11 +247,11 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   if (LIBC_UNLIKELY(n == 0)) {
     return FXRep<XType>::ZERO();
   }
-  auto isPowerOfTwo = [](int n) { return (n > 0) && ((n & (n - 1)) == 0); };
+  auto is_power_of_two = [](int n) { return (n > 0) && ((n & (n - 1)) == 0); };
   long accum max_val = static_cast<long accum>(FXRep<XType>::MAX());
   long accum min_val = static_cast<long accum>(FXRep<XType>::MIN());
 
-  if (isPowerOfTwo(cpp::abs(d))) {
+  if (is_power_of_two(cpp::abs(d))) {
     int k = cpp::countr_zero<uint32_t>(static_cast<uint32_t>(cpp::abs(d)));
     constexpr int F = FXRep<XType>::FRACTION_LEN;
     int64_t scaled_n = static_cast<int64_t>(n) << F;
