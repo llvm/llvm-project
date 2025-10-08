@@ -2,8 +2,8 @@ cpu: armv7m
 threads:
   - regsets:
       - flavor: gpr
-        registers: [{name: sp, value: 0x2000fe88}, {name: r7, value: 0x2000fe88}, 
-                    {name: pc, value: 0x00203916}, {name: lr, value: 0x0020392d}]
+        registers: [{name: sp, value: 0x2000fe70}, {name: r7, value: 0x2000fe80}, 
+                    {name: pc, value: 0x0020392c}, {name: lr, value: 0x0020392d}]
 memory-regions:
   # stack memory fetched via 
   # (lldb) p/x $sp
@@ -14,7 +14,7 @@ memory-regions:
       0x0000002a, 0x20010e58, 0x00203923, 0x00000001,
       0x2000fe88, 0x00203911, 0x2000ffdc, 0xfffffff9,
       0x00000102, 0x00000002, 0x000003f0, 0x0000002a,
-      0x20012620, 0x00203215, 0x00202a92, 0x81000200,
+      0x20012620, 0x00203215, 0x00203366, 0x81000200,
       0x00203215, 0x200128b0, 0x0024928d, 0x2000fecc,
       0x002491ed, 0x20010e58, 0x20010e4c, 0x2000ffa0,
       0x200107a0, 0x0000003c, 0x200116e8, 0x200108b0,
@@ -62,26 +62,3 @@ memory-regions:
       0x98, 0xae, 0x28, 0x00
     ]
 
-  # exception_thrower
-  # (lldb) disass -b -c 12 -n exception_thrower
-  # 0x202a88 <+0>:  0xb5f0       push   {r4, r5, r6, r7, lr}
-  # 0x202a8a <+2>:  0xaf03       add    r7, sp, #0xc
-  # 0x202a8c <+4>:  0xe92d0f00   push.w {r8, r9, r10, r11}
-  # 0x202a90 <+8>:  0xb0c3       sub    sp, #0x10c
-  # 0x202a92 <+10>: 0xf7ffffd9   bl     0x202a48                 
-  - addr: 0x202a88
-    UInt8: [
-      0xf0, 0xb5, 0x03, 0xaf, 0x2d, 0xe9, 0x00, 0x0f,
-      0xc3, 0xb0, 0xff, 0xf7, 0xd9, 0xff, 0xff, 0xf7
-    ]
-
-  # main:
-  # 0x202a7e <+0>: push   {r7, lr}
-  # 0x202a80 <+2>: mov    r7, sp
-  # 0x202a82 <+4>: bl     0x202a88                  ; exception_thrower
-  # 0x202a86 <+8>: nop
-  - addr: 0x202a7e
-    UInt8: [
-      0x80, 0xb5, 0x6f, 0x46, 0x00, 0xf0, 0x01, 0xf8,
-      0x00, 0xbf
-    ]
