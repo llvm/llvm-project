@@ -1005,6 +1005,8 @@ TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
     return PR_SignExtend;
   if (isa<ZExtInst>(I))
     return PR_ZeroExtend;
+  if (isa<FPExtInst>(I))
+    return PR_FPExtend;
   return PR_None;
 }
 

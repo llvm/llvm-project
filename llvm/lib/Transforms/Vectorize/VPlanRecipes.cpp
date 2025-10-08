@@ -322,6 +322,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
       return TTI::PR_ZeroExtend;
     if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
       return TTI::PR_SignExtend;
+    if (WidenCastR->getOpcode() == Instruction::CastOps::FPExt)
+      return TTI::PR_FPExtend;
     return TTI::PR_None;
   };
 
@@ -374,8 +376,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
-  assert(getOpcode() == Instruction::Add &&
-         "Unhandled partial reduction opcode");
+  assert(
+      (getOpcode() == Instruction::Add || getOpcode() == Instruction::FAdd) &&
+      "Unhandled partial reduction opcode");
 
   Value *BinOpVal = State.get(getOperand(1));
   Value *PhiVal = State.get(getOperand(0));
@@ -383,9 +386,20 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   Type *RetTy = PhiVal->getType();
 
-  CallInst *V =
-      Builder.CreateIntrinsic(RetTy, Intrinsic::vector_partial_reduce_add,
-                              {PhiVal, BinOpVal}, nullptr, "partial.reduce");
+  enum llvm::Intrinsic::IndependentIntrinsics PRIntrinsic;
+  switch (getOpcode()) {
+  case Instruction::Add: {
+    PRIntrinsic = Intrinsic::vector_partial_reduce_add;
+    break;
+  }
+  case Instruction::FAdd: {
+    PRIntrinsic = Intrinsic::vector_partial_reduce_fadd;
+    break;
+  }
+  }
+
+  CallInst *V = Builder.CreateIntrinsic(RetTy, PRIntrinsic, {PhiVal, BinOpVal},
+                                        nullptr, "partial.reduce");
 
   State.set(this, V);
 }
