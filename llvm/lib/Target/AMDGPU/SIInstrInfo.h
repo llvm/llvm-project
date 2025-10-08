@@ -1315,7 +1315,7 @@ public:
       return 4;
     }
 
-    return RI.getRegSizeInBits(*RI.getRegClass(OpInfo.RegClass)) / 8;
+    return RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))) / 8;
   }
 
   /// This form should usually be preferred since it handles operands
