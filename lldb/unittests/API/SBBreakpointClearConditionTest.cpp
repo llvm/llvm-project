@@ -5,12 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "TestingSupport/SubsystemRAII.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBBreakpointLocation.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBTarget.h"
+// Use the umbrella header for -Wdocumentation.
+#include "lldb/API/LLDB.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <mutex>
