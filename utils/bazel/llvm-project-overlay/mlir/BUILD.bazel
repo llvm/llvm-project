@@ -9436,6 +9436,7 @@ cc_binary(
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMemRefToLLVMWithTransforms",
         "//mlir/test:TestNVGPU",
+        "//mlir/test:TestOpenACC",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
