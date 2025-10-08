@@ -38,6 +38,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include <map>
 #include <set>
@@ -92,25 +93,12 @@ public:
   /// Get the string key for a vocabulary entry at the given position
   std::string getStringKey(unsigned Pos) const;
 
-  MIRVocabulary() = delete;
-  MIRVocabulary(VocabMap &&Entries, const TargetInstrInfo *TII);
-  MIRVocabulary(ir2vec::VocabStorage &&Storage, const TargetInstrInfo &TII)
-      : Storage(std::move(Storage)), TII(TII) {}
-
-  bool isValid() const {
-    return UniqueBaseOpcodeNames.size() > 0 &&
-           Layout.TotalEntries == Storage.size() && Storage.isValid();
-  }
-
   unsigned getDimension() const {
-    if (!isValid())
-      return 0;
     return Storage.getDimension();
   }
 
   // Accessor methods
   const Embedding &operator[](unsigned Opcode) const {
-    assert(isValid() && "MIR2Vec Vocabulary is invalid");
     unsigned LocalIndex = getCanonicalOpcodeIndex(Opcode);
     return Storage[static_cast<unsigned>(Section::Opcodes)][LocalIndex];
   }
@@ -118,20 +106,30 @@ public:
   // Iterator access
   using const_iterator = ir2vec::VocabStorage::const_iterator;
   const_iterator begin() const {
-    assert(isValid() && "MIR2Vec Vocabulary is invalid");
     return Storage.begin();
   }
 
   const_iterator end() const {
-    assert(isValid() && "MIR2Vec Vocabulary is invalid");
     return Storage.end();
   }
 
   /// Total number of entries in the vocabulary
   size_t getCanonicalSize() const {
-    assert(isValid() && "Invalid vocabulary");
     return Storage.size();
   }
+
+  MIRVocabulary() = delete;
+
+  /// Factory method to create MIRVocabulary from vocabulary map
+  static Expected<MIRVocabulary> create(VocabMap &&Entries, const TargetInstrInfo &TII);
+  
+  /// Factory method to create MIRVocabulary from existing storage
+  static Expected<MIRVocabulary> create(ir2vec::VocabStorage &&Storage, const TargetInstrInfo &TII);
+
+private:
+  MIRVocabulary(VocabMap &&Entries, const TargetInstrInfo &TII);
+  MIRVocabulary(ir2vec::VocabStorage &&Storage, const TargetInstrInfo &TII)
+      : Storage(std::move(Storage)), TII(TII) {}
 };
 
 } // namespace mir2vec
@@ -145,7 +143,6 @@ class MIR2VecVocabLegacyAnalysis : public ImmutablePass {
 
   StringRef getPassName() const override;
   Error readVocabulary();
-  void emitError(Error Err, LLVMContext &Ctx);
 
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -156,7 +153,7 @@ protected:
 public:
   static char ID;
   MIR2VecVocabLegacyAnalysis() : ImmutablePass(ID) {}
-  mir2vec::MIRVocabulary getMIR2VecVocabulary(const Module &M);
+  Expected<mir2vec::MIRVocabulary> getMIR2VecVocabulary(const Module &M);
 };
 
 /// This pass prints the embeddings in the MIR2Vec vocabulary
