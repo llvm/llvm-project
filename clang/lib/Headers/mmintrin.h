@@ -679,11 +679,10 @@ _mm_subs_pu16(__m64 __m1, __m64 __m2) {
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [2 x i32] containing the sums of
 ///    products of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_madd_pi16(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_pmaddwd128((__v8hi)__anyext128(__m1),
-                                               (__v8hi)__anyext128(__m2)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_madd_pi16(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_pmaddwd128((__v8hi)__zext128(__m1),
+                                             (__v8hi)__zext128(__m2)));
 }
 
 /// Multiplies each 16-bit signed integer element of the first 64-bit

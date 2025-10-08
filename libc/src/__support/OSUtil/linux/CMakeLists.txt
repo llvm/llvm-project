@@ -25,6 +25,18 @@ add_object_library(
 )
 
 add_header_library(
+  auxv
+  HDRS
+    auxv.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.threads.callonce
+)
+
+add_header_library(
   getrandom
   HDRS
     getrandom.h

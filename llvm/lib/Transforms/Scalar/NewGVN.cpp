@@ -2066,6 +2066,7 @@ NewGVN::performSymbolicEvaluation(Instruction *I,
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::Select:
   case Instruction::ExtractElement:

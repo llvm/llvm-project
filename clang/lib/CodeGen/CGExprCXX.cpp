@@ -1655,11 +1655,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     RValue RV =
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
-    // Set !heapallocsite metadata on the call to operator new.
-    if (getDebugInfo())
-      if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal()))
-        getDebugInfo()->addHeapAllocSiteMetadata(newCall, allocType,
-                                                 E->getExprLoc());
+    if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal())) {
+      if (auto *CGDI = getDebugInfo()) {
+        // Set !heapallocsite metadata on the call to operator new.
+        CGDI->addHeapAllocSiteMetadata(newCall, allocType, E->getExprLoc());
+      }
+      if (SanOpts.has(SanitizerKind::AllocToken)) {
+        // Set !alloc_token metadata.
+        EmitAllocToken(newCall, allocType);
+      }
+    }
 
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce

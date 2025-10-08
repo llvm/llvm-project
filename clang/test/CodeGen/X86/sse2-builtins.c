@@ -852,6 +852,7 @@ __m128i test_mm_madd_epi16(__m128i A, __m128i B) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_madd_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_madd_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){9, 10, 11, 12, 13, 14, 15, 16}), 29, 81, 149, 233));
 
 void test_mm_maskmoveu_si128(__m128i A, __m128i B, char* C) {
   // CHECK-LABEL: test_mm_maskmoveu_si128
