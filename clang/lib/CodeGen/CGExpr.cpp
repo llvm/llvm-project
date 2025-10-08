@@ -1998,9 +1998,16 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                           lvalue.getTBAAInfo(), lvalue.isNontemporal());
 }
 
-static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
-                            llvm::APInt &Min, llvm::APInt &End,
-                            bool StrictEnums, bool IsBool) {
+// XXX: safety first! This method SHOULD NOT be extended to support additional
+// types, like BitInt types, without an opt-in bool controlled by a
+// CodeGenOptions setting (like -fstrict-bool) and a new UBSan check (like
+// SanitizerKind::Bool) as breaking that assumption would lead to memory
+// corruption. See link for examples of how having a bool that has a value
+// different from 0 or 1 in memory can lead to memory corruption.
+// https://discourse.llvm.org/t/defining-what-happens-when-a-bool-isn-t-0-or-1/86778
+static bool getRangeForType(CodeGenFunction &CGF, QualType Ty, llvm::APInt &Min,
+                            llvm::APInt &End, bool StrictEnums, bool StrictBool,
+                            bool IsBool) {
   const auto *ED = Ty->getAsEnumDecl();
   bool IsRegularCPlusPlusEnum =
       CGF.getLangOpts().CPlusPlus && StrictEnums && ED && !ED->isFixed();
@@ -2008,6 +2015,8 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
     return false;
 
   if (IsBool) {
+    if (!StrictBool)
+      return false;
     Min = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
     End = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
   } else {
@@ -2018,7 +2027,10 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
+  bool IsStrictBool = CGM.getCodeGenOpts().getLoadBoolFromMem() ==
+                      CodeGenOptions::BoolFromMem::Strict;
   if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
+                       IsStrictBool,
                        Ty->hasBooleanRepresentation() && !Ty->isVectorType()))
     return nullptr;
 
@@ -2066,7 +2078,8 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
     return false;
 
   llvm::APInt Min, End;
-  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
+  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true,
+                       /*StrictBool=*/true, IsBool))
     return true;
 
   SanitizerKind::SanitizerOrdinal Kind =
@@ -2215,8 +2228,13 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType() ||
-      Ty->isExtVectorBoolType())
+  bool HasBoolRep = Ty->hasBooleanRepresentation();
+  if (HasBoolRep && CGM.getCodeGenOpts().getLoadBoolFromMem() ==
+                        CodeGenOptions::BoolFromMem::NonZero) {
+    return Builder.CreateICmpNE(
+        Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
+  }
+  if (HasBoolRep || Ty->isBitIntType() || Ty->isExtVectorBoolType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
 
   return Value;

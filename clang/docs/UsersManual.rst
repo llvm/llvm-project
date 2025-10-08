@@ -2306,6 +2306,30 @@ are listed below.
    additional function arity information (for supported targets). See
    :doc:`ControlFlowIntegrity` for more details.
 
+.. option:: -fstrict-bool
+
+    ``bool`` values are stored to memory as 8-bit values on most targets. C and
+    C++ specify that it is undefined behavior to put a value other than 0 or 1
+    in the storage of a ``bool`` value, and with ``-fstrict-bool``, Clang
+    leverages this knowledge for optimization opportunities. When this
+    assumption is violated, for instance if invalid data is ``memcpy``ed over a
+    ``bool``, the optimized code can lead to memory corruption.
+    ``-fstrict-bool`` is enabled by default.
+
+.. option:: -fno-strict-bool[={truncate|nonzero}]
+
+    Disable optimizations based on the assumption that all ``bool`` values,
+    which are typically represented as 8-bit integers in memory, only ever
+    contain bit patterns 0 or 1. When ``=truncate`` is specified, a ``bool`` is
+    true if its least significant bit is set, and false otherwise. When
+    ``=nonzero`` is specified, a ``bool`` is true when any bit is set, and
+    false otherwise. The default is ``=truncate``, but this could change in
+    future releases.
+
+    ``-fno-strict-bool`` does not permit Clang to store a value other than 0 or
+    1 in a ``bool``: it is a safety net against programmer mistakes, such as
+    ``memcpy``ing invalid data over a ``bool``.
+
 .. option:: -fstrict-vtable-pointers
 
    Enable optimizations based on the strict rules for overwriting polymorphic
