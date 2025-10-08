@@ -16,8 +16,6 @@ void empty_try_block_with_catch_all() {
 // CIR:     }
 // CIR:   }
 
-// TODO(CIR): Those blocks will be removed once RemoveEmptyScope RewritePattern is upstreamed
-
 // LLVM: define{{.*}} void @_Z30empty_try_block_with_catch_allv()
 // LLVM:  br label %1
 // LLVM: 1:
