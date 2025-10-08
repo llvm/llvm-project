@@ -134,6 +134,7 @@ protected:
     }
 
     struct Glob {
+      Glob(StringRef Name, unsigned LineNo) : Name(Name), LineNo(LineNo) {}
       std::string Name;
       unsigned LineNo;
       GlobPattern Pattern;
@@ -143,8 +144,18 @@ protected:
       Glob() = default;
     };
 
+    struct Reg {
+      Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
+          : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
+      std::string Name;
+      unsigned LineNo;
+      Regex Rg;
+      Reg(Reg &&) = delete;
+      Reg() = default;
+    };
+
     std::vector<std::unique_ptr<Matcher::Glob>> Globs;
-    std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
+    std::vector<std::unique_ptr<Reg>> RegExes;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
