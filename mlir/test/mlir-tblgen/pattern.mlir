@@ -211,9 +211,9 @@ func.func @verifyMultipleEqualArgs(
 
 func.func @verifyEqualArgsCheckBeforeUserConstraints(%arg0: i32, %arg1: f32) {
   // def TestEqualArgsCheckBeforeUserConstraintsPattern :
-  //   Pat<(OpQ $x, $x),
-  //       [(CheckIntIs32Bits $x)],
-  //       (replaceWithValue $x)>;
+  //   Pat<(OpQ:$op $x, $x),
+  //       (replaceWithValue $x),
+  //       [(AssertBinOpEqualArgsAndReturnTrue $op)]>;
 
   // CHECK: "test.op_q"(%arg0, %arg1)
   %0 = "test.op_q"(%arg0, %arg1) : (i32, f32) -> (i32)
