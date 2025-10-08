@@ -4452,11 +4452,12 @@ static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG,
 template <typename F>
 SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
                          const SDLoc &DL, EVT VT, ArrayRef<SDValue> Ops,
-                         F Builder, bool CheckBWI = true) {
+                         F Builder, bool CheckBWI = true,
+                         bool AllowAVX512 = true) {
   assert(Subtarget.hasSSE2() && "Target assumed to support at least SSE2");
   unsigned NumSubs = 1;
-  if ((CheckBWI && Subtarget.useBWIRegs()) ||
-      (!CheckBWI && Subtarget.useAVX512Regs())) {
+  if (AllowAVX512 && ((CheckBWI && Subtarget.useBWIRegs()) ||
+                      (!CheckBWI && Subtarget.useAVX512Regs()))) {
     if (VT.getSizeInBits() > 512) {
       NumSubs = VT.getSizeInBits() / 512;
       assert((VT.getSizeInBits() % 512) == 0 && "Illegal vector size");
@@ -5346,6 +5347,19 @@ bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
 
   return false;
 }
+
+int getRoundingModeX86(unsigned RM) {
+  switch (static_cast<::llvm::RoundingMode>(RM)) {
+    // clang-format off
+  case ::llvm::RoundingMode::NearestTiesToEven: return X86::rmToNearest; break;
+  case ::llvm::RoundingMode::TowardNegative:    return X86::rmDownward; break;
+  case ::llvm::RoundingMode::TowardPositive:    return X86::rmUpward; break;
+  case ::llvm::RoundingMode::TowardZero:        return X86::rmTowardZero; break;
+  default:
+    return X86::rmInvalid; // Invalid rounding mode
+  }
+}
+
 } // namespace X86
 } // namespace llvm
 
@@ -11721,10 +11735,19 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   // we'll have to do 2x as many shuffles in order to achieve this, a 2-input
   // pre-shuffle first is a better strategy.
   if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
+    // If we don't have blends, see if we can create a cheap unpack.
+    if (!Subtarget.hasSSE41() && VT.is128BitVector() &&
+        (is128BitUnpackShuffleMask(V1Mask, DAG) ||
+         is128BitUnpackShuffleMask(V2Mask, DAG)))
+      if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
+              DL, VT, V1, V2, Mask, Subtarget, DAG))
+        return PermUnpack;
+
     // Only prefer immediate blends to unpack/rotate.
-    if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
-                                                          DAG, true))
+    if (SDValue BlendPerm =
+            lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask, DAG, true))
       return BlendPerm;
+
     // If either input vector provides only a single element which is repeated
     // multiple times, unpacking from both input vectors would generate worse
     // code. e.g. for
@@ -11736,13 +11759,16 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
       if (SDValue UnpackPerm =
               lowerShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask, DAG))
         return UnpackPerm;
+
     if (SDValue RotatePerm = lowerShuffleAsByteRotateAndPermute(
             DL, VT, V1, V2, Mask, Subtarget, DAG))
       return RotatePerm;
+
     // Unpack/rotate failed - try again with variable blends.
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG))
       return BlendPerm;
+
     if (VT.getScalarSizeInBits() >= 32)
       if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
               DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -13757,10 +13783,12 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // so prevents folding a load into this instruction or making a copy.
     const int UnpackLoMask[] = {0, 0, 1, 1};
     const int UnpackHiMask[] = {2, 2, 3, 3};
-    if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
-      Mask = UnpackLoMask;
-    else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
-      Mask = UnpackHiMask;
+    if (!isSingleElementRepeatedMask(Mask)) {
+      if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
+        Mask = UnpackLoMask;
+      else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
+        Mask = UnpackHiMask;
+    }
 
     return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v4i32, V1,
                        getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
@@ -28686,16 +28714,14 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
   SDValue RMBits;
   if (auto *CVal = dyn_cast<ConstantSDNode>(NewRM)) {
     uint64_t RM = CVal->getZExtValue();
-    int FieldVal;
-    switch (static_cast<RoundingMode>(RM)) {
-    // clang-format off
-    case RoundingMode::NearestTiesToEven: FieldVal = X86::rmToNearest; break;
-    case RoundingMode::TowardNegative:    FieldVal = X86::rmDownward; break;
-    case RoundingMode::TowardPositive:    FieldVal = X86::rmUpward; break;
-    case RoundingMode::TowardZero:        FieldVal = X86::rmTowardZero; break;
-    default:
-      llvm_unreachable("rounding mode is not supported by X86 hardware");
-    // clang-format on
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(DL.getDebugLoc()), DS_Error));
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
@@ -30289,22 +30315,8 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
 
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
 
-  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode())) {
-    // Hardware support for vector shifts is sparse which makes us scalarize the
-    // vector operations in many cases. Also, on sandybridge ADD is faster than
-    // shl: (shl V, 1) -> (add (freeze V), (freeze V))
-    if (Op.getOpcode() == ISD::SHL && ShiftAmt == 1) {
-      // R may be undef at run-time, but (shl R, 1) must be an even number (LSB
-      // must be 0). (add undef, undef) however can be any value. To make this
-      // safe, we must freeze R to ensure that register allocation uses the same
-      // register for an undefined value. This ensures that the result will
-      // still be even and preserves the original semantics.
-      R = DAG.getFreeze(R);
-      return DAG.getNode(ISD::ADD, dl, VT, R, R);
-    }
-
+  if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
     return getTargetVShiftByConstNode(X86Opc, dl, VT, R, ShiftAmt, DAG);
-  }
 
   // i64 SRA needs to be performed as partial shifts.
   if (((!Subtarget.hasXOP() && VT == MVT::v2i64) ||
@@ -31205,16 +31217,16 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     unsigned NumElts = VT.getVectorNumElements();
 
     if (Subtarget.hasVBMI2() && EltSizeInBits > 8) {
-      if (IsFSHR)
-        std::swap(Op0, Op1);
 
       if (IsCstSplat) {
+        if (IsFSHR)
+          std::swap(Op0, Op1);
         uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
         SDValue Imm = DAG.getTargetConstant(ShiftAmt, DL, MVT::i8);
         return getAVX512Node(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
                              {Op0, Op1, Imm}, DAG, Subtarget);
       }
-      return getAVX512Node(IsFSHR ? X86ISD::VSHRDV : X86ISD::VSHLDV, DL, VT,
+      return getAVX512Node(IsFSHR ? ISD::FSHR : ISD::FSHL, DL, VT,
                            {Op0, Op1, Amt}, DAG, Subtarget);
     }
     assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
@@ -35129,8 +35141,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VALIGN)
   NODE_NAME_CASE(VSHLD)
   NODE_NAME_CASE(VSHRD)
-  NODE_NAME_CASE(VSHLDV)
-  NODE_NAME_CASE(VSHRDV)
   NODE_NAME_CASE(PSHUFD)
   NODE_NAME_CASE(PSHUFHW)
   NODE_NAME_CASE(PSHUFLW)
@@ -44607,8 +44617,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
-    // If we just want the sign bit then we don't need to shift it.
-    if (OriginalDemandedBits.isSignMask())
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - OriginalDemandedBits.countr_zero();
+    if (TLO.DAG.ComputeNumSignBits(Op0, OriginalDemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
       return TLO.CombineTo(Op, Op0);
 
     // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
@@ -45161,11 +45174,27 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::Wrapper:
   case X86ISD::WrapperRIP:
     return true;
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS: {
+    APInt DemandedLHS, DemandedRHS;
+    getPackDemandedElts(Op.getSimpleValueType(), DemandedElts, DemandedLHS,
+                        DemandedRHS);
+    return (!DemandedLHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                                 PoisonOnly, Depth + 1)) &&
+           (!DemandedRHS ||
+            DAG.isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                                 PoisonOnly, Depth + 1));
+  }
+  case X86ISD::INSERTPS:
   case X86ISD::BLENDI:
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
     SmallVector<SDValue, 2> Ops;
@@ -45227,11 +45256,19 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
     return false;
+  // SSE packs.
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
+    return false;
   // SSE target shuffles.
+  case X86ISD::INSERTPS:
+  case X86ISD::PSHUFB:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
     return false;
   // SSE comparisons handle all icmp/fcmp cases.
@@ -45422,7 +45459,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                                   const SDLoc &DL,
                                   const X86Subtarget &Subtarget) {
   EVT SrcVT = Src.getValueType();
-  if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
+  if (Subtarget.useSoftFloat() || !SrcVT.isSimple() ||
+      SrcVT.getScalarType() != MVT::i1)
     return SDValue();
 
   // Recognize the IR pattern for the movmsk intrinsic under SSE1 before type
@@ -46181,7 +46219,7 @@ static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
   SDValue Zero = DAG.getConstant(0, DL, DpVT);
 
   return SplitOpsAndApply(DAG, Subtarget, DL, DpVT, {Zero, DpOp0, DpOp1},
-                          DpBuilder, false);
+                          DpBuilder, /*CheckBWI=*/false, Subtarget.hasVNNI());
 }
 
 // Create a PSADBW given two sources representable as zexts of vXi8.
@@ -52353,16 +52391,41 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
-        EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+    // If EFLAGS is from a CMP that compares the same operands as the earlier
+    // SUB producing X (i.e. CMP X, Y), we can directly use the carry flag with
+    // SBB/ADC without creating a flipped SUB.
+    if (EFLAGS.getOpcode() == X86ISD::CMP &&
+        EFLAGS.getValueType().isInteger() && X == EFLAGS.getOperand(0)) {
       return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                          DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(0, DL, VT), NewEFLAGS);
+                         DAG.getConstant(0, DL, VT), EFLAGS);
+    }
+
+    if (EFLAGS.getOpcode() == X86ISD::SUB &&
+        EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      // Only create NewSub if we know one of the folds will succeed to avoid
+      // introducing a temporary node that may persist and affect one-use checks
+      // below.
+      if (EFLAGS.getNode()->hasOneUse()) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
+                           DAG.getVTList(VT, MVT::i32), X,
+                           DAG.getConstant(0, DL, VT), NewEFLAGS);
+      }
+
+      if (IsSub && X == EFLAGS.getValue(0)) {
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        return DAG.getNode(X86ISD::SBB, DL, DAG.getVTList(VT, MVT::i32),
+                           EFLAGS.getOperand(0), EFLAGS.getOperand(1),
+                           NewEFLAGS);
+      }
     }
   }
 
@@ -58047,7 +58110,8 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   };
 
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
-                          /*CheckBWI*/ false);
+                          /*CheckBWI*/ false,
+                          /*AllowAVX512*/ Subtarget.hasIFMA());
 }
 
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
@@ -58072,6 +58136,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal adds from adds of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Prefer VSHLI to reduce uses, X86FixupInstTunings may revert this depending
+  // on the scheduler model. Limit multiple users to AVX+ targets to prevent
+  // introducing extra register moves.
+  if (Op0 == Op1 && supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL))
+    if (Subtarget.hasAVX() || N->isOnlyUserOf(Op0.getNode()))
+      return getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT.getSimpleVT(),
+                                        Op0, 1, DAG);
 
   // Canonicalize hidden LEA pattern:
   // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)

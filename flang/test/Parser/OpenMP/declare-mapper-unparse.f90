@@ -9,7 +9,7 @@ program main
   end type ty
 
 
-!CHECK: !$OMP DECLARE MAPPER (mymapper:ty::mapped) MAP(mapped,mapped%x)
+!CHECK: !$OMP DECLARE MAPPER(mymapper:ty::mapped) MAP(mapped,mapped%x)
   !$omp declare mapper(mymapper : ty :: mapped) map(mapped, mapped%x)
 
 !PARSE-TREE:      OpenMPDeclareMapperConstruct
@@ -24,7 +24,7 @@ program main
 !PARSE-TREE:           DataRef -> Name = 'mapped'
 !PARSE-TREE:           Name = 'x'
 
-!CHECK: !$OMP DECLARE MAPPER (ty::mapped) MAP(mapped,mapped%x)
+!CHECK: !$OMP DECLARE MAPPER(ty::mapped) MAP(mapped,mapped%x)
   !$omp declare mapper(ty :: mapped) map(mapped, mapped%x)
 
 !PARSE-TREE:      OpenMPDeclareMapperConstruct

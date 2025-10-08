@@ -41,6 +41,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
@@ -485,19 +486,47 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   }
 
   if (ProfileUseArg) {
+    SmallString<128> UsePathBuf;
+    StringRef UsePath;
     if (ProfileUseArg->getOption().matches(options::OPT_fprofile_instr_use_EQ))
-      CmdArgs.push_back(Args.MakeArgString(
-          Twine("-fprofile-instrument-use-path=") + ProfileUseArg->getValue()));
+      UsePath = ProfileUseArg->getValue();
     else if ((ProfileUseArg->getOption().matches(
                   options::OPT_fprofile_use_EQ) ||
               ProfileUseArg->getOption().matches(
                   options::OPT_fprofile_instr_use))) {
-      SmallString<128> Path(
-          ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
-      if (Path.empty() || llvm::sys::fs::is_directory(Path))
-        llvm::sys::path::append(Path, "default.profdata");
+      UsePathBuf =
+          ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue();
+      if (UsePathBuf.empty() || llvm::sys::fs::is_directory(UsePathBuf))
+        llvm::sys::path::append(UsePathBuf, "default.profdata");
+      UsePath = UsePathBuf;
+    }
+    auto ReaderOrErr =
+        llvm::IndexedInstrProfReader::create(UsePath, D.getVFS());
+    if (auto E = ReaderOrErr.takeError()) {
+      auto DiagID = D.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
+      llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
+        D.Diag(DiagID) << UsePath.str() << EI.message();
+      });
+    } else {
+      std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
+          std::move(ReaderOrErr.get());
+      StringRef UseKind;
+      // Currently memprof profiles are only added at the IR level. Mark the
+      // profile type as IR in that case as well and the subsequent matching
+      // needs to detect which is available (might be one or both).
+      if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
+        if (PGOReader->hasCSIRLevelProfile())
+          UseKind = "csllvm";
+        else
+          UseKind = "llvm";
+      } else
+        UseKind = "clang";
+
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("-fprofile-instrument-use-path=") + Path));
+          Args.MakeArgString("-fprofile-instrument-use=" + UseKind));
+      CmdArgs.push_back(
+          Args.MakeArgString("-fprofile-instrument-use-path=" + UsePath));
     }
   }
 
@@ -693,16 +722,6 @@ RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
   default:
     break;
   }
-}
-
-static bool checkDebugInfoOption(const Arg *A, const ArgList &Args,
-                                 const Driver &D, const ToolChain &TC) {
-  assert(A && "Expected non-nullptr argument.");
-  if (TC.supportsDebugInfoOption(A))
-    return true;
-  D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
-      << A->getAsString(Args) << TC.getTripleString();
-  return false;
 }
 
 static void RenderDebugInfoCompressionArgs(const ArgList &Args,
@@ -1109,26 +1128,15 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdinc) &&
       Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                    true) &&
-      !Args.hasArg(options::OPT_nobuiltininc)) {
-    // Without an offloading language we will include these headers directly.
-    // Offloading languages will instead only use the declarations stored in
-    // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
-    if (getToolChain().getTriple().isGPU() &&
-        C.getActiveOffloadKinds() == Action::OFK_None) {
-      SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, getToolChain().getTripleString());
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
-    } else if (C.getActiveOffloadKinds() == Action::OFK_OpenMP) {
-      // TODO: CUDA / HIP include their own headers for some common functions
-      // implemented here. We'll need to clean those up so they do not conflict.
-      SmallString<128> P(D.ResourceDir);
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, "llvm_libc_wrappers");
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
-    }
+      !Args.hasArg(options::OPT_nobuiltininc) &&
+      (C.getActiveOffloadKinds() == Action::OFK_OpenMP)) {
+    // TODO: CUDA / HIP include their own headers for some common functions
+    // implemented here. We'll need to clean those up so they do not conflict.
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    llvm::sys::path::append(P, "llvm_libc_wrappers");
+    CmdArgs.push_back("-internal-isystem");
+    CmdArgs.push_back(Args.MakeArgString(P));
   }
 
   // Add system include arguments for all targets but IAMCU.
@@ -2744,42 +2752,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-static void EmitComplexRangeDiag(const Driver &D, StringRef LastOpt,
-                                 LangOptions::ComplexRangeKind Range,
-                                 StringRef NewOpt,
-                                 LangOptions::ComplexRangeKind NewRange) {
-  //  Do not emit a warning if NewOpt overrides LastOpt in the following cases.
-  //
-  // | LastOpt               | NewOpt                |
-  // |-----------------------|-----------------------|
-  // | -fcx-limited-range    | -fno-cx-limited-range |
-  // | -fno-cx-limited-range | -fcx-limited-range    |
-  // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
-  // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
-  // | -ffast-math           | -fno-fast-math        |
-  // | -ffp-model=           | -ffast-math           |
-  // | -ffp-model=           | -fno-fast-math        |
-  // | -ffp-model=           | -ffp-model=           |
-  // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
-  if (LastOpt == NewOpt || NewOpt.empty() || LastOpt.empty() ||
-      (LastOpt == "-fcx-limited-range" && NewOpt == "-fno-cx-limited-range") ||
-      (LastOpt == "-fno-cx-limited-range" && NewOpt == "-fcx-limited-range") ||
-      (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
-      (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
-      (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
-      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
-      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
-      (LastOpt.starts_with("-ffp-model=") &&
-       NewOpt.starts_with("-ffp-model=")) ||
-      (LastOpt.starts_with("-fcomplex-arithmetic=") &&
-       NewOpt.starts_with("-fcomplex-arithmetic=")))
-    return;
-
-  D.Diag(clang::diag::warn_drv_overriding_complex_range)
-      << LastOpt << NewOpt << complexRangeKindToStr(Range)
-      << complexRangeKindToStr(NewRange);
-}
-
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
@@ -2836,27 +2808,19 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   std::string ComplexRangeStr;
   StringRef LastComplexRangeOption;
 
-  auto setComplexRange = [&](StringRef NewOption,
-                             LangOptions::ComplexRangeKind NewRange) {
-    // Warn if user overrides the previously set complex number
-    // multiplication/division option.
-    if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
-      EmitComplexRangeDiag(D, LastComplexRangeOption, Range, NewOption,
-                           NewRange);
-    LastComplexRangeOption = NewOption;
-    Range = NewRange;
-  };
-
   // Lambda to set fast-math options. This is also used by -ffp-model=fast
   auto applyFastMath = [&](bool Aggressive, StringRef CallerOption) {
     if (Aggressive) {
       HonorINFs = false;
       HonorNaNs = false;
-      setComplexRange(CallerOption, LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(D, CallerOption, LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
     } else {
       HonorINFs = true;
       HonorNaNs = true;
-      setComplexRange(CallerOption, LangOptions::ComplexRangeKind::CX_Promoted);
+      setComplexRange(D, CallerOption,
+                      LangOptions::ComplexRangeKind::CX_Promoted,
+                      LastComplexRangeOption, Range);
     }
     MathErrno = false;
     AssociativeMath = true;
@@ -2908,18 +2872,24 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     default: continue;
 
     case options::OPT_fcx_limited_range:
-      setComplexRange(A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_cx_limited_range:
-      setComplexRange(A->getSpelling(), LangOptions::ComplexRangeKind::CX_Full);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Full,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fcx_fortran_rules:
-      setComplexRange(A->getSpelling(),
-                      LangOptions::ComplexRangeKind::CX_Improved);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Improved,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_cx_fortran_rules:
-      setComplexRange(A->getSpelling(), LangOptions::ComplexRangeKind::CX_Full);
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Full,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fcomplex_arithmetic_EQ: {
       LangOptions::ComplexRangeKind RangeVal;
@@ -2937,7 +2907,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             << A->getSpelling() << Val;
         break;
       }
-      setComplexRange(Args.MakeArgString(A->getSpelling() + Val), RangeVal);
+      setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val), RangeVal,
+                      LastComplexRangeOption, Range);
       break;
     }
     case options::OPT_ffp_model_EQ: {
@@ -2977,8 +2948,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         FPModel = Val;
         FPContract = "on";
         LastFpContractOverrideOption = "-ffp-model=precise";
-        setComplexRange(Args.MakeArgString(A->getSpelling() + Val),
-                        LangOptions::ComplexRangeKind::CX_Full);
+        setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val),
+                        LangOptions::ComplexRangeKind::CX_Full,
+                        LastComplexRangeOption, Range);
       } else if (Val == "strict") {
         StrictFPModel = true;
         FPExceptionBehavior = "strict";
@@ -2987,8 +2959,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
         RoundingFPMath = true;
-        setComplexRange(Args.MakeArgString(A->getSpelling() + Val),
-                        LangOptions::ComplexRangeKind::CX_Full);
+        setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val),
+                        LangOptions::ComplexRangeKind::CX_Full,
+                        LastComplexRangeOption, Range);
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
@@ -3195,8 +3168,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SignedZeros = true;
       restoreFPContractState();
       if (Range != LangOptions::ComplexRangeKind::CX_Full)
-        setComplexRange(A->getSpelling(),
-                        LangOptions::ComplexRangeKind::CX_None);
+        setComplexRange(D, A->getSpelling(),
+                        LangOptions::ComplexRangeKind::CX_None,
+                        LastComplexRangeOption, Range);
       else
         Range = LangOptions::ComplexRangeKind::CX_None;
       LastComplexRangeOption = "";
@@ -4334,27 +4308,6 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
                      options::OPT_fno_spell_checking);
 
   Args.addLastArg(CmdArgs, options::OPT_warning_suppression_mappings_EQ);
-}
-
-DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
-                                            const ArgList &Args, Arg *&Arg) {
-  Arg = Args.getLastArg(options::OPT_gsplit_dwarf, options::OPT_gsplit_dwarf_EQ,
-                        options::OPT_gno_split_dwarf);
-  if (!Arg || Arg->getOption().matches(options::OPT_gno_split_dwarf))
-    return DwarfFissionKind::None;
-
-  if (Arg->getOption().matches(options::OPT_gsplit_dwarf))
-    return DwarfFissionKind::Split;
-
-  StringRef Value = Arg->getValue();
-  if (Value == "split")
-    return DwarfFissionKind::Split;
-  if (Value == "single")
-    return DwarfFissionKind::Single;
-
-  D.Diag(diag::err_drv_unsupported_option_argument)
-      << Arg->getSpelling() << Arg->getValue();
-  return DwarfFissionKind::None;
 }
 
 static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
@@ -9300,14 +9253,20 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   addOffloadCompressArgs(Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ)) {
-    int NumThreads;
-    if (StringRef(A->getValue()).getAsInteger(10, NumThreads) ||
-        NumThreads <= 0)
-      C.getDriver().Diag(diag::err_drv_invalid_int_value)
-          << A->getAsString(Args) << A->getValue();
-    else
-      CmdArgs.push_back(
-          Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
+    StringRef Val = A->getValue();
+
+    if (Val.equals_insensitive("jobserver"))
+      CmdArgs.push_back(Args.MakeArgString("--wrapper-jobs=jobserver"));
+    else {
+      int NumThreads;
+      if (Val.getAsInteger(10, NumThreads) || NumThreads <= 0) {
+        C.getDriver().Diag(diag::err_drv_invalid_int_value)
+            << A->getAsString(Args) << Val;
+      } else {
+        CmdArgs.push_back(
+            Args.MakeArgString("--wrapper-jobs=" + Twine(NumThreads)));
+      }
+    }
   }
 
   const char *Exec =

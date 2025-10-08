@@ -9,6 +9,7 @@
 #include "lldb/Host/JSONTransport.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/Host/PipeTestUtilities.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
@@ -25,27 +26,45 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
+#include <system_error>
 
 using namespace llvm;
 using namespace lldb_private;
+using namespace lldb_private::transport;
 using testing::_;
 using testing::HasSubstr;
 using testing::InSequence;
+using testing::Ref;
+
+namespace llvm::json {
+static bool fromJSON(const Value &V, Value &T, Path P) {
+  T = V;
+  return true;
+}
+} // namespace llvm::json
 
 namespace {
 
 namespace test_protocol {
 
 struct Req {
+  int id = 0;
   std::string name;
+  std::optional<json::Value> params;
 };
-json::Value toJSON(const Req &T) { return json::Object{{"req", T.name}}; }
+json::Value toJSON(const Req &T) {
+  return json::Object{{"name", T.name}, {"id", T.id}, {"params", T.params}};
+}
 bool fromJSON(const json::Value &V, Req &T, json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("req", T.name);
+  return O && O.map("name", T.name) && O.map("id", T.id) &&
+         O.map("params", T.params);
 }
-bool operator==(const Req &a, const Req &b) { return a.name == b.name; }
+bool operator==(const Req &a, const Req &b) {
+  return a.name == b.name && a.id == b.id && a.params == b.params;
+}
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Req &V) {
   OS << toJSON(V);
   return OS;
@@ -58,14 +77,22 @@ void PrintTo(const Req &message, std::ostream *os) {
 }
 
 struct Resp {
-  std::string name;
+  int id = 0;
+  int errorCode = 0;
+  std::optional<json::Value> result;
 };
-json::Value toJSON(const Resp &T) { return json::Object{{"resp", T.name}}; }
+json::Value toJSON(const Resp &T) {
+  return json::Object{
+      {"id", T.id}, {"errorCode", T.errorCode}, {"result", T.result}};
+}
 bool fromJSON(const json::Value &V, Resp &T, json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("resp", T.name);
+  return O && O.map("id", T.id) && O.mapOptional("errorCode", T.errorCode) &&
+         O.map("result", T.result);
 }
-bool operator==(const Resp &a, const Resp &b) { return a.name == b.name; }
+bool operator==(const Resp &a, const Resp &b) {
+  return a.id == b.id && a.errorCode == b.errorCode && a.result == b.result;
+}
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Resp &V) {
   OS << toJSON(V);
   return OS;
@@ -79,11 +106,14 @@ void PrintTo(const Resp &message, std::ostream *os) {
 
 struct Evt {
   std::string name;
+  std::optional<json::Value> params;
 };
-json::Value toJSON(const Evt &T) { return json::Object{{"evt", T.name}}; }
+json::Value toJSON(const Evt &T) {
+  return json::Object{{"name", T.name}, {"params", T.params}};
+}
 bool fromJSON(const json::Value &V, Evt &T, json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("evt", T.name);
+  return O && O.map("name", T.name) && O.map("params", T.params);
 }
 bool operator==(const Evt &a, const Evt &b) { return a.name == b.name; }
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Evt &V) {
@@ -107,23 +137,8 @@ bool fromJSON(const json::Value &V, Message &msg, json::Path P) {
     P.report("expected object");
     return false;
   }
-  if (O->get("req")) {
-    Req R;
-    if (!fromJSON(V, R, P))
-      return false;
 
-    msg = std::move(R);
-    return true;
-  }
-  if (O->get("resp")) {
-    Resp R;
-    if (!fromJSON(V, R, P))
-      return false;
-
-    msg = std::move(R);
-    return true;
-  }
-  if (O->get("evt")) {
+  if (O->find("id") == O->end()) {
     Evt E;
     if (!fromJSON(V, E, P))
       return false;
@@ -131,17 +146,105 @@ bool fromJSON(const json::Value &V, Message &msg, json::Path P) {
     msg = std::move(E);
     return true;
   }
-  P.report("unknown message type");
-  return false;
+
+  if (O->get("name")) {
+    Req R;
+    if (!fromJSON(V, R, P))
+      return false;
+
+    msg = std::move(R);
+    return true;
+  }
+
+  Resp R;
+  if (!fromJSON(V, R, P))
+    return false;
+
+  msg = std::move(R);
+  return true;
 }
+
+struct MyFnParams {
+  int a = 0;
+  int b = 0;
+};
+json::Value toJSON(const MyFnParams &T) {
+  return json::Object{{"a", T.a}, {"b", T.b}};
+}
+bool fromJSON(const json::Value &V, MyFnParams &T, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("a", T.a) && O.map("b", T.b);
+}
+
+struct MyFnResult {
+  int c = 0;
+};
+json::Value toJSON(const MyFnResult &T) { return json::Object{{"c", T.c}}; }
+bool fromJSON(const json::Value &V, MyFnResult &T, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("c", T.c);
+}
+
+struct ProtoDesc {
+  using Id = int;
+  using Req = Req;
+  using Resp = Resp;
+  using Evt = Evt;
+
+  static inline Id InitialId() { return 0; }
+  static inline Req Make(Id id, llvm::StringRef method,
+                         std::optional<llvm::json::Value> params) {
+    return Req{id, method.str(), params};
+  }
+  static inline Evt Make(llvm::StringRef method,
+                         std::optional<llvm::json::Value> params) {
+    return Evt{method.str(), params};
+  }
+  static inline Resp Make(Req req, llvm::Error error) {
+    Resp resp;
+    resp.id = req.id;
+    llvm::handleAllErrors(
+        std::move(error), [&](const llvm::ErrorInfoBase &err) {
+          std::error_code cerr = err.convertToErrorCode();
+          resp.errorCode =
+              cerr == llvm::inconvertibleErrorCode() ? 1 : cerr.value();
+          resp.result = err.message();
+        });
+    return resp;
+  }
+  static inline Resp Make(Req req, std::optional<llvm::json::Value> result) {
+    return Resp{req.id, 0, std::move(result)};
+  }
+  static inline Id KeyFor(Resp r) { return r.id; }
+  static inline std::string KeyFor(Req r) { return r.name; }
+  static inline std::string KeyFor(Evt e) { return e.name; }
+  static inline std::optional<llvm::json::Value> Extract(Req r) {
+    return r.params;
+  }
+  static inline llvm::Expected<llvm::json::Value> Extract(Resp r) {
+    if (r.errorCode != 0)
+      return llvm::createStringError(
+          std::error_code(r.errorCode, std::generic_category()),
+          r.result && r.result->getAsString() ? *r.result->getAsString()
+                                              : "no-message");
+    return r.result;
+  }
+  static inline std::optional<llvm::json::Value> Extract(Evt e) {
+    return e.params;
+  }
+};
+
+using Transport = TestTransport<ProtoDesc>;
+using Binder = lldb_private::transport::Binder<ProtoDesc>;
+using MessageHandler = MockMessageHandler<ProtoDesc>;
 
 } // namespace test_protocol
 
-template <typename T, typename Req, typename Resp, typename Evt>
-class JSONTransportTest : public PipePairTest {
-
+template <typename T> class JSONTransportTest : public PipePairTest {
 protected:
-  MockMessageHandler<Req, Resp, Evt> message_handler;
+  SubsystemRAII<FileSystem> subsystems;
+
+  test_protocol::MessageHandler message_handler;
   std::unique_ptr<T> transport;
   MainLoop loop;
 
@@ -191,8 +294,7 @@ protected:
 };
 
 class TestHTTPDelimitedJSONTransport final
-    : public HTTPDelimitedJSONTransport<test_protocol::Req, test_protocol::Resp,
-                                        test_protocol::Evt> {
+    : public HTTPDelimitedJSONTransport<test_protocol::ProtoDesc> {
 public:
   using HTTPDelimitedJSONTransport::HTTPDelimitedJSONTransport;
 
@@ -204,9 +306,7 @@ public:
 };
 
 class HTTPDelimitedJSONTransportTest
-    : public JSONTransportTest<TestHTTPDelimitedJSONTransport,
-                               test_protocol::Req, test_protocol::Resp,
-                               test_protocol::Evt> {
+    : public JSONTransportTest<TestHTTPDelimitedJSONTransport> {
 public:
   using JSONTransportTest::JSONTransportTest;
 
@@ -222,8 +322,7 @@ public:
 };
 
 class TestJSONRPCTransport final
-    : public JSONRPCTransport<test_protocol::Req, test_protocol::Resp,
-                              test_protocol::Evt> {
+    : public JSONRPCTransport<test_protocol::ProtoDesc> {
 public:
   using JSONRPCTransport::JSONRPCTransport;
 
@@ -234,9 +333,7 @@ public:
   std::vector<std::string> log_messages;
 };
 
-class JSONRPCTransportTest
-    : public JSONTransportTest<TestJSONRPCTransport, test_protocol::Req,
-                               test_protocol::Resp, test_protocol::Evt> {
+class JSONRPCTransportTest : public JSONTransportTest<TestJSONRPCTransport> {
 public:
   using JSONTransportTest::JSONTransportTest;
 
@@ -245,6 +342,33 @@ public:
     raw_string_ostream OS(msg);
     OS << formatv("{0}\n", V);
     return msg;
+  }
+};
+
+class TransportBinderTest : public testing::Test {
+protected:
+  SubsystemRAII<FileSystem> subsystems;
+
+  std::unique_ptr<test_protocol::Transport> to_remote;
+  std::unique_ptr<test_protocol::Transport> from_remote;
+  std::unique_ptr<test_protocol::Binder> binder;
+  test_protocol::MessageHandler remote;
+  MainLoop loop;
+
+  void SetUp() override {
+    std::tie(to_remote, from_remote) = test_protocol::Transport::createPair();
+    binder = std::make_unique<test_protocol::Binder>(*to_remote);
+
+    auto binder_handle = to_remote->RegisterMessageHandler(loop, remote);
+    EXPECT_THAT_EXPECTED(binder_handle, Succeeded());
+
+    auto remote_handle = from_remote->RegisterMessageHandler(loop, *binder);
+    EXPECT_THAT_EXPECTED(remote_handle, Succeeded());
+  }
+
+  void Run() {
+    loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
+    EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
   }
 };
 
@@ -269,35 +393,45 @@ TEST_F(HTTPDelimitedJSONTransportTest, MalformedRequests) {
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, Read) {
-  Write(Req{"foo"});
-  EXPECT_CALL(message_handler, Received(Req{"foo"}));
+  Write(Req{6, "foo", std::nullopt});
+  EXPECT_CALL(message_handler, Received(Req{6, "foo", std::nullopt}));
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadMultipleMessagesInSingleWrite) {
   InSequence seq;
-  Write(Message{Req{"one"}}, Message{Evt{"two"}}, Message{Resp{"three"}});
-  EXPECT_CALL(message_handler, Received(Req{"one"}));
-  EXPECT_CALL(message_handler, Received(Evt{"two"}));
-  EXPECT_CALL(message_handler, Received(Resp{"three"}));
+  Write(
+      Message{
+          Req{6, "one", std::nullopt},
+      },
+      Message{
+          Evt{"two", std::nullopt},
+      },
+      Message{
+          Resp{2, 0, std::nullopt},
+      });
+  EXPECT_CALL(message_handler, Received(Req{6, "one", std::nullopt}));
+  EXPECT_CALL(message_handler, Received(Evt{"two", std::nullopt}));
+  EXPECT_CALL(message_handler, Received(Resp{2, 0, std::nullopt}));
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadAcrossMultipleChunks) {
   std::string long_str = std::string(
-      HTTPDelimitedJSONTransport<Req, Resp, Evt>::kReadBufferSize * 2, 'x');
-  Write(Req{long_str});
-  EXPECT_CALL(message_handler, Received(Req{long_str}));
+      HTTPDelimitedJSONTransport<test_protocol::ProtoDesc>::kReadBufferSize * 2,
+      'x');
+  Write(Req{5, long_str, std::nullopt});
+  EXPECT_CALL(message_handler, Received(Req{5, long_str, std::nullopt}));
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadPartialMessage) {
-  std::string message = Encode(Req{"foo"});
+  std::string message = Encode(Req{5, "foo", std::nullopt});
   auto split_at = message.size() / 2;
   std::string part1 = message.substr(0, split_at);
   std::string part2 = message.substr(split_at);
 
-  EXPECT_CALL(message_handler, Received(Req{"foo"}));
+  EXPECT_CALL(message_handler, Received(Req{5, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
   loop.AddPendingCallback(
@@ -309,12 +443,12 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadPartialMessage) {
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadWithZeroByteWrites) {
-  std::string message = Encode(Req{"foo"});
+  std::string message = Encode(Req{6, "foo", std::nullopt});
   auto split_at = message.size() / 2;
   std::string part1 = message.substr(0, split_at);
   std::string part2 = message.substr(split_at);
 
-  EXPECT_CALL(message_handler, Received(Req{"foo"}));
+  EXPECT_CALL(message_handler, Received(Req{6, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
 
@@ -366,20 +500,21 @@ TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, Write) {
-  ASSERT_THAT_ERROR(transport->Send(Req{"foo"}), Succeeded());
-  ASSERT_THAT_ERROR(transport->Send(Resp{"bar"}), Succeeded());
-  ASSERT_THAT_ERROR(transport->Send(Evt{"baz"}), Succeeded());
+  ASSERT_THAT_ERROR(transport->Send(Req{7, "foo", std::nullopt}), Succeeded());
+  ASSERT_THAT_ERROR(transport->Send(Resp{5, 0, "bar"}), Succeeded());
+  ASSERT_THAT_ERROR(transport->Send(Evt{"baz", std::nullopt}), Succeeded());
   output.CloseWriteFileDescriptor();
   char buf[1024];
   Expected<size_t> bytes_read =
       output.Read(buf, sizeof(buf), std::chrono::milliseconds(1));
   ASSERT_THAT_EXPECTED(bytes_read, Succeeded());
-  ASSERT_EQ(StringRef(buf, *bytes_read), StringRef("Content-Length: 13\r\n\r\n"
-                                                   R"({"req":"foo"})"
-                                                   "Content-Length: 14\r\n\r\n"
-                                                   R"({"resp":"bar"})"
-                                                   "Content-Length: 13\r\n\r\n"
-                                                   R"({"evt":"baz"})"));
+  ASSERT_EQ(StringRef(buf, *bytes_read),
+            StringRef("Content-Length: 35\r\n\r\n"
+                      R"({"id":7,"name":"foo","params":null})"
+                      "Content-Length: 37\r\n\r\n"
+                      R"({"errorCode":0,"id":5,"result":"bar"})"
+                      "Content-Length: 28\r\n\r\n"
+                      R"({"name":"baz","params":null})"));
 }
 
 TEST_F(JSONRPCTransportTest, MalformedRequests) {
@@ -395,37 +530,38 @@ TEST_F(JSONRPCTransportTest, MalformedRequests) {
 }
 
 TEST_F(JSONRPCTransportTest, Read) {
-  Write(Message{Req{"foo"}});
-  EXPECT_CALL(message_handler, Received(Req{"foo"}));
+  Write(Message{Req{1, "foo", std::nullopt}});
+  EXPECT_CALL(message_handler, Received(Req{1, "foo", std::nullopt}));
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(JSONRPCTransportTest, ReadMultipleMessagesInSingleWrite) {
   InSequence seq;
-  Write(Message{Req{"one"}}, Message{Evt{"two"}}, Message{Resp{"three"}});
-  EXPECT_CALL(message_handler, Received(Req{"one"}));
-  EXPECT_CALL(message_handler, Received(Evt{"two"}));
-  EXPECT_CALL(message_handler, Received(Resp{"three"}));
+  Write(Message{Req{1, "one", std::nullopt}}, Message{Evt{"two", std::nullopt}},
+        Message{Resp{3, 0, "three"}});
+  EXPECT_CALL(message_handler, Received(Req{1, "one", std::nullopt}));
+  EXPECT_CALL(message_handler, Received(Evt{"two", std::nullopt}));
+  EXPECT_CALL(message_handler, Received(Resp{3, 0, "three"}));
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(JSONRPCTransportTest, ReadAcrossMultipleChunks) {
   // Use a string longer than the chunk size to ensure we split the message
   // across the chunk boundary.
-  std::string long_str =
-      std::string(IOTransport<Req, Resp, Evt>::kReadBufferSize * 2, 'x');
-  Write(Req{long_str});
-  EXPECT_CALL(message_handler, Received(Req{long_str}));
+  std::string long_str = std::string(
+      IOTransport<test_protocol::ProtoDesc>::kReadBufferSize * 2, 'x');
+  Write(Req{42, long_str, std::nullopt});
+  EXPECT_CALL(message_handler, Received(Req{42, long_str, std::nullopt}));
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
 TEST_F(JSONRPCTransportTest, ReadPartialMessage) {
-  std::string message = R"({"req": "foo"})"
+  std::string message = R"({"id":42,"name":"foo","params":null})"
                         "\n";
   std::string part1 = message.substr(0, 7);
   std::string part2 = message.substr(7);
 
-  EXPECT_CALL(message_handler, Received(Req{"foo"}));
+  EXPECT_CALL(message_handler, Received(Req{42, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
   loop.AddPendingCallback(
@@ -455,26 +591,206 @@ TEST_F(JSONRPCTransportTest, ReaderWithUnhandledData) {
 }
 
 TEST_F(JSONRPCTransportTest, Write) {
-  ASSERT_THAT_ERROR(transport->Send(Req{"foo"}), Succeeded());
-  ASSERT_THAT_ERROR(transport->Send(Resp{"bar"}), Succeeded());
-  ASSERT_THAT_ERROR(transport->Send(Evt{"baz"}), Succeeded());
+  ASSERT_THAT_ERROR(transport->Send(Req{11, "foo", std::nullopt}), Succeeded());
+  ASSERT_THAT_ERROR(transport->Send(Resp{14, 0, "bar"}), Succeeded());
+  ASSERT_THAT_ERROR(transport->Send(Evt{"baz", std::nullopt}), Succeeded());
   output.CloseWriteFileDescriptor();
   char buf[1024];
   Expected<size_t> bytes_read =
       output.Read(buf, sizeof(buf), std::chrono::milliseconds(1));
   ASSERT_THAT_EXPECTED(bytes_read, Succeeded());
-  ASSERT_EQ(StringRef(buf, *bytes_read), StringRef(R"({"req":"foo"})"
-                                                   "\n"
-                                                   R"({"resp":"bar"})"
-                                                   "\n"
-                                                   R"({"evt":"baz"})"
-                                                   "\n"));
+  ASSERT_EQ(StringRef(buf, *bytes_read),
+            StringRef(R"({"id":11,"name":"foo","params":null})"
+                      "\n"
+                      R"({"errorCode":0,"id":14,"result":"bar"})"
+                      "\n"
+                      R"({"name":"baz","params":null})"
+                      "\n"));
 }
 
 TEST_F(JSONRPCTransportTest, InvalidTransport) {
   transport = std::make_unique<TestJSONRPCTransport>(nullptr, nullptr);
   ASSERT_THAT_ERROR(Run(/*close_input=*/false),
                     FailedWithMessage("IO object is not valid."));
+}
+
+// Out-bound binding request handler.
+TEST_F(TransportBinderTest, OutBoundRequests) {
+  OutgoingRequest<MyFnResult, MyFnParams> addFn =
+      binder->Bind<MyFnResult, MyFnParams>("add");
+  bool replied = false;
+  addFn(MyFnParams{1, 2}, [&](Expected<MyFnResult> result) {
+    EXPECT_THAT_EXPECTED(result, Succeeded());
+    EXPECT_EQ(result->c, 3);
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "add", MyFnParams{1, 2}}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, 0, toJSON(MyFnResult{3})}),
+                    Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
+}
+
+TEST_F(TransportBinderTest, OutBoundRequestsVoidParams) {
+  OutgoingRequest<MyFnResult, void> voidParamFn =
+      binder->Bind<MyFnResult, void>("voidParam");
+  bool replied = false;
+  voidParamFn([&](Expected<MyFnResult> result) {
+    EXPECT_THAT_EXPECTED(result, Succeeded());
+    EXPECT_EQ(result->c, 3);
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "voidParam", std::nullopt}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, 0, toJSON(MyFnResult{3})}),
+                    Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
+}
+
+TEST_F(TransportBinderTest, OutBoundRequestsVoidResult) {
+  OutgoingRequest<void, MyFnParams> voidResultFn =
+      binder->Bind<void, MyFnParams>("voidResult");
+  bool replied = false;
+  voidResultFn(MyFnParams{4, 5}, [&](llvm::Error error) {
+    EXPECT_THAT_ERROR(std::move(error), Succeeded());
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "voidResult", MyFnParams{4, 5}}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, 0, std::nullopt}), Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
+}
+
+TEST_F(TransportBinderTest, OutBoundRequestsVoidParamsAndVoidResult) {
+  OutgoingRequest<void, void> voidParamAndResultFn =
+      binder->Bind<void, void>("voidParamAndResult");
+  bool replied = false;
+  voidParamAndResultFn([&](llvm::Error error) {
+    EXPECT_THAT_ERROR(std::move(error), Succeeded());
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "voidParamAndResult", std::nullopt}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, 0, std::nullopt}), Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
+}
+
+// In-bound binding request handler.
+TEST_F(TransportBinderTest, InBoundRequests) {
+  bool called = false;
+  binder->Bind<MyFnResult, MyFnParams>(
+      "add",
+      [&](const int captured_param,
+          const MyFnParams &params) -> Expected<MyFnResult> {
+        called = true;
+        return MyFnResult{params.a + params.b + captured_param};
+      },
+      2);
+  EXPECT_THAT_ERROR(from_remote->Send(Req{1, "add", MyFnParams{3, 4}}),
+                    Succeeded());
+
+  EXPECT_CALL(remote, Received(Resp{1, 0, MyFnResult{9}}));
+  Run();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(TransportBinderTest, InBoundRequestsVoidParams) {
+  bool called = false;
+  binder->Bind<MyFnResult, void>(
+      "voidParam",
+      [&](const int captured_param) -> Expected<MyFnResult> {
+        called = true;
+        return MyFnResult{captured_param};
+      },
+      2);
+  EXPECT_THAT_ERROR(from_remote->Send(Req{2, "voidParam", std::nullopt}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Resp{2, 0, MyFnResult{2}}));
+  Run();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(TransportBinderTest, InBoundRequestsVoidResult) {
+  bool called = false;
+  binder->Bind<void, MyFnParams>(
+      "voidResult",
+      [&](const int captured_param, const MyFnParams &params) -> llvm::Error {
+        called = true;
+        EXPECT_EQ(captured_param, 2);
+        EXPECT_EQ(params.a, 3);
+        EXPECT_EQ(params.b, 4);
+        return llvm::Error::success();
+      },
+      2);
+  EXPECT_THAT_ERROR(from_remote->Send(Req{3, "voidResult", MyFnParams{3, 4}}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Resp{3, 0, std::nullopt}));
+  Run();
+  EXPECT_TRUE(called);
+}
+TEST_F(TransportBinderTest, InBoundRequestsVoidParamsAndResult) {
+  bool called = false;
+  binder->Bind<void, void>(
+      "voidParamAndResult",
+      [&](const int captured_param) -> llvm::Error {
+        called = true;
+        EXPECT_EQ(captured_param, 2);
+        return llvm::Error::success();
+      },
+      2);
+  EXPECT_THAT_ERROR(
+      from_remote->Send(Req{4, "voidParamAndResult", std::nullopt}),
+      Succeeded());
+  EXPECT_CALL(remote, Received(Resp{4, 0, std::nullopt}));
+  Run();
+  EXPECT_TRUE(called);
+}
+
+// Out-bound binding event handler.
+TEST_F(TransportBinderTest, OutBoundEvents) {
+  OutgoingEvent<MyFnParams> emitEvent = binder->Bind<MyFnParams>("evt");
+  emitEvent(MyFnParams{1, 2});
+  EXPECT_CALL(remote, Received(Evt{"evt", MyFnParams{1, 2}}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, OutBoundEventsVoidParams) {
+  OutgoingEvent<void> emitEvent = binder->Bind<void>("evt");
+  emitEvent();
+  EXPECT_CALL(remote, Received(Evt{"evt", std::nullopt}));
+  Run();
+}
+
+// In-bound binding event handler.
+TEST_F(TransportBinderTest, InBoundEvents) {
+  bool called = false;
+  binder->Bind<MyFnParams>(
+      "evt",
+      [&](const int captured_arg, const MyFnParams &params) {
+        EXPECT_EQ(captured_arg, 42);
+        EXPECT_EQ(params.a, 3);
+        EXPECT_EQ(params.b, 4);
+        called = true;
+      },
+      42);
+  EXPECT_THAT_ERROR(from_remote->Send(Evt{"evt", MyFnParams{3, 4}}),
+                    Succeeded());
+  Run();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(TransportBinderTest, InBoundEventsVoidParams) {
+  bool called = false;
+  binder->Bind<void>(
+      "evt",
+      [&](const int captured_arg) {
+        EXPECT_EQ(captured_arg, 42);
+        called = true;
+      },
+      42);
+  EXPECT_THAT_ERROR(from_remote->Send(Evt{"evt", std::nullopt}), Succeeded());
+  Run();
+  EXPECT_TRUE(called);
 }
 
 #endif
