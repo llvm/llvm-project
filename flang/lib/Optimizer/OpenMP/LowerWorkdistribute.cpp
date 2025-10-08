@@ -59,8 +59,11 @@ using namespace mlir;
 
 namespace {
 
-// The isRuntimeCall function is a utility designed to determine
-// if a given operation is a call to a Fortran-specific runtime function.
+/// This string is used to identify the Fortran-specific runtime FortranAAssign.
+static constexpr llvm::StringRef FortranAssignStr = "_FortranAAssign";
+
+/// The isRuntimeCall function is a utility designed to determine
+/// if a given operation is a call to a Fortran-specific runtime function.
 static bool isRuntimeCall(Operation *op) {
   if (auto callOp = dyn_cast<fir::CallOp>(op)) {
     auto callee = callOp.getCallee();
@@ -73,14 +76,14 @@ static bool isRuntimeCall(Operation *op) {
   return false;
 }
 
-// This is the single source of truth about whether we should parallelize an
-// operation nested in an omp.workdistribute region.
+/// This is the single source of truth about whether we should parallelize an
+/// operation nested in an omp.workdistribute region.
 static bool shouldParallelize(Operation *op) {
   // True if the op is a runtime call to Assign
   if (isRuntimeCall(op)) {
     fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-    if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
-        "_FortranAAssign") {
+    auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+    if (funcName == FortranAssignStr) {
       return true;
     }
   }
@@ -97,12 +100,12 @@ static bool shouldParallelize(Operation *op) {
       return false;
     return *unordered;
   }
-  // We cannot parallise anything else.
+  // We cannot parallelize anything else.
   return false;
 }
 
-// The getPerfectlyNested function is a generic utility for finding
-// a single, "perfectly nested" operation within a parent operation.
+/// The getPerfectlyNested function is a generic utility for finding
+/// a single, "perfectly nested" operation within a parent operation.
 template <typename T>
 static T getPerfectlyNested(Operation *op) {
   if (op->getNumRegions() != 1)
@@ -118,24 +121,25 @@ static T getPerfectlyNested(Operation *op) {
   return nullptr;
 }
 
-// VerifyTargetTeamsWorkdistribute method verifies that
-// omp.target { teams { workdistribute { ... } } } is well formed
-// and fails for function calls that don't have lowering implemented yet.
-static bool
-VerifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
+/// verifyTargetTeamsWorkdistribute method verifies that
+/// omp.target { teams { workdistribute { ... } } } is well formed
+/// and fails for function calls that don't have lowering implemented yet.
+static FailureOr<bool>
+verifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
   OpBuilder rewriter(workdistribute);
+  auto loc = workdistribute->getLoc();
   auto teams = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp());
   if (!teams) {
-    workdistribute.emitError() << "workdistribute not nested in teams\n";
-    return false;
+    emitError(loc, "workdistribute not nested in teams\n");
+    return failure();
   }
   if (workdistribute.getRegion().getBlocks().size() != 1) {
-    workdistribute.emitError() << "workdistribute with multiple blocks\n";
-    return false;
+    emitError(loc, "workdistribute with multiple blocks\n");
+    return failure();
   }
   if (teams.getRegion().getBlocks().size() != 1) {
-    workdistribute.emitError() << "teams with multiple blocks\n";
-    return false;
+    emitError(loc, "teams with multiple blocks\n");
+    return failure();
   }
   omp::TargetOp targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
   // return if not omp.target
@@ -148,64 +152,55 @@ VerifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
         auto funcName = (*callOp.getCallee()).getRootReference().getValue();
         // _FortranAAssign is handled. Other runtime calls are not supported
         // in omp.workdistribute yet.
-        if (funcName == "_FortranAAssign")
+        if (funcName == FortranAssignStr)
           continue;
-        else
-          workdistribute.emitError()
-              << "Runtime call " << funcName
-              << " lowering not supported for workdistribute yet.";
-        return false;
-      } else {
-        workdistribute.emitError() << "Non-runtime fir.call lowering not "
-                                      "supported in workdistribute yet.";
-        return false;
+        else {
+          emitError(loc, "Runtime call " + funcName +
+                             " lowering not supported for workdistribute yet.");
+          return failure();
+        }
       }
     }
   }
   return true;
 }
 
-// FissionWorkdistribute method finds the parallelizable ops
-// within teams {workdistribute} region and moves them to their
-// own teams{workdistribute} region.
-//
-// If B() and D() are parallelizable,
-//
-// omp.teams {
-//   omp.workdistribute {
-//     A()
-//     B()
-//     C()
-//     D()
-//     E()
-//   }
-// }
-//
-// becomes
-//
-// A()
-// omp.teams {
-//   omp.workdistribute {
-//     B()
-//   }
-// }
-// C()
-// omp.teams {
-//   omp.workdistribute {
-//     D()
-//   }
-// }
-// E()
-
-static bool FissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
+/// fissionWorkdistribute method finds the parallelizable ops
+/// within teams {workdistribute} region and moves them to their
+/// own teams{workdistribute} region.
+///
+/// If B() and D() are parallelizable,
+///
+/// omp.teams {
+///   omp.workdistribute {
+///     A()
+///     B()
+///     C()
+///     D()
+///     E()
+///   }
+/// }
+///
+/// becomes
+///
+/// A()
+/// omp.teams {
+///   omp.workdistribute {
+///     B()
+///   }
+/// }
+/// C()
+/// omp.teams {
+///   omp.workdistribute {
+///     D()
+///   }
+/// }
+/// E()
+static FailureOr<bool>
+fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
   OpBuilder rewriter(workdistribute);
   auto loc = workdistribute->getLoc();
   auto teams = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp());
-
-  omp::TargetOp targetOp;
-  // Get the target op parent of teams
-  targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
-
   auto *teamsBlock = &teams.getRegion().front();
   bool changed = false;
   // Move the ops inside teams and before workdistribute outside.
@@ -217,7 +212,7 @@ static bool FissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
     }
     if (shouldParallelize(&op)) {
       emitError(loc, "teams has parallelize ops before first workdistribute\n");
-      return false;
+      return failure();
     } else {
       rewriter.setInsertionPoint(teams);
       rewriter.clone(op, irMapping);
@@ -280,7 +275,7 @@ static bool FissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
   return changed;
 }
 
-// Generate omp.parallel operation with an empty region.
+/// Generate omp.parallel operation with an empty region.
 static void genParallelOp(Location loc, OpBuilder &rewriter, bool composite) {
   auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
   parallelOp.setComposite(composite);
@@ -289,7 +284,7 @@ static void genParallelOp(Location loc, OpBuilder &rewriter, bool composite) {
   return;
 }
 
-// Generate omp.distribute operation with an empty region.
+/// Generate omp.distribute operation with an empty region.
 static void genDistributeOp(Location loc, OpBuilder &rewriter, bool composite) {
   mlir::omp::DistributeOperands distributeClauseOps;
   auto distributeOp =
@@ -300,7 +295,7 @@ static void genDistributeOp(Location loc, OpBuilder &rewriter, bool composite) {
   return;
 }
 
-// Generate loop nest clause operands from fir.do_loop operation.
+/// Generate loop nest clause operands from fir.do_loop operation.
 static void
 genLoopNestClauseOps(OpBuilder &rewriter, fir::DoLoopOp loop,
                      mlir::omp::LoopNestOperands &loopNestClauseOps) {
@@ -312,8 +307,8 @@ genLoopNestClauseOps(OpBuilder &rewriter, fir::DoLoopOp loop,
   loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
 }
 
-// Generate omp.wsloop operation with an empty region and
-// clone the body of fir.do_loop operation inside the loop nest region.
+/// Generate omp.wsloop operation with an empty region and
+/// clone the body of fir.do_loop operation inside the loop nest region.
 static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
                         const mlir::omp::LoopNestOperands &clauseOps,
                         bool composite) {
@@ -341,36 +336,35 @@ static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
   return;
 }
 
-// WorkdistributeDoLower method finds the fir.do_loop unoredered
-// nested in teams {workdistribute{fir.do_loop unoredered}} and
-// lowers it to teams {parallel { distribute {wsloop {loop_nest}}}}.
-//
-// If fir.do_loop is present inside teams workdistribute
-//
-// omp.teams {
-//   omp.workdistribute {
-//     fir.do_loop unoredered {
-//       ...
-//     }
-//   }
-// }
-//
-// Then, its lowered to
-//
-// omp.teams {
-//    omp.parallel {
-//      omp.distribute {
-//        omp.wsloop {
-//          omp.loop_nest
-//            ...
-//          }
-//        }
-//      }
-//   }
-// }
-
+/// workdistributeDoLower method finds the fir.do_loop unoredered
+/// nested in teams {workdistribute{fir.do_loop unoredered}} and
+/// lowers it to teams {parallel { distribute {wsloop {loop_nest}}}}.
+///
+/// If fir.do_loop is present inside teams workdistribute
+///
+/// omp.teams {
+///   omp.workdistribute {
+///     fir.do_loop unoredered {
+///       ...
+///     }
+///   }
+/// }
+///
+/// Then, its lowered to
+///
+/// omp.teams {
+///    omp.parallel {
+///      omp.distribute {
+///        omp.wsloop {
+///          omp.loop_nest
+///            ...
+///          }
+///        }
+///      }
+///   }
+/// }
 static bool
-WorkdistributeDoLower(omp::WorkdistributeOp workdistribute,
+workdistributeDoLower(omp::WorkdistributeOp workdistribute,
                       SetVector<omp::TargetOp> &targetOpsToProcess) {
   OpBuilder rewriter(workdistribute);
   auto doLoop = getPerfectlyNested<fir::DoLoopOp>(workdistribute);
@@ -397,7 +391,7 @@ WorkdistributeDoLower(omp::WorkdistributeOp workdistribute,
   return false;
 }
 
-// Check if the enclosed type in fir.ref is fir.box and fir.box encloses array
+/// Check if the enclosed type in fir.ref is fir.box and fir.box encloses array
 static bool isEnclosedTypeRefToBoxArray(Type type) {
   // Check if it's a reference type
   if (auto refType = dyn_cast<fir::ReferenceType>(type)) {
@@ -414,7 +408,7 @@ static bool isEnclosedTypeRefToBoxArray(Type type) {
   return false;
 }
 
-// Check if the enclosed type in fir.box is scalar (not array)
+/// Check if the enclosed type in fir.box is scalar (not array)
 static bool isEnclosedTypeBoxScalar(Type type) {
   // Check if it's a box type
   if (auto boxType = dyn_cast<fir::BoxType>(type)) {
@@ -426,7 +420,7 @@ static bool isEnclosedTypeBoxScalar(Type type) {
   return false;
 }
 
-// Check if the FortranAAssign call has src as scalar and dest as array
+/// Check if the FortranAAssign call has src as scalar and dest as array
 static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
   if (callOp.getNumOperands() < 2)
     return false;
@@ -450,16 +444,16 @@ static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
   return srcIsScalar && destIsArray;
 }
 
-// Convert a flat index to multi-dimensional indices for an array box
-// Example: 2D array with shape (2,4)
-//         Col 1  Col 2  Col 3  Col 4
-// Row 1:  (1,1)  (1,2)  (1,3)  (1,4)
-// Row 2:  (2,1)  (2,2)  (2,3)  (2,4)
-//
-// extents: (2,4)
-//
-// flatIdx:  0     1     2     3     4     5     6     7
-// Indices: (1,1) (1,2) (1,3) (1,4) (2,1) (2,2) (2,3) (2,4)
+/// Convert a flat index to multi-dimensional indices for an array box
+/// Example: 2D array with shape (2,4)
+///         Col 1  Col 2  Col 3  Col 4
+/// Row 1:  (1,1)  (1,2)  (1,3)  (1,4)
+/// Row 2:  (2,1)  (2,2)  (2,3)  (2,4)
+///
+/// extents: (2,4)
+///
+/// flatIdx:  0     1     2     3     4     5     6     7
+/// Indices: (1,1) (1,2) (1,3) (1,4) (2,1) (2,2) (2,3) (2,4)
 static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
                                                 Location loc, Value flatIdx,
                                                 Value arrayBox) {
@@ -495,8 +489,8 @@ static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
   return indices;
 }
 
-// Calculate the total number of elements in the array box
-// (totalElems = extent(1) * extent(2) * ... * extent(n))
+/// Calculate the total number of elements in the array box
+/// (totalElems = extent(1) * extent(2) * ... * extent(n))
 static Value CalculateTotalElements(OpBuilder &builder, Location loc,
                                     Value arrayBox) {
   auto boxType = cast<fir::BoxType>(arrayBox.getType());
@@ -517,7 +511,7 @@ static Value CalculateTotalElements(OpBuilder &builder, Location loc,
   return totalElems;
 }
 
-// Replace the FortranAAssign runtime call with an unordered do loop
+/// Replace the FortranAAssign runtime call with an unordered do loop
 static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
                                        omp::TeamsOp teamsOp,
                                        omp::WorkdistributeOp workdistribute,
@@ -576,27 +570,27 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
   builder.create<fir::StoreOp>(loc, scalar, elemPtr);
 }
 
-// WorkdistributeRuntimeCallLower method finds the runtime calls
-// nested in teams {workdistribute{}} and
-// lowers FortranAAssign to unordered do loop if src is scalar and dest is
-// array. Other runtime calls are not handled currently.
-static bool
-WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
+/// workdistributeRuntimeCallLower method finds the runtime calls
+/// nested in teams {workdistribute{}} and
+/// lowers FortranAAssign to unordered do loop if src is scalar and dest is
+/// array. Other runtime calls are not handled currently.
+static FailureOr<bool>
+workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
                                SetVector<omp::TargetOp> &targetOpsToProcess) {
   OpBuilder rewriter(workdistribute);
   auto loc = workdistribute->getLoc();
   auto teams = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp());
   if (!teams) {
     emitError(loc, "workdistribute not nested in teams\n");
-    return false;
+    return failure();
   }
   if (workdistribute.getRegion().getBlocks().size() != 1) {
     emitError(loc, "workdistribute with multiple blocks\n");
-    return false;
+    return failure();
   }
   if (teams.getRegion().getBlocks().size() != 1) {
     emitError(loc, "teams with multiple blocks\n");
-    return false;
+    return failure();
   }
   auto *workdistributeBlock = &workdistribute.getRegion().front();
   auto *terminator = workdistributeBlock->getTerminator();
@@ -612,8 +606,8 @@ WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
     if (isRuntimeCall(&op)) {
       rewriter.setInsertionPoint(&op);
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
-          "_FortranAAssign") {
+      auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+      if (funcName == FortranAssignStr) {
         if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
           // Record the target ops to process later
           targetOpsToProcess.insert(targetOp);
@@ -632,26 +626,26 @@ WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
   return changed;
 }
 
-// TeamsWorkdistributeToSingleOp method hoists all the ops inside
-// teams {workdistribute{}} before teams op.
-//
-// If A() and B () are present inside teams workdistribute
-//
-// omp.teams {
-//   omp.workdistribute {
-//     A()
-//     B()
-//   }
-// }
-//
-// Then, its lowered to
-//
-// A()
-// B()
-//
-// If only the terminator remains in teams after hoisting, we erase teams op.
+/// teamsWorkdistributeToSingleOp method hoists all the ops inside
+/// teams {workdistribute{}} before teams op.
+///
+/// If A() and B () are present inside teams workdistribute
+///
+/// omp.teams {
+///   omp.workdistribute {
+///     A()
+///     B()
+///   }
+/// }
+///
+/// Then, its lowered to
+///
+/// A()
+/// B()
+///
+/// If only the terminator remains in teams after hoisting, we erase teams op.
 static bool
-TeamsWorkdistributeToSingleOp(omp::TeamsOp teamsOp,
+teamsWorkdistributeToSingleOp(omp::TeamsOp teamsOp,
                               SetVector<omp::TargetOp> &targetOpsToProcess) {
   auto workdistributeOp = getPerfectlyNested<omp::WorkdistributeOp>(teamsOp);
   if (!workdistributeOp)
@@ -687,18 +681,17 @@ TeamsWorkdistributeToSingleOp(omp::TeamsOp teamsOp,
   return true;
 }
 
-// If multiple workdistribute are nested in a target regions, we will need to
-// split the target region, but we want to preserve the data semantics of the
-// original data region and avoid unnecessary data movement at each of the
-// subkernels - we split the target region into a target_data{target}
-// nest where only the outer one moves the data
-std::optional<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
-                                             RewriterBase &rewriter) {
+/// If multiple workdistribute are nested in a target regions, we will need to
+/// split the target region, but we want to preserve the data semantics of the
+/// original data region and avoid unnecessary data movement at each of the
+/// subkernels - we split the target region into a target_data{target}
+/// nest where only the outer one moves the data
+FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
+                                         RewriterBase &rewriter) {
   auto loc = targetOp->getLoc();
   if (targetOp.getMapVars().empty()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << DEBUG_TYPE << " target region has no data maps\n");
-    return std::nullopt;
+    emitError(loc, "Target region has no data maps\n");
+    return failure();
   }
   // Collect all the mapinfo ops
   SmallVector<omp::MapInfoOp> mapInfos;
@@ -727,7 +720,8 @@ std::optional<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       newCaptureType = originalCaptureType;
       outerMapInfos.push_back(mapInfo);
     } else {
-      llvm_unreachable("Unhandled case");
+      emitError(targetOp->getLoc(), "Unhandled case");
+      return failure();
     }
     auto innerMapInfo = cast<omp::MapInfoOp>(rewriter.clone(*mapInfo));
     innerMapInfo.setMapTypeAttr(rewriter.getIntegerAttr(
@@ -768,10 +762,10 @@ std::optional<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   return newTargetOp;
 }
 
-// getNestedOpToIsolate function is designed to identify a specific teams
-// parallel op within the body of an omp::TargetOp that should be "isolated."
-// This returns a tuple of op, if its first op in targetBlock, or if the op is
-// last op in the tragte block.
+/// getNestedOpToIsolate function is designed to identify a specific teams
+/// parallel op within the body of an omp::TargetOp that should be "isolated."
+/// This returns a tuple of op, if its first op in targetBlock, or if the op is
+/// last op in the tragte block.
 static std::optional<std::tuple<Operation *, bool, bool>>
 getNestedOpToIsolate(omp::TargetOp targetOp) {
   if (targetOp.getRegion().empty())
@@ -789,17 +783,17 @@ getNestedOpToIsolate(omp::TargetOp targetOp) {
   return std::nullopt;
 }
 
-// Temporary structure to hold the two mapinfo ops
+/// Temporary structure to hold the two mapinfo ops
 struct TempOmpVar {
   omp::MapInfoOp from, to;
 };
 
-// isPtr checks if the type is a pointer or reference type.
+/// isPtr checks if the type is a pointer or reference type.
 static bool isPtr(Type ty) {
   return isa<fir::ReferenceType>(ty) || isa<LLVM::LLVMPointerType>(ty);
 }
 
-// getPtrTypeForOmp returns an LLVM pointer type for the given type.
+/// getPtrTypeForOmp returns an LLVM pointer type for the given type.
 static Type getPtrTypeForOmp(Type ty) {
   if (isPtr(ty))
     return LLVM::LLVMPointerType::get(ty.getContext());
@@ -807,7 +801,7 @@ static Type getPtrTypeForOmp(Type ty) {
     return fir::ReferenceType::get(ty);
 }
 
-// allocateTempOmpVar allocates a temporary variable for OpenMP mapping
+/// allocateTempOmpVar allocates a temporary variable for OpenMP mapping
 static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
                                      RewriterBase &rewriter) {
   MLIRContext &ctx = *ty.getContext();
@@ -868,25 +862,14 @@ static bool usedOutsideSplit(Value v, Operation *split) {
   return false;
 }
 
-// isRecomputableAfterFission checks if an operation can be recomputed
+/// isRecomputableAfterFission checks if an operation can be recomputed
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
   // If the op has side effects, it cannot be recomputed.
   // We consider fir.declare as having no side effects.
-  if (isa<fir::DeclareOp>(op))
-    return true;
-
-  llvm::SmallVector<MemoryEffects::EffectInstance> effects;
-  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
-  if (!interface) {
-    return false;
-  }
-  interface.getEffects(effects);
-  if (effects.empty())
-    return true;
-  return false;
+  return isa<fir::DeclareOp>(op) || isMemoryEffectFree(op);
 }
 
-// collectNonRecomputableDeps collects dependencies that cannot be recomputed
+/// collectNonRecomputableDeps collects dependencies that cannot be recomputed
 static void collectNonRecomputableDeps(Value &v, omp::TargetOp targetOp,
                                        SetVector<Operation *> &nonRecomputable,
                                        SetVector<Operation *> &toCache,
@@ -909,7 +892,7 @@ static void collectNonRecomputableDeps(Value &v, omp::TargetOp targetOp,
                                toRecompute);
 }
 
-// createBlockArgsAndMap creates block arguments and maps them
+/// createBlockArgsAndMap creates block arguments and maps them
 static void createBlockArgsAndMap(Location loc, RewriterBase &rewriter,
                                   omp::TargetOp &targetOp, Block *targetBlock,
                                   Block *newTargetBlock,
@@ -967,7 +950,7 @@ static void createBlockArgsAndMap(Location loc, RewriterBase &rewriter,
   return;
 }
 
-// reloadCacheAndRecompute reloads cached values and recomputes operations
+/// reloadCacheAndRecompute reloads cached values and recomputes operations
 static void reloadCacheAndRecompute(
     Location loc, RewriterBase &rewriter, Operation *splitBefore,
     omp::TargetOp &targetOp, Block *targetBlock, Block *newTargetBlock,
@@ -1006,9 +989,9 @@ static void reloadCacheAndRecompute(
   }
 }
 
-// Given a teamsOp, navigate down the nested structure to find the
-// innermost LoopNestOp. The expected nesting is:
-// teams -> parallel -> distribute -> wsloop -> loop_nest
+/// Given a teamsOp, navigate down the nested structure to find the
+/// innermost LoopNestOp. The expected nesting is:
+/// teams -> parallel -> distribute -> wsloop -> loop_nest
 static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
   if (teamsOp.getRegion().empty())
     return nullptr;
@@ -1059,7 +1042,7 @@ static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
   return nullptr;
 }
 
-// Generate LLVM constant operations for i32 and i64 types.
+/// Generate LLVM constant operations for i32 and i64 types.
 static mlir::LLVM::ConstantOp
 genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
   mlir::Type i32Ty = rewriter.getI32Type();
@@ -1067,9 +1050,9 @@ genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
   return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
 }
 
-// Given a box descriptor, extract the base address of the data it describes.
-// If the box descriptor is a reference, load it first.
-// The base address is returned as an i8* pointer.
+/// Given a box descriptor, extract the base address of the data it describes.
+/// If the box descriptor is a reference, load it first.
+/// The base address is returned as an i8* pointer.
 static Value genDescriptorGetBaseAddress(fir::FirOpBuilder &builder,
                                          Location loc, Value boxDesc) {
   Value box = boxDesc;
@@ -1087,9 +1070,9 @@ static Value genDescriptorGetBaseAddress(fir::FirOpBuilder &builder,
   return rawAddr;
 }
 
-// Given a box descriptor, extract the total number of elements in the array it
-// describes. If the box descriptor is a reference, load it first.
-// The total number of elements is returned as an i64 value.
+/// Given a box descriptor, extract the total number of elements in the array it
+/// describes. If the box descriptor is a reference, load it first.
+/// The total number of elements is returned as an i64 value.
 static Value genDescriptorGetTotalElements(fir::FirOpBuilder &builder,
                                            Location loc, Value boxDesc) {
   Value box = boxDesc;
@@ -1102,9 +1085,9 @@ static Value genDescriptorGetTotalElements(fir::FirOpBuilder &builder,
   return fir::BoxTotalElementsOp::create(builder, loc, i64Type, box);
 }
 
-// Given a box descriptor, extract the size of each element in the array it
-// describes. If the box descriptor is a reference, load it first.
-// The element size is returned as an i64 value.
+/// Given a box descriptor, extract the size of each element in the array it
+/// describes. If the box descriptor is a reference, load it first.
+/// The element size is returned as an i64 value.
 static Value genDescriptorGetEleSize(fir::FirOpBuilder &builder, Location loc,
                                      Value boxDesc) {
   Value box = boxDesc;
@@ -1117,10 +1100,10 @@ static Value genDescriptorGetEleSize(fir::FirOpBuilder &builder, Location loc,
   return fir::BoxEleSizeOp::create(builder, loc, i64Type, box);
 }
 
-// Given a box descriptor, compute the total size in bytes of the data it
-// describes. This is done by multiplying the total number of elements by the
-// size of each element. If the box descriptor is a reference, load it first.
-// The total size in bytes is returned as an i64 value.
+/// Given a box descriptor, compute the total size in bytes of the data it
+/// describes. This is done by multiplying the total number of elements by the
+/// size of each element. If the box descriptor is a reference, load it first.
+/// The total size in bytes is returned as an i64 value.
 static Value genDescriptorGetDataSizeInBytes(fir::FirOpBuilder &builder,
                                              Location loc, Value boxDesc) {
   Value box = boxDesc;
@@ -1134,11 +1117,11 @@ static Value genDescriptorGetDataSizeInBytes(fir::FirOpBuilder &builder,
   return mlir::arith::MulIOp::create(builder, loc, totalElements, eleSize);
 }
 
-// Generate a call to the OpenMP runtime function `omp_get_mapped_ptr` to
-// retrieve the device pointer corresponding to a given host pointer and device
-// number. If no mapping exists, the original host pointer is returned.
-// Signature:
-//   void *omp_get_mapped_ptr(void *host_ptr, int device_num);
+/// Generate a call to the OpenMP runtime function `omp_get_mapped_ptr` to
+/// retrieve the device pointer corresponding to a given host pointer and device
+/// number. If no mapping exists, the original host pointer is returned.
+/// Signature:
+///   void *omp_get_mapped_ptr(void *host_ptr, int device_num);
 static mlir::Value genOmpGetMappedPtrIfPresent(fir::FirOpBuilder &builder,
                                                mlir::Location loc,
                                                mlir::Value hostPtr,
@@ -1174,12 +1157,12 @@ static mlir::Value genOmpGetMappedPtrIfPresent(fir::FirOpBuilder &builder,
   return result;
 }
 
-// Generate a call to the OpenMP runtime function `omp_target_memcpy` to
-// perform memory copy between host and device or between devices.
-// Signature:
-//   int omp_target_memcpy(void *dst, const void *src, size_t length,
-//                         size_t dst_offset, size_t src_offset,
-//                         int dst_device, int src_device);
+/// Generate a call to the OpenMP runtime function `omp_target_memcpy` to
+/// perform memory copy between host and device or between devices.
+/// Signature:
+///   int omp_target_memcpy(void *dst, const void *src, size_t length,
+///                         size_t dst_offset, size_t src_offset,
+///                         int dst_device, int src_device);
 static void genOmpTargetMemcpyCall(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value dst,
                                    mlir::Value src, mlir::Value length,
@@ -1209,11 +1192,11 @@ static void genOmpTargetMemcpyCall(fir::FirOpBuilder &builder,
   return;
 }
 
-// Generate code to replace a Fortran array assignment call with OpenMP
-// runtime calls to perform the equivalent operation on the device.
-// This involves extracting the source and destination pointers from the
-// Fortran array descriptors, retrieving their mapped device pointers (if any),
-// and invoking `omp_target_memcpy` to copy the data on the device.
+/// Generate code to replace a Fortran array assignment call with OpenMP
+/// runtime calls to perform the equivalent operation on the device.
+/// This involves extracting the source and destination pointers from the
+/// Fortran array descriptors, retrieving their mapped device pointers (if any),
+/// and invoking `omp_target_memcpy` to copy the data on the device.
 static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            fir::CallOp callOp,
@@ -1250,20 +1233,20 @@ static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
                          device, module);
 }
 
-// Struct to hold the host eval vars corresponding to loop bounds and steps
+/// Struct to hold the host eval vars corresponding to loop bounds and steps
 struct HostEvalVars {
   SmallVector<Value> lbs;
   SmallVector<Value> ubs;
   SmallVector<Value> steps;
 };
 
-// moveToHost method clones all the ops from target region outside of it.
-// It hoists runtime functions and replaces them with omp vesions.
-// Also hoists and replaces fir.allocmem with omp.target_allocmem and
-// fir.freemem with omp.target_freemem
-static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
-                       mlir::ModuleOp module,
-                       struct HostEvalVars &hostEvalVars) {
+/// moveToHost method clones all the ops from target region outside of it.
+/// It hoists runtime function "_FortranAAssign" and replaces it with omp
+/// version. Also hoists and replaces fir.allocmem with omp.target_allocmem and
+/// fir.freemem with omp.target_freemem
+static LogicalResult moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
+                                mlir::ModuleOp module,
+                                struct HostEvalVars &hostEvalVars) {
   OpBuilder::InsertionGuard guard(rewriter);
   Block *targetBlock = &targetOp.getRegion().front();
   assert(targetBlock == &targetOp.getRegion().back());
@@ -1272,8 +1255,9 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
   // Get the parent target_data op
   auto targetDataOp = cast<omp::TargetDataOp>(targetOp->getParentOp());
   if (!targetDataOp) {
-    llvm_unreachable("Expected target op to be inside target_data op");
-    return;
+    emitError(targetOp->getLoc(),
+              "Expected target op to be inside target_data op");
+    return failure();
   }
   // create mapping for host_eval_vars
   unsigned hostEvalVarCount = targetOp.getHostEvalVars().size();
@@ -1345,11 +1329,12 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     // Check for runtime calls to be replaced.
     if (isRuntimeCall(clonedOp)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
-          "_FortranAAssign") {
+      auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+      if (funcName == FortranAssignStr) {
         opsToReplace.push_back(clonedOp);
       } else {
-        llvm_unreachable("Unhandled runtime call hoisting.");
+        emitError(runtimeCall->getLoc(), "Unhandled runtime call hoisting.");
+        return failure();
       }
     }
   }
@@ -1392,8 +1377,8 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     // Replace runtime calls with omp versions.
     else if (isRuntimeCall(op)) {
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
-          "_FortranAAssign") {
+      auto funcName = (*runtimeCall.getCallee()).getRootReference().getValue();
+      if (funcName == FortranAssignStr) {
         rewriter.setInsertionPoint(op);
         fir::FirOpBuilder builder{rewriter, op};
 
@@ -1402,10 +1387,12 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
                                        module);
         rewriter.eraseOp(op);
       } else {
-        llvm_unreachable("Unhandled runtime call hoisting.");
+        emitError(runtimeCall->getLoc(), "Unhandled runtime call hoisting.");
+        return failure();
       }
     } else {
-      llvm_unreachable("Unhandled op hoisting.");
+      emitError(op->getLoc(), "Unhandled op hoisting.");
+      return failure();
     }
   }
 
@@ -1417,18 +1404,19 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
   }
   // Finally erase the original targetOp.
   rewriter.eraseOp(targetOp);
+  return success();
 }
 
-// Result of isolateOp method
+/// Result of isolateOp method
 struct SplitResult {
   omp::TargetOp preTargetOp;
   omp::TargetOp isolatedTargetOp;
   omp::TargetOp postTargetOp;
 };
 
-// computeAllocsCacheRecomputable method computes the allocs needed to cache
-// the values that are used outside the split point. It also computes the ops
-// that need to be cached and the ops that can be recomputed after the split.
+/// computeAllocsCacheRecomputable method computes the allocs needed to cache
+/// the values that are used outside the split point. It also computes the ops
+/// that need to be cached and the ops that can be recomputed after the split.
 static void computeAllocsCacheRecomputable(
     omp::TargetOp targetOp, Operation *splitBeforeOp, RewriterBase &rewriter,
     SmallVector<Value> &preMapOperands, SmallVector<Value> &postMapOperands,
@@ -1467,9 +1455,9 @@ static void computeAllocsCacheRecomputable(
   }
 }
 
-// genPreTargetOp method generates the preTargetOp that contains all the ops
-// before the split point. It also creates the block arguments and maps the
-// values accordingly. It also creates the store operations for the allocs.
+/// genPreTargetOp method generates the preTargetOp that contains all the ops
+/// before the split point. It also creates the block arguments and maps the
+/// values accordingly. It also creates the store operations for the allocs.
 static omp::TargetOp
 genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
                SmallVector<Value> &allocs, Operation *splitBeforeOp,
@@ -1546,10 +1534,10 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
   return preTargetOp;
 }
 
-// genIsolatedTargetOp method generates the isolatedTargetOp that contains the
-// ops between the split point. It also creates the block arguments and maps
-// the values accordingly. It also creates the load operations for the allocs
-// and recomputes the necessary ops.
+/// genIsolatedTargetOp method generates the isolatedTargetOp that contains the
+/// ops between the split point. It also creates the block arguments and maps
+/// the values accordingly. It also creates the load operations for the allocs
+/// and recomputes the necessary ops.
 static omp::TargetOp
 genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
                     Operation *splitBeforeOp, RewriterBase &rewriter,
@@ -1635,10 +1623,10 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
   return isolatedTargetOp;
 }
 
-// genPostTargetOp method generates the postTargetOp that contains all the ops
-// after the split point. It also creates the block arguments and maps the
-// values accordingly. It also creates the load operations for the allocs
-// and recomputes the necessary ops.
+/// genPostTargetOp method generates the postTargetOp that contains all the ops
+/// after the split point. It also creates the block arguments and maps the
+/// values accordingly. It also creates the load operations for the allocs
+/// and recomputes the necessary ops.
 static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
                                      Operation *splitBeforeOp,
                                      SmallVector<Value> &postMapOperands,
@@ -1681,20 +1669,21 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
   return postTargetOp;
 }
 
-// isolateOp method rewrites a omp.target_data { omp.target } in to
-// omp.target_data {
-//      // preTargetOp region contains ops before splitBeforeOp.
-//      omp.target {}
-//      // isolatedTargetOp region contains splitBeforeOp,
-//      omp.target {}
-//      // postTargetOp region contains ops after splitBeforeOp.
-//      omp.target {}
-// }
-// It also handles the mapping of variables and the caching/recomputing
-// of values as needed.
-static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
-                             RewriterBase &rewriter, mlir::ModuleOp module,
-                             bool isTargetDevice) {
+/// isolateOp method rewrites a omp.target_data { omp.target } in to
+/// omp.target_data {
+///      // preTargetOp region contains ops before splitBeforeOp.
+///      omp.target {}
+///      // isolatedTargetOp region contains splitBeforeOp,
+///      omp.target {}
+///      // postTargetOp region contains ops after splitBeforeOp.
+///      omp.target {}
+/// }
+/// It also handles the mapping of variables and the caching/recomputing
+/// of values as needed.
+static FailureOr<SplitResult> isolateOp(Operation *splitBeforeOp,
+                                        bool splitAfter, RewriterBase &rewriter,
+                                        mlir::ModuleOp module,
+                                        bool isTargetDevice) {
   auto targetOp = cast<omp::TargetOp>(splitBeforeOp->getParentOp());
   assert(targetOp);
   rewriter.setInsertionPoint(targetOp);
@@ -1725,7 +1714,9 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
                      hostEvalVars, isTargetDevice);
 
   // Move the ops of preTarget to host.
-  moveToHost(preTargetOp, rewriter, module, hostEvalVars);
+  auto res = moveToHost(preTargetOp, rewriter, module, hostEvalVars);
+  if (failed(res))
+    return failure();
   rewriter.setInsertionPoint(targetOp);
 
   // Generate the isolatedTargetOp
@@ -1745,15 +1736,15 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
   return SplitResult{preTargetOp, isolatedTargetOp, postTargetOp};
 }
 
-// Recursively fission target ops until no more nested ops can be isolated.
-static void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter,
-                          mlir::ModuleOp module, bool isTargetDevice) {
+/// Recursively fission target ops until no more nested ops can be isolated.
+static LogicalResult fissionTarget(omp::TargetOp targetOp,
+                                   RewriterBase &rewriter,
+                                   mlir::ModuleOp module, bool isTargetDevice) {
   auto tuple = getNestedOpToIsolate(targetOp);
   if (!tuple) {
     LLVM_DEBUG(llvm::dbgs() << " No op to isolate\n");
     struct HostEvalVars hostEvalVars;
-    moveToHost(targetOp, rewriter, module, hostEvalVars);
-    return;
+    return moveToHost(targetOp, rewriter, module, hostEvalVars);
   }
   Operation *toIsolate = std::get<0>(*tuple);
   bool splitBefore = !std::get<1>(*tuple);
@@ -1762,19 +1753,24 @@ static void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter,
   if (splitBefore && splitAfter) {
     auto res =
         isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
-    fissionTarget(res.postTargetOp, rewriter, module, isTargetDevice);
-    return;
+    if (failed(res))
+      return failure();
+    return fissionTarget((*res).postTargetOp, rewriter, module, isTargetDevice);
   }
   // Isolate only before the op.
   if (splitBefore) {
-    isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
-    return;
+    auto res =
+        isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
+    if (failed(res))
+      return failure();
   } else {
-    llvm::report_fatal_error("Unhandled case in fissionTarget");
+    emitError(toIsolate->getLoc(), "Unhandled case in fissionTarget");
+    return failure();
   }
+  return success();
 }
 
-// Pass to lower omp.workdistribute ops.
+/// Pass to lower omp.workdistribute ops.
 class LowerWorkdistributePass
     : public flangomp::impl::LowerWorkdistributeBase<LowerWorkdistributePass> {
 public:
@@ -1784,22 +1780,28 @@ public:
     bool changed = false;
     SetVector<omp::TargetOp> targetOpsToProcess;
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      bool res = VerifyTargetTeamsWorkdistribute(workdistribute);
-      if (!res)
+      auto res = verifyTargetTeamsWorkdistribute(workdistribute);
+      if (failed(res))
         signalPassFailure();
     });
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      changed |= FissionWorkdistribute(workdistribute);
+      auto res = fissionWorkdistribute(workdistribute);
+      if (failed(res))
+        signalPassFailure();
+      changed |= *res;
     });
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      changed |=
-          WorkdistributeRuntimeCallLower(workdistribute, targetOpsToProcess);
+      auto res =
+          workdistributeRuntimeCallLower(workdistribute, targetOpsToProcess);
+      if (failed(res))
+        signalPassFailure();
+      changed |= *res;
     });
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      changed |= WorkdistributeDoLower(workdistribute, targetOpsToProcess);
+      changed |= workdistributeDoLower(workdistribute, targetOpsToProcess);
     });
     moduleOp->walk([&](mlir::omp::TeamsOp teams) {
-      changed |= TeamsWorkdistributeToSingleOp(teams, targetOpsToProcess);
+      changed |= teamsWorkdistributeToSingleOp(teams, targetOpsToProcess);
     });
     if (changed) {
       bool isTargetDevice =
@@ -1808,8 +1810,12 @@ public:
       IRRewriter rewriter(&context);
       for (auto targetOp : targetOpsToProcess) {
         auto res = splitTargetData(targetOp, rewriter);
-        if (res)
-          fissionTarget(*res, rewriter, moduleOp, isTargetDevice);
+        if (failed(res))
+          signalPassFailure();
+        if (*res) {
+          if (failed(fissionTarget(*res, rewriter, moduleOp, isTargetDevice)))
+            signalPassFailure();
+        }
       }
     }
   }
