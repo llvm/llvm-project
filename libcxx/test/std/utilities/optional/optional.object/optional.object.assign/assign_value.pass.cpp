@@ -284,8 +284,8 @@ constexpr void test_with_ref() {
     optional<T&> opt{t};
     opt = t2;
 
-    assert(std::addressof(*opt) != std::addressof(t)); 
-    assert(std::addressof(*opt) == std::addressof(t2)); 
+    assert(std::addressof(*opt) != std::addressof(t));
+    assert(std::addressof(*opt) == std::addressof(t2));
   }
   // test that reassigning the reference for an optional<T&> doesn't affect the objet it's holding a reference to
   {

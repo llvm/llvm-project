@@ -418,7 +418,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   }
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val){
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) {
     this->__get() = std::forward<_Up>(__val);
   }
 };
@@ -476,7 +476,7 @@ struct __optional_storage_base<_Tp, true> {
   }
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val){
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) {
     __value_ = std::addressof(__val);
   }
 };
