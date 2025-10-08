@@ -30,7 +30,7 @@ def test_index(O=TensorDef(I32, S.M, S.N, output=True)):
 
 
 @linalg_structured_op
-def elemwise_unary_poly(
+def elemwise_unary_poly_cast(
     I=TensorDef(T),
     O=TensorDef(U, output=True),
     fun=UnaryFnAttrDef(default=UnaryFn.exp),
@@ -38,6 +38,13 @@ def elemwise_unary_poly(
 ):
     O[None] = fun(cast(U, I[None]))
 
+@linalg_structured_op
+def elemwise_unary_poly(
+    I=TensorDef(T),
+    O=TensorDef(U, output=True),
+    fun=UnaryFnAttrDef(default=UnaryFn.exp),
+):
+    O[None] = fun(I[None])
 
 @linalg_structured_op(op_name="custom_op_name")
 def non_default_op_name(I=TensorDef(T, S.N), O=TensorDef(T, S.N, output=True)):
@@ -84,6 +91,17 @@ with Context() as ctx, Location.unknown():
         def test_f32_elemwise_exp(input, init_result):
             return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.exp)
 
+        # CHECK-LABEL: @test_c32_elemwise_exp
+        # CHECK:      ^{{.*}}(%[[IN:.+]]: complex<f32>, %[[OUT:.+]]: complex<f32>)
+        # CHECK-NEXT:   %[[EXP:.+]] = complex.exp %[[IN]] : complex<f32>
+        # CHECK-NEXT:   linalg.yield %[[EXP]] : complex<f32>
+        # CHECK-NEXT: -> tensor<4x16xcomplex<f32>>
+        @func.FuncOp.from_py_func(
+            RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), c32)
+        )
+        def test_c32_elemwise_exp(input, init_result):
+            return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.exp)
+
         # CHECK-LABEL: @test_f32_elemwise_log
         # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
         # CHECK-NEXT:   %[[LOG:.+]] = math.log %[[IN]] : f32
@@ -95,10 +113,21 @@ with Context() as ctx, Location.unknown():
         def test_f32_elemwise_log(input, init_result):
             return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.log)
 
+        # CHECK-LABEL: @test_c32_elemwise_log
+        # CHECK:      ^{{.*}}(%[[IN:.+]]: complex<f32>, %[[OUT:.+]]: complex<f32>)
+        # CHECK-NEXT:   %[[LOG:.+]] = complex.log %[[IN]] : complex<f32>
+        # CHECK-NEXT:   linalg.yield %[[LOG]] : complex<f32>
+        # CHECK-NEXT: -> tensor<4x16xcomplex<f32>>
+        @func.FuncOp.from_py_func(
+            RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), c32)
+        )
+        def test_c32_elemwise_log(input, init_result):
+            return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.log)
+
         # CHECK-LABEL: @test_f32_elemwise_abs
         # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
-        # CHECK-NEXT:   %[[EXP:.+]] = math.absf %[[IN]] : f32
-        # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+        # CHECK-NEXT:   %[[ABS:.+]] = math.absf %[[IN]] : f32
+        # CHECK-NEXT:   linalg.yield %[[ABS]] : f32
         # CHECK-NEXT: -> tensor<4x16xf32>
         @func.FuncOp.from_py_func(
             RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32)
@@ -106,10 +135,21 @@ with Context() as ctx, Location.unknown():
         def test_f32_elemwise_abs(input, init_result):
             return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.abs)
 
+        # CHECK-LABEL: @test_c32_elemwise_abs
+        # CHECK:      ^{{.*}}(%[[IN:.+]]: complex<f32>, %[[OUT:.+]]: f32)
+        # CHECK-NEXT:   %[[ABS:.+]] = complex.abs %[[IN]] : complex<f32>
+        # CHECK-NEXT:   linalg.yield %[[ABS]] : f32
+        # CHECK-NEXT: -> tensor<4x16xf32>
+        @func.FuncOp.from_py_func(
+            RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), f32)
+        )
+        def test_c32_elemwise_abs(input, init_result):
+            return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.abs)
+
         # CHECK-LABEL: @test_f32_elemwise_ceil
         # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
-        # CHECK-NEXT:   %[[EXP:.+]] = math.ceil %[[IN]] : f32
-        # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+        # CHECK-NEXT:   %[[CEIL:.+]] = math.ceil %[[IN]] : f32
+        # CHECK-NEXT:   linalg.yield %[[CEIL]] : f32
         # CHECK-NEXT: -> tensor<4x16xf32>
         @func.FuncOp.from_py_func(
             RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32)
@@ -119,8 +159,8 @@ with Context() as ctx, Location.unknown():
 
         # CHECK-LABEL: @test_f32_elemwise_floor
         # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
-        # CHECK-NEXT:   %[[EXP:.+]] = math.floor %[[IN]] : f32
-        # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+        # CHECK-NEXT:   %[[FLOOR:.+]] = math.floor %[[IN]] : f32
+        # CHECK-NEXT:   linalg.yield %[[FLOOR]] : f32
         # CHECK-NEXT: -> tensor<4x16xf32>
         @func.FuncOp.from_py_func(
             RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32)
@@ -130,8 +170,8 @@ with Context() as ctx, Location.unknown():
 
         # CHECK-LABEL: @test_f32_elemwise_neg
         # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
-        # CHECK-NEXT:   %[[EXP:.+]] = arith.negf %[[IN]] : f32
-        # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
+        # CHECK-NEXT:   %[[NEG:.+]] = arith.negf %[[IN]] : f32
+        # CHECK-NEXT:   linalg.yield %[[NEG]] : f32
         # CHECK-NEXT: -> tensor<4x16xf32>
         @func.FuncOp.from_py_func(
             RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32)
@@ -141,14 +181,25 @@ with Context() as ctx, Location.unknown():
 
         # CHECK-LABEL: @test_c32_elemwise_neg
         # CHECK:      ^{{.*}}(%[[IN:.+]]: complex<f32>, %[[OUT:.+]]: complex<f32>)
-        # CHECK-NEXT:   %[[EXP:.+]] = complex.neg %[[IN]] : complex<f32>
-        # CHECK-NEXT:   linalg.yield %[[EXP]] : complex<f32>
+        # CHECK-NEXT:   %[[NEG:.+]] = complex.neg %[[IN]] : complex<f32>
+        # CHECK-NEXT:   linalg.yield %[[NEG]] : complex<f32>
         # CHECK-NEXT: -> tensor<4x16xcomplex<f32>>
         @func.FuncOp.from_py_func(
             RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), c32)
         )
         def test_c32_elemwise_neg(input, init_result):
             return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.negf)
+
+        # CHECK-LABEL: @test_c32_elemwise_conj
+        # CHECK:      ^{{.*}}(%[[IN:.+]]: complex<f32>, %[[OUT:.+]]: complex<f32>)
+        # CHECK-NEXT:   %[[CONJ:.+]] = complex.conj %[[IN]] : complex<f32>
+        # CHECK-NEXT:   linalg.yield %[[CONJ]] : complex<f32>
+        # CHECK-NEXT: -> tensor<4x16xcomplex<f32>>
+        @func.FuncOp.from_py_func(
+            RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), c32)
+        )
+        def test_c32_elemwise_conj(input, init_result):
+            return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.conj, cast=None)
 
         # Just check that we don't assert out on name mismatch.
         # CHECK-LABEL: @test_non_default_op_name
