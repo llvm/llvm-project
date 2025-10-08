@@ -1627,10 +1627,6 @@ unsigned getRegBitWidth(unsigned RCID);
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
 
-/// Get size of register operand
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo);
-
 LLVM_READNONE
 inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   switch (OpInfo.OperandType) {
@@ -1787,13 +1783,15 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+                             const MCSubtargetInfo &ST);
 
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
