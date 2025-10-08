@@ -26,6 +26,9 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(MemRef, memref);
 
+MLIR_CAPI_EXPORTED void
+mlirMemRefRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

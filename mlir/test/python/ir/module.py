@@ -3,6 +3,7 @@
 import gc
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
+import mlir.dialects.func
 
 
 def run(f):

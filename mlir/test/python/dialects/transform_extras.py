@@ -2,7 +2,7 @@
 
 from typing import Callable
 from mlir import ir
-from mlir.dialects import scf, pdl
+from mlir.dialects import scf, pdl, arith
 from mlir.dialects.transform import (
     structured,
     get_parent_op,

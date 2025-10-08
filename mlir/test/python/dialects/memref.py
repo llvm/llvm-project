@@ -2,6 +2,7 @@
 
 import mlir.dialects.arith as arith
 import mlir.dialects.memref as memref
+import mlir.dialects.func
 import mlir.extras.types as T
 from mlir.dialects.memref import _infer_memref_subview_result_type
 from mlir.ir import *

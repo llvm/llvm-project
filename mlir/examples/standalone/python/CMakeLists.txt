@@ -138,6 +138,7 @@ set(_declared_sources
   StandalonePythonSources
   MLIRPythonSources.Core
   MLIRPythonSources.Dialects.builtin
+  MLIRPythonSources.Dialects.arith
 )
 # For an external projects build, the MLIRPythonExtension.Core.type_stub_gen
 # target already exists and can just be added to DECLARED_SOURCES.

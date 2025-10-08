@@ -2,7 +2,7 @@
 
 import gc
 from mlir.ir import *
-from mlir.dialects import arith, tensor, func, memref
+from mlir.dialects import arith, tensor, func, memref, transform, scf
 import mlir.extras.types as T
 
 

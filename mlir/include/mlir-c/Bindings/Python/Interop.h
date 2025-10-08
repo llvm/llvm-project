@@ -84,6 +84,8 @@
 #define MLIR_PYTHON_CAPSULE_VALUE MAKE_MLIR_PYTHON_QUALNAME("ir.Value._CAPIPtr")
 #define MLIR_PYTHON_CAPSULE_TYPEID                                             \
   MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_DIALECT_HANDLE                                     \
+  MAKE_MLIR_PYTHON_QUALNAME("ir.DialectHandle._CAPIPtr")
 
 /** Attribute on MLIR Python objects that expose their C-API pointer.
  * This will be a type-specific capsule created as per one of the helpers
@@ -455,6 +457,13 @@ static inline MlirValue mlirPythonCapsuleToValue(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_VALUE);
   MlirValue value = {ptr};
   return value;
+}
+
+static inline MlirDialectHandle
+mlirPythonCapsuleToDialectHandle(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_DIALECT_HANDLE);
+  MlirDialectHandle handle = {ptr};
+  return handle;
 }
 
 #ifdef __cplusplus

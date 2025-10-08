@@ -55,6 +55,9 @@ mlirLinalgGetIndexingMapsAttribute(MlirOperation op);
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Linalg, linalg);
 
+MLIR_CAPI_EXPORTED void
+mlirLinalgRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif
