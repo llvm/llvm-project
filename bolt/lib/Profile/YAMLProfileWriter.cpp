@@ -14,10 +14,12 @@
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/CoalescingBitVector.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <regex>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
@@ -139,6 +141,8 @@ YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
     }
   };
 
+  using NodesBitVector = CoalescingBitVector<uint32_t>;
+
   // Check identical BlockProbeInfo structs and merge them
   std::unordered_map<yaml::bolt::PseudoProbeInfo, std::vector<uint32_t>,
                      BlockProbeInfoHasher>
@@ -151,12 +155,15 @@ YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
     BPIToNodes[BPI].push_back(NodeId);
   }
 
-  auto handleMask = [](const auto &Ids, auto &Vec, auto &Mask) {
-    for (auto Id : Ids)
-      if (Id > 64)
-        Vec.emplace_back(Id);
-      else
-        Mask |= 1ull << (Id - 1);
+  auto compressVec = [](const auto &Nodes) -> std::string {
+    NodesBitVector::Allocator Alloc;
+    NodesBitVector BV(Alloc);
+    for (uint32_t Node : Nodes)
+      BV.test_and_set(Node);
+    std::string Buf;
+    raw_string_ostream SS(Buf);
+    BV.printCompressed(SS);
+    return Buf;
   };
 
   // Add to YAML with merged nodes/block mask optimizations
@@ -169,8 +176,11 @@ YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
     if (Nodes.size() == 1)
       YamlBPI.InlineTreeIndex = Nodes.front();
     else
-      YamlBPI.InlineTreeNodes = Nodes;
-    handleMask(BPI.BlockProbes, YamlBPI.BlockProbes, YamlBPI.BlockMask);
+      YamlBPI.InlineTreeNodesStr = compressVec(Nodes);
+    if (BPI.BlockProbes.size() == 1)
+      YamlBPI.BlockProbe = BPI.BlockProbes.front();
+    else
+      YamlBPI.BlockProbesStr = compressVec(BPI.BlockProbes);
   }
   return YamlProbes;
 }

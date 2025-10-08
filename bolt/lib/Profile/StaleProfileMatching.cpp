@@ -1023,7 +1023,7 @@ bool YAMLProfileReader::inferStaleProfile(
   // Match as many block/jump counts from the stale profile as possible
   size_t MatchedBlocks =
       matchWeights(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-                   YamlBP.Header.HashFunction, IdToYamLBF, BF, ProbeMatchSpecs);
+                   YamlBP.Header.HashFunction, IdToYamlBF, BF, ProbeMatchSpecs);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.

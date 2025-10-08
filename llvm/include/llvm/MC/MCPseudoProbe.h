@@ -210,11 +210,13 @@ public:
   // \p ContextStack is populated in root to leaf order
   LLVM_ABI void
   getInlineContext(SmallVectorImpl<MCPseudoProbeFrameLocation> &ContextStack,
-                   const GUIDProbeFunctionMap &GUID2FuncMAP) const;
+                   const GUIDProbeFunctionMap &GUID2FuncMAP,
+                   bool ShowName = true) const;
 
   // Helper function to get the string from context stack
   LLVM_ABI std::string
-  getInlineContextStr(const GUIDProbeFunctionMap &GUID2FuncMAP) const;
+  getInlineContextStr(const GUIDProbeFunctionMap &GUID2FuncMAP,
+                      bool ShowName = true) const;
 
   // Print pseudo probe while disassembling
   LLVM_ABI void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,

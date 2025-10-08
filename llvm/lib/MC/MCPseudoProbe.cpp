@@ -283,7 +283,7 @@ void MCPseudoProbeFuncDesc::print(raw_ostream &OS) {
 
 void MCDecodedPseudoProbe::getInlineContext(
     SmallVectorImpl<MCPseudoProbeFrameLocation> &ContextStack,
-    const GUIDProbeFunctionMap &GUID2FuncMAP) const {
+    const GUIDProbeFunctionMap &GUID2FuncMAP, bool ShowName) const {
   uint32_t Begin = ContextStack.size();
   MCDecodedPseudoProbeInlineTree *Cur = InlineTree;
   // It will add the string of each node's inline site during iteration.
@@ -299,10 +299,10 @@ void MCDecodedPseudoProbe::getInlineContext(
 }
 
 std::string MCDecodedPseudoProbe::getInlineContextStr(
-    const GUIDProbeFunctionMap &GUID2FuncMAP) const {
+    const GUIDProbeFunctionMap &GUID2FuncMAP, bool ShowName) const {
   std::ostringstream OContextStr;
   SmallVector<MCPseudoProbeFrameLocation, 16> ContextStack;
-  getInlineContext(ContextStack, GUID2FuncMAP);
+  getInlineContext(ContextStack, GUID2FuncMAP, ShowName);
   for (auto &Cxt : ContextStack) {
     if (OContextStr.str().size())
       OContextStr << " @ ";
@@ -328,7 +328,7 @@ void MCDecodedPseudoProbe::print(raw_ostream &OS,
   if (Discriminator)
     OS << "Discriminator: " << Discriminator << "  ";
   OS << "Type: " << PseudoProbeTypeStr[static_cast<uint8_t>(Type)] << "  ";
-  std::string InlineContextStr = getInlineContextStr(GUID2FuncMAP);
+  std::string InlineContextStr = getInlineContextStr(GUID2FuncMAP, ShowName);
   if (InlineContextStr.size()) {
     OS << "Inlined: @ ";
     OS << InlineContextStr;
