@@ -1991,6 +1991,28 @@ void Ripple::padToTargetSIMDWidth() {
           MustBePadded.insert(I);
           AddUserInstsToWorklist(I, Worklist);
         }
+      } else if (auto* CallI = dyn_cast<CallInst>(I)) {
+        std::string ErrStr;
+        raw_string_ostream OSS(ErrStr);
+        OSS << "Only call instructions that accept legalizable types suported. "
+               "Unsupported call: "
+            << *I;
+        OSS.flush();
+
+        if (auto *CallIVtype = dyn_cast<FixedVectorType>(CallI->getType())) {
+          if (CallIVtype->getNumElements() != GetPaddedLength(CallI)) {
+            return createStringError(inconvertibleErrorCode(), ErrStr);
+          }
+        }
+
+        for (auto &Arg : CallI->args()) {
+          auto *ArgV = Arg.get();
+          if (auto *ArgVtype = dyn_cast<FixedVectorType>(ArgV->getType())) {
+            if (ArgVtype->getNumElements() != GetPaddedLength(ArgV)) {
+              return createStringError(inconvertibleErrorCode(), ErrStr);
+            }
+          }
+        }
       } else {
         std::string ErrStr;
         raw_string_ostream OSS(ErrStr);
@@ -2503,7 +2525,7 @@ void Ripple::padToTargetSIMDWidth() {
   InstsThatMustBePadded.clear();
   InstsThatMustBePaddedRPOT.clear();
 
-  for (auto *I : InstructionsToRemove) {
+  for (auto *I : llvm::reverse(InstructionsToRemove)) {
     invalidateRippleDataFor(I);
     LLVM_DEBUG(dbgs() << "[PadToTargetSIMD] Deleting " << *I << "\n";);
     if (!I->use_empty()) {

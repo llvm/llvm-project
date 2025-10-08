@@ -63,6 +63,11 @@ extern inline f16t64 ripple_ew_mask_non_pure_ew_separate_mask(f16t64 A,
   return A * B;
 }
 
+// Element-wise A * 2
+extern inline f32t32 ripple_ew_doublify(f32t32 A) {
+  return A * 2.f;
+}
+
 extern inline f16t64 ripple_mysinf16(f16t64 A) { return A; }
 
 #define CREATE_UNARY_MATH_TEST_FUN(name)                                       \
