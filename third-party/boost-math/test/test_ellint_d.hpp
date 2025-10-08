@@ -123,12 +123,12 @@ void test_spots(T, const char* type_name)
 
     do_test_ellint_d1<T>(ellint_d_data, type_name, "Elliptic Integral D: Random Data");
 
-    #ifdef BOOST_MATH_NO_EXCEPTIONS
+    #ifndef BOOST_MATH_NO_EXCEPTIONS
     BOOST_MATH_CHECK_THROW(boost::math::ellint_d(T(1)), std::domain_error);
     BOOST_MATH_CHECK_THROW(boost::math::ellint_d(T(-1)), std::domain_error);
     BOOST_MATH_CHECK_THROW(boost::math::ellint_d(T(1.5)), std::domain_error);
     BOOST_MATH_CHECK_THROW(boost::math::ellint_d(T(-1.5)), std::domain_error);
-    BOOST_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
+    BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
     {
        BOOST_CHECK_EQUAL(boost::math::ellint_d(T(0.5), std::numeric_limits<T>::infinity()), std::numeric_limits<T>::infinity());
     }

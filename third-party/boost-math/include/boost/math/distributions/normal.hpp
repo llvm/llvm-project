@@ -18,6 +18,7 @@
 #include <boost/math/tools/config.hpp>
 #include <boost/math/tools/tuple.hpp>
 #include <boost/math/tools/numeric_limits.hpp>
+#include <boost/math/tools/promotion.hpp>
 #include <boost/math/distributions/fwd.hpp>
 #include <boost/math/special_functions/erf.hpp> // for erf/erfc.
 #include <boost/math/distributions/complement.hpp>

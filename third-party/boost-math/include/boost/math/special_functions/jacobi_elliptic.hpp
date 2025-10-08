@@ -41,9 +41,7 @@ T jacobi_imp(const T& x, const T& k, T* cn, T* dn, const Policy& pol, const char
    BOOST_MATH_STD_USING
    if(k < 0)
    {
-      *cn = policies::raise_domain_error<T>(function, "Modulus k must be positive but got %1%.", k, pol);
-      *dn = *cn;
-      return *cn;
+      return *dn = *cn = policies::raise_domain_error<T>(function, "Modulus k must be positive but got %1%.", k, pol);
    }
    if(k > 1)
    {

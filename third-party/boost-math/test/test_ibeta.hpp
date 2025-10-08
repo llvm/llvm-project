@@ -131,6 +131,24 @@ void test_beta(T, const char* name)
 
    do_test_beta<T>(ibeta_int_data, name, "Incomplete Beta Function: Small Integer Values");
 #endif
+
+#if !defined(TEST_DATA) || (TEST_DATA == 5)
+   //
+   // We restrict these tests to types of limited precision, otherwise we exhaust our iteration limit
+   // and throw exceptions.  This includes types (ie double) which may be promoted internally to
+   // a 128-bit long double for evaluation.
+   //
+   if (std::numeric_limits<T>::is_specialized && (std::numeric_limits<T>::digits <= 64) && ((std::numeric_limits<long double>::digits <= 64) || (sizeof(T) == sizeof(float))))
+   {
+#  include "ibeta_large_asym_data.ipp"
+
+      do_test_beta<T>(ibeta_large_asym_data, name, "Incomplete Beta Function: Very Large a,b Values");
+
+#  include "ibeta_asym.ipp"
+
+      do_test_beta<T>(ibeta_asym, name, "Incomplete Beta Function: Asymptotically Large a,b Values");
+   }
+#endif
 }
 
 template <class T>

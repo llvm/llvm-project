@@ -80,11 +80,15 @@ inline constexpr T make_big_value(largest_float, const char* s, std::false_type 
 //
 // For constants which might fit in a long double (if it's big enough):
 //
+// Note that gcc-13 has std::is_convertible<long double, std::float64_t>::value false, likewise
+// std::is_constructible<std::float64_t, long double>::value, even though the conversions do
+// actually work.  Workaround is the || std::is_floating_point<T>::value part which thankfully is true.
+//
 #define BOOST_MATH_BIG_CONSTANT(T, D, x)\
    boost::math::tools::make_big_value<T>(\
       BOOST_MATH_LARGEST_FLOAT_C(x), \
       BOOST_MATH_STRINGIZE(x), \
-      std::integral_constant<bool, (std::is_convertible<boost::math::tools::largest_float, T>::value) && \
+      std::integral_constant<bool, (std::is_convertible<boost::math::tools::largest_float, T>::value || std::is_floating_point<T>::value) && \
       ((D <= boost::math::tools::numeric_traits<boost::math::tools::largest_float>::digits) \
           || std::is_floating_point<T>::value \
           || (boost::math::tools::numeric_traits<T>::is_specialized && \

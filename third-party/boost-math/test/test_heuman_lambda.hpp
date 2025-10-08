@@ -77,5 +77,17 @@ void test_spots(T, const char* type_name)
 #include "heuman_lambda_data.ipp"
 
     do_test_heuman_lambda<T>(heuman_lambda_data, type_name, "Elliptic Integral Heuman Lambda: Random Data");
+
+    //
+    // Special cases for coverage:
+    //
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+    BOOST_CHECK_THROW(boost::math::heuman_lambda(T(1.1), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::heuman_lambda(static_cast<T>(1e-100), T(2.5)), std::domain_error);
+#else
+    BOOST_CHECK((boost::math::isnan)(boost::math::heuman_lambda(T(1.1), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::heuman_lambda(static_cast<T>(1e-100), T(2.5))));
+#endif
+
 }
 

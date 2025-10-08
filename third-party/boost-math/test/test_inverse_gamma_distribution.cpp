@@ -14,6 +14,10 @@
 #  pragma warning (disable : 4310) // cast truncates constant value
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/tools/config.hpp>
 #include "../include_private/boost/math/tools/test.hpp"
 

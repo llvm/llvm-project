@@ -349,13 +349,14 @@ jso(const Func cost_function, jso_parameters<ArgumentContainer> &jso_params,
           delta_f.push_back(abs(cost[i] - trial_cost));
         }
         // Build the historical archive:
+        // The historical archive stores inferior solutions for the purpose of maintaining diversity.
         if (archive.size() < cost.size()) {
-          archive.push_back(trial_vector);
+          archive.push_back(population[i]);
         } else {
-          // If it's already built, then put the successful trial in a random index:
+          // If it's already built, then put the eliminated individual in a random index:
           archive.resize(cost.size());
           auto idx = gen() % archive.size();
-          archive[idx] = trial_vector;
+          archive[idx] = population[i];
         }
         cost[i] = trial_cost;
         population[i] = trial_vector;

@@ -209,7 +209,7 @@ BOOST_MATH_GPU_ENABLED inline U evaluate_polynomial(const T* poly, U const& z, b
 template <boost::math::size_t N, class T, class V>
 BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_polynomial(const T(&a)[N], const V& val) BOOST_MATH_NOEXCEPT(V)
 {
-   typedef boost::math::integral_constant<int, N> tag_type;
+   typedef boost::math::integral_constant<int, static_cast<int>(N)> tag_type;
    return detail::evaluate_polynomial_c_imp(static_cast<const T*>(a), val, static_cast<tag_type const*>(nullptr));
 }
 
@@ -217,7 +217,7 @@ BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_polynomial(const
 template <boost::math::size_t N, class T, class V>
 BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_polynomial(const std::array<T,N>& a, const V& val) BOOST_MATH_NOEXCEPT(V)
 {
-   typedef boost::math::integral_constant<int, N> tag_type;
+   typedef boost::math::integral_constant<int, static_cast<int>(N)> tag_type;
    return detail::evaluate_polynomial_c_imp(static_cast<const T*>(a.data()), val, static_cast<tag_type const*>(nullptr));
 }
 #endif
@@ -255,7 +255,7 @@ BOOST_MATH_GPU_ENABLED inline U evaluate_odd_polynomial(const T* poly, U z, boos
 template <boost::math::size_t N, class T, class V>
 BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_odd_polynomial(const T(&a)[N], const V& z) BOOST_MATH_NOEXCEPT(V)
 {
-   typedef boost::math::integral_constant<int, N-1> tag_type;
+   typedef boost::math::integral_constant<int, static_cast<int>(N-1)> tag_type;
    return a[0] + z * detail::evaluate_polynomial_c_imp(static_cast<const T*>(a) + 1, V(z*z), static_cast<tag_type const*>(nullptr));
 }
 
@@ -263,7 +263,7 @@ BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_odd_polynomial(c
 template <boost::math::size_t N, class T, class V>
 BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_odd_polynomial(const std::array<T,N>& a, const V& z) BOOST_MATH_NOEXCEPT(V)
 {
-   typedef boost::math::integral_constant<int, N-1> tag_type;
+   typedef boost::math::integral_constant<int, static_cast<int>(N-1)> tag_type;
    return a[0] + z * detail::evaluate_polynomial_c_imp(static_cast<const T*>(a.data()) + 1, V(z*z), static_cast<tag_type const*>(nullptr));
 }
 #endif
@@ -324,14 +324,14 @@ BOOST_MATH_GPU_ENABLED V evaluate_rational(const T* num, const U* denom, const V
 template <boost::math::size_t N, class T, class U, class V>
 BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_rational(const T(&a)[N], const U(&b)[N], const V& z) BOOST_MATH_NOEXCEPT(V)
 {
-   return detail::evaluate_rational_c_imp(a, b, z, static_cast<const boost::math::integral_constant<int, N>*>(nullptr));
+   return detail::evaluate_rational_c_imp(a, b, z, static_cast<const boost::math::integral_constant<int, static_cast<int>(N)>*>(nullptr));
 }
 
 #ifndef BOOST_MATH_HAS_NVRTC
 template <boost::math::size_t N, class T, class U, class V>
 BOOST_MATH_GPU_ENABLED BOOST_MATH_GPU_ENABLED inline V evaluate_rational(const std::array<T,N>& a, const std::array<U,N>& b, const V& z) BOOST_MATH_NOEXCEPT(V)
 {
-   return detail::evaluate_rational_c_imp(a.data(), b.data(), z, static_cast<boost::math::integral_constant<int, N>*>(nullptr));
+   return detail::evaluate_rational_c_imp(a.data(), b.data(), z, static_cast<boost::math::integral_constant<int, static_cast<int>(N)>*>(nullptr));
 }
 #endif
 

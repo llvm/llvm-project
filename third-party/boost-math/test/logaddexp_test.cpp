@@ -41,8 +41,10 @@ void test()
     Real spot1 = static_cast<Real>(exp(x1));
     Real spot2 = static_cast<Real>(exp(x2));
     Real spot12 = logaddexp(x1, x2);
+    Real spot21 = logaddexp(x2, x1);
 
     CHECK_ULP_CLOSE(log(spot1 + spot2), spot12, 1);
+    CHECK_ULP_CLOSE(log(spot1 + spot2), spot21, 1);
 }
 
 int main (void)

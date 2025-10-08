@@ -162,11 +162,6 @@ BOOST_AUTO_TEST_CASE( test_main )
    expected_results();
    BOOST_MATH_CONTROL_FP;
 
-#if !defined(TEST) || (TEST == 1)
-   test_hypergeometric_mellin_transform<double>();
-   test_hypergeometric_laplace_transform<double>();
-#endif
-
 #ifndef BOOST_MATH_BUGGY_LARGE_FLOAT_CONSTANTS
 #if !defined(TEST) || (TEST == 2)
    test_spots(0.0F, "float");

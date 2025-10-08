@@ -32,6 +32,10 @@
 # pragma warning (disable : 4224) // nonstandard extension used : formal parameter 'arg' was previously defined as a type.
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/tools/config.hpp>
 
 #ifndef BOOST_MATH_NO_REAL_CONCEPT_TESTS

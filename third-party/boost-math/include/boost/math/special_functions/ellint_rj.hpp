@@ -76,29 +76,6 @@ BOOST_MATH_GPU_ENABLED T ellint_rj_imp_final(T x, T y, T z, T p, const Policy& p
 {
    BOOST_MATH_STD_USING
 
-   constexpr auto function = "boost::math::ellint_rj<%1%>(%1%,%1%,%1%)";
-
-   if(x < 0)
-   {
-      return policies::raise_domain_error<T>(function, "Argument x must be non-negative, but got x = %1%", x, pol);
-   }
-   if(y < 0)
-   {
-      return policies::raise_domain_error<T>(function, "Argument y must be non-negative, but got y = %1%", y, pol);
-   }
-   if(z < 0)
-   {
-      return policies::raise_domain_error<T>(function, "Argument z must be non-negative, but got z = %1%", z, pol);
-   }
-   if(p == 0)
-   {
-      return policies::raise_domain_error<T>(function, "Argument p must not be zero, but got p = %1%", p, pol);
-   }
-   if(x + y == 0 || y + z == 0 || z + x == 0)
-   {
-      return policies::raise_domain_error<T>(function, "At most one argument can be zero, only possible result is %1%.", boost::math::numeric_limits<T>::quiet_NaN(), pol);
-   }
-
    //
    // Special cases from http://dlmf.nist.gov/19.20#iii
    //

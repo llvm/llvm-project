@@ -1606,5 +1606,20 @@ void test_powm1_sqrtp1m1(T, const char* type_name)
       extract_result<T>(2));
    handle_test_result(result, powm1_big_data[result.worst()], result.worst(), type_name, "boost::math::powm1", "powm1");
 
+   //
+   // Special cases and code coverage:
+   //
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_quiet_NaN)
+   {
+      BOOST_MATH_CHECK_THROW(boost::math::powm1(std::numeric_limits<T>::quiet_NaN(), static_cast<T>(2.0)), std::domain_error);
+      BOOST_MATH_CHECK_THROW(boost::math::powm1(static_cast<T>(3.5), std::numeric_limits<T>::quiet_NaN()), std::domain_error);
+   }
+
+   BOOST_CHECK_EQUAL(boost::math::powm1(static_cast<T>(-2.0), static_cast<T>(4)), static_cast<T>(15));
+   BOOST_CHECK_EQUAL(boost::math::powm1(static_cast<T>(-3.0), static_cast<T>(4)), static_cast<T>(80));
+   BOOST_CHECK_EQUAL(boost::math::powm1(static_cast<T>(-3.0), static_cast<T>(3)), static_cast<T>(-28));
+   BOOST_CHECK_EQUAL(boost::math::powm1(-static_cast<T>(0.0), static_cast<T>(3)), static_cast<T>(-1));
+   BOOST_MATH_CHECK_THROW(boost::math::powm1(static_cast<T>(-3.5), static_cast<T>(2.25)), std::domain_error);
+
 }
 

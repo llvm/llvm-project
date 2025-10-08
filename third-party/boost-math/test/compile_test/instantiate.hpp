@@ -1749,11 +1749,6 @@ void instantiate_mixed(RealType)
    boost::math::owens_t(fr, dr, pol);
    boost::math::owens_t(i, s, pol);
    boost::math::lambert_w0(i, pol);
-   {
-      int i_zero { 0 };
-
-      boost::math::lambert_wm1(i_zero, pol);
-   }
    boost::math::lambert_w0_prime(i, pol);
 #endif
 #ifdef TEST_GROUP_11
@@ -1950,11 +1945,6 @@ void instantiate_mixed(RealType)
    test::owens_t(fr, dr);
    test::owens_t(i, s);
    boost::math::lambert_w0(i);
-   {
-      int i_zero { 0 };
-
-      boost::math::lambert_wm1(i_zero);
-   }
    boost::math::lambert_w0_prime(i);
 #endif
 #endif

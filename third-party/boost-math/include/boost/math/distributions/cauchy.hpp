@@ -18,6 +18,7 @@
 #include <boost/math/tools/tuple.hpp>
 #include <boost/math/tools/numeric_limits.hpp>
 #include <boost/math/tools/precision.hpp>
+#include <boost/math/tools/promotion.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/distributions/complement.hpp>
 #include <boost/math/distributions/detail/common_error_handling.hpp>

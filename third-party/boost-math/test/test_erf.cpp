@@ -6,6 +6,8 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch_light.hpp>
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #ifdef __clang__

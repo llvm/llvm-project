@@ -6,6 +6,10 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/concepts/real_concept.hpp> // for real_concept
 #include <boost/math/special_functions/sign.hpp>
 

@@ -171,6 +171,7 @@ BOOST_MATH_GPU_ENABLED inline T digamma_imp_large(T x, const boost::math::integr
 // Fully generic asymptotic expansion in terms of Bernoulli numbers, see:
 // http://functions.wolfram.com/06.14.06.0012.01
 //
+// LCOV_EXCL_START muliprecision only.
 template <class T>
 struct digamma_series_func
 {
@@ -202,6 +203,7 @@ inline T digamma_imp_large(T x, const Policy& pol, const boost::math::integral_c
    policies::check_series_iterations<T>("boost::math::digamma<%1%>(%1%)", max_iter, pol);
    return result;
 }
+// LCOV_EXCL_STOP
 //
 // Now follow rational approximations over the range [1,2].
 //
@@ -486,6 +488,7 @@ BOOST_MATH_GPU_ENABLED T digamma_imp(T x, const Tag* t, const Policy& pol)
 
 #ifndef BOOST_MATH_HAS_NVRTC
 
+// LCOV_EXCL_START
 template <class T, class Policy>
 T digamma_imp(T x, const boost::math::integral_constant<int, 0>* t, const Policy& pol)
 {
@@ -495,7 +498,6 @@ T digamma_imp(T x, const boost::math::integral_constant<int, 0>* t, const Policy
    //
    // This is covered by our real_concept tests, but these are disabled for
    // code coverage runs for performance reasons.
-   // LCOV_EXCL_START
    //
    BOOST_MATH_STD_USING // ADL of std functions.
 
@@ -581,8 +583,8 @@ T digamma_imp(T x, const boost::math::integral_constant<int, 0>* t, const Policy
       result += digamma_imp_large(x, pol, t);
    }
    return result;
-   // LCOV_EXCL_STOP
 }
+// LCOV_EXCL_STOP
 
 #endif
 
@@ -608,9 +610,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 
-   return policies::checked_narrowing_cast<result_type, Policy>(detail::digamma_imp(
-      static_cast<value_type>(x),
-      static_cast<const tag_type*>(nullptr), forwarding_policy()), "boost::math::digamma<%1%>(%1%)");
+   return policies::checked_narrowing_cast<result_type, Policy>(detail::digamma_imp(static_cast<value_type>(x), static_cast<const tag_type*>(nullptr), forwarding_policy()), "boost::math::digamma<%1%>(%1%)");
 }
 
 template <class T>

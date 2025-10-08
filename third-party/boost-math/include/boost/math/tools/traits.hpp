@@ -66,9 +66,9 @@ constexpr bool has_backend_type_v = has_backend_type<T>::value;
 #endif
 
 template <typename D>
-char cdf(const D& ...);
+char cdf(const D&, ...);
 template <typename D>
-char quantile(const D& ...);
+char quantile(const D&, ...);
 
 template <typename D>
 struct has_cdf

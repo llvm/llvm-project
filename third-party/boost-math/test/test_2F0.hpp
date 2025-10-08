@@ -99,4 +99,10 @@ void test_spots(T z, const char* type_name)
       a1 = -0.5f;
       BOOST_CHECK((boost::math::isinf)(boost::math::hypergeometric_2F0(a1, a2, z)));
    }
+   //
+   // Coverage:
+   //
+   BOOST_CHECK_EQUAL(boost::math::hypergeometric_2F0(T(0), T(20), T(2)), T(1));
+   BOOST_CHECK_EQUAL(boost::math::hypergeometric_2F0(T(20), T(0), T(2)), T(1));
+   BOOST_CHECK_EQUAL(boost::math::hypergeometric_2F0(T(20), T(10), T(0)), T(1));
 }

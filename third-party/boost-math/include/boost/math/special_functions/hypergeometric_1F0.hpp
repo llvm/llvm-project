@@ -25,16 +25,11 @@ inline T hypergeometric_1F0_imp(const T& a, const T& z, const Policy& pol)
    BOOST_MATH_STD_USING // pow
 
    if (z == 1)
-      return policies::raise_pole_error<T>(
-         function,
-         "Evaluation of 1F0 with z = %1%.",
-         z,
-         pol);
+      return policies::raise_pole_error<T>(function, "Evaluation of 1F0 with z = %1%.", z, pol);
    if (1 - z < 0)
    {
       if (floor(a) != a)
-         return policies::raise_domain_error<T>(function,
-            "Result is complex when a is non-integral and z > 1, but got z = %1%", z, pol);
+         return policies::raise_domain_error<T>(function, "Result is complex when a is non-integral and z > 1, but got z = %1%", z, pol);
    }
    // more naive and convergent method than series
    return pow(T(1 - z), T(-a));

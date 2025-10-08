@@ -167,7 +167,7 @@ test_result<typename calculate_result_type<A>::value_type> test(const A& a, F1 t
          print_row(row, std::cerr);
          BOOST_ERROR("Unexpected non-finite result");
       }
-      if(err > 0.5)
+      if(err > 0.5f)
       {
          std::cerr << "CAUTION: Gross error found at entry " << i << ".\n";
          std::cerr << "Found: " << point << " Expected " << expected << " Error: " << err << std::endl;
@@ -240,7 +240,7 @@ test_result<Real> test_hetero(const A& a, F1 test_func, F2 expect_func)
          print_row(row, std::cerr);
          BOOST_ERROR("Unexpected non-finite result");
       }
-      if(err > 0.5)
+      if(err > 0.5f)
       {
          std::cerr << "CAUTION: Gross error found at entry " << i << ".\n";
          std::cerr << "Found: " << point << " Expected " << expected << " Error: " << err << std::endl;

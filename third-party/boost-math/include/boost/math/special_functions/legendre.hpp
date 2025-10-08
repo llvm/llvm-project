@@ -40,10 +40,7 @@ T legendre_imp(unsigned l, T x, const Policy& pol, bool second = false)
    static const char* function = "boost::math::legrendre_p<%1%>(unsigned, %1%)";
    // Error handling:
    if((x < -1) || (x > 1))
-      return policies::raise_domain_error<T>(
-         function,
-         "The Legendre Polynomial is defined for"
-         " -1 <= x <= 1, but got x = %1%.", x, pol);
+      return policies::raise_domain_error<T>(function, "The Legendre Polynomial is defined for -1 <= x <= 1, but got x = %1%.", x, pol);
 
    T p0, p1;
    if(second)
@@ -84,17 +81,11 @@ T legendre_p_prime_imp(unsigned l, T x, const Policy& pol, T* Pn
    static const char* function = "boost::math::legrendre_p_prime<%1%>(unsigned, %1%)";
    // Error handling:
    if ((x < -1) || (x > 1))
-      return policies::raise_domain_error<T>(
-         function,
-         "The Legendre Polynomial is defined for"
-         " -1 <= x <= 1, but got x = %1%.", x, pol);
+      return policies::raise_domain_error<T>(function, "The Legendre Polynomial is defined for -1 <= x <= 1, but got x = %1%.", x, pol);
    
    if (l == 0)
     {
-        if (Pn)
-        {
-           *Pn = 1;
-        }
+        BOOST_MATH_ASSERT(Pn == nullptr); // There are no zeros of P_0 so we shoud never call this with l = 0 and Pn non-null.
         return 0;
     }
     T p0 = 1;
@@ -218,7 +209,7 @@ std::vector<T> legendre_p_zeros_imp(int n, const Policy& pol)
         ++k;
     }
     return zeros;
-}
+}  // LCOV_EXCL_LINE
 
 } // namespace detail
 
@@ -310,10 +301,7 @@ T legendre_p_imp(int l, int m, T x, T sin_theta_power, const Policy& pol)
    BOOST_MATH_STD_USING
    // Error handling:
    if((x < -1) || (x > 1))
-      return policies::raise_domain_error<T>(
-      "boost::math::legendre_p<%1%>(int, int, %1%)",
-         "The associated Legendre Polynomial is defined for"
-         " -1 <= x <= 1, but got x = %1%.", x, pol);
+      return policies::raise_domain_error<T>("boost::math::legendre_p<%1%>(int, int, %1%)", "The associated Legendre Polynomial is defined for -1 <= x <= 1, but got x = %1%.", x, pol);
    // Handle negative arguments first:
    if(l < 0)
       return legendre_p_imp(-l-1, m, x, sin_theta_power, pol);

@@ -6,8 +6,6 @@ include(BoostTestJamfile OPTIONAL RESULT_VARIABLE HAVE_BOOST_TEST)
 
 if(HAVE_BOOST_TEST)
 
-    boost_test(SOURCES check_cmake_version.cpp ARGUMENTS ${PROJECT_VERSION} LINK_LIBRARIES Boost::core Boost::config)    
-
     if (BOOST_MATH_ENABLE_CUDA)
 
         message(STATUS "Building boost.math with CUDA")
@@ -48,6 +46,7 @@ if(HAVE_BOOST_TEST)
         boost_test_jamfile(FILE sycl_jamfile LINK_LIBRARIES Boost::math Boost::assert Boost::concept_check Boost::config Boost::core Boost::integer Boost::lexical_cast Boost::multiprecision Boost::predef Boost::random Boost::static_assert Boost::throw_exception Boost::unit_test_framework sycl COMPILE_OPTIONS -fsycl )
     else()
 
+        boost_test(SOURCES check_cmake_version.cpp ARGUMENTS ${PROJECT_VERSION} LINK_LIBRARIES Boost::core Boost::config)
         add_subdirectory(compile_test)
 
     endif()

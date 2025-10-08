@@ -14,6 +14,11 @@
 #include <boost/math/concepts/real_concept.hpp>
 #include "../include_private/boost/math/tools/test.hpp"
 #define BOOST_TEST_MAIN
+
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/tools/floating_point_comparison.hpp>
 

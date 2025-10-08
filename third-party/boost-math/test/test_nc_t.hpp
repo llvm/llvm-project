@@ -550,8 +550,10 @@ void test_accuracy(T, const char* type_name)
       do_test_nc_t<T>(nct_asym, type_name, "Non Central T (large parameters)");
       quantile_sanity_check<T>(nct_asym, type_name, "Non Central T (large parameters)");
 
+#ifndef BOOST_MP_TEST
 #include "nc_t_pdf_data.ipp"
       do_test_nc_t_pdf<T>(nc_t_pdf_data, type_name, "Non Central T PDF");
+#endif
    }
 }
 

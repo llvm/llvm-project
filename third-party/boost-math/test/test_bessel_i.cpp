@@ -7,6 +7,7 @@
 #include <pch_light.hpp>
 #else
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
+#include "sycl/sycl.hpp"
 #include <boost/math/tools/config.hpp>
 #endif
 

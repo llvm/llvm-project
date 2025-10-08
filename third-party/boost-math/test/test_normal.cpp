@@ -17,6 +17,8 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch.hpp> // include directory /libs/math/src/tr1/ is needed.
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #ifdef _MSC_VER

@@ -309,6 +309,13 @@ void test_spots(T)
       BOOST_CHECK_CLOSE(::boost::math::falling_factorial(ldexp(static_cast<T>(1), -300), 200), static_cast<T>(-1.93579759151806711025267355739174942986011285920860098569075e282L), 10 * tolerance);
    }
 
+   // for coverage:
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity && (std::numeric_limits<T>::max_exponent <= std::numeric_limits<double>::max_exponent))
+   {
+      BOOST_CHECK_EQUAL(::boost::math::falling_factorial(boost::math::tools::epsilon<T>(), 200), -std::numeric_limits<T>::infinity());
+   }
+
+
 
    tolerance = boost::math::tools::epsilon<T>() * 100 * 20;  // 20 eps as a percent.
    unsigned i = boost::math::max_factorial<T>::value;

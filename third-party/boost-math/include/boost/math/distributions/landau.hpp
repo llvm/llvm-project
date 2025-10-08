@@ -3382,7 +3382,7 @@ BOOST_MATH_GPU_ENABLED inline RealType landau_quantile_lower_imp_prec(const Real
 
         // Rational Approximation
         // Maximum Relative Error: 5.3064e-35
-        //LCOV_EXCL_START
+        // LCOV_EXCL_START
         BOOST_MATH_STATIC const RealType P[14] = {
             BOOST_MATH_BIG_CONSTANT(RealType, 113, -5.09971143249822249471944441552701756051e0),
             BOOST_MATH_BIG_CONSTANT(RealType, 113, -3.00154235169065403254826962372636417554e-2),

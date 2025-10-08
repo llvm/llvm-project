@@ -5,6 +5,10 @@
  * LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  */
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include "math_unit_test.hpp"
 #include <numeric>
 #include <utility>

@@ -47,48 +47,8 @@
 
 namespace boost { namespace math { namespace detail{
 
-   template <typename T>
-   BOOST_MATH_GPU_ENABLED T bessel_k1(const T&);
-
-   template <class T, class tag>
-   struct bessel_k1_initializer
-   {
-      struct init
-      {
-         BOOST_MATH_GPU_ENABLED init()
-         {
-            do_init(tag());
-         }
-         BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 113>&)
-         {
-            bessel_k1(T(0.5));
-            bessel_k1(T(2));
-            bessel_k1(T(6));
-         }
-         BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 64>&)
-         {
-            bessel_k1(T(0.5));
-            bessel_k1(T(6));
-         }
-         template <class U>
-         BOOST_MATH_GPU_ENABLED static void do_init(const U&) {}
-         BOOST_MATH_GPU_ENABLED void force_instantiate()const {}
-      };
-      BOOST_MATH_STATIC const init initializer;
-      BOOST_MATH_GPU_ENABLED static void force_instantiate()
-      {
-         #ifndef BOOST_MATH_HAS_GPU_SUPPORT
-         initializer.force_instantiate();
-         #endif
-      }
-   };
-
-   template <class T, class tag>
-   const typename bessel_k1_initializer<T, tag>::init bessel_k1_initializer<T, tag>::initializer;
-
-
    template <typename T, int N>
-   inline BOOST_MATH_GPU_ENABLED T bessel_k1_imp(const T&, const boost::math::integral_constant<int, N>&)
+   BOOST_MATH_GPU_ENABLED inline T bessel_k1_imp(const T&, const boost::math::integral_constant<int, N>&)
    {
       BOOST_MATH_ASSERT(0);
       return 0;
@@ -538,7 +498,7 @@ namespace boost { namespace math { namespace detail{
     }
 
    template <typename T>
-   inline BOOST_MATH_GPU_ENABLED T bessel_k1(const T& x)
+   BOOST_MATH_GPU_ENABLED inline T bessel_k1(const T& x)
    {
       typedef boost::math::integral_constant<int,
          ((boost::math::numeric_limits<T>::digits == 0) || (boost::math::numeric_limits<T>::radix != 2)) ?
@@ -553,7 +513,6 @@ namespace boost { namespace math { namespace detail{
          113 : -1
       > tag_type;
 
-      bessel_k1_initializer<T, tag_type>::force_instantiate();
       return bessel_k1_imp(x, tag_type());
    }
 

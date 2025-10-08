@@ -19,6 +19,10 @@
 #  pragma warning(disable: 4127) // conditional expression is constant.
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #if !defined(TEST_FLOAT) && !defined(TEST_DOUBLE) && !defined(TEST_LDOUBLE) && !defined(TEST_REAL_CONCEPT)
 #  define TEST_FLOAT
 #  define TEST_DOUBLE

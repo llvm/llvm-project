@@ -7,7 +7,9 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #ifndef SYCL_LANGUAGE_VERSION
-#include <pch_light.hpp>
+#include <pch_light.hpp> // include /libs/math/src/
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #include "test_ellint_2.hpp"

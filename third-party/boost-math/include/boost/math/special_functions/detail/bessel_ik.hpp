@@ -282,7 +282,7 @@ BOOST_MATH_GPU_ENABLED int CF2_ik(T v, T x, T* Kv, T* Kv1, const Policy& pol)
     }
     policies::check_series_iterations<T>("boost::math::bessel_ik<%1%>(%1%,%1%) in CF2_ik", k, pol);
 
-    if(x >= tools::log_max_value<T>())
+    if(-x < tools::log_min_value<T>())
        *Kv = exp(0.5f * log(pi<T>() / (2 * x)) - x - log(S));
     else
       *Kv = sqrt(pi<T>() / (2 * x)) * exp(-x) / S;
@@ -330,6 +330,11 @@ BOOST_MATH_GPU_ENABLED int bessel_ik(T v, T x, T* result_I, T* result_K, int kin
     T scale = 1;
     T scale_sign = 1;
 
+    n = iround(v, pol);
+    u = v - n;                              // -1/2 <= u < 1/2
+    BOOST_MATH_INSTRUMENT_VARIABLE(n);
+    BOOST_MATH_INSTRUMENT_VARIABLE(u);
+
     if (((kind & need_i) == 0) && (fabs(4 * v * v - 25) / (8 * x) < tools::forth_root_epsilon<T>()))
     {
        // A&S 9.7.2
@@ -341,11 +346,6 @@ BOOST_MATH_GPU_ENABLED int bessel_ik(T v, T x, T* result_I, T* result_K, int kin
     }
     else
     {
-       n = iround(v, pol);
-       u = v - n;                              // -1/2 <= u < 1/2
-       BOOST_MATH_INSTRUMENT_VARIABLE(n);
-       BOOST_MATH_INSTRUMENT_VARIABLE(u);
-
        BOOST_MATH_ASSERT(x > 0); // Error handling for x <= 0 handled in cyl_bessel_i and cyl_bessel_k
 
        // x is positive until reflection
@@ -416,8 +416,9 @@ BOOST_MATH_GPU_ENABLED int bessel_ik(T v, T x, T* result_I, T* result_K, int kin
        else
           Iv = boost::math::numeric_limits<T>::quiet_NaN(); // any value will do
     }
-    if (reflect)
+    if (reflect && (kind & need_i))
     {
+        BOOST_MATH_ASSERT(fabs(v - n - u) < tools::forth_root_epsilon<T>());
         T z = (u + n % 2);
         T fact = (2 / pi<T>()) * (boost::math::sin_pi(z, pol) * Kv);
         if(fact == 0)

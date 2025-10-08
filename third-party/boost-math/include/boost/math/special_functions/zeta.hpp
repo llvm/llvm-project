@@ -152,27 +152,29 @@ T zeta_polynomial_series(T s, T sc, Policy const &)
    //
    BOOST_MATH_STD_USING
    int n = itrunc(T(log(boost::math::tools::epsilon<T>()) / -2));
-   T sum = 0;
+   T sum = 0;  // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
    T two_n = ldexp(T(1), n);
-   int ej_sign = 1;
+   int ej_sign = 1;  // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
    for(int j = 0; j < n; ++j)
    {
       sum += ej_sign * -two_n / pow(T(j + 1), s);
       ej_sign = -ej_sign;
    }
-   T ej_sum = 1;
-   T ej_term = 1;
+   T ej_sum = 1;   // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
+   T ej_term = 1;  // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
    for(int j = n; j <= 2 * n - 1; ++j)
    {
       sum += ej_sign * (ej_sum - two_n) / pow(T(j + 1), s);
       ej_sign = -ej_sign;
       ej_term *= 2 * n - j;
       ej_term /= j - n + 1;
-      ej_sum += ej_term;
+      ej_sum += ej_term;  // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
    }
    return -sum / (two_n * (-powm1(T(2), sc)));
 }
-
+//
+// MP only, verified as covered by the full tests:
+// LCOV_EXCL_START
 template <class T, class Policy>
 T zeta_imp_prec(T s, T sc, const Policy& pol, const std::integral_constant<int, 0>&)
 {
@@ -197,6 +199,7 @@ T zeta_imp_prec(T s, T sc, const Policy& pol, const std::integral_constant<int, 
 #endif
    return result;
 }
+// LCOV_EXCL_STOP
 
 template <class T, class Policy>
 inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 53>&)
@@ -209,6 +212,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
       // Maximum Deviation Found:                     2.020e-18
       // Expected Error Term:                         -2.020e-18
       // Max error found at double precision:         3.994987e-17
+      // LCOV_EXCL_START
       static const T P[6] = {
          static_cast<T>(0.24339294433593750202L),
          static_cast<T>(-0.49092470516353571651L),
@@ -225,6 +229,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
          static_cast<T>(0.00024978985622317935355L),
          static_cast<T>(-0.101855788418564031874e-4L),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, sc) / tools::evaluate_polynomial(Q, sc);
       result -= 1.2433929443359375F;
       result += (sc);
@@ -234,6 +239,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
    {
       // Maximum Deviation Found:        9.007e-20
       // Expected Error Term:            9.007e-20
+      // LCOV_EXCL_START
       static const T P[6] = {
          static_cast<T>(0.577215664901532860516L),
          static_cast<T>(0.243210646940107164097L),
@@ -250,6 +256,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
          static_cast<T>(0.000255784226140488490982L),
          static_cast<T>(0.10991819782396112081e-4L),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(-sc)) / tools::evaluate_polynomial(Q, T(-sc));
       result += 1 / (-sc);
    }
@@ -257,6 +264,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
    {
       // Maximum Deviation Found:          5.946e-22
       // Expected Error Term:              -5.946e-22
+      // LCOV_EXCL_START
       static const float Y = 0.6986598968505859375;
       static const T P[6] = {
          static_cast<T>(-0.0537258300023595030676L),
@@ -275,6 +283,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
          static_cast<T>(0.106951867532057341359e-4L),
          static_cast<T>(0.236276623974978646399e-7L),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 2)) / tools::evaluate_polynomial(Q, T(s - 2));
       result += Y + 1 / (-sc);
    }
@@ -283,7 +292,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
       // Maximum Deviation Found:                     2.955e-17
       // Expected Error Term:                         2.955e-17
       // Max error found at double precision:         2.009135e-16
-
+      // LCOV_EXCL_START
       static const T P[6] = {
          static_cast<T>(-2.49710190602259410021L),
          static_cast<T>(-2.60013301809475665334L),
@@ -303,6 +312,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
          static_cast<T>(0.718833729365459760664e-8L),
          static_cast<T>(-0.1129200113474947419e-9L),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 4)) / tools::evaluate_polynomial(Q, T(s - 4));
       result = 1 + exp(result);
    }
@@ -311,6 +321,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
       // Maximum Deviation Found:                     7.117e-16
       // Expected Error Term:                         7.117e-16
       // Max error found at double precision:         9.387771e-16
+      // LCOV_EXCL_START
       static const T P[7] = {
          static_cast<T>(-4.78558028495135619286L),
          static_cast<T>(-1.89197364881972536382L),
@@ -331,6 +342,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
          static_cast<T>(-0.833378440625385520576e-10L),
          static_cast<T>(0.699841545204845636531e-12L),
         };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 7)) / tools::evaluate_polynomial(Q, T(s - 7));
       result = 1 + exp(result);
    }
@@ -338,6 +350,7 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
    {
       // Max error in interpolated form:             1.668e-17
       // Max error found at long double precision:   1.669714e-17
+      // LCOV_EXCL_START
       static const T P[8] = {
          static_cast<T>(-10.3948950573308896825L),
          static_cast<T>(-2.85827219671106697179L),
@@ -358,16 +371,13 @@ inline T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<in
          static_cast<T>(0.118507153474022900583e-7L),
          static_cast<T>(0.222609483627352615142e-14L),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 15)) / tools::evaluate_polynomial(Q, T(s - 15));
       result = 1 + exp(result);
    }
-   else if(s < 56)
-   {
-      result = 1 + pow(T(2), -s);
-   }
    else
    {
-      result = 1;
+      result = 1 + pow(T(2), -s);
    }
    return result;
 }
@@ -383,6 +393,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
       // Maximum Deviation Found:                     3.099e-20
       // Expected Error Term:                         3.099e-20
       // Max error found at long double precision:    5.890498e-20
+      // LCOV_EXCL_START
       static const T P[6] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.243392944335937499969),
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.496837806864865688082),
@@ -400,6 +411,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.159600883054550987633e-4),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.339770279812410586032e-6),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, sc) / tools::evaluate_polynomial(Q, sc);
       result -= 1.2433929443359375F;
       result += (sc);
@@ -410,7 +422,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
       // Maximum Deviation Found:                     1.059e-21
       // Expected Error Term:                         1.059e-21
       // Max error found at long double precision:    1.626303e-19
-
+      // LCOV_EXCL_START
       static const T P[6] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.577215664901532860605),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.222537368917162139445),
@@ -428,6 +440,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.635994377921861930071e-5),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.226583954978371199405e-7),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(-sc)) / tools::evaluate_polynomial(Q, T(-sc));
       result += 1 / (-sc);
    }
@@ -435,6 +448,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
    {
       // Maximum Deviation Found:          5.946e-22
       // Expected Error Term:              -5.946e-22
+      // LCOV_EXCL_START
       static const float Y = 0.6986598968505859375;
       static const T P[7] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.053725830002359501027),
@@ -455,12 +469,14 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.278090318191657278204e-6),
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.19683620233222028478e-8),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 2)) / tools::evaluate_polynomial(Q, T(s - 2));
       result += Y + 1 / (-sc);
    }
    else if(s <= 7)
    {
       // Max error found at long double precision: 8.132216e-19
+      // LCOV_EXCL_START
       static const T P[8] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -2.49710190602259407065),
          BOOST_MATH_BIG_CONSTANT(T, 64, -3.36664913245960625334),
@@ -482,6 +498,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.927884739284359700764e-8),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.119810501805618894381e-9),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 4)) / tools::evaluate_polynomial(Q, T(s - 4));
       result = 1 + exp(result);
    }
@@ -489,6 +506,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
    {
       // Max error in interpolated form:              1.133e-18
       // Max error found at long double precision:    2.183198e-18
+      // LCOV_EXCL_START
       static const T P[9] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -4.78558028495135548083),
          BOOST_MATH_BIG_CONSTANT(T, 64, -3.23873322238609358947),
@@ -511,6 +529,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.117957556472335968146e-7),
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.193432300973017671137e-12),
         };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 7)) / tools::evaluate_polynomial(Q, T(s - 7));
       result = 1 + exp(result);
    }
@@ -518,6 +537,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
    {
       // Max error in interpolated form:             1.668e-17
       // Max error found at long double precision:   1.669714e-17
+      // LCOV_EXCL_START
       static const T P[9] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -10.3948950573308861781),
          BOOST_MATH_BIG_CONSTANT(T, 64, -2.82646012777913950108),
@@ -541,16 +561,13 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 64>&
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.939798249922234703384e-16),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.264584017421245080294e-18),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 15)) / tools::evaluate_polynomial(Q, T(s - 15));
       result = 1 + exp(result);
    }
-   else if(s < 63)
-   {
-      result = 1 + pow(T(2), -s);
-   }
    else
    {
-      result = 1;
+      result = 1 + pow(T(2), -s);
    }
    return result;
 }
@@ -566,7 +583,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
       // Maximum Deviation Found:                     9.493e-37
       // Expected Error Term:                         9.492e-37
       // Max error found at long double precision:    7.281332e-31
-
+      // LCOV_EXCL_START
       static const T P[10] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -1.0),
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.0353008629988648122808504280990313668),
@@ -592,6 +609,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.217062446168217797598596496310953025e-9),
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.315823200002384492377987848307151168e-11),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, sc) / tools::evaluate_polynomial(Q, sc);
       result += (sc);
       result /= (sc);
@@ -600,7 +618,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
    {
       // Maximum Deviation Found:                     1.616e-37
       // Expected Error Term:                         -1.615e-37
-
+      // LCOV_EXCL_START
       static const T P[10] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.577215664901532860606512090082402431),
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.255597968739771510415479842335906308),
@@ -626,6 +644,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.377105263588822468076813329270698909e-11),
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.581926559304525152432462127383600681e-13),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(-sc)) / tools::evaluate_polynomial(Q, T(-sc));
       result += 1 / (-sc);
    }
@@ -634,7 +653,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
       // Maximum Deviation Found:                     1.891e-36
       // Expected Error Term:                         -1.891e-36
       // Max error found: 2.171527e-35
-
+      // LCOV_EXCL_START
       static const float Y = 0.6986598968505859375;
       static const T P[11] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.0537258300023595010275848333539748089),
@@ -663,6 +682,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.105677416606909614301995218444080615e-11),
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.547223964564003701979951154093005354e-15),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 2)) / tools::evaluate_polynomial(Q, T(s - 2));
       result += Y + 1 / (-sc);
    }
@@ -670,7 +690,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
    {
       // Max error in interpolated form:             1.510e-37
       // Max error found at long double precision:   2.769266e-34
-
+      // LCOV_EXCL_START
       static const T Y = 3.28348541259765625F;
 
       static const T P[13] = {
@@ -704,6 +724,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.275363878344548055574209713637734269e-13),
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.221564186807357535475441900517843892e-15),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 4)) / tools::evaluate_polynomial(Q, T(s - 4));
       result -= Y;
       result = 1 + exp(result);
@@ -712,7 +733,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
    {
       // Max error in interpolated form:             1.999e-34
       // Max error found at long double precision:   2.156186e-33
-
+      // LCOV_EXCL_START
       static const T P[13] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -4.0545627381873738086704293881227365),
          BOOST_MATH_BIG_CONSTANT(T, 113, -4.70088348734699134347906176097717782),
@@ -744,6 +765,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.294670713571839023181857795866134957e-16),
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.147003914536437243143096875069813451e-18),
         };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 6)) / tools::evaluate_polynomial(Q, T(s - 6));
       result = 1 + exp(result);
    }
@@ -751,6 +773,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
    {
       // Max error in interpolated form:             1.641e-32
       // Max error found at long double precision:   1.696121e-32
+      // LCOV_EXCL_START
       static const T P[13] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -6.91319491921722925920883787894829678),
          BOOST_MATH_BIG_CONSTANT(T, 113, -3.65491257639481960248690596951049048),
@@ -782,6 +805,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.887948682401000153828241615760146728e-19),
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.34980761098820347103967203948619072e-21),
         };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 10)) / tools::evaluate_polynomial(Q, T(s - 10));
       result = 1 + exp(result);
    }
@@ -789,7 +813,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
    {
       // Max error in interpolated form:             1.563e-31
       // Max error found at long double precision:   1.562725e-31
-
+      // LCOV_EXCL_START
       static const T P[13] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -11.7824798233959252791987402769438322),
          BOOST_MATH_BIG_CONSTANT(T, 113, -4.36131215284987731928174218354118102),
@@ -821,6 +845,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.291354445847552426900293580511392459e-22),
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.73614324724785855925025452085443636e-25),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 17)) / tools::evaluate_polynomial(Q, T(s - 17));
       result = 1 + exp(result);
    }
@@ -828,6 +853,7 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
    {
       // Max error in interpolated form:             2.311e-27
       // Max error found at long double precision:   2.297544e-27
+      // LCOV_EXCL_START
       static const T P[14] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -20.7944102007844314586649688802236072),
          BOOST_MATH_BIG_CONSTANT(T, 113, -4.95759941987499442499908748130192187),
@@ -862,16 +888,13 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.557103423021951053707162364713587374e-31),
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.618708773442584843384712258199645166e-34),
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, T(s - 30)) / tools::evaluate_polynomial(Q, T(s - 30));
       result = 1 + exp(result);
    }
-   else if(s < 117)
-   {
-      result = 1 + pow(T(2), -s);
-   }
    else
    {
-      result = 1;
+      result = 1 + pow(T(2), -s);
    }
    return result;
 }
@@ -879,9 +902,11 @@ T zeta_imp_prec(T s, T sc, const Policy&, const std::integral_constant<int, 113>
 template <class T, class Policy>
 T zeta_imp_odd_integer(int s, const T&, const Policy&, const std::true_type&)
 {
+   // LCOV_EXCL_START
    static const T results[] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, 1.2020569031595942853997381615114500), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0369277551433699263313654864570342), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0083492773819228268397975498497968), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0020083928260822144178527692324121), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0004941886041194645587022825264699), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0001227133475784891467518365263574), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000305882363070204935517285106451), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000076371976378997622736002935630), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000019082127165539389256569577951), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000004769329867878064631167196044), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000001192199259653110730677887189), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000298035035146522801860637051), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000074507117898354294919810042), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000018626597235130490064039099), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000004656629065033784072989233), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000001164155017270051977592974), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000291038504449709968692943), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000072759598350574810145209), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000018189896503070659475848), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000004547473783042154026799), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000001136868407680227849349), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000284217097688930185546), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000071054273952108527129), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000017763568435791203275), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000004440892103143813364), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000001110223025141066134), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000277555756213612417), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000069388939045441537), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000017347234760475766), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000004336808690020650), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000001084202172494241), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000271050543122347), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000067762635780452), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000016940658945098), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000004235164736273), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000001058791184068), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000264697796017), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000066174449004), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000016543612251), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000004135903063), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000001033975766), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000258493941), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000064623485), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000016155871), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000004038968), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000001009742), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000252435), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000063109), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000015777), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000003944), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000000986), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000000247), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000000062), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000000015), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000000004), BOOST_MATH_BIG_CONSTANT(T, 113, 1.0000000000000000000000000000000001),
    };
+   // LCOV_EXCL_STOP
    return s > 113 ? 1 : results[(s - 3) / 2];
 }
 
@@ -891,14 +916,16 @@ T zeta_imp_odd_integer(int s, const T& sc, const Policy& pol, const std::false_t
 #ifdef BOOST_MATH_NO_THREAD_LOCAL_WITH_NON_TRIVIAL_TYPES
    static_assert(std::is_trivially_destructible<T>::value, "Your platform does not support thread_local with non-trivial types, last checked with Mingw-x64-8.1, Jan 2021.  Please try a Mingw build with the POSIX threading model, see https://sourceforge.net/p/mingw-w64/bugs/527/");
 #endif
+   // LCOV_EXCL_START
    static BOOST_MATH_THREAD_LOCAL bool is_init = false;
    static BOOST_MATH_THREAD_LOCAL T results[50] = {};
    static BOOST_MATH_THREAD_LOCAL int digits = tools::digits<T>();
-   int current_digits = tools::digits<T>();
+   // LCOV_EXCL_STOP
+   int current_digits = tools::digits<T>();  // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
    if(digits != current_digits)
    {
       // Oh my precision has changed...
-      is_init = false;
+      is_init = false;  // LCOV_EXCL_LINE variable precision MP case only, not included in coverage tests.
    }
    if(!is_init)
    {
@@ -907,11 +934,11 @@ T zeta_imp_odd_integer(int s, const T& sc, const Policy& pol, const std::false_t
       for(unsigned k = 0; k < sizeof(results) / sizeof(results[0]); ++k)
       {
          T arg = k * 2 + 3;
-         T c_arg = 1 - arg;
+         T c_arg = 1 - arg;  // LCOV_EXCL_LINE spurious miss as surrounding lines hit.
          results[k] = zeta_polynomial_series(arg, c_arg, pol);
       }
    }
-   unsigned index = (s - 3) / 2;
+   const unsigned index = static_cast<unsigned>((s - 3) / 2);
    return index >= sizeof(results) / sizeof(results[0]) ? zeta_polynomial_series(T(s), sc, pol): results[index];
 }
 
@@ -921,11 +948,8 @@ T zeta_imp(T s, T sc, const Policy& pol, const Tag& tag)
    BOOST_MATH_STD_USING
    static const char* function = "boost::math::zeta<%1%>";
    if(sc == 0)
-      return policies::raise_pole_error<T>(
-         function,
-         "Evaluation of zeta function at pole %1%",
-         s, pol);
-   T result;
+      return policies::raise_pole_error<T>(function, "Evaluation of zeta function at pole %1%", s, pol);
+   T result;  // LCOV_EXCL_LINE
    //
    // Trivial case:
    //
@@ -967,7 +991,7 @@ T zeta_imp(T s, T sc, const Policy& pol, const Tag& tag)
 #ifndef BOOST_MATH_NO_EXCEPTIONS
       }
       catch(const boost::math::rounding_error&){} // Just fall through, s is too large to round
-      catch(const std::overflow_error&){}
+      catch(const std::overflow_error&){} // LCOV_EXCL_LINE We can only get here for "strange" MP types with small exponents and very large digit counts.
 #endif
    }
 
@@ -990,8 +1014,13 @@ T zeta_imp(T s, T sc, const Policy& pol, const Tag& tag)
             if(result > tools::log_max_value<T>())
                return sign(mult) * policies::raise_overflow_error<T>(function, nullptr, pol);
             result = exp(result);
+            //
+            // Whether this if branch can be triggered is very type dependent, we need
+            // result to be just on the verge of overflow when /s/ is very close to a
+            // half integer.
+            //
             if(tools::max_value<T>() / fabs(mult) < result)
-               return boost::math::sign(mult) * policies::raise_overflow_error<T>(function, nullptr, pol);
+               return boost::math::sign(mult) * policies::raise_overflow_error<T>(function, nullptr, pol);  // LCOV_EXCL_LINE
             result *= mult;
          }
          else
@@ -1009,53 +1038,6 @@ T zeta_imp(T s, T sc, const Policy& pol, const Tag& tag)
    }
    return result;
 }
-
-template <class T, class Policy, class tag>
-struct zeta_initializer
-{
-   struct init
-   {
-      init()
-      {
-         do_init(tag());
-      }
-      static void do_init(const std::integral_constant<int, 0>&){ boost::math::zeta(static_cast<T>(5), Policy()); }
-      static void do_init(const std::integral_constant<int, 53>&){ boost::math::zeta(static_cast<T>(5), Policy()); }
-      static void do_init(const std::integral_constant<int, 64>&)
-      {
-         boost::math::zeta(static_cast<T>(0.5), Policy());
-         boost::math::zeta(static_cast<T>(1.5), Policy());
-         boost::math::zeta(static_cast<T>(3.5), Policy());
-         boost::math::zeta(static_cast<T>(6.5), Policy());
-         boost::math::zeta(static_cast<T>(14.5), Policy());
-         boost::math::zeta(static_cast<T>(40.5), Policy());
-
-         boost::math::zeta(static_cast<T>(5), Policy());
-      }
-      static void do_init(const std::integral_constant<int, 113>&)
-      {
-         boost::math::zeta(static_cast<T>(0.5), Policy());
-         boost::math::zeta(static_cast<T>(1.5), Policy());
-         boost::math::zeta(static_cast<T>(3.5), Policy());
-         boost::math::zeta(static_cast<T>(5.5), Policy());
-         boost::math::zeta(static_cast<T>(9.5), Policy());
-         boost::math::zeta(static_cast<T>(16.5), Policy());
-         boost::math::zeta(static_cast<T>(25.5), Policy());
-         boost::math::zeta(static_cast<T>(70.5), Policy());
-
-         boost::math::zeta(static_cast<T>(5), Policy());
-      }
-      void force_instantiate()const{}
-   };
-   static const init initializer;
-   static void force_instantiate()
-   {
-      initializer.force_instantiate();
-   }
-};
-
-template <class T, class Policy, class tag>
-const typename zeta_initializer<T, Policy, tag>::init zeta_initializer<T, Policy, tag>::initializer;
 
 } // detail
 
@@ -1077,8 +1059,6 @@ inline typename tools::promote_args<T>::type zeta(T s, const Policy&)
       precision_type::value <= 64 ? 64 :
       precision_type::value <= 113 ? 113 : 0
    > tag_type;
-
-   detail::zeta_initializer<value_type, forwarding_policy, tag_type>::force_instantiate();
 
    return policies::checked_narrowing_cast<result_type, forwarding_policy>(detail::zeta_imp(
       static_cast<value_type>(s),

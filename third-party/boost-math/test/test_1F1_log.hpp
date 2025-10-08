@@ -78,6 +78,19 @@ void test_spots2(T, const char* type_name)
 }
 
 template <class T>
+void test_sign(T, const char* type_name)
+{
+#include "hypergeometric_1F1_small_random.ipp"
+
+   for (unsigned i = 0; i < hypergeometric_1F1_small_random.size(); ++i)
+   {
+      int s;
+      boost::math::log_hypergeometric_1F1(hypergeometric_1F1_small_random[i][0], hypergeometric_1F1_small_random[i][1], hypergeometric_1F1_small_random[i][2], &s);
+      BOOST_CHECK_EQUAL(s, boost::math::sign(hypergeometric_1F1_small_random[i][3]));
+   }
+}
+
+template <class T>
 void test_spots_bugs(T, const char* type_name)
 {
    static const std::array<std::array<T, 4>, 7> hypergeometric_1F1_bugs = { {
@@ -99,6 +112,7 @@ void test_spots(T z, const char* type_name)
 {
    test_spots1(z, type_name);
    test_spots_bugs(z, type_name);
+   test_sign(z, type_name);
 #ifdef TEST_UNSOLVED
    test_spots2(z, type_name);
 #endif

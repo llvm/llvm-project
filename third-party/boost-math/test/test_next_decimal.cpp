@@ -54,6 +54,22 @@ void test_value(const T& val, const char* name)
    BOOST_CHECK_EQUAL(float_distance(float_prior(float_prior(val)), float_next(float_next(val))), 4);
    BOOST_CHECK_EQUAL(float_distance(float_prior(float_next(val)), val), 0);
    BOOST_CHECK_EQUAL(float_distance(float_next(float_prior(val)), val), 0);
+   BOOST_CHECK_EQUAL(float_advance(val, 1), float_next(val));
+   BOOST_CHECK_EQUAL(float_advance(val, -1), float_prior(val));
+
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_quiet_NaN)
+   {
+      BOOST_CHECK_THROW(float_distance(val, std::numeric_limits<T>::quiet_NaN()), std::domain_error);
+      BOOST_CHECK_THROW(float_distance(std::numeric_limits<T>::quiet_NaN(), val), std::domain_error);
+   }
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
+   {
+      BOOST_CHECK_THROW(float_distance(val, std::numeric_limits<T>::infinity()), std::domain_error);
+      BOOST_CHECK_THROW(float_distance(-std::numeric_limits<T>::infinity(), val), std::domain_error);
+   }
+#endif
+
    if (is_normalized_value(val))
    {
       BOOST_CHECK_EQUAL(float_prior(float_next(val)), val);
@@ -197,6 +213,9 @@ void test_values(const T& val, const char* name)
    {
       BOOST_MATH_CHECK_THROW(boost::math::float_prior(std::numeric_limits<T>::quiet_NaN()), std::domain_error);
       BOOST_MATH_CHECK_THROW(boost::math::float_next(std::numeric_limits<T>::quiet_NaN()), std::domain_error);
+      BOOST_MATH_CHECK_THROW(boost::math::float_advance(std::numeric_limits<T>::quiet_NaN(), 3), std::domain_error);
+      BOOST_MATH_CHECK_THROW(boost::math::float_advance(std::numeric_limits<T>::infinity(), 3), std::domain_error);
+      BOOST_MATH_CHECK_THROW(boost::math::float_advance(-std::numeric_limits<T>::infinity(), 3), std::domain_error);
    }
 }
 

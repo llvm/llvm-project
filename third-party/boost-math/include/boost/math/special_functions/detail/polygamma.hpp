@@ -470,34 +470,12 @@ namespace boost { namespace math { namespace detail{
      return exp(power_terms) * ((s < 0) && ((n + 1) & 1) ? -1 : 1) * boost::math::sign(sum);
   }
 
-  template <class T, class Policy>
-  struct polygamma_initializer
-  {
-     struct init
-     {
-        init()
-        {
-           // Forces initialization of our table of coefficients and mutex:
-           boost::math::polygamma(30, T(-2.5f), Policy());
-        }
-        void force_instantiate()const{}
-     };
-     static const init initializer;
-     static void force_instantiate()
-     {
-        initializer.force_instantiate();
-     }
-  };
-
-  template <class T, class Policy>
-  const typename polygamma_initializer<T, Policy>::init polygamma_initializer<T, Policy>::initializer;
-
   template<class T, class Policy>
   inline T polygamma_imp(const int n, T x, const Policy &pol)
   {
     BOOST_MATH_STD_USING
     static const char* function = "boost::math::polygamma<%1%>(int, %1%)";
-    polygamma_initializer<T, Policy>::initializer.force_instantiate();
+
     if(n < 0)
        return policies::raise_domain_error<T>(function, "Order must be >= 0, but got %1%", static_cast<T>(n), pol);
     if(x < 0)

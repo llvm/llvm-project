@@ -95,6 +95,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
 
    T workspace[13];
 
+   // LCOV_EXCL_START
    BOOST_MATH_STATIC const T C0[] = {
       BOOST_MATH_BIG_CONSTANT(T, 64, -0.333333333333333333333),
       BOOST_MATH_BIG_CONSTANT(T, 64, 0.0833333333333333333333),
@@ -272,6 +273,8 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
       BOOST_MATH_BIG_CONSTANT(T, 64, 0.00640336283380806979482),
       BOOST_MATH_BIG_CONSTANT(T, 64, -0.00404101610816766177474),
    };
+   // LCOV_EXCL_STOP
+
    workspace[12] = tools::evaluate_polynomial(C12, z);
 
    T result = tools::evaluate_polynomial<13, T, T>(workspace, 1/a);
@@ -303,6 +306,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
 
    T workspace[10];
 
+   // LCOV_EXCL_START
    BOOST_MATH_STATIC const T C0[] = {
       static_cast<T>(-0.33333333333333333L),
       static_cast<T>(0.083333333333333333L),
@@ -416,6 +420,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
       static_cast<T>(0.00083949872067208728L),
       static_cast<T>(-0.00043829709854172101L),
    };
+   // LCOV_EXCL_STOP
    workspace[8] = tools::evaluate_polynomial(C8, z);
    workspace[9] = static_cast<T>(-0.00059676129019274625L);
 
@@ -456,6 +461,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
 
    T workspace[3];
 
+   // LCOV_EXCL_START
    BOOST_MATH_STATIC const T C0[] = {
       static_cast<T>(-0.333333333L),
       static_cast<T>(0.0833333333L),
@@ -482,6 +488,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
       static_cast<T>(0.000771604938L),
    };
    workspace[2] = tools::evaluate_polynomial(C2, z);
+   // LCOV_EXCL_STOP
 
    T result = tools::evaluate_polynomial(workspace, 1/a);
    result *= exp(-y) / sqrt(2 * constants::pi<T>() * a);
@@ -510,6 +517,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
 // It's use for a < 200 is not recommended, that would
 // require many more terms in the polynomials.
 //
+// LCOV_EXCL_START: 128-bit floats not deliberately tested in our coverage tests (takes too long)
 #ifndef BOOST_MATH_HAS_GPU_SUPPORT
 
 template <class T, class Policy>
@@ -802,6 +810,7 @@ BOOST_MATH_GPU_ENABLED T igamma_temme_large(T a, T x, const Policy& pol, const b
 
    return result;
 }
+// LCOV_EXCL_STOP
 
 #endif
 

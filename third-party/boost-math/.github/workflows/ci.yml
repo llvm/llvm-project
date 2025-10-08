@@ -78,73 +78,13 @@ jobs:
       - name: Test
         run: ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER define=BOOST_MATH_RUN_MP_TESTS
         working-directory: ../boost-root/libs/math/test
-
-  ubuntu-jammy:
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler: [ g++-12, clang++-14, clang++-15 ]
-        standard: [ c++14, c++17 ]
-        suite: [ github_ci_block_1, github_ci_block_2 ]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-      - name: Set TOOLSET
-        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
-      - name: Add repository
-        continue-on-error: true
-        id: addrepo
-        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
-      - name: Retry Add Repo
-        continue-on-error: true
-        id: retry1
-        if: steps.addrepo.outcome=='failure'
-        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
-      - name: Retry Add Repo 2
-        continue-on-error: true
-        id: retry2
-        if: steps.retry1.outcome=='failure'
-        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
-      - name: Install packages
-        run: sudo apt-get install -y g++-12 clang-14 clang-15 libgmp-dev libmpfr-dev libfftw3-dev
-      - name: Checkout main boost
-        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
-      - name: Update tools/boostdep
-        run: git submodule update --init tools/boostdep
-        working-directory: ../boost-root
-      - name: Copy files
-        run: cp -r $GITHUB_WORKSPACE/* libs/math
-        working-directory: ../boost-root
-      - name: Install deps
-        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
-        working-directory: ../boost-root
-      - name: Bootstrap
-        run: ./bootstrap.sh
-        working-directory: ../boost-root
-      - name: Generate headers
-        run: ./b2 headers
-        working-directory: ../boost-root
-      - name: Generate user config
-        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
-        working-directory: ../boost-root
-      - name: Config info install
-        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
-        working-directory: ../boost-root/libs/config/test
-      - name: Config info
-        run: ./config_info_travis
-        working-directory: ../boost-root/libs/config/test
-      - name: Test
-        run: ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER define=BOOST_MATH_RUN_MP_TESTS
-        working-directory: ../boost-root/libs/math/test
   ubuntu-focal-no-eh:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ g++-9, g++-11, clang++-10 ]
-        standard: [ c++14, c++17, c++2a ]
+        compiler: [ g++-13, clang++-19 ]
+        standard: [ c++14, c++17, c++20, c++23 ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -166,7 +106,7 @@ jobs:
         if: steps.retry1.outcome=='failure'
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt-get install -y g++-9 g++-11 clang-9 clang-10 libgmp-dev libmpfr-dev libfftw3-dev
+        run: sudo apt-get install -y g++-13 clang-19 libgmp-dev libmpfr-dev libfftw3-dev
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -234,57 +174,8 @@ jobs:
       - name: Test
         run: ../../../b2 toolset=${{ matrix.toolset }} cxxstd=${{ matrix.standard }} ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER
         working-directory: ../boost-root/libs/math/test
-  windows:
-    runs-on: windows-2019
-    defaults:
-      run:
-        shell: cmd
-    env:
-      ARGS: toolset=${{ matrix.toolset }} address-model=64 cxxstd=${{ matrix.standard }}
-      ARGSLATEST: toolset=${{ matrix.toolset }} address-model=64 cxxstd=latest
-    strategy:
-      fail-fast: false
-      matrix:
-        toolset: [ msvc-14.2 ]
-        standard: [ 14, 17 ]
-        suite: [ github_ci_block_1, github_ci_block_2 ]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-      - name: Checkout main boost
-        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
-      - name: Update tools/boostdep
-        run: git submodule update --init tools/boostdep
-        working-directory: ../boost-root
-      - name: Copy files
-        run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\math
-        working-directory: ../boost-root
-      - name: Install deps
-        run: python tools/boostdep/depinst/depinst.py math -I example -I tools
-        working-directory: ../boost-root
-      - name: Bootstrap
-        run: bootstrap
-        working-directory: ../boost-root
-      - name: Generate headers
-        run: b2 headers
-        working-directory: ../boost-root
-      - name: Config info install
-        run: ..\..\..\b2 config_info_travis_install %ARGS%
-        working-directory: ../boost-root/libs/config/test
-      - name: Config info
-        run: config_info_travis
-        working-directory: ../boost-root/libs/config/test
-      - name: Test std-14 vc140 and std-14-17 vc142
-        if: ${{ matrix.toolset != 'msvc-14.0' || matrix.standard != '17' }}
-        run: ..\..\..\b2 --hash %ARGS% define=CI_SUPPRESS_KNOWN_ISSUES debug-symbols=off ${{ matrix.suite }} pch=off
-        working-directory: ../boost-root/libs/math/test
-      - name: Test std-latest vc140
-        if: ${{ matrix.toolset == 'msvc-14.0' && matrix.standard == '17' }}
-        run: ..\..\..\b2 --hash %ARGSLATEST% define=CI_SUPPRESS_KNOWN_ISSUES debug-symbols=off ${{ matrix.suite }} pch=off
-        working-directory: ../boost-root/libs/math/test
   windows_gcc:
-    runs-on: windows-2019
+    runs-on: windows-2025
     defaults:
       run:
         shell: cmd
@@ -294,7 +185,7 @@ jobs:
       fail-fast: false
       matrix:
         toolset: [ gcc ]
-        standard: [ 14, 17 ]
+        standard: [ 14 ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
       - uses: actions/checkout@v4
@@ -408,11 +299,11 @@ jobs:
       - name: Test
         run: C:\\tools\\cygwin\\bin\\bash -l -c 'cd $(cygpath -u "$GITHUB_WORKSPACE")/../boost-root/libs/math/test && ../../../b2 toolset=$TOOLSET ${{ matrix.suite }} define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER'
   standalone-compile-tests-gcc:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ g++-10 ]
+        compiler: [ g++-13 ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -432,7 +323,7 @@ jobs:
         if: steps.retry1.outcome=='failure'
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt-get install -y g++-10 libgmp-dev libmpfr-dev libfftw3-dev
+        run: sudo apt-get install -y g++-13 libgmp-dev libmpfr-dev libfftw3-dev
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -442,17 +333,17 @@ jobs:
         run: cp -r $GITHUB_WORKSPACE/* libs/math
         working-directory: ../boost-root
       - name: Run CMake
-        run: cmake -DBUILD_TESTING=1 -DCMAKE_CXX_COMPILER=g++-10 .
+        run: cmake -DBUILD_TESTING=1 -DCMAKE_CXX_COMPILER=g++-13 .
         working-directory: ../boost-root/libs/math
       - name: Run Compile Tests
         run: make -j$((`nproc`+1))
         working-directory: ../boost-root/libs/math
   standalone-compile-tests-clang:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ clang++-10 ]
+        compiler: [ clang++-19 ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -472,7 +363,7 @@ jobs:
         if: steps.retry1.outcome=='failure'
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt-get install -y clang-10 libgmp-dev libmpfr-dev libfftw3-dev libtbb-dev
+        run: sudo apt-get install -y clang-19 libgmp-dev libmpfr-dev libfftw3-dev libtbb-dev
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -482,18 +373,18 @@ jobs:
         run: cp -r $GITHUB_WORKSPACE/* libs/math
         working-directory: ../boost-root
       - name: Run CMake
-        run: cmake -DBUILD_TESTING=1 -DCMAKE_CXX_COMPILER=clang++-10 .
+        run: cmake -DBUILD_TESTING=1 -DCMAKE_CXX_COMPILER=clang++-19 .
         working-directory: ../boost-root/libs/math
       - name: Run Compile Tests
         run: make -j$((`nproc`+1))
         working-directory: ../boost-root/libs/math
   standalone-gcc:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ g++-10 ]
-        standard: [ c++14, c++17, c++20 ]
+        compiler: [ g++-13 ]
+        standard: [ c++14, c++17, c++20, c++23 ]
         suite: [ github_ci_block_1, github_ci_block_2 ]
     steps:
       - uses: actions/checkout@v4
@@ -516,7 +407,7 @@ jobs:
         if: steps.retry1.outcome=='failure'
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt-get install -y g++-10 libgmp-dev libmpfr-dev libfftw3-dev
+        run: sudo apt-get install -y g++-13 libgmp-dev libmpfr-dev libfftw3-dev
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -552,7 +443,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
 
     runs-on: ${{matrix.os}}
 
@@ -664,13 +555,13 @@ jobs:
     strategy:
       fail-fast: false
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: Jimver/cuda-toolkit@v0.2.16
+      - uses: Jimver/cuda-toolkit@v0.2.25
         id: cuda-toolkit
         with:
-          cuda: '12.5.0'
+          cuda: '12.8.0'
           method: 'network'
           sub-packages: '["nvcc"]'
 
@@ -708,70 +599,12 @@ jobs:
         run: |
           cd ../boost-root
           mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DBOOST_MATH_ENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES=70 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.5 ..
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DBOOST_MATH_ENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES=86 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.8 ..
       - name: Build tests
         run: |
           cd ../boost-root/__build__
           cmake --build . --target tests -j $(nproc)
       # Will leave this commented out for now. GHA does not install graphics cards by default
-      #- name: Run tests
-      #  run: |
-      #    cd ../boost-root/__build__
-      #    ctest --output-on-failure --no-tests=error
-  nvrtc-cmake-test:
-    strategy:
-      fail-fast: false
-
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: Jimver/cuda-toolkit@v0.2.16
-        id: cuda-toolkit
-        with:
-          cuda: '12.5.0'
-          method: 'network'
-
-      - name: Output CUDA information
-        run: |
-          echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"+
-          echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
-          nvcc -V
-      - uses: actions/checkout@v4
-
-      - name: Install Packages
-        run: |
-          sudo apt-get install -y cmake make
-      - name: Setup Boost
-        run: |
-          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
-          LIBRARY=${GITHUB_REPOSITORY#*/}
-          echo LIBRARY: $LIBRARY
-          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
-          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
-          echo GITHUB_REF: $GITHUB_REF
-          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
-          REF=${REF#refs/heads/}
-          echo REF: $REF
-          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
-          echo BOOST_BRANCH: $BOOST_BRANCH
-          cd ..
-          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
-          cd boost-root
-          mkdir -p libs/$LIBRARY
-          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
-          git submodule update --init tools/boostdep
-          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
-      - name: Configure
-        run: |
-          cd ../boost-root
-          mkdir __build__ && cd __build__
-          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DBOOST_MATH_ENABLE_NVRTC=1 -DCMAKE_CUDA_ARCHITECTURES=70 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.5 -DBOOST_MATH_NVRTC_CI_RUN=1 ..
-          pwd
-      - name: Build tests
-        run: |
-          cd ../boost-root/__build__
-          cmake --build . --target tests -j $(nproc)
-      # We don't have the ability for runtime right now
       #- name: Run tests
       #  run: |
       #    cd ../boost-root/__build__

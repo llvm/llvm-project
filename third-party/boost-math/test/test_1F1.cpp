@@ -117,6 +117,16 @@ void expected_results()
 
 #endif
 
+#if (defined(__aarch64__) && !defined(__APPLE__)) || defined(__s390__)
+   add_expected_result(
+      ".*",                          // compiler
+      ".*",                          // stdlib
+      ".*",                          // platform
+      "double",                      // test type(s)
+      "Bug.*",                       // test data group
+      ".*", 10, 2);                  // test function
+#endif
+
    add_expected_result(
       ".*",                          // compiler
       ".*",                          // stdlib

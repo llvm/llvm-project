@@ -186,5 +186,33 @@ void test_spots(T, const char* type_name)
     BOOST_CHECK_CLOSE_FRACTION(boost::math::jacobi_sn(T(0.5), T(0.5)), static_cast<T>(0.475082936028536510082218324703870258745078171807428948028252L), tol);
     BOOST_CHECK_CLOSE_FRACTION(boost::math::jacobi_sn(T(0.5), T(0.5), pol), static_cast<T>(0.475082936028536510082218324703870258745078171807428948028252L), tol);
 
+    //
+    // Bug cases and coverage:
+    //
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+    BOOST_CHECK_THROW(boost::math::jacobi_cd(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_cn(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_cs(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_dn(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_ds(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_nc(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_nd(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_ns(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_sc(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_sd(T(-0.5), T(0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_sn(T(-0.5), T(0.5)), std::domain_error);
+#else
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_cd(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_cn(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_cs(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_dn(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_ds(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_nc(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_nd(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_ns(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_sc(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_sd(T(-0.5), T(0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_sn(T(-0.5), T(0.5))));
+#endif
 }
 

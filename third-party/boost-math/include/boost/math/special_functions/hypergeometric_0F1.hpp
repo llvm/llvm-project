@@ -64,9 +64,7 @@ namespace boost { namespace math { namespace detail {
             return T(1);
 
       if ((b <= 0) && (b == floor(b)))
-         return policies::raise_pole_error<T>(
-            function,
-            "Evaluation of 0f1 with nonpositive integer b = %1%.", b, pol);
+         return policies::raise_pole_error<T>(function, "Evaluation of 0f1 with nonpositive integer b = %1%.", b, pol);
 
       if (z < -5 && b > -5)
       {

@@ -191,10 +191,10 @@ namespace boost
             //
             T last_term = 0;
             boost::math::uintmax_t count = 0;
-            for(auto i = k + 1; ; ++i)
+            for(long long i = k + 1; ; ++i)
             {
                poisf *= l2 / i;
-               xtermf *= (x * (a + b + i - 2)) / (a + i - 1);
+               xtermf *= (x * (a + b + (i - 2))) / (a + (i - 1));
                betaf += xtermf;
 
                T term = poisf * betaf;

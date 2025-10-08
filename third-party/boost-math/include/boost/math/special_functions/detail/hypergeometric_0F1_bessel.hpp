@@ -20,12 +20,11 @@
   {
     BOOST_MATH_STD_USING
 
-    const bool is_z_nonpositive = z <= 0;
+    //const bool is_z_nonpositive = z <= 0;
+    BOOST_MATH_ASSERT(z < 0);  // condition used at call site
 
-    const T sqrt_z = is_z_nonpositive ? T(sqrt(-z)) : T(sqrt(z));
-    const T bessel_mult = is_z_nonpositive ?
-      boost::math::cyl_bessel_j(b - 1, 2 * sqrt_z, pol) :
-      boost::math::cyl_bessel_i(b - 1, 2 * sqrt_z, pol) ;
+    const T sqrt_z = sqrt(-z);
+    const T bessel_mult = boost::math::cyl_bessel_j(b - 1, 2 * sqrt_z, pol);
 
     if (b > boost::math::max_factorial<T>::value)
     {

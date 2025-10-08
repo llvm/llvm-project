@@ -32,6 +32,7 @@
 
 #include <boost/math/tools/config.hpp>
 #include <boost/math/tools/tuple.hpp>
+#include <boost/math/tools/promotion.hpp>
 #include <boost/math/distributions/complement.hpp> // complements.
 #include <boost/math/distributions/detail/common_error_handling.hpp> // error checks.
 #include <boost/math/constants/constants.hpp>

@@ -13,9 +13,11 @@
 
 
 #include <boost/math/special_functions/sinhc.hpp>
+#include <boost/multiprecision/cpp_bin_float.hpp>
 
 #define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
+#include <boost/test/tools/floating_point_comparison.hpp>
 
 
 BOOST_TEST_CASE_TEMPLATE_FUNCTION(sinhc_pi_test, T)
@@ -33,6 +35,19 @@ BOOST_TEST_CASE_TEMPLATE_FUNCTION(sinhc_pi_test, T)
     BOOST_CHECK_PREDICATE(::std::less_equal<T>(),
         (abs(sinhc_pi<T>(static_cast<T>(0))-static_cast<T>(1)))
         (numeric_limits<T>::epsilon()));
+
+    using mp_t = boost::multiprecision::cpp_bin_float_50;
+    T val = 2;
+    T tolerance = boost::math::tools::epsilon<T>() * 100;
+    for (unsigned i = 0; i < 1000; ++i)
+    {
+       val /= 3;
+       if (val < boost::math::tools::min_value<T>())
+          break;
+       T r1 = sinhc_pi(val);
+       T r2 = static_cast<T>(sinh(mp_t(val)) / mp_t(val));
+       BOOST_CHECK_CLOSE_FRACTION(r1, r2, tolerance);
+    }
 }
 
 
@@ -53,6 +68,19 @@ BOOST_TEST_CASE_TEMPLATE_FUNCTION(sinhc_pi_complex_test, T)
         (abs(sinhc_pi<T>(::std::complex<T>(0, 1))-
              ::std::complex<T>(sin(static_cast<T>(1)))))
         (numeric_limits<T>::epsilon()));
+
+    using mp_t = boost::multiprecision::cpp_complex_50;
+    std::complex<T> val(2, 2.5);
+    for (unsigned i = 0; i < 50; ++i)
+    {
+       val /= 3;
+       if (val.real() < boost::math::tools::min_value<T>())
+          break;
+       std::complex<T> r1 = sinhc_pi(val);
+       std::complex<T> r2 = static_cast<std::complex<T>>(sinh(mp_t(val)) / mp_t(val));
+       BOOST_CHECK_LE(std::abs(r1.real() - r2.real()), boost::math::tools::epsilon<T>());
+       BOOST_CHECK_LE(std::abs(r1.imag() - r2.imag()), boost::math::tools::epsilon<T>());
+    }
 }
 
 

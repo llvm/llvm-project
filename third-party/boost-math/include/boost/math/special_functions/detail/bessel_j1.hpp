@@ -33,40 +33,8 @@
 namespace boost { namespace math{  namespace detail{
 
 template <typename T>
-BOOST_MATH_GPU_ENABLED T bessel_j1(T x);
-
-template <class T>
-struct bessel_j1_initializer
-{
-   struct init
-   {
-      BOOST_MATH_GPU_ENABLED init()
-      {
-         do_init();
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init()
-      {
-         bessel_j1(T(1));
-      }
-      BOOST_MATH_GPU_ENABLED void force_instantiate()const{}
-   };
-   BOOST_MATH_STATIC const init initializer;
-   BOOST_MATH_GPU_ENABLED static void force_instantiate()
-   {
-      #ifndef BOOST_MATH_HAS_GPU_SUPPORT
-      initializer.force_instantiate();
-      #endif
-   }
-};
-
-template <class T>
-const typename bessel_j1_initializer<T>::init bessel_j1_initializer<T>::initializer;
-
-template <typename T>
 BOOST_MATH_GPU_ENABLED T bessel_j1(T x)
 {
-    bessel_j1_initializer<T>::force_instantiate();
-
     BOOST_MATH_STATIC const T P1[] = {
          static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, -1.4258509801366645672e+11)),
          static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, 6.6781041261492395835e+09)),

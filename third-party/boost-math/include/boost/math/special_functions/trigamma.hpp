@@ -392,11 +392,7 @@ BOOST_MATH_GPU_ENABLED T trigamma_dispatch(T x, const Policy& pol, const Tag& ta
       // Reflect:
       T z = 1 - x;
 
-      if(z < 1)
-      {
-         result = 1 / (z * z);
-         z += 1;
-      }
+      BOOST_MATH_ASSERT(z >= 1);
 
       // Argument reduction for tan:
       if(floor(x) == x)
@@ -413,38 +409,6 @@ BOOST_MATH_GPU_ENABLED T trigamma_dispatch(T x, const Policy& pol, const Tag& ta
    }
    return result + trigamma_prec(x, pol, tag);
 }
-
-//
-// Initializer: ensure all our constants are initialized prior to the first call of main:
-//
-template <class T, class Policy>
-struct trigamma_initializer
-{
-   struct init
-   {
-      BOOST_MATH_GPU_ENABLED init()
-      {
-         typedef typename policies::precision<T, Policy>::type precision_type;
-         do_init(boost::math::integral_constant<bool, precision_type::value && (precision_type::value <= 113)>());
-      }
-      BOOST_MATH_GPU_ENABLED void do_init(const boost::math::true_type&)
-      {
-         boost::math::trigamma(T(2.5), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED void do_init(const boost::math::false_type&){}
-      BOOST_MATH_GPU_ENABLED void force_instantiate()const{}
-   };
-   static const init initializer;
-   BOOST_MATH_GPU_ENABLED static void force_instantiate()
-   {
-      #ifndef BOOST_MATH_HAS_GPU_SUPPORT
-      initializer.force_instantiate();
-      #endif
-   }
-};
-
-template <class T, class Policy>
-const typename trigamma_initializer<T, Policy>::init trigamma_initializer<T, Policy>::initializer;
 
 } // namespace detail
 
@@ -468,13 +432,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 
-   // Force initialization of constants:
-   detail::trigamma_initializer<value_type, forwarding_policy>::force_instantiate();
-
-   return policies::checked_narrowing_cast<result_type, Policy>(detail::trigamma_dispatch(
-      static_cast<value_type>(x),
-      forwarding_policy(),
-      tag_type()), "boost::math::trigamma<%1%>(%1%)");
+   return policies::checked_narrowing_cast<result_type, Policy>(detail::trigamma_dispatch(static_cast<value_type>(x), forwarding_policy(), tag_type()), "boost::math::trigamma<%1%>(%1%)");
 }
 
 template <class T>

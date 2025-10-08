@@ -76,7 +76,7 @@ BOOST_MATH_GPU_ENABLED T bessel_jn(int n, T x, const Policy& pol)
     {
         prev = bessel_j0(x);
         current = bessel_j1(x);
-        policies::check_series_iterations<T>("boost::math::bessel_j_n<%1%>(%1%,%1%)", n, pol);
+        policies::check_series_iterations<T>("boost::math::bessel_j_n<%1%>(%1%,%1%)", static_cast<unsigned>(n), pol);
         for (int k = 1; k < n; k++)
         {
             value = (2 * k * current / x) - prev;
@@ -96,7 +96,7 @@ BOOST_MATH_GPU_ENABLED T bessel_jn(int n, T x, const Policy& pol)
         prev = fn;
         current = 1;
         // Check recursion won't go on too far:
-        policies::check_series_iterations<T>("boost::math::bessel_j_n<%1%>(%1%,%1%)", n, pol);
+        policies::check_series_iterations<T>("boost::math::bessel_j_n<%1%>(%1%,%1%)", static_cast<unsigned>(n), pol);
         for (int k = n; k > 0; k--)
         {
             T fact = 2 * k / x;

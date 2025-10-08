@@ -227,7 +227,7 @@ namespace boost { namespace math {
          fi = temp * delta_i + fi * delta_r;
          for (k = 2; k < policies::get_max_series_iterations<Policy>(); k++)
          {
-            a = k - 0.5f;
+            a = static_cast<T>(k) - 0.5f;
             a *= a;
             a -= v2;
             bi += 2;
@@ -291,7 +291,7 @@ namespace boost { namespace math {
             *J = *Y = policies::raise_evaluation_error<T>(function, "Order of Bessel function is too large to evaluate: got %1%", v, pol);
             return 1;  // LCOV_EXCL_LINE previous line will throw.
          }
-         n = iround(v, pol);
+         n = static_cast<unsigned>(iround(v, pol));
          u = v - n;                              // -1/2 <= u < 1/2
 
          if(reflect)
@@ -361,7 +361,8 @@ namespace boost { namespace math {
             // Truncated series evaluation for small x and v an integer,
             // much quicker in this area than temme_jy below.
             // This code is only used in the multiprecision case, otherwise
-            // we go via bessel_jn.  LCOV_EXCL_START
+            // we go via bessel_jn.
+            // LCOV_EXCL_START
             if(kind&need_j)
                Jv = bessel_j_small_z_series(v, x, pol);
             else
@@ -370,7 +371,7 @@ namespace boost { namespace math {
                || (org_kind & need_j && (reflect && (sp != 0))))
             {
                // Only calculate if we need it, and if the reflection formula will actually use it:
-               Yv = bessel_yn_small_z(n, x, &Yv_scale, pol);
+               Yv = bessel_yn_small_z(static_cast<int>(n), x, &Yv_scale, pol);
             }
             else
                Yv = boost::math::numeric_limits<T>::quiet_NaN();

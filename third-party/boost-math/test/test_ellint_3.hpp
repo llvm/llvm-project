@@ -232,4 +232,12 @@ void test_spots(T, const char* type_name)
     BOOST_MATH_CHECK_THROW(boost::math::ellint_3(T(1), T(-0.5), T(-2)), std::domain_error);
     BOOST_MATH_CHECK_THROW(boost::math::ellint_3(T(0.5), T(1.2)), std::domain_error);
     BOOST_MATH_CHECK_THROW(boost::math::ellint_3(T(1.5), T(0.5)), std::domain_error);
+    // Special case for ellint_rj and full coverage:
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(-0.5), T(0.5), T(0.5), T(0.5)), std::domain_error);
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(0.5), T(-0.5), T(0.5), T(0.5)), std::domain_error);
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(0.5), T(0.5), T(-0.5), T(0.5)), std::domain_error);
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(0.5), T(0.5), T(0.5), T(0.)), std::domain_error);
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(0.0), T(0.0), T(0.5), T(0.5)), std::domain_error);
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(0.0), T(0.5), T(0.0), T(0.5)), std::domain_error);
+    BOOST_MATH_CHECK_THROW(boost::math::ellint_rj(T(0.5), T(0.0), T(0.0), T(0.5)), std::domain_error);
 }

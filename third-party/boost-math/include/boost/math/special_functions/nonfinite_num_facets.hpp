@@ -493,10 +493,10 @@ namespace boost {
               return;
             }
           }
-          break;
+          break;  // LCOV_EXCL_LINE  simple fallthrough not registered as covered.
 
         default:
-          break;
+          break;  // LCOV_EXCL_LINE  simple fallthrough not registered as covered.
         }
 
         state |= std::ios_base::failbit;
@@ -523,7 +523,7 @@ namespace boost {
                 val = std::numeric_limits<ValType>::infinity();
                 return;
             }
-            break;
+            break;  // LCOV_EXCL_LINE  simple fallthrough not registered as covered.
 
           case 'd':   // 1.#IND"
             if(std::numeric_limits<ValType>::has_quiet_NaN
@@ -533,10 +533,10 @@ namespace boost {
                 val = positive_nan<ValType>();
                 return;
             }
-            break;
+            break;  // LCOV_EXCL_LINE  simple fallthrough not registered as covered.
 
-          default:
-            break;
+          default:  // LCOV_EXCL_LINE  simple fallthrough not registered as covered.
+            break;  // LCOV_EXCL_LINE  simple fallthrough not registered as covered.
           }
         }
 

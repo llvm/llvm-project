@@ -8,6 +8,10 @@
 #define BOOST_MATH_OVERFLOW_ERROR_POLICY ignore_error
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/concepts/real_concept.hpp>
 #include <boost/math/special_functions/beta.hpp>
 #include "math_unit_test.hpp"

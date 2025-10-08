@@ -245,7 +245,7 @@ BOOST_MATH_GPU_ENABLED T bessel_yn_small_z(int n, T z, T* scale, const Policy& p
       auto p = static_cast<T>(pow(z / 2, n));
       #endif
       
-      T result = -((boost::math::factorial<T>(n - 1, pol) / constants::pi<T>()));
+      T result = -((boost::math::factorial<T>(static_cast<unsigned>(n - 1), pol) / constants::pi<T>()));
       if(p * tools::max_value<T>() < fabs(result))
       {
          T div = tools::max_value<T>() / 8;

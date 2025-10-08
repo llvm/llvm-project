@@ -11,6 +11,8 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch_light.hpp> // include /libs/math/src/
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #include "test_cbrt.hpp"

@@ -532,7 +532,7 @@ BOOST_MATH_GPU_ENABLED T bessel_i1_imp(const T& x, const boost::math::integral_c
 }
 
 template <typename T>
-inline BOOST_MATH_GPU_ENABLED T bessel_i1(const T& x)
+BOOST_MATH_GPU_ENABLED inline T bessel_i1(const T& x)
 {
    typedef boost::math::integral_constant<int,
       ((boost::math::numeric_limits<T>::digits == 0) || (boost::math::numeric_limits<T>::radix != 2)) ?

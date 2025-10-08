@@ -5,6 +5,8 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch_light.hpp>
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #define BOOST_MATH_OVERFLOW_ERROR_POLICY ignore_error
@@ -83,6 +85,18 @@ void test_hankel(T, const char* name)
             boost::math::cyl_hankel_2(data[i][0].real() + 0.5f, data[i][1].real()) * boost::math::constants::root_half_pi<T>() / sqrt(data[i][1]),
             boost::math::sph_hankel_2(data[i][0].real(), data[i][1].real()));
       }
+   }
+
+   BOOST_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
+   {
+      std::complex<T> r = boost::math::cyl_hankel_1(T(1), T(0));
+      BOOST_CHECK_EQUAL(r, std::complex<T>(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity()));
+      r = boost::math::cyl_hankel_2(T(1), T(0));
+      BOOST_CHECK_EQUAL(r, std::complex<T>(std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity()));
+      r = boost::math::cyl_hankel_1(T(0), T(0));
+      BOOST_CHECK_EQUAL(r, std::complex<T>(1, -std::numeric_limits<T>::infinity()));
+      r = boost::math::cyl_hankel_2(T(0), T(0));
+      BOOST_CHECK_EQUAL(r, std::complex<T>(1, std::numeric_limits<T>::infinity()));
    }
 }
 

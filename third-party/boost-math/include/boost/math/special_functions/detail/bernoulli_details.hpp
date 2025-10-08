@@ -108,7 +108,7 @@ inline std::size_t find_bernoulli_overflow_limit(const std::false_type&)
    // Set a limit on how large the result can ever be:
    static const auto max_result = static_cast<double>((std::numeric_limits<std::size_t>::max)() - 1000u);
 
-   unsigned long long t = lltrunc(boost::math::tools::log_max_value<T>());
+   unsigned long long t = static_cast<unsigned long long>(lltrunc(boost::math::tools::log_max_value<T>()));
    max_bernoulli_root_functor fun(t);
    boost::math::tools::equal_floor tol;
    std::uintmax_t max_iter = boost::math::policies::get_max_root_iterations<Policy>();
@@ -372,7 +372,7 @@ public:
          {
             for(; n; ++start, --n)
             {
-               *out = b2n_asymptotic<T, Policy>(static_cast<typename container_type::size_type>(start * 2U));
+               *out = b2n_asymptotic<T, Policy>(static_cast<int>(start * 2U));
                ++out;
             }
          }

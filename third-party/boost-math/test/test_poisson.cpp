@@ -23,6 +23,10 @@
 #  pragma warning(disable: 4127) // conditional expression is constant.
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/tools/config.hpp>
 
 #define BOOST_TEST_MAIN

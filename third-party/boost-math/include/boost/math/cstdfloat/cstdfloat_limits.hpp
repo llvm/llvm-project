@@ -10,21 +10,21 @@
 // Implement quadruple-precision std::numeric_limits<> support.
 
 #ifndef BOOST_MATH_CSTDFLOAT_LIMITS_2014_01_09_HPP_
-  #define BOOST_MATH_CSTDFLOAT_LIMITS_2014_01_09_HPP_
+    #define BOOST_MATH_CSTDFLOAT_LIMITS_2014_01_09_HPP_
 
-  #include <boost/math/cstdfloat/cstdfloat_types.hpp>
+    #include <boost/math/cstdfloat/cstdfloat_types.hpp>
 
-#if defined(__GNUC__) && defined(BOOST_MATH_USE_FLOAT128)
-//
-// This is the only way we can avoid
-// warning: non-standard suffix on floating constant [-Wpedantic]
-// when building with -Wall -pedantic.  Neither __extension__
-// nor #pragma diagnostic ignored work :(
-//
-#pragma GCC system_header
-#endif
+    #if defined(__GNUC__) && defined(BOOST_MATH_USE_FLOAT128)
+    //
+    // This is the only way we can avoid
+    // warning: non-standard suffix on floating constant [-Wpedantic]
+    // when building with -Wall -pedantic.  Neither __extension__
+    // nor #pragma diagnostic ignored work :(
+    //
+    #pragma GCC system_header
+    #endif
 
-  #if defined(BOOST_CSTDFLOAT_HAS_INTERNAL_FLOAT128_T) && defined(BOOST_MATH_USE_FLOAT128) && !defined(BOOST_CSTDFLOAT_NO_LIBQUADMATH_SUPPORT) && (!defined(_GLIBCXX_RELEASE) || (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 14))
+    #if defined(BOOST_CSTDFLOAT_HAS_INTERNAL_FLOAT128_T) && defined(BOOST_MATH_USE_FLOAT128) && !defined(BOOST_CSTDFLOAT_NO_LIBQUADMATH_SUPPORT) && (!defined(_GLIBCXX_RELEASE) || (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 14))
 
     #include <limits>
     #include <boost/math/tools/nothrow.hpp>

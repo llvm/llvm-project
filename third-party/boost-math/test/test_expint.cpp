@@ -5,6 +5,8 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch_light.hpp>
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #ifndef BOOST_MATH_OVERFLOW_ERROR_POLICY
@@ -85,12 +87,12 @@ void expected_results()
       ".*",                          // platform
       "float|double|long double",    // test type(s)
       ".*Ei.*",                      // test data group
-      #ifndef SYCL_LANGUAGE_VERSION
+#ifndef SYCL_LANGUAGE_VERSION
       ".*", 6, 3);                   // test function
-      #else
+#else
       ".*", 10, 3);
-      #endif
-   if(std::numeric_limits<long double>::digits > 100)
+#endif
+   BOOST_IF_CONSTEXPR (std::numeric_limits<long double>::digits > 100)
    {
       add_expected_result(
          ".*",                          // compiler

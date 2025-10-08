@@ -6,6 +6,11 @@
 
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_MODULE StatsHoltsmarkTest
+
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/tools/config.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/tools/floating_point_comparison.hpp>

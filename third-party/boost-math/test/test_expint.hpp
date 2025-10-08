@@ -196,5 +196,40 @@ void test_spots(T, const char* t)
    BOOST_CHECK_CLOSE(::boost::math::expint(static_cast<T>(-0.5)), static_cast<T>(-0.559773594776160811746795939315085235226846890316353515248293L), tolerance);
    BOOST_CHECK_CLOSE(::boost::math::expint(static_cast<T>(-1)), static_cast<T>(-0.219383934395520273677163775460121649031047293406908207577979L), tolerance);
    BOOST_CHECK_CLOSE(::boost::math::expint(static_cast<T>(-50.5)), static_cast<T>(-2.27237132932219350440719707268817831250090574830769670186618e-24L), tolerance);
+   //
+   // Extra coverage cases:
+   //
+   BOOST_CHECK_EQUAL(boost::math::expint(-boost::math::tools::max_value<T>()), T(0));
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+   BOOST_CHECK_THROW(boost::math::expint(1, T(-1)), std::domain_error);
+   BOOST_CHECK_THROW(boost::math::expint(2, T(-1)), std::domain_error);
+#else
+   BOOST_CHECK((boost::math::isnan)(boost::math::expint(1, T(-1))));
+   BOOST_CHECK((boost::math::isnan)(boost::math::expint(2, T(-1))));
+#endif
+   BOOST_CHECK_EQUAL(boost::math::expint(2, T(0)), T(1));
+   BOOST_CHECK_EQUAL(boost::math::expint(3, T(0)), T(0.5));
+   BOOST_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
+   {
+      BOOST_CHECK_EQUAL(boost::math::expint(1, T(0)), std::numeric_limits<T>::infinity());
+      BOOST_CHECK_EQUAL(boost::math::expint(T(0)), -std::numeric_limits<T>::infinity());
+      BOOST_CHECK_EQUAL(boost::math::expint(boost::math::tools::log_max_value<T>() * 2), std::numeric_limits<T>::infinity());
+      if (boost::math::tools::log_max_value<T>() < boost::math::tools::log_max_value<double>())
+      {
+         BOOST_CHECK_EQUAL(boost::math::expint(static_cast<T>(boost::math::tools::log_max_value<double>() * 2)), std::numeric_limits<T>::infinity());
+      }
+      BOOST_CHECK_EQUAL(boost::math::expint(boost::math::tools::log_max_value<T>() + T(38)), std::numeric_limits<T>::infinity());
+      if (boost::math::tools::log_max_value<T>() < boost::math::tools::log_max_value<double>())
+      {
+         BOOST_CHECK_EQUAL(boost::math::expint(static_cast<T>(boost::math::tools::log_max_value<double>() + T(38))), std::numeric_limits<T>::infinity());
+      }
+   }
+   else
+   {
+      BOOST_CHECK_GE(boost::math::expint(1, T(0)), boost::math::tools::max_value<T>());
+      BOOST_CHECK_LE(boost::math::expint(T(0)), -boost::math::tools::max_value<T>());
+      BOOST_CHECK_GE(boost::math::expint(boost::math::tools::log_max_value<T>() * 2), boost::math::tools::max_value<T>());
+      BOOST_CHECK_GE(boost::math::expint(boost::math::tools::log_max_value<T>() + T(38)), boost::math::tools::max_value<T>());
+   }
 }
 

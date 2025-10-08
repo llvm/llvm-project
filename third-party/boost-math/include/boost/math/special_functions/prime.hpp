@@ -2416,8 +2416,7 @@ constexpr std::array<std::uint16_t, 3458> prime_data_imp<b>::a3;
          return prime_data::a2[n - prime_data::b1 - 1];
       if(n >= prime_data::b3)
       {
-         return boost::math::policies::raise_domain_error<std::uint32_t>(
-            "boost::math::prime<%1%>", "Argument n out of range: got %1%", n, pol);
+         return boost::math::policies::raise_domain_error<std::uint32_t>("boost::math::prime<%1%>", "Argument n out of range: got %1%", n, pol);
       }
       return static_cast<std::uint32_t>(prime_data::a3[n - prime_data::b2 - 1]) + 0xFFFFu;
    }

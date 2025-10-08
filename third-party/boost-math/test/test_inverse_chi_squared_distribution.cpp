@@ -12,6 +12,10 @@
 #  pragma warning (disable : 4310) // cast truncates constant value.
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 // http://www.wolframalpha.com/input/?i=inverse+chisquare+distribution
 
 #include <boost/math/tools/config.hpp>

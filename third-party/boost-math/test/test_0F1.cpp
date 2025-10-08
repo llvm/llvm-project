@@ -49,7 +49,7 @@ void expected_results()
       ".*",                          // platform
       largest_type,                  // test type(s)
       "Large.*",                   // test data group
-      ".*", 400, 100);               // test function
+      ".*", 1300, 300);               // test function
 
 
    //

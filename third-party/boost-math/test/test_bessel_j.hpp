@@ -291,6 +291,7 @@ void test_bessel(T, const char* name)
        BOOST_CHECK_EQUAL(boost::math::cyl_bessel_j(T(0), std::numeric_limits<T>::infinity()), T(0));
        BOOST_CHECK_EQUAL(boost::math::cyl_bessel_j(T(2), std::numeric_limits<T>::infinity()), T(0));
        BOOST_CHECK_EQUAL(boost::math::cyl_bessel_j(T(1.25), std::numeric_limits<T>::infinity()), T(0));
+       BOOST_CHECK_EQUAL(boost::math::cyl_bessel_j(T(-1.25), std::numeric_limits<T>::infinity()), T(0));
        BOOST_CHECK_EQUAL(boost::math::sph_bessel(0, std::numeric_limits<T>::infinity()), T(0));
        BOOST_CHECK_EQUAL(boost::math::sph_bessel(1, std::numeric_limits<T>::infinity()), T(0));
        BOOST_CHECK_EQUAL(boost::math::sph_bessel(2, std::numeric_limits<T>::infinity()), T(0));

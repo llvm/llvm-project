@@ -120,6 +120,13 @@ void expected_results()
    add_expected_result(
       ".*",                          // compiler
       ".*",                          // stdlib
+      "Win32.*",                     // platform
+      largest_type,                  // test type(s)
+      ".*",                          // test data group
+      ".*", 60, 25);                 // test function
+   add_expected_result(
+      ".*",                          // compiler
+      ".*",                          // stdlib
       ".*",                          // platform
       largest_type,                  // test type(s)
       ".*",                          // test data group

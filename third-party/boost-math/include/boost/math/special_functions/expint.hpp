@@ -62,6 +62,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
       // Maximum Deviation Found:                     2.006e-18
       // Expected Error Term:                         2.006e-18
       // Max error found at double precision:         2.760e-17
+      // LCOV_EXCL_START
       static const T Y = 0.66373538970947265625F;
       static const T P[6] = {
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.0865197248079397976498),
@@ -79,6 +80,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.000131049900798434683324),
          BOOST_MATH_BIG_CONSTANT(T, 53, -0.528611029520217142048e-6)
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, z)
          / tools::evaluate_polynomial(Q, z);
       result += z - log(z) - Y;
@@ -87,6 +89,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
    {
       // Maximum Deviation Found (interpolated):      1.444e-17
       // Max error found at double precision:         3.119e-17
+      // LCOV_EXCL_START
       static const T P[11] = {
          BOOST_MATH_BIG_CONSTANT(T, 53, -0.121013190657725568138e-18),
          BOOST_MATH_BIG_CONSTANT(T, 53, -0.999999999999998811143),
@@ -114,6 +117,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 53, 1229.20784182403048905),
          BOOST_MATH_BIG_CONSTANT(T, 53, -0.776491285282330997549)
       };
+      // LCOV_EXCL_STOP
       T recip = 1 / z;
       result = 1 + tools::evaluate_polynomial(P, recip)
          / tools::evaluate_polynomial(Q, recip);
@@ -136,7 +140,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
       // Maximum Deviation Found:                     3.807e-20
       // Expected Error Term:                         3.807e-20
       // Max error found at long double precision:    6.249e-20
-
+      // LCOV_EXCL_START
       static const T Y = 0.66373538970947265625F;
       static const T P[6] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.0865197248079397956816),
@@ -155,6 +159,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.202872781770207871975e-5),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.52779248094603709945e-7)
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, z)
          / tools::evaluate_polynomial(Q, z);
       result += z - log(z) - Y;
@@ -163,6 +168,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
    {
       // Maximum Deviation Found (interpolated):     2.220e-20
       // Max error found at long double precision:   1.346e-19
+      // LCOV_EXCL_START
       static const T P[14] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.534401189080684443046e-23),
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.999999999999999999905),
@@ -195,6 +201,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 64, 73930.2995984054930821),
          BOOST_MATH_BIG_CONSTANT(T, 64, 2063.86994219629165937)
       };
+      // LCOV_EXCL_STOP
       T recip = 1 / z;
       result = 1 + tools::evaluate_polynomial(P, recip)
          / tools::evaluate_polynomial(Q, recip);
@@ -217,7 +224,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
       // Maximum Deviation Found:                     2.477e-35
       // Expected Error Term:                         2.477e-35
       // Max error found at long double precision:    6.810e-35
-
+      // LCOV_EXCL_START
       static const T Y = 0.66373538970947265625F;
       static const T P[10] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.0865197248079397956434879099175975937),
@@ -243,6 +250,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 113, 0.369373328141051577845488477377890236e-9),
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.274149801370933606409282434677600112e-12)
       };
+      // LCOV_EXCL_STOP
       result = tools::evaluate_polynomial(P, z)
          / tools::evaluate_polynomial(Q, z);
       result += z - log(z) - Y;
@@ -251,7 +259,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
    {
       // Max error in interpolated form:             5.614e-35
       // Max error found at long double precision:   7.979e-35
-
+      // LCOV_EXCL_START
       static const T Y = 0.70190334320068359375F;
 
       static const T P[16] = {
@@ -290,6 +298,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 113, 169.845369689596739824177412096477219),
          BOOST_MATH_BIG_CONSTANT(T, 113, 2.17607292280092201170768401876895354)
       };
+      // LCOV_EXCL_STOP
       T recip = 1 / z;
       result = Y + tools::evaluate_polynomial(P, recip)
          / tools::evaluate_polynomial(Q, recip);
@@ -299,7 +308,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
    {
       // Max error in interpolated form:             4.413e-35
       // Max error found at long double precision:   8.928e-35
-
+      // LCOV_EXCL_START
       static const T P[19] = {
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.559148411832951463689610809550083986e-40),
          BOOST_MATH_BIG_CONSTANT(T, 113, -0.999999999999999999999999999999999997),
@@ -343,6 +352,7 @@ BOOST_MATH_GPU_ENABLED T expint_1_rational(const T& z, const boost::math::integr
          BOOST_MATH_BIG_CONSTANT(T, 113, 70242279152.8241187845178443118302693),
          BOOST_MATH_BIG_CONSTANT(T, 113, -37633302.9409263839042721539363416685)
       };
+      // LCOV_EXCL_STOP
       T recip = 1 / z;
       result = 1 + tools::evaluate_polynomial(P, recip)
          / tools::evaluate_polynomial(Q, recip);
@@ -531,7 +541,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const Tag& tag)
    if(z < 0)
       return -expint_imp(1, T(-z), pol, tag);
    if(z == 0)
-      return -policies::raise_overflow_error<T>(function, nullptr, pol);
+      return -policies::raise_overflow_error<T>(function, nullptr, pol);  // LCOV_EXCL_LINE confirmed covered by real_concept tests
    return expint_i_as_series(z, pol);
 }
 
@@ -552,6 +562,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Maximum Deviation Found:                     2.852e-18
       // Expected Error Term:                         2.852e-18
       // Max Error found at double precision =        Poly: 2.636335e-16   Cheb: 4.187027e-16
+      // LCOV_EXCL_START
       BOOST_MATH_STATIC const T P[10] = {
          BOOST_MATH_BIG_CONSTANT(T, 53, 2.98677224343598593013),
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.356343618769377415068),
@@ -580,6 +591,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T r1 = static_cast<T>(c1 / c2);
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T r2 = BOOST_MATH_BIG_CONSTANT(T, 53, 0.131401834143860282009280387409357165515556574352422001206362e-16);
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T r = static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 53, 0.372507410781366634461991866580119133535689497771654051555657435242200120636201854384926049951548942392));
+      // LCOV_EXCL_STOP
       T t = (z / 3) - 1;
       result = tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -599,6 +611,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Maximum Deviation Found:                     6.546e-17
       // Expected Error Term:                         6.546e-17
       // Max Error found at double precision =        Poly: 6.890169e-17   Cheb: 6.772128e-17
+      // LCOV_EXCL_START
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 1.158985137939453125F;
       BOOST_MATH_STATIC const T P[8] = {
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.00139324086199402804173),
@@ -620,6 +633,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.000402453408512476836472),
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.263649630720255691787e-4)
       };
+      // LCOV_EXCL_STOP
       T t = z / 2 - 4;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -631,7 +645,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Maximum Deviation Found:                     1.843e-17
       // Expected Error Term:                         -1.842e-17
       // Max Error found at double precision =        Poly: 4.375868e-17   Cheb: 5.860967e-17
-
+      // LCOV_EXCL_START
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 1.0869731903076171875F;
       BOOST_MATH_STATIC const T P[9] = {
          BOOST_MATH_BIG_CONSTANT(T, 53, -0.00893891094356945667451),
@@ -655,6 +669,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.00278170769163303669021),
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.000159150281166108755531)
       };
+      // LCOV_EXCL_STOP
       T t = z / 5 - 3;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -666,8 +681,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Maximum Deviation Found:                     5.102e-18
       // Expected Error Term:                         5.101e-18
       // Max Error found at double precision =        Poly: 1.441088e-16   Cheb: 1.864792e-16
-
-
+      // LCOV_EXCL_START
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 1.03937530517578125F;
       BOOST_MATH_STATIC const T P[9] = {
          BOOST_MATH_BIG_CONSTANT(T, 53, -0.00356165148914447597995),
@@ -690,6 +704,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.0651165455496281337831),
          BOOST_MATH_BIG_CONSTANT(T, 53, 0.00488071077519227853585)
       };
+      // LCOV_EXCL_STOP
       T t = z / 10 - 3;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -699,6 +714,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
    else
    {
       // Max Error found at double precision =        3.381886e-17
+      // LCOV_EXCL_START
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T exp40 = static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 53, 2.35385266837019985407899910749034804508871617254555467236651e17));
       BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y= 1.013065338134765625F;
       BOOST_MATH_STATIC const T P[6] = {
@@ -718,6 +734,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 53, 54738.2833147775537106),
          BOOST_MATH_BIG_CONSTANT(T, 53, 8297.16296356518409347)
       };
+      // LCOV_EXCL_STOP
       T t = 1 / z;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -767,6 +784,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Expected Error Term:                         3.883e-21
       // Max Error found at long double precision =   Poly: 3.344801e-19   Cheb: 4.989937e-19
 
+      // LCOV_EXCL_START
       static const T P[11] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, 2.98677224343598593764),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.25891613550886736592),
@@ -797,6 +815,8 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       static const T r1 = c1 / c2;
       static const T r2 = BOOST_MATH_BIG_CONSTANT(T, 64, 0.131401834143860282009280387409357165515556574352422001206362e-16);
       static const T r = static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, 0.372507410781366634461991866580119133535689497771654051555657435242200120636201854384926049951548942392));
+      // LCOV_EXCL_STOP
+
       T t = (z / 3) - 1;
       result = tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -816,7 +836,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Maximum Deviation Found:                     2.622e-21
       // Expected Error Term:                         -2.622e-21
       // Max Error found at long double precision =   Poly: 1.208328e-20   Cheb: 1.073723e-20
-
+      // LCOV_EXCL_START
       static const T Y = 1.158985137939453125F;
       static const T P[9] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.00139324086199409049399),
@@ -841,6 +861,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.204339282037446434827e-5),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.146951181174930425744e-7)
       };
+      // LCOV_EXCL_STOP
       T t = z / 2 - 4;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -853,7 +874,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Expected Error Term:                         3.220e-20
       // Max Error found at long double precision =   Poly: 7.696841e-20   Cheb: 6.205163e-20
 
-
+      // LCOV_EXCL_START
       static const T Y = 1.0869731903076171875F;
       static const T P[10] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.00893891094356946995368),
@@ -879,6 +900,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.000577048986213535829925),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.290976943033493216793e-4)
       };
+      // LCOV_EXCL_STOP
       T t = z / 5 - 3;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -890,7 +912,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
       // Maximum Deviation Found:                     2.940e-21
       // Expected Error Term:                         -2.938e-21
       // Max Error found at long double precision =   Poly: 3.419893e-19   Cheb: 3.359874e-19
-
+      // LCOV_EXCL_START
       static const T Y = 1.03937530517578125F;
       static const T P[12] = {
          BOOST_MATH_BIG_CONSTANT(T, 64, -0.00356165148914447278177),
@@ -917,6 +939,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.0280128013584653182994),
          BOOST_MATH_BIG_CONSTANT(T, 64, 0.00182034930799902922549)
       };
+      // LCOV_EXCL_STOP
       T t = z / 10 - 3;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -930,7 +953,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
    {
       // Maximum Deviation Found:                     3.536e-20
       // Max Error found at long double precision =   Poly: 1.310671e-19   Cheb: 8.630943e-11
-
+      // LCOV_EXCL_START
       static const T exp40 = static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, 2.35385266837019985407899910749034804508871617254555467236651e17));
       static const T Y= 1.013065338134765625F;
       static const T P[9] = {
@@ -955,6 +978,7 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
          BOOST_MATH_BIG_CONSTANT(T, 64, 384647824.678554961174),
          BOOST_MATH_BIG_CONSTANT(T, 64, -166288297.874583961493)
       };
+      // LCOV_EXCL_STOP
       T t = 1 / z;
       result = Y + tools::evaluate_polynomial(P, t)
          / tools::evaluate_polynomial(Q, t);
@@ -994,7 +1018,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_imp_113a(T& result, const T& z, const Polic
    // Expected Error Term:                         -1.230e-36
    // Max Error found at long double precision =   Poly: 4.355299e-34   Cheb: 7.512581e-34
 
-
+   // LCOV_EXCL_START
    static const T P[15] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, 2.98677224343598593765287235997328555),
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.333256034674702967028780537349334037),
@@ -1039,6 +1063,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_imp_113a(T& result, const T& z, const Polic
    static const T r2 = c3 / c4 / c5;
    static const T r3 = static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 113, 0.283806480836357377069325311780969887585024578164571984232357e-31));
    static const T r = static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 113, 0.372507410781366634461991866580119133535689497771654051555657435242200120636201854384926049951548942392));
+   // LCOV_EXCL_STOP
    T t = (z / 3) - 1;
    result = tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1061,7 +1086,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113b(T& result, const T& z)
    // Maximum Deviation Found:                     7.779e-36
    // Expected Error Term:                         -7.779e-36
    // Max Error found at long double precision =   Poly: 2.576723e-35   Cheb: 1.236001e-34
-
+   // LCOV_EXCL_START
    static const T Y = 1.158985137939453125F;
    static const T P[15] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.00139324086199409049282472239613554817),
@@ -1097,6 +1122,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113b(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.139007266881450521776529705677086902e-9),
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.234715286125516430792452741830364672e-11)
    };
+   // LCOV_EXCL_STOP
    T t = z / 2 - 4;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1112,7 +1138,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113c(T& result, const T& z)
    // Expected Error Term:                         1.080e-34
    // Max Error found at long double precision =   Poly: 1.958294e-34   Cheb: 2.472261e-34
 
-
+   // LCOV_EXCL_START
    static const T Y = 1.091579437255859375F;
    static const T P[17] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.00685089599550151282724924894258520532),
@@ -1150,6 +1176,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113c(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.233593219218823384508105943657387644e-7),
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.554900353169148897444104962034267682e-9)
    };
+   // LCOV_EXCL_STOP
    T t = z / 4 - 3.5;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1164,7 +1191,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113d(T& result, const T& z)
    // Maximum Deviation Found:                     3.163e-35
    // Expected Error Term:                         3.163e-35
    // Max Error found at long double precision =   Poly: 4.158110e-35   Cheb: 5.385532e-35
-
+   // LCOV_EXCL_START
    static const T Y = 1.051731109619140625F;
    static const T P[14] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.00144552494420652573815404828020593565),
@@ -1198,6 +1225,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113d(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.127552010539733113371132321521204458e-7),
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.25737310826983451144405899970774587e-9)
    };
+   // LCOV_EXCL_STOP
    T t = z / 4 - 5.5;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1215,7 +1243,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113e(T& result, const T& z)
    // Maximum Deviation Found:                     7.972e-36
    // Expected Error Term:                         7.962e-36
    // Max Error found at long double precision =   Poly: 1.711721e-34   Cheb: 3.100018e-34
-
+   // LCOV_EXCL_START
    static const T Y = 1.032726287841796875F;
    static const T P[15] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.00141056919297307534690895009969373233),
@@ -1252,6 +1280,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113e(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.322153582559488797803027773591727565e-7),
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.161635525318683508633792845159942312e-16)
    };
+   // LCOV_EXCL_STOP
    T t = z / 8 - 4.25;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1269,7 +1298,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113f(T& result, const T& z)
    // Maximum Deviation Found:                     4.469e-36
    // Expected Error Term:                         4.468e-36
    // Max Error found at long double precision =   Poly: 1.288958e-35   Cheb: 2.304586e-35
-
+   // LCOV_EXCL_START
    static const T Y = 1.0216197967529296875F;
    static const T P[12] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.000322999116096627043476023926572650045),
@@ -1299,6 +1328,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113f(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.233740058688179614344680531486267142e-5),
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.498800627828842754845418576305379469e-7)
    };
+   // LCOV_EXCL_STOP
    T t = z / 7 - 7;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1316,7 +1346,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113g(T& result, const T& z)
    // Maximum Deviation Found:                     5.588e-35
    // Expected Error Term:                         -5.566e-35
    // Max Error found at long double precision =   Poly: 9.976345e-35   Cheb: 8.358865e-35
-
+   // LCOV_EXCL_START
    static const T Y = 1.015148162841796875F;
    static const T P[11] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.000435714784725086961464589957142615216),
@@ -1344,6 +1374,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113g(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.000167479843750859222348869769094711093),
       BOOST_MATH_BIG_CONSTANT(T, 113, 0.475673638665358075556452220192497036e-5)
    };
+   // LCOV_EXCL_STOP
    T t = z / 14 - 5;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1361,7 +1392,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113h(T& result, const T& z)
    // Maximum Deviation Found:                     4.448e-36
    // Expected Error Term:                         4.445e-36
    // Max Error found at long double precision =   Poly: 2.058532e-35   Cheb: 2.165465e-27
-
+   // LCOV_EXCL_START
    static const T Y= 1.00849151611328125F;
    static const T P[9] = {
       BOOST_MATH_BIG_CONSTANT(T, 113, -0.0084915161132812500000001440233607358),
@@ -1386,6 +1417,7 @@ BOOST_MATH_GPU_ENABLED void expint_i_113h(T& result, const T& z)
       BOOST_MATH_BIG_CONSTANT(T, 113, 8354144.67882768405803322344185185517),
       BOOST_MATH_BIG_CONSTANT(T, 113, 355076.853106511136734454134915432571)
    };
+   // LCOV_EXCL_STOP
    T t = 1 / z;
    result = Y + tools::evaluate_polynomial(P, t)
       / tools::evaluate_polynomial(Q, t);
@@ -1497,98 +1529,6 @@ BOOST_MATH_GPU_ENABLED T expint_i_imp(T z, const Policy& pol, const boost::math:
    return result;
 }
 
-template <class T, class Policy, class tag>
-struct expint_i_initializer
-{
-   struct init
-   {
-      BOOST_MATH_GPU_ENABLED init()
-      {
-         do_init(tag());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 0>&){}
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 53>&)
-      {
-         boost::math::expint(T(5), Policy());
-         boost::math::expint(T(7), Policy());
-         boost::math::expint(T(18), Policy());
-         boost::math::expint(T(38), Policy());
-         boost::math::expint(T(45), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 64>&)
-      {
-         boost::math::expint(T(5), Policy());
-         boost::math::expint(T(7), Policy());
-         boost::math::expint(T(18), Policy());
-         boost::math::expint(T(38), Policy());
-         boost::math::expint(T(45), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 113>&)
-      {
-         boost::math::expint(T(5), Policy());
-         boost::math::expint(T(7), Policy());
-         boost::math::expint(T(17), Policy());
-         boost::math::expint(T(25), Policy());
-         boost::math::expint(T(40), Policy());
-         boost::math::expint(T(50), Policy());
-         boost::math::expint(T(80), Policy());
-         boost::math::expint(T(200), Policy());
-         boost::math::expint(T(220), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED void force_instantiate()const{}
-   };
-   static const init initializer;
-   BOOST_MATH_GPU_ENABLED static void force_instantiate()
-   {
-      #ifndef BOOST_MATH_HAS_GPU_SUPPORT
-      initializer.force_instantiate();
-      #endif
-   }
-};
-
-template <class T, class Policy, class tag>
-const typename expint_i_initializer<T, Policy, tag>::init expint_i_initializer<T, Policy, tag>::initializer;
-
-template <class T, class Policy, class tag>
-struct expint_1_initializer
-{
-   struct init
-   {
-      BOOST_MATH_GPU_ENABLED init()
-      {
-         do_init(tag());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 0>&){}
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 53>&)
-      {
-         boost::math::expint(1, T(0.5), Policy());
-         boost::math::expint(1, T(2), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 64>&)
-      {
-         boost::math::expint(1, T(0.5), Policy());
-         boost::math::expint(1, T(2), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 113>&)
-      {
-         boost::math::expint(1, T(0.5), Policy());
-         boost::math::expint(1, T(2), Policy());
-         boost::math::expint(1, T(6), Policy());
-      }
-      BOOST_MATH_GPU_ENABLED void force_instantiate()const{}
-   };
-   static const init initializer;
-   BOOST_MATH_GPU_ENABLED static void force_instantiate()
-   {
-      #ifndef BOOST_MATH_HAS_GPU_SUPPORT
-      initializer.force_instantiate();
-      #endif
-   }
-};
-
-template <class T, class Policy, class tag>
-const typename expint_1_initializer<T, Policy, tag>::init expint_1_initializer<T, Policy, tag>::initializer;
-
 template <class T, class Policy>
 BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
    expint_forwarder(T z, const Policy& /*pol*/, boost::math::true_type const&)
@@ -1609,12 +1549,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
       precision_type::value <= 113 ? 113 : 0
    > tag_type;
 
-   expint_i_initializer<value_type, forwarding_policy, tag_type>::force_instantiate();
-
-   return policies::checked_narrowing_cast<result_type, forwarding_policy>(detail::expint_i_imp(
-      static_cast<value_type>(z),
-      forwarding_policy(),
-      tag_type()), "boost::math::expint<%1%>(%1%)");
+   return policies::checked_narrowing_cast<result_type, forwarding_policy>(detail::expint_i_imp(static_cast<value_type>(z), forwarding_policy(), tag_type()), "boost::math::expint<%1%>(%1%)");
 }
 
 template <class T>
@@ -1645,8 +1580,6 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
       precision_type::value <= 64 ? 64 :
       precision_type::value <= 113 ? 113 : 0
    > tag_type;
-
-   detail::expint_1_initializer<value_type, forwarding_policy, tag_type>::force_instantiate();
 
    return policies::checked_narrowing_cast<result_type, forwarding_policy>(detail::expint_imp(
       n,

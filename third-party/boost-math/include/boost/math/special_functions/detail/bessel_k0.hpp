@@ -47,45 +47,6 @@
 
 namespace boost { namespace math { namespace detail{
 
-template <typename T>
-BOOST_MATH_GPU_ENABLED T bessel_k0(const T& x);
-
-template <class T, class tag>
-struct bessel_k0_initializer
-{
-   struct init
-   {
-      BOOST_MATH_GPU_ENABLED init()
-      {
-         do_init(tag());
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 113>&)
-      {
-         bessel_k0(T(0.5));
-         bessel_k0(T(1.5));
-      }
-      BOOST_MATH_GPU_ENABLED static void do_init(const boost::math::integral_constant<int, 64>&)
-      {
-         bessel_k0(T(0.5));
-         bessel_k0(T(1.5));
-      }
-      template <class U>
-      BOOST_MATH_GPU_ENABLED static void do_init(const U&){}
-      BOOST_MATH_GPU_ENABLED void force_instantiate()const{}
-   };
-   BOOST_MATH_STATIC const init initializer;
-   BOOST_MATH_GPU_ENABLED static void force_instantiate()
-   {
-      #ifndef BOOST_MATH_HAS_GPU_SUPPORT
-      initializer.force_instantiate();
-      #endif
-   }
-};
-
-template <class T, class tag>
-const typename bessel_k0_initializer<T, tag>::init bessel_k0_initializer<T, tag>::initializer;
-
-
 template <typename T, int N>
 BOOST_MATH_GPU_ENABLED T bessel_k0_imp(const T&, const boost::math::integral_constant<int, N>&)
 {
@@ -511,7 +472,6 @@ BOOST_MATH_GPU_ENABLED inline T bessel_k0(const T& x)
       113 : -1
    > tag_type;
 
-   bessel_k0_initializer<T, tag_type>::force_instantiate();
    return bessel_k0_imp(x, tag_type());
 }
 

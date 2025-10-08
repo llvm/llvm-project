@@ -17,6 +17,10 @@
 #  pragma warning(disable: 4305) // truncation from 'long double' to 'float'
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/tools/config.hpp>
 
 #ifndef BOOST_MATH_NO_REAL_CONCEPT_TESTS

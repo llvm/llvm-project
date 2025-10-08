@@ -548,7 +548,7 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> bracket_and_solve_root(F f, const
          // magnitude out.  This happens most often if the guess is a small value (say 1) and the result
          // we're looking for is close to std::numeric_limits<T>::min().
          //
-         if((max_iter - count) % step == 0)
+         if((max_iter - count) % static_cast<unsigned>(step) == 0u)
          {
             factor *= 2;
             if(step > 1) step /= 2;
@@ -588,7 +588,7 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> bracket_and_solve_root(F f, const
          // magnitude out.  This happens most often if the guess is a small value (say 1) and the result
          // we're looking for is close to std::numeric_limits<T>::min().
          //
-         if((max_iter - count) % step == 0)
+         if((max_iter - count) % static_cast<unsigned>(step) == 0u)
          {
             factor *= 2;
             if(step > 1) step /= 2;

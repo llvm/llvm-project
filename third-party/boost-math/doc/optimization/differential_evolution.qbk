@@ -32,8 +32,8 @@ LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
         const Func cost_function, differential_evolution_parameters<ArgumentContainer> const &de_params, URBG &g,
         std::invoke_result_t<Func, ArgumentContainer> target_value = std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
         std::atomic<bool> *cancellation = nullptr,
-        std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr,
-        std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr);
+        std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr,
+        std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr);
 
     } // namespaces
 ``
@@ -73,8 +73,8 @@ ArgumentContainer differential_evolution(const Func cost_function,
                                          std::invoke_result_t<Func, ArgumentContainer> value_to_reach
                                            = std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
                                          std::atomic<bool> *cancellation = nullptr,
-                                         std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr,
-                                         std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr)
+                                         std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr,
+                                         std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr)
 ``
 
 Parameters:
@@ -88,11 +88,11 @@ Parameters:
     See the referenced book for clear examples of when target values can be deduced. 
 * `cancellation`: An optional atomic boolean to allow the user to stop the computation and gracefully return the best result found up to that point.
     N.B.: Cancellation is not immediate; the in-progress generation finishes.
-* `queries`: An optional vector to store intermediate results during optimization.
-    This is useful for debugging and perhaps volume rendering of the objective function after the calculation is complete.
 * `current_minimum_cost`: An optional atomic variable to store the current minimum cost during optimization.
     This allows developers to (e.g.) plot the progress of the minimization over time and in conjunction with the cancellation argument allow halting the computation when the progress stagnates.
     Refer to Price, Storn, and Lampinen, Section 3.2 for caveats with this approach.
+* `queries`: An optional vector to store intermediate results during optimization.
+    This is useful for debugging and perhaps volume rendering of the objective function after the calculation is complete.
 
 Returns:
 

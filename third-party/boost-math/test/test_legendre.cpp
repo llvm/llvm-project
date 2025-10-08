@@ -52,7 +52,7 @@ void expected_results()
    //
    // Linux:
    //
-   if((std::numeric_limits<long double>::digits <= 64)
+   BOOST_MATH_IF_CONSTEXPR((std::numeric_limits<long double>::digits <= 64)
       && (std::numeric_limits<long double>::digits != std::numeric_limits<double>::digits))
    {
 #ifndef BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
@@ -65,7 +65,7 @@ void expected_results()
          ".*", 10, 5);                  // test function
 #endif
    }
-   if(std::numeric_limits<long double>::digits == 64)
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<long double>::digits == 64)
    {
       add_expected_result(
          ".*",                          // compiler

@@ -106,7 +106,7 @@ void expected_results()
          "[^|]*",                          // platform
          "double",                         // test type(s)
          "[^|]*Large.*",                   // test data group
-         ".*", 3300, 200);                 // test function
+         ".*", 3900, 300);                 // test function
       add_expected_result(
          "[^|]*",                          // compiler
          "[^|]*",                          // stdlib

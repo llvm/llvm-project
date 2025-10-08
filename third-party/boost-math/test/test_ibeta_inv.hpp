@@ -320,5 +320,14 @@ void test_spots(T)
       BOOST_CHECK((boost::math::isfinite)(boost::math::ibeta_inv(m, m, static_cast<T>(0.125))));
    }
    #endif
+   //
+   // scipy: https://github.com/scipy/scipy/issues/21725
+   //
+   BOOST_CHECK_CLOSE(
+      ::boost::math::ibeta_inv(
+         static_cast<T>(1.0e11L),
+         static_cast<T>(1.0e13L),
+         static_cast<T>(0.995L)),
+      static_cast<T>(0.0099010703473402885173268397418009652L), 5e-10);
 }
 

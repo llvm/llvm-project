@@ -187,7 +187,7 @@ BOOST_MATH_GPU_ENABLED T airy_ai_zero_imp(int m, const Policy& pol)
    // of decimal digits in the numeric type T, being at least 12.
    const int my_digits10 = static_cast<int>(static_cast<float>(policies::digits<T, Policy>() * 0.301F));
 
-   const std::uintmax_t iterations_allowed = static_cast<std::uintmax_t>((std::max)(12, my_digits10 * 2));
+   const std::uintmax_t iterations_allowed = static_cast<std::uintmax_t>(BOOST_MATH_GPU_SAFE_MAX(12, my_digits10 * 2));
 
    std::uintmax_t iterations_used = iterations_allowed;
 
@@ -239,7 +239,7 @@ BOOST_MATH_GPU_ENABLED T airy_bi_zero_imp(int m, const Policy& pol)
    // of decimal digits in the numeric type T, being at least 12.
    const int my_digits10 = static_cast<int>(static_cast<float>(policies::digits<T, Policy>() * 0.301F));
 
-   const std::uintmax_t iterations_allowed = static_cast<std::uintmax_t>((std::max)(12, my_digits10 * 2));
+   const std::uintmax_t iterations_allowed = static_cast<std::uintmax_t>(BOOST_MATH_GPU_SAFE_MAX(12, my_digits10 * 2));
 
    std::uintmax_t iterations_used = iterations_allowed;
 

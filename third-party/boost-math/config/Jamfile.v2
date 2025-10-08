@@ -36,6 +36,7 @@ obj has_gmp : has_gmp.cpp :
 obj is_ci_sanitizer_run : is_ci_sanitizer_run.cpp ;
 obj is_ci_standalone_run : is_ci_standalone_run.cpp ;
 obj is_cygwin_run : is_cygwin_run.cpp ;
+obj has_cxx14_type_traits : has_cxx14_type_traits.cpp ;
 
 explicit has_long_double_support ;
 explicit has_mpfr_class ;
@@ -52,3 +53,4 @@ explicit has_fftw3 ;
 explicit is_ci_sanitizer_run ;
 explicit is_ci_standalone_run ;
 explicit is_cygwin_run ;
+explicit has_cxx14_type_traits ;

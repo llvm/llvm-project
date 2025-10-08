@@ -1391,28 +1391,6 @@ struct max_factorial<BOOST_MATH_FLOAT128_TYPE>
 
 #endif
 
-template <class T>
-struct unchecked_factorial_initializer
-{
-   struct init
-   {
-      init()
-      {
-         boost::math::unchecked_factorial<T>(3);
-      }
-      void force_instantiate()const {}
-   };
-   static const init initializer;
-   static void force_instantiate()
-   {
-      initializer.force_instantiate();
-   }
-};
-
-template <class T>
-const typename unchecked_factorial_initializer<T>::init unchecked_factorial_initializer<T>::initializer;
-
-
 template <class T, int N>
 inline T unchecked_factorial_imp(unsigned i, const boost::math::integral_constant<int, N>&)
 {

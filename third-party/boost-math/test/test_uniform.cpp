@@ -10,6 +10,8 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch.hpp>
+#else
+#include "sycl/sycl.hpp"
 #endif
 
 #ifdef _MSC_VER

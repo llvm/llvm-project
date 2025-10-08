@@ -11,6 +11,10 @@
 #  pragma warning (disable : 4512) // assignment operator could not be generated.
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/config.hpp>
 #include <boost/math/tools/config.hpp>
 

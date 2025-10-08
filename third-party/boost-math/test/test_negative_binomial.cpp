@@ -26,6 +26,10 @@
 #  define TEST_REAL_CONCEPT
 #endif
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/math/tools/config.hpp>
 #include "../include_private/boost/math/tools/test.hpp"
 

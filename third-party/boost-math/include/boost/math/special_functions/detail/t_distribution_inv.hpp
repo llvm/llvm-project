@@ -404,8 +404,10 @@ calculate_real:
          // where we use Shaw's tail series.
          // The crossover point is roughly exponential in -df:
          //
-         T crossover = ldexp(1.0f, iround(T(df / -0.654f), typename policies::normalise<Policy, policies::rounding_error<policies::ignore_error> >::type()));
-         if(u > crossover)
+         int u_exp;
+         T m_exp = frexp(u, &u_exp);
+         // The following is equivalent to: u > 2^df/-0.654
+         if(m_exp > 0 && u_exp < df / 0.654f)
          {
             result = boost::math::detail::inverse_students_t_hill(df, u, pol);
          }

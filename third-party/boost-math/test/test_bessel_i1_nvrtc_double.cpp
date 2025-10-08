@@ -88,9 +88,9 @@ int main()
         nvrtcAddNameExpression(prog, "test_bessel_i1_kernel");
 
         #ifdef BOOST_MATH_NVRTC_CI_RUN
-        const char* opts[] = {"--std=c++14", "--gpu-architecture=compute_75", "--include-path=/home/runner/work/cuda-math/boost-root/libs/cuda-math/include/", "-I/usr/local/cuda/include"};
+        const char* opts[] = {"--std=c++20", "--gpu-architecture=compute_75", "--include-path=/home/runner/work/cuda-math/boost-root/libs/cuda-math/include/", "-I/usr/local/cuda/include"};
         #else
-        const char* opts[] = {"--std=c++14", "--include-path=/home/mborland/Documents/boost/libs/cuda-math/include/", "-I/usr/local/cuda/include"};
+        const char* opts[] = {"--std=c++20", "--include-path=/home/mborland/Documents/boost/libs/cuda-math/include/", "-I/usr/local/cuda/include"};
         #endif
 
         // Compile the program

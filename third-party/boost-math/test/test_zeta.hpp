@@ -170,6 +170,11 @@ void test_spots(T, const char* t)
       BOOST_CHECK_EQUAL(::boost::math::zeta(static_cast<T>(-10007)), std::numeric_limits<T>::infinity());
       BOOST_CHECK_EQUAL(::boost::math::zeta(static_cast<T>(-10009)), -std::numeric_limits<T>::infinity());
    }
+   //
+   // Coverage tests:
+   //
+   BOOST_CHECK_THROW(boost::math::zeta(static_cast<T>(1)), std::domain_error);
+   BOOST_CHECK_EQUAL(boost::math::zeta(-boost::math::tools::max_value<T>()), static_cast<T>(0));
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

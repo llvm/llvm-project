@@ -5,6 +5,10 @@
 
 #ifndef SYCL_LANGUAGE_VERSION
 #include <pch_light.hpp>
+#else
+#define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
+#include "sycl/sycl.hpp"
+#include <boost/math/tools/config.hpp>
 #endif
 
 #ifdef __clang__
@@ -97,6 +101,23 @@ void expected_results()
       largest_type,                     // test type(s)
       "(?i).*medium.*",                     // test data group
       ".*", 300, 80);  // test function
+   if (std::numeric_limits<double>::max_exponent < std::numeric_limits<long double>::max_exponent)
+   {
+      add_expected_result(
+         "[^|]*",                          // compiler
+         "[^|]*",                          // stdlib
+         "[^|]*",                          // platform
+         largest_type,                     // test type(s)
+         "(?i).*Very Large.*",             // test data group
+         ".*", 2000000, 200000);           // test function
+      add_expected_result(
+         "[^|]*",                          // compiler
+         "[^|]*",                          // stdlib
+         ".*",                             // platform
+         largest_type,                     // test type(s)
+         "(?i).*Asymptotically.*",         // test data group
+         ".*", 900000000, 90000000);       // test function
+   }
    //
    // Deficiencies in pow function really kick in here for
    // large arguments.  Note also that the tests here get
@@ -106,19 +127,43 @@ void expected_results()
    add_expected_result(
       "[^|]*",                          // compiler
       "[^|]*",                          // stdlib
+      "Mac OS",                         // platform
+      largest_type,                     // test type(s)
+      "(?i).*Very Large.*",             // test data group
+      ".*", 20000000, 2000000);         // test function
+   add_expected_result(
+      "[^|]*",                          // compiler
+      "[^|]*",                          // stdlib
+      "Mac OS",                          // platform
+      largest_type,                     // test type(s)
+      "(?i).*Asymptotically Large.*",   // test data group
+      ".*", 900000000, 80000000);       // test function
+   add_expected_result(
+      "[^|]*",                          // compiler
+      "[^|]*",                          // stdlib
       "linux|Mac OS",                          // platform
       largest_type,                     // test type(s)
       "(?i).*large.*",                      // test data group
       ".*", 200000, 10000);                 // test function
-#ifndef BOOST_MATH_NO_REAL_CONCEPT_TESTS
-   add_expected_result(
-      "[^|]*",                          // compiler
-      "[^|]*",                          // stdlib
-      "linux|Mac OS|Sun.*",             // platform
-      "double",                     // test type(s)
-      "(?i).*large.*",                      // test data group
-      ".*", 40, 20);                 // test function
-#endif
+   if (std::numeric_limits<long double>::digits == 64)
+   {
+      // 80-bit long double, errors spill over:
+      add_expected_result(
+         "[^|]*",                          // compiler
+         "[^|]*",                          // stdlib
+         ".*",                             // platform
+         "double",                         // test type(s)
+         "(?i).*Asymptotically.*",         // test data group
+         ".*", 500000, 50000);             // test function
+      add_expected_result(
+         "[^|]*",                          // compiler
+         "[^|]*",                          // stdlib
+         ".*",                             // platform
+         "double",                         // test type(s)
+         "(?i).*large.*",                  // test data group
+         ".*", 200, 20);                   // test function
+   }
+
    add_expected_result(
       "[^|]*",                          // compiler
       "[^|]*",                          // stdlib
@@ -267,6 +312,20 @@ void expected_results()
       largest_type,                     // test type(s)
       "(?i).*medium.*",                     // test data group
       ".*", 350, 50);  // test function
+   add_expected_result(
+      "[^|]*",                          // compiler
+      "[^|]*",                          // stdlib
+      "[^|]*",                          // platform
+      largest_type,                     // test type(s)
+      "(?i).*Very Large.*",             // test data group
+      ".*", 200000, 20000);             // test function
+   add_expected_result(
+      "[^|]*",                          // compiler
+      "[^|]*",                          // stdlib
+      "[^|]*",                          // platform
+      largest_type,                     // test type(s)
+      "(?i).*Asymptotically Large.*",   // test data group
+      ".*", 900000000, 80000000);       // test function
    add_expected_result(
       "[^|]*",                          // compiler
       "[^|]*",                          // stdlib

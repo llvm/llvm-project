@@ -74,8 +74,12 @@
            {
               // We get very limited precision due to rapid denormalisation/underflow of the Bessel values, raise an exception and try something else:
               policies::raise_evaluation_error("hypergeometric_1F1_AS_13_3_7_tricomi_series<%1%>", "Underflow in Bessel functions", bessel_cache[cache_size - 1], pol);
+              // Exceptions are off if we get here, just fill the cache with NaN's and we'll let this method fail and fallback later:
+              std::fill(bessel_cache.begin(), bessel_cache.end(), std::numeric_limits<T>::quiet_NaN());
+              cache_offset = -cache_size;
+              return;
            }
-           if ((term * bessel_cache[cache_size - 1] < tools::min_value<T>() / (tools::epsilon<T>() * tools::epsilon<T>())) || !(boost::math::isfinite)(term) || (!std::numeric_limits<T>::has_infinity && (fabs(term) > tools::max_value<T>())))
+           if ((fabs(term * bessel_cache[cache_size - 1]) < tools::min_value<T>() / (tools::epsilon<T>() * tools::epsilon<T>())) || !(boost::math::isfinite)(term) || (!std::numeric_limits<T>::has_infinity && (fabs(term) > tools::max_value<T>())))
            {
               term = -log(fabs(bessel_arg)) * b_minus_1_plus_n / 2;
               log_scale = lltrunc(term);
@@ -88,15 +92,27 @@
            if constexpr (std::numeric_limits<T>::has_infinity)
            {
               if (!(boost::math::isfinite)(bessel_cache[cache_size - 1]))
+              {
                  policies::raise_evaluation_error("hypergeometric_1F1_AS_13_3_7_tricomi_series<%1%>", "Expected finite Bessel function result but got %1%", bessel_cache[cache_size - 1], pol);
+                 // Exceptions are off if we get here, just fill the cache with NaN's and we'll let this method fail and fallback later:
+                 std::fill(bessel_cache.begin(), bessel_cache.end(), std::numeric_limits<T>::quiet_NaN());
+              }
            }
            else
               if ((boost::math::isnan)(bessel_cache[cache_size - 1]) || (fabs(bessel_cache[cache_size - 1]) >= tools::max_value<T>()))
+              {
                  policies::raise_evaluation_error("hypergeometric_1F1_AS_13_3_7_tricomi_series<%1%>", "Expected finite Bessel function result but got %1%", bessel_cache[cache_size - 1], pol);
+                 // Exceptions are off if we get here, just fill the cache with NaN's and we'll let this method fail and fallback later:
+                 std::fill(bessel_cache.begin(), bessel_cache.end(), std::numeric_limits<T>::quiet_NaN());
+              }
 #else
            if ((std::numeric_limits<T>::has_infinity && !(boost::math::isfinite)(bessel_cache[cache_size - 1])) 
               || (!std::numeric_limits<T>::has_infinity && ((boost::math::isnan)(bessel_cache[cache_size - 1]) || (fabs(bessel_cache[cache_size - 1]) >= tools::max_value<T>()))))
+           {
               policies::raise_evaluation_error("hypergeometric_1F1_AS_13_3_7_tricomi_series<%1%>", "Expected finite Bessel function result but got %1%", bessel_cache[cache_size - 1], pol);
+              // Exceptions are off if we get here, just fill the cache with NaN's and we'll let this method fail and fallback later:
+              std::fill(bessel_cache.begin(), bessel_cache.end(), std::numeric_limits<T>::quiet_NaN());
+           }
 #endif
            cache_offset = -cache_size;
            refill_cache();
@@ -108,8 +124,13 @@
            // very small (or zero) when b == 2a:
            //
            BOOST_MATH_STD_USING
+           //
+           // Except in the multiprecision case, we have probably illiminated anything
+           // would need more than the default 64 Bessel Functions.  Anything more
+           // than that risks becoming a divergent series anyway...
+           //
            if(n - 2 - cache_offset >= cache_size)
-              refill_cache();
+              refill_cache();  // LCOV_EXCL_LINE
            T result = A_minus_2 * term * bessel_cache[n - 2 - cache_offset];
            term *= mult;
            ++n;
@@ -122,7 +143,7 @@
            if (A_minus_2 != 0)
            {
               if (n - 2 - cache_offset >= cache_size)
-                 refill_cache();
+                 refill_cache(); // LCOV_EXCL_LINE
               result += A_minus_2 * term * bessel_cache[n - 2 - cache_offset];
            }
            term *= mult;

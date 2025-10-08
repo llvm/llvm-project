@@ -298,6 +298,37 @@ void test_spots(T, const char* type_name)
 #include "jacobi_theta_small_tau.ipp"
 
     do_test_jacobi_theta_tau<T>(jacobi_theta_small_tau_data, type_name, "Jacobi Theta: Random Data (Small Tau)");
+
+    //
+    // coverage and bugs:
+    //
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4(T(0.5), T(0)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4(T(0.5), T(-0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4(T(0.5), T(1)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4(T(0.5), T(1.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4m1(T(0.5), T(0)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4m1(T(0.5), T(-0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4m1(T(0.5), T(1)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta4m1(T(0.5), T(1.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta3m1(T(0.5), T(0)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta3m1(T(0.5), T(-0.5)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta3m1(T(0.5), T(1)), std::domain_error);
+    BOOST_CHECK_THROW(boost::math::jacobi_theta3m1(T(0.5), T(1.5)), std::domain_error);
+#else
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4(T(0.5), T(0))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4(T(0.5), T(-0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4(T(0.5), T(1))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4(T(0.5), T(1.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4m1(T(0.5), T(0))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4m1(T(0.5), T(-0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4m1(T(0.5), T(1))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta4m1(T(0.5), T(1.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta3m1(T(0.5), T(0))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta3m1(T(0.5), T(-0.5))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta3m1(T(0.5), T(1))));
+    BOOST_CHECK((boost::math::isnan)(boost::math::jacobi_theta3m1(T(0.5), T(1.5))));
+#endif
 }
 
 #define _check_close(a, b, eps) \

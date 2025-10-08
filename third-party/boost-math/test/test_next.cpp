@@ -61,6 +61,18 @@ void test_value(const T& val, const char* name)
       BOOST_CHECK_EQUAL(float_distance(float_advance(float_next(float_next(val)), 4), float_next(float_next(val))), -4);
       BOOST_CHECK_EQUAL(float_distance(float_advance(float_next(float_next(val)), -4), float_next(float_next(val))), 4);
    }
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_quiet_NaN)
+   {
+      BOOST_CHECK_THROW(float_distance(val, std::numeric_limits<T>::quiet_NaN()), std::domain_error);
+      BOOST_CHECK_THROW(float_distance(std::numeric_limits<T>::quiet_NaN(), val), std::domain_error);
+   }
+   BOOST_MATH_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
+   {
+      BOOST_CHECK_THROW(float_distance(val, std::numeric_limits<T>::infinity()), std::domain_error);
+      BOOST_CHECK_THROW(float_distance(-std::numeric_limits<T>::infinity(), val), std::domain_error);
+   }
+#endif
    if(val > 0)
    {
       T n = val + ulp(val);
@@ -177,7 +189,7 @@ void test_values(const T& val, const char* name)
       BOOST_CHECK_EQUAL(boost::math::float_next(-std::numeric_limits<T>::infinity()), -(std::numeric_limits<T>::max)());
       BOOST_CHECK_EQUAL(boost::math::float_prior(-std::numeric_limits<T>::infinity()), -std::numeric_limits<T>::infinity());
       BOOST_CHECK_EQUAL(boost::math::float_next(std::numeric_limits<T>::infinity()), std::numeric_limits<T>::infinity());
-      if(boost::math::policies:: BOOST_MATH_OVERFLOW_ERROR_POLICY == boost::math::policies::throw_on_error)
+      BOOST_MATH_IF_CONSTEXPR(boost::math::policies:: BOOST_MATH_OVERFLOW_ERROR_POLICY == boost::math::policies::throw_on_error)
       {
          BOOST_MATH_CHECK_THROW(boost::math::float_prior(-(std::numeric_limits<T>::max)()), std::overflow_error);
          BOOST_MATH_CHECK_THROW(boost::math::float_next((std::numeric_limits<T>::max)()), std::overflow_error);
@@ -186,6 +198,18 @@ void test_values(const T& val, const char* name)
       {
          BOOST_CHECK_EQUAL(boost::math::float_prior(-(std::numeric_limits<T>::max)()), -std::numeric_limits<T>::infinity());
          BOOST_CHECK_EQUAL(boost::math::float_next((std::numeric_limits<T>::max)()), std::numeric_limits<T>::infinity());
+      }
+      BOOST_MATH_IF_CONSTEXPR(boost::math::policies::BOOST_MATH_DOMAIN_ERROR_POLICY == boost::math::policies::throw_on_error)
+      {
+         BOOST_MATH_CHECK_THROW(boost::math::float_advance(std::numeric_limits<T>::infinity(), 2), std::domain_error);
+         BOOST_MATH_CHECK_THROW(boost::math::float_advance(-std::numeric_limits<T>::infinity(), 2), std::domain_error);
+         BOOST_MATH_CHECK_THROW(boost::math::float_advance(std::numeric_limits<T>::infinity(), -2), std::domain_error);
+         BOOST_MATH_CHECK_THROW(boost::math::float_advance(-std::numeric_limits<T>::infinity(), -2), std::domain_error);
+      }
+      else
+      {
+         BOOST_CHECK((boost::math::isnan)(boost::math::float_advance(std::numeric_limits<T>::quiet_NaN(), 2)));
+         BOOST_CHECK((boost::math::isnan)(boost::math::float_advance(std::numeric_limits<T>::quiet_NaN(), -2)));
       }
    }
    BOOST_IF_CONSTEXPR(std::numeric_limits<T>::is_specialized && (std::numeric_limits<T>::has_quiet_NaN))

@@ -163,6 +163,19 @@ template<class CharType, class ValType> void basic_test_inf_impl()
     BOOST_CHECK(b2 == a2);
     BOOST_CHECK(b3 == std::numeric_limits<ValType>::infinity());
     BOOST_CHECK(ss.rdstate() == std::ios_base::eofbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "ind";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "infinidy";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit);
+
 }
 
 //------------------------------------------------------------------------------
@@ -221,6 +234,56 @@ template<class CharType, class ValType> void basic_test_nan_impl()
     BOOST_CHECK(!(signbit)(b5));
 
     BOOST_CHECK(ss.rdstate() == std::ios_base::eofbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "nad";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "nan(123";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit | std::ios_base::eofbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "qnad";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit | std::ios_base::eofbit);
+
+    std::locale new_locale_2(tmp_locale, new nonfinite_num_get<CharType>(legacy));
+    ss.imbue(new_locale_2);
+    ss.clear();
+    ss.str(S_(""));
+    ss << "qnan";
+    ss >> b1;
+    BOOST_CHECK((boost::math::isnan)(b1));
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "qnad";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit | std::ios_base::eofbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "1.#SNAD";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit | std::ios_base::eofbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "1.#POP";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit | std::ios_base::eofbit);
+
+    ss.clear();
+    ss.str(S_(""));
+    ss << "1.#IMP";
+    ss >> b1;
+    BOOST_CHECK(ss.rdstate() == std::ios_base::failbit | std::ios_base::eofbit);
 }
 
 //------------------------------------------------------------------------------

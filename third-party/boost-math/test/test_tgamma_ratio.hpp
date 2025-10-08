@@ -179,5 +179,27 @@ void test_spots(T, const char*)
          BOOST_CHECK_CLOSE_FRACTION(boost::math::tgamma_delta_ratio(T(ldexp(T(1), -1074)), T(200)), T(5.13282785052571536804189023927976812551830809667482691717029e-50L), tol * 10);
          BOOST_CHECK_CLOSE_FRACTION(boost::math::tgamma_delta_ratio(T(200), T(ldexp(T(1), -1074))), T(1), tol);
       }
+#if LDBL_MAX_EXP >= 16384
+      if(0 != ldexp(T(1), -16445))
+      {
+         // This is denorm_min at 80 bit long double precision:
+         BOOST_CHECK_CLOSE_FRACTION(boost::math::tgamma_ratio(T(ldexp(T(1), -16445)), T(200)), T(6.956968705776973348795055087648739671964943862403874276047e4577L), tol * 50);
+         BOOST_CHECK_CLOSE_FRACTION(boost::math::tgamma_ratio(T(200), T(ldexp(T(1), -16445))), T(1.43740764446678254374798600325709882852078655978124426386e-4578L), tol * 10);
+         BOOST_CHECK_CLOSE_FRACTION(boost::math::tgamma_delta_ratio(T(ldexp(T(1), -16445)), T(200)), T(6.956968705776973348795055087648739671964943862403874276047e4577L), tol * 10);
+         BOOST_CHECK_CLOSE_FRACTION(boost::math::tgamma_delta_ratio(T(200), T(ldexp(T(1), -16445))), T(1), tol);
+      }
+#endif
+   }
+   //
+   // Coverage:
+   //
+   BOOST_CHECK_EQUAL(boost::math::tgamma_delta_ratio(T(2), T(0)), T(1));
+   BOOST_CHECK_EQUAL(boost::math::tgamma_delta_ratio(T(200), T(0)), T(1));
+   BOOST_CHECK_EQUAL(boost::math::tgamma_delta_ratio(T(2000), T(0)), T(1));
+
+   BOOST_CHECK_EQUAL(boost::math::tgamma_ratio(T(0.5), T(100000)), T(0));
+   BOOST_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)
+   {
+      BOOST_CHECK_EQUAL(boost::math::tgamma_ratio(T(100000), T(0.5)), std::numeric_limits<T>::infinity());
    }
 }

@@ -86,8 +86,8 @@ ArgumentContainer differential_evolution(
     std::invoke_result_t<Func, ArgumentContainer> target_value =
         std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
     std::atomic<bool> *cancellation = nullptr,
-    std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr,
-    std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr) {
+    std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr,
+    std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr) {
   using Real = typename ArgumentContainer::value_type;
   using DimensionlessReal = decltype(Real()/Real());
   using ResultType = std::invoke_result_t<Func, ArgumentContainer>;

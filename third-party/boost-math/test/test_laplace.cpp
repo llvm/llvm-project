@@ -61,6 +61,11 @@ Test 8: test_extreme_function_arguments()
 
 
 #define BOOST_TEST_MAIN
+
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <boost/test/unit_test.hpp>
 #include "../include_private/boost/math/tools/test.hpp"
 #include <boost/math/constants/constants.hpp>

@@ -79,16 +79,22 @@ T get_beta(T a, T b)
 // compute the continued fraction:
 //
 template <class T>
-T get_ibeta_fraction1(T a, T b, T x)
+T get_ibeta_fraction1(T a, T b, T x, T log_scaling = 0)
 {
+   using std::isnormal;
    ibeta_fraction1_t<T> f(a, b, x);
    T fract = boost::math::tools::continued_fraction_a(f, boost::math::policies::digits<T, boost::math::policies::policy<> >());
    T denom = (a * (fract + 1));
    T num = pow(x, a) * pow(1 - x, b);
-   if(num == 0)
-      return 0;
-   else if(denom == 0)
+   if(denom == 0)
       return -1;
+   else if (!isnormal(num) || log_scaling)
+   {
+      return exp(a * log(x) + b * log(1 - x) - log(denom) - log_scaling);
+   }
+   else if (num == 0)
+      return 0;
+   
    return num / denom;
 }
 //
@@ -100,7 +106,7 @@ std::pair<T,T> ibeta_fraction1(T a, T b, T x)
    T bet = get_beta(a, b);
    if(x > ((a+1)/(a+b+2)))
    {
-      T fract = get_ibeta_fraction1(b, a, 1-x);
+      T fract = get_ibeta_fraction1(b, a, T(1-x));
       if(fract/bet > 0.75)
       {
          fract = get_ibeta_fraction1(a, b, x);
@@ -111,7 +117,7 @@ std::pair<T,T> ibeta_fraction1(T a, T b, T x)
    T fract = get_ibeta_fraction1(a, b, x);
    if(fract/bet > 0.75)
    {
-      fract = get_ibeta_fraction1(b, a, 1-x);
+      fract = get_ibeta_fraction1(b, a, T(1-x));
       return std::make_pair(bet - fract, fract);
    }
    return std::make_pair(fract, bet - fract);
@@ -124,24 +130,30 @@ template <class T>
 std::pair<T,T> ibeta_fraction1_regular(T a, T b, T x)
 {
    T bet = get_beta(a, b);
+   T log_scaling = 0;
+   if (bet == 0)
+   {
+      log_scaling = boost::math::lgamma(a) + boost::math::lgamma(b) - boost::math::lgamma(a + b);
+      bet = 1;
+   }
    if(x > ((a+1)/(a+b+2)))
    {
-      T fract = get_ibeta_fraction1(b, a, 1-x);
+      T fract = get_ibeta_fraction1(b, a, T(1-x), log_scaling);
       if(fract == 0)
          bet = 1;  // normalise so we don't get 0/0
       else if(bet == 0)
          return std::make_pair(T(-1), T(-1)); // Yikes!!
       if(fract / bet > 0.75)
       {
-         fract = get_ibeta_fraction1(a, b, x);
+         fract = get_ibeta_fraction1(a, b, x, log_scaling);
          return std::make_pair(fract / bet, 1 - (fract / bet));
       }
       return std::make_pair(1 - (fract / bet), fract / bet);
    }
-   T fract = get_ibeta_fraction1(a, b, x);
+   T fract = get_ibeta_fraction1(a, b, x, log_scaling);
    if(fract / bet > 0.75)
    {
-      fract = get_ibeta_fraction1(b, a, 1-x);
+      fract = get_ibeta_fraction1(b, a, T(1-x), log_scaling);
       return std::make_pair(1 - (fract / bet), fract / bet);
    }
    return std::make_pair(fract / bet, 1 - (fract / bet));
@@ -237,9 +249,70 @@ struct beta_data_generator_int
    }
 };
 
+template <class T>
+bool is_01(const T& x)
+{
+   return (x >= 0) && (x <= 1);
+}
+
+template <class T>
+bool is_interesting(const T& x)
+{
+   return (x > 0) && (x < 1);
+}
+
+struct beta_data_generator_asym
+{
+   boost::math::tuple<mp_t, mp_t, mp_t, mp_t, mp_t, mp_t, mp_t> operator()(mp_t a_, mp_t b_)
+   {
+      float a = truncate_to_float(a_);
+      float b = truncate_to_float(b_);
+      float x0 = a / (a + b);
+      static const float mul[] = { 0.9, 0.99, 0.9999, 0.99999, 0.999999, 0.99999999, 1.001, 1.1, 1.00001, 1.0000001, 1.000000001 };
+      static int index = 0;
+      float x = truncate_to_float(real_cast<float>(x0 * mul[index]));
+      if (x >= 1)
+         throw std::domain_error("");
+      index = index == 10 ? 0 : ++index;
+      std::pair<mp_t, mp_t> ib_full = ibeta_fraction1(mp_t(a), mp_t(b), mp_t(x));
+      std::pair<mp_t, mp_t> ib_reg = ibeta_fraction1_regular(mp_t(a), mp_t(b), mp_t(x));
+      if (!isnormal(ib_full.first) || !isnormal(ib_reg.first) || !isnormal(ib_reg.second) || !isnormal(ib_full.second) || !is_01(ib_reg.first) || !is_01(ib_reg.second))
+         throw std::domain_error("");
+      std::cout << a << " " << b << " " << x << " " << ib_full.first << " " << ib_reg.first << " " << ib_reg.second << std::endl;
+      return boost::math::make_tuple(a, b, x, ib_full.first, ib_full.second, ib_reg.first, ib_reg.second);
+   }
+};
+
+struct beta_data_generator_asym2
+{
+   boost::math::tuple<mp_t, mp_t, mp_t, mp_t, mp_t, mp_t, mp_t> operator()(mp_t a_power, mp_t _b_mul, mp_t _x_mul)
+   {
+      float b_mul = truncate_to_float(_b_mul);
+      float x_mul = truncate_to_float(_x_mul);
+      float a = truncate_to_float(pow(mp_t(10), a_power));
+      float b = truncate_to_float(a * b_mul);
+      float x0 = a / (a + b);
+
+      std::cout << a << " " << b_mul << " " << x_mul << std::endl;
+
+      float x = truncate_to_float(x0 * x_mul);
+      if (x >= 1)
+         throw std::domain_error("");
+      if(std::isinf(a))
+         throw std::domain_error("");
+
+      std::pair<mp_t, mp_t> ib_full = ibeta_fraction1(mp_t(a), mp_t(b), mp_t(x));
+      std::pair<mp_t, mp_t> ib_reg = ibeta_fraction1_regular(mp_t(a), mp_t(b), mp_t(x));
+      if (isnan(ib_full.first) || !isnormal(ib_reg.first) || !isnormal(ib_reg.second) || isnan(ib_full.second) || !is_01(ib_reg.first) || !is_01(ib_reg.second) || !(is_interesting(ib_reg.first) || is_interesting(ib_reg.second)))
+         throw std::domain_error("");
+      std::cout << a << " " << b << " " << x << " " << ib_full.first << " " << ib_reg.first << " " << ib_reg.second << std::endl;
+      return boost::math::make_tuple(a, b, x, ib_full.first, ib_full.second, ib_reg.first, ib_reg.second);
+   }
+};
+
 int main(int, char* [])
 {
-   parameter_info<mp_t> arg1, arg2, arg3, arg4, arg5;
+   parameter_info<mp_t> arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12;
    test_data<mp_t> data;
 
    std::cout << "Welcome.\n"
@@ -252,19 +325,36 @@ int main(int, char* [])
    arg3 = make_random_param(mp_t(0.0001), mp_t(1), 10);
    arg4 = make_random_param(mp_t(0.0001), mp_t(1), 100 /*500*/);
    arg5 = make_periodic_param(mp_t(1), mp_t(41), 10);
+   arg6 = make_power_param(mp_t(0), 20, 40);
+   arg7 = make_power_param(mp_t(0), 20, 40);
+   arg8 = make_power_param(mp_t(0), 50, 70);
+   arg9 = make_power_param(mp_t(0), 50, 70);
+   arg10 = make_periodic_param(mp_t(10), mp_t(18), 4);
+   arg11 = make_periodic_param(mp_t(1) - 10 * mp_t(1)/2048, mp_t(1) + 10 * mp_t(1) / 2048, 20);
+   arg12 = make_periodic_param(mp_t(1) - 10 * mp_t(1)/2048, mp_t(1) + 10 * mp_t(1) / 2048, 20);
 
    arg1.type |= dummy_param;
    arg2.type |= dummy_param;
    arg3.type |= dummy_param;
    arg4.type |= dummy_param;
    arg5.type |= dummy_param;
+   arg6.type |= dummy_param;
+   arg7.type |= dummy_param;
+   arg8.type |= dummy_param;
+   arg9.type |= dummy_param;
+   arg10.type |= dummy_param;
+   arg11.type |= dummy_param;
+   arg12.type |= dummy_param;
 
    // comment out all but one of the following when running
    // or this program will take forever to complete!
    //data.insert(beta_data_generator(), arg1, arg2, arg3);
    //data.insert(beta_data_generator_medium(), arg4);
    //data.insert(beta_data_generator_small(), arg4);
-   data.insert(beta_data_generator_int(), arg5, arg5, arg3);
+   //data.insert(beta_data_generator_int(), arg5, arg5, arg3);
+   //data.insert(beta_data_generator_asym(), arg6, arg7);
+   //data.insert(beta_data_generator_asym(), arg8, arg9);
+   data.insert(beta_data_generator_asym2(), arg10, arg11, arg12);
 
    test_data<mp_t>::const_iterator i, j;
    i = data.begin();

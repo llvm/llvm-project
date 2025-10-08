@@ -35,11 +35,6 @@ obj no_eh : noeh_support.cpp : <library>/boost/config//boost_config ;
 
 project
     : requirements
-      <library>/boost/math//boost_math
-      <library>/boost/multiprecision//boost_multiprecision
-      <library>/boost/test//included
-      <library>/boost/type_index//boost_type_index
-      <library>/boost/ublas//boost_ublas
       $(OBJ_REMOVAL_OPTIONS)
       <toolset>acc:<cxxflags>+W2068,2461,2236,4070,4069
       <toolset>intel-win:<cxxflags>-nologo
@@ -80,7 +75,8 @@ project
       <search>$(mpfr_path)
       <search>$(mpfr_path)/build.vc10/lib/Win32/Debug
       [ requires cxx11_noexcept cxx11_rvalue_references sfinae_expr cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_hdr_initializer_list cxx11_hdr_chrono cxx11_thread_local cxx11_constexpr cxx11_nullptr cxx11_numeric_limits cxx11_decltype cxx11_hdr_array cxx11_hdr_atomic cxx11_hdr_type_traits cxx11_allocator cxx11_explicit_conversion_operators ]
-      [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction ]
+      [ requires cxx14_constexpr cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates ]
+      [ check-target-builds ../config//has_cxx14_type_traits "cxx14_type_traits" : : <build>no ]
     ;
 
 if $(ntl-path)
@@ -106,19 +102,23 @@ local float128_type_intel_quad =
 local float128_type_gcc =
     [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support"
         : <toolset>gcc:<library>quadmath <toolset>gcc:<define>BOOST_MATH_TEST_FLOAT128 ] ;
-local float128_type_floatmax =
+local float128_type_floatmax = $(float128_type_gcc) $(float128_type_intel_quad)
     [ check-target-builds ../config//has_128bit_floatmax_t "128-bit floatmax_t" : : <build>no ] ;
+#
+# DO NOT include $(float128_type_floatmax) in this macro, otherwise the whole test
+# gets disabled when std::float128_t is not available (which is most of the time!!)
+#
 local float128_type =
-    $(float128_type_intel_quad) $(float128_type_gcc) $(float128_type_floatmax) ;
+    $(float128_type_intel_quad) $(float128_type_gcc) ;
 
 test-suite special_fun :
    [ run test_1F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=1 : test_1F0_1 ] # hypergeometric_pFq_checked_series.hpp uses auto, the rest are from quadrature tests.
    [ run test_1F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 : test_1F0_2 ] # hypergeometric_pFq_checked_series.hpp uses auto, the rest are from quadrature tests.
    [ run test_1F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 : test_1F0_3 ] # hypergeometric_pFq_checked_series.hpp uses auto, the rest are from quadrature tests.
-   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=1 : test_2F0_1 ]
-   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=2 : test_2F0_2 ]
-   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=3 : test_2F0_3 ]
-   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=4 : test_2F0_4 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=1 : test_2F0_1 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 : test_2F0_2 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type_gcc) <define>TEST=3 : test_2F0_3 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=4 : test_2F0_4 ]
 
    [ run test_0F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=1 : test_0F1_1 ]
    [ run test_0F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 : test_0F1_2 ]
@@ -183,6 +183,9 @@ test-suite special_fun :
    [ run ccmath_fma_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
    [ run ccmath_signbit_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
    [ run log1p_expm1_test.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run log1p_expm1_extra_test.cpp pch_light /boost/test//boost_unit_test_framework : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>-lquadmath ] ]
+   [ run log1p_expm1_stdfloat_test.cpp pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_log1p_simple.cpp ]
    [ run powm1_sqrtp1m1_test.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
    [ run git_issue_705.cpp /boost/test//boost_unit_test_framework  ]
    [ run git_issue_810.cpp /boost/test//boost_unit_test_framework  ]
@@ -194,6 +197,10 @@ test-suite special_fun :
    [ run git_issue_1139.cpp ]
    [ run git_issue_1175.cpp ]
    [ run git_issue_1194.cpp ]
+   # -fsanitize=integer trips over deliberate unsigned integer overflow (left shift) in multiprecision:
+   [ run git_issue_1249.cpp /boost/test//boost_unit_test_framework  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Santizer Build" : : <build>no ] ]
+   [ run git_issue_1255.cpp ]
+   [ run git_issue_1247.cpp ]
    [ run special_functions_test.cpp /boost/test//boost_unit_test_framework  ]
    [ run test_airy.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
    [ run test_bessel_j.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
@@ -247,6 +254,7 @@ test-suite special_fun :
    [ run erf_limits_test.cpp ]
    [ run test_expint.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
    [ run test_factorials.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_lanczos.cpp /boost/test//boost_unit_test_framework : : : $(float128_type) ]
    [ run test_gamma.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
    [ run test_gamma_edge.cpp ]
    [ run test_gamma_mp.cpp /boost/test//boost_unit_test_framework : : : release <define>TEST=1 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :  test_gamma_mp_1 ]
@@ -260,6 +268,7 @@ test-suite special_fun :
         : # requirements
           <define>TEST_FLOAT
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_float  ]
    [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
         : # command line
@@ -267,6 +276,7 @@ test-suite special_fun :
         : # requirements
           <define>TEST_DOUBLE
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_double  ]
    [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
         : # command line
@@ -274,6 +284,7 @@ test-suite special_fun :
         : # requirements
           <define>TEST_LDOUBLE
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_long_double  ]
    [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
         : # command line
@@ -282,6 +293,7 @@ test-suite special_fun :
           <define>TEST_REAL_CONCEPT
           <define>TEST_DATA=1
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_real_concept1  ]
    [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
         : # command line
@@ -290,6 +302,7 @@ test-suite special_fun :
           <define>TEST_REAL_CONCEPT
           <define>TEST_DATA=2
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_real_concept2  ]
    [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
         : # command line
@@ -298,6 +311,7 @@ test-suite special_fun :
           <define>TEST_REAL_CONCEPT
           <define>TEST_DATA=3
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_real_concept3  ]
    [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
         : # command line
@@ -306,6 +320,7 @@ test-suite special_fun :
           <define>TEST_REAL_CONCEPT
           <define>TEST_DATA=4
           <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
         : test_ibeta_real_concept4  ]
 
    [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
@@ -540,7 +555,7 @@ test-suite special_fun :
    [ run test_lambert_w_integrals_long_double.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] ]
    [ run test_lambert_w_integrals_double.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] ]
    [ run test_lambert_w_integrals_float.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] ]
-   [ run test_lambert_w_derivative.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION  $(float128_type)  ]
+   [ run test_lambert_w_derivative.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION  $(float128_type_gcc)  ]
 
    [ run test_legendre.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework : : : $(float128_type)  ]
    [ run chebyshev_test.cpp  : : : [ requires cxx11_inline_namespaces cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_range_based_for cxx11_constexpr ] $(float128_type)  ]
@@ -557,7 +572,7 @@ test-suite special_fun :
 
    [ run test_ldouble_simple.cpp /boost/test//boost_unit_test_framework  ]
    # Needs to run in release mode, as it's rather slow:
-   [ run test_next.cpp pch /boost/test//boost_unit_test_framework : : : release  ]
+   [ run test_next.cpp pch /boost/test//boost_unit_test_framework ]
    [ run test_next_decimal.cpp pch /boost/test//boost_unit_test_framework : : : release  ]
    [ run test_owens_t.cpp /boost/test//boost_unit_test_framework  ]
    [ run test_polygamma.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
@@ -569,10 +584,12 @@ test-suite special_fun :
    [ run test_tgamma_for_issue396_part1.cpp /boost/test//boost_unit_test_framework : : : $(float128_type) <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] ]
    [ run test_tgamma_for_issue396_part2.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ]  ]
    [ run test_tgamma_ratio.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_tgamma_eh.cpp /boost/test//boost_unit_test_framework  ]
    [ run test_trig.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
    [ run test_zeta.cpp /boost/test//boost_unit_test_framework test_instances//test_instances pch_light  ]
    [ run test_sinc.cpp /boost/test//boost_unit_test_framework pch_light ]
    [ run test_fibonacci.cpp /boost/test//boost_unit_test_framework ]
+   [ run test_prime.cpp /boost/test//boost_unit_test_framework ]
 ;
 
 test-suite distribution_tests :
@@ -882,6 +899,7 @@ test-suite distribution_tests :
 
    [ run test_legacy_nonfinite.cpp /boost/test//boost_unit_test_framework ]
    [ run test_basic_nonfinite.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_nonfinite_io.cpp /boost/test//boost_unit_test_framework  ]
    [ run test_lexical_cast.cpp /boost/test//boost_unit_test_framework  ]
    [ run test_nonfinite_trap.cpp /boost/test//boost_unit_test_framework : : : <exception-handling>off:<build>no  ]
    [ run test_signed_zero.cpp /boost/test//boost_unit_test_framework  ]
@@ -1054,6 +1072,7 @@ test-suite misc :
        quaternion_mi1.cpp
        quaternion_mi2.cpp
        /boost/test//boost_unit_test_framework ]
+   [ run test_ulp.cpp /boost/test//boost_unit_test_framework ]
 
 #   [ run __temporary_test.cpp test_instances//test_instances : : : <test-info>always_show_run_output <pch>off ]
 ;
@@ -1373,7 +1392,7 @@ rule get_float128_tests
            : # command line
            : # input files
            : # requirements
-            $(float128_type)
+            $(float128_type_floatmax)
             <define>BOOST_ALL_NO_LIB
            : $(source:B)_floatmax_t ] ;
      }

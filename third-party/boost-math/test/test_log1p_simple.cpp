@@ -3,6 +3,10 @@
 //  Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#ifdef SYCL_LANGUAGE_VERSION
+#include "sycl/sycl.hpp"
+#endif
+
 #include <random>
 #include <cmath>
 #include <boost/math/special_functions/log1p.hpp>
@@ -34,6 +38,18 @@ void test_log1pmx()
         const T value (dist(rng));
         CHECK_ULP_CLOSE(std::log1p(value) - value, boost::math::log1pmx(value), 1e9);
     }
+
+    std::uniform_real_distribution<T> dist2(0, 10);
+
+    for (int n = 0; n < 100; ++n)
+    {
+        const T value (dist2(rng));
+        CHECK_ULP_CLOSE(std::log1p(value) - value, boost::math::log1pmx(value), 1e9);
+    }
+#ifndef BOOST_MATH_NO_EXCEPTIONS
+    CHECK_THROW(boost::math::log1pmx(T(-1.1)), std::domain_error);
+    CHECK_THROW(boost::math::log1pmx(T(-1.0)), std::overflow_error);
+#endif
 }
 
 int main()
