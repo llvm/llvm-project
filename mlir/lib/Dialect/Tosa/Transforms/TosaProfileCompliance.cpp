@@ -445,9 +445,9 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   const TosaSpecificationVersion complianceVersion{versionedTypeInfo.second};
   const TosaSpecificationVersion targetVersion{targetEnv.getSpecVersion()};
   if (!targetVersion.isBackwardsCompatibleWith(complianceVersion)) {
-    op->emitOpError() << "illegal: requires the target specification version ("
+    op->emitOpError() << "illegal: the target specification version ("
                       << stringifyVersion(targetVersion)
-                      << ") be backwards compatible with the op compliance "
+                      << ") is not backwards compatible with the op compliance "
                          "specification version ("
                       << stringifyVersion(complianceVersion) << ")\n";
     return failure();
