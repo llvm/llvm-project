@@ -4,32 +4,34 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin  %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/more-cstrings.s -o %t/more-cstrings.o
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-0 %t/test.o %t/more-cstrings.o
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/test-0 %t/test.o %t/more-cstrings.o
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-0 | FileCheck %s --check-prefix=ORIGIN_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-0 | FileCheck %s --check-prefix=ORIGIN_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-1 %t/test.o %t/more-cstrings.o -order_file %t/ord-1
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/test-1 %t/test.o %t/more-cstrings.o -order_file %t/ord-1
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-1 | FileCheck %s --check-prefix=ONE_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-1 | FileCheck %s --check-prefix=ONE_SEC
 
+# RUN: %lld --no-deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-1-dup %t/test.o %t/more-cstrings.o -order_file %t/ord-1
+# RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-1-dup | FileCheck %s --check-prefix=ONE_SYM
+# RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-1-dup | FileCheck %s --check-prefix=ONE_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-2 %t/test.o %t/more-cstrings.o -order_file %t/ord-2
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/test-2 %t/test.o %t/more-cstrings.o -order_file %t/ord-2
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-2 | FileCheck %s --check-prefix=TWO_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-2 | FileCheck %s --check-prefix=TWO_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-3 %t/test.o %t/more-cstrings.o -order_file %t/ord-3
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/test-3 %t/test.o %t/more-cstrings.o -order_file %t/ord-3
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-3 | FileCheck %s --check-prefix=THREE_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-3 | FileCheck %s --check-prefix=THREE_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-4 %t/test.o %t/more-cstrings.o -order_file %t/ord-4
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/test-4 %t/test.o %t/more-cstrings.o -order_file %t/ord-4
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-4 | FileCheck %s --check-prefix=FOUR_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-4 | FileCheck %s --check-prefix=FOUR_SEC
 # RUN: llvm-readobj --string-dump=__cstring %t/test-4 | FileCheck %s --check-prefix=FOUR_SEC_ESCAPE
 
-
 # We expect:
 # 1) Covered cstring symbols are reordered
-# 2) the rest of the cstring symbols remain original relative order within the cstring section
+# 2) the rest of the cstring symbols remain in the original relative order within the cstring section
 
 # ORIGIN_SYM: _local_foo1
 # ORIGIN_SYM: _globl_foo2
@@ -49,29 +51,27 @@
 
 # original order, but only parital covered
 #--- ord-1
-#foo2
-CSTR;1433942677
-#bar
-CSTR;540201826
 #bar2
 CSTR;1496286555
+#foo2
+CSTR;1433942677
 #foo3
 CSTR;1343999025
+#bar
+CSTR;540201826
 
-# ONE_SYM: _globl_foo2
-# ONE_SYM: _local_foo2
-# ONE_SYM: _bar
 # ONE_SYM: _bar2
+# ONE_SYM-DAG: _globl_foo2
+# ONE_SYM-DAG: _local_foo2
 # ONE_SYM: _globl_foo3
-# ONE_SYM: _local_foo1
+# ONE_SYM: _bar
 # ONE_SYM: _baz
 # ONE_SYM: _baz_dup
 
-# ONE_SEC: foo2
-# ONE_SEC: bar
 # ONE_SEC: bar2
+# ONE_SEC: foo2
 # ONE_SEC: foo3
-# ONE_SEC: foo1
+# ONE_SEC: bar
 # ONE_SEC: baz
 
 
