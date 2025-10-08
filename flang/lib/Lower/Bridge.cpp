@@ -3267,14 +3267,26 @@ private:
       }
     }
 
+    // Track sunk evaluations to avoid double-lowering
+    llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> sunk;
+    for (auto *e : prologue) sunk.insert(e);
+    for (auto *e : tail) sunk.insert(e);
+
     // Prologue sink
     for (auto *e : prologue)
       genFIR(*e);
 
-    // Lower the loop body as usual
+    // Lower the loop body as usual, skipping already-sunk evals
     if (curEval && curEval->hasNestedEvaluations()) {
-      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
+      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations()) {
+        if (sunk.contains(&e)) continue;
         genFIR(e);
+      }
+    } else if (getEval().hasNestedEvaluations()) {
+      for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations()) {
+        if (sunk.contains(&e)) continue;
+        genFIR(e);
+      }
     }
 
     // Epilogue sink
