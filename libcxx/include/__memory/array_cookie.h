@@ -102,7 +102,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie(_
   };
 
   size_t __cookie_size_with_padding = // max(sizeof(_ArrayCookie), alignof(T))
-      sizeof(_ArrayCookie) < alignof(_Tp) ? alignof(_Tp) : sizeof(_ArrayCookie);
+      sizeof(_ArrayCookie) < _LIBCPP_ALIGNOF(_Tp) ? _LIBCPP_ALIGNOF(_Tp) : sizeof(_ArrayCookie);
   char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - __cookie_size_with_padding;
   _ArrayCookie const* __cookie   = reinterpret_cast<_ArrayCookie const*>(__allocation_start);
   return __cookie->__element_count;
