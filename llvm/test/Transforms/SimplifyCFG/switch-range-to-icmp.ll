@@ -188,4 +188,217 @@ exit:
   ret void
 }
 
+define i32 @wrapping_known_range(i8 range(i8 0, 6) %arg) {
+; CHECK-LABEL: @wrapping_known_range(
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 4, label %if
+  i8 5, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i32 @wrapping_known_range_2(i8 range(i8 0, 6) %arg) {
+; CHECK-LABEL: @wrapping_known_range_2(
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i8 [[ARG:%.*]], 1
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 2, label %if
+  i8 3, label %if
+  i8 4, label %if
+  i8 5, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i32 @wrapping_range(i8 %arg) {
+; CHECK-LABEL: @wrapping_range(
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], -4
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 -3, label %if
+  i8 -2, label %if
+  i8 -1, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i8 @wrapping_range_phi(i8 %arg) {
+; CHECK-LABEL: @wrapping_range_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i8 [[ARG:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[ARG_OFF]], -2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i8 0, i8 1
+; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
+;
+entry:
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 -1, label %if
+  ]
+
+if:
+  %i = phi i8 [ 0, %else ], [ 1, %entry ], [ 1, %entry ]
+  ret i8 %i
+
+else:
+  br label %if
+}
+
+define i32 @no_continuous_wrapping_range(i8 %arg) {
+; CHECK-LABEL: @no_continuous_wrapping_range(
+; CHECK-NEXT:    switch i8 [[ARG:%.*]], label [[ELSE:%.*]] [
+; CHECK-NEXT:      i8 0, label [[IF:%.*]]
+; CHECK-NEXT:      i8 -3, label [[IF]]
+; CHECK-NEXT:      i8 -1, label [[IF]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       if:
+; CHECK-NEXT:    [[I0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i8 %arg, label %else [
+  i8 0, label %if
+  i8 -3, label %if
+  i8 -1, label %if
+  ]
+
+if:
+  %i0 = call i32 @f(i32 0)
+  ret i32 %i0
+
+else:
+  %i1 = call i32 @f(i32 1)
+  ret i32 %i1
+}
+
+define i32 @one_case_1(i32 %x) {
+; CHECK-LABEL: @one_case_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i32 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[B]] ], [ [[TMP1:%.*]], [[A]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       a:
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  switch i32 %x, label %unreachable [
+  i32 5, label %a
+  i32 6, label %a
+  i32 7, label %a
+  i32 10, label %b
+  ]
+
+unreachable:
+  unreachable
+a:
+  %0 = call i32 @f(i32 0)
+  ret i32 %0
+b:
+  %1 = call i32 @f(i32 1)
+  ret i32 %1
+}
+
+define i32 @one_case_2(i32 %x) {
+; CHECK-LABEL: @one_case_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i32 [[X:%.*]], 5
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       a:
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  switch i32 %x, label %unreachable [
+  i32 5, label %a
+  i32 10, label %b
+  i32 11, label %b
+  i32 12, label %b
+  i32 13, label %b
+  ]
+
+unreachable:
+  unreachable
+a:
+  %0 = call i32 @f(i32 0)
+  ret i32 %0
+b:
+  %1 = call i32 @f(i32 1)
+  ret i32 %1
+}
+
 declare void @bar(ptr nonnull dereferenceable(4))

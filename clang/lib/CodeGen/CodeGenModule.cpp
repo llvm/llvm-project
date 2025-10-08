@@ -493,10 +493,15 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     auto ReaderOrErr = llvm::IndexedInstrProfReader::create(
         CodeGenOpts.ProfileInstrumentUsePath, *FS,
         CodeGenOpts.ProfileRemappingFile);
-    // We're checking for profile read errors in CompilerInvocation, so if
-    // there was an error it should've already been caught. If it hasn't been
-    // somehow, trip an assertion.
-    assert(ReaderOrErr);
+    if (auto E = ReaderOrErr.takeError()) {
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
+      llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
+        Diags.Report(DiagID)
+            << CodeGenOpts.ProfileInstrumentUsePath << EI.message();
+      });
+      return;
+    }
     PGOReader = std::move(ReaderOrErr.get());
   }
 
