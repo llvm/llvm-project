@@ -19319,9 +19319,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
   // FIXME: This is duplicated in getNegatibleCost, but getNegatibleCost doesn't
   // know it was called from a context with a nsz flag if the input fsub does
   // not.
-  if (N0.getOpcode() == ISD::FSUB &&
-      (DAG.getTarget().Options.NoSignedZerosFPMath ||
-       N->getFlags().hasNoSignedZeros()) && N0.hasOneUse()) {
+  if (N0.getOpcode() == ISD::FSUB && N->getFlags().hasNoSignedZeros() &&
+      N0.hasOneUse()) {
     return DAG.getNode(ISD::FSUB, SDLoc(N), VT, N0.getOperand(1),
                        N0.getOperand(0));
   }

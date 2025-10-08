@@ -3524,6 +3524,17 @@ void RewriteInstance::disassembleFunctions() {
       }
     }
 
+    // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
+    // function.
+    if (Function.containedNegateRAState()) {
+      if (!opts::UpdateBranchProtection) {
+        BC->errs()
+            << "BOLT-ERROR: --update-branch-protection is set to false, but "
+            << Function.getPrintName() << " contains .cfi-negate-ra-state\n";
+        exit(1);
+      }
+    }
+
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
         !BC->getFragmentsToSkip().count(&Function)) {
