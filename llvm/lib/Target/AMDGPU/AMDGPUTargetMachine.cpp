@@ -940,7 +940,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
       if (!isLTOPreLink(Phase)) {
-        if (getTargetTriple().isAMDGCN()) {
+        if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
           AMDGPUAttributorOptions Opts;
           MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
         }
@@ -990,7 +990,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(InternalizePass(mustPreserveGV));
             PM.addPass(GlobalDCEPass());
           }
-          if (EnableAMDGPUAttributor) {
+          if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
               Opt.IsClosedWorld = true;
