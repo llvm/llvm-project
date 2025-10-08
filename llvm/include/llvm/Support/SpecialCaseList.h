@@ -166,7 +166,7 @@ private:
   /// Represents a set of patterns and their line numbers
   class Matcher {
   public:
-    LLVM_ABI explicit Matcher(bool UseGlobs);
+    LLVM_ABI Matcher(bool UseGlobs, bool RemoveDotSlash);
 
     LLVM_ABI void
     match(StringRef Query,
@@ -181,6 +181,7 @@ private:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
 
     std::variant<RegexMatcher, GlobMatcher> M;
+    bool RemoveDotSlash;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
@@ -188,7 +189,8 @@ private:
 protected:
   struct Section {
     Section(StringRef Str, unsigned FileIdx, bool UseGlobs)
-        : SectionMatcher(UseGlobs), SectionStr(Str), FileIdx(FileIdx) {}
+        : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false), SectionStr(Str),
+          FileIdx(FileIdx) {}
 
     Section(Section &&) = default;
 

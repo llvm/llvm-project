@@ -24,9 +24,6 @@ TEST_F(LanguageTest, SourceLanguage_GetDescription) {
       continue;
 
     auto lang_type = static_cast<lldb::LanguageType>(i);
-    if (lang_type == lldb::eLanguageTypeLastStandardLanguage)
-      continue;
-
     SourceLanguage lang(lang_type);
 
     // eLanguageTypeHIP is not implemented as a DW_LNAME because of a conflict.
@@ -66,4 +63,17 @@ TEST_F(LanguageTest, SourceLanguage_AsLanguageType) {
             eLanguageTypeAssembly);
   EXPECT_EQ(SourceLanguage(eLanguageTypeUnknown).AsLanguageType(),
             eLanguageTypeUnknown);
+}
+
+TEST_F(LanguageTest, SourceLanguage_LastStandardLanguage) {
+  // eLanguageTypeLastStandardLanguage should be treated as a standard DWARF
+  // language.
+  SourceLanguage lang(eLanguageTypeLastStandardLanguage);
+  EXPECT_TRUE(lang);
+
+  // It should have a valid description (not "Unknown").
+  EXPECT_NE(lang.GetDescription(), "Unknown");
+
+  // It should convert to the correct language type.
+  EXPECT_EQ(lang.AsLanguageType(), eLanguageTypeLastStandardLanguage);
 }
