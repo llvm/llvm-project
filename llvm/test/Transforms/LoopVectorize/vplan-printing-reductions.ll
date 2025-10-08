@@ -800,3 +800,269 @@ exit:
   %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
   ret i64 %r.0.lcssa
 }
+
+define i32 @print_mulacc_extended_const(ptr %start, ptr %end) {
+; CHECK-LABEL: 'print_mulacc_extended_const'
+; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<%0> = VF
+; CHECK-NEXT:  Live-in vp<%1> = VF * UF
+; CHECK-NEXT:  Live-in vp<%2> = vector-trip-count
+; CHECK-NEXT:  vp<%3> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<%3> = EXPAND SCEV (1 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64))
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%start> + vp<%2> * ir<1>
+; CHECK-NEXT:    EMIT vp<%5> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT vp<%6> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi vp<%5>, vp<%9>
+; CHECK-NEXT:      vp<%7> = SCALAR-STEPS vp<%6>, ir<1>, vp<%0>
+; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<%7>
+; CHECK-NEXT:      vp<%8> = vector-pointer vp<%next.gep>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<%8>
+; CHECK-NEXT:      EXPRESSION vp<%9> = ir<%red> + reduce.add (mul (ir<%l> zext to i32), (ir<63> zext to i32))
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%11> = compute-reduction-result ir<%red>, vp<%9>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%3>, vp<%2>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i32 [ %red.next, %loop ] (extra operand: vp<%11> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%4>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<%11>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %ptr.iv = phi ptr [ %start, %entry ], [ %gep.iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %red = phi i32 [ 0, %entry ], [ %red.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %l = load i8, ptr %ptr.iv, align 1
+; CHECK-NEXT:    IR   %l.ext = zext i8 %l to i32
+; CHECK-NEXT:    IR   %mul = mul i32 %l.ext, 63
+; CHECK-NEXT:    IR   %red.next = add i32 %red, %mul
+; CHECK-NEXT:    IR   %gep.iv.next = getelementptr i8, ptr %ptr.iv, i64 1
+; CHECK-NEXT:    IR   %ec = icmp eq ptr %ptr.iv, %end
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+; CHECK:       VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%1> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %start2 = ptrtoint ptr %start to i64
+; CHECK-NEXT:    IR   %end1 = ptrtoint ptr %end to i64
+; CHECK-NEXT:    IR   %0 = add i64 %end1, 1
+; CHECK-NEXT:    IR   %1 = sub i64 %0, %start2
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%1>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%n.mod.vf> = urem ir<%1>, ir<4>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%1>, vp<%n.mod.vf>
+; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%start> + vp<%n.vec> * ir<1>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi ir<0>, ir<%red.next>
+; CHECK-NEXT:    EMIT vp<%next.gep> = ptradd ir<%start>, vp<%index>
+; CHECK-NEXT:    WIDEN ir<%l> = load vp<%next.gep>
+; CHECK-NEXT:    WIDEN-CAST ir<%l.ext> = zext ir<%l> to i32
+; CHECK-NEXT:    WIDEN ir<%mul> = mul ir<%l.ext>, ir<63>
+; CHECK-NEXT:    REDUCE ir<%red.next> = ir<%red> +  reduce.add (ir<%mul>)
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%5> = compute-reduction-result ir<%red>, ir<%red.next>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%1>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i32 [ %red.next, %loop ] (extra operand: vp<%5> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%3>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<%5>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %ptr.iv = phi ptr [ %start, %scalar.ph ], [ %gep.iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %red = phi i32 [ 0, %scalar.ph ], [ %red.next, %loop ] (extra operand: vp<%bc.merge.rdx> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %l = load i8, ptr %ptr.iv, align 1
+; CHECK-NEXT:    IR   %l.ext = zext i8 %l to i32
+; CHECK-NEXT:    IR   %mul = mul i32 %l.ext, 63
+; CHECK-NEXT:    IR   %red.next = add i32 %red, %mul
+; CHECK-NEXT:    IR   %gep.iv.next = getelementptr i8, ptr %ptr.iv, i64 1
+; CHECK-NEXT:    IR   %ec = icmp eq ptr %ptr.iv, %end
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+entry:
+  br label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %start, %entry ], [ %gep.iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
+  %l = load i8, ptr %ptr.iv, align 1
+  %l.ext = zext i8 %l to i32
+  %mul = mul i32 %l.ext, 63
+  %red.next = add i32 %red, %mul
+  %gep.iv.next = getelementptr i8, ptr %ptr.iv, i64 1
+  %ec = icmp eq ptr %ptr.iv, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %red.next
+}
+
+; Constants >= 128 cannot be treated as sign-extended, so the expression shouldn't extend 128
+define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
+; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<%0> = VF
+; CHECK-NEXT:  Live-in vp<%1> = VF * UF
+; CHECK-NEXT:  Live-in vp<%2> = vector-trip-count
+; CHECK-NEXT:  vp<%3> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<%3> = EXPAND SCEV (1 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64))
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%start> + vp<%2> * ir<1>
+; CHECK-NEXT:    EMIT vp<%5> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT vp<%6> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi vp<%5>, vp<%9>
+; CHECK-NEXT:      vp<%7> = SCALAR-STEPS vp<%6>, ir<1>, vp<%0>
+; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<%7>
+; CHECK-NEXT:      vp<%8> = vector-pointer vp<%next.gep>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<%8>
+; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
+; CHECK-NEXT:      EXPRESSION vp<%9> = ir<%red> + reduce.add (mul ir<%l.ext>, ir<128>)
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%11> = compute-reduction-result ir<%red>, vp<%9>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%3>, vp<%2>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i32 [ %red.next, %loop ] (extra operand: vp<%11> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%4>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<%11>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %ptr.iv = phi ptr [ %start, %entry ], [ %gep.iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %red = phi i32 [ 0, %entry ], [ %red.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %l = load i8, ptr %ptr.iv, align 1
+; CHECK-NEXT:    IR   %l.ext = sext i8 %l to i32
+; CHECK-NEXT:    IR   %mul = mul i32 %l.ext, 128
+; CHECK-NEXT:    IR   %red.next = add i32 %red, %mul
+; CHECK-NEXT:    IR   %gep.iv.next = getelementptr i8, ptr %ptr.iv, i64 1
+; CHECK-NEXT:    IR   %ec = icmp eq ptr %ptr.iv, %end
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+; CHECK:       VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%1> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %start2 = ptrtoint ptr %start to i64
+; CHECK-NEXT:    IR   %end1 = ptrtoint ptr %end to i64
+; CHECK-NEXT:    IR   %0 = add i64 %end1, 1
+; CHECK-NEXT:    IR   %1 = sub i64 %0, %start2
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%1>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%n.mod.vf> = urem ir<%1>, ir<4>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%1>, vp<%n.mod.vf>
+; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%start> + vp<%n.vec> * ir<1>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi ir<0>, ir<%red.next>
+; CHECK-NEXT:    EMIT vp<%next.gep> = ptradd ir<%start>, vp<%index>
+; CHECK-NEXT:    WIDEN ir<%l> = load vp<%next.gep>
+; CHECK-NEXT:    WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
+; CHECK-NEXT:    WIDEN ir<%mul> = mul ir<%l.ext>, ir<128>
+; CHECK-NEXT:    REDUCE ir<%red.next> = ir<%red> +  reduce.add (ir<%mul>)
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%5> = compute-reduction-result ir<%red>, ir<%red.next>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%1>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i32 [ %red.next, %loop ] (extra operand: vp<%5> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%3>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<%5>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %ptr.iv = phi ptr [ %start, %scalar.ph ], [ %gep.iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %red = phi i32 [ 0, %scalar.ph ], [ %red.next, %loop ] (extra operand: vp<%bc.merge.rdx> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %l = load i8, ptr %ptr.iv, align 1
+; CHECK-NEXT:    IR   %l.ext = sext i8 %l to i32
+; CHECK-NEXT:    IR   %mul = mul i32 %l.ext, 128
+; CHECK-NEXT:    IR   %red.next = add i32 %red, %mul
+; CHECK-NEXT:    IR   %gep.iv.next = getelementptr i8, ptr %ptr.iv, i64 1
+; CHECK-NEXT:    IR   %ec = icmp eq ptr %ptr.iv, %end
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+entry:
+  br label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %start, %entry ], [ %gep.iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
+  %l = load i8, ptr %ptr.iv, align 1
+  %l.ext = sext i8 %l to i32
+  %mul = mul i32 %l.ext, 128
+  %red.next = add i32 %red, %mul
+  %gep.iv.next = getelementptr i8, ptr %ptr.iv, i64 1
+  %ec = icmp eq ptr %ptr.iv, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %red.next.lcssa = phi i32 [ %red.next, %loop ]
+  ret i32 %red.next.lcssa
+}
