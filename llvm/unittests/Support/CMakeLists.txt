@@ -52,6 +52,7 @@ add_llvm_unittest(SupportTests
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
   InterleavedRangeTest.cpp
+  JobserverTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
