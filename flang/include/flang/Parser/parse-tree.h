@@ -4718,7 +4718,7 @@ struct OmpTaskReductionClause {
 // threadset-clause ->
 //     THREADSET(omp_pool|omp_team)
 struct OmpThreadsetClause {
-  ENUM_CLASS(ThreadsetPolicy, omp_pool, omp_team)
+  ENUM_CLASS(ThreadsetPolicy, Omp_Pool, Omp_Team)
   WRAPPER_CLASS_BOILERPLATE(OmpThreadsetClause, ThreadsetPolicy);
 };
 

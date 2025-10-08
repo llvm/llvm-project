@@ -1149,7 +1149,7 @@ struct ThreadsT {
 // V6.0: [14.8] `threadset` clause
 template <typename T, typename I, typename E> //
 struct ThreadsetT {
-  ENUM(ThreadsetPolicy, omp_pool, omp_team);
+  ENUM(ThreadsetPolicy, Omp_Pool, Omp_Team);
   using WrapperTrait = std::true_type;
   ThreadsetPolicy v;
 };

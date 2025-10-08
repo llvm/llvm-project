@@ -1434,8 +1434,8 @@ Threadset make(const parser::OmpClause::Threadset &inp,
   CLAUSET_ENUM_CONVERT( //
       convert, wrapped::ThreadsetPolicy, Threadset::ThreadsetPolicy,
       // clang-format off
-      MS(omp_pool, omp_pool)
-      MS(omp_team, omp_team)
+      MS(Omp_Pool, Omp_Pool)
+      MS(Omp_Team, Omp_Team)
       // clang-format on
   );
   return Threadset{/*ThreadsetPolicy=*/convert(inp.v.v)};
