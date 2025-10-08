@@ -13,9 +13,9 @@
 #ifndef LLVM_ASMPARSER_LLLEXER_H
 #define LLVM_ASMPARSER_LLLEXER_H
 
-#include "LLToken.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/AsmParser/LLToken.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include <string>
