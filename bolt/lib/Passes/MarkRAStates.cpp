@@ -131,11 +131,9 @@ Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
     return !BF.containedNegateRAState() || BF.isIgnored();
   };
 
-  int Total = llvm::count_if(
-      BC.getBinaryFunctions(),
-      [&](std::pair<const unsigned long, BinaryFunction> &P) {
-        return P.second.containedNegateRAState() && !P.second.isIgnored();
-      });
+  int Total = llvm::count_if(BC.getBinaryFunctions(), [&](auto &P) {
+    return P.second.containedNegateRAState() && !P.second.isIgnored();
+  });
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
