@@ -240,6 +240,225 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
   return iteratorType == utils::IteratorType::reduction;
 }
 
+// -------------------------------
+// ---------- CONV ---------------
+// -------------------------------
+
+/// Utility to match block body for linalg.pool* ops.
+template <typename... OpTypes>
+static bool bodyMatcherForPoolOps(Value yieldVal, Block *body) {
+  Operation *defOp = yieldVal.getDefiningOp();
+  // if (!defOp) return false;
+  if (!(isa_and_present<OpTypes>(defOp) || ...)) return false;
+
+  BlockArgument lhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(0));
+  BlockArgument rhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(1));
+  if (!lhsArg || !rhsArg) return false;
+  return true;
+}
+
+static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxSIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinSIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal, body);
+}
+
+static bool bodyMatcherForSumPoolOps(Value yieldVal, Block *body) {
+  return bodyMatcherForPoolOps<arith::AddIOp, arith::AddFOp>(yieldVal, body);
+}
+
+static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
+                                        uint32_t mapIndex, uint32_t dimIndex) {
+  auto affineMap = cast<AffineMapAttr>(indexingMaps[mapIndex]).getValue();
+  if (dimIndex < affineMap.getNumResults())
+    return affineMap.getResult(dimIndex);
+  return nullptr;
+}
+
+// Check if `expr` is either:
+// - a dimension expr alone (implying *1), or
+// - a multiplication of dimension expr by constant.
+static bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim, int64_t &constantValue) {
+  if (auto dExpr = dyn_cast<AffineDimExpr>(expr)) {
+    dim = dExpr;
+    constantValue = 1;
+    return true;
+  }
+
+  auto mulExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+  if (!mulExpr || mulExpr.getKind() != AffineExprKind::Mul)
+    return false;
+
+  AffineExpr lhs = mulExpr.getLHS();
+  AffineExpr rhs = mulExpr.getRHS();
+
+  if (auto dExpr = dyn_cast<AffineDimExpr>(lhs)) {
+    if (auto cst = dyn_cast<AffineConstantExpr>(rhs)) {
+      dim = dExpr;
+      constantValue = cst.getValue();
+      return true;
+    }
+  }
+  if (auto cst = dyn_cast<AffineConstantExpr>(lhs)) {
+    if (auto dExpr = dyn_cast<AffineDimExpr>(rhs)) {
+      dim = dExpr;
+      constantValue = cst.getValue();
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim, unsigned fDim, unsigned oDim) {
+  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
+  AffineExpr inpExpr = getAffineMapDim(indexingMaps, iIndex, iDim);
+  auto addExpr = dyn_cast<AffineBinaryOpExpr>(inpExpr);
+  if (!addExpr || addExpr.getKind() != AffineExprKind::Add)
+    return false;
+
+  AffineExpr dim0, dim1;
+  // TODO(Abhishek-Varma): Use this information in specialize.cpp.
+  int64_t c0, c1;
+
+  if (isDimTimesConstantOrDimOnly(addExpr.getLHS(), dim0, c0) &&
+      isDimTimesConstantOrDimOnly(addExpr.getRHS(), dim1, c1)) {
+    // Pattern matched with dims and constants extracted.
+    AffineExpr fExpr = getAffineMapDim(indexingMaps, fIndex, fDim);
+    AffineExpr oExpr = getAffineMapDim(indexingMaps, oIndex, oDim);
+    return ((dim0 == fExpr && dim1 == oExpr) || (dim1 == fExpr && dim0 == oExpr));
+  }
+  return false;
+}
+
+static bool matchConvDimExprPattern(ArrayAttr indexingMaps, unsigned aIndex, unsigned aDim, unsigned bIndex, unsigned bDim) {
+  return getAffineMapDim(indexingMaps, aIndex, aDim) == getAffineMapDim(indexingMaps, bIndex, bDim);
+}
+
+static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps, ArrayRef<int64_t> expectedSizes) {
+  if (indexingMaps.size() != expectedSizes.size()) return false;
+
+  for (auto [indexingMap, expectedSize] : llvm::zip_equal(indexingMaps, expectedSizes)) {
+    auto affineMap = cast<AffineMapAttr>(indexingMap).getValue();
+    if (affineMap.getNumResults() != expectedSize) return false;
+  }
+  return true;
+}
+
+bool isaConv1DOp(LinalgOp op) {
+  if (isa<linalg::Conv1DOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {1,1,1})) return false;
+  
+  // #map = affine_map<(d0, d1) -> (d0 + d1)>
+  // #map1 = affine_map<(d0, d1) -> (d1)>
+  // #map2 = affine_map<(d0, d1) -> (d0)>
+  return matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0, /*oDim=*/0);
+}
+
+bool isaConv1DNwcWcfOp(LinalgOp op) {
+  if (isa<linalg::Conv1DNwcWcfOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,3})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d3, d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4, d2)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
+      matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 2));
+}
+
+bool isaConv1DNcwFcwOp(LinalgOp op) {
+  if (isa<linalg::Conv1DNcwFcwOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,3})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d2 + d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d1, d3, d4)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1));
+}
+
+bool isaDepthwiseConv1DNcwCwOp(LinalgOp op) {
+  if (isa<linalg::DepthwiseConv1DNcwCwOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,2,3})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1 + d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2));
+}
+
+bool isaDepthwiseConv1DNwcWcOp(LinalgOp op) {
+  if (isa<linalg::DepthwiseConv1DNwcWcOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,2,3})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1));
+}
+
+bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op) {
+  if (isa<linalg::DepthwiseConv1DNwcWcmOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,3,4})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d4, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d4, d2, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+      matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 3));
+}
+
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold,
                             ValueRange typeDynDims) {

@@ -111,8 +111,15 @@ std::optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 
 //===----------------------------------------------------------------------===//
-// Fusion / Tiling utilities
+// Convolution matcher utilities
 //===----------------------------------------------------------------------===//
+
+bool isaConv1DOp(LinalgOp op);
+bool isaConv1DNwcWcfOp(LinalgOp op);
+bool isaConv1DNcwFcwOp(LinalgOp op);
+bool isaDepthwiseConv1DNcwCwOp(LinalgOp op);
+bool isaDepthwiseConv1DNwcWcOp(LinalgOp op);
+bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities

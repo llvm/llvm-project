@@ -338,35 +338,24 @@ bool matchConvDimExprPattern(ArrayAttr indexingMaps, unsigned aIndex, unsigned a
 }
 
 static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() != 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
-  if (matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0, /*oDim=*/0))
-    return "linalg.conv_1d";
+  if (isaConv1DOp(genericOp)) return "linalg.conv_1d";
   return "";
 }
 
 static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
   ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   if (indexingMaps.size() != 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
   // depthwise_conv_1d_ncw_cw
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1 + d3)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2))
+  if (isaDepthwiseConv1DNcwCwOp(genericOp))
     return "linalg.depthwise_conv_1d_ncw_cw";
   // depthwise_conv_1d_nwc_wc
   // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
   // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1))
+  if (isaDepthwiseConv1DNwcWcOp(genericOp))
     return "linalg.depthwise_conv_1d_nwc_wc";
   // conv_2d
   // #map = affine_map<(d0, d1, d2, d3) -> (d0 + d2, d1 + d3)>
@@ -414,34 +403,23 @@ static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
 static std::string inferBasedOnRank5ConvIteratorTypes(GenericOp genericOp) {
   ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   if (indexingMaps.size() != 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
   // depthwise_conv_1d_nwc_wcm
   // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d4, d2)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d4, d2, d3)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 3))
+  if (isaDepthwiseConv1DNwcWcmOp(genericOp))
     return "linalg.depthwise_conv_1d_nwc_wcm";
   // conv_1d_nwc_wcf
   // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1 + d3, d4)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d3, d4, d2)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, fIndex, 1) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 2, oIndex, 2))
+  if (isaConv1DNwcWcfOp(genericOp))
     return "linalg.conv_1d_nwc_wcf";
   // conv_1d_ncw_fcw
   // #map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d2 + d4)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4) -> (d1, d3, d4)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1))
+  if (isaConv1DNcwFcwOp(genericOp))
     return "linalg.conv_1d_ncw_fcw";
   return "";
 }
