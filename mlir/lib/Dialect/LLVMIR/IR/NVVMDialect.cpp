@@ -2221,14 +2221,12 @@ NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
           .Case<Float8E4M3FNType>([&](Float8E4M3FNType type) {
-            return hasRelu
-                       ? llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn_relu
-                       : llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn;
+            return hasRelu ? llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn;
           })
           .Case<Float8E5M2Type>([&](Float8E5M2Type type) {
-            return hasRelu
-                       ? llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn_relu
-                       : llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn;
+            return hasRelu ? llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn_relu
+                           : llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn;
           })
           .Default([](mlir::Type type) {
             llvm_unreachable("Invalid type for ConvertF8x2ToF16x2Op");
