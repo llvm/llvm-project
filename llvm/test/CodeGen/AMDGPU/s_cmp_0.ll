@@ -66,7 +66,6 @@ define amdgpu_ps i32 @ashr32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: ashr32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_ashr_i32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -81,7 +80,6 @@ define amdgpu_ps i32 @ashr64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: ashr64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -96,7 +94,6 @@ define amdgpu_ps i32 @abs32(i32 inreg %val0) {
 ; CHECK-LABEL: abs32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_abs_i32 s0, s0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND

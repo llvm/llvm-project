@@ -10586,43 +10586,38 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!Def || Def->getParent() != CmpInstr.getParent())
       return false;
 
-    if (!(Def->getOpcode() == AMDGPU::S_LSHL_B32 ||
-          Def->getOpcode() == AMDGPU::S_LSHL_B64 ||
-          Def->getOpcode() == AMDGPU::S_LSHR_B32 ||
-          Def->getOpcode() == AMDGPU::S_LSHR_B64 ||
-          Def->getOpcode() == AMDGPU::S_AND_B32 ||
-          Def->getOpcode() == AMDGPU::S_AND_B64 ||
-          Def->getOpcode() == AMDGPU::S_OR_B32 ||
-          Def->getOpcode() == AMDGPU::S_OR_B64 ||
-          Def->getOpcode() == AMDGPU::S_XOR_B32 ||
-          Def->getOpcode() == AMDGPU::S_XOR_B64 ||
-          Def->getOpcode() == AMDGPU::S_NAND_B32 ||
-          Def->getOpcode() == AMDGPU::S_NAND_B64 ||
-          Def->getOpcode() == AMDGPU::S_NOR_B32 ||
-          Def->getOpcode() == AMDGPU::S_NOR_B64 ||
-          Def->getOpcode() == AMDGPU::S_XNOR_B32 ||
-          Def->getOpcode() == AMDGPU::S_XNOR_B64 ||
-          Def->getOpcode() == AMDGPU::S_ANDN2_B32 ||
-          Def->getOpcode() == AMDGPU::S_ANDN2_B64 ||
-          Def->getOpcode() == AMDGPU::S_ORN2_B32 ||
-          Def->getOpcode() == AMDGPU::S_ORN2_B64 ||
-          Def->getOpcode() == AMDGPU::S_BFE_I32 ||
-          Def->getOpcode() == AMDGPU::S_BFE_I64 ||
-          Def->getOpcode() == AMDGPU::S_BFE_U32 ||
-          Def->getOpcode() == AMDGPU::S_BFE_U64 ||
-          Def->getOpcode() == AMDGPU::S_BCNT0_I32_B32 ||
-          Def->getOpcode() == AMDGPU::S_BCNT0_I32_B64 ||
-          Def->getOpcode() == AMDGPU::S_BCNT1_I32_B32 ||
-          Def->getOpcode() == AMDGPU::S_BCNT1_I32_B64 ||
-          Def->getOpcode() == AMDGPU::S_QUADMASK_B32 ||
-          Def->getOpcode() == AMDGPU::S_QUADMASK_B64 ||
-          Def->getOpcode() == AMDGPU::S_NOT_B32 ||
-          Def->getOpcode() == AMDGPU::S_NOT_B64 ||
+    bool CanOptimize = false;
+    MachineOperand *SccDef =
+        Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
 
-          ((Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-            Def->getOpcode() == AMDGPU::S_CSELECT_B64) &&
-           Def->getOperand(1).isImm() && Def->getOperand(1).getImm() &&
-           !Def->getOperand(2).isImm() && !Def->getOperand(2).getImm())))
+    // For S_OP that set SCC = DST!=0, do the transformation
+    //
+    //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
+    if (SccDef && Def->getOpcode() != AMDGPU::S_ADD_I32 &&
+        Def->getOpcode() != AMDGPU::S_ADD_U32 &&
+        Def->getOpcode() != AMDGPU::S_ADDC_U32 &&
+        Def->getOpcode() != AMDGPU::S_SUB_I32 &&
+        Def->getOpcode() != AMDGPU::S_SUB_U32 &&
+        Def->getOpcode() != AMDGPU::S_SUBB_U32 &&
+        Def->getOpcode() != AMDGPU::S_MIN_I32 &&
+        Def->getOpcode() != AMDGPU::S_MIN_U32 &&
+        Def->getOpcode() != AMDGPU::S_MAX_I32 &&
+        Def->getOpcode() != AMDGPU::S_MAX_U32 &&
+        Def->getOpcode() != AMDGPU::S_ADDK_I32)
+      CanOptimize = true;
+
+    // s_cmp_lg_* is redundant because the SCC input value for S_CSELECT* has
+    // the same value that will be calculated by s_cmp_lg_*
+    //
+    //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
+    //   imm), 0)
+    if ((Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+         Def->getOpcode() == AMDGPU::S_CSELECT_B64) &&
+        Def->getOperand(1).isImm() && Def->getOperand(1).getImm() &&
+        !Def->getOperand(2).isImm() && !Def->getOperand(2).getImm())
+      CanOptimize = true;
+
+    if (!CanOptimize)
       return false;
 
     for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
@@ -10632,13 +10627,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         return false;
     }
 
-    if (!(Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-          Def->getOpcode() == AMDGPU::S_CSELECT_B64)) {
-      MachineOperand *SccDef =
-          Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
-      assert(SccDef && "Def instruction must define SCC");
+    if (SccDef)
       SccDef->setIsDead(false);
-    }
 
     CmpInstr.eraseFromParent();
     return true;
