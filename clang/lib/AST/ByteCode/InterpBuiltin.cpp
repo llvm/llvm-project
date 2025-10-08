@@ -3288,7 +3288,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_ctzg:
     return interp__builtin_elementwise_countzeroes(S, OpPC, Frame, Call,
                                                    BuiltinID);
-
+  case Builtin::BI__builtin_bswapg: {
+    const APSInt &Val = popToAPSInt(S, Call->getArg(0));
+      assert(Val.getActiveBits() <= 64);
+    if (Val.getBitWidth() == 8)
+        pushInteger(S, Val, Call->getType());
+    else
+        pushInteger(S, Val.byteSwap(), Call->getType());
+    return true;
+  }
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:

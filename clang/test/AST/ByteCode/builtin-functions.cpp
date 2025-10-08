@@ -824,6 +824,10 @@ namespace bswap {
   int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
   int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
   int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
+  int h6 = __builtin_bswapg(0x12) == 0x12 ? 1 : f();
+  int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
+  int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
+  int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
 }
 
 #define CFSTR __builtin___CFStringMakeConstantString

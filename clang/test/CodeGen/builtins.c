@@ -130,7 +130,7 @@ int main(void) {
   P(object_size, (s0, 3));
 
   // Whatever
-
+  P(bswapg, (N));
   P(bswap16, (N));
   P(bswap32, (N));
   P(bswap64, (N));
