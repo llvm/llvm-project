@@ -482,7 +482,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
-    // The ordering have to be strictly weak.
+    // The ordering has to be strictly weak.
     /// Sort heaviest intervals first to prioritize their unspilling
     if (A->weight() != B->weight())
       return A->weight() > B->weight();
@@ -491,7 +491,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       return A->getSize() > B->getSize();
 
     // Tie breaker by number to avoid need for stable sort
-    return (A->reg().stackSlotIndex() < B->reg().stackSlotIndex());
+    return A->reg().stackSlotIndex() < B->reg().stackSlotIndex();
   });
 
   // FIXME: The APIs for dealing with the LiveInterval of a frame index are
