@@ -318,12 +318,12 @@ Changes in existing checks
 
   - ``for`` loops are supported.
 
-- Improved :doc:`misc-header-include-cycle
-  <clang-tidy/checks/misc/header-include-cycle>` check performance.
-
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by fixing false positives
   of function pointer.
+
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
