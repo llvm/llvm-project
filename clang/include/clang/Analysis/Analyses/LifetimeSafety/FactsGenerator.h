@@ -1,4 +1,4 @@
-//===- TODO ---*- C++ -*-===//
+//===- FactsGenerator.h - Lifetime Facts Generation -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TODO
+// This file defines the FactsGenerator, which traverses the AST to generate
+// lifetime-relevant facts (such as loan issuance, expiration, origin flow,
+// and use) from CFG statements. These facts are used by the dataflow analyses
+// to track pointer lifetimes and detect use-after-free errors.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTSGENERATOR_H
