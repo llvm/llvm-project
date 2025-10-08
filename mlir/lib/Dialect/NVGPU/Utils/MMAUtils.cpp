@@ -168,8 +168,7 @@ nvgpu::getLaneIdAndValueIdToOperandCoord(OpBuilder &builder, Location loc,
                                          const WarpMatrixInfo &fragmentType) {
   Type elementType = fragmentType.vectorType.getElementType();
   ArrayRef<int64_t> operandShape = fragmentType.vectorType.getShape();
-  FailureOr<nvgpu::FragmentElementInfo> regInfo =
-      getMmaSyncRegisterType(fragmentType);
+  FailureOr<FragmentElementInfo> regInfo = getMmaSyncRegisterType(fragmentType);
   if (failed(regInfo))
     return failure();
 
@@ -199,8 +198,8 @@ nvgpu::getLaneIdAndValueIdToOperandCoord(OpBuilder &builder, Location loc,
                       (logicalValueIdDim % elementsPerRegister)});
 }
 
-FailureOr<nvgpu::LdMatrixParams>
-nvgpu::getLdMatrixParams(const WarpMatrixInfo &type, bool transpose) {
+FailureOr<LdMatrixParams> nvgpu::getLdMatrixParams(const WarpMatrixInfo &type,
+                                                   bool transpose) {
   LdMatrixParams params;
   Type elType = type.vectorType.getElementType();
   params.fragmentType = type.vectorType;
