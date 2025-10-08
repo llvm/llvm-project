@@ -2373,11 +2373,8 @@ static mlir::acc::LoopOp buildACCLoopOp(
        llvm::zip(loopOp.getLoopRegions().front()->front().getArguments(),
                  ivPrivate)) {
     // Store block argument to the related iv private variable.
-    auto privateValue =
+    mlir::Value privateValue =
         converter.getSymbolAddress(std::get<Fortran::semantics::SymbolRef>(iv));
-    // if (auto declareOp =
-    //         mlir::dyn_cast<hlfir::DeclareOp>(privateValue.getDefiningOp()))
-    //   privateValue = declareOp.getResults()[0];
     fir::StoreOp::create(builder, currentLocation, arg, privateValue);
   }
 
