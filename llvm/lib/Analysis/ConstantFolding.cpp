@@ -1495,17 +1495,17 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   default:
     llvm_unreachable("Missing case");
   case Instruction::PtrToAddr:
-    // TODO: Add some of the ptrtoint folds here as well.
-    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
       // If the input is a inttoptr, eliminate the pair.  This requires knowing
       // the width of a pointer, so it can't be done in ConstantExpr::getCast.
       if (CE->getOpcode() == Instruction::IntToPtr) {
-        // zext/trunc the inttoptr to pointer size.
-        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0),
-                                              DL.getIntPtrType(CE->getType()),
+        // zext/trunc the inttoptr to pointer/address size.
+        Type *MidTy = Opcode == Instruction::PtrToInt
+                          ? DL.getAddressType(CE->getType())
+                          : DL.getIntPtrType(CE->getType());
+        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0), MidTy,
                                               /*IsSigned=*/false, DL);
       } else if (auto *GEP = dyn_cast<GEPOperator>(CE)) {
         // If we have GEP, we can perform the following folds:
@@ -1528,7 +1528,8 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
                 Sub->getOpcode() == Instruction::Sub &&
                 Sub->getOperand(0)->isNullValue())
               FoldedValue = ConstantExpr::getSub(
-                  ConstantExpr::getPtrToInt(Ptr, IntIdxTy), Sub->getOperand(1));
+                  ConstantExpr::getCast(Opcode, Ptr, IntIdxTy),
+                  Sub->getOperand(1));
           }
         }
       }

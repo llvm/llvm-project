@@ -2,6 +2,12 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "p1:64:64:64:32"
 
+@g = external global i8
+@g2 = external global i8
+
+@g.as1 = external addrspace(1) global i8
+@g2.as1 = external addrspace(1) global i8
+
 define i32 @ptrtoaddr_inttoptr_arg(i32 %a) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_arg(
 ; CHECK-SAME: i32 [[A:%.*]]) {
@@ -24,14 +30,14 @@ define i32 @ptrtoaddr_inttoptr() {
 
 define i32 @ptrtoaddr_inttoptr_diff_size1() {
 ; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_diff_size1() {
-; CHECK-NEXT:    ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i64 -1 to ptr addrspace(1)) to i32)
+; CHECK-NEXT:    ret i32 -1
 ;
   ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i64 -1 to ptr addrspace(1)) to i32)
 }
 
 define i32 @ptrtoaddr_inttoptr_diff_size2() {
 ; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_diff_size2() {
-; CHECK-NEXT:    ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i16 -1 to ptr addrspace(1)) to i32)
+; CHECK-NEXT:    ret i32 65535
 ;
   ret i32 ptrtoaddr (ptr addrspace(1) inttoptr (i16 -1 to ptr addrspace(1)) to i32)
 }
@@ -52,14 +58,42 @@ define i64 @ptr2addr2_inttoptr_noas2() {
 
 define i64 @ptrtoaddr_inttoptr_noas_diff_size1() {
 ; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_noas_diff_size1() {
-; CHECK-NEXT:    ret i64 ptrtoaddr (ptr inttoptr (i32 -1 to ptr) to i64)
+; CHECK-NEXT:    ret i64 4294967295
 ;
   ret i64 ptrtoaddr (ptr inttoptr (i32 -1 to ptr) to i64)
 }
 
 define i64 @ptrtoaddr_inttoptr_noas_diff_size2() {
 ; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_noas_diff_size2() {
-; CHECK-NEXT:    ret i64 ptrtoaddr (ptr inttoptr (i128 -1 to ptr) to i64)
+; CHECK-NEXT:    ret i64 -1
 ;
   ret i64 ptrtoaddr (ptr inttoptr (i128 -1 to ptr) to i64)
+}
+
+define i64 @ptrtoaddr_gep_null() {
+; CHECK-LABEL: define i64 @ptrtoaddr_gep_null() {
+; CHECK-NEXT:    ret i64 42
+;
+  ret i64 ptrtoaddr (ptr getelementptr (i8, ptr null, i64 42) to i64)
+}
+
+define i32 @ptrtoaddr_gep_null_addrsize() {
+; CHECK-LABEL: define i32 @ptrtoaddr_gep_null_addrsize() {
+; CHECK-NEXT:    ret i32 42
+;
+  ret i32 ptrtoaddr (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i32 42) to i32)
+}
+
+define i64 @ptrtoaddr_gep_sub() {
+; CHECK-LABEL: define i64 @ptrtoaddr_gep_sub() {
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoaddr (ptr @g to i64), i64 ptrtoaddr (ptr @g2 to i64))
+;
+  ret i64 ptrtoaddr (ptr getelementptr (i8, ptr @g, i64 sub (i64 0, i64 ptrtoaddr (ptr @g2 to i64))) to i64)
+}
+
+define i32 @ptrtoaddr_gep_sub_addrsize() {
+; CHECK-LABEL: define i32 @ptrtoaddr_gep_sub_addrsize() {
+; CHECK-NEXT:    ret i32 sub (i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), i32 ptrtoaddr (ptr addrspace(1) @g2.as1 to i32))
+;
+  ret i32 ptrtoaddr (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g.as1, i32 sub (i32 0, i32 ptrtoaddr (ptr addrspace(1) @g2.as1 to i32))) to i32)
 }
