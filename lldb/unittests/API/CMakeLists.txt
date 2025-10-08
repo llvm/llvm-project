@@ -2,6 +2,7 @@ add_lldb_unittest(APITests
   SBCommandInterpreterTest.cpp
   SBLineEntryTest.cpp
   SBMutexTest.cpp
+  SBBreakpointClearConditionTest.cpp
 
   SBAPITEST
 
