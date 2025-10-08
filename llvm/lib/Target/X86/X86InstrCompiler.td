@@ -702,10 +702,11 @@ def : Pat<(v8f64 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
 let isPseudo = 1, isNotDuplicable = 1 in {
   // Phase 1: Initial pseudos that consume EFLAGS (via custom inserter)
   // These are matched by patterns and convert EFLAGS to condition byte
-  multiclass CTSELECT_I386_INITIAL<RegisterClass RC> {
+  multiclass CTSELECT_I386_INITIAL<RegisterClass RC, ValueType VT> {
     let Uses = [EFLAGS], Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
       def rr : PseudoI<(outs RC:$dst),
-                       (ins RC:$src1, RC:$src2, i8imm:$cond), []>;
+                       (ins RC:$src1, RC:$src2, i8imm:$cond), 
+                       [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2, timm:$cond, EFLAGS)))]>;
     }
   }
 
@@ -721,22 +722,14 @@ let isPseudo = 1, isNotDuplicable = 1 in {
       }
     }
   }
-
-  multiclass CTSELECT_NOCMOV<RegisterClass RC, ValueType VT> {
-    let hasNoSchedulingInfo = 1 in {
-      def rr : PseudoI<(outs RC:$dst), (ins RC:$src1, RC:$src2, i8imm:$cond),
-                       [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2,
-                                          timm:$cond, EFLAGS)))]>;
-    }
-  }
 }
 
 // Phase 1 pseudos for non-CMOV targets (custom inserter materializes condition)
 let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
   let Predicates = [NoNativeCMOV] in {
-    defm CTSELECT_I386_GR8 : CTSELECT_I386_INITIAL<GR8>;
-    defm CTSELECT_I386_GR16 : CTSELECT_I386_INITIAL<GR16>;
-    defm CTSELECT_I386_GR32 : CTSELECT_I386_INITIAL<GR32>;
+    defm CTSELECT_I386_GR8 : CTSELECT_I386_INITIAL<GR8, i8>;
+    defm CTSELECT_I386_GR16 : CTSELECT_I386_INITIAL<GR16, i16>;
+    defm CTSELECT_I386_GR32 : CTSELECT_I386_INITIAL<GR32, i32>;
   }
 }
 
@@ -749,22 +742,20 @@ let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
   }
 }
 
-let usesCustomInserter = 1,
-    isCodeGenOnly = 1,
-    hasSideEffects = 1,
+let hasSideEffects = 1,
     ForceDisassemble = 1,
     Constraints = "$dst = $src1" in {
 
   let Predicates = [FPStackf32] in
-    defm CTSELECT_FP32 : CTSELECT_NOCMOV<RFP32, f32>;
+    defm CTSELECT_I386_FP32 : CTSELECT_I386_INITIAL<RFP32, f32>;
 
   let Predicates = [FPStackf64] in
-    defm CTSELECT_FP64 : CTSELECT_NOCMOV<RFP64, f64>;
+    defm CTSELECT_I386_FP64 : CTSELECT_I386_INITIAL<RFP64, f64>;
 
-  defm CTSELECT_FP80 : CTSELECT_NOCMOV<RFP80, f80>;
+  defm CTSELECT_I386_FP80 : CTSELECT_I386_INITIAL<RFP80, f80>;
 
   let Predicates = [HasMMX] in
-    defm CTSELECT_VR64   : CTSELECT_NOCMOV<VR64, x86mmx>;
+    defm CTSELECT_VR64   : CTSELECT_I386_INITIAL<VR64, x86mmx>;
 }
 
 // Pattern matching for non-native-CMOV CTSELECT (routes to custom inserter for condition materialization)

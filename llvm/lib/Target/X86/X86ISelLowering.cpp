@@ -25520,219 +25520,6 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
   }
 
-  // Handle floating point on i386 without SSE/CMOV (constant-time requirement)
-  if (!Subtarget.hasSSE1() && VT.isFloatingPoint() && !VT.isVector()) {
-    if (VT == MVT::f32) {
-      // Optimize: if operands are memory loads, access raw bits directly
-      if (TrueOp.getOpcode() == ISD::LOAD && FalseOp.getOpcode() == ISD::LOAD) {
-        LoadSDNode *TrueLoad = cast<LoadSDNode>(TrueOp.getNode());
-        LoadSDNode *FalseLoad = cast<LoadSDNode>(FalseOp.getNode());
-
-        // Load the same memory addresses as i32 (raw f32 bits)
-        SDValue TrueI32 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
-                                      TrueLoad->getBasePtr(), TrueLoad->getPointerInfo());
-        SDValue FalseI32 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
-                                       FalseLoad->getBasePtr(), FalseLoad->getPointerInfo());
-
-        // Direct CTSELECT on raw bits
-        SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueI32, FalseI32);
-
-        // Store result and load back as f32
-        SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f32);
-        SDValue Store = DAG.getStore(DAG.getEntryNode(), DL, CtSelect, ResultSlot,
-                                     MachinePointerInfo());
-        return DAG.getLoad(MVT::f32, DL, Store, ResultSlot, MachinePointerInfo());
-      }
-
-      // Fallback: bitcast approach for register values
-      TrueOp = DAG.getBitcast(MVT::i32, TrueOp);
-      FalseOp = DAG.getBitcast(MVT::i32, FalseOp);
-      SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueOp, FalseOp);
-      return DAG.getBitcast(VT, CtSelect);
-    } else if (VT == MVT::f64) {
-      // Optimize: if operands are memory loads, access raw bits directly
-      if (TrueOp.getOpcode() == ISD::LOAD && FalseOp.getOpcode() == ISD::LOAD) {
-        LoadSDNode *TrueLoad = cast<LoadSDNode>(TrueOp.getNode());
-        LoadSDNode *FalseLoad = cast<LoadSDNode>(FalseOp.getNode());
-
-        // Load i32 parts directly from memory (lo/hi 32-bit chunks)
-        SDValue TrueLo = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
-                                     TrueLoad->getBasePtr(), TrueLoad->getPointerInfo());
-        SDValue TrueHiPtr = DAG.getMemBasePlusOffset(TrueLoad->getBasePtr(),
-                                                     TypeSize::getFixed(4), DL);
-        SDValue TrueHi = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
-                                     TrueHiPtr, TrueLoad->getPointerInfo());
-
-        SDValue FalseLo = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
-                                      FalseLoad->getBasePtr(), FalseLoad->getPointerInfo());
-        SDValue FalseHiPtr = DAG.getMemBasePlusOffset(FalseLoad->getBasePtr(),
-                                                      TypeSize::getFixed(4), DL);
-        SDValue FalseHi = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
-                                      FalseHiPtr, FalseLoad->getPointerInfo());
-
-        // Direct CTSELECT on both i32 parts
-        SDValue LoSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueLo, FalseLo);
-        SDValue HiSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueHi, FalseHi);
-
-        // Store result parts and load back as f64
-        SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f64);
-        SDValue Chain = DAG.getEntryNode();
-        SDValue StoreResLo = DAG.getStore(Chain, DL, LoSelect, ResultSlot,
-                                          MachinePointerInfo());
-        SDValue ResHiPtr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
-        SDValue StoreResHi = DAG.getStore(StoreResLo, DL, HiSelect, ResHiPtr,
-                                          MachinePointerInfo());
-        return DAG.getLoad(MVT::f64, DL, StoreResHi, ResultSlot, MachinePointerInfo());
-      }
-
-      // Fallback: memory-based approach for register values
-      // TODO: Consider creating CTSELECT_I386_F64mm pseudo instruction
-      // for single bundled 64-bit memory-based post-RA expansion
-
-      SDValue Chain = DAG.getEntryNode();
-
-      // Create temporary stack slots for input f64 values
-      SDValue TrueSlot = DAG.CreateStackTemporary(MVT::f64);
-      SDValue FalseSlot = DAG.CreateStackTemporary(MVT::f64);
-
-      // Store f64 values to memory
-      SDValue StoreTrueF64 = DAG.getStore(Chain, DL, TrueOp, TrueSlot,
-                                          MachinePointerInfo());
-      SDValue StoreFalseF64 = DAG.getStore(Chain, DL, FalseOp, FalseSlot,
-                                           MachinePointerInfo());
-
-      // Load i32 parts from memory (lo at offset 0, hi at offset 4)
-      SDValue TrueLo = DAG.getLoad(MVT::i32, DL, StoreTrueF64, TrueSlot,
-                                   MachinePointerInfo());
-      SDValue TrueHiPtr = DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(4), DL);
-      SDValue TrueHi = DAG.getLoad(MVT::i32, DL, StoreTrueF64, TrueHiPtr,
-                                   MachinePointerInfo());
-
-      SDValue FalseLo = DAG.getLoad(MVT::i32, DL, StoreFalseF64, FalseSlot,
-                                    MachinePointerInfo());
-      SDValue FalseHiPtr = DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(4), DL);
-      SDValue FalseHi = DAG.getLoad(MVT::i32, DL, StoreFalseF64, FalseHiPtr,
-                                    MachinePointerInfo());
-
-      // Create two i32 CTSELECT operations
-      SDValue LoSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueLo, FalseLo);
-      SDValue HiSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueHi, FalseHi);
-
-      // Create result stack slot and store the selected parts
-      SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f64);
-      SDValue StoreResLo = DAG.getStore(Chain, DL, LoSelect, ResultSlot,
-                                        MachinePointerInfo());
-      SDValue ResHiPtr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
-      SDValue StoreResHi = DAG.getStore(StoreResLo, DL, HiSelect, ResHiPtr,
-                                        MachinePointerInfo());
-
-      // Load complete f64 result from memory
-      return DAG.getLoad(MVT::f64, DL, StoreResHi, ResultSlot, MachinePointerInfo());
-    } else if (VT == MVT::f80) {
-      // Optimize: if operands are memory loads, access raw bits directly
-      if (TrueOp.getOpcode() == ISD::LOAD && FalseOp.getOpcode() == ISD::LOAD) {
-        LoadSDNode *TrueLoad = cast<LoadSDNode>(TrueOp.getNode());
-        LoadSDNode *FalseLoad = cast<LoadSDNode>(FalseOp.getNode());
-
-        // Load i32 parts directly from memory (3 chunks: [0-3], [4-7], [8-11] bytes)
-        SDValue TruePart0 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
-                                        TrueLoad->getBasePtr(), TrueLoad->getPointerInfo());
-        SDValue TruePart1Ptr = DAG.getMemBasePlusOffset(TrueLoad->getBasePtr(),
-                                                        TypeSize::getFixed(4), DL);
-        SDValue TruePart1 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
-                                        TruePart1Ptr, TrueLoad->getPointerInfo());
-        SDValue TruePart2Ptr = DAG.getMemBasePlusOffset(TrueLoad->getBasePtr(),
-                                                        TypeSize::getFixed(8), DL);
-        SDValue TruePart2 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
-                                        TruePart2Ptr, TrueLoad->getPointerInfo());
-
-        SDValue FalsePart0 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
-                                         FalseLoad->getBasePtr(), FalseLoad->getPointerInfo());
-        SDValue FalsePart1Ptr = DAG.getMemBasePlusOffset(FalseLoad->getBasePtr(),
-                                                         TypeSize::getFixed(4), DL);
-        SDValue FalsePart1 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
-                                         FalsePart1Ptr, FalseLoad->getPointerInfo());
-        SDValue FalsePart2Ptr = DAG.getMemBasePlusOffset(FalseLoad->getBasePtr(),
-                                                         TypeSize::getFixed(8), DL);
-        SDValue FalsePart2 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
-                                         FalsePart2Ptr, FalseLoad->getPointerInfo());
-
-        // Direct CTSELECT on all three i32 parts
-        SDValue Part0Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart0, FalsePart0);
-        SDValue Part1Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart1, FalsePart1);
-        SDValue Part2Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart2, FalsePart2);
-
-        // Store result parts and load back as f80
-        SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f80);
-        SDValue Chain = DAG.getEntryNode();
-        SDValue StorePart0 = DAG.getStore(Chain, DL, Part0Select, ResultSlot,
-                                          MachinePointerInfo());
-        SDValue ResPart1Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
-        SDValue StorePart1 = DAG.getStore(StorePart0, DL, Part1Select, ResPart1Ptr,
-                                          MachinePointerInfo());
-        SDValue ResPart2Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(8), DL);
-        SDValue StorePart2 = DAG.getStore(StorePart1, DL, Part2Select, ResPart2Ptr,
-                                          MachinePointerInfo());
-        return DAG.getLoad(MVT::f80, DL, StorePart2, ResultSlot, MachinePointerInfo());
-      }
-
-      // Fallback: memory-based approach for register values
-      // f80 is stored as 96 bits (80 bits + 16 padding), handled as 3×i32
-      // TODO: Consider creating CTSELECT_I386_F80mm pseudo instruction
-      // for single bundled 80-bit memory-based post-RA expansion
-
-      SDValue Chain = DAG.getEntryNode();
-
-      // Create temporary stack slots for input f80 values
-      SDValue TrueSlot = DAG.CreateStackTemporary(MVT::f80);
-      SDValue FalseSlot = DAG.CreateStackTemporary(MVT::f80);
-
-      // Store f80 values to memory
-      SDValue StoreTrueF80 = DAG.getStore(Chain, DL, TrueOp, TrueSlot,
-                                          MachinePointerInfo());
-      SDValue StoreFalseF80 = DAG.getStore(Chain, DL, FalseOp, FalseSlot,
-                                           MachinePointerInfo());
-
-      // Load i32 parts from memory (3 chunks: [0-3], [4-7], [8-11] bytes)
-      SDValue TruePart0 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TrueSlot,
-                                      MachinePointerInfo());
-      SDValue TruePart1Ptr = DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(4), DL);
-      SDValue TruePart1 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TruePart1Ptr,
-                                      MachinePointerInfo());
-      SDValue TruePart2Ptr = DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(8), DL);
-      SDValue TruePart2 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TruePart2Ptr,
-                                      MachinePointerInfo());
-
-      SDValue FalsePart0 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalseSlot,
-                                       MachinePointerInfo());
-      SDValue FalsePart1Ptr = DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(4), DL);
-      SDValue FalsePart1 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalsePart1Ptr,
-                                       MachinePointerInfo());
-      SDValue FalsePart2Ptr = DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(8), DL);
-      SDValue FalsePart2 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalsePart2Ptr,
-                                       MachinePointerInfo());
-
-      // Create three i32 CTSELECT operations
-      SDValue Part0Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart0, FalsePart0);
-      SDValue Part1Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart1, FalsePart1);
-      SDValue Part2Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart2, FalsePart2);
-
-      // Create result stack slot and store the selected parts
-      SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f80);
-      SDValue StorePart0 = DAG.getStore(Chain, DL, Part0Select, ResultSlot,
-                                        MachinePointerInfo());
-      SDValue ResPart1Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
-      SDValue StorePart1 = DAG.getStore(StorePart0, DL, Part1Select, ResPart1Ptr,
-                                        MachinePointerInfo());
-      SDValue ResPart2Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(8), DL);
-      SDValue StorePart2 = DAG.getStore(StorePart1, DL, Part2Select, ResPart2Ptr,
-                                        MachinePointerInfo());
-
-      // Load complete f80 result from memory
-      return DAG.getLoad(MVT::f80, DL, StorePart2, ResultSlot, MachinePointerInfo());
-    }
-  }
-
   if (isScalarFPTypeInSSEReg(VT)) {
     MVT IntVT = (VT == MVT::f32) ? MVT::i32 : MVT::i64;
     TrueOp = DAG.getBitcast(IntVT, TrueOp);
@@ -38212,10 +37999,8 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
 /// This approach ensures that when i64 is type-legalized into two i32
 /// operations, both operations share the same condition byte rather than
 /// each independently reading (and destroying) EFLAGS.
-static MachineBasicBlock *
-emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
-                                              MachineBasicBlock *BB,
-                                              unsigned InternalPseudoOpcode) {
+static MachineBasicBlock *emitCTSelectI386WithConditionMaterialization(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned InternalPseudoOpcode) {
   const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
   const MIMetadata MIMD(MI);
   MachineFunction *MF = BB->getParent();
@@ -38239,7 +38024,8 @@ emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
   // This pseudo will be expanded post-RA into the actual constant-time bundle
   // The condition byte can now be safely shared between multiple pseudos
 
-  // Internal pseudo has operands: (outs dst, tmp_byte, tmp_mask), (ins src1, src2, cond_byte)
+  // Internal pseudo has operands: (outs dst, tmp_byte, tmp_mask), (ins src1,
+  // src2, cond_byte)
   Register DstReg = MI.getOperand(0).getReg();
 
   // Create virtual registers for the temporary outputs
@@ -38256,14 +38042,182 @@ emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
   }
 
   BuildMI(*BB, MI, MIMD, TII->get(InternalPseudoOpcode))
-      .addDef(DstReg)         // dst (output)
-      .addDef(TmpByteReg)     // tmp_byte (output)
-      .addDef(TmpMaskReg)     // tmp_mask (output)
-      .addReg(Src1Reg)        // src1 (input)
-      .addReg(Src2Reg)        // src2 (input)
-      .addReg(CondByteReg);   // pre-materialized condition byte (input)
+      .addDef(DstReg)       // dst (output)
+      .addDef(TmpByteReg)   // tmp_byte (output)
+      .addDef(TmpMaskReg)   // tmp_mask (output)
+      .addReg(Src1Reg)      // src1 (input)
+      .addReg(Src2Reg)      // src2 (input)
+      .addReg(CondByteReg); // pre-materialized condition byte (input)
 
   MI.eraseFromParent();
+  return BB;
+}
+
+static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
+                                                     MachineBasicBlock *BB,
+                                                     unsigned pseudoInstr) {
+  const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
+  const MIMetadata MIMD(MI);
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  unsigned RegSizeInByte = 4;
+
+  // Get operands
+  // MI operands: %result:rfp80 = CTSELECT_I386 %false:rfp80, %true:rfp80, %cond:i8imm
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned FalseReg = MI.getOperand(1).getReg();
+  unsigned TrueReg = MI.getOperand(2).getReg();
+  X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(3).getImm());
+  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
+
+  // Materialize condition byte from EFLAGS
+  Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  BuildMI(*BB, MI, MIMD, TII->get(X86::SETCCr), CondByteReg).addImm(OppCC);
+
+  // Create mask from condition: 0x00000000 or 0xFFFFFFFF
+  unsigned MaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+  unsigned ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+
+  // Zero-extend i8 condition to i32
+  BuildMI(*BB, MI, MIMD, TII->get(X86::MOVZX32rr8), ExtReg)
+      .addReg(CondByteReg, RegState::Kill);
+
+  // Negate to create mask
+  BuildMI(*BB, MI, MIMD, TII->get(X86::NEG32r), MaskReg)
+      .addReg(ExtReg, RegState::Kill);
+
+  // Create inverted mask
+  unsigned InvMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+  BuildMI(*BB, MI, MIMD, TII->get(X86::NOT32r), InvMaskReg).addReg(MaskReg);
+
+  auto storeFpToSlot = [&](unsigned Opcode, int Slot, Register Reg) {
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(Opcode)), Slot)
+        .addReg(Reg, RegState::Kill);
+  };
+
+  auto emitCtSelect = [&](unsigned NumValues, int TrueSlot, int FalseSlot,
+                          int ResultSlot, bool KillMaskRegs) {
+    for (unsigned Val = 0; Val < NumValues; ++Val) {
+      unsigned Offset = Val * RegSizeInByte;
+      unsigned TrueReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), TrueReg)
+          .addFrameIndex(TrueSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0);
+
+      unsigned FalseReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), FalseReg)
+          .addFrameIndex(FalseSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0);
+
+      unsigned MaskedTrueReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      unsigned MaskedFalseReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      unsigned ResultReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+
+      bool KillMasksNow = KillMaskRegs && Val + 1 == NumValues;
+
+      auto TrueMIB =
+          BuildMI(*BB, MI, MIMD, TII->get(X86::AND32rr), MaskedTrueReg);
+      TrueMIB.addReg(TrueReg, RegState::Kill);
+      if (KillMasksNow)
+        TrueMIB.addReg(MaskReg, RegState::Kill);
+      else
+        TrueMIB.addReg(MaskReg);
+
+      auto FalseMIB =
+          BuildMI(*BB, MI, MIMD, TII->get(X86::AND32rr), MaskedFalseReg);
+      FalseMIB.addReg(FalseReg, RegState::Kill);
+      if (KillMasksNow)
+        FalseMIB.addReg(InvMaskReg, RegState::Kill);
+      else
+        FalseMIB.addReg(InvMaskReg);
+
+      BuildMI(*BB, MI, MIMD, TII->get(X86::OR32rr), ResultReg)
+          .addReg(MaskedTrueReg, RegState::Kill)
+          .addReg(MaskedFalseReg, RegState::Kill);
+
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
+          .addFrameIndex(ResultSlot)
+          .addImm(1)
+          .addReg(0)
+          .addImm(Offset)
+          .addReg(0)
+          .addReg(ResultReg, RegState::Kill);
+    }
+  };
+
+  switch (pseudoInstr) {
+  case X86::CTSELECT_I386_FP32rr: {
+
+    // Allocate stack slot for result (4 bytes for f32)
+    int ResultSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+    int TrueSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+    int FalseSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
+
+    // Store f32 to stack using pseudo instruction (ST_Fp32m will be handled by
+    // FP stackifier)
+    storeFpToSlot(X86::ST_Fp32m, TrueSlot, TrueReg);
+    storeFpToSlot(X86::ST_Fp32m, FalseSlot, FalseReg);
+
+    emitCtSelect(1, TrueSlot, FalseSlot, ResultSlot, true);
+
+    // Load as f32 to x87 stack using pseudo instruction
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp32m), DestReg),
+                      ResultSlot);
+    break;
+  }
+  case X86::CTSELECT_I386_FP64rr: {
+    unsigned StackSlotSize = 8;
+    // Allocate stack slots for temporaries (8 bytes for f64)
+    int TrueSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+    int FalseSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+    int ResultSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
+
+    // Store x87 values to stack using pseudo instruction
+    // ST_Fp64m will be handled by the FP stackifier
+    storeFpToSlot(X86::ST_Fp64m, TrueSlot, TrueReg);
+    storeFpToSlot(X86::ST_Fp64m, FalseSlot, FalseReg);
+
+    emitCtSelect(StackSlotSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot, true);
+
+    // Load final f64 result back to x87 stack using pseudo instruction
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp64m), DestReg),
+                      ResultSlot);
+    break;
+  }
+  case X86::CTSELECT_I386_FP80rr: {
+    // Allocate stack slots for temporaries
+    unsigned StackObjctSize = 12;
+    int TrueSlot = MFI.CreateStackObject(
+      StackObjctSize, Align(4), false); // 80-bit = 10 bytes, aligned to 12
+    int FalseSlot = MFI.CreateStackObject(StackObjctSize, Align(4), false);
+    int ResultSlot = MFI.CreateStackObject(StackObjctSize, Align(4), false);
+
+    // Store x87 values to stack using pseudo instruction
+    // ST_FpP80m will be handled by the FP stackifier
+    storeFpToSlot(X86::ST_FpP80m, TrueSlot, TrueReg);
+    storeFpToSlot(X86::ST_FpP80m, FalseSlot, FalseReg);
+
+    // Process 3 x i32 parts (bytes 0-3, 4-7, 8-11)
+    emitCtSelect(StackObjctSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot, true);
+
+    // Load final f80 result back to x87 stack using pseudo instruction
+    addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp80m), DestReg),
+                      ResultSlot);
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid CTSELECT opcode");
+  }
+
+  MI.eraseFromParent();
+
   return BB;
 }
 
@@ -38340,9 +38294,12 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitCTSelectI386WithConditionMaterialization(
         MI, BB, X86::CTSELECT_I386_INT_GR32rr);
 
-  case X86::CTSELECT_FP32rr:
-  case X86::CTSELECT_FP64rr:
-  case X86::CTSELECT_FP80rr:
+  case X86::CTSELECT_I386_FP32rr:
+    return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP32rr);
+  case X86::CTSELECT_I386_FP64rr:
+    return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP64rr);
+  case X86::CTSELECT_I386_FP80rr:
+    return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP80rr);
   case X86::CTSELECT_VR64rr:
     return EmitLoweredSelect(
         MI, BB); // TODO: Implement this to generate for Constant time version
