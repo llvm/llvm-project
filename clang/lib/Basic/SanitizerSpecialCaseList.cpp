@@ -42,7 +42,7 @@ void SanitizerSpecialCaseList::createSanitizerSections() {
     SanitizerMask Mask;
 
 #define SANITIZER(NAME, ID)                                                    \
-  if (S.SectionMatcher.match(NAME))                                            \
+  if (S.SectionMatcher.matchAny(NAME))                                         \
     Mask |= SanitizerKind::ID;
 #define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID)
 
@@ -66,8 +66,7 @@ SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
                                          StringRef Category) const {
   for (const auto &S : llvm::reverse(SanitizerSections)) {
     if (S.Mask & Mask) {
-      unsigned LineNum =
-          SpecialCaseList::inSectionBlame(S.S.Entries, Prefix, Query, Category);
+      unsigned LineNum = S.S.getLastMatch(Prefix, Query, Category);
       if (LineNum > 0)
         return {S.S.FileIdx, LineNum};
     }

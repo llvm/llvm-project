@@ -788,9 +788,11 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
-    int RCID = Desc.operands()[OpNo].RegClass;
+    const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
+    int16_t RCID = MII.getOpRegClassID(
+        OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
     if (RCID != -1) {
-      const MCRegisterClass RC = MRI.getRegClass(RCID);
+      const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
         O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
@@ -1025,7 +1027,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
-      AMDGPU::isDPALU_DPP(Desc, STI)) {
+      AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
     return;
