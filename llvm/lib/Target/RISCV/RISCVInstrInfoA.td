@@ -24,10 +24,10 @@ class LR_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
 }
 
 multiclass LR_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def ""     : LR_r<0, 0, funct3, opcodestr>;
-  def _AQ    : LR_r<1, 0, funct3, opcodestr # ".aq">;
-  def _RL    : LR_r<0, 1, funct3, opcodestr # ".rl">;
-  def _AQ_RL : LR_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def ""    : LR_r<0, 0, funct3, opcodestr>;
+  def _AQ   : LR_r<1, 0, funct3, opcodestr # ".aq">;
+  def _RL   : LR_r<0, 1, funct3, opcodestr # ".rl">;
+  def _AQRL : LR_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
@@ -37,10 +37,10 @@ class SC_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
                     opcodestr, "$rd, $rs2, $rs1">;
 
 multiclass SC_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def ""     : SC_r<0, 0, funct3, opcodestr>;
-  def _AQ    : SC_r<1, 0, funct3, opcodestr # ".aq">;
-  def _RL    : SC_r<0, 1, funct3, opcodestr # ".rl">;
-  def _AQ_RL : SC_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def ""    : SC_r<0, 0, funct3, opcodestr>;
+  def _AQ   : SC_r<1, 0, funct3, opcodestr # ".aq">;
+  def _RL   : SC_r<0, 1, funct3, opcodestr # ".rl">;
+  def _AQRL : SC_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
@@ -50,10 +50,10 @@ class AMO_rr<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr>
                     opcodestr, "$rd, $rs2, $rs1">;
 
 multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
-  def ""     : AMO_rr<funct5, 0, 0, funct3, opcodestr>;
-  def _AQ    : AMO_rr<funct5, 1, 0, funct3, opcodestr # ".aq">;
-  def _RL    : AMO_rr<funct5, 0, 1, funct3, opcodestr # ".rl">;
-  def _AQ_RL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
+  def ""    : AMO_rr<funct5, 0, 0, funct3, opcodestr>;
+  def _AQ   : AMO_rr<funct5, 1, 0, funct3, opcodestr # ".aq">;
+  def _RL   : AMO_rr<funct5, 0, 1, funct3, opcodestr # ".rl">;
+  def _AQRL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -198,9 +198,9 @@ let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_release"),
                   !cast<RVInst>(BaseInst#"_RL"), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acq_rel"),
-                  !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
+                  !cast<RVInst>(BaseInst#"_AQRL"), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_seq_cst"),
-                  !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
+                  !cast<RVInst>(BaseInst#"_AQRL"), vt>;
 }
 let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
