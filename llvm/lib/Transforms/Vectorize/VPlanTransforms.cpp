@@ -2013,8 +2013,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // We can extend the list of handled recipes in the future,
     // provided we account for the data embedded in them while checking for
     // equality or hashing.
-
     auto C = getOpcodeOrIntrinsicID(Def);
+
     // The issue with (Insert|Extract)Value is that the index of the
     // insert/extract is not a proper operand in LLVM IR, and hence also not in
     // VPlan.
