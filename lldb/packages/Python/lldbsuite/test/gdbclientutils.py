@@ -87,7 +87,6 @@ class MockGDBServerResponder:
     """
 
     registerCount = 40
-    packetLog = None
 
     class RESPONSE_DISCONNECT:
         pass

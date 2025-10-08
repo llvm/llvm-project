@@ -549,7 +549,7 @@ Language::~Language() = default;
 
 static std::optional<llvm::dwarf::SourceLanguage>
 ToDwarfSourceLanguage(lldb::LanguageType language_type) {
-  if (language_type < lldb::eLanguageTypeLastStandardLanguage)
+  if (language_type <= lldb::eLanguageTypeLastStandardLanguage)
     return static_cast<llvm::dwarf::SourceLanguage>(language_type);
 
   switch (language_type) {

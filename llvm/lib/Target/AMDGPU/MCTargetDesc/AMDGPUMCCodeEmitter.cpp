@@ -270,10 +270,19 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     const MCInstrDesc &Desc, const MCOperand &MO, unsigned OpNo,
     const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
   const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
-  int64_t Imm;
+  int64_t Imm = 0;
   if (MO.isExpr()) {
-    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
-      return AMDGPU::getOperandSize(OpInfo) == 8 ? 254 : 255;
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm) ||
+        AMDGPU::isLitExpr(MO.getExpr())) {
+      if (OpInfo.OperandType == AMDGPU::OPERAND_KIMM16 ||
+          OpInfo.OperandType == AMDGPU::OPERAND_KIMM32 ||
+          OpInfo.OperandType == AMDGPU::OPERAND_KIMM64)
+        return Imm;
+      if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+          AMDGPU::getOperandSize(OpInfo) == 8)
+        return 254;
+      return 255;
+    }
   } else {
     assert(!MO.isDFPImm());
 

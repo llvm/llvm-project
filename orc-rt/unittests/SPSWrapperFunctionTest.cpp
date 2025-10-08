@@ -180,7 +180,7 @@ round_trip_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
       });
 }
 
-TEST(SPSWrapperFunctionUtilsTest, TransparentSerializationPointers) {
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionPointers) {
   int X = 42;
   int *P = nullptr;
   SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
@@ -201,7 +201,7 @@ expected_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
       });
 }
 
-TEST(SPSWrapperFunctionUtilsTest, TransparentSerializationExpectedPointers) {
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedPointers) {
   int X = 42;
   int *P = nullptr;
   SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::call(

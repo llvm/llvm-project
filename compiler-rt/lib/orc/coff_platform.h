@@ -19,6 +19,7 @@
 // dlfcn functions.
 ORC_RT_INTERFACE const char *__orc_rt_coff_jit_dlerror();
 ORC_RT_INTERFACE void *__orc_rt_coff_jit_dlopen(const char *path, int mode);
+ORC_RT_INTERFACE int __orc_rt_coff_jit_dlupdate(void *dso_handle);
 ORC_RT_INTERFACE int __orc_rt_coff_jit_dlclose(void *header);
 ORC_RT_INTERFACE void *__orc_rt_coff_jit_dlsym(void *header,
                                                const char *symbol);
