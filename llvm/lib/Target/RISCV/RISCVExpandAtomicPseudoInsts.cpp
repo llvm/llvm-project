@@ -287,8 +287,8 @@ static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
     break;
   }
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)), ScratchReg)
-      .addReg(AddrReg)
-      .addReg(ScratchReg);
+      .addReg(ScratchReg)
+      .addReg(AddrReg);
   BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
@@ -375,8 +375,8 @@ static void doMaskedAtomicBinOpExpansion(const RISCVInstrInfo *TII,
                     ScratchReg);
 
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW32(Ordering, STI)), ScratchReg)
-      .addReg(AddrReg)
-      .addReg(ScratchReg);
+      .addReg(ScratchReg)
+      .addReg(AddrReg);
   BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
@@ -535,8 +535,8 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
   //   sc.w scratch1, scratch1, (addr)
   //   bnez scratch1, loop
   BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW32(Ordering, STI)), Scratch1Reg)
-      .addReg(AddrReg)
-      .addReg(Scratch1Reg);
+      .addReg(Scratch1Reg)
+      .addReg(AddrReg);
   BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
       .addReg(Scratch1Reg)
       .addReg(RISCV::X0)
@@ -674,8 +674,8 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
     //   bnez scratch, loophead
     BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)),
             ScratchReg)
-        .addReg(AddrReg)
-        .addReg(NewValReg);
+        .addReg(NewValReg)
+        .addReg(AddrReg);
     BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
         .addReg(ScratchReg)
         .addReg(RISCV::X0)
@@ -707,8 +707,8 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
                       MaskReg, ScratchReg);
     BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)),
             ScratchReg)
-        .addReg(AddrReg)
-        .addReg(ScratchReg);
+        .addReg(ScratchReg)
+        .addReg(AddrReg);
     BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
         .addReg(ScratchReg)
         .addReg(RISCV::X0)

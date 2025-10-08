@@ -962,6 +962,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
   add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
+
+  # Disable -Wno-pass-failed flag, which reports failure to perform
+  # optimizations suggested by pragmas. This warning is not relevant for LLVM
+  # projects and may be injected by pragmas in libstdc++.
+  # FIXME: Reconsider this choice if warnings from STL headers can be reliably
+  # avoided (https://github.com/llvm/llvm-project/issues/157666).
+  add_flag_if_supported("-Wno-pass-failed" NO_PASS_FAILED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)

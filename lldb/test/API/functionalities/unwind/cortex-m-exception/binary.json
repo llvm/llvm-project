@@ -1,5 +1,5 @@
 {
-  "triple": "armv7m--",
+  "triple": "armv7m-apple",
   "uuid": "2D157DBA-53C9-3AC7-B5A1-9D336EC831CB",
   "type": "executable",
   "sections": [
@@ -28,13 +28,13 @@
     {
       "name": "exception_catcher",
       "type": "code",
-      "size": 32,
+      "size": 44,
       "address": 2111760
     },
     {
       "name": "exception_thrower",
       "type": "code",
-      "size": 16,
+      "size": 2652,
       "address": 2108040
     }
   ]
