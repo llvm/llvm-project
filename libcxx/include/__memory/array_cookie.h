@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // other ABIs, we assume there are no array cookies.
 //
 // [1]: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-cookies
-#if defined(_LIBCPP_ABI_ITANIUM) || defined(_LIBCPP_ABI_ARM_WITH_32BIT_ODDITIES)
+#if defined(_LIBCPP_ABI_ITANIUM) || defined(_LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES)
 // TODO: Use a builtin instead
 // TODO: We should factor in the choice of the usual deallocation function in this determination:
 //       a cookie may be available in more cases but we ignore those for now.
@@ -85,7 +85,7 @@ struct __has_array_cookie : false_type {};
 // [2]: https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Handle-C++-differences
 template <class _Tp>
 // Avoid failures when -fsanitize-address-poison-custom-array-cookie is enabled
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie(_Tp const* __ptr) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([[maybe_unused]] _Tp const* __ptr) {
   static_assert(
       __has_array_cookie<_Tp>::value, "Trying to access the array cookie of a type that is not guaranteed to have one");
 
@@ -94,7 +94,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie(_
   size_t const* __cookie = reinterpret_cast<size_t const*>(__ptr) - 1;
   return *__cookie;
 
-#elif defined(_LIBCPP_ABI_ARM_WITH_32BIT_ODDITIES)
+#elif defined(_LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES)
 
   struct _ArrayCookie {
     size_t __element_size;
