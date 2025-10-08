@@ -1310,7 +1310,7 @@ private:
 
     // Remove any incoming values that come from an invalid predecessor
     for (PHINode &Phi : BB->phis())
-      Phi.removeIncomingValueIf([&](uint Index) {
+      Phi.removeIncomingValueIf([&](unsigned Index) {
         BasicBlock *IncomingBB = Phi.getIncomingBlock(Index);
         return !isPredecessor(BB, IncomingBB);
       });
