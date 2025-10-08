@@ -644,7 +644,7 @@ char const a<t_t>::MyConstClass_string[] = "123";
 
 template <template <typename> class A> struct b { A<int> c; };
 // CHECK-MESSAGES: :[[@LINE-1]]:47: warning: invalid case style for struct 'b'
-// CHECK-FIXES:template <template <typename> class A> struct B { A<int> c; };{{$}}
+// CHECK-FIXES: template <template <typename> class A> struct B { A<int> c; };
 
 unsigned MY_GLOBAL_array[] = {1,2,3};
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'MY_GLOBAL_array'
