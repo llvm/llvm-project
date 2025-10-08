@@ -23,7 +23,6 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
-#include "../GPUCommon/OpToFuncCallLowering.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOXEVM
@@ -33,9 +32,6 @@ namespace mlir {
 using namespace mlir;
 
 #define DEBUG_TYPE "math-to-xevm"
-
-// GPUCommon/OpToFunctionCallLowering is not used here, as it doesn't handle
-// native functions/intrinsics that take vector operands.
 
 /// Convert math ops marked with `fast` (`afn`) to native OpenCL intrinsics.
 template <typename Op>
