@@ -22,6 +22,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -82,7 +83,8 @@ void SpecialCaseList::GlobMatcher::match(
       Cb(G.Name, G.LineNo);
 }
 
-SpecialCaseList::Matcher::Matcher(bool UseGlobs) {
+SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
+    : RemoveDotSlash(RemoveDotSlash) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
   else
@@ -92,6 +94,8 @@ SpecialCaseList::Matcher::Matcher(bool UseGlobs) {
 void SpecialCaseList::Matcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
+  if (RemoveDotSlash)
+    Query = llvm::sys::path::remove_leading_dotslash(Query);
   return std::visit([&](auto &V) { return V.match(Query, Cb); }, M);
 }
 
@@ -184,11 +188,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
   bool UseGlobs = Version > 1;
 
+  bool RemoveDotSlash = Version > 2;
+
   Section *CurrentSection;
   if (auto Err = addSection("*", FileIdx, 1, true).moveInto(CurrentSection)) {
     Error = toString(std::move(Err));
     return false;
   }
+
+  // This is the current list of prefixes for all existing users matching file
+  // path. We may need parametrization in constructor in future.
+  constexpr StringRef PathPrefixes[] = {"src", "!src", "mainfile", "source"};
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
@@ -224,8 +234,9 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     }
 
     auto [Pattern, Category] = Postfix.split("=");
-    auto [It, _] =
-        CurrentSection->Entries[Prefix].try_emplace(Category, UseGlobs);
+    auto [It, _] = CurrentSection->Entries[Prefix].try_emplace(
+        Category, UseGlobs,
+        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =

@@ -770,6 +770,51 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GloblCtorAttr
+//===----------------------------------------------------------------------===//
+
+class CIR_GlobalCtorDtor<string name, string attrMnemonic>
+    : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
+  let parameters = (ins "mlir::StringAttr":$name, "int":$priority);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins
+        "llvm::StringRef":$name,
+        CArg<"int", "65535">:$priority), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
+        "mlir::StringAttr":$name,
+        CArg<"int", "65535">:$priority), [{
+      return $_get(name.getContext(), name, priority);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $name `,` $priority `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isDefaultPriority() const {
+      return getPriority() == getDefaultPriority();
+    };
+
+    static int getDefaultPriority() {
+      return 65535;
+    }
+  }];
+}
+
+def CIR_GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor"> {
+  let summary = "Marks a function as a global constructor";
+  let description = [{
+    Marks the function as a global constructor in the module's constructor list.
+    It will be executed before main() is called.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
 //===----------------------------------------------------------------------===//
 
