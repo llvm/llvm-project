@@ -15,6 +15,7 @@
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
+#include "src/stdio/fopencookie.h"
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 #include "src/stdio/vfprintf.h"
@@ -29,11 +30,13 @@ using LIBC_NAMESPACE::fclose;
 using LIBC_NAMESPACE::ferror;
 using LIBC_NAMESPACE::fopen;
 using LIBC_NAMESPACE::fread;
+using LIBC_NAMESPACE::fopencookie;
 #else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
 using ::fopen;
 using ::fread;
+using ::fopencookie;
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace printf_test
 
@@ -97,4 +100,27 @@ TEST(LlvmLibcVFPrintfTest, WriteToFile) {
   ASSERT_ERRNO_EQ(EIO);
 
   ASSERT_EQ(printf_test::fclose(file), 0);
+}
+
+TEST(LlvmLibcVFPrintfTest, CharsWrittenOverflow) {
+  struct NoopStream {};
+  auto noop_write = [](void *cookie, const char *buf, size_t size) -> ssize_t {
+    return size;
+  };
+
+  NoopStream stream;
+  cookie_io_functions_t funcs = {nullptr, +noop_write, nullptr, nullptr};
+  ::FILE *file = printf_test::fopencookie(&stream, "w", funcs);
+  ASSERT_NE(file, nullptr);
+
+  // Trigger an overflow in the return value of vfprintf by writing more than
+  // INT_MAX bytes. We do this by printing a string with precision INT_MAX, and
+  // then one more character.
+  int max_int = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
+  int result = call_vfprintf(file, "%*sA", max_int, "");
+
+  EXPECT_LT(result, 0);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
+
+  EXPECT_EQ(printf_test::fclose(file), 0);
 }
