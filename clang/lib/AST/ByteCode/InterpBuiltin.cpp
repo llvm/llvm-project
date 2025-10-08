@@ -3185,9 +3185,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_unaryop(
         S, OpPC, Call, [](const APSInt &Val) {
           return APInt(Val.getBitWidth(),
-                       (Val.countTrailingZeros() == Val.getBitWidth())
-                           ? 0u
-                           : (Val.countTrailingZeros() + 1u));
+                       Val.isZero() ? 0u : Val.countTrailingZeros() + 1u);
         });
 
   case Builtin::BIaddressof:
