@@ -37,7 +37,7 @@ enum class InstructionKind {
   // @TODO: Add more instructions as needed
 };
 
-llvm::StringRef toString(InstructionKind name) {
+static llvm::StringRef toString(InstructionKind name) {
   switch (name) {
   case InstructionKind::DPAS:
     return "dpas";
@@ -45,7 +45,8 @@ llvm::StringRef toString(InstructionKind name) {
   llvm_unreachable("Unknown InstructionKind");
 }
 
-std::optional<InstructionKind> parseInstructionKind(llvm::StringRef str) {
+static std::optional<InstructionKind>
+parseInstructionKind(llvm::StringRef str) {
   if (str.equals_insensitive("dpas"))
     return InstructionKind::DPAS;
   return std::nullopt;
