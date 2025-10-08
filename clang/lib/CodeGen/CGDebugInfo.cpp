@@ -837,7 +837,8 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
-      LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
+      llvm::DISourceLanguageName(LangTag), CUFile,
+      CGOpts.EmitVersionIdentMetadata ? Producer : "",
       CGOpts.OptimizationLevel != 0 || CGOpts.PrepareForLTO ||
           CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers, CGOpts.SplitDwarfFile, EmissionKind,
@@ -1289,7 +1290,7 @@ llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
 
 /// \return whether a C++ mangling exists for the type defined by TD.
 static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
-  switch (TheCU->getSourceLanguage()) {
+  switch (TheCU->getSourceLanguage().getUnversionedName()) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
@@ -3271,8 +3272,8 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCInterfaceType *Ty,
   if (!ID)
     return nullptr;
 
-  auto RuntimeLang =
-      static_cast<llvm::dwarf::SourceLanguage>(TheCU->getSourceLanguage());
+  auto RuntimeLang = static_cast<llvm::dwarf::SourceLanguage>(
+      TheCU->getSourceLanguage().getUnversionedName());
 
   // Return a forward declaration if this type was imported from a clang module,
   // and this is not the compile unit with the implementation of the type (which
@@ -3408,7 +3409,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   ObjCInterfaceDecl *ID = Ty->getDecl();
   llvm::DIFile *DefUnit = getOrCreateFile(ID->getLocation());
   unsigned Line = getLineNumber(ID->getLocation());
-  unsigned RuntimeLang = TheCU->getSourceLanguage();
+
+  unsigned RuntimeLang = TheCU->getSourceLanguage().getUnversionedName();
 
   // Bit size, align and offset of the type.
   uint64_t Size = CGM.getContext().getTypeSize(Ty);

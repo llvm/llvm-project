@@ -2740,7 +2740,24 @@ def fsanitize_skip_hot_cutoff_EQ
           "(0.0 [default] = skip none; 1.0 = skip all). "
           "Argument format: <sanitizer1>=<value1>,<sanitizer2>=<value2>,...">;
 
+defm sanitize_alloc_token_fast_abi : BoolOption<"f", "sanitize-alloc-token-fast-abi",
+  CodeGenOpts<"SanitizeAllocTokenFastABI">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Use the AllocToken fast ABI">,
+  NegFlag<SetFalse, [], [ClangOption], "Use the default AllocToken ABI">>,
+  Group<f_clang_Group>;
+defm sanitize_alloc_token_extended : BoolOption<"f", "sanitize-alloc-token-extended",
+  CodeGenOpts<"SanitizeAllocTokenExtended">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " extended coverage to custom allocation functions">>,
+  Group<f_clang_Group>;
+
 } // end -f[no-]sanitize* flags
+
+def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<N>">,
+  HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
 
 def fallow_runtime_check_skip_hot_cutoff_EQ
     : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
@@ -4834,6 +4851,10 @@ def gdwarf_4 : Flag<["-"], "gdwarf-4">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 4">;
 def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 5">;
+def gdwarf_6
+    : Flag<["-"], "gdwarf-6">,
+      Group<g_Group>,
+      HelpText<"Generate source-level debug information with dwarf version 6">;
 }
 def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,

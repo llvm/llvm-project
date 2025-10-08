@@ -2391,8 +2391,12 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
                                AsmWriterContext &WriterCtx) {
   Out << "!DICompileUnit(";
   MDFieldPrinter Printer(Out, WriterCtx);
-  Printer.printDwarfEnum("language", N->getSourceLanguage(),
-                         dwarf::LanguageString, /* ShouldSkipZero */ false);
+
+  Printer.printDwarfEnum("language",
+                         N->getSourceLanguage().getUnversionedName(),
+                         dwarf::LanguageString,
+                         /* ShouldSkipZero */ false);
+
   Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
   Printer.printString("producer", N->getProducer());
   Printer.printBool("isOptimized", N->isOptimized());

@@ -306,6 +306,8 @@ CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0, Benign) ///< Emit PCs for covere
 CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0, Benign) ///< Emit PCs for atomic operations.
 CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0, Benign) ///< Emit PCs for start of functions
                                                     ///< that are subject for use-after-return checking.
+CODEGENOPT(SanitizeAllocTokenFastABI, 1, 0, Benign) ///< Use the AllocToken fast ABI.
+CODEGENOPT(SanitizeAllocTokenExtended, 1, 0, Benign) ///< Extend coverage to custom allocation functions.
 CODEGENOPT(SanitizeStats     , 1, 0, Benign) ///< Collect statistics for sanitizers.
 ENUM_CODEGENOPT(SanitizeDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
 CODEGENOPT(SimplifyLibCalls  , 1, 1, Benign) ///< Set when -fbuiltin is enabled.
