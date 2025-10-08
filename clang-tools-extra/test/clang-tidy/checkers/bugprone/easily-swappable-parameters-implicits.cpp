@@ -74,19 +74,19 @@ void numericConversion1(int I, double D) { numericConversion1(D, I); }
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 2 adjacent parameters of 'numericConversion1' of convertible types are easily swapped by mistake [bugprone-easily-swappable-parameters]
 // CHECK-MESSAGES: :[[@LINE-2]]:29: note: the first parameter in the range is 'I'
 // CHECK-MESSAGES: :[[@LINE-3]]:39: note: the last parameter in the range is 'D'
-// CHECK-MESSAGES: :[[@LINE-4]]:32: note: 'int' and 'double' may be implicitly converted
+// CHECK-MESSAGES: :[[@LINE-4]]:32: note: 'int' and 'double' may be implicitly converted{{$}}
 
 void numericConversion2(int I, short S) { numericConversion2(S, I); }
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 2 adjacent parameters of 'numericConversion2' of convertible types
 // CHECK-MESSAGES: :[[@LINE-2]]:29: note: the first parameter in the range is 'I'
 // CHECK-MESSAGES: :[[@LINE-3]]:38: note: the last parameter in the range is 'S'
-// CHECK-MESSAGES: :[[@LINE-4]]:32: note: 'int' and 'short' may be implicitly converted
+// CHECK-MESSAGES: :[[@LINE-4]]:32: note: 'int' and 'short' may be implicitly converted{{$}}
 
 void numericConversion3(float F, unsigned long long ULL) { numericConversion3(ULL, F); }
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 2 adjacent parameters of 'numericConversion3' of convertible types
 // CHECK-MESSAGES: :[[@LINE-2]]:31: note: the first parameter in the range is 'F'
 // CHECK-MESSAGES: :[[@LINE-3]]:53: note: the last parameter in the range is 'ULL'
-// CHECK-MESSAGES: :[[@LINE-4]]:34: note: 'float' and 'unsigned long long' may be implicitly converted
+// CHECK-MESSAGES: :[[@LINE-4]]:34: note: 'float' and 'unsigned long long' may be implicitly converted{{$}}
 
 enum Unscoped { U_A,
                 U_B };
@@ -111,7 +111,7 @@ void numericConversionMultiUnique(int I, double D1, double D2) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: 3 adjacent parameters of 'numericConversionMultiUnique' of convertible types
 // CHECK-MESSAGES: :[[@LINE-2]]:39: note: the first parameter in the range is 'I'
 // CHECK-MESSAGES: :[[@LINE-3]]:60: note: the last parameter in the range is 'D2'
-// CHECK-MESSAGES: :[[@LINE-4]]:42: note: 'int' and 'double' may be implicitly converted
+// CHECK-MESSAGES: :[[@LINE-4]]:42: note: 'int' and 'double' may be implicitly converted{{$}}
 // (Note: int<->double conversion for I<->D2 not diagnosed again.)
 
 typedef int MyInt;
@@ -176,7 +176,7 @@ void userDefinedConversion1(int I1, Integer I2) { userDefinedConversion1(I2, I1)
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: 2 adjacent parameters of 'userDefinedConversion1' of convertible types
 // CHECK-MESSAGES: :[[@LINE-2]]:33: note: the first parameter in the range is 'I1'
 // CHECK-MESSAGES: :[[@LINE-3]]:45: note: the last parameter in the range is 'I2'
-// CHECK-MESSAGES: :[[@LINE-4]]:37: note: 'int' and 'Integer' may be implicitly converted
+// CHECK-MESSAGES: :[[@LINE-4]]:37: note: 'int' and 'Integer' may be implicitly converted{{$}}
 // CHECK-MESSAGES: :[[@LINE-9]]:3: note: the implicit conversion involves the converting constructor declared here
 // CHECK-MESSAGES: :[[@LINE-9]]:3: note: the implicit conversion involves the conversion operator declared here
 

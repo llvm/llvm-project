@@ -22,7 +22,7 @@ struct S2 {
   // CHECK-NOTES: :[[@LINE+9]]:12: note: expanded from macro 'DEFINITION'
   // This one is unfortunate, but the location this points to is in a scratch
   // space, so it's not helpful to the user.
-  // CHECK-NOTES: note: expanded from here
+  // CHECK-NOTES: {{^}}note: expanded from here{{$}}
   // CHECK-NOTES: :[[@LINE-7]]:8: note: differing parameters are named here: ('g'), in definition: ('w')
 };
 
