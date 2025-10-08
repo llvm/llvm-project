@@ -7,6 +7,12 @@
 //===----------------------------------------------------------------------===//
 // Use the umbrella header for -Wdocumentation.
 #include "lldb/API/LLDB.h"
+
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBreakpointLocation.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBTarget.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <mutex>
