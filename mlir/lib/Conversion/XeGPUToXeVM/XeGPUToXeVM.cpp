@@ -21,6 +21,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -371,8 +372,6 @@ static Value addOffset(ConversionPatternRewriter &rewriter, Location loc,
                        Value baseAddr, Value offset, int64_t elemByteSize) {
   Value byteSize = arith::ConstantIntOp::create(
       rewriter, loc, rewriter.getI64Type(), elemByteSize);
-  offset = arith::IndexCastUIOp::create(rewriter, loc, rewriter.getI64Type(),
-                                        offset);
   Value byteOffset = arith::MulIOp::create(rewriter, loc, offset, byteSize);
   Value newAddr = arith::AddIOp::create(rewriter, loc, baseAddr, byteOffset);
   return newAddr;
@@ -583,6 +582,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     else
       data = adaptor.getData();
     VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
+    if (!valOrResVecTy)
+      valOrResVecTy = VectorType::get(1, data.getType());
 
     int64_t elemBitWidth =
         valOrResVecTy.getElementType().getIntOrFloatBitWidth();
@@ -606,6 +607,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
         rewriter, loc, rewriter.getI64Type(), basePtrLLVM);
 
     Value linearOffset = mdescTy.getLinearOffsets(rewriter, loc, offsets);
+    linearOffset = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI64Type(), linearOffset);
     basePtrI64 =
         addOffset(rewriter, loc, basePtrI64, linearOffset, elemByteSize);
 
@@ -613,15 +616,72 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     basePtrLLVM =
         LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtrI64);
 
-    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-
-      Value loadOp =
-          LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
-      rewriter.replaceOp(op, loadOp);
+    // if the size of valOrResVecTy is 1, it lowers to a scalar load/store
+    // operation. LLVM load/store does not support vector of size 1, so we need
+    // to handle this case separately.
+    if (valOrResVecTy.getNumElements() == 1) {
+      Type scalarTy = valOrResVecTy.getElementType();
+      if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+        Value loadOp =
+            LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
+        rewriter.replaceOp(op, loadOp);
+      } else {
+        auto storeOp = LLVM::StoreOp::create(rewriter, loc, adaptor.getData(),
+                                             basePtrLLVM);
+        rewriter.eraseOp(op);
+      }
+      return success();
     } else {
-      auto storeOp =
-          LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
-      rewriter.eraseOp(op);
+      // if the attribute 'subgroup_block_io' is set to true, it lowers to
+      // xevm.blockload
+      auto subgroupBlockIoAttr = op.getSubgroupBlockIoAttr();
+      bool subgroup_block_io =
+          subgroupBlockIoAttr && cast<BoolAttr>(subgroupBlockIoAttr).getValue();
+      if (subgroup_block_io) {
+        if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+          Value loadOp = xevm::BlockLoadOp::create(rewriter, loc, valOrResVecTy,
+                                                   basePtrLLVM);
+          rewriter.replaceOp(op, loadOp);
+        } else {
+          xevm::BlockStoreOp::create(rewriter, loc, basePtrLLVM,
+                                     adaptor.getData(), nullptr);
+          rewriter.eraseOp(op);
+        }
+      } else {
+        // if the result is 1D vector, if the vector direction is Column, then
+        // the
+        //  memory descriptor should be treated as column major
+        auto chipOpt = xegpu::getChipStr(op);
+        if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
+          // the lowering only works for pvc and bmg
+          return rewriter.notifyMatchFailure(
+              op, "The lowering is specific to pvc or bmg.");
+        }
+        xegpu::MatrixAccessDirectionAttr vecDirection =
+            op.getVecDirectionAttr();
+        if (vecDirection &&
+            vecDirection.getValue() == xegpu::MatrixAccessDirection::COL &&
+            !mdescTy.isColMajor())
+          return rewriter.notifyMatchFailure(
+              op, "mem_desc should be column major when "
+                  "vec_direction is COLUMN for 1D result.");
+        if (vecDirection &&
+            vecDirection.getValue() == xegpu::MatrixAccessDirection::ROW &&
+            mdescTy.isColMajor())
+          return rewriter.notifyMatchFailure(
+              op, "mem_desc should be row major when "
+                  "vec_direction is ROW for 1D result.");
+
+        if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+          Value loadOp =
+              LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
+          rewriter.replaceOp(op, loadOp);
+        } else {
+          auto storeOp = LLVM::StoreOp::create(rewriter, loc, adaptor.getData(),
+                                               basePtrLLVM);
+          rewriter.eraseOp(op);
+        }
+      }
     }
     return success();
   }

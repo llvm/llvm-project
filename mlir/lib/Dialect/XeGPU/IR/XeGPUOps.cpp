@@ -173,6 +173,51 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
   return success();
 }
 
+LogicalResult IsValidStoreMatrixParams(
+    VectorType dataTy, MemDescType mdescTy, UnitAttr subgroup_block_io,
+    MatrixAccessDirectionAttr vecDirection, IntegerAttr vecLength,
+    function_ref<InFlightDiagnostic()> emitError) {
+
+  if (!dataTy)
+    if (subgroup_block_io || vecDirection || vecLength)
+      return emitError() << "vec_length, vec_direction and subgroup_block_io "
+                            "are only allowed when result is a 1D VectorType.";
+    else
+      return success();
+
+  if (mdescTy.getRank() != 2)
+    return emitError() << "mem_desc must be 2D.";
+
+  ArrayRef<int64_t> dataShape = dataTy.getShape();
+  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
+
+  if (dataShape.size() == 2) {
+    if (subgroup_block_io || vecDirection || vecLength)
+      return emitError() << "vec_length, vec_direction and subgroup_block_io "
+                            "are only allowed when result is a 1D VectorType.";
+    if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
+                     [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+      return emitError() << "data shape must not exceed mem_desc shape.";
+  } else if (dataShape.size() == 1) {
+
+    SmallVector<int64_t> blockSize = mdescTy.getBlockSize();
+    // if the subgroup_block_io attribute is set,  mdescTy must have block
+    // attribute
+    if (subgroup_block_io && !blockSize.size())
+      return emitError() << "mem_desc must have block attribute when "
+                            "subgroup_block_io is set.";
+    // if the subgroup_block_io attribute is set, the memdesc should be row
+    // major
+    if (subgroup_block_io && mdescTy.isColMajor())
+      return emitError() << "mem_desc should be row major when "
+                            "subgroup_block_io is set.";
+  } else if (dataShape.size() == 0) {
+    return emitError() << "result shape must not be empty.";
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -1053,25 +1098,20 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
   // nullptr/empty)
   build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
         /*vec_length=*/nullptr, /*vec_direction=*/nullptr,
-        /*subgroupBlockIO=*/nullptr, layout);
+        /*subgroup_block_io=*/nullptr, layout);
 }
 
 LogicalResult LoadMatrixOp::verify() {
-  VectorType resTy = getRes().getType();
+
+  auto resTy = dyn_cast<VectorType>(getRes().getType());
+  UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
+  MatrixAccessDirectionAttr vecDirection = getVecDirectionAttr();
+  IntegerAttr vecLength = getVecLengthAttr();
   MemDescType mdescTy = getMemDesc().getType();
 
-  if (mdescTy.getRank() != 2)
-    return emitOpError("mem_desc must be 2D.");
-
-  ArrayRef<int64_t> valueShape = resTy.getShape();
-  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-
-  if (valueShape.size() != 1) {
-    if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
-                     [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-      return emitOpError("result shape must not exceed mem_desc shape.");
-  }
-  return success();
+  return IsValidStoreMatrixParams(resTy, mdescTy, subgroup_block_io,
+                                  vecDirection, vecLength,
+                                  [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1086,24 +1126,20 @@ void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
   build(builder, state, data, memDesc, dynamicOffsets, staticOffsetsAttr,
-        layout);
+        /*vec_length=*/nullptr, /*vec_direction=*/nullptr,
+        /*subgroup_block_io=*/nullptr, layout);
 }
 
 LogicalResult StoreMatrixOp::verify() {
-  VectorType dataTy = getData().getType();
+
+  auto dataTy = dyn_cast<VectorType>(getData().getType());
+  UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
+  MatrixAccessDirectionAttr vecDirection = getVecDirectionAttr();
+  IntegerAttr vecLength = getVecLengthAttr();
   MemDescType mdescTy = getMemDesc().getType();
-
-  if (mdescTy.getRank() != 2)
-    return emitOpError("mem_desc must be 2D.");
-
-  ArrayRef<int64_t> dataShape = dataTy.getShape();
-  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-  if (dataShape.size() != 1) {
-    if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
-                     [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-      return emitOpError("data shape must not exceed mem_desc shape.");
-  }
-  return success();
+  return IsValidStoreMatrixParams(dataTy, mdescTy, subgroup_block_io,
+                                  vecDirection, vecLength,
+                                  [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//

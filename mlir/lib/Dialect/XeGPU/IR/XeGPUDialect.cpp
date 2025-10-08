@@ -813,9 +813,8 @@ SmallVector<int64_t> MemDescType::getStrides() {
   }
   llvm::dbgs() << "]\n";
 
-  if (innerBlkShape.empty())
-    return strides;
-
+  // get perm from FCD to LCD
+  // perm[i] = the dim with i-th smallest stride
   SmallVector<int, 4> perm =
       llvm::to_vector<4>(llvm::seq<int>(0, strides.size()));
   llvm::sort(perm, [&](int a, int b) { return strides[a] < strides[b]; });
@@ -908,6 +907,7 @@ SmallVector<int64_t> MemDescType::getStrides() {
 Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
                                     ArrayRef<OpFoldResult> offsets) {
 
+  SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
   SmallVector<int64_t> blockShape = getBlockSize();
   SmallVector<int64_t> strides = getStrides();
 
@@ -917,7 +917,11 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
              llvm::interleaveComma(strides, llvm::dbgs());
              llvm::dbgs() << "]\n");
 
-  if (!blockShape.empty()) {
+  // blockshape equal to matrixshape means no blocking
+  if (llvm::equal(blockShape, matrixShape)) {
+    // remove the outer dims from strides
+    strides.erase(strides.begin(), strides.begin() + matrixShape.size());
+  } else {
     assert(offsets.size() == blockShape.size() &&
            "offsets and blockShape must have the same size");
     // say the original offset is [y, x], and the block shape is [By, Bx],

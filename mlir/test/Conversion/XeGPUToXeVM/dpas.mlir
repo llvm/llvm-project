@@ -7,7 +7,7 @@ gpu.module @test_kernel {
         // Loads are checked in a separate test.
         // CHECK: %[[D:.*]] = xevm.mma %[[ARG0]], %[[ARG1]], %[[ARG2]] {shape = <m = 8, n = 16, k = 16>, types = <d = f32, a = f16, b = f16, c = f32>}
         // CHECK-SAME:    : (vector<8xf16>, vector<16xf16>, vector<8xf32>) -> vector<8xf32>
-        %d = xegpu.dpas %a_loaded, %b_loaded, %c_loaded {a_layout = #sg_map_a_f16, b_layout = #sg_map_b_f16, c_layout = #sg_map_c_f32}
+        %d = xegpu.dpas %a_loaded, %b_loaded, %c_loaded
             : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
         return %d : vector<8xf32>
     }

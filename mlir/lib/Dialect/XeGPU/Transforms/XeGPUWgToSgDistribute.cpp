@@ -867,7 +867,7 @@ struct WgToSgLoadMatrixOp : public OpConversionPattern<xegpu::LoadMatrixOp> {
       return failure();
 
     ArrayRef<int64_t> wgShape = op.getDataShape();
-    VectorType valueTy = op.getRes().getType();
+    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getRes().getType());
     Type elemTy = valueTy.getElementType();
 
     xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();

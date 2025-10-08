@@ -1304,10 +1304,10 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<I32Attr>:$vec_length,
     OptionalAttr<MatrixAccessDirectionAttr>:$vec_direction,
-    OptionalAttr<UnitAttr>:$subgroupBlockIO,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
-  let results = (outs XeGPU_ValueType:$res);
+  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);  
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
@@ -1338,7 +1338,10 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     }
 
     ArrayRef<int64_t> getDataShape() {
-      return getRes().getType().getShape();
+      auto resTy = getRes().getType();
+      if (auto vecTy = llvm::dyn_cast<VectorType>(resTy))
+        return vecTy.getShape();
+      return {};
     }
   }];
 
@@ -1348,10 +1351,13 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
 def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
                               AllElementTypesMatch<["mem_desc", "data"]>]> {
   let arguments = (ins
-    XeGPU_ValueType:$data,
+    AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$data,
     XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<I32Attr>:$vec_length,
+    OptionalAttr<MatrixAccessDirectionAttr>:$vec_direction,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
@@ -1379,7 +1385,10 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     }
 
     ArrayRef<int64_t> getDataShape() {
-      return getData().getType().getShape();
+      auto DataTy = getData().getType();
+      if (auto vecTy = llvm::dyn_cast<VectorType>(DataTy))
+        return vecTy.getShape();
+      return {};
     }
 
   }];
