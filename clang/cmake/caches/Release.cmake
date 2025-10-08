@@ -32,8 +32,7 @@ endfunction()
 
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   # Reduce projects built for Windows due to 2GB installer limits.
-  #set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
-  set (DEFAULT_PROJECTS "clang;lld")
+  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
 else()
   set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
 endif()
