@@ -43,7 +43,7 @@
   #define LIBUNWIND_AVAIL
 #endif
 
-#if __has_feature(ptrauth_calls)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
 
   #include <ptrauth.h>
 

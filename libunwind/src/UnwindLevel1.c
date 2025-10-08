@@ -110,9 +110,6 @@ static _Unwind_Personality_Fn get_handler_function(unw_proc_info_t *frameInfo) {
   //         _Unwind_Personality_Fn typed local - this avoids any confused
   //         re-signing of values that already have a signature.
   _Unwind_Personality_Fn handler;
-  uintptr_t __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 0,
-                  ptrauth_function_pointer_type_discriminator(_Unwind_Personality_Fn))
-                  f;
   memcpy(&handler, (void *)&reauthenticatedIntegerHandler,
          sizeof(_Unwind_Personality_Fn));
 
