@@ -104,6 +104,7 @@ public:
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
+  void setActive(bool isActive) { cleanupBits.isActive = isActive; }
 
   size_t getCleanupSize() const { return cleanupBits.cleanupSize; }
   void *getCleanupBuffer() { return this + 1; }
@@ -136,6 +137,14 @@ public:
 
 inline EHScopeStack::iterator EHScopeStack::begin() const {
   return iterator(startOfData);
+}
+
+inline EHScopeStack::iterator
+EHScopeStack::find(stable_iterator savePoint) const {
+  assert(savePoint.isValid() && "finding invalid savepoint");
+  assert(savePoint.size <= stable_begin().size &&
+         "finding savepoint after pop");
+  return iterator(endOfBuffer - savePoint.size);
 }
 
 } // namespace clang::CIRGen

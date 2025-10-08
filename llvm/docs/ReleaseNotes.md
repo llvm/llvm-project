@@ -146,6 +146,8 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

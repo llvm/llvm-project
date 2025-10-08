@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16 %s
 
 define void @atomic_store_monotonic_i8(ptr addrspace(3) %ptr, i8 %val) {
 ; CI-LABEL: atomic_store_monotonic_i8:
@@ -41,6 +43,26 @@ define void @atomic_store_monotonic_i8(ptr addrspace(3) %ptr, i8 %val) {
 ; GFX11-FAKE16-NEXT:    ds_store_b8 v0, v2
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_i8:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b8 v0, v1
+; GFX1250-TRUE16-NEXT:    ds_store_b8_d16_hi v0, v1
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_i8:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b8 v0, v1
+; GFX1250-FAKE16-NEXT:    ds_store_b8 v0, v2
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %val1 = add i8 %val, 2
   store atomic i8 %val, ptr addrspace(3) %ptr monotonic, align 1
   store atomic i8 %val1, ptr addrspace(3) %ptr monotonic, align 1
@@ -84,6 +106,26 @@ define void @atomic_store_monotonic_offset_i8(ptr addrspace(3) %ptr, i8 %val) {
 ; GFX11-FAKE16-NEXT:    ds_store_b8 v0, v2 offset:16
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_offset_i8:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b8 v0, v1 offset:8
+; GFX1250-TRUE16-NEXT:    ds_store_b8_d16_hi v0, v1 offset:16
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_offset_i8:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b8 v0, v1 offset:8
+; GFX1250-FAKE16-NEXT:    ds_store_b8 v0, v2 offset:16
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %val1 = add i8 %val, 2
   %gep_1 = getelementptr inbounds i8, ptr addrspace(3) %ptr, i8 8
   %gep_2 = getelementptr inbounds i8, ptr addrspace(3) %ptr, i8 16
@@ -129,6 +171,26 @@ define void @atomic_store_monotonic_i16(ptr addrspace(3) %ptr, i16 %val) {
 ; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v2
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_i16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b16 v0, v1
+; GFX1250-TRUE16-NEXT:    ds_store_b16_d16_hi v0, v1
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_i16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v1
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v2
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %val1 = add i16 %val, 2
   store atomic i16 %val, ptr addrspace(3) %ptr monotonic, align 2
   store atomic i16 %val1, ptr addrspace(3) %ptr monotonic, align 2
@@ -172,6 +234,26 @@ define void @atomic_store_monotonic_offset_i16(ptr addrspace(3) %ptr, i16 %val) 
 ; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v2 offset:32
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_offset_i16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b16 v0, v1 offset:32
+; GFX1250-TRUE16-NEXT:    ds_store_b16_d16_hi v0, v1 offset:32
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_offset_i16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v1 offset:32
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v2 offset:32
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %val1 = add i16 %val, 2
   %gep = getelementptr inbounds i16, ptr addrspace(3) %ptr, i16 16
   store atomic i16 %val, ptr addrspace(3) %gep monotonic, align 2
@@ -201,6 +283,14 @@ define void @atomic_store_monotonic_i32(ptr addrspace(3) %ptr, i32 %val) {
 ; GFX11-NEXT:    ds_store_b32 v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: atomic_store_monotonic_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    ds_store_b32 v0, v1
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   store atomic i32 %val, ptr addrspace(3) %ptr monotonic, align 4
   ret void
 }
@@ -227,6 +317,14 @@ define void @atomic_store_monotonic_offset_i32(ptr addrspace(3) %ptr, i32 %val) 
 ; GFX11-NEXT:    ds_store_b32 v0, v1 offset:64
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: atomic_store_monotonic_offset_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    ds_store_b32 v0, v1 offset:64
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr inbounds i32, ptr addrspace(3) %ptr, i32 16
   store atomic i32 %val, ptr addrspace(3) %gep monotonic, align 4
   ret void
@@ -254,6 +352,15 @@ define void @atomic_store_monotonic_i64(ptr addrspace(3) %ptr, i64 %val) {
 ; GFX11-NEXT:    ds_store_b64 v0, v[1:2]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: atomic_store_monotonic_i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-NEXT:    ds_store_b64 v0, v[2:3]
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   store atomic i64 %val, ptr addrspace(3) %ptr monotonic, align 8
   ret void
 }
@@ -280,6 +387,15 @@ define void @atomic_store_monotonic_offset_i64(ptr addrspace(3) %ptr, i64 %val) 
 ; GFX11-NEXT:    ds_store_b64 v0, v[1:2] offset:128
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: atomic_store_monotonic_offset_i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; GFX1250-NEXT:    ds_store_b64 v0, v[2:3] offset:128
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr inbounds i64, ptr addrspace(3) %ptr, i64 16
   store atomic i64 %val, ptr addrspace(3) %gep monotonic, align 8
   ret void
@@ -322,6 +438,26 @@ define void @atomic_store_monotonic_f16(ptr addrspace(3) %ptr, i16 %arg.val) {
 ; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v2
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_f16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b16 v0, v1
+; GFX1250-TRUE16-NEXT:    ds_store_b16_d16_hi v0, v1
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_f16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v1
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v2
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %arg.val1 = add i16 %arg.val, 2
   %val = bitcast i16 %arg.val to half
   %val1 = bitcast i16 %arg.val1 to half
@@ -367,6 +503,26 @@ define void @atomic_store_monotonic_offset_f16(ptr addrspace(3) %ptr, i16 %arg.v
 ; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v2 offset:32
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_offset_f16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b16 v0, v1 offset:32
+; GFX1250-TRUE16-NEXT:    ds_store_b16_d16_hi v0, v1 offset:32
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_offset_f16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v1 offset:32
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v2 offset:32
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %arg.val1 = add i16 %arg.val, 2
   %val1 = bitcast i16 %arg.val1 to half
   %val = bitcast i16 %arg.val to half
@@ -413,6 +569,26 @@ define void @atomic_store_monotonic_bf16(ptr addrspace(3) %ptr, i16 %arg.val) {
 ; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v2
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_bf16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b16 v0, v1
+; GFX1250-TRUE16-NEXT:    ds_store_b16_d16_hi v0, v1
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_bf16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v1
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v2
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %arg.val1 = add i16 %arg.val, 2
   %val1 = bitcast i16 %arg.val1 to bfloat
   %val = bitcast i16 %arg.val to bfloat
@@ -458,6 +634,26 @@ define void @atomic_store_monotonic_offset_bf16(ptr addrspace(3) %ptr, i16 %arg.
 ; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v2 offset:32
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-TRUE16-LABEL: atomic_store_monotonic_offset_bf16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v1.h, v1.l, 2
+; GFX1250-TRUE16-NEXT:    ds_store_b16 v0, v1 offset:32
+; GFX1250-TRUE16-NEXT:    ds_store_b16_d16_hi v0, v1 offset:32
+; GFX1250-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-FAKE16-LABEL: atomic_store_monotonic_offset_bf16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_nc_u16 v2, v1, 2
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v1 offset:32
+; GFX1250-FAKE16-NEXT:    ds_store_b16 v0, v2 offset:32
+; GFX1250-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %arg.val1 = add i16 %arg.val, 2
   %val1 = bitcast i16 %arg.val1 to bfloat
   %val = bitcast i16 %arg.val to bfloat

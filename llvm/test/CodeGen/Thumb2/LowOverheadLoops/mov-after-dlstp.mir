@@ -240,10 +240,10 @@ body:             |
 
     $s4 = VMOVSR $r1, 14 /* CC::al */, $noreg
     $lr = tMOVr $r4, 14 /* CC::al */, $noreg
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, renamable $s3, 14 /* CC::al */, $noreg, implicit $q0
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, renamable $s3, 14 /* CC::al */, $noreg, implicit $q0, implicit $fpscr_rm
     $lr = t2DoLoopStart killed $r4
     renamable $s4 = VUITOS killed renamable $s4, 14 /* CC::al */, $noreg
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg, implicit $fpscr_rm
     renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg
     renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
     renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, $noreg, undef renamable $q1
@@ -267,10 +267,10 @@ body:             |
     liveins: $q0, $r1, $r2
 
     renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 1, 14 /* CC::al */, $noreg
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, renamable $s3, 14 /* CC::al */, $noreg, implicit $q0
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, renamable $s3, 14 /* CC::al */, $noreg, implicit $q0, implicit $fpscr_rm
     $s2 = VMOVSR killed $r0, 14 /* CC::al */, $noreg
     renamable $s2 = VUITOS killed renamable $s2, 14 /* CC::al */, $noreg
-    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s2, 14 /* CC::al */, $noreg
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s2, 14 /* CC::al */, $noreg, implicit $fpscr_rm
     VSTRS killed renamable $s0, killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.pResult)
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
 

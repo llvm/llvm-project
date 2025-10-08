@@ -1262,7 +1262,7 @@ define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
 ; GFX1250-TRUE16-LABEL: ps_mesa_i16:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.l
-; GFX1250-TRUE16-NEXT:    flat_store_b16 v[0:1], v0
+; GFX1250-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX1250-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX1250-FAKE16-LABEL: ps_mesa_i16:
@@ -3013,7 +3013,7 @@ define amdgpu_cs void @amdgpu_cs_v8i1(<8 x i1> %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 4, v0.h
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v0.h, 15 bitop3:0xec
-; GFX1250-TRUE16-NEXT:    flat_store_b8 v[0:1], v0
+; GFX1250-TRUE16-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX1250-FAKE16-LABEL: amdgpu_cs_v8i1:
@@ -3297,7 +3297,7 @@ define amdgpu_cs void @amdgpu_cs_v16i1(<16 x i1> %arg0) {
 ; GFX1250-TRUE16-NEXT:    v_or_b16 v0.h, v1.h, v1.l
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v0.h, 0xff bitop3:0xec
-; GFX1250-TRUE16-NEXT:    flat_store_b16 v[0:1], v0
+; GFX1250-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX1250-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX1250-FAKE16-LABEL: amdgpu_cs_v16i1:

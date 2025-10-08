@@ -2308,18 +2308,6 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "clang-offload-packager",
-    srcs = glob(["tools/clang-offload-packager/*.cpp"]),
-    stamp = 0,
-    deps = [
-        ":basic",
-        "//llvm:BinaryFormat",
-        "//llvm:Object",
-        "//llvm:Support",
-    ],
-)
-
 gentbl_cc_library(
     name = "linker_wrapper_opts_gen",
     strip_include_prefix = "tools/clang-linker-wrapper",

@@ -568,25 +568,10 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     case DW_CFA_remember_state:
       Function.addCFIInstruction(
           Offset, MCCFIInstruction::createRememberState(nullptr));
-
-      if (Function.getBinaryContext().isAArch64()) {
-        // Support for pointer authentication:
-        // We need to annotate instructions that modify the RA State, to work
-        // out the state of each instruction in MarkRAStates Pass.
-        if (Offset != 0)
-          Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
-      }
       break;
     case DW_CFA_restore_state:
       Function.addCFIInstruction(Offset,
                                  MCCFIInstruction::createRestoreState(nullptr));
-      if (Function.getBinaryContext().isAArch64()) {
-        // Support for pointer authentication:
-        // We need to annotate instructions that modify the RA State, to work
-        // out the state of each instruction in MarkRAStates Pass.
-        if (Offset != 0)
-          Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
-      }
       break;
     case DW_CFA_def_cfa:
       Function.addCFIInstruction(
@@ -644,24 +629,11 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         BC.errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
       return false;
     case DW_CFA_GNU_window_save:
-      // DW_CFA_GNU_window_save and DW_CFA_AARCH64_negate_ra_state just use the
-      // same id but mean different things. The latter is used in AArch64.
+      // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
+      // id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
-        Function.setContainedNegateRAState();
-        // The location OpNegateRAState CFIs are needed depends on the order of
-        // BasicBlocks, which changes during optimizations. Instead of adding
-        // OpNegateRAState CFIs, an annotation is added to the instruction, to
-        // mark that the instruction modifies the RA State. The actual state for
-        // instructions are worked out in MarkRAStates based on these
-        // annotations.
-        if (Offset != 0)
-          Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
-                                          Offset);
-        else
-          // We cannot Annotate an instruction at Offset == 0.
-          // Instead, we save the initial (Signed) state, and push it to
-          // MarkRAStates' RAStateStack.
-          Function.setInitialRAState(true);
+        Function.addCFIInstruction(
+            Offset, MCCFIInstruction::createNegateRAState(nullptr));
         break;
       }
       if (opts::Verbosity >= 1)

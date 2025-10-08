@@ -41,6 +41,7 @@ private:
   std::unique_ptr<MCInstrInfo const> const MCII;
   const MCRegisterInfo &MRI;
   const MCAsmInfo &MAI;
+  const unsigned HwModeRegClass;
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;

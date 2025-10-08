@@ -1,0 +1,43 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s64i = !cir.int<s, 64>
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+!Base = !cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
+!Derived = !cir.record<struct "Derived" {!cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
+
+module {
+  cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u32i>
+  cir.global "private" constant external @_ZTI7Derived : !cir.ptr<!u8i>
+  cir.func private @__dynamic_cast(!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
+  cir.func private @__cxa_bad_cast()
+  cir.func @test(%arg0 : !cir.ptr<!Base>) {
+    // expected-error@+1 {{srcRtti must be an RTTI pointer}}
+    %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!Base> -> !cir.ptr<!Derived> #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u32i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
+  }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+!Base = !cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
+!Derived = !cir.record<struct "Derived" {!cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
+
+module {
+  cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u8i>
+  cir.global "private" constant external @_ZTI7Derived : !cir.ptr<!u32i>
+  cir.func private @__dynamic_cast(!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
+  cir.func private @__cxa_bad_cast()
+  cir.func @test(%arg0 : !cir.ptr<!Base>) {
+    // expected-error@+1 {{destRtti must be an RTTI pointer}}
+    %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!Base> -> !cir.ptr<!Derived> #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u32i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
+  }
+}

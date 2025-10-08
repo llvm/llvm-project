@@ -722,7 +722,12 @@ mlgo:
   - llvm/include/llvm/Analysis/IR2Vec.h
   - llvm/lib/Analysis/IR2Vec.cpp
   - llvm/lib/Analysis/models/**
+  - llvm/include/llvm/CodeGen/MIR2Vec.h
+  - llvm/lib/CodeGen/MIR2Vec.cpp
   - llvm/test/Analysis/IR2Vec/**
+  - llvm/test/CodeGen/MIR2Vec/**
+  - llvm/unittests/Analysis/IR2VecTest.cpp
+  - llvm/unittests/CodeGen/MIR2VecTest.cpp
   - llvm/tools/llvm-ir2vec/**
   - llvm/docs/CommandGuide/llvm-ir2vec.rst
 

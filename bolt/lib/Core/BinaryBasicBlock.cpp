@@ -210,11 +210,7 @@ int32_t BinaryBasicBlock::getCFIStateAtInstr(const MCInst *Instr) const {
       InstrSeen = (&Inst == Instr);
       continue;
     }
-    // Ignoring OpNegateRAState CFIs here, as they dont have a "State"
-    // number associated with them.
-    if (Function->getBinaryContext().MIB->isCFI(Inst) &&
-        (Function->getCFIFor(Inst)->getOperation() !=
-         MCCFIInstruction::OpNegateRAState)) {
+    if (Function->getBinaryContext().MIB->isCFI(Inst)) {
       LastCFI = &Inst;
       break;
     }

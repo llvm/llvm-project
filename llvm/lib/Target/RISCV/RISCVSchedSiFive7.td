@@ -567,9 +567,12 @@ multiclass SiFive7WriteResBase<int VLEN,
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 8, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-    defm  : LMULWriteResMXVariant<"WriteVLDS8",  VLDSX0Pred, [VCQ, VL],
-                                         4, [0, 1], [1, !add(1, VLDSX0Cycles)], !add(3, Cycles),
-                                         [0, 1], [1, !add(1, Cycles)], mx, IsWorstCase>;
+    defm  : LMULWriteResMXVariant<"WriteVLDS8",  VLDSX0Pred,
+                                  // Predicated
+                                  [VCQ, VL], 4, [0, 1], [1, !add(1, VLDSX0Cycles)],
+                                  // Not Predicated
+                                  [VCQ, VL], !add(3, Cycles), [0, 1], [1, !add(1, Cycles)],
+                                  mx, IsWorstCase>;
     let Latency = !add(3, Cycles), AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVLDUX8", [VCQ, VL], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVLDOX8", [VCQ, VL], mx, IsWorstCase>;
@@ -587,9 +590,12 @@ multiclass SiFive7WriteResBase<int VLEN,
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 16, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-    defm  : LMULWriteResMXVariant<"WriteVLDS16",  VLDSX0Pred, [VCQ, VL],
-                                         4, [0, 1], [1, !add(1, VLDSX0Cycles)], !add(3, Cycles),
-                                         [0, 1], [1, !add(1, Cycles)], mx, IsWorstCase>;
+    defm  : LMULWriteResMXVariant<"WriteVLDS16",  VLDSX0Pred,
+                                  // Predicated
+                                  [VCQ, VL], 4, [0, 1], [1, !add(1, VLDSX0Cycles)],
+                                  // Not Predicated
+                                  [VCQ, VL], !add(3, Cycles), [0, 1], [1, !add(1, Cycles)],
+                                  mx, IsWorstCase>;
     let Latency = !add(3, Cycles), AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVLDUX16", [VCQ, VL], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVLDOX16", [VCQ, VL], mx, IsWorstCase>;
@@ -604,9 +610,12 @@ multiclass SiFive7WriteResBase<int VLEN,
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 32, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-    defm  : LMULWriteResMXVariant<"WriteVLDS32",  VLDSX0Pred, [VCQ, VL],
-                                         4, [0, 1], [1, !add(1, VLDSX0Cycles)], !add(3, Cycles),
-                                         [0, 1], [1, !add(1, Cycles)], mx, IsWorstCase>;
+    defm  : LMULWriteResMXVariant<"WriteVLDS32",  VLDSX0Pred,
+                                  // Predicated
+                                  [VCQ, VL], 4, [0, 1], [1, !add(1, VLDSX0Cycles)],
+                                  // Not Predicated
+                                  [VCQ, VL], !add(3, Cycles), [0, 1], [1, !add(1, Cycles)],
+                                  mx, IsWorstCase>;
     let Latency = !add(3, Cycles), AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVLDUX32", [VCQ, VL], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVLDOX32", [VCQ, VL], mx, IsWorstCase>;
@@ -621,9 +630,12 @@ multiclass SiFive7WriteResBase<int VLEN,
     defvar VLDSX0Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar Cycles = SiFive7GetCyclesOnePerElement<mx, 64, VLEN>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-    defm  : LMULWriteResMXVariant<"WriteVLDS64",  VLDSX0Pred, [VCQ, VL],
-                                         4, [0, 1], [1, !add(1, VLDSX0Cycles)], !add(3, Cycles),
-                                         [0, 1], [1, !add(1, Cycles)], mx, IsWorstCase>;
+    defm  : LMULWriteResMXVariant<"WriteVLDS64",  VLDSX0Pred,
+                                  // Predicated
+                                  [VCQ, VL], 4, [0, 1], [1, !add(1, VLDSX0Cycles)],
+                                  // Not Predicated
+                                  [VCQ, VL], !add(3, Cycles), [0, 1], [1, !add(1, Cycles)],
+                                  mx, IsWorstCase>;
     let Latency = !add(3, Cycles), AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVLDUX64", [VCQ, VL], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVLDOX64", [VCQ, VL], mx, IsWorstCase>;

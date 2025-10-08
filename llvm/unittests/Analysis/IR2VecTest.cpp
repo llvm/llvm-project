@@ -430,6 +430,60 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
   EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 58.1)));
 }
 
+TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, *V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  // Get initial function vector
+  const auto &FuncVec1 = Emb->getFunctionVector();
+
+  // Compute embeddings again by calling getFunctionVector multiple times
+  const auto &FuncVec2 = Emb->getFunctionVector();
+  const auto &FuncVec3 = Emb->getFunctionVector();
+
+  // All function vectors should be identical
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec2));
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec3));
+  EXPECT_TRUE(FuncVec2.approximatelyEquals(FuncVec3));
+
+  // Also check that instruction vectors remain consistent
+  const auto &InstMap1 = Emb->getInstVecMap();
+  const auto &InstMap2 = Emb->getInstVecMap();
+
+  EXPECT_EQ(InstMap1.size(), InstMap2.size());
+  for (const auto &[Inst, Vec1] : InstMap1) {
+    ASSERT_TRUE(InstMap2.count(Inst));
+    EXPECT_TRUE(Vec1.approximatelyEquals(InstMap2.at(Inst)));
+  }
+}
+
+TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_FlowAware) {
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, *V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  // Get initial function vector
+  const auto &FuncVec1 = Emb->getFunctionVector();
+
+  // Compute embeddings again by calling getFunctionVector multiple times
+  const auto &FuncVec2 = Emb->getFunctionVector();
+  const auto &FuncVec3 = Emb->getFunctionVector();
+
+  // All function vectors should be identical
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec2));
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec3));
+  EXPECT_TRUE(FuncVec2.approximatelyEquals(FuncVec3));
+
+  // Also check that instruction vectors remain consistent
+  const auto &InstMap1 = Emb->getInstVecMap();
+  const auto &InstMap2 = Emb->getInstVecMap();
+
+  EXPECT_EQ(InstMap1.size(), InstMap2.size());
+  for (const auto &[Inst, Vec1] : InstMap1) {
+    ASSERT_TRUE(InstMap2.count(Inst));
+    EXPECT_TRUE(Vec1.approximatelyEquals(InstMap2.at(Inst)));
+  }
+}
+
 static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;
 [[maybe_unused]]
 static constexpr unsigned MaxTypeIDs = Vocabulary::MaxTypeIDs;

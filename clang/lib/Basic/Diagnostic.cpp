@@ -537,33 +537,16 @@ WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
 }
 
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
-  // Drop the default section introduced by special case list, we only support
-  // exact diagnostic group names.
-  // FIXME: We should make this configurable in the parser instead.
-  // FIXME: C++20 can use std::erase_if(Sections, [](Section &sec) { return
-  // sec.SectionStr == "*"; });
-  llvm::erase_if(Sections, [](Section &sec) { return sec.SectionStr == "*"; });
-  // Make sure we iterate sections by their line numbers.
-  std::vector<std::pair<unsigned, const Section *>> LineAndSectionEntry;
-  LineAndSectionEntry.reserve(Sections.size());
-  for (const auto &Entry : Sections) {
-    StringRef DiagName = Entry.SectionStr;
-    // Each section has a matcher with that section's name, attached to that
-    // line.
-    const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = 0;
-    for (const auto &Glob : DiagSectionMatcher->Globs)
-      if (Glob->Name == DiagName) {
-        DiagLine = Glob->LineNo;
-        break;
-      }
-    LineAndSectionEntry.emplace_back(DiagLine, &Entry);
-  }
-  llvm::sort(LineAndSectionEntry);
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
-  for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
+  for (const auto &SectionEntry : Sections) {
+    StringRef DiagGroup = SectionEntry.SectionStr;
+    if (DiagGroup == "*") {
+      // Drop the default section introduced by special case list, we only
+      // support exact diagnostic group names.
+      // FIXME: We should make this configurable in the parser instead.
+      continue;
+    }
     SmallVector<diag::kind> GroupDiags;
-    StringRef DiagGroup = SectionEntry->SectionStr;
     if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
             WarningFlavor, DiagGroup, GroupDiags)) {
       StringRef Suggestion =
@@ -576,7 +559,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     for (diag::kind Diag : GroupDiags)
       // We're intentionally overwriting any previous mappings here to make sure
       // latest one takes precedence.
-      DiagToSection[Diag] = SectionEntry;
+      DiagToSection[Diag] = &SectionEntry;
   }
 }
 

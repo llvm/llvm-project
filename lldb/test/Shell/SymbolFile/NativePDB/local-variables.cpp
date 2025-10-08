@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) step
 // CHECK-NEXT: Process {{.*}} stopped
 // CHECK-NEXT: * thread #1, stop reason = step in
-// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
+// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`int Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
 // CHECK-NEXT:    6
 // CHECK-NEXT:    7
 // CHECK-NEXT:    8 int Function(int Param1, char Param2) {
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) step
 // CHECK-NEXT: Process {{.*}} stopped
 // CHECK-NEXT: * thread #1, stop reason = step in
-// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
+// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`int Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
 // CHECK-NEXT:    7
 // CHECK-NEXT:    8    int Function(int Param1, char Param2) {
 // CHECK-NEXT:    9      unsigned Local1 = Param1 + 1;
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) step
 // CHECK-NEXT: Process {{.*}} stopped
 // CHECK-NEXT: * thread #1, stop reason = step in
-// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
+// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`int Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
 // CHECK-NEXT:    8    int Function(int Param1, char Param2) {
 // CHECK-NEXT:    9      unsigned Local1 = Param1 + 1;
 // CHECK-NEXT:    10     char Local2 = Param2 + 1;
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) step
 // CHECK-NEXT: Process {{.*}} stopped
 // CHECK-NEXT: * thread #1, stop reason = step in
-// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
+// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`int Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
 // CHECK-NEXT:    9      unsigned Local1 = Param1 + 1;
 // CHECK-NEXT:    10     char Local2 = Param2 + 1;
 // CHECK-NEXT:    11     ++Local1;
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) step
 // CHECK-NEXT: Process {{.*}} stopped
 // CHECK-NEXT: * thread #1, stop reason = step in
-// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
+// CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`int Function(Param1=16, Param2='a') at local-variables.cpp:{{.*}}
 // CHECK-NEXT:    10      char Local2 = Param2 + 1;
 // CHECK-NEXT:    11     ++Local1;
 // CHECK-NEXT:    12     ++Local2;

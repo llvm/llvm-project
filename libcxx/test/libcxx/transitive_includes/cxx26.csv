@@ -14,9 +14,7 @@ algorithm ratio
 algorithm tuple
 algorithm version
 any cstdint
-any cstring
 any initializer_list
-any limits
 any typeinfo
 any version
 array cctype

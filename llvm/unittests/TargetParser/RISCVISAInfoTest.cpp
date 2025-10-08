@@ -552,7 +552,7 @@ TEST(ParseArchString,
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
   EXPECT_EQ(Exts.count("zalasr"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p1", true);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p9", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
@@ -581,7 +581,7 @@ TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
       toString(
           RISCVISAInfo::parseArchString("rv64izalasr9p9", true).takeError()),
       "unsupported version number 9.9 for experimental extension 'zalasr' "
-      "(this compiler supports 0.1)");
+      "(this compiler supports 0.9)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -1188,7 +1188,7 @@ Experimental extensions
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zalasr               0.1
+    zalasr               0.9
     zvbc32e              0.7
     zvfbfa               0.1
     zvfofp8min           0.2

@@ -550,7 +550,7 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | OMP_AVAILABLE_DEVICES envirable                             | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Traits for default device envirable                         | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| Traits for default device envirable                         | :part:`in progress`       | :none:`unclaimed`         | ro-i                                                                     |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Optionally omit array length expression                     | :good:`done`              | :none:`unclaimed`         | (Parse) https://github.com/llvm/llvm-project/pull/148048,                |
 |                                                             |                           |                           | (Sema) https://github.com/llvm/llvm-project/pull/152786                  |

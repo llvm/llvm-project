@@ -1211,16 +1211,81 @@ AAAMDWavesPerEU &AAAMDWavesPerEU::createForPosition(const IRPosition &IRP,
   llvm_unreachable("AAAMDWavesPerEU is only valid for function position");
 }
 
-static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
-  for (const auto &CI : IA->ParseConstraints()) {
+/// Compute the minimum number of AGPRs required to allocate the inline asm.
+static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
+                                             const CallBase &Call) {
+  unsigned ArgNo = 0;
+  unsigned ResNo = 0;
+  unsigned AGPRDefCount = 0;
+  unsigned AGPRUseCount = 0;
+  unsigned MaxPhysReg = 0;
+  const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
+
+  // TODO: Overestimates due to not accounting for tied operands
+  for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
+    Type *Ty = nullptr;
+    switch (CI.Type) {
+    case InlineAsm::isOutput: {
+      Ty = Call.getType();
+      if (auto *STy = dyn_cast<StructType>(Ty))
+        Ty = STy->getElementType(ResNo);
+      ++ResNo;
+      break;
+    }
+    case InlineAsm::isInput: {
+      Ty = Call.getArgOperand(ArgNo++)->getType();
+      break;
+    }
+    case InlineAsm::isLabel:
+      continue;
+    case InlineAsm::isClobber:
+      // Parse the physical register reference.
+      break;
+    }
+
     for (StringRef Code : CI.Codes) {
-      Code.consume_front("{");
-      if (Code.starts_with("a"))
-        return true;
+      unsigned RegCount = 0;
+      if (Code.starts_with("a")) {
+        // Virtual register, compute number of registers based on the type.
+        //
+        // We ought to be going through TargetLowering to get the number of
+        // registers, but we should avoid the dependence on CodeGen here.
+        RegCount = divideCeil(DL.getTypeSizeInBits(Ty), 32);
+      } else {
+        // Physical register reference
+        auto [Kind, RegIdx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Code);
+        if (Kind == 'a') {
+          RegCount = NumRegs;
+          MaxPhysReg = std::max(MaxPhysReg, std::min(RegIdx + NumRegs, 256u));
+        }
+
+        continue;
+      }
+
+      if (CI.Type == InlineAsm::isOutput) {
+        // Apply tuple alignment requirement
+        //
+        // TODO: This is more conservative than necessary.
+        AGPRDefCount = alignTo(AGPRDefCount, RegCount);
+
+        AGPRDefCount += RegCount;
+        if (CI.isEarlyClobber) {
+          AGPRUseCount = alignTo(AGPRUseCount, RegCount);
+          AGPRUseCount += RegCount;
+        }
+      } else {
+        AGPRUseCount = alignTo(AGPRUseCount, RegCount);
+        AGPRUseCount += RegCount;
+      }
     }
   }
 
-  return false;
+  unsigned MaxVirtReg = std::max(AGPRUseCount, AGPRDefCount);
+
+  // TODO: This is overly conservative. If there are any physical registers,
+  // allocate any virtual registers after them so we don't have to solve optimal
+  // packing.
+  return std::min(MaxVirtReg + MaxPhysReg, 256u);
 }
 
 // TODO: Migrate to range merge of amdgpu-agpr-alloc.
@@ -1259,14 +1324,29 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
       const Function *Callee = dyn_cast<Function>(CalleeOp);
       if (!Callee) {
         if (const InlineAsm *IA = dyn_cast<InlineAsm>(CalleeOp))
-          return !inlineAsmUsesAGPRs(IA);
+          return inlineAsmGetNumRequiredAGPRs(IA, CB) == 0;
         return false;
       }
 
-      // Some intrinsics may use AGPRs, but if we have a choice, we are not
-      // required to use AGPRs.
-      if (Callee->isIntrinsic())
+      switch (Callee->getIntrinsicID()) {
+      case Intrinsic::not_intrinsic:
+        break;
+      case Intrinsic::write_register:
+      case Intrinsic::read_register:
+      case Intrinsic::read_volatile_register: {
+        const MDString *RegName = cast<MDString>(
+            cast<MDNode>(
+                cast<MetadataAsValue>(CB.getArgOperand(0))->getMetadata())
+                ->getOperand(0));
+        auto [Kind, RegIdx, NumRegs] =
+            AMDGPU::parseAsmPhysRegName(RegName->getString());
+        return Kind != 'a';
+      }
+      default:
+        // Some intrinsics may use AGPRs, but if we have a choice, we are not
+        // required to use AGPRs.
         return true;
+      }
 
       // TODO: Handle callsite attributes
       const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoAGPR>(
@@ -1504,7 +1584,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAAMDMaxNumWorkgroups>(IRPosition::function(*F));
-    A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
     CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
@@ -1514,6 +1593,9 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
     if (!F->isDeclaration() && ST.hasClusters())
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
+
+    if (ST.hasGFX90AInsts())
+      A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;

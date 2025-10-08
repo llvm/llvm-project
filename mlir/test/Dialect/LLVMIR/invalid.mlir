@@ -1973,14 +1973,14 @@ llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
 
 // -----
 llvm.func @invalid_xevm_blockload(%arg0: !llvm.ptr<1>) {
-  // expected-error@+1 {{op vector size must be 1, 2, 4 or 8 for element type > 8 bits}}
+  // expected-error@+1 {{op vector size must be 2, 4 or 8 for element type > 8 bits}}
   %0 = xevm.blockload %arg0 : (!llvm.ptr<1>) -> vector<3xi16>
   llvm.return
 }
 
 // -----
 llvm.func @invalid_xevm_blockstore(%arg0: !llvm.ptr<1>, %arg1: vector<5xi8>) {
-  // expected-error@+1 {{op vector size must be 1, 2, 4, 8 or 16 for 8-bit element type}}
+  // expected-error@+1 {{op vector size must be 2, 4, 8 or 16 for 8-bit element type}}
   xevm.blockstore %arg0, %arg1 : (!llvm.ptr<1>, vector<5xi8>)
   llvm.return
 }

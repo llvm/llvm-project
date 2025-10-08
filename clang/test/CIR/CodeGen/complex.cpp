@@ -1359,3 +1359,49 @@ void complex_type_argument() {
 // OGCG: store float %[[A_IMAG]], ptr %[[ARG_IMAG_PTR]], align 4
 // OGCG: %[[TMP_ARG:.*]] = load <2 x float>, ptr %[[ARG_ADDR]], align 4
 // OGCG: call void @_Z22complex_type_parameterCf(<2 x float> noundef %[[TMP_ARG]])
+
+void real_on_scalar_bool() {
+  bool a;
+  bool b = __real__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.bool -> !cir.bool
+// CIR: cir.store{{.*}} %[[A_REAL]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// LLVM: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// LLVM: %[[TMP_A_I8:.*]] = zext i1 %[[TMP_A_I1]] to i8
+// LLVM: store i8 %[[TMP_A_I8]], ptr %[[B_ADDR]], align 1
+
+// OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// OGCG: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// OGCG: %[[TMP_A_I8:.*]] = zext i1 %[[TMP_A_I1]] to i8
+// OGCG: store i8 %[[TMP_A_I8]], ptr %[[B_ADDR]], align 1
+
+void imag_on_scalar_bool() {
+  bool a;
+  bool b = __imag__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.bool -> !cir.bool
+// CIR: cir.store{{.*}} %[[A_IMAG]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// LLVM: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// LLVM: store i8 0, ptr %[[B_ADDR]], align 1
+
+// OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
+// OGCG: store i8 0, ptr %[[B_ADDR]], align 1

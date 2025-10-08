@@ -1,11 +1,12 @@
 ; REQUIRES: asserts
 ; RUN: opt -S -passes=dfa-jump-threading -debug-only=dfa-jump-threading -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=dfa-jump-threading -print-prof-data %s -o - | FileCheck %s --check-prefix=PROFILE
 
 ; This test checks that the analysis identifies all threadable paths in a
 ; simple CFG. A threadable path includes a list of basic blocks, the exit
 ; state, and the block that determines the next state.
 ; < path of BBs that form a cycle > [ state, determinator ]
-define i32 @test1(i32 %num) {
+define i32 @test1(i32 %num) !prof !0{
 ; CHECK: < case2 for.inc for.body > [ 1, for.inc ]
 ; CHECK-NEXT: < for.inc for.body > [ 1, for.inc ]
 ; CHECK-NEXT: < case1 for.inc for.body > [ 2, for.inc ]
@@ -25,8 +26,11 @@ case1:
   br label %for.inc
 
 case2:
+  ; PROFILE-LABEL: @test1
+  ; PROFILE-LABEL: case2:
+  ; PROFILE: br i1 %cmp, label %for.inc.jt1, label %sel.si.unfold.false.jt2, !prof !1 ; !1 = !{!"branch_weights", i32 3, i32 5}
   %cmp = icmp eq i32 %count, 50
-  %sel = select i1 %cmp, i32 1, i32 2
+  %sel = select i1 %cmp, i32 1, i32 2, !prof !1
   br label %for.inc
 
 for.inc:
@@ -182,7 +186,7 @@ bb66:                                             ; preds = %bb59
 }
 
 ; Value %init is not predictable but it's okay since it is the value initial to the switch.
-define i32 @initial.value.positive1(i32 %init) {
+define i32 @initial.value.positive1(i32 %init) !prof !0 {
 ; CHECK: < loop.1.backedge loop.1 loop.2 loop.3 > [ 1, loop.1 ]
 ; CHECK-NEXT: < case4 loop.1.backedge state.1.be2.si.unfold.false loop.1 loop.2 loop.3 > [ 2, loop.1.backedge ]
 ; CHECK-NEXT: < case2 loop.1.backedge state.1.be2.si.unfold.false loop.1 loop.2 loop.3 > [ 4, loop.1.backedge ]
@@ -241,3 +245,6 @@ infloop.i:
 exit:
   ret i32 0
 }
+
+!0 = !{!"function_entry_count", i32 10}
+!1 = !{!"branch_weights", i32 3, i32 5}

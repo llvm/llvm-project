@@ -26,7 +26,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; SIFIVE-NEXT:    [[TMP2:%.*]] = add i64 [[LEN]], -1
 ; SIFIVE-NEXT:    [[XTRAITER:%.*]] = and i64 [[LEN]], 7
 ; SIFIVE-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 7
-; SIFIVE-NEXT:    br i1 [[TMP3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; SIFIVE-NEXT:    br i1 [[TMP3]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; SIFIVE:       [[ENTRY_NEW]]:
 ; SIFIVE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; SIFIVE-NEXT:    br label %[[FOR_BODY:.*]]
@@ -83,15 +83,15 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; SIFIVE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
 ; SIFIVE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; SIFIVE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; SIFIVE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
-; SIFIVE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; SIFIVE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[FOR_BODY]] ]
-; SIFIVE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; SIFIVE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; SIFIVE:       [[EXIT_UNR_LCSSA]]:
-; SIFIVE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; SIFIVE-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[FOR_BODY]] ]
 ; SIFIVE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; SIFIVE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; SIFIVE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; SIFIVE:       [[FOR_BODY_EPIL_PREHEADER]]:
+; SIFIVE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR1]], %[[EXIT_UNR_LCSSA]] ]
+; SIFIVE-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; SIFIVE-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; SIFIVE-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; SIFIVE:       [[FOR_BODY_EPIL]]:
 ; SIFIVE-NEXT:    [[TMP18:%.*]] = sub nsw i64 [[LEN]], [[IV_UNR]]

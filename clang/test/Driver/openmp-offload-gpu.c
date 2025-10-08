@@ -242,7 +242,7 @@
 // CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp, sm_52)
 // CHECK-PHASES: 8: assembler, {7}, object, (device-openmp, sm_52)
 // CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda:sm_52)" {8}, object
-// CHECK-PHASES: 10: clang-offload-packager, {9}, image
+// CHECK-PHASES: 10: llvm-offload-binary, {9}, image
 // CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
 // CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
 // CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
@@ -346,13 +346,13 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-FEATURES %s
 
-// CHECK-LTO-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}
+// CHECK-LTO-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx64 -foffload-lto %s 2>&1 \
 // RUN:    | FileCheck --check-prefix=CHECK-SET-FEATURES %s
 
-// CHECK-SET-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx64
+// CHECK-SET-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}feature=+ptx64
 
 //
 // Check that `-Xarch_host` works for OpenMP offloading.

@@ -126,6 +126,8 @@ AST Dumping Potentially Breaking Changes
 - Pretty-printing of templates with inherited (i.e. specified in a previous
   redeclaration) default arguments has been fixed.
 
+- Default arguments of template template parameters are pretty-printed now.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
