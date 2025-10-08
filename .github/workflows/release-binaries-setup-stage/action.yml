@@ -34,6 +34,7 @@ runs:
     # the path names for the build.
     - name: Shorten paths on Windows
       if: startsWith(runner.os, 'Windows')
+      shell: pwsh
       run: |
         subst S: ${{ github.workspace }}
 
