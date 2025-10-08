@@ -47,7 +47,7 @@ void SPIRVInstPrinter::printRemainingVariableOps(const MCInst *MI,
 void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              unsigned StartIndex,
                                              raw_ostream &O) {
-  const bool IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
+  unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
   const unsigned Opcode = MI->getOpcode();
 
@@ -73,7 +73,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   // Handle float constants (OpConstantF)
   uint64_t Imm = MI->getOperand(StartIndex).getImm();
   if (NumVarOps == 2) {
-    Imm |= static_cast<uint64_t>(MI->getOperand(StartIndex + 1).getImm()) << 32;
+    Imm |= (MI->getOperand(StartIndex + 1).getImm()) << 32;
   }
 
   // For 16-bit floats, print as integer
@@ -83,9 +83,8 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   }
 
   // Format and print float values
-  const APFloat FP = (NumVarOps == 1) 
-    ? APFloat(APInt(32, Imm).bitsToFloat())
-    : APFloat(APInt(64, Imm).bitsToDouble());
+  APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
+                              : APFloat(APInt(64, Imm).bitsToDouble());
 
   // Print infinity and NaN as hex floats.
   // TODO: Make sure subnormal numbers are handled correctly as they may also

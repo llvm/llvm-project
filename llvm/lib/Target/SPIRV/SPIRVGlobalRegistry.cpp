@@ -343,7 +343,7 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
   return Res;
 }
 
-Register SPIRVGlobalRegistry::getOrCreateConstInt(APInt Val, MachineInstr &I,
+Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
                                                   bool ZeroAsNull) {
@@ -353,10 +353,10 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(APInt Val, MachineInstr &I,
   if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
              MI->getOpcode() == SPIRV::OpConstantI))
     return MI->getOperand(0).getReg();
-  return createConstInt(CI, Val, I, SpvType, TII, ZeroAsNull);
+  return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
 }
 
-Register SPIRVGlobalRegistry::createConstInt(const Constant *CI, APInt Val,
+Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
                                              MachineInstr &I,
                                              SPIRVType *SpvType,
                                              const SPIRVInstrInfo &TII,
@@ -374,15 +374,15 @@ Register SPIRVGlobalRegistry::createConstInt(const Constant *CI, APInt Val,
         MachineInstrBuilder MIB;
         if (BitWidth == 1) {
           MIB = MIRBuilder
-                    .buildInstr(Val.isZero() ? SPIRV::OpConstantFalse
+                    .buildInstr(CI->isZero() ? SPIRV::OpConstantFalse
                                              : SPIRV::OpConstantTrue)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-        } else if (!Val.isZero() || !ZeroAsNull) {
+        } else if (!CI->isZero() || !ZeroAsNull) {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(Val, MIB);
+          addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
