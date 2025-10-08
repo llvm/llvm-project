@@ -32,4 +32,4 @@ tar -x --file ${SCRIPT_DIR}/boost-math-${version}.tar.gz -C ${SCRIPT_DIR}/boost-
 echo "****************************************"
 echo "Subsetting Boost.Math ${version}"
 echo "****************************************"
-rm -rf ${SCRIPT_DIR}/boost-math/{.circleci,.drone,.github,build,config,doc,example,meta,test,tools}
+rm -rf ${SCRIPT_DIR}/boost-math/{.circleci,.drone,.github,build,config,doc,example,meta,reporting,test,tools}
