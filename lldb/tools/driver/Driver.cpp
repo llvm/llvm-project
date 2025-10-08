@@ -30,9 +30,12 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -773,7 +776,7 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
   AddPythonDLLToSearchPath();
 #endif
 
