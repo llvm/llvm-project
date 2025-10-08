@@ -6971,7 +6971,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        Type *ElemTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
                                        StridedPtrInfo &SPtrInfo) const {
-  // Group the pointers by constant offset.
+  // If each value in `PointerOps` is of the form `%x + Offset` where `Offset`
+  // is constant for each offset we record values from `PointerOps` and their
+  // indicies in `PointerOps`.
   SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
   for (auto [Idx, Ptr] : enumerate(PointerOps)) {
@@ -7011,6 +7013,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment)))
     return false;
 
+  // Check if the offsets are contiguous.
   SmallVector<int64_t> SortedOffsetsV;
   for (auto [K, _] : OffsetToPointerOpIdxMap)
     SortedOffsetsV.push_back(K);
@@ -7025,6 +7028,11 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     }
   }
 
+  // For the set of pointers with the same offset check that the distance
+  // between adjacent pointers are all equal to the same value (stride). As we
+  // do that, also calculate SortedIndices. Since we should not modify
+  // `SortedIndices` unless we know that all the checks succeede, record the
+  // indicies into `SortedIndicesDraft`.
   int64_t LowestOffset = SortedOffsetsV[0];
   SmallVector<Value *> &PointerOps0 =
       OffsetToPointerOpIdxMap[LowestOffset].first;
@@ -7046,8 +7054,13 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   SortedIndicesDraft.resize(Sz);
   auto UpdateSortedIndices =
       [&](SmallVectorImpl<unsigned> &SortedIndicesForOffset,
-          SmallVectorImpl<unsigned> &IndicesInAllPointerOps,
-          int64_t OffsetNum) {
+          const SmallVectorImpl<unsigned> &IndicesInAllPointerOps,
+          const int64_t OffsetNum) {
+        if (SortedIndicesForOffset.empty()) {
+          SortedIndicesForOffset.resize(IndicesInAllPointerOps.size());
+          std::iota(SortedIndicesForOffset.begin(),
+                    SortedIndicesForOffset.end(), 0);
+        }
         for (const auto [Num, Idx] : enumerate(SortedIndicesForOffset)) {
           SortedIndicesDraft[Num * NumOffsets + OffsetNum] =
               IndicesInAllPointerOps[Idx];
