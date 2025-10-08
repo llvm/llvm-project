@@ -1213,12 +1213,12 @@ def TestMultipleEqualArgsPattern :
   Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
 
 // Test equal arguments checks are applied before user provided constraints.
-// CheckIntIs32Bits would throw exceptions if input is not i32.
-def CheckIntIs32Bits : Constraint<CPred<"intIs32Bits($0)">>;
+def AssertBinOpEqualArgsAndReturnTrue : Constraint<
+  CPred<"assertBinOpEqualArgsAndReturnTrue($0)">>;
 def TestEqualArgsCheckBeforeUserConstraintsPattern :
-  Pat<(OpQ $x, $x),
+  Pat<(OpQ:$op $x, $x),
       (replaceWithValue $x),
-      [(CheckIntIs32Bits $x)]>;
+      [(AssertBinOpEqualArgsAndReturnTrue $op)]>;
 
 // Test for memrefs normalization of an op with normalizable memrefs.
 def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
