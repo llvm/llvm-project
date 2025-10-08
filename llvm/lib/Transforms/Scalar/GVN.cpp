@@ -1659,9 +1659,6 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // that we only have to insert *one* load (which means we're basically moving
   // the load, not inserting a new one).
 
-  if (Load->getType()->isTokenLikeTy())
-    return false;
-
   SmallPtrSet<BasicBlock *, 4> Blockers(llvm::from_range, UnavailableBlocks);
 
   // Let's find the first basic block with more than one predecessor.  Walk
@@ -2245,6 +2242,9 @@ bool GVNPass::processLoad(LoadInst *L) {
 
   // This code hasn't been audited for ordered or volatile memory access.
   if (!L->isUnordered())
+    return false;
+
+  if (L->getType()->isTokenLikeTy())
     return false;
 
   if (L->use_empty()) {
