@@ -482,17 +482,17 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
-    /// Sort heaviest intervals first to prioritize their unspilling
-    if (A->weight() > B->weight())
-      return true;
+    // The ordering have to be strictly weak.
 
-    if (A->getSize() > B->getSize())
-      return true;
+    /// Sort heaviest intervals first to prioritize their unspilling
+    if (A->weight() != B->weight())
+      return A->weight() > B->weight();
+
+    if (A->getSize() != B->getSize())
+      return A->getSize() > B->getSize();
 
     // Tie breaker by number to avoid need for stable sort
-    // The ordering have to be strictly weak.
-    return (A->reg().stackSlotIndex() < B->reg().stackSlotIndex()) &&
-           ((A->weight() <= B->weight()) && (A->getSize() <= B->getSize()));
+    return (A->reg().stackSlotIndex() < B->reg().stackSlotIndex());
   });
 
   // FIXME: The APIs for dealing with the LiveInterval of a frame index are
