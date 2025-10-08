@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
