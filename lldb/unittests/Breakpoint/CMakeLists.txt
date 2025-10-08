@@ -5,7 +5,6 @@ add_lldb_unittest(LLDBBreakpointTests
   LINK_COMPONENTS
     Support
   LINK_LIBS
-    liblldb
     lldbBreakpoint
     lldbCore
     LLVMTestingSupport
