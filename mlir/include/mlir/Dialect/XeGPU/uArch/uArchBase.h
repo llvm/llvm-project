@@ -37,21 +37,6 @@ enum class InstructionKind {
   // @TODO: Add more instructions as needed
 };
 
-static llvm::StringRef toString(InstructionKind name) {
-  switch (name) {
-  case InstructionKind::DPAS:
-    return "dpas";
-  }
-  llvm_unreachable("Unknown InstructionKind");
-}
-
-static std::optional<InstructionKind>
-parseInstructionKind(llvm::StringRef str) {
-  if (str.equals_insensitive("dpas"))
-    return InstructionKind::DPAS;
-  return std::nullopt;
-}
-
 // A struct to represent basic information about an instruction.
 // The primary purpose of the Instruction struct is to provide a generic way to
 // represent information about an instruction and to use this information to
@@ -65,6 +50,20 @@ struct Instruction {
   // Get methods
   InstructionKind getInstructionKind() { return instKind; }
   InstructionScope getScope() { return scope; }
+  static llvm::StringRef toString(InstructionKind instKind) {
+    switch (instKind) {
+    case InstructionKind::DPAS:
+      return "dpas";
+    }
+    llvm_unreachable("Unknown InstructionKind");
+  }
+
+  static std::optional<InstructionKind>
+  parseInstructionKind(llvm::StringRef str) {
+    if (str.equals_insensitive("dpas"))
+      return InstructionKind::DPAS;
+    return std::nullopt;
+  }
 
 protected:
   InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
@@ -168,7 +167,7 @@ struct uArch {
   llvm::SmallVector<StringRef, 8> getSupportedInstructionNames() const {
     llvm::SmallVector<StringRef, 8> instructionNames;
     for (const auto &inst : instructions) {
-      instructionNames.push_back(toString(inst.first));
+      instructionNames.push_back(Instruction::toString(inst.first));
     }
     return instructionNames;
   }
