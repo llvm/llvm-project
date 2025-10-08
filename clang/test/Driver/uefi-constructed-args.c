@@ -15,5 +15,5 @@
 
 // RUN: %clang -### --target=x86_64-unknown-uefi -print-search-dirs 2>&1 \
 // RUN:     | FileCheck -check-prefixes=PROGPATH %s
-// PROGPATH-DAG: InstalledDir: [[DRIVER_INSTALLED_DIR:.*]]
+// PROGPATH: InstalledDir: [[DRIVER_INSTALLED_DIR:.*]]
 // PROGPATH: programs: =[[DRIVER_INSTALLED_DIR]]
