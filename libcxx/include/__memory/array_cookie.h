@@ -31,9 +31,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // other ABIs, we assume there are no array cookies.
 //
 // [1]: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-cookies
-#if defined(_LIBCPP_ABI_ITANIUM) || defined(_LIBCPP_ABI_ARM)
+#if defined(_LIBCPP_ABI_ITANIUM) || defined(_LIBCPP_ABI_ARM_WITH_32BIT_ODDITIES)
 // TODO: Use a builtin instead
-// TODO: We should factor in the choice of the usual deallocation function in this determination.
+// TODO: We should factor in the choice of the usual deallocation function in this determination:
+//       a cookie may be available in more cases but we ignore those for now.
 template <class _Tp>
 struct __has_array_cookie : _Not<is_trivially_destructible<_Tp> > {};
 #else
@@ -43,8 +44,8 @@ struct __has_array_cookie : false_type {};
 
 // Return the array cookie located before the given pointer.
 //
-// In the Itanium ABI
-// ------------------
+// In the Itanium ABI [1]
+// ----------------------
 // The array cookie is stored immediately before the first element of the array. If the preferred alignment
 // of array elements (which is different from the ABI alignment) is more than that of size_t, additional
 // padding bytes exist before the array cookie. Assuming array elements of size and alignment 16 bytes, that
@@ -60,8 +61,8 @@ struct __has_array_cookie : false_type {};
 // In practice, it is sufficient to read the bytes immediately before the first array element.
 //
 //
-// In the ARM ABI
-// --------------
+// In the ARM ABI [2]
+// ------------------
 // The array cookie is stored at the very start of the allocation and it has the following form:
 //
 //    struct array_cookie {
@@ -79,6 +80,9 @@ struct __has_array_cookie : false_type {};
 //
 // We calculate the starting address of the allocation by taking into account the ABI (not the preferred)
 // alignment of the type.
+//
+// [1]: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-cookies
+// [2]: https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Handle-C++-differences
 template <class _Tp>
 // Avoid failures when -fsanitize-address-poison-custom-array-cookie is enabled
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie(_Tp const* __ptr) {
@@ -90,7 +94,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie(_
   size_t const* __cookie = reinterpret_cast<size_t const*>(__ptr) - 1;
   return *__cookie;
 
-#elif defined(_LIBCPP_ABI_ARM)
+#elif defined(_LIBCPP_ABI_ARM_WITH_32BIT_ODDITIES)
 
   struct _ArrayCookie {
     size_t __element_size;
