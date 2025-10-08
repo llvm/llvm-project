@@ -425,6 +425,10 @@ indexstore_symbol_subkind_t index::getIndexStoreSubKind(SymbolSubKind K) {
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTASSOCIATEDTYPE;
   case SymbolSubKind::SwiftGenericTypeParam:
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTGENERICTYPEPARAM;
+  case SymbolSubKind::SwiftAccessorBorrow:
+    return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORBORROW;
+  case SymbolSubKind::SwiftAccessorMutate:
+    return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMUTATE;
   }
   llvm_unreachable("unexpected symbol subkind");
 }
