@@ -123,9 +123,15 @@ protected:
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
                           bool UseRegex);
-    // Returns the line number in the source file that this query matches to.
-    // Returns zero if no match is found.
-    LLVM_ABI unsigned match(StringRef Query) const;
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
+
+    LLVM_ABI bool matchAny(StringRef Query) const {
+      bool R = false;
+      match(Query, [&](StringRef, unsigned) { R = true; });
+      return R;
+    }
 
     struct Glob {
       std::string Name;
@@ -158,6 +164,15 @@ protected:
     // 1-based line number on which rule is defined, or 0 if there is no match.
     LLVM_ABI unsigned getLastMatch(StringRef Prefix, StringRef Query,
                                    StringRef Category) const;
+
+    // Helper method to search by Prefix, Query, and Category. Returns
+    // matching rule, or empty string if there is no match.
+    LLVM_ABI StringRef getLongestMatch(StringRef Prefix, StringRef Query,
+                                       StringRef Category) const;
+
+  private:
+    LLVM_ABI const SpecialCaseList::Matcher *
+    findMatcher(StringRef Prefix, StringRef Category) const;
   };
 
   std::vector<Section> Sections;
