@@ -744,8 +744,9 @@ Error RewriteInstance::run() {
   discoverFileObjects();
 
   if (BC->isPPC64()) {
-    if (const auto *G = BC->getUniqueSectionByName(".got")) {
-      PPC64TOCBase = G->getAddress() + 0x8000; // ELFv2 ABI
+    if (auto GOrErr = BC->getUniqueSectionByName(".got")) {
+      const BinarySection &G = *GOrErr;
+      PPC64TOCBase = G.getAddress() + 0x8000; // ELFv2 ABI
       HavePPC64TOCBase = true;
       if (opts::Verbosity >= 1)
         BC->outs() << "BOLT-INFO: PPC64 TOC base: 0x"
