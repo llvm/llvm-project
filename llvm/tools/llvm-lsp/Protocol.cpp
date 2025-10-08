@@ -14,8 +14,7 @@ using namespace llvm::lsp;
 bool llvm::lsp::fromJSON(const llvm::json::Value &Value, GetCfgParams &Result,
                          llvm::json::Path Path) {
   llvm::json::ObjectMapper O(Value, Path);
-  return O && O.map("uri", Result.uri) &&
-         O.map("position", Result.position);
+  return O && O.map("uri", Result.uri) && O.map("position", Result.position);
 }
 
 llvm::json::Value llvm::lsp::toJSON(const CFG &Value) {

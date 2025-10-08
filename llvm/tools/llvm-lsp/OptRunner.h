@@ -42,37 +42,37 @@ public:
     unsigned PassNumber = 0;
     // FIXME: Should we only consider passes that modify the IR?
     std::function<void(const StringRef, Any, const PreservedAnalyses)>
-        RecordPassNamesAndDescription = [&PassListAndDescription, &PassNumber](
-                                            const StringRef PassName, Any IR,
-                                            const PreservedAnalyses &PA) {
-          PassNumber++;
-          std::string PassNameStr =
-              (std::to_string(PassNumber) + "-" + PassName.str());
-          std::string PassDescStr = [&IR, &PassName]() -> std::string {
-            if (auto *M = any_cast<const Module *>(&IR))
-              return "Module Pass on \"" + (**M).getName().str() + "\"";
-            if (auto *F = any_cast<const Function *>(&IR))
-              return "Function Pass on \"" + (**F).getName().str() + "\"";
-            if (auto *L = any_cast<const Loop *>(&IR)) {
-              Function *F = (*L)->getHeader()->getParent();
-              std::string Desc = "Loop Pass in Function \"" +
-                                 F->getName().str() +
-                                 "\" on loop with Header \"" +
-                                 (*L)->getHeader()->getName().str() + "\"";
-              return Desc;
-            }
-            if (auto *SCC = any_cast<const LazyCallGraph::SCC *>(&IR)) {
-              Function &F = (**SCC).begin()->getFunction();
-              std::string Desc =
-                  "CGSCC Pass on Function \"" + F.getName().str() + "\"";
-              return Desc;
-            }
-            lsp::Logger::error("Unknown Pass Type \"{}\"!", PassName.str());
-            return "";
-          }();
+        RecordPassNamesAndDescription =
+            [&PassListAndDescription, &PassNumber](
+                const StringRef PassName, Any IR, const PreservedAnalyses &PA) {
+              PassNumber++;
+              std::string PassNameStr =
+                  (std::to_string(PassNumber) + "-" + PassName.str());
+              std::string PassDescStr = [&IR, &PassName]() -> std::string {
+                if (auto *M = any_cast<const Module *>(&IR))
+                  return "Module Pass on \"" + (**M).getName().str() + "\"";
+                if (auto *F = any_cast<const Function *>(&IR))
+                  return "Function Pass on \"" + (**F).getName().str() + "\"";
+                if (auto *L = any_cast<const Loop *>(&IR)) {
+                  Function *F = (*L)->getHeader()->getParent();
+                  std::string Desc = "Loop Pass in Function \"" +
+                                     F->getName().str() +
+                                     "\" on loop with Header \"" +
+                                     (*L)->getHeader()->getName().str() + "\"";
+                  return Desc;
+                }
+                if (auto *SCC = any_cast<const LazyCallGraph::SCC *>(&IR)) {
+                  Function &F = (**SCC).begin()->getFunction();
+                  std::string Desc =
+                      "CGSCC Pass on Function \"" + F.getName().str() + "\"";
+                  return Desc;
+                }
+                lsp::Logger::error("Unknown Pass Type \"{}\"!", PassName.str());
+                return "";
+              }();
 
-          PassListAndDescription.push_back({PassNameStr, PassDescStr});
-        };
+              PassListAndDescription.push_back({PassNameStr, PassDescStr});
+            };
 
     auto RunOptResult = runOpt(PipelineText, RecordPassNamesAndDescription);
     if (!RunOptResult) {
