@@ -1393,7 +1393,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 }
 
 def EmitC_YieldOp : EmitC_Op<"yield",
-      [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp", "SwitchOp"]>]> {
+      [Pure, Terminator, ParentOneOf<["DoOp", "ExpressionOp", "ForOp", "IfOp", "SwitchOp"]>]> {
   let summary = "Block termination operation";
   let description = [{
     The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
@@ -1723,6 +1723,107 @@ def EmitC_GetFieldOp
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
   let hasVerifier = 1;
+}
+
+def EmitC_DoOp : EmitC_Op<"do",
+      [NoTerminator, OpAsmOpInterface, RecursiveMemoryEffects]> {
+  let summary = "Do-while operation";
+  let description = [{
+    The `emitc.do` operation represents a C/C++ do-while loop construct that
+    repeatedly executes a body region as long as a condition region evaluates to
+    true. The operation has two regions:
+
+    1. A body region that contains the loop body
+    2. A condition region that must yield a boolean value (i1)
+
+    The condition is evaluated before each iteration as follows:
+    - The condition region must contain exactly one block with:
+      1. An `emitc.expression` operation producing an i1 value
+      2. An `emitc.yield` passing through the expression result
+    - The expression's body contains the actual condition logic
+
+    The body region is executed before the first evaluation of the 
+    condition. Thus, there is a guarantee that the loop will be executed 
+    at least once. The loop terminates when the condition yields false.
+
+    The canonical structure of `emitc.do` is:
+
+    ```mlir
+    emitc.do {
+      // Body region (no terminator required).
+      // Loop body operations...
+    } while {
+      // Condition region (must yield i1)
+      %condition = emitc.expression : () -> i1 {
+        // Condition computation...
+        %result = ... : i1  // Last operation must produce i1
+        emitc.yield %result : i1
+      }
+      // Forward expression result
+      emitc.yield %condition : i1  
+    }
+    ```
+
+    Example:
+
+    ```mlir
+    emitc.func @do_example() {
+      %counter = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+      %end = emitc.literal "10" : i32
+      %step = emitc.literal "1" : i32
+
+      emitc.do {
+        // Print current value
+        %val = emitc.load %counter : !emitc.lvalue<i32>
+        emitc.verbatim "printf(\"%d\\n\", {});" args %val : i32
+
+        // Increment counter
+        %new_val = emitc.add %val, %step : (i32, i32) -> i32
+        "emitc.assign"(%counter, %new_val) : (!emitc.lvalue<i32>, i32) -> ()
+      } while {
+        %condition = emitc.expression %counter, %end : (!emitc.lvalue<i32>, i32) -> i1 {
+          %current = emitc.load %counter : !emitc.lvalue<i32>
+          %cmp_res = emitc.cmp lt, %current, %end : (i32, i32) -> i1
+          emitc.yield %cmp_res : i1
+        }
+        emitc.yield %condition : i1
+      }
+      return
+    }
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    void do_example() {
+      int32_t v1 = 0;
+      do {
+        int32_t v2 = v1;
+        printf("%d\n", v2);
+        int32_t v3 = v2 + 1;
+        v1 = v3;
+      } while (v1 < 10);
+      return;
+    }
+    ```
+  }];
+
+  let arguments = (ins);
+  let results = (outs); 
+  let regions = (region SizedRegion<1>:$bodyRegion,
+                        SizedRegion<1>:$conditionRegion);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

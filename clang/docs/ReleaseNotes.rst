@@ -126,6 +126,8 @@ AST Dumping Potentially Breaking Changes
 - Pretty-printing of templates with inherited (i.e. specified in a previous
   redeclaration) default arguments has been fixed.
 
+- Default arguments of template template parameters are pretty-printed now.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -255,10 +257,16 @@ Non-comprehensive list of changes in this release
 
 - Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
+- Introduce support for :doc:`allocation tokens <AllocToken>` to enable
+  allocator-level heap organization strategies. A feature to instrument all
+  allocation functions with a token ID can be enabled via the
+  ``-fsanitize=alloc-token`` flag.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
 
 
 Lanai Support
@@ -445,6 +453,8 @@ Bug Fixes to C++ Support
 - Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
 - Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
 - Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
+- Fix for clang incorrectly rejecting the default construction of a union with
+  nontrivial member when another member has an initializer. (#GH81774)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
