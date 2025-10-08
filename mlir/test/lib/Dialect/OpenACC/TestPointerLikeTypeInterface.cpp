@@ -200,10 +200,10 @@ void TestPointerLikeTypeInterfacePass::testGenAllocate(
   newBuilder.setInsertionPointAfter(op);
 
   // Call the genAllocate API
-  bool success = pointerType.genAllocate(newBuilder, loc, "test_alloc",
-                                         result.getType(), result);
+  Value allocRes = pointerType.genAllocate(newBuilder, loc, "test_alloc",
+                                           result.getType(), result);
 
-  if (success) {
+  if (allocRes) {
     llvm::errs() << "Successfully generated alloc for operation: ";
     op->print(llvm::errs());
     llvm::errs() << "\n";

@@ -85,9 +85,10 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         runtime dimension information from the original variable to create
         allocations with matching dynamic sizes.
 
-        Returns true if allocation was successfully generated, false otherwise.
+        Returns a Value representing the result of the allocation. If no value
+        is returned, it means the allocation was not successfully generated.
       }],
-      /*retTy=*/"bool",
+      /*retTy=*/"::mlir::Value",
       /*methodName=*/"genAllocate",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
                     "::mlir::Location":$loc,
@@ -96,7 +97,7 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
                     "::mlir::Value":$originalVar),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return false;
+        return {};
       }]
     >,
     InterfaceMethod<

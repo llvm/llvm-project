@@ -73,15 +73,15 @@ struct MemRefPointerLikeModel
     return mlir::acc::VariableTypeCategory::array;
   }
 
-  bool genAllocate(Type pointer, OpBuilder &builder, Location loc,
-                   StringRef varName, Type varType, Value originalVar) const {
+  mlir::Value genAllocate(Type pointer, OpBuilder &builder, Location loc,
+                          StringRef varName, Type varType,
+                          Value originalVar) const {
     auto memrefTy = cast<MemRefType>(pointer);
 
     // Check if this is a static memref (all dimensions are known) - if yes
     // then we can generate an alloca operation.
     if (memrefTy.hasStaticShape()) {
-      memref::AllocaOp::create(builder, loc, memrefTy);
-      return true;
+      return memref::AllocaOp::create(builder, loc, memrefTy).getResult();
     }
 
     // For dynamic memrefs, extract sizes from the original variable if
@@ -100,12 +100,12 @@ struct MemRefPointerLikeModel
         // Note: We only add dynamic sizes to the dynamicSizes array
         // Static dimensions are handled automatically by AllocOp
       }
-      memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
-      return true;
+      return memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes)
+          .getResult();
     }
 
     // TODO: Unranked not yet supported.
-    return false;
+    return {};
   }
 
   bool genFree(Type pointer, OpBuilder &builder, Location loc,
