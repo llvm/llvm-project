@@ -337,12 +337,6 @@ Error MetadataParser::parseRootDescriptors(
   else
     return makeRSError("Invalid value for RegisterSpace");
 
-  if (RSD.Version == 1) {
-    RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
-    return Error::success();
-  }
-  assert(RSD.Version > 1);
-
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 4))
     Descriptor.Flags = *Val;
   else
@@ -523,12 +517,6 @@ Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
     return Error(std::move(E));
   Sampler.ShaderVisibility = *Visibility;
 
-  if (RSD.Version < 3) {
-    RSD.StaticSamplers.push_back(Sampler);
-    return Error::success();
-  }
-  assert(RSD.Version >= 3);
-
   if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 14))
     Sampler.Flags = *Val;
   else
@@ -673,15 +661,15 @@ Error MetadataParser::validateRootSignature(
             makeRSError(formatv("Invalid value for RegisterSpace: {0}",
                                 Descriptor.RegisterSpace)));
 
-        bool IsValidFlag =
-            dxbc::isValidRootDesciptorFlags(Descriptor.Flags) &&
-            hlsl::rootsig::verifyRootDescriptorFlag(
-                RSD.Version, dxbc::RootDescriptorFlags(Descriptor.Flags));
-        if (!IsValidFlag)
-          DeferredErrs = joinErrors(
-              std::move(DeferredErrs),
-              makeRSError(formatv("Invalid value for RootDescriptorFlag: {0}",
-                                  Descriptor.Flags)));
+      bool IsValidFlag =
+          dxbc::isValidRootDesciptorFlags(Descriptor.Flags) &&
+          hlsl::rootsig::verifyRootDescriptorFlag(
+              RSD.Version, dxbc::RootDescriptorFlags(Descriptor.Flags));
+      if (!IsValidFlag)
+        DeferredErrs = joinErrors(
+            std::move(DeferredErrs),
+            makeRSError(formatv("Invalid value for RootDescriptorFlag: {0}",
+                                Descriptor.Flags)));
       break;
     }
     case dxbc::RootParameterType::DescriptorTable: {
@@ -732,12 +720,6 @@ Error MetadataParser::validateRootSignature(
                                          Sampler.MipLODBias)));
 
     if (!hlsl::rootsig::verifyMaxAnisotropy(Sampler.MaxAnisotropy))
-      DeferredErrs = joinErrors(std::move(DeferredErrs),
-                                createRSError(RSErrorKind::Validation,
-                                              StringRef("MaxAnisotropy"),
-                                              Sampler.MaxAnisotropy));
-
-    if (!hlsl::rootsig::verifyLOD(Sampler.MinLOD))
       DeferredErrs =
           joinErrors(std::move(DeferredErrs),
                      makeRSError(formatv("Invalid value for MaxAnisotropy: {0}",
