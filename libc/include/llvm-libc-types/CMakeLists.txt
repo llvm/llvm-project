@@ -72,6 +72,7 @@ add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
+add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
@@ -149,9 +150,15 @@ add_header(
   HDR
     cfloat128.h
   DEPENDS
-    libc.include.llvm-libc-macros.float_macros
+    libc.include.llvm-libc-macros.cfloat128_macros
 )
-add_header(cfloat16 HDR cfloat16.h)
+add_header(
+  cfloat16
+  HDR
+    cfloat16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.cfloat16_macros
+)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(

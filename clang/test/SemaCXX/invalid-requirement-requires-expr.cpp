@@ -17,8 +17,7 @@ constexpr bool A<x>::far() {
       b.data_member;
       requires A<x-1>::far(); // #Invalid
       // expected-error@#Invalid {{recursive template instantiation exceeded maximum depth}}
-      // expected-note@#Invalid {{in instantiation}}
-      // expected-note@#Invalid 2 {{while}}
+      // expected-note@#Invalid 3 {{while}}
       // expected-note@#Invalid {{contexts in backtrace}}
       // expected-note@#Invalid {{increase recursive template instantiation depth}}
     };

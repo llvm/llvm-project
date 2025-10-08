@@ -268,6 +268,7 @@ public:
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
+    CustomExpand,      // Custom target-specific expansion using TLI hooks.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -479,7 +480,7 @@ public:
     return true;
   }
 
-  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
+  /// Return true if the @llvm.vector.partial.reduce.* intrinsic
   /// should be expanded using generic code in SelectionDAGBuilder.
   virtual bool
   shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
@@ -2275,6 +2276,18 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a atomic store using a target-specific way.
+  virtual void emitExpandAtomicStore(StoreInst *SI) const {
+    llvm_unreachable(
+        "Generic atomic store expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic load using a target-specific way.
+  virtual void emitExpandAtomicLoad(LoadInst *LI) const {
+    llvm_unreachable(
+        "Generic atomic load expansion unimplemented on this target");
+  }
+
   /// Perform a cmpxchg expansion using a target-specific method.
   virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
     llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
@@ -2379,8 +2392,8 @@ public:
   }
 
   /// Returns how the given (atomic) store should be expanded by the IR-level
-  /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
-  /// to use an atomicrmw xchg.
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
+  /// will try to use an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
@@ -3442,6 +3455,10 @@ public:
   /// matching of other patterns.
   virtual bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                                     bool MathUsed) const {
+    // Form it if it is legal.
+    if (isOperationLegal(Opcode, VT))
+      return true;
+
     // TODO: The default logic is inherited from code in CodeGenPrepare.
     // The opcode should not make a difference by default?
     if (Opcode != ISD::UADDO)
@@ -3492,9 +3509,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
-  /// Should we expand [US]CMP nodes using two selects and two compares, or by
-  /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
+  /// Should we prefer selects to doing arithmetic on boolean types
+  virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
+    return false;
+  }
 
   /// True if target has some particular form of dealing with pointer arithmetic
   /// semantics for pointers with the given value type. False if pointer
@@ -3502,6 +3520,13 @@ public:
   /// selection, and can fallback to regular arithmetic.
   /// This should be removed when PTRADD nodes are widely supported by backends.
   virtual bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const {
+    return false;
+  }
+
+  /// True if the target allows transformations of in-bounds pointer
+  /// arithmetic that cause out-of-bounds intermediate results.
+  virtual bool canTransformPtrArithOutOfBounds(const Function &F,
+                                               EVT PtrVT) const {
     return false;
   }
 
@@ -4673,6 +4698,13 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  /// Optional target hook to add target-specific actions when entering EH pad
+  /// blocks. The implementation should return the resulting token chain value.
+  virtual SDValue lowerEHPadEntry(SDValue Chain, const SDLoc &DL,
+                                  SelectionDAG &DAG) const {
+    return SDValue();
+  }
+
   virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                      ArgListTy &Args) const {}
 
@@ -5111,14 +5143,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
-
-  /// This hook allows the target to expand an inline asm call to be explicit
-  /// llvm code if it wants to.  This is useful for turning simple inline asms
-  /// into LLVM intrinsics, which gives the compiler more information about the
-  /// behavior of the code.
-  virtual bool ExpandInlineAsm(CallInst *) const {
-    return false;
-  }
 
   enum ConstraintType {
     C_Register,            // Constraint represents specific register(s).

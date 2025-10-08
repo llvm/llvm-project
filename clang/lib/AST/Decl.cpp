@@ -3600,6 +3600,10 @@ bool FunctionDecl::isNoReturn() const {
   return false;
 }
 
+bool FunctionDecl::isAnalyzerNoReturn() const {
+  return hasAttr<AnalyzerNoReturnAttr>();
+}
+
 bool FunctionDecl::isMemberLikeConstrainedFriend() const {
   // C++20 [temp.friend]p9:
   //   A non-template friend declaration with a requires-clause [or]
@@ -5155,6 +5159,10 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (RecordDecl *D = getDefinition(); D && D != this)
     return D->field_begin();
   return field_iterator(decl_iterator(FirstDecl));
+}
+
+RecordDecl::field_iterator RecordDecl::noload_field_begin() const {
+  return field_iterator(decl_iterator(getDefinitionOrSelf()->FirstDecl));
 }
 
 /// completeDefinition - Notes that the definition of this type is now

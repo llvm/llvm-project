@@ -55,7 +55,7 @@ namespace format {
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
-  /* l_brace of if/for/while */                                                \
+  /* l_brace of if/for/while/switch/catch */                                   \
   TYPE(ControlStatementLBrace)                                                 \
   TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
@@ -136,6 +136,7 @@ namespace format {
   TYPE(PointerOrReference)                                                     \
   TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(PureVirtualSpecifier)                                                   \
+  TYPE(QtProperty)                                                             \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RecordRBrace)                                                           \
@@ -703,6 +704,7 @@ public:
            isAttribute();
   }
 
+  [[nodiscard]] bool isQtProperty() const;
   [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 

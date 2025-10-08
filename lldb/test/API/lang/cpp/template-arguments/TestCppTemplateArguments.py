@@ -82,7 +82,7 @@ class TestCase(TestBase):
         value = self.expect_expr("temp7", result_type="Foo<__fp16, __fp16>")
         self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
 
-        value = self.expect_expr("temp8", result_type="Foo<__fp16, __fp16>")
+        value = self.expect_expr("temp8", result_type="Foo<__bf16, __bf16>")
         self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
 
         value = self.expect_expr("temp9", result_type="Bar<double, 1.200000e+00>")

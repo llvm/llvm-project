@@ -138,7 +138,7 @@ static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
 /// Table that drives the fir generation depending on the intrinsic or intrinsic
 /// module procedure one to one mapping with Fortran arguments. If no mapping is
 /// defined here for a generic intrinsic, genRuntimeCall will be called
-/// to look for a match in the runtime a emit a call. Note that the argument
+/// to look for a match in the runtime and emit a call. Note that the argument
 /// lowering rules for an intrinsic need to be provided only if at least one
 /// argument must not be lowered by value. In which case, the lowering rules
 /// should be provided for all the intrinsic arguments for completeness.
@@ -397,6 +397,34 @@ static constexpr IntrinsicHandler handlers[]{
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
+    {"co_broadcast",
+     &I::genCoBroadcast,
+     {{{"a", asBox},
+       {"source_image", asAddr},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_max",
+     &I::genCoMax,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_min",
+     &I::genCoMin,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_sum",
+     &I::genCoSum,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
     {"cosd", &I::genCosd},
@@ -427,6 +455,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
     {"dprod", &I::genDprod},
+    {"dsecnds",
+     &I::genDsecnds,
+     {{{"refTime", asAddr}}},
+     /*isElemental=*/false},
     {"dshiftl", &I::genDshiftl},
     {"dshiftr", &I::genDshiftr},
     {"eoshift",
@@ -1062,7 +1094,7 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
                          llvm::StringRef suffix, mlir::FunctionType funcType) {
   std::string output = prefix.str();
   llvm::raw_string_ostream sstream(output);
-  if (name == "pow") {
+  if (name == "pow" || name == "pow-unsigned") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
     sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
@@ -1288,26 +1320,6 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   }
 
   LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
-  return result;
-}
-
-mlir::Value genComplexPow(fir::FirOpBuilder &builder, mlir::Location loc,
-                          const MathOperation &mathOp,
-                          mlir::FunctionType mathLibFuncType,
-                          llvm::ArrayRef<mlir::Value> args) {
-  bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
-  if (!isAMDGPU)
-    return genLibCall(builder, loc, mathOp, mathLibFuncType, args);
-
-  auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
-  auto realTy = complexTy.getElementType();
-  mlir::Value realExp = builder.createConvert(loc, realTy, args[1]);
-  mlir::Value zero = builder.createRealConstant(loc, realTy, 0);
-  mlir::Value complexExp =
-      builder.create<mlir::complex::CreateOp>(loc, complexTy, realExp, zero);
-  mlir::Value result =
-      builder.create<mlir::complex::PowOp>(loc, args[0], complexExp);
-  result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   return result;
 }
 
@@ -1636,11 +1648,11 @@ static constexpr MathOperation mathOperations[] = {
     {"pow", RTNAME_STRING(PowF128), FuncTypeReal16Real16Real16, genLibF128Call},
     {"pow", "cpowf",
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Complex<4>>,
-     genComplexMathOp<mlir::complex::PowOp>},
+     genMathOp<mlir::complex::PowOp>},
     {"pow", "cpow", genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Complex<8>>,
-     genComplexMathOp<mlir::complex::PowOp>},
+     genMathOp<mlir::complex::PowOp>},
     {"pow", RTNAME_STRING(CPowF128), FuncTypeComplex16Complex16Complex16,
-     genLibF128Call},
+     genMathOp<mlir::complex::PowOp>},
     {"pow", RTNAME_STRING(FPow4i),
      genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Integer<4>>,
      genMathOp<mlir::math::FPowIOp>},
@@ -1661,20 +1673,28 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::FPowIOp>},
     {"pow", RTNAME_STRING(cpowi),
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<4>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(zpowi),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<4>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(cqpowi), FuncTypeComplex16Complex16Integer4,
-     genLibF128Call},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(cpowk),
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<8>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(zpowk),
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<8>>,
-     genComplexPow},
+     genMathOp<mlir::complex::PowiOp>},
     {"pow", RTNAME_STRING(cqpowk), FuncTypeComplex16Complex16Integer8,
-     genLibF128Call},
+     genMathOp<mlir::complex::PowiOp>},
+    {"pow-unsigned", RTNAME_STRING(UPow1),
+     genFuncType<Ty::Integer<1>, Ty::Integer<1>, Ty::Integer<1>>, genLibCall},
+    {"pow-unsigned", RTNAME_STRING(UPow2),
+     genFuncType<Ty::Integer<2>, Ty::Integer<2>, Ty::Integer<2>>, genLibCall},
+    {"pow-unsigned", RTNAME_STRING(UPow4),
+     genFuncType<Ty::Integer<4>, Ty::Integer<4>, Ty::Integer<4>>, genLibCall},
+    {"pow-unsigned", RTNAME_STRING(UPow8),
+     genFuncType<Ty::Integer<8>, Ty::Integer<8>, Ty::Integer<8>>, genLibCall},
     {"remainder", "remainderf",
      genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"remainder", "remainder",
@@ -3678,6 +3698,85 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
                                                            imag);
 }
 
+// CO_BROADCAST
+void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value sourceImage = fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2])
+          ? fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult()
+          : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoBroadcast(builder, loc, fir::getBase(args[0]), sourceImage,
+                               status, errmsg);
+}
+
+// CO_MAX
+void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value refNone =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoMax(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
+// CO_MIN
+void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value refNone =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoMin(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
+// CO_SUM
+void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value absentInt =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? absentInt : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? absentInt : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoSum(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
 // COMMAND_ARGUMENT_COUNT
 fir::ExtendedValue IntrinsicLibrary::genCommandArgumentCount(
     mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -3931,6 +4030,23 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   mlir::Value a = builder.createConvert(loc, resultType, args[0]);
   mlir::Value b = builder.createConvert(loc, resultType, args[1]);
   return mlir::arith::MulFOp::create(builder, loc, a, b);
+}
+
+// DSECNDS
+// Double precision variant of SECNDS (PGI extension)
+fir::ExtendedValue
+IntrinsicLibrary::genDsecnds(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "DSECNDS expects one argument");
+
+  mlir::Value refTime = fir::getBase(args[0]);
+
+  if (!refTime)
+    fir::emitFatalError(loc, "expected REFERENCE TIME parameter");
+
+  mlir::Value result = fir::runtime::genDsecnds(builder, loc, refTime);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 // DSHIFTL
@@ -7323,7 +7439,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
 fir::ExtendedValue
 IntrinsicLibrary::genNumImages(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
@@ -8404,7 +8520,7 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genThisImage(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
   mlir::Value team =
@@ -9441,6 +9557,14 @@ mlir::Value genPow(fir::FirOpBuilder &builder, mlir::Location loc,
   //       implementation and mark it 'strictfp'.
   //       Another option is to implement it in Fortran runtime library
   //       (just like matmul).
+  if (type.isUnsignedInteger()) {
+    assert(x.getType().isUnsignedInteger() && y.getType().isUnsignedInteger() &&
+           "unsigned pow requires unsigned arguments");
+    return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow-unsigned", type,
+                                                         {x, y});
+  }
+  assert(!x.getType().isUnsignedInteger() && !y.getType().isUnsignedInteger() &&
+         "non-unsigned pow requires non-unsigned arguments");
   return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow", type, {x, y});
 }
 

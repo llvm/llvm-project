@@ -16,6 +16,7 @@
 #include "DefinitionBlockSeparator.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
+#include "NumericLiteralCaseFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
@@ -472,6 +473,25 @@ struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::NumericLiteralComponentStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::NumericLiteralComponentStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::NLCS_Leave);
+    IO.enumCase(Value, "Upper", FormatStyle::NLCS_Upper);
+    IO.enumCase(Value, "Lower", FormatStyle::NLCS_Lower);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
+  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Value) {
+    IO.mapOptional("ExponentLetter", Value.ExponentLetter);
+    IO.mapOptional("HexDigit", Value.HexDigit);
+    IO.mapOptional("Prefix", Value.Prefix);
+    IO.mapOptional("Suffix", Value.Suffix);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::OperandAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::OperandAlignmentStyle &Value) {
     IO.enumCase(Value, "DontAlign", FormatStyle::OAS_DontAlign);
@@ -515,6 +535,7 @@ struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
     IO.enumCase(Value, "None", FormatStyle::PPDIS_None);
     IO.enumCase(Value, "AfterHash", FormatStyle::PPDIS_AfterHash);
     IO.enumCase(Value, "BeforeHash", FormatStyle::PPDIS_BeforeHash);
+    IO.enumCase(Value, "Leave", FormatStyle::PPDIS_Leave);
   }
 };
 
@@ -1007,6 +1028,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowAllParametersOfDeclarationOnNextLine);
     IO.mapOptional("AllowBreakBeforeNoexceptSpecifier",
                    Style.AllowBreakBeforeNoexceptSpecifier);
+    IO.mapOptional("AllowBreakBeforeQtProperty",
+                   Style.AllowBreakBeforeQtProperty);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
     IO.mapOptional("AllowShortCaseExpressionOnASingleLine",
@@ -1121,6 +1144,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
+    IO.mapOptional("NumericLiteralCase", Style.NumericLiteralCase);
     IO.mapOptional("ObjCBinPackProtocolList", Style.ObjCBinPackProtocolList);
     IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
     IO.mapOptional("ObjCBreakBeforeNestedBlockParam",
@@ -1545,6 +1569,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
+  LLVMStyle.AllowBreakBeforeQtProperty = false;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   LLVMStyle.AllowShortCaseExpressionOnASingleLine = true;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
@@ -1653,6 +1678,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
+  LLVMStyle.NumericLiteralCase = {/*ExponentLetter=*/FormatStyle::NLCS_Leave,
+                                  /*HexDigit=*/FormatStyle::NLCS_Leave,
+                                  /*Prefix=*/FormatStyle::NLCS_Leave,
+                                  /*Suffix=*/FormatStyle::NLCS_Leave};
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
@@ -2156,47 +2185,68 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   if (Input.error())
     return Input.error();
 
-  for (unsigned i = 0; i < Styles.size(); ++i) {
-    // Ensures that only the first configuration can skip the Language option.
-    if (Styles[i].Language == FormatStyle::LK_None && i != 0)
+  assert(!Styles.empty());
+  const auto StyleCount = Styles.size();
+
+  // Start from the second style as (only) the first one may be the default.
+  for (unsigned I = 1; I < StyleCount; ++I) {
+    const auto Lang = Styles[I].Language;
+    if (Lang == FormatStyle::LK_None)
       return make_error_code(ParseError::Error);
     // Ensure that each language is configured at most once.
-    for (unsigned j = 0; j < i; ++j) {
-      if (Styles[i].Language == Styles[j].Language) {
+    for (unsigned J = 0; J < I; ++J) {
+      if (Lang == Styles[J].Language) {
         LLVM_DEBUG(llvm::dbgs()
                    << "Duplicate languages in the config file on positions "
-                   << j << " and " << i << "\n");
+                   << J << " and " << I << '\n');
         return make_error_code(ParseError::Error);
       }
     }
   }
-  // Look for a suitable configuration starting from the end, so we can
-  // find the configuration for the specific language first, and the default
-  // configuration (which can only be at slot 0) after it.
-  FormatStyle::FormatStyleSet StyleSet;
-  bool LanguageFound = false;
-  for (const FormatStyle &Style : llvm::reverse(Styles)) {
-    const auto Lang = Style.Language;
-    if (Lang != FormatStyle::LK_None)
-      StyleSet.Add(Style);
-    if (Lang == Language ||
-        // For backward compatibility.
-        (Lang == FormatStyle::LK_Cpp && Language == FormatStyle::LK_C)) {
-      LanguageFound = true;
-    } else if (IsDotHFile && Language == FormatStyle::LK_Cpp &&
-               (Lang == FormatStyle::LK_C || Lang == FormatStyle::LK_ObjC)) {
-      Language = Lang;
-      LanguageFound = true;
+
+  int LanguagePos = -1; // Position of the style for Language.
+  int CppPos = -1;      // Position of the style for C++.
+  int CPos = -1;        // Position of the style for C.
+
+  // Search Styles for Language and store the positions of C++ and C styles in
+  // case Language is not found.
+  for (unsigned I = 0; I < StyleCount; ++I) {
+    const auto Lang = Styles[I].Language;
+    if (Lang == Language) {
+      LanguagePos = I;
+      break;
     }
+    if (Lang == FormatStyle::LK_Cpp)
+      CppPos = I;
+    else if (Lang == FormatStyle::LK_C)
+      CPos = I;
   }
-  if (!LanguageFound) {
-    if (Styles.empty() || Styles[0].Language != FormatStyle::LK_None)
+
+  // If Language is not found, use the default style if there is one. Otherwise,
+  // use the C style for C++ .h files and for backward compatibility, the C++
+  // style for .c files.
+  if (LanguagePos < 0) {
+    if (Styles[0].Language == FormatStyle::LK_None) // Default style.
+      LanguagePos = 0;
+    else if (IsDotHFile && Language == FormatStyle::LK_Cpp)
+      LanguagePos = CPos;
+    else if (!IsDotHFile && Language == FormatStyle::LK_C)
+      LanguagePos = CppPos;
+    if (LanguagePos < 0)
       return make_error_code(ParseError::Unsuitable);
-    FormatStyle DefaultStyle = Styles[0];
-    DefaultStyle.Language = Language;
-    StyleSet.Add(std::move(DefaultStyle));
   }
-  *Style = *StyleSet.Get(Language);
+
+  for (const auto &S : llvm::reverse(llvm::drop_begin(Styles)))
+    Style->StyleSet.Add(S);
+
+  *Style = Styles[LanguagePos];
+
+  if (LanguagePos == 0) {
+    if (Style->Language == FormatStyle::LK_None) // Default style.
+      Style->Language = Language;
+    Style->StyleSet.Add(*Style);
+  }
+
   if (Style->InsertTrailingCommas != FormatStyle::TCS_None &&
       Style->BinPackArguments) {
     // See comment on FormatStyle::TSC_Wrapped.
@@ -2227,14 +2277,8 @@ FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
   if (!Styles)
     return std::nullopt;
   auto It = Styles->find(Language);
-  if (It == Styles->end()) {
-    if (Language != FormatStyle::LK_C)
-      return std::nullopt;
-    // For backward compatibility.
-    It = Styles->find(FormatStyle::LK_Cpp);
-    if (It == Styles->end())
-      return std::nullopt;
-  }
+  if (It == Styles->end())
+    return std::nullopt;
   FormatStyle Style = It->second;
   Style.StyleSet = *this;
   return Style;
@@ -3132,6 +3176,7 @@ private:
         "UIImage",
         "UIView",
     };
+    assert(llvm::is_sorted(FoundationIdentifiers));
 
     for (auto *Line : AnnotatedLines) {
       if (Line->First && (Line->First->TokenText.starts_with("#") ||
@@ -3890,6 +3935,10 @@ reformat(const FormatStyle &Style, StringRef Code,
     return IntegerLiteralSeparatorFixer().process(Env, Expanded);
   });
 
+  Passes.emplace_back([&](const Environment &Env) {
+    return NumericLiteralCaseFixer().process(Env, Expanded);
+  });
+
   if (Style.isCpp()) {
     if (Style.QualifierAlignment != FormatStyle::QAS_Leave)
       addQualifierAlignmentFixerPasses(Expanded, Passes);
@@ -4087,6 +4136,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   switch (Style.Language) {
   case FormatStyle::LK_C:
     LangOpts.C11 = 1;
+    LangOpts.C23 = 1;
     break;
   case FormatStyle::LK_Cpp:
   case FormatStyle::LK_ObjC:

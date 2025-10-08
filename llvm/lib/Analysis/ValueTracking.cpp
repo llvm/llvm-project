@@ -250,9 +250,8 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 }
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
-  return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    return match(U, m_ICmp(m_Value(), m_Zero()));
-  });
+  return !I->user_empty() &&
+         all_of(I->users(), match_fn(m_ICmp(m_Value(), m_Zero())));
 }
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
@@ -413,6 +412,18 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
         isGuaranteedNotToBeUndef(Op0, Q.AC, Q.CxtI, Q.DT, Depth + 1);
   Known = KnownBits::mul(Known, Known2, SelfMultiply);
 
+  if (SelfMultiply) {
+    unsigned SignBits = ComputeNumSignBits(Op0, DemandedElts, Q, Depth + 1);
+    unsigned TyBits = Op0->getType()->getScalarSizeInBits();
+    unsigned OutValidBits = 2 * (TyBits - SignBits + 1);
+
+    if (OutValidBits < TyBits) {
+      APInt KnownZeroMask =
+          APInt::getHighBitsSet(TyBits, TyBits - OutValidBits + 1);
+      Known.Zero |= KnownZeroMask;
+    }
+  }
+
   // Only make use of no-wrap flags if we failed to compute the sign bit
   // directly.  This matters if the multiplication always overflows, in
   // which case we prefer to follow the result of the direct computation,
@@ -430,8 +441,7 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
   unsigned NumRanges = Ranges.getNumOperands() / 2;
   assert(NumRanges >= 1);
 
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
+  Known.setAllConflict();
 
   for (unsigned i = 0; i < NumRanges; ++i) {
     ConstantInt *Lower =
@@ -727,17 +737,16 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       // For those bits in C that are known, we can propagate them to known
       // bits in V shifted to the right by ShAmt.
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
-      RHSKnown.Zero.lshrInPlace(ShAmt);
-      RHSKnown.One.lshrInPlace(ShAmt);
+      RHSKnown >>= ShAmt;
       Known = Known.unionWith(RHSKnown);
       // assume(V >> ShAmt = C)
     } else if (match(LHS, m_Shr(m_V, m_ConstantInt(ShAmt))) &&
                ShAmt < BitWidth) {
-      KnownBits RHSKnown = KnownBits::makeConstant(*C);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
-      Known.Zero |= RHSKnown.Zero << ShAmt;
-      Known.One |= RHSKnown.One << ShAmt;
+      KnownBits RHSKnown = KnownBits::makeConstant(*C);
+      RHSKnown <<= ShAmt;
+      Known = Known.unionWith(RHSKnown);
     }
     break;
   case ICmpInst::ICMP_NE: {
@@ -1318,8 +1327,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
 
       if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
-        Known.Zero.setAllBits();
-        Known.One.setAllBits();
+        Known.setAllConflict();
 
         if (FPClasses & fcInf)
           Known = Known.intersectWith(KnownBits::makeConstant(
@@ -1395,8 +1403,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       computeKnownBits(I->getOperand(0), SubDemandedElts, KnownSrc, Q,
                        Depth + 1);
 
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
+      Known.setAllConflict();
       for (unsigned i = 0; i != NumElts; ++i) {
         if (DemandedElts[i]) {
           unsigned Shifts = IsLE ? i : NumElts - 1 - i;
@@ -1728,8 +1735,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
 
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
+      Known.setAllConflict();
       for (const Use &U : P->operands()) {
         Value *IncValue;
         const PHINode *CxtPhi;
@@ -1829,18 +1835,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
-        Known = Known2.abs(IntMinIsPoison);
+        Known = Known.unionWith(Known2.abs(IntMinIsPoison));
         break;
       }
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.reverseBits();
-        Known.One |= Known2.One.reverseBits();
+        Known = Known.unionWith(Known2.reverseBits());
         break;
       case Intrinsic::bswap:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.byteSwap();
-        Known.One |= Known2.One.byteSwap();
+        Known = Known.unionWith(Known2.byteSwap());
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
@@ -1890,10 +1894,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
 
-        Known.Zero =
-            Known2.Zero.shl(ShiftAmt) | Known3.Zero.lshr(BitWidth - ShiftAmt);
-        Known.One =
-            Known2.One.shl(ShiftAmt) | Known3.One.lshr(BitWidth - ShiftAmt);
+        Known2 <<= ShiftAmt;
+        Known3 >>= BitWidth - ShiftAmt;
+        Known = Known2.unionWith(Known3);
         break;
       }
       case Intrinsic::uadd_sat:
@@ -2076,8 +2079,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Known.resetAll();
       return;
     }
-    Known.One.setAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllConflict();
     if (!!DemandedLHS) {
       const Value *LHS = Shuf->getOperand(0);
       computeKnownBits(LHS, DemandedLHS, Known, Q, Depth + 1);
@@ -2109,8 +2111,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       NeedsElt = DemandedElts[CIdx->getZExtValue()];
     }
 
-    Known.One.setAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllConflict();
     if (NeedsElt) {
       computeKnownBits(Elt, Known, Q, Depth + 1);
       // If we don't know any bits, early out.
@@ -2266,7 +2267,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     assert(!isa<ScalableVectorType>(V->getType()));
     // We know that CDV must be a vector of integers. Take the intersection of
     // each element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     for (unsigned i = 0, e = CDV->getNumElements(); i != e; ++i) {
       if (!DemandedElts[i])
         continue;
@@ -2283,7 +2284,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     assert(!isa<ScalableVectorType>(V->getType()));
     // We know that CV must be a vector of integers. Take the intersection of
     // each element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     for (unsigned i = 0, e = CV->getNumOperands(); i != e; ++i) {
       if (!DemandedElts[i])
         continue;
@@ -5062,6 +5063,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
+          // Don't take sign bit from NaN operands.
+          if (!KnownLHS.isKnownNeverNaN())
+            KnownLHS.SignBit = std::nullopt;
+          if (!KnownRHS.isKnownNeverNaN())
+            KnownRHS.SignBit = std::nullopt;
           if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
                IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
@@ -9413,6 +9419,21 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       return true;
   }
 
+  // a - b == NonZero -> a != b
+  // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
+  const APInt *L1C;
+  Value *A, *B;
+  if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
+      match(L1, m_APInt(L1C)) && !L1C->isZero() &&
+      match(L0, m_Sub(m_Value(A), m_Value(B))) &&
+      ((A == R0 && B == R1) || (A == R1 && B == R0) ||
+       (match(A, m_PtrToInt(m_Specific(R0))) &&
+        match(B, m_PtrToInt(m_Specific(R1)))) ||
+       (match(A, m_PtrToInt(m_Specific(R1))) &&
+        match(B, m_PtrToInt(m_Specific(R0)))))) {
+    return RPred.dropSameSign() == ICmpInst::ICMP_NE;
+  }
+
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (L0 == R0 &&
       (LPred == ICmpInst::ICMP_ULT || LPred == ICmpInst::ICMP_UGE) &&
@@ -10168,12 +10189,17 @@ void llvm::findValuesAffectedByCondition(
           AddAffected(B);
         if (HasRHSC) {
           Value *Y;
-          // (X & C) or (X | C).
           // (X << C) or (X >>_s C) or (X >>_u C).
           if (match(A, m_Shift(m_Value(X), m_ConstantInt())))
             AddAffected(X);
+          // (X & C) or (X | C).
           else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                    match(A, m_Or(m_Value(X), m_Value(Y)))) {
+            AddAffected(X);
+            AddAffected(Y);
+          }
+          // X - Y
+          else if (match(A, m_Sub(m_Value(X), m_Value(Y)))) {
             AddAffected(X);
             AddAffected(Y);
           }

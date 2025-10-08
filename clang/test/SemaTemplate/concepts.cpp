@@ -1251,6 +1251,27 @@ int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup()
 
 }
 
+namespace GH61824 {
+
+template<typename T, typename U = typename T::type> // #T_Type
+concept C = true;
+
+constexpr bool f(C auto) { // #GH61824_f
+  return true;
+}
+
+C auto x = 0;
+// expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
+// expected-note@-1 {{in instantiation of default argument}}
+
+// This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
+// Which makes us behave like GCC.
+static_assert(f(0));
+// expected-error@-1 {{no matching function for call}} \
+// expected-note@#GH61824_f {{constraints not satisfied}} \
+// expected-note@#T_Type {{type 'int' cannot be used prior to '::'}}
+
+}
 
 namespace GH149986 {
 template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}

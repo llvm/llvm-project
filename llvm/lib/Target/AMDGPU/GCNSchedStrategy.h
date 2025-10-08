@@ -433,7 +433,7 @@ public:
 
 /// Attempts to reduce function spilling or, if there is no spilling, to
 /// increase function occupancy by one with respect to ArchVGPR usage by sinking
-/// trivially rematerializable instructions to their use. When the stage
+/// rematerializable instructions to their use. When the stage
 /// estimates reducing spilling or increasing occupancy is possible, as few
 /// instructions as possible are rematerialized to reduce potential negative
 /// effects on function latency.
@@ -483,9 +483,8 @@ private:
   /// PreRARematStage::TargetOccupancy.
   bool canIncreaseOccupancyOrReduceSpill();
 
-  /// Whether the MI is trivially rematerializable and does not have any virtual
-  /// register use.
-  bool isTriviallyReMaterializable(const MachineInstr &MI);
+  /// Whether the MI is rematerializable
+  bool isReMaterializable(const MachineInstr &MI);
 
   /// Rematerializes all instructions in PreRARematStage::Rematerializations
   /// and stores the achieved occupancy after remat in

@@ -19,7 +19,7 @@
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
-#include <__fwd/bit_reference.h> // TODO: This is a workaround for https://github.com/llvm/llvm-project/issues/131814
+#include <__fwd/bit_reference.h> // TODO: This is a workaround for https://llvm.org/PR131814
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>
@@ -478,7 +478,6 @@ private:
     return (__new_size + (__bits_per_word - 1)) & ~((size_type)__bits_per_word - 1);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __new_size) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct_at_end(size_type __n, bool __x);
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
@@ -567,20 +566,6 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
   return std::max<size_type>(2 * __cap, __align_it(__new_size));
 }
 
-//  Default constructs __n objects starting at __end_
-//  Precondition:  size() + __n <= capacity()
-//  Postcondition:  size() == size() + __n
-template <class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<bool, _Allocator>::__construct_at_end(size_type __n, bool __x) {
-  _LIBCPP_ASSERT_INTERNAL(
-      capacity() >= size() + __n, "vector<bool>::__construct_at_end called with insufficient capacity");
-  std::fill_n(end(), __n, __x);
-  this->__size_ += __n;
-  if (end().__ctz_ != 0) // Ensure uninitialized leading bits in the last word are set to zero
-    std::fill_n(end(), __bits_per_word - end().__ctz_, 0);
-}
-
 template <class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
@@ -613,7 +598,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n)
     : __begin_(nullptr), __size_(0), __cap_(0) {
   if (__n > 0) {
     __vallocate(__n);
-    __construct_at_end(__n, false);
+    std::fill_n(__begin_, __external_cap_to_internal(__n), __storage_type(0));
+    __size_ = __n;
   }
 }
 
@@ -623,7 +609,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, co
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   if (__n > 0) {
     __vallocate(__n);
-    __construct_at_end(__n, false);
+    std::fill_n(__begin_, __external_cap_to_internal(__n), __storage_type(0));
+    __size_ = __n;
   }
 }
 #endif
@@ -633,7 +620,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(size_type __n, co
     : __begin_(nullptr), __size_(0), __cap_(0) {
   if (__n > 0) {
     __vallocate(__n);
-    __construct_at_end(__n, __x);
+    std::fill_n(__begin_, __external_cap_to_internal(__n), __storage_type(0) - __x);
+    __size_ = __n;
   }
 }
 
@@ -643,7 +631,8 @@ vector<bool, _Allocator>::vector(size_type __n, const value_type& __x, const all
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(static_cast<__storage_allocator>(__a)) {
   if (__n > 0) {
     __vallocate(__n);
-    __construct_at_end(__n, __x);
+    std::fill_n(__begin_, __external_cap_to_internal(__n), __storage_type(0) - __x);
+    __size_ = __n;
   }
 }
 

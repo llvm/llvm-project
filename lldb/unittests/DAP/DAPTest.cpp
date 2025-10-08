@@ -28,6 +28,7 @@ TEST_F(DAPTest, SendProtocolMessages) {
       /*log=*/nullptr,
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/{},
+      /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
       /*transport=*/*transport,
       /*loop=*/loop,

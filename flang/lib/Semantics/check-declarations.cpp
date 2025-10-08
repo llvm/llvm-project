@@ -2950,7 +2950,7 @@ static bool IsSubprogramDefinition(const Symbol &symbol) {
 
 static bool IsExternalProcedureDefinition(const Symbol &symbol) {
   return IsBlockData(symbol) ||
-      (IsSubprogramDefinition(symbol) &&
+      ((IsSubprogramDefinition(symbol) || IsAlternateEntry(&symbol)) &&
           (IsExternal(symbol) || symbol.GetBindName()));
 }
 
@@ -4164,13 +4164,17 @@ void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
 // comes from a different module but is not necessarily use-associated.
 void DistinguishabilityHelper::AttachDeclaration(
     parser::Message &msg, const Scope &scope, const Symbol &proc) {
-  const Scope &unit{GetTopLevelUnitContaining(proc)};
-  if (unit == scope) {
+  if (proc.owner().IsTopLevel()) {
     evaluate::AttachDeclaration(msg, proc);
   } else {
-    msg.Attach(unit.GetName().value(),
-        "'%s' is USE-associated from module '%s'"_en_US, proc.name(),
-        unit.GetName().value());
+    const Scope &unit{GetTopLevelUnitContaining(proc)};
+    if (unit == scope) {
+      evaluate::AttachDeclaration(msg, proc);
+    } else {
+      msg.Attach(unit.GetName().value(),
+          "'%s' is USE-associated from module '%s'"_en_US, proc.name(),
+          unit.GetName().value());
+    }
   }
 }
 

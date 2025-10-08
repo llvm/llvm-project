@@ -117,6 +117,13 @@ struct VPlanTransforms {
       bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
       const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE);
 
+  /// Add a check to \p Plan to see if the epilogue vector loop should be
+  /// executed.
+  static void addMinimumVectorEpilogueIterationCheck(
+      VPlan &Plan, Value *TripCount, Value *VectorTripCount,
+      bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
+      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE);
+
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
@@ -158,10 +165,10 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
-  /// with \p VF single-scalar recipes.
-  /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
-  /// dissolving the latter.
+  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
+  /// any replicate region in \p Plan with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
+  /// replicate regions, thereby dissolving the latter.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
@@ -198,6 +205,12 @@ struct VPlanTransforms {
   static void
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
+
+  /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
+  /// possible.
+  static void
+  replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                         const DenseMap<Value *, const SCEV *> &StridesMap);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
@@ -279,6 +292,9 @@ struct VPlanTransforms {
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors.
   static void removeBranchOnConst(VPlan &Plan);
+
+  /// Perform common-subexpression-elimination on \p Plan.
+  static void cse(VPlan &Plan);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken

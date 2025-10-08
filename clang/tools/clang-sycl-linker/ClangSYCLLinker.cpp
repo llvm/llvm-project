@@ -466,6 +466,13 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
 }
 
+// TODO: Consider using LLVM-IR metadata to identify globals of interest
+bool isKernel(const Function &F) {
+  const CallingConv::ID CC = F.getCallingConv();
+  return CC == CallingConv::SPIR_KERNEL || CC == CallingConv::AMDGPU_KERNEL ||
+         CC == CallingConv::PTX_Kernel;
+}
+
 /// Performs the following steps:
 /// 1. Link input device code (user code and SYCL device library code).
 /// 2. Run SPIR-V code generation.
@@ -485,6 +492,22 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   // be refactored once SYCL post link support is available.
   SmallVector<std::string> SplitModules;
   SplitModules.emplace_back(*LinkedFile);
+
+  // Generate symbol table.
+  SmallVector<std::string> SymbolTable;
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    Expected<std::unique_ptr<Module>> ModOrErr =
+        getBitcodeModule(SplitModules[I], C);
+    if (!ModOrErr)
+      return ModOrErr.takeError();
+
+    SmallVector<StringRef> Symbols;
+    for (Function &F : **ModOrErr) {
+      if (isKernel(F))
+        Symbols.push_back(F.getName());
+    }
+    SymbolTable.emplace_back(llvm::join(Symbols.begin(), Symbols.end(), "\n"));
+  }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
       StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
@@ -523,12 +546,19 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         return createFileError(File, EC);
     }
     OffloadingImage TheImage{};
-    TheImage.TheImageKind = IMG_Object;
+    // TODO: TheImageKind should be
+    // `IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;`
+    // For that we need to update SYCL Runtime to align with the ImageKind enum.
+    // Temporarily it is initalized to IMG_None, because in that case, SYCL
+    // Runtime has a heuristic to understand what the Image Kind is, so at least
+    // it works.
+    TheImage.TheImageKind = IMG_None;
     TheImage.TheOffloadKind = OFK_SYCL;
     TheImage.StringData["triple"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
+    TheImage.StringData["symbols"] = SymbolTable[I];
     TheImage.Image = std::move(*FileOrErr);
 
     llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);

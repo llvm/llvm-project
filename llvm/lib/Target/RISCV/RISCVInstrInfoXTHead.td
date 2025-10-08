@@ -44,6 +44,7 @@ def ImmThreeAsmOperand : AsmOperandClass {
 def immthree : RISCVOp {
   let ParserMatchClass = ImmThreeAsmOperand;
   let OperandType = "OPERAND_THREE";
+  let DecoderMethod = "decodeImmThreeOperand";
 }
 
 def ImmFourAsmOperand : AsmOperandClass {
@@ -56,6 +57,7 @@ def ImmFourAsmOperand : AsmOperandClass {
 def immfour : RISCVOp {
   let ParserMatchClass = ImmFourAsmOperand;
   let OperandType = "OPERAND_FOUR";
+  let DecoderMethod = "decodeImmFourOperand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -161,9 +163,9 @@ class THLoadPair<bits<5> funct5, string opcodestr, Operand consttype>
                 (ins GPR:$rs1, uimm2:$uimm2, consttype:$const3or4),
                  opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
+  bits<0> const3or4;
   let Inst{31-27} = funct5;
   let Inst{26-25} = uimm2;
-  let DecoderMethod = "decodeXTHeadMemPair";
   let Constraints = "@earlyclobber $rd,@earlyclobber $rs2";
 }
 
@@ -173,9 +175,9 @@ class THStorePair<bits<5> funct5, string opcodestr, Operand consttype>
               (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, consttype:$const3or4),
               opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
+  bits<0> const3or4;
   let Inst{31-27} = funct5;
   let Inst{26-25} = uimm2;
-  let DecoderMethod = "decodeXTHeadMemPair";
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
@@ -594,8 +596,6 @@ def : Pat<(i64 (sra (bswap GPR:$rs1), (i64 32))),
           (TH_REVW GPR:$rs1)>;
 def : Pat<(binop_allwusers<srl> (bswap GPR:$rs1), (i64 32)),
           (TH_REVW GPR:$rs1)>;
-def : Pat<(riscv_clzw GPR:$rs1),
-          (TH_FF0 (i64 (SLLI (i64 (XORI GPR:$rs1, -1)), 32)))>;
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
 let Predicates = [HasVendorXTHeadBs] in {

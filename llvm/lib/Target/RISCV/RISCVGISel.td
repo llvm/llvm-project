@@ -41,12 +41,12 @@ def GIImmPlus1 :
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
 
 // Define pattern expansions for pointer ult/slt conditional codes
-def : Pat<(XLenVT (setult (PtrVT GPR:$rs1), simm12:$imm12)),
-          (SLTIU GPR:$rs1, simm12:$imm12)>;
+def : Pat<(XLenVT (setult (PtrVT GPR:$rs1), simm12_lo:$imm12)),
+          (SLTIU GPR:$rs1, simm12_lo:$imm12)>;
 def : Pat<(XLenVT (setult (PtrVT GPR:$rs1), (PtrVT GPR:$rs2))),
           (SLTU GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (setlt (PtrVT GPR:$rs1), simm12:$imm12)),
-          (SLTI GPR:$rs1, simm12:$imm12)>;
+def : Pat<(XLenVT (setlt (PtrVT GPR:$rs1), simm12_lo:$imm12)),
+          (SLTI GPR:$rs1, simm12_lo:$imm12)>;
 def : Pat<(XLenVT (setlt (PtrVT GPR:$rs1), (PtrVT GPR:$rs2))),
           (SLT GPR:$rs1, GPR:$rs2)>;
 
@@ -72,12 +72,12 @@ def : Pat<(XLenVT (setgt (Ty GPR:$rs1), (Ty simm12Minus1Nonzero:$imm))),
           (XORI (SLTI GPR:$rs1, (ImmPlus1 simm12Minus1Nonzero:$imm)), 1)>;
 def : Pat<(XLenVT (setgt (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (SLT GPR:$rs2, GPR:$rs1)>;
-def : Pat<(XLenVT (setuge (XLenVT GPR:$rs1), (Ty simm12:$imm))),
-          (XORI (SLTIU GPR:$rs1, simm12:$imm), 1)>;
+def : Pat<(XLenVT (setuge (XLenVT GPR:$rs1), (Ty simm12_lo:$imm))),
+          (XORI (SLTIU GPR:$rs1, simm12_lo:$imm), 1)>;
 def : Pat<(XLenVT (setuge (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(XLenVT (setge (Ty GPR:$rs1), (Ty simm12:$imm))),
-          (XORI (SLTI GPR:$rs1, simm12:$imm), 1)>;
+def : Pat<(XLenVT (setge (Ty GPR:$rs1), (Ty simm12_lo:$imm))),
+          (XORI (SLTI GPR:$rs1, simm12_lo:$imm), 1)>;
 def : Pat<(XLenVT (setge (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(XLenVT (setule (Ty GPR:$rs1), (Ty simm12Minus1NonzeroNonNeg1:$imm))),
@@ -142,6 +142,9 @@ def : StPat<truncstorei16, SH, GPR, i32>;
 def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
+
+def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12_lo:$imm)), i32),
+          (ADDIW GPR:$rs1, simm12_lo:$imm)>;
 
 // Use sext if the sign bit of the input is 0.
 def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;

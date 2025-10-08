@@ -162,17 +162,13 @@ UnwrappedLineParser::UnwrappedLineParser(
       LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords),
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
       Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
-      IncludeGuard(Style.IndentPPDirectives == FormatStyle::PPDIS_None
-                       ? IG_Rejected
-                       : IG_Inited),
+      IncludeGuard(getIncludeGuardState(Style.IndentPPDirectives)),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
       Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
-  IncludeGuard = Style.IndentPPDirectives == FormatStyle::PPDIS_None
-                     ? IG_Rejected
-                     : IG_Inited;
+  IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
   IncludeGuardToken = nullptr;
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
@@ -1140,7 +1136,7 @@ void UnwrappedLineParser::parsePPEndIf() {
   // If the #endif of a potential include guard is the last thing in the file,
   // then we found an include guard.
   if (IncludeGuard == IG_Defined && PPBranchLevel == -1 && Tokens->isEOF() &&
-      Style.IndentPPDirectives != FormatStyle::PPDIS_None) {
+      getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited) {
     IncludeGuard = IG_Found;
   }
 }
@@ -2272,7 +2268,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   if (!tryToParseLambdaIntroducer())
     return false;
 
-  bool SeenArrow = false;
+  FormatToken *Arrow = nullptr;
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
@@ -2347,17 +2343,13 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::ellipsis:
     case tok::kw_true:
     case tok::kw_false:
-      if (SeenArrow || InTemplateParameterList) {
+      if (Arrow || InTemplateParameterList) {
         nextToken();
         break;
       }
       return true;
     case tok::arrow:
-      // This might or might not actually be a lambda arrow (this could be an
-      // ObjC method invocation followed by a dereferencing arrow). We might
-      // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_LambdaArrow);
-      SeenArrow = true;
+      Arrow = FormatTok;
       nextToken();
       break;
     case tok::kw_requires: {
@@ -2379,6 +2371,9 @@ bool UnwrappedLineParser::tryToParseLambda() {
   FormatTok->setFinalizedType(TT_LambdaLBrace);
   LSquare.setFinalizedType(TT_LambdaLSquare);
 
+  if (Arrow)
+    Arrow->setFinalizedType(TT_LambdaArrow);
+
   NestedLambdas.push_back(Line->SeenDecltypeAuto);
   parseChildBlock();
   assert(!NestedLambdas.empty());
@@ -2392,11 +2387,6 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   const FormatToken *LeftSquare = FormatTok;
   nextToken();
   if (Previous) {
-    if (Previous->Tok.getIdentifierInfo() &&
-        !Previous->isOneOf(tok::kw_return, tok::kw_co_await, tok::kw_co_yield,
-                           tok::kw_co_return)) {
-      return false;
-    }
     if (Previous->closesScope()) {
       // Not a potential C-style cast.
       if (Previous->isNot(tok::r_paren))
@@ -2406,6 +2396,13 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
       // and `int (*)()`.
       if (!BeforeRParen || !BeforeRParen->isOneOf(tok::greater, tok::r_paren))
         return false;
+    } else if (Previous->is(tok::star)) {
+      Previous = Previous->getPreviousNonComment();
+    }
+    if (Previous && Previous->Tok.getIdentifierInfo() &&
+        !Previous->isOneOf(tok::kw_return, tok::kw_co_await, tok::kw_co_yield,
+                           tok::kw_co_return)) {
+      return false;
     }
   }
   if (LeftSquare->isCppStructuredBinding(IsCpp))

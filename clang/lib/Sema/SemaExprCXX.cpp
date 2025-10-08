@@ -354,6 +354,8 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
         CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
                           SS.getWithLocInContext(Context), II, NameLoc, &TSI,
                           /*DeducedTSTContext=*/true);
+    if (T.isNull())
+      return ParsedType();
     return CreateParsedType(T, TSI);
   }
 
@@ -2393,7 +2395,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
           return ExprError(
               Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-              << toString(*Value, 10) << (*ArraySize)->getSourceRange());
+              << toString(*Value, 10, Value->isSigned(),
+                          /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                          /*InsertSeparators=*/true)
+              << (*ArraySize)->getSourceRange());
       }
 
       KnownArraySize = Value->getZExtValue();
@@ -3579,7 +3584,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
 FunctionDecl *
 Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
                                     ImplicitDeallocationParameters IDP,
-                                    DeclarationName Name) {
+                                    DeclarationName Name, bool Diagnose) {
   DeclareGlobalNewDelete();
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
@@ -3594,7 +3599,7 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   if (!Result)
     return nullptr;
 
-  if (CheckDeleteOperator(*this, StartLoc, StartLoc, /*Diagnose=*/true,
+  if (CheckDeleteOperator(*this, StartLoc, StartLoc, Diagnose,
                           FoundDelete.getNamingClass(), Result.Found,
                           Result.FD))
     return nullptr;
@@ -3605,7 +3610,8 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
 
 FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
                                                           CXXRecordDecl *RD,
-                                                          bool Diagnose) {
+                                                          bool Diagnose,
+                                                          bool LookForGlobal) {
   DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
 
   FunctionDecl *OperatorDelete = nullptr;
@@ -3614,18 +3620,20 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
       DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
       AlignedAllocationMode::No, SizedDeallocationMode::No};
 
-  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, IDP, Diagnose))
-    return nullptr;
+  if (!LookForGlobal) {
+    if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, IDP, Diagnose))
+      return nullptr;
 
-  if (OperatorDelete)
-    return OperatorDelete;
+    if (OperatorDelete)
+      return OperatorDelete;
+  }
 
   // If there's no class-specific operator delete, look up the global
   // non-array delete.
   IDP.PassAlignment = alignedAllocationModeFromBool(
       hasNewExtendedAlignment(*this, DeallocType));
   IDP.PassSize = SizedDeallocationMode::Yes;
-  return FindUsualDeallocationFunction(Loc, IDP, Name);
+  return FindUsualDeallocationFunction(Loc, IDP, Name, Diagnose);
 }
 
 bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,

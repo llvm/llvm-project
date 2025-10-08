@@ -21,6 +21,7 @@ add_clang_library(clangAnalysis
   FixitUtil.cpp
   IntervalPartition.cpp
   IssueHash.cpp
+  LifetimeAnnotations.cpp
   LifetimeSafety.cpp
   LiveVariables.cpp
   MacroExpansionContext.cpp

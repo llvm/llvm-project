@@ -45,6 +45,27 @@ struct SlicyBits {
   int W : 8;
 };
 
+struct Unnamed {
+  int A;
+  int : 8;
+};
+
+struct Empty {
+};
+
+struct UnnamedOnly {
+  int : 8;
+};
+
+struct EmptyDerived : Empty {};
+
+struct UnnamedDerived : UnnamedOnly {};
+
+// CHECK-DAG: [[ConstE:@.*]] = private unnamed_addr constant %struct.Empty undef, align 1
+// CHECK-DAG: [[ConstUO:@.*]] = private unnamed_addr constant %struct.UnnamedOnly undef, align 1
+// CHECK-DAG: [[ConstED:@.*]] = private unnamed_addr constant %struct.EmptyDerived undef, align 1
+// CHECK-DAG: [[ConstUD:@.*]] = private unnamed_addr constant %struct.UnnamedDerived undef, align 1
+
 // Case 1: Extraneous braces get ignored in literal instantiation.
 // CHECK-LABEL: define hidden void @_Z5case1v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -958,4 +979,79 @@ int case17Helper(int x) {
 // CHECK-NEXT: ret void
 void case17() {
   int2 X = {case17Helper(0), case17Helper(1)};
+}
+
+// InitList with Struct with unnamed bitfield on LHS
+// CHECK-LABEL: case18
+// CHECK: [[U:%.*]] = alloca %struct.Unnamed, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[U]], ptr align 1 {{.*}}, i32 5, i1 false)
+void case18() {
+  Unnamed U = {1};
+}
+
+// InitList with Struct with unnamed bitfield on RHS
+// CHECK-LABEL: case19
+// CHECK: [[TI:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: [[Z:%.*]] = getelementptr inbounds nuw %struct.TwoInts, ptr [[TI]], i32 0, i32 0
+// CHECK-NEXT: [[A:%.*]] = getelementptr inbounds nuw %struct.Unnamed, ptr %U, i32 0, i32 0
+// CHECK-NEXT: [[L:%.*]] = load i32, ptr [[A]], align 1
+// CHECK-NEXT: store i32 [[L]], ptr [[Z]], align 1
+// CHECK-NEXT: [[W:%.*]] = getelementptr inbounds nuw %struct.TwoInts, ptr [[TI]], i32 0, i32 1
+// CHECK-NEXT: store i32 1, ptr [[W]], align 1
+void case19(Unnamed U) {
+  TwoInts TI = {U, 1};
+}
+
+// InitList with Empty Struct on LHS
+// CHECK-LABEL: case20
+// CHECK: [[E:%.*]] = alloca %struct.Empty, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[E]], ptr align 1 [[ConstE]], i32 1, i1 false)
+void case20() {
+  Empty E = {};
+}
+
+// InitList with Empty Struct on RHS
+// CHECK-LABEL: case21
+// CHECK: [[TI:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %TI, ptr align 1 {{.*}}, i32 8, i1 false)
+void case21(Empty E) {
+  TwoInts TI = {E, 1, 2};
+}
+
+// InitList with Struct with only unnamed bitfield on LHS
+// CHECK-LABEL: case22
+// CHECK: [[UO:%.*]] = alloca %struct.UnnamedOnly, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[UO]], ptr align 1 [[ConstUO]], i32 1, i1 false)
+void case22() {
+ UnnamedOnly UO = {}; 
+}
+
+// InitList with Struct with only unnamed bitfield on RHS
+// CHECK-LABEL: case23
+// CHECK: [[TI:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TI]], ptr align 1 {{.*}}, i32 8, i1 false)
+void case23(UnnamedOnly UO) {
+  TwoInts TI = {UO, 1, 2};
+}
+
+// InitList with Derived empty struct on LHS
+// InitList with Derived unnamed bitfield on LHS
+// CHECK-LABEL: case24
+// CHECK: [[ED:%.*]] = alloca %struct.EmptyDerived, align 1
+// CHECK-NEXT: [[UD:%.*]] = alloca %struct.UnnamedDerived, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %ED, ptr align 1 [[ConstED]], i32 1, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %UD, ptr align 1 [[ConstUD]], i32 1, i1 false)
+void case24() {
+ EmptyDerived ED = {};
+ UnnamedDerived UD = {};
+}
+
+// CHECK-LABEL: case25
+// CHECK: [[TI1:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: [[TI2:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %TI1, ptr align 1 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %TI2, ptr align 1 {{.*}}, i32 8, i1 false)
+void case25(EmptyDerived ED, UnnamedDerived UD) {
+ TwoInts TI1 = {ED, 1, 2};
+ TwoInts TI2 = {UD, 1, 2};
 }

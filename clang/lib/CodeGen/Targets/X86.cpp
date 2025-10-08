@@ -1513,12 +1513,18 @@ static void initFeatureMaps(const ASTContext &Ctx,
 
 static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
                                  SourceLocation CallLoc,
+                                 const FunctionDecl &Callee,
                                  const llvm::StringMap<bool> &CallerMap,
                                  const llvm::StringMap<bool> &CalleeMap,
                                  QualType Ty, StringRef Feature,
                                  bool IsArgument) {
   bool CallerHasFeat = CallerMap.lookup(Feature);
   bool CalleeHasFeat = CalleeMap.lookup(Feature);
+  // No explicit features and the function is internal, be permissive.
+  if (!CallerHasFeat && !CalleeHasFeat &&
+      (!Callee.isExternallyVisible() || Callee.hasAttr<AlwaysInlineAttr>()))
+    return false;
+
   if (!CallerHasFeat && !CalleeHasFeat)
     return Diag.Report(CallLoc, diag::warn_avx_calling_convention)
            << IsArgument << Ty << Feature;
@@ -1533,37 +1539,19 @@ static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
   return false;
 }
 
-static bool checkAVX512ParamFeature(DiagnosticsEngine &Diag,
-                                    SourceLocation CallLoc,
-                                    const llvm::StringMap<bool> &CallerMap,
-                                    const llvm::StringMap<bool> &CalleeMap,
-                                    QualType Ty, bool IsArgument) {
-  bool Caller256 = CallerMap.lookup("avx512f") && !CallerMap.lookup("evex512");
-  bool Callee256 = CalleeMap.lookup("avx512f") && !CalleeMap.lookup("evex512");
-
-  // Forbid 512-bit or larger vector pass or return when we disabled ZMM
-  // instructions.
-  if (Caller256 || Callee256)
-    return Diag.Report(CallLoc, diag::err_avx_calling_convention)
-           << IsArgument << Ty << "evex512";
-
-  return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
-                              "avx512f", IsArgument);
-}
-
 static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
-                          SourceLocation CallLoc,
+                          SourceLocation CallLoc, const FunctionDecl &Callee,
                           const llvm::StringMap<bool> &CallerMap,
                           const llvm::StringMap<bool> &CalleeMap, QualType Ty,
                           bool IsArgument) {
   uint64_t Size = Ctx.getTypeSize(Ty);
   if (Size > 256)
-    return checkAVX512ParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
-                                   IsArgument);
+    return checkAVXParamFeature(Diag, CallLoc, Callee, CallerMap, CalleeMap, Ty,
+                                "avx512f", IsArgument);
 
   if (Size > 128)
-    return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty, "avx",
-                                IsArgument);
+    return checkAVXParamFeature(Diag, CallLoc, Callee, CallerMap, CalleeMap, Ty,
+                                "avx", IsArgument);
 
   return false;
 }
@@ -1600,8 +1588,8 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
       if (ArgIndex < Callee->getNumParams())
         Ty = Callee->getParamDecl(ArgIndex)->getType();
 
-      if (checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, CallerMap,
-                        CalleeMap, Ty, /*IsArgument*/ true))
+      if (checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, *Callee,
+                        CallerMap, CalleeMap, Ty, /*IsArgument*/ true))
         return;
     }
     ++ArgIndex;
@@ -1612,7 +1600,7 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
   if (Callee->getReturnType()->isVectorType() &&
       CGM.getContext().getTypeSize(Callee->getReturnType()) > 128) {
     initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
-    checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, CallerMap,
+    checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, *Callee, CallerMap,
                   CalleeMap, Callee->getReturnType(),
                   /*IsArgument*/ false);
   }

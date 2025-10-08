@@ -723,6 +723,11 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
       NumExtElts >= NumInsElts)
     return false;
 
+  Value *ExtVecOp = ExtElt->getVectorOperand();
+  // Bail out on constant vectors.
+  if (isa<ConstantData>(ExtVecOp))
+    return false;
+
   // Create a shuffle mask to widen the extended-from vector using poison
   // values. The mask selects all of the values of the original vector followed
   // by as many poison values as needed to create a vector of the same length
@@ -733,7 +738,6 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   for (unsigned i = NumExtElts; i < NumInsElts; ++i)
     ExtendMask.push_back(-1);
 
-  Value *ExtVecOp = ExtElt->getVectorOperand();
   auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp);
   BasicBlock *InsertionBlock = (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
                                    ? ExtVecOpInst->getParent()

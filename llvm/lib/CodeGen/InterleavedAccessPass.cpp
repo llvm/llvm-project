@@ -312,10 +312,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       continue;
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
-            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
-            return SVI && isa<UndefValue>(SVI->getOperand(1));
-          })) {
+      using namespace PatternMatch;
+      if (!BI->user_empty() &&
+          all_of(BI->users(), match_fn(m_Shuffle(m_Value(), m_Undef())))) {
         for (auto *SVI : BI->users())
           BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;
@@ -660,6 +659,10 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
   }
 
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
+    Type *Op1Ty = SVI->getOperand(1)->getType();
+    if (!isa<FixedVectorType>(Op1Ty))
+      return {nullptr, GapMask};
+
     // Check that the shuffle mask is: a) an interleave, b) all of the same
     // set of the elements, and c) contained by the first source.  (c) could
     // be relaxed if desired.

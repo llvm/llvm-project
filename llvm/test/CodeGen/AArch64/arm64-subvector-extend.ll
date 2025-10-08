@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Test efficient codegen of vector extends up from legal type to 128 bit
-; and 256 bit vector types.
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for zext_v32i1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zext_v64i1
+
+; Test efficient codegen of vector extends up from legal type to 128 bit
+; and 256 bit vector types.
 
 ;-----
 ; Vectors of i16.

@@ -717,6 +717,14 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M)))
       return std::move(Err);
     break;
+  case OFK_SYCL: {
+    // TODO: fill these options once the Driver supports them.
+    offloading::SYCLJITOptions Options;
+    if (Error Err =
+            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+      return std::move(Err);
+    break;
+  }
   default:
     return createStringError(getOffloadKindName(Kind) +
                              " wrapping is not supported");
@@ -750,6 +758,32 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
         MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
+
+  return std::move(Buffers);
+}
+
+Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
+bundleSYCL(ArrayRef<OffloadingImage> Images) {
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  if (DryRun) {
+    // In dry-run mode there is an empty input which is insufficient for the
+    // testing. Therefore, we return here a stub image.
+    OffloadingImage Image;
+    Image.TheImageKind = IMG_None;
+    Image.TheOffloadKind = OffloadKind::OFK_SYCL;
+    Image.StringData["symbols"] = "stub";
+    Image.Image = MemoryBuffer::getMemBufferCopy("");
+    SmallString<0> SerializedImage = OffloadBinary::write(Image);
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(SerializedImage));
+    return std::move(Buffers);
+  }
+
+  for (const OffloadingImage &Image : Images) {
+    // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
+    // passed to Offload Wrapper as is.
+    StringRef S(Image.Image->getBufferStart(), Image.Image->getBufferSize());
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(S));
+  }
 
   return std::move(Buffers);
 }
@@ -806,8 +840,9 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
-  case OFK_SYCL:
     return bundleOpenMP(Images);
+  case OFK_SYCL:
+    return bundleSYCL(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
   case OFK_HIP:

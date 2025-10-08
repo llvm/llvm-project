@@ -235,7 +235,7 @@ define <vscale x 2 x i32> @vpmerge_viota(<vscale x 2 x i32> %passthru, <vscale x
 ; CHECK-NEXT:    viota.m v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x i32> @llvm.riscv.viota.mask.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, <vscale x 2 x i1> %m, i64 %1, i64 0)
+  %a = call <vscale x 2 x i32> @llvm.riscv.viota.mask.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i1> %vm, <vscale x 2 x i1> %m, i64 %1, i64 0)
   %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, <vscale x 2 x i1> splat (i1 -1), i64 %1)
   ret <vscale x 2 x i32> %b
 }

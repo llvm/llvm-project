@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -1812,6 +1813,46 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
+/// Test if a pair of compares with a shared operand and 2 constants has an
+/// empty set intersection, full set union, or if one compare is a superset of
+/// the other.
+static Value *simplifyAndOrOfFCmpsWithConstants(FCmpInst *Cmp0, FCmpInst *Cmp1,
+                                                bool IsAnd) {
+  // Look for this pattern: {and/or} (fcmp X, C0), (fcmp X, C1)).
+  if (Cmp0->getOperand(0) != Cmp1->getOperand(0))
+    return nullptr;
+
+  const APFloat *C0, *C1;
+  if (!match(Cmp0->getOperand(1), m_APFloat(C0)) ||
+      !match(Cmp1->getOperand(1), m_APFloat(C1)))
+    return nullptr;
+
+  auto Range0 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp0->getPredicate() : Cmp0->getInversePredicate(), *C0);
+  auto Range1 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp1->getPredicate() : Cmp1->getInversePredicate(), *C1);
+
+  if (!Range0 || !Range1)
+    return nullptr;
+
+  // For and-of-compares, check if the intersection is empty:
+  // (fcmp X, C0) && (fcmp X, C1) --> empty set --> false
+  if (Range0->intersectWith(*Range1).isEmptySet())
+    return ConstantInt::getBool(Cmp0->getType(), !IsAnd);
+
+  // Is one range a superset of the other?
+  // If this is and-of-compares, take the smaller set:
+  // (fcmp ogt X, 4) && (fcmp ogt X, 42) --> fcmp ogt X, 42
+  // If this is or-of-compares, take the larger set:
+  // (fcmp ogt X, 4) || (fcmp ogt X, 42) --> fcmp ogt X, 4
+  if (Range0->contains(*Range1))
+    return Cmp1;
+  if (Range1->contains(*Range0))
+    return Cmp0;
+
+  return nullptr;
+}
+
 static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                                    FCmpInst *RHS, bool IsAnd) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
@@ -1849,6 +1890,9 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                  ? static_cast<Value *>(LHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
   }
+
+  if (auto *V = simplifyAndOrOfFCmpsWithConstants(LHS, RHS, IsAnd))
+    return V;
 
   return nullptr;
 }
@@ -5028,14 +5072,12 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   // All-zero GEP is a no-op, unless it performs a vector splat.
-  if (Ptr->getType() == GEPTy &&
-      all_of(Indices, [](const auto *V) { return match(V, m_Zero()); }))
+  if (Ptr->getType() == GEPTy && all_of(Indices, match_fn(m_Zero())))
     return Ptr;
 
   // getelementptr poison, idx -> poison
   // getelementptr baseptr, poison -> poison
-  if (isa<PoisonValue>(Ptr) ||
-      any_of(Indices, [](const auto *V) { return isa<PoisonValue>(V); }))
+  if (isa<PoisonValue>(Ptr) || any_of(Indices, IsaPred<PoisonValue>))
     return PoisonValue::get(GEPTy);
 
   // getelementptr undef, idx -> undef
@@ -5092,8 +5134,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   if (!IsScalableVec && Q.DL.getTypeAllocSize(LastType) == 1 &&
-      all_of(Indices.drop_back(1),
-             [](Value *Idx) { return match(Idx, m_Zero()); })) {
+      all_of(Indices.drop_back(1), match_fn(m_Zero()))) {
     unsigned IdxWidth =
         Q.DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace());
     if (Q.DL.getTypeSizeInBits(Indices.back()->getType()) == IdxWidth) {
@@ -5123,8 +5164,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   // Check to see if this is constant foldable.
-  if (!isa<Constant>(Ptr) ||
-      !all_of(Indices, [](Value *V) { return isa<Constant>(V); }))
+  if (!isa<Constant>(Ptr) || !all_of(Indices, IsaPred<Constant>))
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
@@ -5240,6 +5280,19 @@ static Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
         return IVI->getInsertedValueOperand();
       break;
     }
+  }
+
+  // Simplify umul_with_overflow where one operand is 1.
+  Value *V;
+  if (Idxs.size() == 1 &&
+      (match(Agg,
+             m_Intrinsic<Intrinsic::umul_with_overflow>(m_Value(V), m_One())) ||
+       match(Agg, m_Intrinsic<Intrinsic::umul_with_overflow>(m_One(),
+                                                             m_Value(V))))) {
+    if (Idxs[0] == 0)
+      return V;
+    assert(Idxs[0] == 1 && "invalid index");
+    return getFalse(CmpInst::makeCmpResultType(V->getType()));
   }
 
   return nullptr;
@@ -5649,7 +5702,7 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
                               RoundingMode Rounding) {
   // Poison is independent of anything else. It always propagates from an
   // operand to a math result.
-  if (any_of(Ops, [](Value *V) { return match(V, m_Poison()); }))
+  if (any_of(Ops, IsaPred<PoisonValue>))
     return PoisonValue::get(Ops[0]->getType());
 
   for (Value *V : Ops) {
@@ -6461,6 +6514,27 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                      const CallBase *Call) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::get_active_lane_mask: {
+    if (match(Op1, m_Zero()))
+      return ConstantInt::getFalse(ReturnType);
+
+    const Function *F = Call->getFunction();
+    auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
+    Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
+    if (ScalableTy && Attr.isValid()) {
+      std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      if (!VScaleMax)
+        break;
+      uint64_t MaxPossibleMaskElements =
+          (uint64_t)ScalableTy->getMinNumElements() * (*VScaleMax);
+
+      const APInt *Op1Val;
+      if (match(Op0, m_Zero()) && match(Op1, m_APInt(Op1Val)) &&
+          Op1Val->uge(MaxPossibleMaskElements))
+        return ConstantInt::getAllOnesValue(ReturnType);
+    }
+    break;
+  }
   case Intrinsic::abs:
     // abs(abs(x)) -> abs(x). We don't need to worry about the nsw arg here.
     // It is always ok to pick the earlier abs. We'll just lose nsw if its only
@@ -7109,7 +7183,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 
   switch (I->getOpcode()) {
   default:
-    if (llvm::all_of(NewOps, [](Value *V) { return isa<Constant>(V); })) {
+    if (all_of(NewOps, IsaPred<Constant>)) {
       SmallVector<Constant *, 8> NewConstOps(NewOps.size());
       transform(NewOps, NewConstOps.begin(),
                 [](Value *V) { return cast<Constant>(V); });
