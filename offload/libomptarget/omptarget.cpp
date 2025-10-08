@@ -33,6 +33,9 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
 
+#include "flang/ISO_Fortran_binding.h"
+
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -378,6 +381,34 @@ static void *calculateTargetPointeeBase(void *HstPteeBase, void *HstPteeBegin,
   return TgtPteeBase;
 }
 
+// Fortran pointer attachments treated descriptors as plain pointers, so
+// automapped arrays lose their declared bounds on the device. Recognize
+// CFI descriptors to compute their actual size before copying, ensuring the
+// full descriptor (including bounds) is transferred during attachment.
+static int64_t getFortranDescriptorSize(void **HstPtrAddr,
+                                        int64_t ReportedSize) {
+  constexpr int64_t VoidPtrSize = sizeof(void *);
+
+  if (!HstPtrAddr || ReportedSize > VoidPtrSize)
+    return ReportedSize;
+
+  const CFI_cdesc_t *Desc = reinterpret_cast<const CFI_cdesc_t *>(HstPtrAddr);
+
+  if (Desc->version != CFI_VERSION)
+    return ReportedSize;
+
+  if (Desc->rank > CFI_MAX_RANK)
+    return ReportedSize;
+
+  const char *RawDesc = reinterpret_cast<const char *>(Desc);
+  const char *DimsAddr = reinterpret_cast<const char *>(&Desc->dim);
+  size_t HeaderBytes = static_cast<size_t>(DimsAddr - RawDesc);
+  size_t DimsBytes = static_cast<size_t>(Desc->rank) * sizeof(CFI_dim_t);
+  size_t TotalBytes = HeaderBytes + DimsBytes;
+
+  return std::max<int64_t>(ReportedSize, static_cast<int64_t>(TotalBytes));
+}
+
 /// Utility function to perform a pointer attachment operation.
 ///
 /// For something like:
@@ -445,6 +476,7 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
          "Need a valid pointer entry to perform pointer-attachment");
 
   constexpr int64_t VoidPtrSize = sizeof(void *);
+  HstPtrSize = getFortranDescriptorSize(HstPtrAddr, HstPtrSize);
   assert(HstPtrSize >= VoidPtrSize && "PointerSize is too small");
 
   void *TgtPteeBase =

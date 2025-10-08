@@ -18,9 +18,11 @@
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include <algorithm>
 
 namespace flangomp {
 #define GEN_PASS_DEF_AUTOMAPTOTARGETDATAPASS
@@ -154,6 +156,104 @@ class AutomapToTargetDataPass
           addMapInfo(globalOp, loadOp);
       }
     }
+
+    // Move automapped descriptors from map() to has_device_addr in target ops.
+    auto originatesFromAutomapGlobal = [&](mlir::Value varPtr) -> bool {
+      if (auto decl = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+              varPtr.getDefiningOp())) {
+        if (auto addrOp = mlir::dyn_cast_or_null<fir::AddrOfOp>(
+                decl.getMemref().getDefiningOp())) {
+          if (auto g =
+                  mlir::SymbolTable::lookupNearestSymbolFrom<fir::GlobalOp>(
+                      decl, addrOp.getSymbol()))
+            return automapGlobals.contains(g);
+        }
+      }
+      return false;
+    };
+
+    module.walk([&](mlir::omp::TargetOp target) {
+      // Collect candidates to move: descriptor maps of automapped globals.
+      llvm::SmallVector<mlir::Value> newMapOps;
+      llvm::SmallVector<unsigned> removedIndices;
+      llvm::SmallVector<mlir::Value> movedToHDA;
+      llvm::SmallVector<mlir::BlockArgument> oldMapArgsForMoved;
+
+      auto mapRange = target.getMapVars();
+      newMapOps.reserve(mapRange.size());
+
+      auto argIface = llvm::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
+          target.getOperation());
+      llvm::ArrayRef<mlir::BlockArgument> mapBlockArgs =
+          argIface.getMapBlockArgs();
+
+      for (auto [idx, mapVal] : llvm::enumerate(mapRange)) {
+        auto mapOp =
+            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapVal.getDefiningOp());
+        if (!mapOp) {
+          newMapOps.push_back(mapVal);
+          continue;
+        }
+
+        mlir::Type varTy = fir::unwrapRefType(mapOp.getVarType());
+        bool isDescriptor = mlir::isa<fir::BaseBoxType>(varTy);
+        if (isDescriptor && originatesFromAutomapGlobal(mapOp.getVarPtr())) {
+          movedToHDA.push_back(mapVal);
+          removedIndices.push_back(idx);
+          oldMapArgsForMoved.push_back(mapBlockArgs[idx]);
+        } else {
+          newMapOps.push_back(mapVal);
+        }
+      }
+
+      if (movedToHDA.empty())
+        return;
+
+      // Update map vars to exclude moved entries.
+      mlir::MutableOperandRange mapMutable = target.getMapVarsMutable();
+      mapMutable.assign(newMapOps);
+
+      // Append moved entries to has_device_addr and insert corresponding block
+      // arguments.
+      mlir::MutableOperandRange hdaMutable =
+          target.getHasDeviceAddrVarsMutable();
+      llvm::SmallVector<mlir::Value> newHDA;
+      newHDA.reserve(hdaMutable.size() + movedToHDA.size());
+      llvm::for_each(hdaMutable.getAsOperandRange(),
+                     [&](mlir::Value v) { newHDA.push_back(v); });
+
+      unsigned hdaStart = argIface.getHasDeviceAddrBlockArgsStart();
+      unsigned oldHdaCount = argIface.numHasDeviceAddrBlockArgs();
+      llvm::SmallVector<mlir::BlockArgument> newHDAArgsForMoved;
+      unsigned insertIndex = hdaStart + oldHdaCount;
+      for (mlir::Value v : movedToHDA) {
+        newHDA.push_back(v);
+        target->getRegion(0).insertArgument(insertIndex, v.getType(),
+                                            v.getLoc());
+        // Capture the newly inserted block argument.
+        newHDAArgsForMoved.push_back(
+            target->getRegion(0).getArgument(insertIndex));
+        insertIndex++;
+      }
+      hdaMutable.assign(newHDA);
+
+      // Redirect uses in the region: replace old map block args with the
+      // corresponding new has_device_addr block args.
+      for (auto [oldArg, newArg] :
+           llvm::zip_equal(oldMapArgsForMoved, newHDAArgsForMoved))
+        oldArg.replaceAllUsesWith(newArg);
+
+      // Finally, erase corresponding map block arguments (descending order).
+      unsigned mapStart = argIface.getMapBlockArgsStart();
+      // Convert indices to absolute argument numbers before erasing.
+      llvm::SmallVector<unsigned> absArgNos;
+      absArgNos.reserve(removedIndices.size());
+      for (unsigned idx : removedIndices)
+        absArgNos.push_back(mapStart + idx);
+      std::sort(absArgNos.begin(), absArgNos.end(), std::greater<>());
+      for (unsigned absNo : absArgNos)
+        target->getRegion(0).eraseArgument(absNo);
+    });
   }
 };
 } // namespace
