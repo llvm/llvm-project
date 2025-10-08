@@ -14,8 +14,11 @@
 
 namespace llvm {
 
+/// Struct holding Line:Column location
 struct FileLoc {
+  // 0-based line number
   unsigned Line;
+  // 0-based column number
   unsigned Col;
 
   bool operator<=(const FileLoc &RHS) const {
@@ -30,6 +33,7 @@ struct FileLoc {
   FileLoc(std::pair<unsigned, unsigned> LC) : Line(LC.first), Col(LC.second) {}
 };
 
+// Struct holding a semiopen range [Start; End)
 struct FileLocRange {
   FileLoc Start;
   FileLoc End;
@@ -43,7 +47,7 @@ struct FileLocRange {
   bool contains(FileLoc L) const { return Start <= L && L <= End; }
 
   bool contains(FileLocRange LR) const {
-    return contains(LR.Start) && contains(LR.End);
+    return Start <= LR.Start && LR.End <= End;
   }
 };
 
