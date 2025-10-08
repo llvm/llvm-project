@@ -15749,38 +15749,11 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       return RewriteMap.lookup_or(S, S);
     };
 
-    // Check for the SCEV expression (A /u B) * B while B is a constant, inside
-    // \p Expr. The check is done recuresively on \p Expr, which is assumed to
-    // be a composition of Min/Max SCEVs. Return whether the SCEV expression (A
-    // /u B) * B was found, and return the divisor B in \p DividesBy. For
-    // example, if Expr = umin (umax ((A /u 8) * 8, 16), 64), return true since
-    // (A /u 8) * 8 matched the pattern, and return the constant SCEV 8 in \p
-    // DividesBy.
-    std::function<bool(const SCEV *, const SCEV *&)> HasDivisibiltyInfo =
-        [&](const SCEV *Expr, const SCEV *&DividesBy) {
-          const APInt &Multiple = SE.getConstantMultiple(Expr);
-          if (!Multiple.isOne()) {
-            DividesBy = SE.getConstant(Multiple);
-            return true;
-          }
-          return false;
-        };
-
-    // Return true if Expr known to divide by \p DividesBy.
-    std::function<bool(const SCEV *, const SCEV *&)> IsKnownToDivideBy =
-        [&](const SCEV *Expr, const SCEV *DividesBy) {
-          if (Expr->getType()->isIntegerTy() &&
-              SE.getURemExpr(Expr, DividesBy)->isZero())
-            return true;
-          return false;
-        };
-
     const SCEV *RewrittenLHS = GetMaybeRewritten(LHS);
     const SCEV *DividesBy = nullptr;
-    if (HasDivisibiltyInfo(RewrittenLHS, DividesBy))
-      // Check that the whole expression is divided by DividesBy
-      DividesBy =
-          IsKnownToDivideBy(RewrittenLHS, DividesBy) ? DividesBy : nullptr;
+    const APInt &Multiple = SE.getConstantMultiple(RewrittenLHS);
+    if (!Multiple.isOne())
+      DividesBy = SE.getConstant(Multiple);
 
     // Collect rewrites for LHS and its transitive operands based on the
     // condition.
