@@ -4626,6 +4626,26 @@ LLVM_C_ABI LLVMValueRef LLVMBuildFNeg(LLVMBuilderRef, LLVMValueRef V,
 LLVM_C_ABI LLVMValueRef LLVMBuildNot(LLVMBuilderRef, LLVMValueRef V,
                                      const char *Name);
 
+/**
+ * Creates and inserts a minnum intrinsic intruction.
+ *
+ * Returns the minimum of the two floating point values.
+ *
+ * @see llvm::IRBuilder::CreateMinNum()
+ */
+LLVM_C_ABI LLVMValueRef LLVMBuildMinNum(LLVMBuilderRef B, LLVMValueRef LHS,
+                                        LLVMValueRef RHS);
+
+/**
+ * Creates and inserts a maxnum intrinsic intruction.
+ *
+ * Returns the maximum of the two floating point values.
+ *
+ * @see llvm::IRBuilder::CreateMaxNum()
+ */
+LLVM_C_ABI LLVMValueRef LLVMBuildMaxNum(LLVMBuilderRef B, LLVMValueRef LHS,
+                                        LLVMValueRef RHS);
+
 LLVM_C_ABI LLVMBool LLVMGetNUW(LLVMValueRef ArithInst);
 LLVM_C_ABI void LLVMSetNUW(LLVMValueRef ArithInst, LLVMBool HasNUW);
 LLVM_C_ABI LLVMBool LLVMGetNSW(LLVMValueRef ArithInst);

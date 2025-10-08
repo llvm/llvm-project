@@ -3804,6 +3804,16 @@ LLVMValueRef LLVMBuildNot(LLVMBuilderRef B, LLVMValueRef V, const char *Name) {
   return wrap(unwrap(B)->CreateNot(unwrap(V), Name));
 }
 
+LLVMValueRef LLVMBuildMinNum(LLVMBuilderRef B, LLVMValueRef LHS,
+                             LLVMValueRef RHS) {
+  return wrap(unwrap(B)->CreateMinNum(unwrap(LHS), unwrap(RHS)));
+}
+
+LLVMValueRef LLVMBuildMaxNum(LLVMBuilderRef B, LLVMValueRef LHS,
+                             LLVMValueRef RHS) {
+  return wrap(unwrap(B)->CreateMaxNum(unwrap(LHS), unwrap(RHS)));
+}
+
 LLVMBool LLVMGetNUW(LLVMValueRef ArithInst) {
   Value *P = unwrap<Value>(ArithInst);
   return cast<Instruction>(P)->hasNoUnsignedWrap();

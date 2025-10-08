@@ -147,6 +147,7 @@ Changes to the C API
 --------------------
 
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
+* Add `LLVMBuildMinNum` and `LLVMBuildMaxNum` to create calls to the `minnum` and `maxnum` intrinsics.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

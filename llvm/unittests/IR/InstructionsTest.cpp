@@ -1933,5 +1933,28 @@ TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
   EXPECT_TRUE(Offset.isZero());
 }
 
+TEST(InstructionsTest, LLVMBuildMinMaxNum) {
+  LLVMContext Ctx;
+  Module M("Mod", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  IRBuilder<> B(BB);
+
+  Type *FTy = B.getFloatTy();
+  Value *LHS = ConstantFP::get(FTy, 1.0);
+  Value *RHS = ConstantFP::get(FTy, 2.0);
+
+  auto *Min = unwrap<CallInst>(LLVMBuildMinNum(wrap(&B), wrap(LHS), wrap(RHS)));
+  Function *MinFunc = Min->getCalledFunction();
+  EXPECT_EQ(MinFunc->getIntrinsicID(), Intrinsic::minnum);
+  EXPECT_EQ(Min->getType(), FTy);
+
+  auto *Max = unwrap<CallInst>(LLVMBuildMaxNum(wrap(&B), wrap(LHS), wrap(RHS)));
+  Function *MaxFunc = Max->getCalledFunction();
+  EXPECT_EQ(MaxFunc->getIntrinsicID(), Intrinsic::maxnum);
+  EXPECT_EQ(Max->getType(), FTy);
+}
+
 } // end anonymous namespace
 } // end namespace llvm
