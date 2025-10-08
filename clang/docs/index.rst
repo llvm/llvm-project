@@ -103,7 +103,6 @@ Using Clang Tools
    ClangOffloadWrapper
    ClangOffloadBundler
    ClangOffloadWrapper
-   ClangOffloadPackager
    ClangRepl
    ClangSYCLLinker
 
