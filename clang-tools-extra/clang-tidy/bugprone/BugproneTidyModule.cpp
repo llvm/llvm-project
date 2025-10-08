@@ -33,6 +33,7 @@
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
+#include "InconsistentIfelseBracesCheck.h"
 #include "IncorrectEnableIfCheck.h"
 #include "IncorrectEnableSharedFromThisCheck.h"
 #include "IncorrectRoundingsCheck.h"
@@ -150,6 +151,8 @@ public:
         "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
+    CheckFactories.registerCheck<InconsistentIfelseBracesCheck>(
+        "bugprone-inconsistent-ifelse-braces");
     CheckFactories.registerCheck<IncorrectEnableIfCheck>(
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
