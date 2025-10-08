@@ -2275,4 +2275,5 @@ TEST(DWARFDebugInfo, TestDWARF64UnitLength) {
     ASSERT_EQ(0x1122334455667788ULL, CU.getLength());
   });
 }
+
 } // end anonymous namespace
