@@ -1146,7 +1146,7 @@ bool FunctionSpecializer::findSpecializations(
         Function *NewF = CU.second.second;
 
         // Recurse only if constants found for the function
-        if (!NewF)
+        if (!NewF || NewF->isVarArg())
           continue;
 
         // Don't allow any recursion in chains
