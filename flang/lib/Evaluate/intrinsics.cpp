@@ -3654,6 +3654,12 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
                             .GetTypeAndShape())
                       .type()};
               DynamicType newType{GetReturnType(*specIter->second, defaults_)};
+              // For MAX0/MIN0, preserve the generic type rather than forcing
+              // to default integer. This allows, for example, MAX0(1_8,2_8) to
+              // return INTEGER(8) instead of INTEGER(4).
+              if (genericType.category() == newType.category()) {
+                newType = genericType;
+              }
               if (genericType.category() == newType.category() ||
                   ((genericType.category() == TypeCategory::Integer ||
                        genericType.category() == TypeCategory::Real) &&
