@@ -598,18 +598,17 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
 
   validatePackoffset(SemaRef, BufDecl);
 
-  // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
-  HLSLVkBindingAttr *VkBinding = Dcl->getAttr<HLSLVkBindingAttr>();
-  HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
-  if (!VkBinding && (!RBA || !RBA->hasRegisterSlot())) {
+  // Handle implicit binding if needed.
+  ResourceBindingAttrs ResourceAttrs(Dcl);
+  if (!ResourceAttrs.isExplicit()) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
     // Use HLSLResourceBindingAttr to transfer implicit binding order_ID
     // to codegen. If it does not exist, create an implicit attribute.
     uint32_t OrderID = getNextImplicitBindingOrderID();
-    if (RBA)
-      RBA->setImplicitBindingOrderID(OrderID);
+    if (ResourceAttrs.hasBinding())
+      ResourceAttrs.setImplicitOrderID(OrderID);
     else
       addImplicitBindingAttrToDecl(SemaRef, BufDecl,
                                    BufDecl->isCBuffer() ? RegisterType::CBuffer
@@ -1590,10 +1589,6 @@ void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
-  // The vk::binding attribute only applies to SPIR-V.
-  if (!getASTContext().getTargetInfo().getTriple().isSPIRV())
-    return;
-
   uint32_t Binding = 0;
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Binding))
     return;
@@ -3780,17 +3775,15 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
       // If the resource array does not have an explicit binding attribute,
       // create an implicit one. It will be used to transfer implicit binding
       // order_ID to codegen.
-      if (!VD->hasAttr<HLSLVkBindingAttr>()) {
-        HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-        if (!RBA || !RBA->hasRegisterSlot()) {
-          uint32_t OrderID = getNextImplicitBindingOrderID();
-          if (RBA)
-            RBA->setImplicitBindingOrderID(OrderID);
-          else
-            addImplicitBindingAttrToDecl(
-                SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
-                OrderID);
-        }
+      ResourceBindingAttrs Binding(VD);
+      if (!Binding.isExplicit()) {
+        uint32_t OrderID = getNextImplicitBindingOrderID();
+        if (Binding.hasBinding())
+          Binding.setImplicitOrderID(OrderID);
+        else
+          addImplicitBindingAttrToDecl(
+              SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
+              OrderID);
       }
     }
   }
