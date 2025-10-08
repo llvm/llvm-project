@@ -30,7 +30,8 @@ bool onlyScalarValuesUsed(const VPValue *Def);
 
 /// Digs through a chain of recipes starting from \p Root, skipping widening
 /// decisions, and determines if the final leaves use only scalar values of \p
-/// Root.
+/// Root. Leaf nodes are WidenStores whose operand isn't single-scalar, or
+/// non-widen recipes that don't use scalar values of the operand.
 bool chainUsesScalarValues(const VPValue *Root);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
