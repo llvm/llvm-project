@@ -70,7 +70,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_def() {
 
 define amdgpu_kernel void @kernel_uses_asm_physreg_def_tuple() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_physreg_def_tuple(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call i64 asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -118,7 +118,7 @@ define amdgpu_kernel void @kernel_uses_asm_physreg() {
 
 define amdgpu_kernel void @kernel_uses_asm_physreg_tuple() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_physreg_tuple(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -154,7 +154,7 @@ define void @func_uses_asm_physreg_agpr() {
 
 define void @func_uses_asm_physreg_agpr_tuple() {
 ; CHECK-LABEL: define void @func_uses_asm_physreg_agpr_tuple(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -168,7 +168,7 @@ declare void @unknown()
 
 define amdgpu_kernel void @kernel_calls_extern() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_extern(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -180,8 +180,8 @@ define amdgpu_kernel void @kernel_calls_extern() {
 
 define amdgpu_kernel void @kernel_calls_extern_marked_callsite() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_extern_marked_callsite(
-; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    call void @unknown() #[[ATTR10:[0-9]+]]
+; CHECK-SAME: ) #[[ATTR3]] {
+; CHECK-NEXT:    call void @unknown() #[[ATTR29:[0-9]+]]
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -192,7 +192,7 @@ define amdgpu_kernel void @kernel_calls_extern_marked_callsite() {
 
 define amdgpu_kernel void @kernel_calls_indirect(ptr %indirect) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_indirect(
-; CHECK-SAME: ptr [[INDIRECT:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[INDIRECT:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void [[INDIRECT]]()
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -204,8 +204,8 @@ define amdgpu_kernel void @kernel_calls_indirect(ptr %indirect) {
 
 define amdgpu_kernel void @kernel_calls_indirect_marked_callsite(ptr %indirect) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_calls_indirect_marked_callsite(
-; CHECK-SAME: ptr [[INDIRECT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    call void [[INDIRECT]]() #[[ATTR10]]
+; CHECK-SAME: ptr [[INDIRECT:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    call void [[INDIRECT]]() #[[ATTR29]]
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -316,7 +316,7 @@ define amdgpu_kernel void @kernel_calls_workitem_id_x(ptr addrspace(1) %out) {
 
 define amdgpu_kernel void @indirect_calls_none_agpr(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @indirect_calls_none_agpr(
-; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
@@ -342,7 +342,7 @@ define amdgpu_kernel void @indirect_calls_none_agpr(i1 %cond) {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_def_struct_0() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_struct_0(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call { i32, i32 } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -354,7 +354,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_def_struct_0() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_1() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_1(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call { i32, <2 x i32> } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -378,7 +378,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_use_struct_2() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_ptr_ty() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_ptr_ty(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -390,7 +390,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_ptr_ty() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_def_ptr_ty() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_ptr_ty(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call ptr asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -402,7 +402,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_def_ptr_ty() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_def_vector_ptr_ty() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_vector_ptr_ty(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR5]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call <2 x ptr> asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -414,7 +414,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_def_vector_ptr_ty() {
 
 define amdgpu_kernel void @kernel_uses_asm_physreg_def_struct_0() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_physreg_def_struct_0(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call { i32, i32 } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -426,7 +426,7 @@ define amdgpu_kernel void @kernel_uses_asm_physreg_def_struct_0() {
 
 define amdgpu_kernel void @kernel_uses_asm_clobber() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -438,7 +438,7 @@ define amdgpu_kernel void @kernel_uses_asm_clobber() {
 
 define amdgpu_kernel void @kernel_uses_asm_clobber_tuple() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber_tuple(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -450,7 +450,7 @@ define amdgpu_kernel void @kernel_uses_asm_clobber_tuple() {
 
 define amdgpu_kernel void @kernel_uses_asm_clobber_oob() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber_oob(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -462,7 +462,7 @@ define amdgpu_kernel void @kernel_uses_asm_clobber_oob() {
 
 define amdgpu_kernel void @kernel_uses_asm_clobber_max() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_clobber_max(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR9]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -474,7 +474,7 @@ define amdgpu_kernel void @kernel_uses_asm_clobber_max() {
 
 define amdgpu_kernel void @kernel_uses_asm_physreg_oob() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_physreg_oob(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR9]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -486,7 +486,7 @@ define amdgpu_kernel void @kernel_uses_asm_physreg_oob() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_def_max_ty() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_def_max_ty(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call <32 x i32> asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -498,7 +498,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_def_max_ty() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_use_max_ty() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_max_ty(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR10]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -510,7 +510,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_use_max_ty() {
 
 define amdgpu_kernel void @kernel_uses_asm_virtreg_use_def_max_ty() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_asm_virtreg_use_def_max_ty(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR10]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call <32 x i32> asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -522,7 +522,7 @@ define amdgpu_kernel void @kernel_uses_asm_virtreg_use_def_max_ty() {
 
 define amdgpu_kernel void @vreg_use_exceeds_register_file() {
 ; CHECK-LABEL: define amdgpu_kernel void @vreg_use_exceeds_register_file(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR9]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -534,7 +534,7 @@ define amdgpu_kernel void @vreg_use_exceeds_register_file() {
 
 define amdgpu_kernel void @vreg_def_exceeds_register_file() {
 ; CHECK-LABEL: define amdgpu_kernel void @vreg_def_exceeds_register_file(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR9]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call <257 x i32> asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -546,7 +546,7 @@ define amdgpu_kernel void @vreg_def_exceeds_register_file() {
 
 define amdgpu_kernel void @multiple() {
 ; CHECK-LABEL: define amdgpu_kernel void @multiple(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR10]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call { <16 x i32>, <8 x i32>, <8 x i32> } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -558,7 +558,7 @@ define amdgpu_kernel void @multiple() {
 
 define amdgpu_kernel void @earlyclobber_0() {
 ; CHECK-LABEL: define amdgpu_kernel void @earlyclobber_0(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call <8 x i32> asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -570,7 +570,7 @@ define amdgpu_kernel void @earlyclobber_0() {
 
 define amdgpu_kernel void @earlyclobber_1() {
 ; CHECK-LABEL: define amdgpu_kernel void @earlyclobber_1(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    [[DEF:%.*]] = call { <8 x i32>, <16 x i32> } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -582,7 +582,7 @@ define amdgpu_kernel void @earlyclobber_1() {
 
 define amdgpu_kernel void @physreg_a32__vreg_a256__vreg_a512() {
 ; CHECK-LABEL: define amdgpu_kernel void @physreg_a32__vreg_a256__vreg_a512(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -594,7 +594,7 @@ define amdgpu_kernel void @physreg_a32__vreg_a256__vreg_a512() {
 
 define amdgpu_kernel void @physreg_def_a32__def_vreg_a256__def_vreg_a512() {
 ; CHECK-LABEL: define amdgpu_kernel void @physreg_def_a32__def_vreg_a256__def_vreg_a512(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR13]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, <8 x i32>, <16 x i32> } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -606,7 +606,7 @@ define amdgpu_kernel void @physreg_def_a32__def_vreg_a256__def_vreg_a512() {
 
 define amdgpu_kernel void @physreg_def_a32___def_vreg_a512_use_vreg_a256() {
 ; CHECK-LABEL: define amdgpu_kernel void @physreg_def_a32___def_vreg_a512_use_vreg_a256(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, <16 x i32> } asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -618,7 +618,7 @@ define amdgpu_kernel void @physreg_def_a32___def_vreg_a512_use_vreg_a256() {
 
 define amdgpu_kernel void @mixed_physreg_vreg_tuples_0() {
 ; CHECK-LABEL: define amdgpu_kernel void @mixed_physreg_vreg_tuples_0(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR11]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -630,7 +630,7 @@ define amdgpu_kernel void @mixed_physreg_vreg_tuples_0() {
 
 define amdgpu_kernel void @mixed_physreg_vreg_tuples_1() {
 ; CHECK-LABEL: define amdgpu_kernel void @mixed_physreg_vreg_tuples_1(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR15:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -642,7 +642,7 @@ define amdgpu_kernel void @mixed_physreg_vreg_tuples_1() {
 
 define amdgpu_kernel void @physreg_raises_limit() {
 ; CHECK-LABEL: define amdgpu_kernel void @physreg_raises_limit(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR16:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -652,10 +652,9 @@ define amdgpu_kernel void @physreg_raises_limit() {
   ret void
 }
 
-; FIXME: This should require 9. We cannot allocate an a128 at a0.
 define amdgpu_kernel void @physreg_tuple_alignment_raises_limit() {
 ; CHECK-LABEL: define amdgpu_kernel void @physreg_tuple_alignment_raises_limit(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR11]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -667,7 +666,7 @@ define amdgpu_kernel void @physreg_tuple_alignment_raises_limit() {
 
 define amdgpu_kernel void @align3_virtreg() {
 ; CHECK-LABEL: define amdgpu_kernel void @align3_virtreg(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR6]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -679,7 +678,7 @@ define amdgpu_kernel void @align3_virtreg() {
 
 define amdgpu_kernel void @align3_align4_virtreg() {
 ; CHECK-LABEL: define amdgpu_kernel void @align3_align4_virtreg(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR15]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -691,7 +690,7 @@ define amdgpu_kernel void @align3_align4_virtreg() {
 
 define amdgpu_kernel void @align2_align4_virtreg() {
 ; CHECK-LABEL: define amdgpu_kernel void @align2_align4_virtreg(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR15]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
@@ -703,7 +702,7 @@ define amdgpu_kernel void @align2_align4_virtreg() {
 
 define amdgpu_kernel void @kernel_uses_write_register_a55() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_a55(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR17:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.write_register.i32(metadata [[META0:![0-9]+]], i32 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -713,71 +712,313 @@ define amdgpu_kernel void @kernel_uses_write_register_a55() {
 
 define amdgpu_kernel void @kernel_uses_write_register_v55() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_v55(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.write_register.i32(metadata [[META1:![0-9]+]], i32 0)
+; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.write_register.i64(metadata !1, i32 0)
+  call void @use_most()
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_write_register_a55_57() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_a55_57(
-; CHECK-SAME: ) #[[ATTR3]] {
+; CHECK-SAME: ) #[[ATTR18:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.write_register.i96(metadata [[META2:![0-9]+]], i96 0)
+; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.write_register.i64(metadata !2, i96 0)
+  call void @use_most()
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_read_register_a55(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_register_a55(
-; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR19:[0-9]+]] {
 ; CHECK-NEXT:    [[REG:%.*]] = call i32 @llvm.read_register.i32(metadata [[META0]])
 ; CHECK-NEXT:    store i32 [[REG]], ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
   %reg = call i32 @llvm.read_register.i64(metadata !0)
   store i32 %reg, ptr addrspace(1) %ptr
+  call void @use_most()
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_read_volatile_register_a55(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_volatile_register_a55(
-; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR19]] {
 ; CHECK-NEXT:    [[REG:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata [[META0]])
 ; CHECK-NEXT:    store i32 [[REG]], ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
   %reg = call i32 @llvm.read_volatile_register.i64(metadata !0)
   store i32 %reg, ptr addrspace(1) %ptr
+  call void @use_most()
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_read_register_a56_59(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_register_a56_59(
-; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR20:[0-9]+]] {
 ; CHECK-NEXT:    [[REG:%.*]] = call i128 @llvm.read_register.i128(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    store i128 [[REG]], ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
   %reg = call i128 @llvm.read_register.i64(metadata !3)
   store i128 %reg, ptr addrspace(1) %ptr
+  call void @use_most()
   ret void
 }
 
 define amdgpu_kernel void @kernel_uses_write_register_out_of_bounds_a256() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_write_register_out_of_bounds_a256(
-; CHECK-SAME: ) #[[ATTR3]] {
+; CHECK-SAME: ) #[[ATTR9]] {
 ; CHECK-NEXT:    call void @llvm.write_register.i32(metadata [[META4:![0-9]+]], i32 0)
+; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.write_register.i64(metadata !4, i32 0)
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_multiple_uses() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_multiple_uses(
+; CHECK-SAME: ) #[[ATTR5]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(i64 poison)
+  call void asm sideeffect "; use $0", "a"(i32 poison)
+  call void asm sideeffect "; use $0", "a"(i128 poison)
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_multiple_defs() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_multiple_defs(
+; CHECK-SAME: ) #[[ATTR5]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 asm sideeffect "
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 asm sideeffect "
+; CHECK-NEXT:    [[TMP3:%.*]] = call i128 asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call i64 asm sideeffect "; def $0", "=a"()
+  call i32 asm sideeffect "; def $0", "=a"()
+  call i128 asm sideeffect "; def $0", "=a"()
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_multiple_use_defs() {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_multiple_use_defs(
+; CHECK-SAME: ) #[[ATTR5]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    [[TMP1:%.*]] = call i128 asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(i32 poison)
+  call i128 asm sideeffect "; def $0", "=a"()
+  call void @use_most()
+  ret void
+}
+
+define void @callgraph_b() {
+; CHECK-LABEL: define void @callgraph_b(
+; CHECK-SAME: ) #[[ATTR15]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> asm sideeffect "
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call <4 x i32> asm sideeffect "; def $0", "=a"()
+  call void asm sideeffect "; use $0", "a"(<8 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define void @callgraph_c() {
+; CHECK-LABEL: define void @callgraph_c(
+; CHECK-SAME: ) #[[ATTR2]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 asm sideeffect "
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call i32 asm sideeffect "; def $0", "=a"()
+  call void asm sideeffect "; use $0", "a"(<2 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define void @callgraph_a(i1 %cond) {
+; CHECK-LABEL: define void @callgraph_a(
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR15]] {
+; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    call void @callgraph_b()
+; CHECK-NEXT:    ret void
+; CHECK:       b:
+; CHECK-NEXT:    call void @callgraph_c()
+; CHECK-NEXT:    ret void
+;
+  br i1 %cond, label %a, label %b
+
+a:
+  call void @callgraph_b()
+  ret void
+
+b:
+  call void @callgraph_c()
+  ret void
+}
+
+
+define void @kernel_max_callgraph(i1 %cond) {
+; CHECK-LABEL: define void @kernel_max_callgraph(
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR15]] {
+; CHECK-NEXT:    call void @callgraph_a(i1 [[COND]])
+; CHECK-NEXT:    ret void
+;
+  call void @callgraph_a(i1 %cond)
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_all_virtregs() #1 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_all_virtregs(
+; CHECK-SAME: ) #[[ATTR21:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a,a,a,a,a,a,a,a"(<32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @kernel_uses_all_virtregs_plus_1() #1 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_all_virtregs_plus_1(
+; CHECK-SAME: ) #[[ATTR21]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a,a,a,a,a,a,a,a,a"(<32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, <32 x i32> poison, i32 poison)
+  call void @use_most()
+  ret void
+}
+
+define void @recursive() {
+; CHECK-LABEL: define void @recursive(
+; CHECK-SAME: ) #[[ATTR22:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    call void @recursive()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(<7 x i32> poison)
+  call void @use_most()
+  call void @recursive()
+  ret void
+}
+
+define void @indirect_0() {
+; CHECK-LABEL: define void @indirect_0(
+; CHECK-SAME: ) #[[ATTR22]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; use $0", "a"(<7 x i32> poison)
+  call void @use_most()
+  ret void
+}
+
+define void @indirect_1() {
+; CHECK-LABEL: define void @indirect_1(
+; CHECK-SAME: ) #[[ATTR23:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i32> asm sideeffect "
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call <3 x i32> asm sideeffect "; def $0", "=a"()
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @knowable_indirect_call(i1 %cond) {
+; CHECK-LABEL: define amdgpu_kernel void @knowable_indirect_call(
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR22]] {
+; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @indirect_0, ptr @indirect_1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @indirect_1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    call void @indirect_1()
+; CHECK-NEXT:    br label [[TMP6:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    call void @indirect_0()
+; CHECK-NEXT:    br label [[TMP6]]
+; CHECK:       5:
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  %fptr = select i1 %cond, ptr @indirect_0, ptr @indirect_1
+  call void %fptr()
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @calls_poison(i1 %cond) {
+; CHECK-LABEL: define amdgpu_kernel void @calls_poison(
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    call void poison()
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void poison()
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @calls_null(i1 %cond) {
+; CHECK-LABEL: define amdgpu_kernel void @calls_null(
+; CHECK-SAME: i1 [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    call void null()
+; CHECK-NEXT:    call void @use_most()
+; CHECK-NEXT:    ret void
+;
+  call void null()
+  call void @use_most()
+  ret void
+}
+
+define amdgpu_kernel void @indirect_unknown(ptr %fptr) {
+; CHECK-LABEL: define amdgpu_kernel void @indirect_unknown(
+; CHECK-SAME: ptr [[FPTR:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    call void [[FPTR]]()
+; CHECK-NEXT:    ret void
+;
+  call void %fptr()
   ret void
 }
 
 attributes #0 = { "amdgpu-agpr-alloc"="0" }
+attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
 
 !0 = !{!"a55"}
 !1 = !{!"v55"}
@@ -787,16 +1028,35 @@ attributes #0 = { "amdgpu-agpr-alloc"="0" }
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR8:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR9:[0-9]+]] = { nocallback nounwind "target-cpu"="gfx90a" }
-; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="0" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="1" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="2" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR3]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="4" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="6" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-agpr-alloc"="5" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-agpr-alloc"="14" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-agpr-alloc"="256" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="32" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-agpr-alloc"="9" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR12]] = { "amdgpu-agpr-alloc"="64" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR13]] = { "amdgpu-agpr-alloc"="49" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR14]] = { "amdgpu-agpr-alloc"="33" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR15]] = { "amdgpu-agpr-alloc"="8" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR16]] = { "amdgpu-agpr-alloc"="13" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR17]] = { "amdgpu-agpr-alloc"="56" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR18]] = { "amdgpu-agpr-alloc"="58" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR19]] = { "amdgpu-agpr-alloc"="56" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR20]] = { "amdgpu-agpr-alloc"="60" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR21]] = { "amdgpu-agpr-alloc"="256" "amdgpu-waves-per-eu"="1,1" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR22]] = { "amdgpu-agpr-alloc"="7" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR23]] = { "amdgpu-agpr-alloc"="3" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR24:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR25:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR26:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR27:[0-9]+]] = { nounwind "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR28:[0-9]+]] = { nocallback nounwind "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR29]] = { "amdgpu-agpr-alloc"="0" }
 ;.
 ; CHECK: [[META0]] = !{!"a55"}
 ; CHECK: [[META1]] = !{!"v55"}

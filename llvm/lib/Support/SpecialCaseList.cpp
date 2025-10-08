@@ -22,6 +22,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -72,6 +73,8 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 void SpecialCaseList::Matcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
+  if (RemoveDotSlash)
+    Query = llvm::sys::path::remove_leading_dotslash(Query);
   for (const auto &Glob : reverse(Globs))
     if (Glob->Pattern.match(Query))
       Cb(Glob->Name, Glob->LineNo);
@@ -164,11 +167,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
   bool UseGlobs = Version > 1;
 
+  bool RemoveDotSlash = Version > 2;
+
   Section *CurrentSection;
   if (auto Err = addSection("*", FileIdx, 1).moveInto(CurrentSection)) {
     Error = toString(std::move(Err));
     return false;
   }
+
+  // This is the current list of prefixes for all existing users matching file
+  // path. We may need parametrization in constructor in future.
+  constexpr StringRef PathPrefixes[] = {"src", "!src", "mainfile", "source"};
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
@@ -205,6 +214,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
     auto [Pattern, Category] = Postfix.split("=");
     auto &Entry = CurrentSection->Entries[Prefix][Category];
+    Entry.RemoveDotSlash =
+        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix);
     if (auto Err = Entry.insert(Pattern, LineNo, UseGlobs)) {
       Error =
           (Twine("malformed ") + (UseGlobs ? "glob" : "regex") + " in line " +
