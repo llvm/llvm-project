@@ -29,7 +29,7 @@ namespace llvm {
     const char *CurPtr;
     StringRef CurBuf;
 
-    // The the end (exclusive) of the current token
+    /// The end (exclusive) of the previous token.
     const char *PrevTokEnd = nullptr;
 
     enum class ErrorPriority {
@@ -80,14 +80,14 @@ namespace llvm {
       IgnoreColonInIdentifiers = val;
     }
 
-    // Get the line, column position of the start of the current token,
-    // zero-indexed
+    /// Get the line, column position of the start of the current token,
+    /// zero-indexed
     std::pair<unsigned, unsigned> getTokLineColumnPos() {
       auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(TokStart));
       return {LC.first - 1, LC.second - 1};
     }
-    // Get the line, column position of the end of the previous token,
-    // zero-indexed exclusive
+    /// Get the line, column position of the end of the previous token,
+    /// zero-indexed exclusive
     std::pair<unsigned, unsigned> getPrevTokEndLineColumnPos() {
       auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(PrevTokEnd));
       --LC.first;
