@@ -2386,6 +2386,18 @@ public:
     return true;
   }
 
+  /// Returns the preferred extension type for a promoted load.
+  /// This is called during type legalization when promoting loads from
+  /// illegal types (like v4i8) to legal types (like v4i16).
+  /// By default returns EXTLOAD (anyext), but targets can override to
+  /// prefer ZEXTLOAD or SEXTLOAD for specific loads.
+  /// The LoadSDNode parameter allows the target to check alignment and
+  /// other properties of the specific load being promoted.
+  virtual ISD::LoadExtType getPreferredExtendForPromotedLoad(LoadSDNode *N,
+                                                             EVT LoadVT) const {
+    return ISD::EXTLOAD;
+  }
+
   /// Returns how the given (atomic) load should be expanded by the
   /// IR-level AtomicExpand pass.
   virtual AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const {

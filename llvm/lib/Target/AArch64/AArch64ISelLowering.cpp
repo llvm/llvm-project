@@ -1438,12 +1438,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::v2i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::v4i8, Custom);
 
-    setLoadExtAction(ISD::EXTLOAD,  MVT::v4i16, MVT::v4i8, Custom);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
-    setLoadExtAction(ISD::EXTLOAD,  MVT::v4i32, MVT::v4i8, Custom);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i32, MVT::v2i8, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i32, MVT::v2i8, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i64, MVT::v2i8, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i8, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i8, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i8, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i32, MVT::v2i16, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i32, MVT::v2i16, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v2i64, MVT::v2i16, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i16, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i16, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i16, Legal);
 
     // ADDP custom lowering
     for (MVT VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 })
@@ -6746,8 +6754,19 @@ bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(SDValue Extend,
 
 bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtVT = ExtVal.getValueType();
-  if (!ExtVT.isScalableVector() && !Subtarget->useSVEForFixedLengthVectors())
-    return false;
+  if (!ExtVT.isScalableVector()) {
+    if (auto *SrcVal = dyn_cast<LoadSDNode>(ExtVal.getOperand(0))) {
+      EVT SrcVT = SrcVal->getValueType(0);
+      if ((SrcVT == MVT::v2i8 || SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16) &&
+          isTypeLegal(ExtVT) &&
+          allowsMisalignedMemoryAccesses(
+              SrcVT, SrcVal->getAddressSpace(), SrcVal->getAlign(),
+              SrcVal->getMemOperand()->getFlags(), nullptr))
+        return true;
+    }
+    if (!Subtarget->useSVEForFixedLengthVectors())
+      return false;
+  }
 
   // It may be worth creating extending masked loads if there are multiple
   // masked loads using the same predicate. That way we'll end up creating
@@ -7228,37 +7247,7 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
     return DAG.getMergeValues({Loaded, Chain}, DL);
   }
 
-  // Custom lowering for extending v4i8 vector loads.
-  EVT VT = Op->getValueType(0);
-  assert((VT == MVT::v4i16 || VT == MVT::v4i32) && "Expected v4i16 or v4i32");
-
-  if (LoadNode->getMemoryVT() != MVT::v4i8)
-    return SDValue();
-
-  // Avoid generating unaligned loads.
-  if (Subtarget->requiresStrictAlign() && LoadNode->getAlign() < Align(4))
-    return SDValue();
-
-  unsigned ExtType;
-  if (LoadNode->getExtensionType() == ISD::SEXTLOAD)
-    ExtType = ISD::SIGN_EXTEND;
-  else if (LoadNode->getExtensionType() == ISD::ZEXTLOAD ||
-           LoadNode->getExtensionType() == ISD::EXTLOAD)
-    ExtType = ISD::ZERO_EXTEND;
-  else
-    return SDValue();
-
-  SDValue Load = DAG.getLoad(MVT::f32, DL, LoadNode->getChain(),
-                             LoadNode->getBasePtr(), MachinePointerInfo());
-  SDValue Chain = Load.getValue(1);
-  SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f32, Load);
-  SDValue BC = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Vec);
-  SDValue Ext = DAG.getNode(ExtType, DL, MVT::v8i16, BC);
-  Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16, Ext,
-                    DAG.getConstant(0, DL, MVT::i64));
-  if (VT == MVT::v4i32)
-    Ext = DAG.getNode(ExtType, DL, MVT::v4i32, Ext);
-  return DAG.getMergeValues({Ext, Chain}, DL);
+  return SDValue();
 }
 
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
@@ -12674,6 +12663,55 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
                     << " imm value: "; Imm.dump(););
   return IsLegal;
+}
+
+ISD::LoadExtType
+AArch64TargetLowering::getPreferredExtendForPromotedLoad(LoadSDNode *N,
+                                                         EVT LoadVT) const {
+  // Only prefer ZEXTLOAD for small integer vector types that will be
+  // optimized by performSmallVectorLoadExtCombine. We need to match the
+  // same conditions that function checks to avoid applying ZEXTLOAD when
+  // the load won't actually be optimized.
+
+  EVT MemVT = N->getMemoryVT();
+
+  // performSmallVectorLoadExtCombine only handles specific types
+  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8 &&
+      MemVT != MVT::v2i16 && MemVT != MVT::v4i16) {
+    return ISD::EXTLOAD;
+  }
+
+  // performSmallVectorLoadExtCombine requires NEON
+  if (!Subtarget->isNeonAvailable()) {
+    return ISD::EXTLOAD;
+  }
+
+  // performSmallVectorLoadExtCombine bails out on volatile loads
+  if (N->isVolatile()) {
+    return ISD::EXTLOAD;
+  }
+
+  // Check alignment - performSmallVectorLoadExtCombine requires proper alignment
+  // when strict alignment is required
+  Align Alignment = N->getAlign();
+  Align RequiredAlignment = Align(MemVT.getStoreSize().getFixedValue());
+  if (Subtarget->requiresStrictAlign() && Alignment < RequiredAlignment) {
+    // The load won't be optimized by performSmallVectorLoadExtCombine,
+    // so don't use ZEXTLOAD
+    return ISD::EXTLOAD;
+  }
+
+  // For these small integer vector types with proper alignment,
+  // prefer zero-extending loads to avoid the need for AND masks later.
+  // This is especially beneficial for the patterns created by
+  // performSmallVectorLoadExtCombine which converts these to scalar loads
+  // followed by vector operations.
+  if (isLoadExtLegal(ISD::ZEXTLOAD, LoadVT, MemVT)) {
+    return ISD::ZEXTLOAD;
+  }
+
+  // Default to EXTLOAD for other cases
+  return ISD::EXTLOAD;
 }
 
 //===----------------------------------------------------------------------===//
@@ -23300,6 +23338,137 @@ static SDValue performZExtUZPCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, BC, DAG.getConstant(Mask, DL, VT));
 }
 
+// Helper function to optimize small vector load + extension patterns.
+// These patterns would otherwise be scalarized into inefficient sequences.
+static SDValue performSmallVectorLoadExtCombine(LoadSDNode *LD,
+                                                SelectionDAG &DAG) {
+  // Don't optimize if NEON is not available.
+  const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget.isNeonAvailable())
+    return SDValue();
+
+  // Don't optimize volatile loads
+  if (LD->isVolatile())
+    return SDValue();
+
+  EVT MemVT = LD->getMemoryVT();
+  EVT ResVT = LD->getValueType(0);
+
+  // Only handle our specific small vector patterns.
+  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8 && MemVT != MVT::v2i16 &&
+      MemVT != MVT::v4i16)
+    return SDValue();
+
+  unsigned NumElts = ResVT.getVectorNumElements();
+  unsigned DstEltBits = ResVT.getScalarSizeInBits();
+
+  // Check alignment
+  Align Alignment = LD->getAlign();
+  Align RequiredAlignment = Align(MemVT.getStoreSize().getFixedValue());
+  if (Subtarget.requiresStrictAlign() && Alignment < RequiredAlignment)
+    return SDValue();
+
+  unsigned ExtOpcode;
+  switch (LD->getExtensionType()) {
+  case ISD::EXTLOAD:
+  case ISD::ZEXTLOAD:
+    ExtOpcode = ISD::ZERO_EXTEND;
+    break;
+  case ISD::SEXTLOAD:
+    ExtOpcode = ISD::SIGN_EXTEND;
+    break;
+  case ISD::NON_EXTLOAD:
+    return SDValue();
+  }
+
+  SDLoc DL(LD);
+  SDValue Chain = LD->getChain();
+  SDValue BasePtr = LD->getBasePtr();
+  const MachinePointerInfo &PtrInfo = LD->getPointerInfo();
+
+  SDValue Load;
+  SDValue Vec;
+
+  if (MemVT == MVT::v2i8) {
+    Load = DAG.getLoad(MVT::f16, DL, Chain, BasePtr, PtrInfo, Alignment);
+    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, Load);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4f16, Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+    Vec = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Vec);
+    if (DstEltBits >= 16) {
+      Vec = DAG.getNode(ExtOpcode, DL, MVT::v8i16, Vec);
+      if (DstEltBits >= 32) {
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16, Vec,
+                          DAG.getConstant(0, DL, MVT::i64));
+        Vec = DAG.getNode(ExtOpcode, DL, MVT::v4i32, Vec);
+        if (DstEltBits >= 64) {
+          Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, Vec,
+                            DAG.getConstant(0, DL, MVT::i64));
+          Vec = DAG.getNode(ExtOpcode, DL, MVT::v2i64, Vec);
+        }
+      }
+    }
+  } else if (MemVT == MVT::v4i8) {
+    Load = DAG.getLoad(MVT::f32, DL, Chain, BasePtr, PtrInfo, Alignment);
+    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Load);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2f32, Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+    Vec = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Vec);
+    if (DstEltBits >= 16) {
+      Vec = DAG.getNode(ExtOpcode, DL, MVT::v8i16, Vec);
+      if (DstEltBits >= 32) {
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16, Vec,
+                          DAG.getConstant(0, DL, MVT::i64));
+        Vec = DAG.getNode(ExtOpcode, DL, MVT::v4i32, Vec);
+        if (DstEltBits >= 64) {
+          Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, Vec,
+                            DAG.getConstant(0, DL, MVT::i64));
+          Vec = DAG.getNode(ExtOpcode, DL, MVT::v2i64, Vec);
+        }
+      }
+    }
+  } else if (MemVT == MVT::v2i16) {
+    Load = DAG.getLoad(MVT::f32, DL, Chain, BasePtr, PtrInfo, Alignment);
+    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Load);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2f32, Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+    Vec = DAG.getNode(ISD::BITCAST, DL, MVT::v4i16, Vec);
+    if (DstEltBits >= 32) {
+      Vec = DAG.getNode(ExtOpcode, DL, MVT::v4i32, Vec);
+      if (DstEltBits >= 64) {
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, Vec,
+                          DAG.getConstant(0, DL, MVT::i64));
+        Vec = DAG.getNode(ExtOpcode, DL, MVT::v2i64, Vec);
+      }
+    }
+  } else if (MemVT == MVT::v4i16) {
+    Load = DAG.getLoad(MVT::f64, DL, Chain, BasePtr, PtrInfo, Alignment);
+    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, Load);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v1f64, Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+    Vec = DAG.getNode(ISD::BITCAST, DL, MVT::v4i16, Vec);
+    if (DstEltBits >= 32) {
+      Vec = DAG.getNode(ExtOpcode, DL, MVT::v4i32, Vec);
+      if (DstEltBits >= 64) {
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, Vec,
+                          DAG.getConstant(0, DL, MVT::i64));
+        Vec = DAG.getNode(ExtOpcode, DL, MVT::v2i64, Vec);
+      }
+    }
+  }
+
+  if (Vec.getValueType().getVectorNumElements() != NumElts) {
+    EVT FinalVT = EVT::getVectorVT(
+        *DAG.getContext(), Vec.getValueType().getVectorElementType(), NumElts);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, FinalVT, Vec,
+                      DAG.getConstant(0, DL, MVT::i64));
+  }
+
+  
+
+  return DAG.getMergeValues({Vec, Load.getValue(1)}, DL);
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -24425,6 +24594,10 @@ static SDValue performLOADCombine(SDNode *N,
                             LD->getMemOperand()->getFlags());
     }
   }
+
+  // Try to optimize small vector load + extension patterns
+  if (SDValue Result = performSmallVectorLoadExtCombine(LD, DAG))
+    return Result;
 
   if (LD->isVolatile() || !Subtarget->isLittleEndian())
     return SDValue(N, 0);

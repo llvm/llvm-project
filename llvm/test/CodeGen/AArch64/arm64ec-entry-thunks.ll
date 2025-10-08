@@ -509,7 +509,7 @@ define <4 x i8> @small_vector(<4 x i8> %0) {
 ; CHECK-NEXT:     .seh_add_fp	176
 ; CHECK-NEXT:     .seh_endprologue
 ; CHECK-NEXT:     str	w0, [sp, #12]
-; CHECK-NEXT:     ldr	s0, [sp, #12]
+; CHECK-NEXT:     ldr s0, [sp, #12]
 ; CHECK-NEXT:     ushll	v0.8h, v0.8b, #0
 ; CHECK-NEXT:                                           // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:     blr	x9

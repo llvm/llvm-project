@@ -1012,18 +1012,16 @@ define void @zext_v4i8_to_v4i32_in_loop(ptr %src, ptr %dst) {
 ;
 ; CHECK-BE-LABEL: zext_v4i8_to_v4i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    adrp x8, .LCPI11_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI11_0
-; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB11_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ldr s1, [x0, x8]
+; CHECK-BE-NEXT:    ldr s0, [x0, x8]
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    rev32 v1.16b, v1.16b
-; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b }, v0.16b
-; CHECK-BE-NEXT:    st1 { v1.16b }, [x1]
+; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    st1 { v0.4s }, [x1]
 ; CHECK-BE-NEXT:    add x1, x1, #64
 ; CHECK-BE-NEXT:    b.ne .LBB11_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit

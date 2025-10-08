@@ -13,20 +13,6 @@ define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: z_i32_v4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
   %e = zext <4 x i8> %b to <4 x i16>
   ret <4 x i16> %e

@@ -993,8 +993,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_LOAD(LoadSDNode *N) {
   assert(ISD::isUNINDEXEDLoad(N) && "Indexed load during type legalization!");
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  ISD::LoadExtType ExtType =
-    ISD::isNON_EXTLoad(N) ? ISD::EXTLOAD : N->getExtensionType();
+  ISD::LoadExtType ExtType;
+  if (ISD::isNON_EXTLoad(N)) {
+    // For non-extending loads, ask the target what extension type it prefers
+    ExtType = TLI.getPreferredExtendForPromotedLoad(N, NVT);
+  } else {
+    ExtType = N->getExtensionType();
+  }
   SDLoc dl(N);
   SDValue Res = DAG.getExtLoad(ExtType, dl, NVT, N->getChain(), N->getBasePtr(),
                                N->getMemoryVT(), N->getMemOperand());

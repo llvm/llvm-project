@@ -103,12 +103,12 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqshlu_zero_shift_amount
 
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: sqshl8b:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    sqshl v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshl8b:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    sqshl v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.sqshl.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)

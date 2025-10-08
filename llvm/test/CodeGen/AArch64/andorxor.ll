@@ -176,12 +176,12 @@ entry:
 define void @and_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-LABEL: and_v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.b }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #1
-; CHECK-SD-NEXT:    add x9, x1, #1
-; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ldr h1, [x1]
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
@@ -212,12 +212,12 @@ entry:
 define void @or_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-LABEL: or_v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.b }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #1
-; CHECK-SD-NEXT:    add x9, x1, #1
-; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ldr h1, [x1]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
@@ -248,12 +248,12 @@ entry:
 define void @xor_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-LABEL: xor_v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.b }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #1
-; CHECK-SD-NEXT:    add x9, x1, #1
-; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ldr h1, [x1]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
@@ -293,10 +293,9 @@ define void @and_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
-; CHECK-SD-NEXT:    str s1, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
-; CHECK-SD-NEXT:    strh w8, [x0]
+; CHECK-SD-NEXT:    str h1, [x0]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
@@ -345,10 +344,9 @@ define void @or_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
-; CHECK-SD-NEXT:    str s1, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
-; CHECK-SD-NEXT:    strh w8, [x0]
+; CHECK-SD-NEXT:    str h1, [x0]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
@@ -397,10 +395,9 @@ define void @xor_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
-; CHECK-SD-NEXT:    str s1, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
-; CHECK-SD-NEXT:    strh w8, [x0]
+; CHECK-SD-NEXT:    str h1, [x0]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
@@ -698,12 +695,10 @@ entry:
 define void @and_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-LABEL: and_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.h }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #2
-; CHECK-SD-NEXT:    add x9, x1, #2
-; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
@@ -734,12 +729,10 @@ entry:
 define void @or_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-LABEL: or_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.h }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #2
-; CHECK-SD-NEXT:    add x9, x1, #2
-; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
@@ -770,12 +763,10 @@ entry:
 define void @xor_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-LABEL: xor_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.h }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #2
-; CHECK-SD-NEXT:    add x9, x1, #2
-; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]

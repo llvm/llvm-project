@@ -145,6 +145,10 @@ public:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
+  /// Return the preferred extension type for promoted loads.
+  ISD::LoadExtType getPreferredExtendForPromotedLoad(LoadSDNode *N,
+                                                     EVT LoadVT) const override;
+
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
