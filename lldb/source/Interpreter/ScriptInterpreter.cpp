@@ -108,9 +108,8 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
 
 lldb::StackFrameSP
 ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
-  if (frame.m_opaque_sp) {
+  if (frame.m_opaque_sp)
     return frame.m_opaque_sp->GetFrameSP();
-  }
   return nullptr;
 }
 

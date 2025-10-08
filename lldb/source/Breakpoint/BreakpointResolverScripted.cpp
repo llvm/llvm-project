@@ -173,7 +173,6 @@ BreakpointResolverScripted::WasHit(lldb::StackFrameSP frame_sp,
                                    lldb::BreakpointLocationSP bp_loc_sp) {
   if (m_interface_sp)
     return m_interface_sp->WasHit(frame_sp, bp_loc_sp);
-
   return {};
 }
 

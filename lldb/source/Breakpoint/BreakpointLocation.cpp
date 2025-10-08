@@ -529,8 +529,7 @@ llvm::Error BreakpointLocation::ClearBreakpointSite() {
     // This might be a Facade Location, which don't have sites or addresses
     if (IsFacade())
       return llvm::Error::success();
-    else
-      return llvm::createStringError("no breakpoint site to clear");
+    return llvm::createStringError("no breakpoint site to clear");
   }
 
   // If the process exists, get it to remove the owner, it will remove the
@@ -692,7 +691,7 @@ void BreakpointLocation::GetDescription(Stream *s,
     }
   }
 
-  // Scripted breakpoint are currently always resolved.  Does this seem right?
+  // FIXME: scripted breakpoint are currently always resolved.  Does this seem right?
   // If they don't add any scripted locations, we shouldn't consider them
   // resolved.
   bool is_resolved = is_scripted_desc || IsResolved();
