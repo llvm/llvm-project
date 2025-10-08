@@ -259,7 +259,7 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
   if (isCompressibleLoad(MI) || isCompressibleStore(MI)) {
     const MachineOperand &MOImm = MI.getOperand(2);
     if (!MOImm.isImm())
-      return RegImmPair(RISCV::NoRegister, 0);
+      return RegImmPair(Register(), 0);
 
     int64_t Offset = MOImm.getImm();
     int64_t NewBaseAdjust = getBaseAdjustForCompression(Offset, Opcode);
@@ -292,7 +292,7 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
       }
     }
   }
-  return RegImmPair(RISCV::NoRegister, 0);
+  return RegImmPair(Register(), 0);
 }
 
 // Check all uses after FirstMI of the given register, keeping a vector of
