@@ -3145,7 +3145,7 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
-int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   switch (Type) {
   default:
     break;
@@ -3168,7 +3168,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
-    return Hi_32(Imm);
+    return IsLit ? Imm : Hi_32(Imm);
   }
   return Imm;
 }

@@ -35,8 +35,10 @@ Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
                                                          CastOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto castOp = cast<CastOp>(op);
     auto srcType = cast<TensorType>(castOp.getSource().getType());
 
@@ -53,8 +55,7 @@ struct CastOpInterface
       Value isSameRank = arith::CmpIOp::create(
           builder, loc, arith::CmpIPredicate::eq, srcRank, resultRank);
       cf::AssertOp::create(builder, loc, isSameRank,
-                           RuntimeVerifiableOpInterface::generateErrorMessage(
-                               op, "rank mismatch"));
+                           generateErrorMessage(op, "rank mismatch"));
     }
 
     // Check dimension sizes.
@@ -76,8 +77,8 @@ struct CastOpInterface
           builder, loc, arith::CmpIPredicate::eq, srcDimSz, resultDimSz);
       cf::AssertOp::create(
           builder, loc, isSameSz,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "size mismatch of dim " + std::to_string(it.index())));
+          generateErrorMessage(op, "size mismatch of dim " +
+                                       std::to_string(it.index())));
     }
   }
 };
@@ -85,16 +86,17 @@ struct CastOpInterface
 struct DimOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<DimOpInterface,
                                                          DimOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto dimOp = cast<DimOp>(op);
     Value rank = RankOp::create(builder, loc, dimOp.getSource());
     Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
     cf::AssertOp::create(
         builder, loc,
         generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "index is out of bounds"));
+        generateErrorMessage(op, "index is out of bounds"));
   }
 };
 
@@ -104,8 +106,10 @@ template <typename OpTy>
 struct ExtractInsertOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           ExtractInsertOpInterface<OpTy>, OpTy> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto extractInsertOp = cast<OpTy>(op);
 
     Value tensor;
@@ -135,16 +139,17 @@ struct ExtractInsertOpInterface
                 : inBounds;
     }
     cf::AssertOp::create(builder, loc, assertCond,
-                         RuntimeVerifiableOpInterface::generateErrorMessage(
-                             op, "out-of-bounds access"));
+                         generateErrorMessage(op, "out-of-bounds access"));
   }
 };
 
 struct ExtractSliceOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           ExtractSliceOpInterface, ExtractSliceOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto extractSliceOp = cast<ExtractSliceOp>(op);
     RankedTensorType sourceType = extractSliceOp.getSource().getType();
 
@@ -166,10 +171,10 @@ struct ExtractSliceOpInterface
           loc, extractSliceOp.getSource(), i);
       Value offsetInBounds =
           generateInBoundsCheck(builder, loc, offset, zero, dimSize);
-      cf::AssertOp::create(
-          builder, loc, offsetInBounds,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "offset " + std::to_string(i) + " is out-of-bounds"));
+      cf::AssertOp::create(builder, loc, offsetInBounds,
+                           generateErrorMessage(op, "offset " +
+                                                        std::to_string(i) +
+                                                        " is out-of-bounds"));
 
       // Verify that slice does not run out-of-bounds.
       Value sizeMinusOne = arith::SubIOp::create(builder, loc, size, one);
@@ -181,7 +186,7 @@ struct ExtractSliceOpInterface
           generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
       cf::AssertOp::create(
           builder, loc, lastPosInBounds,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
+          generateErrorMessage(
               op, "extract_slice runs out-of-bounds along dimension " +
                       std::to_string(i)));
     }

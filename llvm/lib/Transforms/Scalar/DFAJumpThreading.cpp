@@ -1206,19 +1206,18 @@ private:
     // value for the new predecessor ClonedBB. The value will either be the same
     // value from BB or a cloned value.
     for (BasicBlock *Succ : BlocksToUpdate) {
-      for (auto II = Succ->begin(); PHINode *Phi = dyn_cast<PHINode>(II);
-           ++II) {
-        Value *Incoming = Phi->getIncomingValueForBlock(BB);
+      for (PHINode &Phi : Succ->phis()) {
+        Value *Incoming = Phi.getIncomingValueForBlock(BB);
         if (Incoming) {
           if (isa<Constant>(Incoming)) {
-            Phi->addIncoming(Incoming, ClonedBB);
+            Phi.addIncoming(Incoming, ClonedBB);
             continue;
           }
           Value *ClonedVal = VMap[Incoming];
           if (ClonedVal)
-            Phi->addIncoming(ClonedVal, ClonedBB);
+            Phi.addIncoming(ClonedVal, ClonedBB);
           else
-            Phi->addIncoming(Incoming, ClonedBB);
+            Phi.addIncoming(Incoming, ClonedBB);
         }
       }
     }
@@ -1313,27 +1312,19 @@ private:
   void cleanPhiNodes(BasicBlock *BB) {
     // If BB is no longer reachable, remove any remaining phi nodes
     if (pred_empty(BB)) {
-      std::vector<PHINode *> PhiToRemove;
-      for (auto II = BB->begin(); PHINode *Phi = dyn_cast<PHINode>(II); ++II) {
-        PhiToRemove.push_back(Phi);
-      }
-      for (PHINode *PN : PhiToRemove) {
-        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
-        PN->eraseFromParent();
+      for (PHINode &PN : make_early_inc_range(BB->phis())) {
+        PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+        PN.eraseFromParent();
       }
       return;
     }
 
     // Remove any incoming values that come from an invalid predecessor
-    for (auto II = BB->begin(); PHINode *Phi = dyn_cast<PHINode>(II); ++II) {
-      std::vector<BasicBlock *> BlocksToRemove;
-      for (BasicBlock *IncomingBB : Phi->blocks()) {
-        if (!isPredecessor(BB, IncomingBB))
-          BlocksToRemove.push_back(IncomingBB);
-      }
-      for (BasicBlock *BB : BlocksToRemove)
-        Phi->removeIncomingValue(BB);
-    }
+    for (PHINode &Phi : BB->phis())
+      Phi.removeIncomingValueIf([&](unsigned Index) {
+        BasicBlock *IncomingBB = Phi.getIncomingBlock(Index);
+        return !isPredecessor(BB, IncomingBB);
+      });
   }
 
   /// Checks if BB was already cloned for a particular next state value. If it
