@@ -915,7 +915,6 @@ Transforms/InstCombine/select_frexp.ll
 Transforms/InstCombine/select.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
-Transforms/InstCombine/select-safe-bool-transforms.ll
 Transforms/InstCombine/select-safe-impliedcond-transforms.ll
 Transforms/InstCombine/select-safe-transforms.ll
 Transforms/InstCombine/select-select.ll
