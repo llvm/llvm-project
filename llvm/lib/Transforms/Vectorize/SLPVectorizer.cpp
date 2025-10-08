@@ -2243,27 +2243,45 @@ public:
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
                      Align Alignment, int64_t Diff, size_t Sz) const;
-  /// Given a set of pointers, check if they can be rearranged as follows (%s is
-  /// a constant):
+
+  /// Return true if an array of scalar loads can be replaced with a strided
+  ///  load (with constant stride).
+  ///
+  ///  It is possible that the load gets "widened". Suppose that originally each load loads `k` bytes and `PointerOps` can be arranged as follows (`%s` is constant):
   ///  %b + 0 * %s + 0
   ///  %b + 0 * %s + 1
   ///  %b + 0 * %s + 2
   ///  ...
-  ///  %b + 0 * %s + w
+  ///  %b + 0 * %s + (w - 1)
   ///
   ///  %b + 1 * %s + 0
   ///  %b + 1 * %s + 1
   ///  %b + 1 * %s + 2
   ///  ...
-  ///  %b + 1 * %s + w
+  ///  %b + 1 * %s + (w - 1)
   ///  ...
   ///
-  ///  If the pointers can be rearanged in the above pattern, it means that the
-  ///  memory can be accessed with a strided loads of width `w` and stride `%s`.
-  bool analyzeConstantStrideCandidate(ArrayRef<Value *> PointerOps,
-                                      Type *ElemTy, Align CommonAlignment,
-                                      SmallVectorImpl<unsigned> &SortedIndices,
-                                      int64_t Diff, Value *Ptr0, Value *PtrN,
+  ///  %b + (n - 1) * %s + 0
+  ///  %b + (n - 1) * %s + 1
+  ///  %b + (n - 1) * %s + 2
+  ///  ...
+  ///  %b + (n - 1) * %s + (w - 1)
+  ///
+  /// In this case we will generate a strided load of type `<n x (k * w)>`.
+  ///
+  /// \param PointerOps list of pointer arguments of loads.
+  /// \param ElemTy original scalar type of loads.
+  /// \param Alignment alignment of the first load.
+  /// \param SortedIndices is the order of PointerOps as returned by `sortPtrAccesses`
+  /// \param Diff Pointer difference between the lowest and the highes pointer in `PointerOps` as returned by `getPointersDiff`.
+  /// \param Ptr0 first pointer in `PointersOps`.
+  /// \param PtrN last pointer in `PointersOps`.
+  /// \param SPtrInfo If the function return `true`, it also sets all the fields
+  /// of `SPtrInfo` necessary to generate the strided load later.
+  bool analyzeConstantStrideCandidate(const ArrayRef<Value *> PointerOps,
+                                      Type *ElemTy, Align Alignment,
+                                      const SmallVectorImpl<unsigned> &SortedIndices,
+                                      const int64_t Diff, Value *Ptr0, Value *PtrN,
                                       StridedPtrInfo &SPtrInfo) const;
 
   /// Return true if an array of scalar loads can be replaced with a strided
@@ -6891,8 +6909,8 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
-    ArrayRef<Value *> PointerOps, Type *ElemTy, Align CommonAlignment,
-    SmallVectorImpl<unsigned> &SortedIndices, int64_t Diff, Value *Ptr0,
+    const ArrayRef<Value *> PointerOps, Type *ElemTy, Align CommonAlignment,
+    const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff, Value *Ptr0,
     Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const unsigned Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase;
