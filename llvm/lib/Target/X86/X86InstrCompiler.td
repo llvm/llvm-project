@@ -753,9 +753,6 @@ let hasSideEffects = 1,
     defm CTSELECT_I386_FP64 : CTSELECT_I386_INITIAL<RFP64, f64>;
 
   defm CTSELECT_I386_FP80 : CTSELECT_I386_INITIAL<RFP80, f80>;
-
-  let Predicates = [HasMMX] in
-    defm CTSELECT_VR64   : CTSELECT_I386_INITIAL<VR64, x86mmx>;
 }
 
 // Pattern matching for non-native-CMOV CTSELECT (routes to custom inserter for condition materialization)

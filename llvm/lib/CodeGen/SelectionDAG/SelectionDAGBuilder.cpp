@@ -6834,7 +6834,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::ct_select: {
-
     SDLoc DL = getCurSDLoc();
 
     SDValue Cond = getValue(I.getArgOperand(0)); // i1

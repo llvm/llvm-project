@@ -38033,11 +38033,13 @@ static MachineBasicBlock *emitCTSelectI386WithConditionMaterialization(
   Register TmpMaskReg;
 
   // Determine the register class for tmp_mask based on the data type
-  if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR8rr ||
-      InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR16rr ||
-      InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR32rr) {
+  if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR8rr)
+    TmpMaskReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+  else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR16rr)
+    TmpMaskReg = MRI.createVirtualRegister(&X86::GR16RegClass);
+  else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR32rr)
     TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-  } else {
+  else {
     llvm_unreachable("Unknown internal pseudo opcode");
   }
 
@@ -38075,139 +38077,109 @@ static MachineBasicBlock *emitCTSelectI386WithFpType(MachineInstr &MI,
   Register CondByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
   BuildMI(*BB, MI, MIMD, TII->get(X86::SETCCr), CondByteReg).addImm(OppCC);
 
-  // Create mask from condition: 0x00000000 or 0xFFFFFFFF
-  unsigned MaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-  unsigned ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-
-  // Zero-extend i8 condition to i32
-  BuildMI(*BB, MI, MIMD, TII->get(X86::MOVZX32rr8), ExtReg)
-      .addReg(CondByteReg, RegState::Kill);
-
-  // Negate to create mask
-  BuildMI(*BB, MI, MIMD, TII->get(X86::NEG32r), MaskReg)
-      .addReg(ExtReg, RegState::Kill);
-
-  // Create inverted mask
-  unsigned InvMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-  BuildMI(*BB, MI, MIMD, TII->get(X86::NOT32r), InvMaskReg).addReg(MaskReg);
-
   auto storeFpToSlot = [&](unsigned Opcode, int Slot, Register Reg) {
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(Opcode)), Slot)
         .addReg(Reg, RegState::Kill);
   };
 
-  auto emitCtSelect = [&](unsigned NumValues, int TrueSlot, int FalseSlot,
-                          int ResultSlot, bool KillMaskRegs) {
+  auto emitCtSelectWithPseudo = [&](unsigned NumValues, int TrueSlot, int FalseSlot, int ResultSlot) {
     for (unsigned Val = 0; Val < NumValues; ++Val) {
       unsigned Offset = Val * RegSizeInByte;
-      unsigned TrueReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), TrueReg)
+      
+      // Load true and false values from stack as 32-bit integers
+      unsigned TrueIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), TrueIntReg)
           .addFrameIndex(TrueSlot)
           .addImm(1)
           .addReg(0)
           .addImm(Offset)
           .addReg(0);
 
-      unsigned FalseReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), FalseReg)
+      unsigned FalseIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32rm), FalseIntReg)
           .addFrameIndex(FalseSlot)
           .addImm(1)
           .addReg(0)
           .addImm(Offset)
           .addReg(0);
 
-      unsigned MaskedTrueReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      unsigned MaskedFalseReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-      unsigned ResultReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      // Use CTSELECT_I386_INT_GR32 pseudo instruction for constant-time selection
+      unsigned ResultIntReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      unsigned TmpByteReg = MRI.createVirtualRegister(&X86::GR8RegClass);
+      unsigned TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      
+      BuildMI(*BB, MI, MIMD, TII->get(X86::CTSELECT_I386_INT_GR32rr))
+          .addDef(ResultIntReg)     // dst (output)
+          .addDef(TmpByteReg)       // tmp_byte (output)
+          .addDef(TmpMaskReg)       // tmp_mask (output)
+          .addReg(FalseIntReg)      // src1 (input) - false value
+          .addReg(TrueIntReg)       // src2 (input) - true value
+          .addReg(CondByteReg);     // pre-materialized condition byte (input)
 
-      bool KillMasksNow = KillMaskRegs && Val + 1 == NumValues;
-
-      auto TrueMIB =
-          BuildMI(*BB, MI, MIMD, TII->get(X86::AND32rr), MaskedTrueReg);
-      TrueMIB.addReg(TrueReg, RegState::Kill);
-      if (KillMasksNow)
-        TrueMIB.addReg(MaskReg, RegState::Kill);
-      else
-        TrueMIB.addReg(MaskReg);
-
-      auto FalseMIB =
-          BuildMI(*BB, MI, MIMD, TII->get(X86::AND32rr), MaskedFalseReg);
-      FalseMIB.addReg(FalseReg, RegState::Kill);
-      if (KillMasksNow)
-        FalseMIB.addReg(InvMaskReg, RegState::Kill);
-      else
-        FalseMIB.addReg(InvMaskReg);
-
-      BuildMI(*BB, MI, MIMD, TII->get(X86::OR32rr), ResultReg)
-          .addReg(MaskedTrueReg, RegState::Kill)
-          .addReg(MaskedFalseReg, RegState::Kill);
-
+      // Store result back to result slot
       BuildMI(*BB, MI, MIMD, TII->get(X86::MOV32mr))
           .addFrameIndex(ResultSlot)
           .addImm(1)
           .addReg(0)
           .addImm(Offset)
           .addReg(0)
-          .addReg(ResultReg, RegState::Kill);
+          .addReg(ResultIntReg, RegState::Kill);
     }
   };
 
   switch (pseudoInstr) {
   case X86::CTSELECT_I386_FP32rr: {
-
-    // Allocate stack slot for result (4 bytes for f32)
+    // Allocate stack slots (4 bytes for f32)
     int ResultSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
     int TrueSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
     int FalseSlot = MFI.CreateStackObject(RegSizeInByte, Align(4), false);
 
-    // Store f32 to stack using pseudo instruction (ST_Fp32m will be handled by
-    // FP stackifier)
+    // Store f32 values to stack
     storeFpToSlot(X86::ST_Fp32m, TrueSlot, TrueReg);
     storeFpToSlot(X86::ST_Fp32m, FalseSlot, FalseReg);
 
-    emitCtSelect(1, TrueSlot, FalseSlot, ResultSlot, true);
+    // Use pseudo instruction for selection (1 x 32-bit value)
+    emitCtSelectWithPseudo(1, TrueSlot, FalseSlot, ResultSlot);
 
-    // Load as f32 to x87 stack using pseudo instruction
+    // Load result back as f32
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp32m), DestReg),
                       ResultSlot);
     break;
   }
   case X86::CTSELECT_I386_FP64rr: {
     unsigned StackSlotSize = 8;
-    // Allocate stack slots for temporaries (8 bytes for f64)
+    // Allocate stack slots (8 bytes for f64)
     int TrueSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
     int FalseSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
     int ResultSlot = MFI.CreateStackObject(StackSlotSize, Align(4), false);
 
-    // Store x87 values to stack using pseudo instruction
-    // ST_Fp64m will be handled by the FP stackifier
+    // Store f64 values to stack
     storeFpToSlot(X86::ST_Fp64m, TrueSlot, TrueReg);
     storeFpToSlot(X86::ST_Fp64m, FalseSlot, FalseReg);
 
-    emitCtSelect(StackSlotSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot, true);
+    // Use pseudo instruction for selection (2 x 32-bit values)
+    emitCtSelectWithPseudo(StackSlotSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot);
 
-    // Load final f64 result back to x87 stack using pseudo instruction
+    // Load result back as f64
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp64m), DestReg),
                       ResultSlot);
     break;
   }
   case X86::CTSELECT_I386_FP80rr: {
-    // Allocate stack slots for temporaries
-    unsigned StackObjctSize = 12;
-    int TrueSlot = MFI.CreateStackObject(
-      StackObjctSize, Align(4), false); // 80-bit = 10 bytes, aligned to 12
-    int FalseSlot = MFI.CreateStackObject(StackObjctSize, Align(4), false);
-    int ResultSlot = MFI.CreateStackObject(StackObjctSize, Align(4), false);
+    // Allocate stack slots (12 bytes for f80 - 80-bit = 10 bytes, aligned to 12)
+    unsigned StackObjectSize = 12;
+    int TrueSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+    int FalseSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
+    int ResultSlot = MFI.CreateStackObject(StackObjectSize, Align(4), false);
 
-    // Store x87 values to stack using pseudo instruction
-    // ST_FpP80m will be handled by the FP stackifier
+    // Store f80 values to stack
     storeFpToSlot(X86::ST_FpP80m, TrueSlot, TrueReg);
     storeFpToSlot(X86::ST_FpP80m, FalseSlot, FalseReg);
 
-    // Process 3 x i32 parts (bytes 0-3, 4-7, 8-11)
-    emitCtSelect(StackObjctSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot, true);
+    // Use pseudo instruction for selection (3 x 32-bit values)
+    emitCtSelectWithPseudo(StackObjectSize/RegSizeInByte, TrueSlot, FalseSlot, ResultSlot);
 
-    // Load final f80 result back to x87 stack using pseudo instruction
+    // Load result back as f80
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::LD_Fp80m), DestReg),
                       ResultSlot);
     break;
@@ -38300,10 +38272,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP64rr);
   case X86::CTSELECT_I386_FP80rr:
     return emitCTSelectI386WithFpType(MI, BB, X86::CTSELECT_I386_FP80rr);
-  case X86::CTSELECT_VR64rr:
-    return EmitLoweredSelect(
-        MI, BB); // TODO: Implement this to generate for Constant time version
-
+    
   case X86::FP80_ADDr:
   case X86::FP80_ADDm32: {
     // Change the floating point control register to use double extended
