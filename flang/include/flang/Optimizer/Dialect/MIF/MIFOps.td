@@ -117,13 +117,12 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
 // Synchronization
 //===----------------------------------------------------------------------===//
 
-def mif_SyncAllOp : mif_Op<"sync_all", [AttrSizedOperandSegments,
-                                        MemoryEffects<[MemWrite]>]> {
+def mif_SyncAllOp : mif_Op<"sync_all", [AttrSizedOperandSegments]> {
   let summary =
       "Performs a collective synchronization of all images in the current team";
 
-  let arguments = (ins Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Optional<AnyReferenceLike>:$stat,
+                       Optional<AnyRefOrBoxType>:$errmsg);
   let assemblyFormat = [{
     (`stat` $stat^ )?
     (`errmsg` $errmsg^ )? 
@@ -131,8 +130,7 @@ def mif_SyncAllOp : mif_Op<"sync_all", [AttrSizedOperandSegments,
   }];
 }
 
-def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments,
-                                              MemoryEffects<[MemWrite]>]> {
+def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments]> {
   let summary = "Performs a synchronization of image with each of the other "
                 "images in the `image_set`";
   let description = [{
@@ -141,9 +139,9 @@ def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments,
     adopt the behavior of the Fortran statement `SYNC IMAGES(*)`.
   }];
 
-  let arguments = (ins Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$image_set,
-                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Optional<AnyRefOrBoxType>:$image_set,
+                       Optional<AnyReferenceLike>:$stat,
+                       Optional<AnyRefOrBoxType>:$errmsg);
   let hasVerifier = 1;
   let assemblyFormat = [{
     (`image_set` $image_set^ )? 
@@ -153,16 +151,15 @@ def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments,
   }];
 }
 
-def mif_SyncMemoryOp : mif_Op<"sync_memory", [AttrSizedOperandSegments,
-                                              MemoryEffects<[MemWrite]>]> {
+def mif_SyncMemoryOp : mif_Op<"sync_memory", [AttrSizedOperandSegments]> {
   let summary = "Operation that ends one segment and begins another.";
   let description = [{
     Operation that ends one segment and begins another; Those two segments can 
     be ordered by user-defined way with respect to segments on other images.
   }];
 
-  let arguments = (ins Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let arguments = (ins Optional<AnyReferenceLike>:$stat,
+                       Optional<AnyRefOrBoxType>:$errmsg);
   let assemblyFormat = [{
     (`stat` $stat^ )?
     (`errmsg` $errmsg^ )? 
