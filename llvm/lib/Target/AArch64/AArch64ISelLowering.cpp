@@ -26193,21 +26193,10 @@ static SDValue performFlagSettingCombine(SDNode *N,
   }
 
   // Combine equivalent generic nodes into this node, re-using the result.
-  auto CombineToExistingGeneric = [&](SDValue Op0, SDValue Op1) {
-    if (SDNode *Generic = DCI.DAG.getNodeIfExists(
-            GenericOpcode, DCI.DAG.getVTList(VT), {Op0, Op1})) {
-      DCI.CombineTo(Generic, SDValue(N, 0));
-      return true;
-    }
-    return false;
-  };
-
-  if (CombineToExistingGeneric(LHS, RHS))
-    return SDValue();
-
-  if (DCI.DAG.getTargetLoweringInfo().isCommutativeBinOp(GenericOpcode) &&
-      CombineToExistingGeneric(RHS, LHS))
-    return SDValue();
+  if (SDNode *Generic = DCI.DAG.getNodeIfExists(
+          GenericOpcode, DCI.DAG.getVTList(VT), {LHS, RHS},
+          /*AllowCommute=*/true))
+    DCI.CombineTo(Generic, SDValue(N, 0));
 
   return SDValue();
 }
