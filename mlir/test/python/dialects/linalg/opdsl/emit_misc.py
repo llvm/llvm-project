@@ -38,6 +38,7 @@ def elemwise_unary_poly_cast(
 ):
     O[None] = fun(cast(U, I[None]))
 
+
 @linalg_structured_op
 def elemwise_unary_poly(
     I=TensorDef(T),
@@ -199,7 +200,9 @@ with Context() as ctx, Location.unknown():
             RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), c32)
         )
         def test_c32_elemwise_conj(input, init_result):
-            return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.conj, cast=None)
+            return elemwise_unary_poly(
+                input, outs=[init_result], fun=UnaryFn.conj, cast=None
+            )
 
         # Just check that we don't assert out on name mismatch.
         # CHECK-LABEL: @test_non_default_op_name
