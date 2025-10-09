@@ -3573,11 +3573,10 @@ static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
 }
 
 template <class ELFT>
-static std::string getSectionHeadersNumString(const ELFFile<ELFT> &Obj,
+static std::string getProgramHeadersNumString(const ELFFile<ELFT> &Obj,
                                               StringRef FileName) {
-  const typename ELFT::Ehdr &ElfHeader = Obj.getHeader();
-  if (ElfHeader.e_shnum != 0)
-    return to_string(ElfHeader.e_shnum);
+  if (Obj.getHeader().e_phnum != ELF::PN_XNUM)
+    return to_string(Obj.getHeader().e_phnum);
 
   Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
   if (!ArrOrErr) {
@@ -3587,17 +3586,35 @@ static std::string getSectionHeadersNumString(const ELFFile<ELFT> &Obj,
     return "<?>";
   }
 
-  if (ArrOrErr->empty())
+  if (Obj.getHeader().e_phnum == Obj.getPhNum())
+    return "65535";
+  return "65535 (" + to_string(Obj.getPhNum()) + ")";
+}
+
+template <class ELFT>
+static std::string getSectionHeadersNumString(const ELFFile<ELFT> &Obj,
+                                              StringRef FileName) {
+  if (Obj.getHeader().e_shnum != 0)
+    return to_string(Obj.getHeader().e_shnum);
+
+  Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
+  if (!ArrOrErr) {
+    // In this case we can ignore an error, because we have already reported a
+    // warning about the broken section header table earlier.
+    consumeError(ArrOrErr.takeError());
+    return "<?>";
+  }
+
+  if (Obj.getHeader().e_shnum == Obj.getShNum())
     return "0";
-  return "0 (" + to_string((*ArrOrErr)[0].sh_size) + ")";
+  return "0 (" + to_string(Obj.getShNum()) + ")";
 }
 
 template <class ELFT>
 static std::string getSectionHeaderTableIndexString(const ELFFile<ELFT> &Obj,
                                                     StringRef FileName) {
-  const typename ELFT::Ehdr &ElfHeader = Obj.getHeader();
-  if (ElfHeader.e_shstrndx != SHN_XINDEX)
-    return to_string(ElfHeader.e_shstrndx);
+  if (Obj.getHeader().e_shstrndx != SHN_XINDEX)
+    return to_string(Obj.getHeader().e_shstrndx);
 
   Expected<ArrayRef<typename ELFT::Shdr>> ArrOrErr = Obj.sections();
   if (!ArrOrErr) {
@@ -3607,10 +3624,9 @@ static std::string getSectionHeaderTableIndexString(const ELFFile<ELFT> &Obj,
     return "<?>";
   }
 
-  if (ArrOrErr->empty())
+  if (Obj.getHeader().e_shstrndx == Obj.getShStrNdx())
     return "65535 (corrupt: out of range)";
-  return to_string(ElfHeader.e_shstrndx) + " (" +
-         to_string((*ArrOrErr)[0].sh_link) + ")";
+  return "65535 (" + to_string(Obj.getShStrNdx()) + ")";
 }
 
 static const EnumEntry<unsigned> *getObjectFileEnumEntry(unsigned Type) {
@@ -3765,7 +3781,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   printFields(OS, "Size of this header:", Str);
   Str = to_string(e.e_phentsize) + " (bytes)";
   printFields(OS, "Size of program headers:", Str);
-  Str = to_string(e.e_phnum);
+  Str = getProgramHeadersNumString(this->Obj, this->FileName);
   printFields(OS, "Number of program headers:", Str);
   Str = to_string(e.e_shentsize) + " (bytes)";
   printFields(OS, "Size of section headers:", Str);
@@ -4778,8 +4794,7 @@ void GNUELFDumper<ELFT>::printProgramHeaders(
     return;
 
   if (PrintProgramHeaders) {
-    const Elf_Ehdr &Header = this->Obj.getHeader();
-    if (Header.e_phnum == 0) {
+    if (this->Obj.getPhNum() == 0) {
       OS << "\nThere are no program headers in this file.\n";
     } else {
       printProgramHeaders();
@@ -4798,7 +4813,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printProgramHeaders() {
   OS << "\nElf file type is "
      << enumToString(Header.e_type, ArrayRef(ElfObjectFileType)) << "\n"
      << "Entry point " << format_hex(Header.e_entry, 3) << "\n"
-     << "There are " << Header.e_phnum << " program headers,"
+     << "There are " << this->Obj.getPhNum() << " program headers,"
      << " starting at offset " << Header.e_phoff << "\n\n"
      << "Program Headers:\n";
   if (ELFT::Is64Bits)
@@ -7470,7 +7485,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);
     W.printNumber("ProgramHeaderEntrySize", E.e_phentsize);
-    W.printNumber("ProgramHeaderCount", E.e_phnum);
+    W.printString("ProgramHeaderCount",
+                  getProgramHeadersNumString(this->Obj, this->FileName));
     W.printNumber("SectionHeaderEntrySize", E.e_shentsize);
     W.printString("SectionHeaderCount",
                   getSectionHeadersNumString(this->Obj, this->FileName));
