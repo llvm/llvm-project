@@ -7,7 +7,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-@skipIf(bugnumber = "rdar://160698178")
 class TestTrampoline(TestBase):
     def setup(self, bkpt_str):
         self.build()
@@ -101,4 +100,4 @@ class TestTrampoline(TestBase):
         thread.StepInto()
         name = thread.frames[0].GetFunctionName()
         self.assertIn('unused_target', name)
-        
+
