@@ -839,8 +839,11 @@ public:
   /// Return true if the variant with 2 variable shifts is preferred.
   /// Return false if there is no preference.
   virtual bool shouldFoldMaskToVariableShiftPair(SDValue X) const {
-    // By default, let's assume that no one prefers shifts.
-    return false;
+    // By default, let's assume that no one prefers shifts for vectors
+    EVT VT = X.getValueType();
+
+    // Prefer shifts for legal types
+    return isOperationLegal(ISD::SHL, VT);
   }
 
   /// Return true if it is profitable to fold a pair of shifts into a mask.
