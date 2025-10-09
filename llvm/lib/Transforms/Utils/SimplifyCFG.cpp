@@ -5959,7 +5959,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
-    for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
+    unsigned E = PreviousEdges - 1;
+    // Remove all incoming values from OtherDest if OtherDest is unreachable.
+    if (NewBI->isUnconditional())
+      ++E;
+    for (unsigned I = 0; I != E; ++I)
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
   }
 
