@@ -151,6 +151,25 @@ public:
 
   TracebackLoc &getTracebackLoc() { return tracebackLoc; }
 
+  class TypeIDAllocator {
+  public:
+    TypeIDAllocator() : allocator(mlirTypeIDAllocatorCreate()) {}
+    ~TypeIDAllocator() {
+      if (!allocator.ptr)
+        mlirTypeIDAllocatorDestroy(allocator);
+    }
+
+    MlirTypeIDAllocator get() { return allocator; }
+    MlirTypeID allocate() {
+      return mlirTypeIDAllocatorAllocateTypeID(allocator);
+    }
+
+  private:
+    MlirTypeIDAllocator allocator;
+  };
+
+  MlirTypeID allocateTypeID() { return typeIDAllocator.allocate(); }
+
 private:
   static PyGlobals *instance;
 
@@ -173,6 +192,7 @@ private:
   llvm::StringSet<> loadedDialectModules;
 
   TracebackLoc tracebackLoc;
+  TypeIDAllocator typeIDAllocator;
 };
 
 } // namespace python

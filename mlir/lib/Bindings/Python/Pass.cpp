@@ -8,6 +8,7 @@
 
 #include "Pass.h"
 
+#include "Globals.h"
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
 // clang-format off
@@ -51,23 +52,6 @@ public:
 private:
   MlirPassManager passManager;
 };
-
-class PyTypeIDAllocator {
-public:
-  PyTypeIDAllocator() : allocator(mlirTypeIDAllocatorCreate()) {}
-  ~PyTypeIDAllocator() {
-    if (!allocator.ptr)
-      mlirTypeIDAllocatorDestroy(allocator);
-  }
-
-  MlirTypeIDAllocator get() { return allocator; }
-  MlirTypeID allocate() { return mlirTypeIDAllocatorAllocateTypeID(allocator); }
-
-private:
-  MlirTypeIDAllocator allocator;
-};
-
-PyTypeIDAllocator globalTypeIDAllocator;
 
 } // namespace
 
@@ -198,7 +182,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               name = nb::cast<std::string>(
                   nb::borrow<nb::str>(run.attr("__name__")));
             }
-            MlirTypeID passID = globalTypeIDAllocator.allocate();
+            MlirTypeID passID = PyGlobals::get().allocateTypeID();
             MlirExternalPassCallbacks callbacks;
             callbacks.construct = [](void *obj) {
               (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
