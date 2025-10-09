@@ -30,7 +30,9 @@ namespace {
 class TestableEmbedder : public Embedder {
 public:
   TestableEmbedder(const Function &F, const Vocabulary &V) : Embedder(F, V) {}
-  Embedding computeEmbeddings(const Instruction &I) const override {}
+  Embedding computeEmbeddings(const Instruction &I) const override {
+    return Embedding();
+  }
 };
 
 TEST(EmbeddingTest, ConstructorsAndAccessors) {
