@@ -111,7 +111,7 @@ static void CheckPassGlobalVariable(
       if (!actualIsArrayElement) {
         warn = true;
       }
-      if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+      if (const ArraySpec *dims{actualFirstSymbol->GetUltimate().GetShape()};
           dims && dims->IsExplicitShape()) {
         // tricky way to check that array has only one element
         if (!((*dims)[0].lbound().GetExplicit() ==

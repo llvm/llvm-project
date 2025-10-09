@@ -453,8 +453,6 @@ bool Symbol::IsFuncResult() const {
 const ArraySpec *Symbol::GetShape() const {
   if (const auto *details{std::get_if<ObjectEntityDetails>(&details_)}) {
     return &details->shape();
-  } else if (const auto *details{std::get_if<UseDetails>(&details_)}) {
-    return details->symbol().GetShape();
   } else {
     return nullptr;
   }
