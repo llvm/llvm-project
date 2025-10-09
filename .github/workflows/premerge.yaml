@@ -82,7 +82,7 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          # The linux-premerge runnres are hosted on GCP and have a different
+          # The linux-premerge runners are hosted on GCP and have a different
           # cache setup than the depot runners.
           if [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
             # This environment variable is passes into the container through the
