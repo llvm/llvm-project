@@ -99,3 +99,13 @@ define i32 @ptrtoaddr_gep_sub_addrsize() {
 ;
   ret i32 ptrtoaddr (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g.as1, i32 sub (i32 0, i32 ptrtoaddr (ptr addrspace(1) @g2.as1 to i32))) to i32)
 }
+
+; Don't fold inttoptr of ptrtoaddr away. inttoptr will pick a previously
+; exposed provenance, which is not necessarily that of @g (especially as
+; ptrtoaddr does not expose the provenance.)
+define ptr @inttoptr_of_ptrtoaddr() {
+; CHECK-LABEL: define ptr @inttoptr_of_ptrtoaddr() {
+; CHECK-NEXT:    ret ptr inttoptr (i64 ptrtoaddr (ptr @g to i64) to ptr)
+;
+  ret ptr inttoptr (i64 ptrtoaddr (ptr @g to i64) to ptr)
+}
