@@ -1244,7 +1244,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         break;
     }
 
-    D.takeAttributesAppend(Attributes);
+    D.takeAttributesAppending(Attributes);
   }
 
   MultiParseScope TemplateParamScope(*this);

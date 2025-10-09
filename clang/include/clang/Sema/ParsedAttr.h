@@ -856,19 +856,19 @@ public:
     friend class ParsedAttributesView;
   };
 
-  void prependAll(iterator B, iterator E) {
+  void prepend(iterator B, iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void prependAll(const_iterator B, const_iterator E) {
+  void prepend(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void appendAll(iterator B, iterator E) {
+  void append(iterator B, iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
-  void appendAll(const_iterator B, const_iterator E) {
+  void append(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
@@ -946,7 +946,7 @@ public:
   void takeAllPrependingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    prependAll(Other.begin(), Other.end());
+    prepend(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
@@ -954,7 +954,7 @@ public:
   void takeAllAppendingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    appendAll(Other.begin(), Other.end());
+    append(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }

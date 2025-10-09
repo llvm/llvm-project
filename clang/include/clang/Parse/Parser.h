@@ -2173,7 +2173,7 @@ private:
     if (Tok.is(tok::kw___attribute)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
-      D.takeAttributesAppend(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2272,7 +2272,7 @@ private:
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);
       ParseCXX11Attributes(Attrs);
-      D.takeAttributesAppend(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -5175,7 +5175,7 @@ private:
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
-      D.takeAttributesAppend(Attrs);
+      D.takeAttributesAppending(Attrs);
       return true;
     }
     return false;
