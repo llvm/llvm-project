@@ -147,8 +147,7 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
       {"string.h", "cstring"}, {"time.h", "ctime"},
       {"wchar.h", "cwchar"},   {"wctype.h", "cwctype"},
   };
-  for (const auto &KeyValue : CXX98Headers)
-    CStyledHeaderToCxx.insert(KeyValue);
+  CStyledHeaderToCxx.insert(std::begin(CXX98Headers), std::end(CXX98Headers));
 
   static constexpr std::pair<StringRef, StringRef> CXX11Headers[] = {
       {"fenv.h", "cfenv"},         {"stdint.h", "cstdint"},
@@ -156,13 +155,11 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
       {"uchar.h", "cuchar"},
   };
   if (LangOpts.CPlusPlus11)
-    for (const auto &KeyValue : CXX11Headers)
-      CStyledHeaderToCxx.insert(KeyValue);
+    CStyledHeaderToCxx.insert(std::begin(CXX11Headers), std::end(CXX11Headers));
 
   static constexpr StringRef HeadersToDelete[] = {"stdalign.h", "stdbool.h",
                                                   "iso646.h"};
-  for (const auto &Key : HeadersToDelete)
-    DeleteHeaders.insert(Key);
+  DeleteHeaders.insert_range(HeadersToDelete);
 }
 
 void IncludeModernizePPCallbacks::InclusionDirective(
