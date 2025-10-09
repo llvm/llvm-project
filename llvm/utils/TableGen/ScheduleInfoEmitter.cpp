@@ -40,6 +40,7 @@ private:
   json::Object emitWriteResInfo(const Record *WriteDef, const Record *WriteRes,
                                  const CodeGenProcModel &ProcModel);
   json::Object emitProcModelInfo(const CodeGenProcModel &ProcModel);
+  json::Object emitInstructionMappings(const CodeGenProcModel &ProcModel);
   unsigned getNumUnitsInGroup(const Record *ProcResGroup);
 };
 
@@ -109,6 +110,9 @@ json::Object ScheduleInfoEmitter::emitProcModelInfo(
 
   ProcInfo["Resources"] = std::move(Resources);
 
+  // Add instruction to scheduling class mappings
+  ProcInfo["InstructionMappings"] = emitInstructionMappings(ProcModel);
+
   return ProcInfo;
 }
 
@@ -172,6 +176,68 @@ json::Object ScheduleInfoEmitter::emitWriteResInfo(
   WriteInfo["NumMicroOps"] = WriteRes->getValueAsInt("NumMicroOps");
 
   return WriteInfo;
+}
+
+json::Object ScheduleInfoEmitter::emitInstructionMappings(
+    const CodeGenProcModel &ProcModel) {
+  json::Object Mappings;
+
+  // Iterate through all instructions in the target
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
+    // Skip instructions without a name
+    if (Inst->TheDef->getName().empty())
+      continue;
+
+    // Get the scheduling class index for this instruction
+    unsigned SchedClassIdx = SchedModels.getSchedClassIdx(*Inst);
+
+    // Get the scheduling class
+    const CodeGenSchedClass &SchedClass = SchedModels.getSchedClass(SchedClassIdx);
+
+    // Skip NoSchedule class (index 0)
+    if (SchedClassIdx == 0)
+      continue;
+
+    // Find the write definitions for this scheduling class
+    json::Array WriteDefs;
+
+    // For each write in the scheduling class
+    for (unsigned WriteID : SchedClass.Writes) {
+      const CodeGenSchedRW &SchedWrite = SchedModels.getSchedRW(WriteID, /*IsRead=*/false);
+
+      // Skip invalid or variadic writes
+      if (!SchedWrite.isValid() || SchedWrite.IsVariadic)
+        continue;
+
+      // Check if this write has resources defined for this processor
+      const Record *WriteDef = SchedWrite.TheDef;
+
+      // Look for processor-specific WriteRes mapping
+      auto I = ProcModel.WriteResMap.find(WriteDef);
+      if (I != ProcModel.WriteResMap.end()) {
+        WriteDefs.push_back(WriteDef->getName());
+      } else {
+        // Check for aliases
+        for (const Record *A : SchedWrite.Aliases) {
+          auto AI = ProcModel.WriteResMap.find(A);
+          if (AI != ProcModel.WriteResMap.end()) {
+            WriteDefs.push_back(A->getName());
+            break;
+          }
+        }
+      }
+    }
+
+    // If we found write definitions for this instruction, add the mapping
+    if (!WriteDefs.empty()) {
+      json::Object InstrInfo;
+      InstrInfo["SchedClass"] = SchedClass.Name;
+      InstrInfo["WriteDefs"] = std::move(WriteDefs);
+      Mappings[Inst->TheDef->getName()] = std::move(InstrInfo);
+    }
+  }
+
+  return Mappings;
 }
 
 unsigned ScheduleInfoEmitter::getNumUnitsInGroup(const Record *ProcRes) {
