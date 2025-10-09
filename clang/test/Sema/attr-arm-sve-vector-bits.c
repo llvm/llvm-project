@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=1 -mvscale-max=1 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=2 -mvscale-max=2 -mvscale-streaming-min=2 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected -mvscale-min=4 -mvscale-max=4 -mvscale-streaming-min=4 -mvscale-streaming-max=4 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=8 -mvscale-max=8 -mvscale-streaming-min=4 -mvscale-streaming-max=8 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=16 -mvscale-max=16 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=1 -mvscale-max=1 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=2 -mvscale-max=2 -mvscale-streaming-min=2 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected -mvscale-min=4 -mvscale-max=4 -mvscale-streaming-min=4 -mvscale-streaming-max=4 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=8 -mvscale-max=8 -mvscale-streaming-min=4 -mvscale-streaming-max=8 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=16 -mvscale-max=16 %s
 
 #include <stdint.h>
 

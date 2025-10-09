@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +dotprod  -target-feature +fullfp16 -target-feature +fp16fml -target-feature +i8mm -target-feature +bf16 -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +dotprod  -target-feature +fullfp16 -target-feature +fp16fml -target-feature +i8mm -target-feature +bf16 -verify -emit-llvm -o - %s
 
 // REQUIRES: aarch64-registered-target
 

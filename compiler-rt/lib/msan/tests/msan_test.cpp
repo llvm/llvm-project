@@ -4132,6 +4132,9 @@ typedef U4 V2x32 __attribute__((__vector_size__(8)));
 typedef U2 V4x16 __attribute__((__vector_size__(8)));
 typedef U1 V8x8 __attribute__((__vector_size__(8)));
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecate-lax-vec-conv-all"
+
 V8x16 shift_sse2_left_scalar(V8x16 x, U4 y) {
   return _mm_slli_epi16(x, y);
 }
@@ -4345,6 +4348,8 @@ TEST(VectorCmpTest, builtin_ia32_ucomisdlt) {
   c = __builtin_ia32_ucomisdlt(V2x64{1, Poisoned<U8>()}, V2x64{1, Poisoned<U8>()});
   EXPECT_NOT_POISONED(c);
 }
+
+#pragma clang diagnostic push
 
 #endif // defined(__x86_64__) && defined(__clang__)
 
