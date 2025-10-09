@@ -148,12 +148,6 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
   }
-
-  // This is a placeholder until EHCleanupScope is implemented.
-  size_t getSize() const override {
-    assert(!cir::MissingFeatures::ehCleanupScope());
-    return sizeof(CallBaseDtor);
-  }
 };
 
 /// A visitor which checks whether an initializer uses 'this' in a
