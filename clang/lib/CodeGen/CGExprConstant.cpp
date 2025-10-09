@@ -434,7 +434,7 @@ llvm::Constant *ConstantAggregateBuilder::buildFrom(
 
       // All remaining elements must be the same type.
       if (Elems[I]->getType() != CommonType ||
-          Offset(I) % ElemSize != 0) {
+          !Offset(I).isMultipleOf(ElemSize)) {
         CanEmitArray = false;
         break;
       }

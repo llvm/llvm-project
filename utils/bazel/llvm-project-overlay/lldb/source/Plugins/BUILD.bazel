@@ -1334,9 +1334,11 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
     ],
 )
 
@@ -1919,6 +1921,8 @@ cc_library(
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],

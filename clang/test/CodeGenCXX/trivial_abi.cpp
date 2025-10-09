@@ -283,9 +283,11 @@ static_assert(sizeof(S) == 8 && sizeof(S2) == 8, "");
 
 // CHECK: define{{.*}} @"_ZN3$_08__invokeEv"()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[CALL:.*]] = call{{.*}} @"_ZNK3$_0clEv"
-// CHECK: %[[RETVALDIVE:.*]] = getelementptr{{.*}} %[[RETVAL]]
+// CHECK: %[[COERCEDIVE:.*]] = getelementptr{{.*}} %[[COERCE]]
 // CHECK: %[[COERCEVALIP:.*]] = inttoptr{{.*}} %[[CALL]]
+// CHECK: call {{.*}}memcpy{{.*}} %[[RETVAL]]{{.*}} %[[COERCE]]
 // CHECK: %[[COERCEDIVE1:.*]] = getelementptr{{.*}} %[[RETVAL]]
 // CHECK: %[[TMP:.*]] = load{{.*}} %[[COERCEDIVE1]]
 // CHECK: %[[COERCEVALPI:.*]] = ptrtoint{{.*}} %[[TMP]]

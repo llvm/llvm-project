@@ -45,6 +45,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool doRsqrtOpt() const;
+  bool doMADWideOpt() const;
 
   NVPTXScopes Scopes{};
 
@@ -90,6 +91,7 @@ private:
                                            bool IsIm2Col = false);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
+  void selectAtomicSwap128(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);

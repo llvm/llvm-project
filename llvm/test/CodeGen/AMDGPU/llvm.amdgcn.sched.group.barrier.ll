@@ -678,8 +678,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[64:95], v1, v2, a[64:95]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v1, v2, a[32:63]
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 4
+; GCN-NEXT:    s_nop 12
 ; GCN-NEXT:    ds_write_b128 v0, a[156:159] offset:112
 ; GCN-NEXT:    ds_write_b128 v0, a[152:155] offset:96
 ; GCN-NEXT:    ds_write_b128 v0, a[148:151] offset:80
@@ -785,8 +784,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[64:95], v1, v2, a[64:95]
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v1, v2, a[32:63]
-; EXACTCUTOFF-NEXT:    s_nop 7
-; EXACTCUTOFF-NEXT:    s_nop 4
+; EXACTCUTOFF-NEXT:    s_nop 12
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[156:159] offset:112
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[152:155] offset:96
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[148:151] offset:80
@@ -890,8 +888,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    v_add_u32_e32 v0, s1, v0
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    ds_write_b128 v0, a[28:31] offset:112
 ; GCN-NEXT:    ds_write_b128 v0, a[24:27] offset:96
@@ -915,8 +912,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    ds_write_b128 v0, a[24:27] offset:8288
 ; GCN-NEXT:    ds_write_b128 v0, a[28:31] offset:8304
@@ -939,8 +935,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    ds_write_b128 v0, a[24:27] offset:16480
 ; GCN-NEXT:    ds_write_b128 v0, a[28:31] offset:16496
@@ -964,8 +959,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    ds_write_b128 v0, a[24:27] offset:24672
 ; GCN-NEXT:    ds_write_b128 v0, a[28:31] offset:24688
@@ -988,8 +982,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 2
 ; GCN-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
 ; GCN-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
@@ -1024,8 +1017,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    v_add_u32_e32 v0, s1, v0
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_nop 7
-; EXACTCUTOFF-NEXT:    s_nop 7
+; EXACTCUTOFF-NEXT:    s_nop 15
 ; EXACTCUTOFF-NEXT:    s_nop 1
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[28:31] offset:112
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[24:27] offset:96
@@ -1049,8 +1041,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_nop 7
-; EXACTCUTOFF-NEXT:    s_nop 7
+; EXACTCUTOFF-NEXT:    s_nop 15
 ; EXACTCUTOFF-NEXT:    s_nop 1
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[24:27] offset:8288
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[28:31] offset:8304
@@ -1073,8 +1064,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_nop 7
-; EXACTCUTOFF-NEXT:    s_nop 7
+; EXACTCUTOFF-NEXT:    s_nop 15
 ; EXACTCUTOFF-NEXT:    s_nop 2
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[24:27] offset:16480
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[28:31] offset:16496
@@ -1098,8 +1088,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_nop 7
-; EXACTCUTOFF-NEXT:    s_nop 7
+; EXACTCUTOFF-NEXT:    s_nop 15
 ; EXACTCUTOFF-NEXT:    s_nop 1
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[24:27] offset:24672
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[28:31] offset:24688
@@ -1122,8 +1111,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
-; EXACTCUTOFF-NEXT:    s_nop 7
-; EXACTCUTOFF-NEXT:    s_nop 7
+; EXACTCUTOFF-NEXT:    s_nop 15
 ; EXACTCUTOFF-NEXT:    s_nop 2
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
 ; EXACTCUTOFF-NEXT:    ds_write_b128 v0, a[28:31] offset:32880

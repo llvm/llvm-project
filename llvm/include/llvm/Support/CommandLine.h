@@ -69,6 +69,7 @@ namespace cl {
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr,
                                       bool LongOptionsUseDoubleDash = false);
 
@@ -1192,6 +1193,31 @@ public:
 
 //--------------------------------------------------
 
+template <>
+class LLVM_ABI parser<std::optional<std::string>>
+    : public basic_parser<std::optional<std::string>> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &, StringRef, StringRef Arg,
+             std::optional<std::string> &Value) {
+    Value = Arg.str();
+    return false;
+  }
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "optional string"; }
+
+  void printOptionDiff(const Option &O, std::optional<StringRef> V,
+                       const OptVal &Default, size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
 extern template class LLVM_TEMPLATE_ABI basic_parser<char>;
 
 template <> class LLVM_ABI parser<char> : public basic_parser<char> {
@@ -2192,7 +2218,8 @@ class ExpansionContext {
                                  SmallVectorImpl<const char *> &NewArgv);
 
 public:
-  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T);
+  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                            vfs::FileSystem *FS = nullptr);
 
   ExpansionContext &setMarkEOLs(bool X) {
     MarkEOLs = X;

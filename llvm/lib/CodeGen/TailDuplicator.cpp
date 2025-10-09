@@ -375,9 +375,8 @@ void TailDuplicator::processPHI(
   if (!Remove)
     return;
 
-  // Remove PredBB from the PHI node.
-  MI->removeOperand(SrcOpIdx + 1);
-  MI->removeOperand(SrcOpIdx);
+  MI->removePHIIncomingValueFor(*PredBB);
+
   if (MI->getNumOperands() == 1 && !TailBB->hasAddressTaken())
     MI->eraseFromParent();
   else if (MI->getNumOperands() == 1)
