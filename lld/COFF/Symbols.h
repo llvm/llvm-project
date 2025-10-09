@@ -237,7 +237,7 @@ public:
       : DefinedCOFF(DefinedCommonKind, f, n, s), data(c), size(size) {
     this->isExternal = true;
     if (c)
-      c->active = true;
+      c->live = true;
   }
 
   static bool classof(const Symbol *s) {

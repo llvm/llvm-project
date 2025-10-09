@@ -522,7 +522,7 @@ public:
   uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return ".bss"; }
 
-  bool active;
+  bool live;
 
 private:
   const COFFSymbolRef sym;

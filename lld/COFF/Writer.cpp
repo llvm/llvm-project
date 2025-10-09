@@ -1115,7 +1115,7 @@ void Writer::createSections() {
       continue;
     }
     if (auto *cc = dyn_cast<CommonChunk>(c)) {
-      if (!cc->active)
+      if (!cc->live)
         continue;
     }
     StringRef name = c->getSectionName();
