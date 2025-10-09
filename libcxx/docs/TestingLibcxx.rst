@@ -415,9 +415,6 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
    * - Directive
      - Parameters
      - Usage
-   * - ``%{temp}``
-     - N/A
-     - This directive points to a temporary directory unique to the test.
    * - ``FILE_DEPENDENCIES``
      - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
      - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. For example, a test that requires some test

@@ -261,6 +261,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{run}
             Equivalent to `%{exec} %t.exe`. This is intended to be used
             in conjunction with the %{build} substitution.
+
+        %{temp}
+            This substitution expands to a non-existent temporary path unique to the test.
+            It is typically used to create a temporary directory.
     """
 
     def getTestsForPath(self, testSuite, pathInSuite, litConfig, localConfig):
