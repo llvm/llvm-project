@@ -7,10 +7,10 @@
 ; state, and the block that determines the next state.
 ; < path of BBs that form a cycle > [ state, determinator ]
 define i32 @test1(i32 %num) !prof !0{
-; CHECK: < case2 for.inc for.body > [ 1, for.inc ]
-; CHECK-NEXT: < for.inc for.body > [ 1, for.inc ]
-; CHECK-NEXT: < case1 for.inc for.body > [ 2, for.inc ]
-; CHECK-NEXT: < case2 sel.si.unfold.false for.inc for.body > [ 2, sel.si.unfold.false ]
+; CHECK: < case2, for.inc, for.body > [ 1, for.inc ]
+; CHECK-NEXT: < for.inc, for.body > [ 1, for.inc ]
+; CHECK-NEXT: < case1, for.inc, for.body > [ 2, for.inc ]
+; CHECK-NEXT: < case2, sel.si.unfold.false, for.inc, for.body > [ 2, sel.si.unfold.false ]
 entry:
   br label %for.body
 
@@ -47,12 +47,12 @@ for.end:
 ; complicated CFG. Here the FSM is represented as a nested loop, with
 ; fallthrough cases.
 define i32 @test2(i32 %init) {
-; CHECK: < loop.1.backedge loop.1 loop.2 loop.3 > [ 1, loop.1 ]
-; CHECK-NEXT: < case4 loop.1.backedge state.1.be2.si.unfold.false loop.1 loop.2 loop.3 > [ 2, loop.1.backedge ]
-; CHECK-NEXT: < case2 loop.1.backedge state.1.be2.si.unfold.false loop.1 loop.2 loop.3 > [ 4, loop.1.backedge ]
-; CHECK-NEXT: < case4 loop.2.backedge loop.2 loop.3 > [ 3, loop.2.backedge ]
-; CHECK-NEXT: < case3 loop.2.backedge loop.2 loop.3 > [ 0, loop.2.backedge ]
-; CHECK-NEXT: < case2 loop.3 > [ 3, loop.3 ]
+; CHECK: < loop.1.backedge, loop.1, loop.2, loop.3 > [ 1, loop.1 ]
+; CHECK-NEXT: < case4, loop.1.backedge, state.1.be2.si.unfold.false, loop.1, loop.2, loop.3 > [ 2, loop.1.backedge ]
+; CHECK-NEXT: < case2, loop.1.backedge, state.1.be2.si.unfold.false, loop.1, loop.2, loop.3 > [ 4, loop.1.backedge ]
+; CHECK-NEXT: < case4, loop.2.backedge, loop.2, loop.3 > [ 3, loop.2.backedge ]
+; CHECK-NEXT: < case3, loop.2.backedge, loop.2, loop.3 > [ 0, loop.2.backedge ]
+; CHECK-NEXT: < case2, loop.3 > [ 3, loop.3 ]
 entry:
   %cmp = icmp eq i32 %init, 0
   %sel = select i1 %cmp, i32 0, i32 2
@@ -187,12 +187,12 @@ bb66:                                             ; preds = %bb59
 
 ; Value %init is not predictable but it's okay since it is the value initial to the switch.
 define i32 @initial.value.positive1(i32 %init) !prof !0 {
-; CHECK: < loop.1.backedge loop.1 loop.2 loop.3 > [ 1, loop.1 ]
-; CHECK-NEXT: < case4 loop.1.backedge state.1.be2.si.unfold.false loop.1 loop.2 loop.3 > [ 2, loop.1.backedge ]
-; CHECK-NEXT: < case2 loop.1.backedge state.1.be2.si.unfold.false loop.1 loop.2 loop.3 > [ 4, loop.1.backedge ]
-; CHECK-NEXT: < case4 loop.2.backedge loop.2 loop.3 > [ 3, loop.2.backedge ]
-; CHECK-NEXT: < case3 loop.2.backedge loop.2 loop.3 > [ 0, loop.2.backedge ]
-; CHECK-NEXT: < case2 loop.3 > [ 3, loop.3 ]
+; CHECK: < loop.1.backedge, loop.1, loop.2, loop.3 > [ 1, loop.1 ]
+; CHECK-NEXT: < case4, loop.1.backedge, state.1.be2.si.unfold.false, loop.1, loop.2, loop.3 > [ 2, loop.1.backedge ]
+; CHECK-NEXT: < case2, loop.1.backedge, state.1.be2.si.unfold.false, loop.1, loop.2, loop.3 > [ 4, loop.1.backedge ]
+; CHECK-NEXT: < case4, loop.2.backedge, loop.2, loop.3 > [ 3, loop.2.backedge ]
+; CHECK-NEXT: < case3, loop.2.backedge, loop.2, loop.3 > [ 0, loop.2.backedge ]
+; CHECK-NEXT: < case2, loop.3 > [ 3, loop.3 ]
 entry:
   %cmp = icmp eq i32 %init, 0
   br label %loop.1

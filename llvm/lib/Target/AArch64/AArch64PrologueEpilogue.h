@@ -27,10 +27,22 @@ class AArch64Subtarget;
 class AArch64FunctionInfo;
 class AArch64FrameLowering;
 
+struct SVEFrameSizes {
+  struct {
+    StackOffset CalleeSavesSize, LocalsSize;
+  } PPR, ZPR;
+};
+
 class AArch64PrologueEpilogueCommon {
 public:
   AArch64PrologueEpilogueCommon(MachineFunction &MF, MachineBasicBlock &MBB,
                                 const AArch64FrameLowering &AFL);
+
+  enum class SVEStackLayout {
+    Default,
+    Split,
+    CalleeSavesAboveFrameRecord,
+  };
 
 protected:
   bool requiresGetVGCall() const;
@@ -53,6 +65,8 @@ protected:
 
   bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
 
+  SVEFrameSizes getSVEStackFrameSizes() const;
+
   MachineFunction &MF;
   MachineBasicBlock &MBB;
 
@@ -68,6 +82,7 @@ protected:
   bool IsFunclet = false;   // Note: Set in derived constructors.
   bool NeedsWinCFI = false; // Note: Can be changed in emitFramePointerSetup.
   bool HomPrologEpilog = false; // Note: Set in derived constructors.
+  SVEStackLayout SVELayout = SVEStackLayout::Default;
 
   // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
   mutable bool HasWinCFI = false;

@@ -2305,6 +2305,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_manipulation_functions",
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":hdr_errno_macros",

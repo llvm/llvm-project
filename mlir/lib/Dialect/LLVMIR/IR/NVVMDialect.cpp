@@ -216,6 +216,18 @@ LogicalResult ConvertFloatToTF32Op::verify() {
   return success();
 }
 
+LogicalResult ConvertF32x2ToF6x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<mlir::Float6E2M3FNType, mlir::Float6E3M2FNType>(getDstTy())) {
+    return emitOpError("Only ")
+           << mlir::Float6E2M3FNType::get(ctx) << " and "
+           << mlir::Float6E3M2FNType::get(ctx)
+           << " types are supported for conversions from f32x2 to f6x2.";
+  }
+  return success();
+}
+
 LogicalResult ConvertF32x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   using SatMode = NVVM::SaturationMode;
@@ -227,41 +239,67 @@ LogicalResult ConvertF32x2ToF8x2Op::verify() {
 
   bool hasRelu = getRelu();
 
-  switch (getType()) {
-  case ConvertFP8Type::E4M3:
-  case ConvertFP8Type::E5M2:
-    if (!isRoundingModeRN)
-      return emitOpError("Only RN rounding mode is supported for conversions "
-                         "from f32x2 to .e4m3x2 or .e5m2x2 types");
-    if (!isSatFinite)
-      return emitOpError("Only SATFINITE saturation mode is supported for "
-                         "conversions from f32x2 to .e4m3x2 or .e5m2x2 types");
-    break;
-  case ConvertFP8Type::UE8M0:
-    if (!(isRoundingModeRZ || isRoundingModeRP))
-      return emitOpError("Only RZ or RP rounding modes are supported for "
-                         "conversions from f32x2 to .ue8m0x2 type");
-    if (hasRelu)
-      return emitOpError("relu not supported for conversions to .ue8m0x2 type");
-    break;
-  }
-  return success();
+  mlir::MLIRContext *ctx = getContext();
+
+  return llvm::TypeSwitch<mlir::Type, LogicalResult>(getDstTy())
+      .Case<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(
+          [&](mlir::Type) -> LogicalResult {
+            if (!isRoundingModeRN) {
+              return emitOpError("Only RN rounding mode is supported for "
+                                 "conversions from f32x2 to ")
+                     << mlir::Float8E4M3FNType::get(ctx) << " and "
+                     << mlir::Float8E5M2Type::get(ctx) << " types";
+            }
+            if (!isSatFinite) {
+              return emitOpError("Only SATFINITE saturation mode is supported "
+                                 "for conversions "
+                                 "from f32x2 to ")
+                     << mlir::Float8E4M3FNType::get(ctx) << " and "
+                     << mlir::Float8E5M2Type::get(ctx) << " types";
+            }
+            return success();
+          })
+      .Case<mlir::Float8E8M0FNUType>([&](mlir::Type) -> LogicalResult {
+        if (!(isRoundingModeRZ || isRoundingModeRP)) {
+          return emitOpError("Only RZ and RP rounding modes are supported for "
+                             "conversions from f32x2 to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        }
+        if (hasRelu) {
+          return emitOpError("relu not supported for conversions to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        }
+        return success();
+      })
+      .Default([&](mlir::Type) {
+        return emitOpError("Only ")
+               << mlir::Float8E4M3FNType::get(ctx) << ", "
+               << mlir::Float8E5M2Type::get(ctx) << ", and "
+               << mlir::Float8E8M0FNUType::get(ctx)
+               << " types are "
+                  "supported for conversions from f32x2 to f8x2";
+      });
 }
 
 LogicalResult ConvertF16x2ToF8x2Op::verify() {
-  if (getType() == ConvertFP8Type::UE8M0)
-    return emitOpError("Only .e4m3 or .e5m2 types are supported for "
-                       "conversions from f16x2 to f8x2.");
+  mlir::MLIRContext *ctx = getContext();
 
+  if (!llvm::isa<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(getDstTy())) {
+    return emitOpError("Only ")
+           << mlir::Float8E4M3FNType::get(ctx) << " and "
+           << mlir::Float8E5M2Type::get(ctx)
+           << " types are supported for conversions from f16x2 to f8x2.";
+  }
   return success();
 }
 
 LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
 
-  if (getType() != ConvertFP8Type::UE8M0)
-    return emitOpError(
-        "Only .ue8m0 type is supported for conversions from bf16x2 to f8x2.");
+  if (!llvm::isa<mlir::Float8E8M0FNUType>(getDstTy()))
+    return emitOpError("Only ") << mlir::Float8E8M0FNUType::get(getContext())
+                                << " type is supported for conversions from "
+                                   "bf16x2 to f8x2.";
 
   auto rnd = getRnd();
   if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
@@ -1980,15 +2018,19 @@ ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
 
-llvm::Intrinsic::ID
-ConvertF32x2ToF6x2Op::getIntrinsicID(NVVM::ConvertFP6Type type, bool hasRelu) {
-  switch (type) {
-  case NVVM::ConvertFP6Type::E2M3:
-    return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
-  case NVVM::ConvertFP6Type::E3M2:
-    return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
-  }
-  llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
+llvm::Intrinsic::ID ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
+                                                         bool hasRelu) {
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+        return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
+      })
+      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+        return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
 }
 
 #define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
@@ -2000,41 +2042,50 @@ ConvertF32x2ToF6x2Op::getIntrinsicID(NVVM::ConvertFP6Type type, bool hasRelu) {
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn
 
 llvm::Intrinsic::ID
-ConvertF32x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type,
-                                     NVVM::FPRoundingMode rnd,
+ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
                                      NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   bool hasRoundingModeRZ = (rnd == NVVM::FPRoundingMode::RZ);
   bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
 
-  switch (type) {
-  case NVVM::ConvertFP8Type::E4M3:
-    return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
-  case NVVM::ConvertFP8Type::E5M2:
-    return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
-  case NVVM::ConvertFP8Type::UE8M0:
-    if (hasRoundingModeRZ)
-      return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
-    else if (hasRoundingModeRP)
-      return GET_F32x2_TO_F8X2_US_ID(rp, hasSatFinite);
-  }
-  llvm_unreachable("Invalid conversion in CvtFloatToF8x2Op");
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+        return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
+      })
+      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+        return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
+      })
+      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
+        if (hasRoundingModeRZ)
+          return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
+        else if (hasRoundingModeRP)
+          return GET_F32x2_TO_F8X2_US_ID(rp, hasSatFinite);
+
+        llvm_unreachable("Invalid conversion in ConvertF32x2ToF8x2Op");
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertF32x2ToF8x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
 }
 
 #define GET_F16x2_TO_F8X2_ID(type, has_relu)                                   \
   has_relu ? llvm::Intrinsic::nvvm_f16x2_to_##type##_rn_relu                   \
            : llvm::Intrinsic::nvvm_f16x2_to_##type##_rn
 
-llvm::Intrinsic::ID
-ConvertF16x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type, bool hasRelu) {
-  switch (type) {
-  case NVVM::ConvertFP8Type::E4M3:
-    return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
-  case NVVM::ConvertFP8Type::E5M2:
-    return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
-  default:
-    llvm_unreachable("Invalid ConvertFP8Type for CvtF16x2ToF8x2Op");
-  }
+llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
+                                                         bool hasRelu) {
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+        return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
+      })
+      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+        return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertF16x2ToF8x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
 }
 
 #define GET_BF16X2_TO_F8X2_ID(rnd, has_satf)                                   \

@@ -61,6 +61,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -382,16 +383,9 @@ typedef DenseMap<BasicBlock *, CloneList> DuplicateBlockMap;
 typedef MapVector<Instruction *, std::vector<Instruction *>> DefMap;
 
 inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
-  OS << "< ";
-  for (const BasicBlock *BB : Path) {
-    std::string BBName;
-    if (BB->hasName())
-      raw_string_ostream(BBName) << BB->getName();
-    else
-      raw_string_ostream(BBName) << BB;
-    OS << BBName << " ";
-  }
-  OS << ">";
+  auto BBNames = llvm::map_range(
+      Path, [](const BasicBlock *BB) { return BB->getNameOrAsOperand(); });
+  OS << "< " << llvm::join(BBNames, ", ") << " >";
   return OS;
 }
 
@@ -423,7 +417,7 @@ struct ThreadingPath {
   }
 
   void print(raw_ostream &OS) const {
-    OS << Path << " [ " << ExitVal << ", " << DBB->getName() << " ]";
+    OS << Path << " [ " << ExitVal << ", " << DBB->getNameOrAsOperand() << " ]";
   }
 
 private:
