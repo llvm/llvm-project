@@ -2778,7 +2778,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
 .. note::
 
@@ -2867,7 +2867,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only \
+     $ clang++ -O2 \
        -fdebug-info-for-profiling -funique-internal-linkage-names \
        -fprofile-sample-use=code.prof code.cc -o code
 
@@ -2875,7 +2875,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: winbatch
 
-     > clang-cl /O2 -gdwarf -gline-tables-only ^
+     > clang-cl /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
        -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
@@ -2886,7 +2886,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ clang++ -fsample-profile-use-profi -O2 -gline-tables-only \
+     $ clang++ -fsample-profile-use-profi -O2 \
        -fdebug-info-for-profiling -funique-internal-linkage-names \
        -fprofile-sample-use=code.prof code.cc -o code
 
@@ -2894,7 +2894,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: winbatch
 
-     > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
+     > clang-cl /clang:-fsample-profile-use-profi /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
        -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
