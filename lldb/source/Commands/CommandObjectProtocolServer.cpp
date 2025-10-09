@@ -164,10 +164,9 @@ protected:
       return;
     }
 
-    std::string address =
-        llvm::join(socket->GetListeningConnectionURI(), ", ");
-    result.AppendMessageWithFormatv(
-        "{0} server connection listeners: {1}", protocol, address);
+    std::string address = llvm::join(socket->GetListeningConnectionURI(), ", ");
+    result.AppendMessageWithFormatv("{0} server connection listeners: {1}",
+                                    protocol, address);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 };
@@ -181,8 +180,8 @@ CommandObjectProtocolServer::CommandObjectProtocolServer(
                               interpreter)));
   LoadSubCommand("stop", CommandObjectSP(
                              new CommandObjectProtocolServerStop(interpreter)));
-  LoadSubCommand("get", CommandObjectSP(
-                            new CommandObjectProtocolServerGet(interpreter)));
+  LoadSubCommand(
+      "get", CommandObjectSP(new CommandObjectProtocolServerGet(interpreter)));
 }
 
 CommandObjectProtocolServer::~CommandObjectProtocolServer() = default;
