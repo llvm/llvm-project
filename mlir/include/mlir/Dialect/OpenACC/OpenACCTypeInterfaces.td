@@ -278,7 +278,9 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         that destruction code must be generated after the returned private
         variable usages, typically in the destroy region of recipe operations
         (for example, when heap allocations or temporaries requiring cleanup
-        are created during initialization).
+        are created during initialization). When `needsDestroy` is set, callers
+        should invoke `generatePrivateDestroy` in the recipe's destroy region
+        with the privatized value returned by this method.
 
         If the return value is empty, it means that recipe body was not
         successfully generated.
@@ -295,6 +297,31 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates destruction operations for a privatized value previously
+        produced by `generatePrivateInit`. This is typically inserted in a
+        recipe's destroy region, after all uses of the privatized value.
+
+        The `privatized` value is the SSA value yielded by the init region
+        (and passed as the privatized argument to the destroy region).
+        Implementations should free heap-allocated storage or perform any
+        cleanup required for the given type. If no destruction is required,
+        this function should be a no-op and return `true`.
+
+        Returns true if destruction was successfully generated or deemed not
+        necessary, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"generatePrivateDestroy",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::Value":$privatized),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return true;
       }]
     >,
   ];
