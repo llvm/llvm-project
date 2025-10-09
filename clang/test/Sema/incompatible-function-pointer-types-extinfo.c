@@ -6,7 +6,7 @@
 // extended function type information are consistent, also in case of other
 // allowed funcion type difference in C.
 //
-// Test case adapted from issue #160474.
+// Test case adapted from issue #41465, with suggestions from PR #160477.
 
 enum E { A = -1, B };
 
@@ -32,8 +32,25 @@ int (*fp3c)(int*                          ) __attribute__((noreturn,cfi_unchecke
 int (*fp3d)(int* __attribute__((noescape))) __attribute__((         cfi_unchecked_callee)) = &f3; // expected-error {{incompatible function pointer types}}
 int (*fp3e)(int* __attribute__((noescape))) __attribute__((noreturn,cfi_unchecked_callee)) = &f3; // expected-error {{incompatible function pointer types}}
 
-// Case 4: assignment to function with no prototype
+// Case 4: assignment converting between prototype/no-prototype
 
-int   f4   (int);
-int (*fp4a)(int) = &f4;
-int (*fp4b)()    = &f4; // proto-error {{incompatible function pointer types}}
+void p1(void);
+void i1(int );
+void n1(    );
+void p2(void) __attribute__((noreturn));
+void i2(int ) __attribute__((noreturn));
+void n2(    ) __attribute__((noreturn));
+
+void (*t1)() = p1;
+void (*t2)() = i1; // proto-error {{incompatible function pointer types}}
+void (*t3)() = n1;
+void (*t4)() __attribute__((noreturn)) = p1; // expected-error {{incompatible function pointer types}}
+void (*t5)() __attribute__((noreturn)) = i1; // expected-error {{incompatible function pointer types}}
+void (*t6)() __attribute__((noreturn)) = n1; // expected-error {{incompatible function pointer types}}
+
+void (*t7)() = p2;
+void (*t8)() = i2; // proto-error {{incompatible function pointer types}}
+void (*t9)() = n2;
+void (*tA)() __attribute__((noreturn)) = p2;
+void (*tB)() __attribute__((noreturn)) = i2; // proto-error {{incompatible function pointer types}}
+void (*tC)() __attribute__((noreturn)) = n2;
