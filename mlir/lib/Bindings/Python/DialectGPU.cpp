@@ -38,7 +38,7 @@ NB_MODULE(_mlirDialectsGPU, m) {
         return cls(mlirGPUAsyncTokenTypeGet(ctx));
       },
       "Gets an instance of AsyncTokenType in the same context", nb::arg("cls"),
-      nb::arg("ctx").none() = nb::none());
+      nb::arg("ctx") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // ObjectAttr
@@ -62,7 +62,7 @@ NB_MODULE(_mlirDialectsGPU, m) {
                                             : MlirAttribute{nullptr}));
           },
           "cls"_a, "target"_a, "format"_a, "object"_a,
-          "properties"_a.none() = nb::none(), "kernels"_a.none() = nb::none(),
+          "properties"_a = nb::none(), "kernels"_a = nb::none(),
           "Gets a gpu.object from parameters.")
       .def_property_readonly(
           "target",

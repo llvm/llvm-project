@@ -110,6 +110,7 @@ if TYPE_CHECKING:
         "tuple[str, Optional[list[Any]], Any]",
         "tuple[str, Optional[list[Any]], Any, Callable[..., Any]]",
     ]
+    CObjP: TypeAlias = _Pointer[Any]
 
     TSeq = TypeVar("TSeq", covariant=True)
 
@@ -707,7 +708,6 @@ class CursorKind(BaseEnumeration):
         """Test if this is an unexposed kind."""
         return conf.lib.clang_isUnexposed(self)  # type: ignore [no-any-return]
 
-
     ###
     # Declaration Kinds
 
@@ -833,7 +833,6 @@ class CursorKind(BaseEnumeration):
 
     # A C++ access specifier decl.
     CXX_ACCESS_SPEC_DECL = 39
-
 
     ###
     # Reference Kinds
@@ -1435,11 +1434,62 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP reverse directive.
+    OMP_REVERSE_DIRECTIVE = 307
+
+    # OpenMP interchange directive.
+    OMP_INTERCHANGE_DIRECTIVE = 308
+
+    # OpenMP assume directive.
+    OMP_ASSUME_DIRECTIVE = 309
+
     # OpenMP stripe directive.
     OMP_STRIPE_DIRECTIVE = 310
 
+    # OpenMP fuse directive.
+    OMP_FUSE_DIRECTIVE = 311
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
+
+    # OpenACC Loop Construct.
+    OPEN_ACC_LOOP_CONSTRUCT = 321
+
+    # OpenACC Combined Constructs.
+    OPEN_ACC_COMBINED_CONSTRUCT = 322
+
+    # OpenACC data Construct.
+    OPEN_ACC_DATA_CONSTRUCT = 323
+
+    # OpenACC enter data Construct.
+    OPEN_ACC_ENTER_DATA_CONSTRUCT = 324
+
+    # OpenACC exit data Construct.
+    OPEN_ACC_EXIT_DATA_CONSTRUCT = 325
+
+    # OpenACC host_data Construct.
+    OPEN_ACC_HOST_DATA_CONSTRUCT = 326
+
+    # OpenACC wait Construct.
+    OPEN_ACC_WAIT_CONSTRUCT = 327
+
+    # OpenACC init Construct.
+    OPEN_ACC_INIT_CONSTRUCT = 328
+
+    # OpenACC shutdown Construct.
+    OPEN_ACC_SHUTDOWN_CONSTRUCT = 329
+
+    # OpenACC set Construct.
+    OPEN_ACC_SET_CONSTRUCT = 330
+
+    # OpenACC update Construct.
+    OPEN_ACC_UPDATE_CONSTRUCT = 331
+
+    # OpenACC atomic Construct.
+    OPEN_ACC_ATOMIC_CONSTRUCT = 332
+
+    # OpenACC cache Construct.
+    OPEN_ACC_CACHE_CONSTRUCT = 333
 
     ###
     # Other Kinds
@@ -1559,6 +1609,7 @@ class ExceptionSpecificationKind(BaseEnumeration):
     UNEVALUATED = 6
     UNINSTANTIATED = 7
     UNPARSED = 8
+    NOTHROW = 9
 
 ### Cursors ###
 
@@ -2443,7 +2494,6 @@ class AccessSpecifier(BaseEnumeration):
     PUBLIC = 1
     PROTECTED = 2
     PRIVATE = 3
-    NONE = 4
 
 ### Type Kinds ###
 
@@ -2491,7 +2541,16 @@ class TypeKind(BaseEnumeration):
     FLOAT128 = 30
     HALF = 31
     FLOAT16 = 32
+    SHORTACCUM = 33
+    ACCUM = 34
+    LONGACCUM = 35
+    USHORTACCUM = 36
+    UACCUM = 37
+    ULONGACCUM = 38
+    BFLOAT16 = 39
     IBM128 = 40
+    FIRSTBUILTIN = VOID
+    LASTBUILTIN = IBM128
     COMPLEX = 100
     POINTER = 101
     BLOCKPOINTER = 102
@@ -2574,6 +2633,10 @@ class TypeKind(BaseEnumeration):
     EXTVECTOR = 176
     ATOMIC = 177
     BTFTAGATTRIBUTED = 178
+
+    HLSLRESOURCE = 179
+    HLSLATTRIBUTEDRESOURCE = 180
+    HLSLINLINESPIRV = 181
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
@@ -2981,25 +3044,25 @@ SPELLING_CACHE = {
 
 class CompletionChunk:
     class Kind:
-        def __init__(self, name):
+        def __init__(self, name: str):
             self.name = name
 
-        def __str__(self):
+        def __str__(self) -> str:
             return self.name
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return "<ChunkKind: %s>" % self
 
-    def __init__(self, completionString, key):
+    def __init__(self, completionString: CObjP, key: int):
         self.cs = completionString
         self.key = key
         self.__kindNumberCache = -1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{'" + self.spelling + "', " + str(self.kind) + "}"
 
     @CachedProperty
-    def spelling(self):
+    def spelling(self) -> str:
         if self.__kindNumber in SPELLING_CACHE:
             return SPELLING_CACHE[self.__kindNumber]
         return _CXString.from_result(
@@ -3010,7 +3073,7 @@ class CompletionChunk:
     # apparently still significantly faster. Please profile carefully if you
     # would like to add CachedProperty back.
     @property
-    def __kindNumber(self):
+    def __kindNumber(self) -> int:
         if self.__kindNumberCache == -1:
             self.__kindNumberCache = conf.lib.clang_getCompletionChunkKind(
                 self.cs, self.key
@@ -3018,30 +3081,30 @@ class CompletionChunk:
         return self.__kindNumberCache
 
     @CachedProperty
-    def kind(self):
+    def kind(self) -> Kind:
         return completionChunkKindMap[self.__kindNumber]
 
     @CachedProperty
-    def string(self):
+    def string(self) -> CompletionString | None:
         res = conf.lib.clang_getCompletionChunkCompletionString(self.cs, self.key)
 
         if not res:
             return None
         return CompletionString(res)
 
-    def isKindOptional(self):
+    def isKindOptional(self) -> bool:
         return self.__kindNumber == 0
 
-    def isKindTypedText(self):
+    def isKindTypedText(self) -> bool:
         return self.__kindNumber == 1
 
-    def isKindPlaceHolder(self):
+    def isKindPlaceHolder(self) -> bool:
         return self.__kindNumber == 3
 
-    def isKindInformative(self):
+    def isKindInformative(self) -> bool:
         return self.__kindNumber == 4
 
-    def isKindResultType(self):
+    def isKindResultType(self) -> bool:
         return self.__kindNumber == 15
 
 
@@ -3081,14 +3144,14 @@ class CompletionString(ClangObject):
         def __repr__(self):
             return "<Availability: %s>" % self
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.num_chunks
 
     @CachedProperty
-    def num_chunks(self):
+    def num_chunks(self) -> int:
         return conf.lib.clang_getNumCompletionChunks(self.obj)  # type: ignore [no-any-return]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> CompletionChunk:
         if self.num_chunks <= key:
             raise IndexError
         return CompletionChunk(self.obj, key)
@@ -3096,24 +3159,24 @@ class CompletionString(ClangObject):
     if TYPE_CHECKING:
         # Defining __getitem__ and __len__ is enough to make an iterable
         # but the typechecker doesn't understand that.
-        def __iter__(self):
+        def __iter__(self) -> Iterator[CompletionChunk]:
             for i in range(len(self)):
                 yield self[i]
 
     @property
-    def priority(self):
+    def priority(self) -> int:
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
 
     @property
-    def availability(self):
+    def availability(self) -> CompletionChunk.Kind:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
         return availabilityKinds[res]
 
     @property
-    def briefComment(self):
+    def briefComment(self) -> str:
         return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             " | ".join([str(a) for a in self])
             + " || Priority: "
@@ -3136,25 +3199,28 @@ availabilityKinds = {
 class CodeCompletionResult(Structure):
     _fields_ = [("cursorKind", c_int), ("completionString", c_object_p)]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(CompletionString(self.completionString))
 
     @property
-    def kind(self):
+    def kind(self) -> CursorKind:
         return CursorKind.from_id(self.cursorKind)
 
     @property
-    def string(self):
+    def string(self) -> CompletionString:
         return CompletionString(self.completionString)
 
 
 class CCRStructure(Structure):
-    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_int)]
+    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_uint)]
 
-    def __len__(self):
+    results: NoSliceSequence[CodeCompletionResult]
+    numResults: int
+
+    def __len__(self) -> int:
         return self.numResults
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> CodeCompletionResult:
         if len(self) <= key:
             raise IndexError
 
@@ -3162,18 +3228,18 @@ class CCRStructure(Structure):
 
 
 class CodeCompletionResults(ClangObject):
-    def __init__(self, ptr):
+    def __init__(self, ptr: _Pointer[CCRStructure]):
         assert isinstance(ptr, POINTER(CCRStructure)) and ptr
         self.ptr = self._as_parameter_ = ptr
 
-    def from_param(self):
+    def from_param(self) -> _Pointer[CCRStructure]:
         return self._as_parameter_
 
-    def __del__(self):
+    def __del__(self) -> None:
         conf.lib.clang_disposeCodeCompleteResults(self)
 
     @property
-    def results(self):
+    def results(self) -> CCRStructure:
         return self.ptr.contents
 
     @property

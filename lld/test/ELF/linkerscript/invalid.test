@@ -5,7 +5,7 @@
 ## We can't write quoted strings that are interpreted the same way
 ## by all echo commands. So, we don't want to run this on Windows.
 
-# REQUIRES: shell
+# UNSUPPORTED: system-windows
 
 # RUN: mkdir -p %t.dir
 

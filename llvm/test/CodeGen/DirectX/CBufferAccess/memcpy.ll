@@ -25,7 +25,7 @@
 ; CHECK: define void @f(
 define void @f(ptr %dst) {
 entry:
-  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 272, 288, 320)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 272, 288, 320)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 272, 288, 320)) %CB.cb_h.i.i, ptr @CB.cb, align 4
 
   %a1.copy = alloca [3 x float], align 4

@@ -28,15 +28,15 @@ namespace llvm {
 /// initialization.
 template <unsigned NumBits>
 class Bitset {
-  typedef uintptr_t BitWord;
+  using BitWord = uintptr_t;
 
-  enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };
+  static constexpr unsigned BitwordBits = sizeof(BitWord) * CHAR_BIT;
 
-  static_assert(BITWORD_SIZE == 64 || BITWORD_SIZE == 32,
+  static_assert(BitwordBits == 64 || BitwordBits == 32,
                 "Unsupported word size");
 
   static constexpr unsigned NumWords =
-      (NumBits + BITWORD_SIZE - 1) / BITWORD_SIZE;
+      (NumBits + BitwordBits - 1) / BitwordBits;
 
 protected:
   using StorageType = std::array<BitWord, NumWords>;
@@ -60,23 +60,23 @@ public:
   }
 
   constexpr Bitset &set(unsigned I) {
-    Bits[I / BITWORD_SIZE] |= BitWord(1) << (I % BITWORD_SIZE);
+    Bits[I / BitwordBits] |= BitWord(1) << (I % BitwordBits);
     return *this;
   }
 
   constexpr Bitset &reset(unsigned I) {
-    Bits[I / BITWORD_SIZE] &= ~(BitWord(1) << (I % BITWORD_SIZE));
+    Bits[I / BitwordBits] &= ~(BitWord(1) << (I % BitwordBits));
     return *this;
   }
 
   constexpr Bitset &flip(unsigned I) {
-    Bits[I / BITWORD_SIZE] ^= BitWord(1) << (I % BITWORD_SIZE);
+    Bits[I / BitwordBits] ^= BitWord(1) << (I % BitwordBits);
     return *this;
   }
 
   constexpr bool operator[](unsigned I) const {
-    BitWord Mask = BitWord(1) << (I % BITWORD_SIZE);
-    return (Bits[I / BITWORD_SIZE] & Mask) != 0;
+    BitWord Mask = BitWord(1) << (I % BitwordBits);
+    return (Bits[I / BitwordBits] & Mask) != 0;
   }
 
   constexpr bool test(unsigned I) const { return (*this)[I]; }

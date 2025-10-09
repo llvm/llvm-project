@@ -15,14 +15,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo(i64 %n, i64 %m, ptr %A) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store double 1.000000e+00, ptr %arrayidx, align 8
-; CHECK-NEXT:  In Loop with Header: for.j
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,(8 * %m)}<%for.i>,+,8}<%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store double 1.000000e+00, ptr %arrayidx1, align 8
-; CHECK-NEXT:  In Loop with Header: for.j
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,8}<%for.i>,+,(8 * %n)}<%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%n] with elements of 8 bytes.

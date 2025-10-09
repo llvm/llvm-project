@@ -11,6 +11,7 @@
 
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
+#include <__atomic/floating_point_helper.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
@@ -332,42 +333,18 @@ template <class _Tp>
   requires is_floating_point_v<_Tp>
 struct atomic<_Tp> : __atomic_base<_Tp> {
 private:
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_fp80_long_double() {
-    // Only x87-fp80 long double has 64-bit mantissa
-    return __LDBL_MANT_DIG__ == 64 && std::is_same_v<_Tp, long double>;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __has_rmw_builtin() {
-#  ifndef _LIBCPP_COMPILER_CLANG_BASED
-    return false;
-#  else
-    // The builtin __cxx_atomic_fetch_add errors during compilation for
-    // long double on platforms with fp80 format.
-    // For more details, see
-    // lib/Sema/SemaChecking.cpp function IsAllowedValueType
-    // LLVM Parser does not allow atomicrmw with x86_fp80 type.
-    // if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-    //    &Context.getTargetInfo().getLongDoubleFormat() ==
-    //        &llvm::APFloat::x87DoubleExtended())
-    // For more info
-    // https://github.com/llvm/llvm-project/issues/68602
-    // https://reviews.llvm.org/D53965
-    return !__is_fp80_long_double();
-#  endif
-  }
-
   template <class _This, class _Operation, class _BuiltinOp>
   _LIBCPP_HIDE_FROM_ABI static _Tp
   __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation, _BuiltinOp __builtin_op) {
-    if constexpr (__has_rmw_builtin()) {
+    if constexpr (std::__has_rmw_builtin<_Tp>()) {
       return __builtin_op(std::addressof(std::forward<_This>(__self).__a_), __operand, __m);
     } else {
       _Tp __old = __self.load(memory_order_relaxed);
       _Tp __new = __operation(__old, __operand);
       while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
 #  ifdef _LIBCPP_COMPILER_CLANG_BASED
-        if constexpr (__is_fp80_long_double()) {
-          // https://github.com/llvm/llvm-project/issues/47978
+        if constexpr (std::__is_fp80_long_double<_Tp>()) {
+          // https://llvm.org/PR47978
           // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
           // Note __old = __self.load(memory_order_relaxed) will not work
           std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), std::addressof(__old), memory_order_relaxed);
