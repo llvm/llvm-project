@@ -28,6 +28,8 @@ protected:
   CIRGenModule &cgm;
   std::unique_ptr<clang::MangleContext> mangleContext;
 
+  virtual bool requiresArrayCookie(const CXXNewExpr *e);
+
 public:
   // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
   // implemented.
@@ -47,14 +49,76 @@ public:
   /// constructor/destructor Decl.
   virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
 
+  virtual mlir::Value
+  getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
+                            Address thisAddr, const CXXRecordDecl *classDecl,
+                            const CXXRecordDecl *baseClassDecl) = 0;
+
 public:
+  /// Similar to AddedStructorArgs, but only notes the number of additional
+  /// arguments.
+  struct AddedStructorArgCounts {
+    unsigned prefix = 0;
+    unsigned suffix = 0;
+    AddedStructorArgCounts() = default;
+    AddedStructorArgCounts(unsigned p, unsigned s) : prefix(p), suffix(s) {}
+    static AddedStructorArgCounts withPrefix(unsigned n) { return {n, 0}; }
+    static AddedStructorArgCounts withSuffix(unsigned n) { return {0, n}; }
+  };
+
+  /// Additional implicit arguments to add to the beginning (Prefix) and end
+  /// (Suffix) of a constructor / destructor arg list.
+  ///
+  /// Note that Prefix should actually be inserted *after* the first existing
+  /// arg; `this` arguments always come first.
+  struct AddedStructorArgs {
+    struct Arg {
+      mlir::Value value;
+      QualType type;
+    };
+    llvm::SmallVector<Arg, 1> prefix;
+    llvm::SmallVector<Arg, 1> suffix;
+    AddedStructorArgs() = default;
+    AddedStructorArgs(llvm::SmallVector<Arg, 1> p, llvm::SmallVector<Arg, 1> s)
+        : prefix(std::move(p)), suffix(std::move(s)) {}
+    static AddedStructorArgs withPrefix(llvm::SmallVector<Arg, 1> args) {
+      return {std::move(args), {}};
+    }
+    static AddedStructorArgs withSuffix(llvm::SmallVector<Arg, 1> args) {
+      return {{}, std::move(args)};
+    }
+  };
+
+  /// Build the signature of the given constructor or destructor vairant by
+  /// adding any required parameters. For convenience, ArgTys has been
+  /// initialized with the type of 'this'.
+  virtual AddedStructorArgCounts
+  buildStructorSignature(GlobalDecl gd,
+                         llvm::SmallVectorImpl<CanQualType> &argTys) = 0;
+
+  AddedStructorArgCounts
+  addImplicitConstructorArgs(CIRGenFunction &cgf, const CXXConstructorDecl *d,
+                             CXXCtorType type, bool forVirtualBase,
+                             bool delegating, CallArgList &args);
+
   clang::ImplicitParamDecl *getThisDecl(CIRGenFunction &cgf) {
     return cgf.cxxabiThisDecl;
   }
 
+  virtual AddedStructorArgs
+  getImplicitConstructorArgs(CIRGenFunction &cgf, const CXXConstructorDecl *d,
+                             CXXCtorType type, bool forVirtualBase,
+                             bool delegating) = 0;
+
   /// Emit the ABI-specific prolog for the function
-  virtual void emitInstanceFunctionProlog(SourceLocation Loc,
+  virtual void emitInstanceFunctionProlog(SourceLocation loc,
                                           CIRGenFunction &cgf) = 0;
+
+  virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
+  virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
+
+  virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
+                                                  QualType ty) = 0;
 
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
@@ -105,6 +169,10 @@ public:
   virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
                                      const CXXRecordDecl *rd) = 0;
 
+  /// Emit any tables needed to implement virtual inheritance.  For Itanium,
+  /// this emits virtual table tables.
+  virtual void emitVirtualInheritanceTables(const CXXRecordDecl *rd) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.
@@ -138,6 +206,17 @@ public:
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase) = 0;
 
+  /// Insert any ABI-specific implicit parameters into the parameter list for a
+  /// function. This generally involves extra data for constructors and
+  /// destructors.
+  ///
+  /// ABIs may also choose to override the return type, which has been
+  /// initialized with the type of 'this' if HasThisReturn(CGF.CurGD) is true or
+  /// the formal return type of the function otherwise.
+  virtual void addImplicitStructorParams(CIRGenFunction &cgf,
+                                         clang::QualType &resTy,
+                                         FunctionArgList &params) = 0;
+
   /// Checks if ABI requires to initialize vptrs for given dynamic class.
   virtual bool
   doStructorsInitializeVPtrs(const clang::CXXRecordDecl *vtableClass) = 0;
@@ -156,6 +235,31 @@ public:
 
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *mangleContext; }
+
+  clang::ImplicitParamDecl *&getStructorImplicitParamDecl(CIRGenFunction &cgf) {
+    return cgf.cxxStructorImplicitParamDecl;
+  }
+
+  mlir::Value getStructorImplicitParamValue(CIRGenFunction &cgf) {
+    return cgf.cxxStructorImplicitParamValue;
+  }
+
+  void setStructorImplicitParamValue(CIRGenFunction &cgf, mlir::Value val) {
+    cgf.cxxStructorImplicitParamValue = val;
+  }
+
+  /**************************** Array cookies ******************************/
+
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given new-expression.  May return 0 to indicate that no
+  /// array cookie is required.
+  ///
+  /// Several cases are filtered out before this method is called:
+  ///   - non-array allocations never need a cookie
+  ///   - calls to \::operator new(size_t, void*) never need a cookie
+  ///
+  /// \param E - the new-expression being allocated.
+  virtual CharUnits getArrayCookieSize(const CXXNewExpr *e);
 };
 
 /// Creates and Itanium-family ABI

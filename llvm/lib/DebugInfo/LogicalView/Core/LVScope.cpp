@@ -107,10 +107,16 @@ LVScopeDispatch LVScope::Dispatch = {
     {LVScopeKind::IsTryBlock, &LVScope::getIsTryBlock},
     {LVScopeKind::IsUnion, &LVScope::getIsUnion}};
 
-void LVScope::addToChildren(LVElement *Element) {
-  if (!Children)
-    Children = std::make_unique<LVElements>();
-  Children->push_back(Element);
+const LVTypes LVScope::EmptyTypes{};
+const LVSymbols LVScope::EmptySymbols{};
+const LVScopes LVScope::EmptyScopes{};
+
+LVElements LVScope::getSortedChildren(LVSortFunction SortFunction) const {
+  const auto UnsortedChildren = getChildren();
+  LVElements Elements{UnsortedChildren.begin(), UnsortedChildren.end()};
+  if (SortFunction)
+    llvm::stable_sort(Elements, SortFunction);
+  return Elements;
 }
 
 void LVScope::addElement(LVElement *Element) {
@@ -175,7 +181,6 @@ void LVScope::addElement(LVScope *Scope) {
 
   // Add it to parent.
   Scopes->push_back(Scope);
-  addToChildren(Scope);
   Scope->setParent(this);
 
   // Notify the reader about the new element being added.
@@ -202,7 +207,6 @@ void LVScope::addElement(LVSymbol *Symbol) {
 
   // Add it to parent.
   Symbols->push_back(Symbol);
-  addToChildren(Symbol);
   Symbol->setParent(this);
 
   // Notify the reader about the new element being added.
@@ -229,7 +233,6 @@ void LVScope::addElement(LVType *Type) {
 
   // Add it to parent.
   Types->push_back(Type);
-  addToChildren(Type);
   Type->setParent(this);
 
   // Notify the reader about the new element being added.
@@ -277,15 +280,12 @@ bool LVScope::removeElement(LVElement *Element) {
   if (Element->getIsLine())
     return RemoveElement(Lines);
 
-  if (RemoveElement(Children)) {
-    if (Element->getIsSymbol())
-      return RemoveElement(Symbols);
-    if (Element->getIsType())
-      return RemoveElement(Types);
-    if (Element->getIsScope())
-      return RemoveElement(Scopes);
-    llvm_unreachable("Invalid element.");
-  }
+  if (Element->getIsSymbol())
+    return RemoveElement(Symbols);
+  if (Element->getIsType())
+    return RemoveElement(Types);
+  if (Element->getIsScope())
+    return RemoveElement(Scopes);
 
   return false;
 }
@@ -356,9 +356,8 @@ void LVScope::updateLevel(LVScope *Parent, bool Moved) {
   setLevel(Parent->getLevel() + 1);
 
   // Update the children.
-  if (Children)
-    for (LVElement *Element : *Children)
-      Element->updateLevel(this, Moved);
+  for (LVElement *Element : getChildren())
+    Element->updateLevel(this, Moved);
 
   // Update any lines.
   if (Lines)
@@ -374,13 +373,12 @@ void LVScope::resolve() {
   LVElement::resolve();
 
   // Resolve the children.
-  if (Children)
-    for (LVElement *Element : *Children) {
-      if (getIsGlobalReference())
-        // If the scope is a global reference, mark all its children as well.
-        Element->setIsGlobalReference();
-      Element->resolve();
-    }
+  for (LVElement *Element : getChildren()) {
+    if (getIsGlobalReference())
+      // If the scope is a global reference, mark all its children as well.
+      Element->setIsGlobalReference();
+    Element->resolve();
+  }
 }
 
 void LVScope::resolveName() {
@@ -633,14 +631,13 @@ Error LVScope::doPrint(bool Split, bool Match, bool Print, raw_ostream &OS,
         options().getPrintFormatting() &&
         getLevel() < options().getOutputLevel()) {
       // Print the children.
-      if (Children)
-        for (const LVElement *Element : *Children) {
-          if (Match && !Element->getHasPattern())
-            continue;
-          if (Error Err =
-                  Element->doPrint(Split, Match, Print, *StreamSplit, Full))
-            return Err;
-        }
+      for (const LVElement *Element : getSortedChildren()) {
+        if (Match && !Element->getHasPattern())
+          continue;
+        if (Error Err =
+                Element->doPrint(Split, Match, Print, *StreamSplit, Full))
+          return Err;
+      }
 
       // Print the line records.
       if (Lines)
@@ -692,7 +689,6 @@ void LVScope::sort() {
           Traverse(Parent->Symbols, SortFunction);
           Traverse(Parent->Scopes, SortFunction);
           Traverse(Parent->Ranges, compareRange);
-          Traverse(Parent->Children, SortFunction);
 
           if (Parent->Scopes)
             for (LVScope *Scope : *Parent->Scopes)
@@ -978,9 +974,8 @@ bool LVScope::equals(const LVScopes *References, const LVScopes *Targets) {
 void LVScope::report(LVComparePass Pass) {
   getComparator().printItem(this, Pass);
   getComparator().push(this);
-  if (Children)
-    for (LVElement *Element : *Children)
-      Element->report(Pass);
+  for (LVElement *Element : getSortedChildren())
+    Element->report(Pass);
 
   if (Lines)
     for (LVLine *Line : *Lines)
@@ -1656,9 +1651,8 @@ void LVScopeCompileUnit::printMatchedElements(raw_ostream &OS,
       // Print the view for the matched scopes.
       for (const LVScope *Scope : MatchedScopes) {
         Scope->print(OS);
-        if (const LVElements *Elements = Scope->getChildren())
-          for (LVElement *Element : *Elements)
-            Element->print(OS);
+        for (LVElement *Element : Scope->getSortedChildren())
+          Element->print(OS);
       }
     }
 

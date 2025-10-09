@@ -106,7 +106,8 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
     // around we created an empty module to make CodeGen happy. We should make
     // sure it always stays empty.
     assert(((!CachedInCodeGenModule ||
-             !CI.getPreprocessorOpts().Includes.empty()) ||
+             !CI.getPreprocessorOpts().Includes.empty() ||
+             !CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) ||
             (CachedInCodeGenModule->empty() &&
              CachedInCodeGenModule->global_empty() &&
              CachedInCodeGenModule->alias_empty() &&

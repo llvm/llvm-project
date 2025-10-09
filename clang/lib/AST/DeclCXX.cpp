@@ -3119,6 +3119,22 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
+void CXXDestructorDecl::setOperatorGlobalDelete(FunctionDecl *OD) {
+  // FIXME: C++23 [expr.delete] specifies that the delete operator will be
+  // a usual deallocation function declared at global scope. A convenient
+  // function to assert that is lacking; Sema::isUsualDeallocationFunction()
+  // only works for CXXMethodDecl.
+  assert(!OD ||
+         (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete &&
+          OD->getDeclContext()->getRedeclContext()->isTranslationUnit()));
+  auto *Canonical = cast<CXXDestructorDecl>(getCanonicalDecl());
+  if (!Canonical->OperatorGlobalDelete) {
+    Canonical->OperatorGlobalDelete = OD;
+    if (auto *L = getASTMutationListener())
+      L->ResolvedOperatorGlobDelete(Canonical, OD);
+  }
+}
+
 bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
   // C++20 [expr.delete]p6: If the value of the operand of the delete-
   // expression is not a null pointer value and the selected deallocation
