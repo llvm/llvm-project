@@ -1021,10 +1021,9 @@ public:
   OMPClause *ActOnOpenMPClause(OpenMPClauseKind Kind, SourceLocation StartLoc,
                                SourceLocation EndLoc);
   /// Called on well-formed 'nowait' clause.
-  OMPClause *
-  ActOnOpenMPNowaitClause(SourceLocation StartLoc, SourceLocation EndLoc,
-                          SourceLocation LParenLoc = SourceLocation(),
-                          Expr *Condition = nullptr);
+  OMPClause *ActOnOpenMPNowaitClause(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     SourceLocation LParenLoc, Expr *Condition);
   /// Called on well-formed 'untied' clause.
   OMPClause *ActOnOpenMPUntiedClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);

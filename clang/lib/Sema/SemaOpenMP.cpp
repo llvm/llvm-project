@@ -17957,7 +17957,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc);
     break;
   case OMPC_nowait:
-    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc);
+    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc,
+                                  /*LParenLoc=*/SourceLocation(),
+                                  /*Condition=*/nullptr);
     break;
   case OMPC_untied:
     Res = ActOnOpenMPUntiedClause(StartLoc, EndLoc);
@@ -18123,8 +18125,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPNowaitClause(SourceLocation StartLoc,
 
       ValExpr = Val.get();
     }
-  } else {
-    ValExpr = nullptr;
   }
   DSAStack->setNowaitRegion();
   return new (getASTContext())
