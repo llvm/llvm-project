@@ -16,14 +16,23 @@ tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
 tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM WebAssemblyGenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyO0PreLegalizerCombiner")
+tablegen(LLVM WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyPreLegalizerCombiner")
+tablegen(LLVM WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyPostLegalizerCombiner")
 
 add_public_tablegen_target(WebAssemblyCommonTableGen)
 
 add_llvm_target(WebAssemblyCodeGen
   GISel/WebAssemblyCallLowering.cpp
   GISel/WebAssemblyInstructionSelector.cpp
-  GISel/WebAssemblyRegisterBankInfo.cpp
+  GISel/WebAssemblyO0PreLegalizerCombiner.cpp
+  GISel/WebAssemblyPostLegalizerCombiner.cpp
+  GISel/WebAssemblyPreLegalizerCombiner.cpp
   GISel/WebAssemblyLegalizerInfo.cpp
+  GISel/WebAssemblyRegisterBankInfo.cpp
   WebAssemblyAddMissingPrototypes.cpp
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
