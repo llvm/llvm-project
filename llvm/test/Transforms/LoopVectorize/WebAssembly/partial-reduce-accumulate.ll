@@ -8,9 +8,6 @@ define hidden i32 @accumulate_add_u8_u8(ptr noundef readonly  %a, ptr noundef re
 ; CHECK-LABEL: define hidden i32 @accumulate_add_u8_u8(
 ; CHECK-SAME: ptr noundef readonly [[A:%.*]], ptr noundef readonly [[B:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP8_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
-; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -34,38 +31,32 @@ define hidden i32 @accumulate_add_u8_u8(ptr noundef readonly  %a, ptr noundef re
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; CHECK-NEXT:    [[ADD3_LCSSA:%.*]] = phi i32 [ [[ADD3:%.*]], %[[FOR_BODY]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD3_LCSSA]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ [[ADD3:%.*]], %[[FOR_BODY]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT_0_LCSSA]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_010:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[RESULT_09:%.*]] = phi i32 [ [[ADD3]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 [[I_010]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[ADD3]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP11]] to i32
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i32 [[I_010]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i32 [[IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP12]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RESULT_09]], [[CONV]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RED]], [[CONV]]
 ; CHECK-NEXT:    [[ADD3]] = add i32 [[ADD]], [[CONV2]]
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_010]], 1
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 ; CHECK-MAX-BANDWIDTH-LABEL: define hidden i32 @accumulate_add_u8_u8(
 ; CHECK-MAX-BANDWIDTH-SAME: ptr noundef readonly [[A:%.*]], ptr noundef readonly [[B:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-MAX-BANDWIDTH-NEXT:  [[ENTRY:.*]]:
-; CHECK-MAX-BANDWIDTH-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[CMP8_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
-; CHECK-MAX-BANDWIDTH:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-MAX-BANDWIDTH:       [[VECTOR_PH]]:
@@ -89,52 +80,47 @@ define hidden i32 @accumulate_add_u8_u8(ptr noundef readonly  %a, ptr noundef re
 ; CHECK-MAX-BANDWIDTH:       [[MIDDLE_BLOCK]]:
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE2]])
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
-; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
 ; CHECK-MAX-BANDWIDTH:       [[SCALAR_PH]]:
-; CHECK-MAX-BANDWIDTH-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-MAX-BANDWIDTH-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-MAX-BANDWIDTH-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK-MAX-BANDWIDTH:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; CHECK-MAX-BANDWIDTH-NEXT:    [[ADD3_LCSSA:%.*]] = phi i32 [ [[ADD3:%.*]], %[[FOR_BODY]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
-; CHECK-MAX-BANDWIDTH-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK-MAX-BANDWIDTH:       [[FOR_COND_CLEANUP]]:
-; CHECK-MAX-BANDWIDTH-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD3_LCSSA]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ [[ADD3:%.*]], %[[FOR_BODY]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-MAX-BANDWIDTH-NEXT:    ret i32 [[RESULT_0_LCSSA]]
 ; CHECK-MAX-BANDWIDTH:       [[FOR_BODY]]:
-; CHECK-MAX-BANDWIDTH-NEXT:    [[I_010:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-MAX-BANDWIDTH-NEXT:    [[RESULT_09:%.*]] = phi i32 [ [[ADD3]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; CHECK-MAX-BANDWIDTH-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 [[I_010]]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[IV:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[RED:%.*]] = phi i32 [ [[ADD3]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 [[IV]]
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[TMP11:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[CONV:%.*]] = zext i8 [[TMP11]] to i32
-; CHECK-MAX-BANDWIDTH-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i32 [[I_010]]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i32 [[IV]]
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP12]] to i32
-; CHECK-MAX-BANDWIDTH-NEXT:    [[ADD:%.*]] = add i32 [[RESULT_09]], [[CONV]]
+; CHECK-MAX-BANDWIDTH-NEXT:    [[ADD:%.*]] = add i32 [[RED]], [[CONV]]
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[ADD3]] = add i32 [[ADD]], [[CONV2]]
-; CHECK-MAX-BANDWIDTH-NEXT:    [[INC]] = add nuw i32 [[I_010]], 1
+; CHECK-MAX-BANDWIDTH-NEXT:    [[INC]] = add nuw i32 [[IV]], 1
 ; CHECK-MAX-BANDWIDTH-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-MAX-BANDWIDTH-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
-  %cmp8.not = icmp eq i32 %N, 0
-  br i1 %cmp8.not, label %for.cond.cleanup, label %for.body
+  br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  %result.0.lcssa = phi i32 [ 0, %entry ], [ %add3, %for.body ]
-  ret i32 %result.0.lcssa
+for.cond.cleanup:                                 ; preds = %for.body
+  ret i32 %add3
 
 for.body:                                         ; preds = %entry, %for.body
-  %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %result.09 = phi i32 [ %add3, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i32 %i.010
+  %iv = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %red = phi i32 [ %add3, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i32 %iv
   %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx1 = getelementptr inbounds nuw i8, ptr %b, i32 %i.010
+  %arrayidx1 = getelementptr inbounds nuw i8, ptr %b, i32 %iv
   %1 = load i8, ptr %arrayidx1, align 1
   %conv2 = zext i8 %1 to i32
-  %add = add i32 %result.09, %conv
+  %add = add i32 %red, %conv
   %add3 = add i32 %add, %conv2
-  %inc = add nuw i32 %i.010, 1
+  %inc = add nuw i32 %iv, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }

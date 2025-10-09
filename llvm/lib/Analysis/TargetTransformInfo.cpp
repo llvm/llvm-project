@@ -1017,6 +1017,7 @@ TargetTransformInfo::getPartialReductionExtendKind(
   default:
     return PR_None;
   }
+  llvm_unreachable("Unhandled cast opcode");
 }
 
 TTI::CastContextHint
