@@ -3141,7 +3141,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
   while (!WorkList.empty()) {
     auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
-    if (!Cur || !Seen.insert(Cur).second)
+    if (!Cur || !Seen.insert(Cur).second || isa<VPBlendRecipe>(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {

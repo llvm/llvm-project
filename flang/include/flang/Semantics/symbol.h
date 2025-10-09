@@ -1126,6 +1126,9 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
           [&](const HostAssocDetails &x) {
             return x.symbol().GetTypeImpl(depth);
           },
+          [&](const GenericDetails &x) {
+            return x.specific() ? x.specific()->GetTypeImpl(depth) : nullptr;
+          },
           [](const auto &) -> const DeclTypeSpec * { return nullptr; },
       },
       details_);

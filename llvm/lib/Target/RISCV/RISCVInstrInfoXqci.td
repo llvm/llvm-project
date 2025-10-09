@@ -1636,7 +1636,7 @@ def : QCISELECTCCIPat<SETNE,  QC_SELECTNEI>;
 }
 
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
-def : Pat<(qc_setwmi GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7),
+def : Pat<(qc_setwmi (i32 GPR:$rs3), GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7),
           (QC_SETWMI GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7)>;
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
