@@ -17,17 +17,20 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SourceMgr.h"
 #include <string>
 
 namespace llvm {
   class Type;
   class SMDiagnostic;
-  class SourceMgr;
   class LLVMContext;
 
   class LLLexer {
     const char *CurPtr;
     StringRef CurBuf;
+
+    // The the end (exclusive) of the current token
+    const char *PrevTokEnd = nullptr;
 
     enum class ErrorPriority {
       None,   // No error message present.
@@ -62,9 +65,7 @@ namespace llvm {
     explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
                      LLVMContext &C);
 
-    lltok::Kind Lex() {
-      return CurKind = LexToken();
-    }
+    lltok::Kind Lex() { return CurKind = LexToken(); }
 
     typedef SMLoc LocTy;
     LocTy getLoc() const { return SMLoc::getFromPointer(TokStart); }
@@ -77,6 +78,23 @@ namespace llvm {
 
     void setIgnoreColonInIdentifiers(bool val) {
       IgnoreColonInIdentifiers = val;
+    }
+
+    // Get the line, column position of the start of the current token,
+    // zero-indexed
+    std::pair<unsigned, unsigned> getTokLineColumnPos() {
+      auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(TokStart));
+      --LC.first;
+      --LC.second;
+      return LC;
+    }
+    // Get the line, column position of the end of the previous token,
+    // zero-indexed exclusive
+    std::pair<unsigned, unsigned> getPrevTokEndLineColumnPos() {
+      auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(PrevTokEnd));
+      --LC.first;
+      --LC.second;
+      return LC;
     }
 
     // This returns true as a convenience for the parser functions that return
@@ -93,7 +111,12 @@ namespace llvm {
   private:
     lltok::Kind LexToken();
 
+    // Return closest pointer after `Ptr` that is an end of a label.
+    // Returns nullptr if `Ptr` doesn't point into a label.
+    const char *getLabelTail(const char *Ptr);
     int getNextChar();
+    const char *skipNChars(unsigned N);
+    void advancePositionTo(const char *Ptr);
     void SkipLineComment();
     bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
