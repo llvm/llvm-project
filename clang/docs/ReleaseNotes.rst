@@ -257,10 +257,16 @@ Non-comprehensive list of changes in this release
 
 - Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
+- Introduce support for :doc:`allocation tokens <AllocToken>` to enable
+  allocator-level heap organization strategies. A feature to instrument all
+  allocation functions with a token ID can be enabled via the
+  ``-fsanitize=alloc-token`` flag.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
 
 
 Lanai Support
@@ -350,6 +356,11 @@ Improvements to Clang's diagnostics
 - The two-element, unary mask variant of ``__builtin_shufflevector`` is now
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
+
+- Closed a loophole in the diagnosis of function pointer conversions changing
+  extended function type information in C mode (#GH41465). Function conversions
+  that were previously incorrectly accepted in case of other irrelevant
+  conditions are now consistently diagnosed, identical to C++ mode.
 
 Improvements to Clang's time-trace
 ----------------------------------
