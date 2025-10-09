@@ -264,8 +264,7 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
     void *Base = Allocator->allocL0(BlockSize, 0, AllocKind);
 
     if (ZeroInit) {
-      auto RC =
-          Allocator->enqueueMemSet(Base, 0, BlockSize);
+      auto RC = Allocator->enqueueMemSet(Base, 0, BlockSize);
       if (RC != OFFLOAD_SUCCESS) {
         DP("Failed to zero-initialize pool memory\n");
         return nullptr;
