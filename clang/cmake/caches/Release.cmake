@@ -30,12 +30,7 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
-if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
-  # Reduce projects built for Windows due to 2GB installer limits.
-  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
-else()
-  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
-endif()
+set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
 
 # bolt only supports ELF, so only enable it for Linux.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
