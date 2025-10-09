@@ -154,11 +154,6 @@ static bool shouldPrintQualified(ParameterElement *param) {
   if (parameter.getPrinter())
     return false;
 
-  if (const llvm::Init *init = parameter.getDef())
-    if (const auto *defInit = dyn_cast<llvm::DefInit>(init))
-      if (defInit->getDef()->isSubClassOf("EnumAttrInfo"))
-        return false;
-
   if (cppType.contains("mlir::Attribute") || cppType.contains("mlir::Type"))
     return true;
 
