@@ -280,7 +280,7 @@ Function::~Function() = default;
 void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file_sp.reset();
+  source_file_sp = std::make_shared<SupportFile>();
 
   if (m_comp_unit == nullptr)
     return;
