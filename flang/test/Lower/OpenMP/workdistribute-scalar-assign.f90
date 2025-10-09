@@ -18,3 +18,12 @@ subroutine target_teams_workdistribute_scalar_assign()
 
 end subroutine target_teams_workdistribute_scalar_assign
 
+! CHECK-LABEL: func @_QPteams_workdistribute_scalar_assign
+subroutine teams_workdistribute_scalar_assign()
+  integer :: aa(10)
+  ! CHECK: fir.call @_FortranAAssign
+  !$omp teams workdistribute
+  aa = 20
+  !$omp end teams workdistribute
+
+end subroutine teams_workdistribute_scalar_assign
