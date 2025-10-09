@@ -393,7 +393,7 @@ define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoaddr(ptr %p, ptr %
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    ret i64 [[INT]]
 ;
   %cmp = icmp eq ptr %p, %p2
