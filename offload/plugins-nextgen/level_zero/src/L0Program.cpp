@@ -352,7 +352,11 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
           }
 
           uint64_t Idx = 0;
-          Parts[0].getAsInteger(10, Idx);
+          if (Parts[0].getAsInteger(10, Idx)) {
+            DP("Warning: ignoring auxiliary information (invalid index '%s').\n",
+               Parts[0].str().c_str());
+            continue;
+          }
           MaxImageIdx = (std::max)(MaxImageIdx, Idx);
           if (AuxInfo.find(Idx) != AuxInfo.end()) {
             DP("Warning: duplicate auxiliary information for image %" PRIu64
@@ -362,7 +366,11 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
           }
 
           uint64_t Part1Id;
-          Parts[1].getAsInteger(10, Part1Id);
+          if (Parts[1].getAsInteger(10, Part1Id)) {
+            DP("Warning: ignoring auxiliary information (invalid part id '%s').\n",
+               Parts[1].str().c_str());
+            continue;
+          }
 
           AuxInfo.emplace(
               std::piecewise_construct, std::forward_as_tuple(Idx),

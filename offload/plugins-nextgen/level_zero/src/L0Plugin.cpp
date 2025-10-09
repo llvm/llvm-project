@@ -214,12 +214,8 @@ Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
        " with ImmCmdList barrier\n",
        DPxPTR(Interop));
     auto ImmCmdList = L0->ImmCmdList;
-    auto Event = l0Device.getEvent();
 
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, Event, 0,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
-    l0Device.releaseEvent(Event);
+    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList, UINT64_MAX);
   } else {
     DP("LevelZeroPluginTy::sync_barrier: Synchronizing " DPxMOD
        " with queue synchronize\n",
@@ -254,6 +250,8 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
                       nullptr);
   } else {
+#if 0
+    // TODO: re-enable once we have a way to delay the CmdList reset 
     DP("LevelZeroPluginTy::async_barrier: Appending CmdList barrier to " DPxMOD
        "\n",
        DPxPTR(Interop));
@@ -264,6 +262,9 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
                       nullptr);
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
+#else
+    return syncBarrierImpl(Interop);
+#endif
   }
 
   return Plugin::success();

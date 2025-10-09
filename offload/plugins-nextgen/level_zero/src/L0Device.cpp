@@ -701,14 +701,12 @@ int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
                                    bool UseCopyEngine) {
   ze_command_list_handle_t CmdList = nullptr;
   ze_command_queue_handle_t CmdQueue = nullptr;
-  ze_event_handle_t Event = nullptr;
 
   if (useImmForCopy()) {
     CmdList = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
-    Event = getEvent();
     CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                     Event, 0, nullptr);
-    CALL_ZE_RET_FAIL(zeEventHostSynchronize, Event, UINT64_MAX);
+                     nullptr, 0, nullptr);
+    CALL_ZE_RET_FAIL(zeCommandListHostSynchronize, CmdList, UINT64_MAX);
   } else {
     if (UseCopyEngine) {
       CmdList = getCopyCmdList();
@@ -719,7 +717,7 @@ int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     }
 
     CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                     Event, 0, nullptr);
+                     nullptr, 0, nullptr);
     CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
     CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                          CmdQueue, 1, &CmdList, nullptr);

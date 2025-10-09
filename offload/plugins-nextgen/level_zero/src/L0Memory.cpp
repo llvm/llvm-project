@@ -174,7 +174,6 @@ MemAllocatorTy::MemPoolTy::MemPoolTy(MemAllocatorTy *_Allocator) {
   BucketStats.resize(1, {0, 0});
   BucketParams.emplace_back(AllocMax, AllocUnit);
   ZeroInit = true;
-  ZeroInitValue.resize(AllocUnit, 0);
   DP("Initialized zero-initialized reduction counter pool for "
      "device " DPxMOD ": AllocMin = %zu, AllocMax = %zu, PoolSizeMax = %zu\n",
      DPxPTR(Allocator->Device), AllocMin, AllocMax, PoolSizeMax);
@@ -266,7 +265,7 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
 
     if (ZeroInit) {
       auto RC =
-          Allocator->enqueueMemCopy(Base, ZeroInitValue.data(), BlockSize);
+          Allocator->enqueueMemSet(Base, 0, BlockSize);
       if (RC != OFFLOAD_SUCCESS) {
         DP("Failed to zero-initialize pool memory\n");
         return nullptr;
@@ -547,6 +546,10 @@ Error MemAllocatorTy::dealloc_locked(void *Ptr) {
      DPxPTR(Ptr), DPxPTR(Info.Base), Info.Size);
 
   return Plugin::success();
+}
+
+int32_t MemAllocatorTy::enqueueMemSet(void *Dst, int8_t Value, size_t Size) {
+  return Device->enqueueMemFill(Dst, &Value, sizeof(int8_t), Size);
 }
 
 int32_t MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src,

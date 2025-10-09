@@ -200,8 +200,6 @@ class MemAllocatorTy {
     std::vector<std::pair<uint64_t, uint64_t>> BucketStats;
     /// Need to zero-initialize after L0 allocation
     bool ZeroInit = false;
-    /// Zero-initialized values to be copied to device
-    std::vector<char> ZeroInitValue;
 
     /// Get bucket ID from the specified allocation size.
     uint32_t getBucketId(size_t Size) {
@@ -394,6 +392,10 @@ public:
 
   /// Perform copy operation
   int32_t enqueueMemCopy(void *Dst, const void *Src, size_t Size);
+
+  /// Perform memory fill operation
+  int32_t enqueueMemSet(void *Dst, int8_t Value, size_t Size);
+
 }; /// MemAllocatorTy
 
 // simple generic wrapper to reuse objects
