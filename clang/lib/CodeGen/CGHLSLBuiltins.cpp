@@ -369,16 +369,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
         ArrayRef<Value *>{IndexOp});
   }
-  case Builtin::BI__builtin_hlsl_buffer_getdimensions: {
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
     Value *Handle = EmitScalarExpr(E->getArg(0));
     LValue Dim = EmitLValue(E->getArg(1));
     llvm::Type *RetTy = llvm::Type::getInt32Ty(getLLVMContext());
     Value *DimValue = Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getGetDimensionsBufferIntrinsic(),
+        RetTy, CGM.getHLSLRuntime().getGetDimensionsXIntrinsic(),
         ArrayRef<Value *>{Handle});
     return Builder.CreateStore(DimValue, Dim.getAddress());
   }
-  case Builtin::BI__builtin_hlsl_buffer_getstride: {
+  case Builtin::BI__builtin_hlsl_resource_getstride: {
     LValue Stride = EmitLValue(E->getArg(1));
     return emitBufferStride(this, E->getArg(0), Stride);
   }

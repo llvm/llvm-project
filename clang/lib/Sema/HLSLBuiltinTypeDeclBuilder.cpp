@@ -1186,10 +1186,10 @@ BuiltinTypeDeclBuilder::addGetDimensionsMethodForBuffer() {
     return BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
         .addParam("numStructs", UIntTy, HLSLParamModifierAttr::Keyword_out)
         .addParam("stride", UIntTy, HLSLParamModifierAttr::Keyword_out)
-        .callBuiltin("__builtin_hlsl_buffer_getdimensions", QualType(),
+        .callBuiltin("__builtin_hlsl_resource_getdimensions_x", QualType(),
                      PH::Handle, PH::_0)
-        .callBuiltin("__builtin_hlsl_buffer_getstride", QualType(), PH::Handle,
-                     PH::_1)
+        .callBuiltin("__builtin_hlsl_resource_getstride", QualType(),
+                     PH::Handle, PH::_1)
         .finalize();
   }
 
@@ -1197,7 +1197,7 @@ BuiltinTypeDeclBuilder::addGetDimensionsMethodForBuffer() {
   // GetDimensions(out uint dim).
   return BuiltinTypeMethodBuilder(*this, "GetDimensions", AST.VoidTy)
       .addParam("dim", UIntTy, HLSLParamModifierAttr::Keyword_out)
-      .callBuiltin("__builtin_hlsl_buffer_getdimensions", QualType(),
+      .callBuiltin("__builtin_hlsl_resource_getdimensions_x", QualType(),
                    PH::Handle, PH::_0)
       .finalize();
 }

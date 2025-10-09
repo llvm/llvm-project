@@ -222,7 +222,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_getdimensions' 'void (...) noexcept'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_x' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'dim' 'unsigned int &__restrict'

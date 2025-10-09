@@ -4951,14 +4951,14 @@ def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "uint32_t(uint32_t)";
 }
 
-def HLSLResourceGetDimensions : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_buffer_getdimensions"];
+def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }
 
 def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_buffer_getstride"];
+  let Spellings = ["__builtin_hlsl_resource_getstride"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

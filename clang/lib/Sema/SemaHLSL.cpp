@@ -2978,7 +2978,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ResourceTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_buffer_getdimensions: {
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
     ASTContext &AST = SemaRef.getASTContext();
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
@@ -2987,7 +2987,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_buffer_getstride: {
+  case Builtin::BI__builtin_hlsl_resource_getstride: {
     ASTContext &AST = SemaRef.getASTContext();
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||

@@ -55,7 +55,7 @@ export uint TestGetDimensions() {
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %this1, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", float, 0, 0, 0), ptr %[[HANDLE_PTR]]
 // CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
-// DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.buffer.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0) %[[HANDLE]])
+// DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0) %[[HANDLE]])
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
@@ -63,12 +63,12 @@ export uint TestGetDimensions() {
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), ptr %[[HANDLE_PTR]]
 // CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
-// DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.buffer.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0) %[[HANDLE]])
+// DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0) %[[HANDLE]])
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
 // DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0), i32)
 // DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), i32)
 
-// DXIL: declare i32 @llvm.dx.resource.getdimensions.buffer.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0))
-// DXIL: declare i32 @llvm.dx.resource.getdimensions.buffer.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0))
+// DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0))
+// DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0))
