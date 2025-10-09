@@ -118,12 +118,8 @@ public:
     constexpr Iterator(const Iterator &RHS) = default;
     constexpr Iterator(Iterator &&RHS) = default;
 
-    Iterator &operator=(const Iterator &RHS) {
-      Table = RHS.Table;
-      O = RHS.O;
-      S = RHS.S;
-      return *this;
-    }
+    constexpr Iterator &operator=(const Iterator &RHS) = default;
+    constexpr Iterator &operator=(Iterator &&RHS) = default;
 
     bool operator==(const Iterator &RHS) const {
       assert(Table == RHS.Table && "Compared iterators for unrelated tables!");
