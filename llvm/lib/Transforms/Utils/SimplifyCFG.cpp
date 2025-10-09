@@ -7736,8 +7736,7 @@ struct SwitchSuccWrapper {
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
 
-namespace llvm {
-template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
+template <> struct llvm::DenseMapInfo<const SwitchSuccWrapper *> {
   static const SwitchSuccWrapper *getEmptyKey() {
     return static_cast<SwitchSuccWrapper *>(
         DenseMapInfo<void *>::getEmptyKey());
@@ -7805,7 +7804,6 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     return true;
   }
 };
-} // namespace llvm
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
