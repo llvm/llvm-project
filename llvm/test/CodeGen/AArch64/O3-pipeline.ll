@@ -105,8 +105,8 @@
 ; CHECK-NEXT:     AArch64 Promote Constant
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
+; CHECK-NEXT:     Merge internal globals
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Merge internal globals
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
