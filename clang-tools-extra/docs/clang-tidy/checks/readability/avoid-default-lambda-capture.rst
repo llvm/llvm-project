@@ -7,9 +7,9 @@ Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``).
   
 Captures can lead to subtle bugs including dangling references and unnecessary
 copies. Writing out the name of the variables being captured reminds programmers
-and reviewers to know what is being captured. And knowing is half the battle.
+and reviewers to know what is being captured.
 
-This check does not lint for variable-length array (VLA) captures. VLAs are not
+This check does not warn on variable-length array (VLA) captures. VLAs are not
 ISO C++, and it is impossible to explicitly capture them as the syntax for doing
 so does not exist.
 
