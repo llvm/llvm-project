@@ -42,6 +42,25 @@ ref_test_test:
   ref.test () -> (i32)
   end_function
 
+  # CHECK-LABEL: ref_cast_test:
+  # CHECK: ref.null_func   # encoding: [0xd0,0x70]
+  # CHECK: ref.cast () -> () # encoding: [0xfb,0x16,0x80'A',0x80'A',0x80'A',0x80'A',A]
+  # CHECK: # fixup A - offset: 2, value: .Ltypeindex2@TYPEINDEX, kind: fixup_uleb128_i32
+  # CHECK: drop # encoding: [0x1a]
+  # CHECK: ref.null_func   # encoding: [0xd0,0x70]
+  # CHECK: ref.cast () -> (i32) # encoding: [0xfb,0x16,0x80'A',0x80'A',0x80'A',0x80'A',A]
+  # CHECK: # fixup A - offset: 2, value: .Ltypeindex3@TYPEINDEX, kind: fixup_uleb128_i32
+  # CHECK: drop # encoding: [0x1a]
+  ref_cast_test:
+    .functype ref_cast_test () -> ()
+    ref.null_func
+    ref.cast () -> ()
+    drop
+    ref.null_func
+    ref.cast () -> (i32)
+    drop
+    end_function
+
 # CHECK-LABEL: ref_sig_test_funcref:
 # CHECK-NEXT: .functype ref_sig_test_funcref (funcref) -> (funcref)
 ref_sig_test_funcref:

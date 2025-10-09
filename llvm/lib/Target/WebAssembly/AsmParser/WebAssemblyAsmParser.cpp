@@ -672,6 +672,10 @@ public:
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;
+    } else if (Name == "ref.cast") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
     }
 
     // Returns true if the next tokens are a catch clause

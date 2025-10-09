@@ -143,8 +143,8 @@ FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                          const TargetLibraryInfo *libInfo);
 
 APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
-                              SmallVector<MVT, 4> &Returns,
-                              SmallVector<MVT, 4> &Params);
+                              ArrayRef<MVT> Returns,
+                              ArrayRef<MVT> Params);
 
 } // end namespace WebAssembly
 
