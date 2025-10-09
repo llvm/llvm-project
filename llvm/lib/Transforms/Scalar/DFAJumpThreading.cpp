@@ -382,18 +382,10 @@ typedef DenseMap<BasicBlock *, CloneList> DuplicateBlockMap;
 // information is needed when restoring SSA form after cloning blocks.
 typedef MapVector<Instruction *, std::vector<Instruction *>> DefMap;
 
-static inline std::string getBlockName(const BasicBlock *BB) {
-  std::string BBName;
-  raw_string_ostream Stream(BBName);
-  if (BB->hasName())
-    Stream << BB->getName();
-  else
-    BB->printAsOperand(Stream, false);
-  return BBName;
-}
-
 inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
-  OS << "< " << llvm::join(llvm::map_range(Path, getBlockName), ", ") << " >";
+  auto BBNames = llvm::map_range(
+      Path, [](const BasicBlock *BB) { return BB->getNameOrAsOperand(); });
+  OS << "< " << llvm::join(BBNames, ", ") << " >";
   return OS;
 }
 
@@ -425,7 +417,7 @@ struct ThreadingPath {
   }
 
   void print(raw_ostream &OS) const {
-    OS << Path << " [ " << ExitVal << ", " << getBlockName(DBB) << " ]";
+    OS << Path << " [ " << ExitVal << ", " << DBB->getNameOrAsOperand() << " ]";
   }
 
 private:
