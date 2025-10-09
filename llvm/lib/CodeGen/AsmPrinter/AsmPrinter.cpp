@@ -20,6 +20,7 @@
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -204,6 +205,17 @@ public:
   void allUsesReplacedWith(Value *V2) override;
 };
 } // namespace
+
+namespace callgraph {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+enum Flags : uint8_t {
+  None = 0,
+  IsIndirectTarget = 1u << 0,
+  HasDirectCallees = 1u << 1,
+  HasIndirectCallees = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
+};
+} // namespace callgraph
 
 class llvm::AddrLabelMap {
   MCContext &Context;
@@ -1696,19 +1708,14 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   const auto &DirectCallees = FuncCGInfo.DirectCallees;
   const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
 
-  enum CallGraphFlags : uint8_t {
-    IsIndirectTargetFlag = 1u << 0,
-    HasDirectCalleesFlag = 1u << 1,
-    HasIndirectCalleesFlag = 1u << 2,
-  };
-
-  uint8_t Flags = 0;
+  using namespace callgraph;
+  Flags CGFlags = Flags::None;
   if (IsIndirectTarget)
-    Flags |= IsIndirectTargetFlag;
+    CGFlags |= Flags::IsIndirectTarget;
   if (DirectCallees.size() > 0)
-    Flags |= HasDirectCalleesFlag;
+    CGFlags |= Flags::HasDirectCallees;
   if (IndirectCalleeTypeIDs.size() > 0)
-    Flags |= HasIndirectCalleesFlag;
+    CGFlags |= Flags::HasIndirectCallees;
 
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
@@ -1726,7 +1733,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // 7) Number of unique indirect target type IDs, if at least one exists.
   // 8) Each unique indirect target type id.
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
-  OutStreamer->emitInt8(Flags);
+  OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
   const auto *TypeId = extractNumericCGTypeId(F);
   if (IsIndirectTarget && TypeId)
