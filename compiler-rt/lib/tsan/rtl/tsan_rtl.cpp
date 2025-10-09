@@ -40,6 +40,13 @@ SANITIZER_WEAK_DEFAULT_IMPL
 void __tsan_test_only_on_fork() {}
 #endif
 
+#if SANITIZER_APPLE
+// Override weak symbol from sanitizer_common
+extern void __tsan_set_in_internal_write_call(bool value) {
+  __tsan::cur_thread_init()->in_internal_write_call = value;
+}
+#endif
+
 namespace __tsan {
 
 #if !SANITIZER_GO
@@ -893,6 +900,13 @@ void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
     ThreadIgnoreBegin(thr, pc);
     ThreadIgnoreSyncBegin(thr, pc);
   }
+
+#  if SANITIZER_APPLE
+  // This flag can have inheritance disabled - we are the child so act
+  // accordingly
+  if (flags()->lock_during_write == kNoLockDuringWritesCurrentProcess)
+    flags()->lock_during_write = kLockDuringAllWrites;
+#  endif
 }
 #endif
 
