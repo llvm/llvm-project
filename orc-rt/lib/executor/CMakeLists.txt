@@ -3,6 +3,7 @@ set(files
   AllocAction.cpp
   ResourceManager.cpp
   RTTI.cpp
+  SimpleNativeMemoryMap.cpp
   )
 
 add_library(orc-rt-executor STATIC ${files})
