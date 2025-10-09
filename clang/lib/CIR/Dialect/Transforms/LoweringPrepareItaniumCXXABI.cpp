@@ -92,7 +92,53 @@ static mlir::Value
 buildDynamicCastToVoidAfterNullCheck(cir::CIRBaseBuilderTy &builder,
                                      clang::ASTContext &astCtx,
                                      cir::DynamicCastOp op) {
-  llvm_unreachable("dynamic cast to void is NYI");
+  mlir::Location loc = op.getLoc();
+  bool vtableUsesRelativeLayout = op.getRelativeLayout();
+
+  // TODO(cir): consider address space in this function.
+  assert(!cir::MissingFeatures::addressSpace());
+
+  mlir::Type vtableElemTy;
+  uint64_t vtableElemAlign;
+  if (vtableUsesRelativeLayout) {
+    vtableElemTy = builder.getSIntNTy(32);
+    vtableElemAlign = 4;
+  } else {
+    const auto &targetInfo = astCtx.getTargetInfo();
+    auto ptrdiffTy = targetInfo.getPtrDiffType(clang::LangAS::Default);
+    bool ptrdiffTyIsSigned = clang::TargetInfo::isTypeSigned(ptrdiffTy);
+    uint64_t ptrdiffTyWidth = targetInfo.getTypeWidth(ptrdiffTy);
+
+    vtableElemTy = cir::IntType::get(builder.getContext(), ptrdiffTyWidth,
+                                     ptrdiffTyIsSigned);
+    vtableElemAlign =
+        llvm::divideCeil(targetInfo.getPointerAlign(clang::LangAS::Default), 8);
+  }
+
+  // Access vtable to get the offset from the given object to its containing
+  // complete object.
+  // TODO: Add a specialized operation to get the object offset?
+  auto vptrTy = cir::VPtrType::get(builder.getContext());
+  cir::PointerType vptrPtrTy = builder.getPointerTo(vptrTy);
+  auto vptrPtr =
+      cir::VTableGetVPtrOp::create(builder, loc, vptrPtrTy, op.getSrc());
+  mlir::Value vptr = builder.createLoad(loc, vptrPtr);
+  mlir::Value elementPtr =
+      builder.createBitcast(vptr, builder.getPointerTo(vtableElemTy));
+  mlir::Value minusTwo = builder.getSignedInt(loc, -2, 64);
+  auto offsetToTopSlotPtr = cir::PtrStrideOp::create(
+      builder, loc, builder.getPointerTo(vtableElemTy), elementPtr, minusTwo);
+  mlir::Value offsetToTop =
+      builder.createAlignedLoad(loc, offsetToTopSlotPtr, vtableElemAlign);
+
+  // Add the offset to the given pointer to get the cast result.
+  // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
+  cir::PointerType u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  mlir::Value srcBytePtr = builder.createBitcast(op.getSrc(), u8PtrTy);
+  auto dstBytePtr =
+      cir::PtrStrideOp::create(builder, loc, u8PtrTy, srcBytePtr, offsetToTop);
+  // Cast the result to a void*.
+  return builder.createBitcast(dstBytePtr, builder.getVoidPtrTy());
 }
 
 mlir::Value
