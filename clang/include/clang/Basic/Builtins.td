@@ -1256,6 +1256,18 @@ def MaskedCompressStore : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedGather : Builtin {
+  let Spellings = ["__builtin_masked_gather"];
+  let Attributes = [NoThrow, Pure, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedScatter : Builtin {
+  let Spellings = ["__builtin_masked_scatter"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1551,13 +1563,13 @@ def ElementwiseFshr : Builtin {
 }
 
 def ElementwiseCtlz : Builtin {
-  let Spellings = ["__builtin_elementwise_ctlz"];
+  let Spellings = ["__builtin_elementwise_clzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseCttz : Builtin {
-  let Spellings = ["__builtin_elementwise_cttz"];
+  let Spellings = ["__builtin_elementwise_ctzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
@@ -4933,6 +4945,18 @@ def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_nonuniformindex"];
+  let Attributes = [NoThrow];
+  let Prototype = "uint32_t(uint32_t)";
+}
+
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
@@ -5079,6 +5103,12 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLIsnan : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isnan"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

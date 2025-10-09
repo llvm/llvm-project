@@ -202,7 +202,7 @@ namespace llvm {
     /// bitwidth.
     MVT changeVectorElementTypeToInteger() const {
       MVT EltTy = getVectorElementType();
-      MVT IntTy = MVT::getIntegerVT(EltTy.getSizeInBits());
+      MVT IntTy = MVT::getIntegerVT(EltTy.getFixedSizeInBits());
       MVT VecTy = MVT::getVectorVT(IntTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Simple vector VT not representable by simple integer vector VT!");
@@ -224,7 +224,7 @@ namespace llvm {
     MVT changeTypeToInteger() {
       if (isVector())
         return changeVectorElementTypeToInteger();
-      return MVT::getIntegerVT(getSizeInBits());
+      return MVT::getIntegerVT(getFixedSizeInBits());
     }
 
     /// Return a VT for a vector type with the same element type but
@@ -580,6 +580,12 @@ namespace llvm {
     static auto fp_scalable_vector_valuetypes() {
       return enum_seq_inclusive(MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
                                 MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
+    }
+
+    static auto cheri_capability_valuetypes() {
+      return enum_seq_inclusive(MVT::FIRST_CHERI_CAPABILITY_VALUETYPE,
+                                MVT::LAST_CHERI_CAPABILITY_VALUETYPE,
                                 force_iteration_on_noniterable_enum);
     }
     /// @}

@@ -159,6 +159,15 @@ libc_test(
     ],
 )
 
+libc_test(
+    name = "rand_test",
+    srcs = ["rand_test.cpp"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
 libc_test_library(
     name = "strfrom_test_helper",
     hdrs = ["StrfromTest.h"],

@@ -174,7 +174,7 @@ TEST_F(TransportInputTest, OutgoingRequest) {
 
 TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
   // Make an outgoing request that expects a failure response.
-  bool responseCallbackInvoked = false;
+  unsigned responseCallbackInvoked = 0;
   auto callFn = getMessageHandler().outgoingRequest<CompletionList, Position>(
       "outgoing-request-json-parse-failure",
       [&responseCallbackInvoked](const llvm::json::Value &id,
@@ -190,7 +190,7 @@ TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
         responseCallbackInvoked += 1;
       });
   callFn({}, 109);
-  EXPECT_EQ(responseCallbackInvoked, 0);
+  EXPECT_EQ(responseCallbackInvoked, 0u);
 
   // The request receives multiple responses, but only the first one triggers
   // the response callback. The first response has erroneous JSON that causes a
@@ -200,6 +200,6 @@ TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
              "{\"jsonrpc\":\"2.0\",\"id\":109,\"result\":{\"line\":3,"
              "\"character\":2}}\n");
   runTransport();
-  EXPECT_EQ(responseCallbackInvoked, 1);
+  EXPECT_EQ(responseCallbackInvoked, 1u);
 }
 } // namespace

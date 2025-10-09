@@ -689,10 +689,14 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   DISubprogram *DIS = F.getSubprogram();
   // If there is no DISubprogram for F, it implies the function is compiled
   // without debug info. So we also don't generate debug info for the frame.
-  if (!DIS || !DIS->getUnit() ||
-      !dwarf::isCPlusPlus(
-          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()) ||
-      DIS->getUnit()->getEmissionKind() != DICompileUnit::DebugEmissionKind::FullDebug)
+
+  if (!DIS || !DIS->getUnit())
+    return;
+
+  if (!dwarf::isCPlusPlus(static_cast<llvm::dwarf::SourceLanguage>(
+          DIS->getUnit()->getSourceLanguage().getUnversionedName())) ||
+      DIS->getUnit()->getEmissionKind() !=
+          DICompileUnit::DebugEmissionKind::FullDebug)
     return;
 
   assert(Shape.ABI == coro::ABI::Switch &&
@@ -907,13 +911,17 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   // Create an entry for every spilled value.
   for (auto &S : FrameData.Spills) {
     Type *FieldType = S.first->getType();
+    MaybeAlign MA;
     // For byval arguments, we need to store the pointed value in the frame,
     // instead of the pointer itself.
-    if (const Argument *A = dyn_cast<Argument>(S.first))
-      if (A->hasByValAttr())
+    if (const Argument *A = dyn_cast<Argument>(S.first)) {
+      if (A->hasByValAttr()) {
         FieldType = A->getParamByValType();
-    FieldIDType Id = B.addField(FieldType, std::nullopt, false /*header*/,
-                                true /*IsSpillOfValue*/);
+        MA = A->getParamAlign();
+      }
+    }
+    FieldIDType Id =
+        B.addField(FieldType, MA, false /*header*/, true /*IsSpillOfValue*/);
     FrameData.setFieldIndex(S.first, Id);
   }
 

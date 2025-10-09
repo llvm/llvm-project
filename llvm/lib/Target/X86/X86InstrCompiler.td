@@ -1324,8 +1324,8 @@ def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
 // %r11. This happens when calling a vararg function with 6 arguments.
 //
 // Match an X86tcret that uses less than 7 volatile registers.
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
-          (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
+def : Pat<(X86tcret GR32_TC:$dst, timm:$off),
+          (TCRETURNri GR32_TC:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotHiPECCFunc, NotUseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret GR32:$dst, timm:$off),

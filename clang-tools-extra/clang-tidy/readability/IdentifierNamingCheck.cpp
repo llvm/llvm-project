@@ -337,8 +337,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
 
     // Remove keywords
     for (StringRef Kw : Keywords) {
-      for (size_t Pos = 0;
-           (Pos = Type.find(Kw.data(), Pos)) != std::string::npos;) {
+      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;) {
         Type.replace(Pos, Kw.size(), "");
       }
     }
@@ -373,7 +372,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
         " int", " char", " double", " long", " short"};
     bool RedundantRemoved = false;
     for (auto Kw : TailsOfMultiWordType) {
-      size_t Pos = Type.rfind(Kw.data());
+      size_t Pos = Type.rfind(Kw);
       if (Pos != std::string::npos) {
         const size_t PtrCount = getAsteriskCount(Type, ND);
         Type = Type.substr(0, Pos + Kw.size() + PtrCount);
@@ -602,9 +601,8 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   if (PtrCount > 0) {
     ModifiedTypeName = [&](std::string Str, StringRef From, StringRef To) {
       size_t StartPos = 0;
-      while ((StartPos = Str.find(From.data(), StartPos)) !=
-             std::string::npos) {
-        Str.replace(StartPos, From.size(), To.data());
+      while ((StartPos = Str.find(From, StartPos)) != std::string::npos) {
+        Str.replace(StartPos, From.size(), To);
         StartPos += To.size();
       }
       return Str;

@@ -9014,24 +9014,6 @@ bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType) {
   return FromAttributes != ToAttributes;
 }
 
-// Check if we have a conversion between incompatible cmse function pointer
-// types, that is, a conversion between a function pointer with the
-// cmse_nonsecure_call attribute and one without.
-static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
-                                          QualType ToType) {
-  if (const auto *ToFn =
-          dyn_cast<FunctionType>(S.Context.getCanonicalType(ToType))) {
-    if (const auto *FromFn =
-            dyn_cast<FunctionType>(S.Context.getCanonicalType(FromType))) {
-      FunctionType::ExtInfo ToEInfo = ToFn->getExtInfo();
-      FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
-
-      return ToEInfo.getCmseNSCall() != FromEInfo.getCmseNSCall();
-    }
-  }
-  return false;
-}
-
 // checkPointerTypesForAssignment - This is a very tricky routine (despite
 // being closely modeled after the C99 spec:-). The odd characteristic of this
 // routine is it effectively iqnores the qualifiers on the top level pointee.
@@ -9187,18 +9169,43 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       return AssignConvertType::IncompatibleFunctionPointer;
     return AssignConvertType::IncompatiblePointer;
   }
-  bool DiscardingCFIUncheckedCallee, AddingCFIUncheckedCallee;
-  if (!S.getLangOpts().CPlusPlus &&
-      S.IsFunctionConversion(ltrans, rtrans, &DiscardingCFIUncheckedCallee,
-                             &AddingCFIUncheckedCallee)) {
-    // Allow conversions between CFIUncheckedCallee-ness.
-    if (!DiscardingCFIUncheckedCallee && !AddingCFIUncheckedCallee)
+  // Note: in C++, typesAreCompatible(ltrans, rtrans) will have guaranteed
+  // hasSameType, so we can skip further checks.
+  const auto *LFT = ltrans->getAs<FunctionType>();
+  const auto *RFT = rtrans->getAs<FunctionType>();
+  if (!S.getLangOpts().CPlusPlus && LFT && RFT) {
+    // The invocation of IsFunctionConversion below will try to transform rtrans
+    // to obtain an exact match for ltrans. This should not fail because of
+    // mismatches in result type and parameter types, they were already checked
+    // by typesAreCompatible above. So we will recreate rtrans (or where
+    // appropriate ltrans) using the result type and parameter types from ltrans
+    // (respectively rtrans), but keeping its ExtInfo/ExtProtoInfo.
+    const auto *LFPT = dyn_cast<FunctionProtoType>(LFT);
+    const auto *RFPT = dyn_cast<FunctionProtoType>(RFT);
+    if (LFPT && RFPT) {
+      rtrans = S.Context.getFunctionType(LFPT->getReturnType(),
+                                         LFPT->getParamTypes(),
+                                         RFPT->getExtProtoInfo());
+    } else if (LFPT) {
+      FunctionProtoType::ExtProtoInfo EPI;
+      EPI.ExtInfo = RFT->getExtInfo();
+      rtrans = S.Context.getFunctionType(LFPT->getReturnType(),
+                                         LFPT->getParamTypes(), EPI);
+    } else if (RFPT) {
+      // In this case, we want to retain rtrans as a FunctionProtoType, to keep
+      // all of its ExtProtoInfo. Transform ltrans instead.
+      FunctionProtoType::ExtProtoInfo EPI;
+      EPI.ExtInfo = LFT->getExtInfo();
+      ltrans = S.Context.getFunctionType(RFPT->getReturnType(),
+                                         RFPT->getParamTypes(), EPI);
+    } else {
+      rtrans = S.Context.getFunctionNoProtoType(LFT->getReturnType(),
+                                                RFT->getExtInfo());
+    }
+    if (!S.Context.hasSameUnqualifiedType(rtrans, ltrans) &&
+        !S.IsFunctionConversion(rtrans, ltrans))
       return AssignConvertType::IncompatibleFunctionPointer;
   }
-  if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
-    return AssignConvertType::IncompatibleFunctionPointer;
-  if (S.IsInvalidSMECallConversion(rtrans, ltrans))
-    return AssignConvertType::IncompatibleFunctionPointer;
   return ConvTy;
 }
 
@@ -14725,8 +14732,9 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
           return MPTy;
         }
       }
-    } else if (!isa<FunctionDecl, NonTypeTemplateParmDecl, BindingDecl,
-                    MSGuidDecl, UnnamedGlobalConstantDecl>(dcl))
+    } else if (!isa<FunctionDecl, TemplateParamObjectDecl,
+                    NonTypeTemplateParmDecl, BindingDecl, MSGuidDecl,
+                    UnnamedGlobalConstantDecl>(dcl))
       llvm_unreachable("Unknown/unexpected decl type");
   }
 
@@ -15708,6 +15716,12 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     ExprResult resolvedRHS = CheckPlaceholderExpr(RHSExpr);
     if (!resolvedRHS.isUsable()) return ExprError();
     RHSExpr = resolvedRHS.get();
+  }
+
+  if (getLangOpts().HLSL && (LHSExpr->getType()->isHLSLResourceRecord() ||
+                             LHSExpr->getType()->isHLSLResourceRecordArray())) {
+    if (!HLSL().CheckResourceBinOp(Opc, LHSExpr, RHSExpr, OpLoc))
+      return ExprError();
   }
 
   if (getLangOpts().CPlusPlus) {
@@ -16784,12 +16798,11 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   Expr *OrigExpr = E;
   bool IsMS = false;
 
-  // CUDA device code does not support varargs.
+  // CUDA device global function does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
       CUDAFunctionTarget T = CUDA().IdentifyTarget(F);
-      if (T == CUDAFunctionTarget::Global || T == CUDAFunctionTarget::Device ||
-          T == CUDAFunctionTarget::HostDevice)
+      if (T == CUDAFunctionTarget::Global)
         return ExprError(Diag(E->getBeginLoc(), diag::err_va_arg_in_device));
     }
   }
@@ -20102,7 +20115,9 @@ static void DoMarkVarDeclReferenced(
       isPotentiallyConstantEvaluatedContext(SemaRef) && UsableInConstantExpr;
 
   bool NeedDefinition =
-      OdrUse == OdrUseContext::Used || NeededForConstantEvaluation;
+      OdrUse == OdrUseContext::Used || NeededForConstantEvaluation ||
+      (TSK != clang::TSK_Undeclared && !UsableInConstantExpr &&
+       Var->getType()->isUndeducedType());
 
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");

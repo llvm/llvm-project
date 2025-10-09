@@ -37,7 +37,6 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
     def async_cancel(self, requestId: int) -> int:
         return self.send_async_req(command="cancel", arguments={"requestId": requestId})
 
-    @skipIfWindows
     def test_pending_request(self):
         """
         Tests cancelling a pending request.
@@ -70,7 +69,6 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(cancel_resp["success"], True)
         self.continue_to_exit()
 
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_inflight_request(self):
         """
         Tests cancelling an inflight request.

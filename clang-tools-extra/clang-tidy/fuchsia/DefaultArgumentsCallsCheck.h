@@ -16,7 +16,7 @@ namespace clang::tidy::fuchsia {
 /// Default arguments are not allowed in called functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/default-arguments-calls.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/default-arguments-calls.html
 class DefaultArgumentsCallsCheck : public ClangTidyCheck {
 public:
   DefaultArgumentsCallsCheck(StringRef Name, ClangTidyContext *Context)

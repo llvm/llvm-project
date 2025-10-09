@@ -41,9 +41,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP11]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 1
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP15]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -174,9 +172,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP11]])
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw i64 [[TMP14]], 1
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP15]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ule i64 1, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -273,8 +269,8 @@ exit:
 define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(ptr noalias %A, ptr noalias %B, ptr noalias %C, ptr noalias %D, ptr noalias %E, ptr noalias %F, ptr noalias %G, ptr noalias %H, ptr noalias %I, ptr noalias %J, ptr noalias %K, ptr %L) #1 {
 ; CHECK-LABEL: define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]], ptr noalias [[E:%.*]], ptr noalias [[F:%.*]], ptr noalias [[G:%.*]], ptr noalias [[H:%.*]], ptr noalias [[I:%.*]], ptr noalias [[J:%.*]], ptr noalias [[K:%.*]], ptr [[L:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -314,12 +310,11 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 8, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 8, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_J1:%.*]] = getelementptr i64, ptr [[J]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L_J:%.*]] = load i64, ptr [[GEP_J1]], align 8
 ; CHECK-NEXT:    [[L_TRUNC:%.*]] = trunc i64 [[L_J]] to i16

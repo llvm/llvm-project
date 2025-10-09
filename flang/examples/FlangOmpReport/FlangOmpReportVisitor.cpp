@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FlangOmpReportVisitor.h"
+#include "flang/Common/idioms.h"
 #include "flang/Parser/openmp-utils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -58,9 +59,15 @@ SourcePosition OpenMPCounterVisitor::getLocation(const OmpWrapperType &w) {
 }
 SourcePosition OpenMPCounterVisitor::getLocation(
     const OpenMPDeclarativeConstruct &c) {
+  const parser::AllCookedSources &allCooked{parsing->allCooked()};
   return std::visit(
-      [&](const auto &o) -> SourcePosition {
-        return parsing->allCooked().GetSourcePositionRange(o.source)->first;
+      common::visitors{
+          [&](const parser::OmpMetadirectiveDirective &o) -> SourcePosition {
+            return allCooked.GetSourcePositionRange(o.v.source)->first;
+          },
+          [&](const auto &o) -> SourcePosition {
+            return allCooked.GetSourcePositionRange(o.source)->first;
+          },
       },
       c.u);
 }

@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
@@ -704,6 +705,9 @@ public:
 
   VPIRFlags(WrapFlagsTy WrapFlags)
       : OpType(OperationType::OverflowingBinOp), WrapFlags(WrapFlags) {}
+
+  VPIRFlags(TruncFlagsTy TruncFlags)
+      : OpType(OperationType::Trunc), TruncFlags(TruncFlags) {}
 
   VPIRFlags(FastMathFlags FMFs) : OpType(OperationType::FPMathOp), FMFs(FMFs) {}
 
@@ -1494,9 +1498,10 @@ public:
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
                     const VPIRFlags &Flags = {},
+                    const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
-        VPIRMetadata(), Opcode(Opcode), ResultTy(ResultTy) {
+        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
   }
@@ -1504,11 +1509,11 @@ public:
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
+    auto *New = new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy, *this,
+                                      *this, getDebugLoc());
     if (auto *UV = getUnderlyingValue())
-      return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                   *cast<CastInst>(UV));
-
-    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy);
+      New->setUnderlyingValue(UV);
+    return New;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
@@ -1763,6 +1768,8 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
 
 /// A recipe for handling GEP instructions.
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
+  Type *SourceElementTy;
+
   bool isPointerLoopInvariant() const {
     return getOperand(0)->isDefinedOutsideLoopRegions();
   }
@@ -1779,7 +1786,8 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
 
 public:
   VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP),
+        SourceElementTy(GEP->getSourceElementType()) {
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     getMetadataToPropagate(GEP, Metadata);
@@ -1800,6 +1808,8 @@ public:
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
+
+  Type *getSourceElementType() const { return SourceElementTy; }
 
   /// Return the cost of this VPWidenGEPRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -1889,18 +1899,20 @@ public:
 /// A recipe to compute the pointers for widened memory accesses of IndexTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
-  Type *IndexedTy;
+  Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, GEPNoWrapFlags GEPFlags,
-                        DebugLoc DL)
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+                        GEPNoWrapFlags GEPFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
                             GEPFlags, DL),
-        IndexedTy(IndexedTy) {}
+        SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
   void execute(VPTransformState &State) override;
+
+  Type *getSourceElementType() const { return SourceElementTy; }
 
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -1917,7 +1929,7 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy,
+    return new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
@@ -2251,8 +2263,7 @@ public:
   /// debug location \p DL.
   VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
                    DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
-        Name(Name.str()) {
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, {}, Phi, DL), Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }
@@ -2966,7 +2977,8 @@ public:
 /// the expression is elevated to connect the non-expression recipe with the
 /// VPExpressionRecipe itself.
 class VPExpressionRecipe : public VPSingleDefRecipe {
-  /// Recipes included in this VPExpressionRecipe.
+  /// Recipes included in this VPExpressionRecipe. This could contain
+  /// duplicates.
   SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
 
   /// Temporary VPValues used for external operands of the expression, i.e.
@@ -2986,6 +2998,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// vector operands, performing a reduction.add on the result, and adding
     /// the scalar result to a chain.
     MulAccReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// extended vector operands, negating the multiplication, performing a
+    /// reduction.add on the result, and adding the scalar result to a chain.
+    ExtNegatedMulAccReduction,
   };
 
   /// Type of the expression.
@@ -3009,10 +3025,26 @@ public:
                      VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
+  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                     VPWidenRecipe *Mul, VPWidenRecipe *Sub,
+                     VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
+                           {Ext0, Ext1, Mul, Sub, Red}) {
+    assert(Mul->getOpcode() == Instruction::Mul && "Expected a mul");
+    assert(Red->getRecurrenceKind() == RecurKind::Add &&
+           "Expected an add reduction");
+    assert(getNumOperands() >= 3 && "Expected at least three operands");
+    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    assert(SubConst && SubConst->getValue() == 0 &&
+           Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
+  }
 
   ~VPExpressionRecipe() override {
-    for (auto *R : reverse(ExpressionRecipes))
-      delete R;
+    SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
+    for (auto *R : reverse(ExpressionRecipes)) {
+      if (ExpressionRecipesSeen.insert(R).second)
+        delete R;
+    }
     for (VPValue *T : LiveInPlaceholders)
       delete T;
   }
