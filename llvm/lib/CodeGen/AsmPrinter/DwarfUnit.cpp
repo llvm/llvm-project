@@ -705,8 +705,15 @@ void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
 }
 
 llvm::dwarf::SourceLanguage DwarfUnit::getSourceLanguage() const {
-  return static_cast<llvm::dwarf::SourceLanguage>(
-      getLanguage().getUnversionedName());
+  const auto &Lang = getLanguage();
+
+  if (!Lang.hasVersionedName())
+    return static_cast<llvm::dwarf::SourceLanguage>(Lang.getName());
+
+  return llvm::dwarf::toDW_LANG(
+             static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()),
+             Lang.getVersion())
+      .value_or(llvm::dwarf::DW_LANG_hi_user);
 }
 
 std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
