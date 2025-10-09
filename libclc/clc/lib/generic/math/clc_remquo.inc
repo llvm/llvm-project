@@ -6,71 +6,257 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define _sHighMask 0xfffff000u
+#define _iMaxQExp 0xbu
+// To prevent YLow to be denormal it should be checked
+// that Exp(Y) <= -127+23 (worst case when only last bit is non zero)
+//      Exp(Y) < -103 -> Y < 0x0C000000
+// That value is used to construct _iYSub by setting up first bit to 1.
+// _iYCmp is get from max acceptable value 0x797fffff:
+//   0x797fffff - 0x8C000000 = 0x(1)ED7FFFFF
+#define _iYSub 0x8C000000u
+#define _iYCmp 0xED7FFFFFu
+#define _iOne 0x00000001u
+
+static _CLC_INLINE _CLC_OVERLOAD int
+internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
+  uint signif_x, signif_y, rem_bit, quo_bit, tmp_x, tmp_y;
+  int exp_x, exp_y, i, j;
+  uint expabs_diff, special_op = 0, signbit_x, signbit_y, sign = 1;
+  float result, abs_x, abs_y;
+  float zero = 0.0f;
+  int nRet = 0;
+  // Remove sign bits
+  tmp_x = ((*(int *)&x)) & EXSIGNBIT_SP32;
+  tmp_y = ((*(int *)&y)) & EXSIGNBIT_SP32;
+  signbit_x = (uint)((*(int *)&x) >> 31);
+  signbit_y = (uint)((*(int *)&y) >> 31);
+  if (signbit_x ^ signbit_y)
+    sign = (-sign);
+  // Get float absolute values
+  abs_x = *(float *)&tmp_x;
+  abs_y = *(float *)&tmp_y;
+  // Remove exponent bias
+  exp_x = (int)((tmp_x & (0x7FF00000L)) >> 23) - 127;
+  exp_y = (int)((tmp_y & (0x7FF00000L)) >> 23) - 127;
+  // Test for NaNs, Infs, and Zeros
+  if ((exp_x == (0x00000080L)) || (exp_y == (0x00000080L)) ||
+      (tmp_x == (0x00000000L)) || (tmp_y == (0x00000000L)))
+    special_op++;
+  // Get significands
+  signif_x = (tmp_x & (0x007FFFFFL));
+  signif_y = (tmp_y & (0x007FFFFFL));
+  // Process NaNs, Infs, and Zeros
+  if (special_op) {
+    (*q) = 0;
+    // x is NaN
+    if ((signif_x != (0x00000000L)) && (exp_x == (0x00000080L)))
+      result = x * 1.7f;
+    // y is NaN
+    else if ((signif_y != (0x00000000L)) && (exp_y == (0x00000080L)))
+      result = y * 1.7f;
+    // y is zero
+    else if (abs_y == zero) {
+      result = zero / zero;
+      nRet = 1;
+    }
+    // x is zero
+    else if (abs_x == zero)
+      result = x;
+    // x is Inf
+    else if ((signif_x == (0x00000000L)) && (exp_x == (0x00000080L)))
+      result = zero / zero;
+    // y is Inf
+    else
+      result = x;
+    (*r) = (result);
+    return nRet;
+  }
+  // If x < y, fast return
+  if (abs_x <= abs_y) {
+    (*q) = 1 * sign;
+    if (abs_x == abs_y) {
+      (*r) = (zero * x);
+      return nRet;
+    }
+    // Is x too big to scale up by 2.0f?
+    if (exp_x != 127) {
+      if ((2.0f * abs_x) <= abs_y) {
+        (*q) = 0;
+        (*r) = x;
+        return nRet;
+      }
+    }
+    result = abs_x - abs_y;
+    if (signbit_x) {
+      result = -result;
+    }
+    (*r) = (result);
+    return nRet;
+  }
+  // Check for denormal x and y, adjust and normalize
+  if ((exp_x == -127) && (signif_x != (0x00000000L))) {
+    exp_x = -126;
+    while (signif_x <= (0x007FFFFFL)) {
+      exp_x--;
+      signif_x <<= 1;
+    };
+  } else
+    signif_x = (signif_x | (0x00800000L));
+  if ((exp_y == -127) && (signif_y != (0x00000000L))) {
+    exp_y = -126;
+    while (signif_y <= (0x007FFFFFL)) {
+      exp_y--;
+      signif_y <<= 1;
+    };
+  } else
+    signif_y = (signif_y | (0x00800000L));
+  //
+  // Main computational path
+  //
+  // Calculate exponent difference
+  expabs_diff = (exp_x - exp_y) + 1;
+  rem_bit = signif_x;
+  quo_bit = 0;
+  for (i = 0; i < expabs_diff; i++) {
+    quo_bit = quo_bit << 1;
+    if (rem_bit >= signif_y) {
+      rem_bit -= signif_y;
+      quo_bit++;
+    }
+    rem_bit <<= 1;
+  }
+  // Zero remquo ... return immediately with sign of x
+  if (rem_bit == (0x00000000L)) {
+    (*q) = ((uint)(0x7FFFFFFFL & quo_bit)) * sign;
+    (*r) = (zero * x);
+    return nRet;
+  }
+  // Adjust remquo
+  rem_bit >>= 1;
+  // Set exponent base, unbiased
+  j = exp_y;
+  // Calculate normalization shift
+  while (rem_bit <= (0x007FFFFFL)) {
+    j--;
+    rem_bit <<= 1;
+  };
+  // Prepare normal results
+  if (j >= -126) {
+    // Remove explicit 1
+    rem_bit &= (0x007FFFFFL);
+    // Set final exponent ... add exponent bias
+    j = j + 127;
+  }
+  // Prepare denormal results
+  else {
+    // Determine denormalization shift count
+    j = -j - 126;
+    // Denormalization
+    rem_bit >>= j;
+    // Set final exponent ... denorms are 0
+    j = 0;
+  }
+  rem_bit = (((uint)(j)) << 23) | rem_bit;
+  // Create float result and adjust if >= .5 * divisor
+  result = *(float *)&rem_bit;
+  if ((2.0f * result) >= abs_y) {
+    if ((2.0f * result) == abs_y) {
+      if (quo_bit & 0x01) {
+        result = -result;
+        quo_bit++;
+      }
+    } else {
+      result = result - abs_y;
+      quo_bit++;
+    }
+  }
+  // Final adjust for sign of input
+  (*q) = ((uint)(0x7FFFFFFFLL & (quo_bit))) * sign;
+  if (signbit_x)
+    result = -result;
+  (*r) = (result);
+  return nRet;
+}
+
 _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
                                           __CLC_ADDRESS_SPACE int *quo) {
-  x = __clc_flush_denormal_if_not_supported(x);
-  y = __clc_flush_denormal_if_not_supported(y);
-  int ux = __clc_as_int(x);
-  int ax = ux & EXSIGNBIT_SP32;
-  float xa = __clc_as_float(ax);
-  int sx = ux ^ ax;
-  int ex = ax >> EXPSHIFTBITS_SP32;
+  float vr1;
+  uint vr2;
 
-  int uy = __clc_as_int(y);
-  int ay = uy & EXSIGNBIT_SP32;
-  float ya = __clc_as_float(ay);
-  int sy = uy ^ ay;
-  int ey = ay >> EXPSHIFTBITS_SP32;
-
-  float xr = __clc_as_float(0x3f800000 | (ax & 0x007fffff));
-  float yr = __clc_as_float(0x3f800000 | (ay & 0x007fffff));
-  int c;
-  int k = ex - ey;
-
-  uint q = 0;
-
-  while (k > 0) {
-    c = xr >= yr;
-    q = (q << 1) | c;
-    xr -= c ? yr : 0.0f;
-    xr += xr;
-    --k;
+  float sZero = __clc_as_float(0);
+  /* Absolute values */
+  float sAbsMask = __clc_as_float(EXSIGNBIT_SP32);
+  float sXAbs = __clc_as_float(__clc_as_uint(x) & __clc_as_uint(sAbsMask));
+  float sYAbs = __clc_as_float(__clc_as_uint(y) & __clc_as_uint(sAbsMask));
+  uint iXExp = __clc_as_uint(sXAbs);
+  uint iYExp = __clc_as_uint(sYAbs);
+  uint iYSub = (_iYSub);
+  uint iYCmp = (_iYCmp);
+  uint iYSpec = (iYExp - iYSub);
+  iYSpec = ((uint)(-(int)((int)iYSpec > (int)iYCmp)));
+  iXExp = ((uint)(iXExp) >> (23));
+  iYExp = ((uint)(iYExp) >> (23));
+  uint iQExp = (iXExp - iYExp);
+  uint iMaxQExp = (_iMaxQExp);
+  uint iRangeMask = (uint)(-(int)((int)iQExp > (int)iMaxQExp));
+  iRangeMask = (iRangeMask | iYSpec);
+  uint vm = iRangeMask;
+  if (__builtin_expect((vm) != 0, 0)) {
+    internal_remquo(x, y, &vr1, &vr2);
+  } else {
+    /* yhi = y & highmask */
+    float sHighMask = __clc_as_float(_sHighMask);
+    float sYHi = __clc_as_float(__clc_as_uint(y) & __clc_as_uint(sHighMask));
+    /* ylo = y - yhi */
+    float sYLo = (y - sYHi);
+    /* q = x/y */
+    float sQ = (x / y);
+    /* iq = trunc(q) */
+    sQ = __clc_rint(sQ);
+    uint iQ = ((int)(sQ));
+    /* yhi*iq */
+    float sQYHi = (sQ * sYHi);
+    /* ylo*iq */
+    float sQYLo = (sQ * sYLo);
+    /* res = x - yhi*iq */
+    float sRes = (x - sQYHi);
+    /* res = res - ylo*iq */
+    sRes = (sRes - sQYLo);
+    /* get result's abs value and sign */
+    float sSignMask = __clc_as_float(SIGNBIT_SP32);
+    float sResSign =
+        __clc_as_float(__clc_as_uint(sRes) & __clc_as_uint(sSignMask));
+    float sAbsRes =
+        __clc_as_float(__clc_as_uint(sRes) & __clc_as_uint(sAbsMask));
+    float sYSign = __clc_as_float(__clc_as_uint(y) & __clc_as_uint(sSignMask));
+    float sQSign =
+        __clc_as_float(__clc_as_uint(sResSign) ^ __clc_as_uint(sYSign));
+    float sXSign = __clc_as_float(__clc_as_uint(x) & __clc_as_uint(sSignMask));
+    /* prepare integer correction term */
+    uint iOne = (_iOne);
+    uint iCorrValue = __clc_as_uint(sQSign);
+    iCorrValue = ((int)iCorrValue >> (31));
+    iCorrValue = (iCorrValue | iOne);
+    /* |y|*0.5 */
+    float sHalf = __clc_as_float(HALFEXPBITS_SP32);
+    float sCorr = (sYAbs * sHalf);
+    /* if |res| > |y|*0.5 */
+    sCorr = __clc_as_float((uint)(-(int)(sAbsRes > sCorr)));
+    uint iCorr = __clc_as_uint(sCorr);
+    iCorr = (iCorr & iCorrValue);
+    /* then res = res - sign(res)*|y| */
+    sCorr = __clc_as_float(__clc_as_uint(sCorr) & __clc_as_uint(sYAbs));
+    sCorr = __clc_as_float(__clc_as_uint(sCorr) | __clc_as_uint(sResSign));
+    sRes = (sRes - sCorr);
+    vr2 = (iQ + iCorr);
+    float sZeroRes = __clc_as_float((uint)(-(int)(sRes == sZero)));
+    sZeroRes = __clc_as_float(__clc_as_uint(sZeroRes) & __clc_as_uint(sXSign));
+    vr1 = __clc_as_float(__clc_as_uint(sRes) | __clc_as_uint(sZeroRes));
   }
 
-  c = xr > yr;
-  q = (q << 1) | c;
-  xr -= c ? yr : 0.0f;
-
-  int lt = ex < ey;
-
-  q = lt ? 0 : q;
-  xr = lt ? xa : xr;
-  yr = lt ? ya : yr;
-
-  c = (yr < 2.0f * xr) | ((yr == 2.0f * xr) & ((q & 0x1) == 0x1));
-  xr -= c ? yr : 0.0f;
-  q += c;
-
-  float s = __clc_as_float(ey << EXPSHIFTBITS_SP32);
-  xr *= lt ? 1.0f : s;
-
-  int qsgn = sx == sy ? 1 : -1;
-  int quot = (q & 0x7f) * qsgn;
-
-  c = ax == ay;
-  quot = c ? qsgn : quot;
-  xr = c ? 0.0f : xr;
-
-  xr = __clc_as_float(sx ^ __clc_as_int(xr));
-
-  c = ax > PINFBITPATT_SP32 | ay > PINFBITPATT_SP32 | ax == PINFBITPATT_SP32 |
-      ay == 0;
-  quot = c ? 0 : quot;
-  xr = c ? __clc_as_float(QNANBITPATT_SP32) : xr;
-
-  *quo = quot;
-
-  return xr;
+  ((__CLC_ADDRESS_SPACE uint *)quo)[0] = vr2;
+  return vr1;
 }
 
 // remquo signature is special, we don't have macro for this
