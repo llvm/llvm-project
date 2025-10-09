@@ -835,7 +835,7 @@ public:
   /// \endcode
   ///
   void addAttributes(const ParsedAttributesView &AL) {
-    Attrs.addAllPrepend(AL.begin(), AL.end());
+    Attrs.prependAll(AL.begin(), AL.end());
   }
 
   bool hasAttributes() const { return !Attrs.empty(); }
@@ -843,8 +843,8 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  void takeAttributesFromAppend(ParsedAttributes &attrs) {
-    Attrs.takeAllFromAppend(attrs);
+  void takeAttributesAppendFrom(ParsedAttributes &attrs) {
+    Attrs.takeAllAppendFrom(attrs);
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
@@ -2327,7 +2327,7 @@ public:
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
                    SourceLocation EndLoc) {
     DeclTypeInfo.push_back(TI);
-    DeclTypeInfo.back().getAttrs().addAllPrepend(attrs.begin(), attrs.end());
+    DeclTypeInfo.back().getAttrs().prependAll(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
@@ -2648,7 +2648,7 @@ public:
   ///
   /// Also extends the range of the declarator.
   void takeAttributesAppend(ParsedAttributes &attrs) {
-    Attrs.takeAllFromAppend(attrs);
+    Attrs.takeAllAppendFrom(attrs);
 
     if (attrs.Range.getEnd().isValid())
       SetRangeEnd(attrs.Range.getEnd());

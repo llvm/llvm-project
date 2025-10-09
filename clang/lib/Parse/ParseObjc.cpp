@@ -43,7 +43,7 @@ void Parser::MaybeSkipAttributes(tok::ObjCKeywordKind Kind) {
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
                               ParsedAttributes &DeclSpecAttrs) {
-  DeclAttrs.takeAllFromPrepend(DeclSpecAttrs);
+  DeclAttrs.takeAllPrependFrom(DeclSpecAttrs);
 
   SourceLocation AtLoc = ConsumeToken(); // the "@"
 

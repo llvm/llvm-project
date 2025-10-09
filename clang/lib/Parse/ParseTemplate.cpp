@@ -196,7 +196,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
   ParsingDeclSpec DS(*this, &DiagsFromTParams);
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFromAppend(DeclSpecAttrs);
+  DS.takeAttributesAppendFrom(DeclSpecAttrs);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              getDeclSpecContextFromDeclaratorContext(Context));

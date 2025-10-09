@@ -1083,7 +1083,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
          "expected uninitialised source range");
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFromAppend(DeclSpecAttrs);
+  DS.takeAttributesAppendFrom(DeclSpecAttrs);
 
   ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
@@ -1155,7 +1155,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     }
 
     DS.abort();
-    DS.takeAttributesFromAppend(Attrs);
+    DS.takeAttributesAppendFrom(Attrs);
 
     const char *PrevSpec = nullptr;
     unsigned DiagID;

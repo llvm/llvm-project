@@ -2292,7 +2292,7 @@ private:
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
-      Attrs.takeAllFromAppend(AttrsWithRange);
+      Attrs.takeAllAppendFrom(AttrsWithRange);
     }
     return AttrsParsed;
   }

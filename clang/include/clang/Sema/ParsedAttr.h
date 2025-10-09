@@ -856,19 +856,19 @@ public:
     friend class ParsedAttributesView;
   };
 
-  void addAllPrepend(iterator B, iterator E) {
+  void prependAll(iterator B, iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAllPrepend(const_iterator B, const_iterator E) {
+  void prependAll(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAllAppend(iterator B, iterator E) {
+  void appendAll(iterator B, iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
-  void addAllAppend(const_iterator B, const_iterator E) {
+  void appendAll(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
@@ -943,18 +943,18 @@ public:
 
   AttributePool &getPool() const { return pool; }
 
-  void takeAllFromPrepend(ParsedAttributes &Other) {
+  void takeAllPrependFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAllPrepend(Other.begin(), Other.end());
+    prependAll(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
 
-  void takeAllFromAppend(ParsedAttributes &Other) {
+  void takeAllAppendFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAllAppend(Other.begin(), Other.end());
+    appendAll(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
