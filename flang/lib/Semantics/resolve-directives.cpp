@@ -1707,9 +1707,10 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
   // Look for COMMON block in the modules
   for (const Scope &childScope : context_.globalScope().children()) {
     if (childScope.kind() == Scope::Kind::Module) {
-      auto *cb{childScope.FindCommonBlock(name->source)};
-      name->symbol = cb;
-      return cb;
+      if (auto *cb{childScope.FindCommonBlock(name->source)}) {
+        name->symbol = cb;
+        return cb;
+      }
     }
   }
   return nullptr;
