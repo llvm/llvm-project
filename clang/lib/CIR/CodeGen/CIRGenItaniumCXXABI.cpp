@@ -68,6 +68,8 @@ public:
                           CXXDtorType type, bool forVirtualBase,
                           bool delegating, Address thisAddr,
                           QualType thisTy) override;
+  void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
+                          mlir::Value addr) override;
 
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
@@ -115,6 +117,16 @@ public:
   getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
                             Address thisAddr, const CXXRecordDecl *classDecl,
                             const CXXRecordDecl *baseClassDecl) override;
+
+  // The traditional clang CodeGen emits calls to `__dynamic_cast` directly into
+  // LLVM in the `emitDynamicCastCall` function. In CIR, `dynamic_cast`
+  // expressions are lowered to `cir.dyn_cast` ops instead of calls to runtime
+  // functions. So during CIRGen we don't need the `emitDynamicCastCall`
+  // function that clang CodeGen has.
+  mlir::Value emitDynamicCast(CIRGenFunction &cgf, mlir::Location loc,
+                              QualType srcRecordTy, QualType destRecordTy,
+                              cir::PointerType destCIRTy, bool isRefCast,
+                              Address src) override;
 
   /**************************** RTTI Uniqueness ******************************/
 protected:
@@ -1507,6 +1519,27 @@ void CIRGenItaniumCXXABI::emitDestructorCall(
                             vttTy, nullptr);
 }
 
+void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
+                                             cir::FuncOp dtor,
+                                             mlir::Value addr) {
+  if (vd->isNoDestroy(cgm.getASTContext()))
+    return;
+
+  if (vd->getTLSKind()) {
+    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: TLS");
+    return;
+  }
+
+  // HLSL doesn't support atexit.
+  if (cgm.getLangOpts().HLSL) {
+    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: HLSL");
+    return;
+  }
+
+  // The default behavior is to use atexit. This is handled in lowering
+  // prepare. Nothing to be done for CIR here.
+}
+
 // The idea here is creating a separate block for the throw with an
 // `UnreachableOp` as the terminator. So, we branch from the current block
 // to the throw block and create a block for the remaining operations.
@@ -1795,4 +1828,144 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
         loc, Address(offsetPtr, cgm.PtrDiffTy, cgf.getPointerAlign()));
   }
   return vbaseOffset;
+}
+
+static cir::FuncOp getBadCastFn(CIRGenFunction &cgf) {
+  // Prototype: void __cxa_bad_cast();
+
+  // TODO(cir): set the calling convention of the runtime function.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
+
+  cir::FuncType fnTy =
+      cgf.getBuilder().getFuncType({}, cgf.getBuilder().getVoidTy());
+  return cgf.cgm.createRuntimeFunction(fnTy, "__cxa_bad_cast");
+}
+
+// TODO(cir): This could be shared with classic codegen.
+static CharUnits computeOffsetHint(ASTContext &astContext,
+                                   const CXXRecordDecl *src,
+                                   const CXXRecordDecl *dst) {
+  CXXBasePaths paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+
+  // If Dst is not derived from Src we can skip the whole computation below and
+  // return that Src is not a public base of Dst.  Record all inheritance paths.
+  if (!dst->isDerivedFrom(src, paths))
+    return CharUnits::fromQuantity(-2ULL);
+
+  unsigned numPublicPaths = 0;
+  CharUnits offset;
+
+  // Now walk all possible inheritance paths.
+  for (const CXXBasePath &path : paths) {
+    if (path.Access != AS_public) // Ignore non-public inheritance.
+      continue;
+
+    ++numPublicPaths;
+
+    for (const CXXBasePathElement &pathElement : path) {
+      // If the path contains a virtual base class we can't give any hint.
+      // -1: no hint.
+      if (pathElement.Base->isVirtual())
+        return CharUnits::fromQuantity(-1ULL);
+
+      if (numPublicPaths > 1) // Won't use offsets, skip computation.
+        continue;
+
+      // Accumulate the base class offsets.
+      const ASTRecordLayout &L =
+          astContext.getASTRecordLayout(pathElement.Class);
+      offset += L.getBaseClassOffset(
+          pathElement.Base->getType()->getAsCXXRecordDecl());
+    }
+  }
+
+  // -2: Src is not a public base of Dst.
+  if (numPublicPaths == 0)
+    return CharUnits::fromQuantity(-2ULL);
+
+  // -3: Src is a multiple public base type but never a virtual base type.
+  if (numPublicPaths > 1)
+    return CharUnits::fromQuantity(-3ULL);
+
+  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
+  // Return the offset of Src from the origin of Dst.
+  return offset;
+}
+
+static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
+  // Prototype:
+  // void *__dynamic_cast(const void *sub,
+  //                      global_as const abi::__class_type_info *src,
+  //                      global_as const abi::__class_type_info *dst,
+  //                      std::ptrdiff_t src2dst_offset);
+
+  mlir::Type voidPtrTy = cgf.getBuilder().getVoidPtrTy();
+  mlir::Type rttiPtrTy = cgf.getBuilder().getUInt8PtrTy();
+  mlir::Type ptrDiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
+
+  // TODO(cir): mark the function as nowind willreturn readonly.
+  assert(!cir::MissingFeatures::opFuncNoUnwind());
+  assert(!cir::MissingFeatures::opFuncWillReturn());
+  assert(!cir::MissingFeatures::opFuncReadOnly());
+
+  // TODO(cir): set the calling convention of the runtime function.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
+
+  cir::FuncType FTy = cgf.getBuilder().getFuncType(
+      {voidPtrTy, rttiPtrTy, rttiPtrTy, ptrDiffTy}, voidPtrTy);
+  return cgf.cgm.createRuntimeFunction(FTy, "__dynamic_cast");
+}
+
+static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
+                                                    mlir::Location loc,
+                                                    QualType srcRecordTy,
+                                                    QualType destRecordTy) {
+  auto srcRtti = mlir::cast<cir::GlobalViewAttr>(
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy));
+  auto destRtti = mlir::cast<cir::GlobalViewAttr>(
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy));
+
+  cir::FuncOp runtimeFuncOp = getItaniumDynamicCastFn(cgf);
+  cir::FuncOp badCastFuncOp = getBadCastFn(cgf);
+  auto runtimeFuncRef = mlir::FlatSymbolRefAttr::get(runtimeFuncOp);
+  auto badCastFuncRef = mlir::FlatSymbolRefAttr::get(badCastFuncOp);
+
+  const CXXRecordDecl *srcDecl = srcRecordTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *destDecl = destRecordTy->getAsCXXRecordDecl();
+  CharUnits offsetHint = computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
+
+  mlir::Type ptrdiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
+  auto offsetHintAttr = cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());
+
+  return cir::DynamicCastInfoAttr::get(srcRtti, destRtti, runtimeFuncRef,
+                                       badCastFuncRef, offsetHintAttr);
+}
+
+mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
+                                                 mlir::Location loc,
+                                                 QualType srcRecordTy,
+                                                 QualType destRecordTy,
+                                                 cir::PointerType destCIRTy,
+                                                 bool isRefCast, Address src) {
+  bool isCastToVoid = destRecordTy.isNull();
+  assert((!isCastToVoid || !isRefCast) && "cannot cast to void reference");
+
+  if (isCastToVoid) {
+    cgm.errorNYI(loc, "emitDynamicCastToVoid");
+    return {};
+  }
+
+  // If the destination is effectively final, the cast succeeds if and only
+  // if the dynamic type of the pointer is exactly the destination type.
+  if (destRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
+      cgf.cgm.getCodeGenOpts().OptimizationLevel > 0) {
+    cgm.errorNYI(loc, "emitExactDynamicCast");
+    return {};
+  }
+
+  cir::DynamicCastInfoAttr castInfo =
+      emitDynamicCastInfo(cgf, loc, srcRecordTy, destRecordTy);
+  return cgf.getBuilder().createDynCast(loc, src.getPointer(), destCIRTy,
+                                        isRefCast, castInfo);
 }

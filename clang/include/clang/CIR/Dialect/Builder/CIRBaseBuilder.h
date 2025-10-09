@@ -374,6 +374,12 @@ public:
                         resOperands, attrs);
   }
 
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+                           mlir::ValueRange operands = mlir::ValueRange(),
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
+  }
+
   cir::CallOp createTryCallOp(
       mlir::Location loc, mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
       mlir::Type returnType = cir::VoidType(),

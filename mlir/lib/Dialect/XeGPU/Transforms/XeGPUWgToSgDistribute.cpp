@@ -720,7 +720,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto vecAttr = dyn_cast<DenseElementsAttr>(op.getValue());
     auto vecType = dyn_cast<VectorType>(op.getType());
-    if (!vecAttr || !vecAttr.isSplat() || !vecType)
+    if (!vecAttr || !vecType)
       return failure();
 
     xegpu::DistributeLayoutAttr layout =
@@ -733,22 +733,139 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     int count;
     std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
 
-    // Current limitation: constant of vector with single value.
-    // TODO: support more complex cases, e.g., vector with multiple values.
-    Attribute singleVal = vecAttr.getSplatValue<Attribute>();
-
     auto newType = VectorType::get(sgShape, vecType.getElementType());
-    auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-    auto cstOp =
-        arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
-    if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-        !layout.getEffectiveInstDataAsInt().empty())
-      xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
-    SmallVector<Value> newConsts(count, cstOp);
+    Location loc = op.getLoc();
+    auto eltType = vecType.getElementType();
 
-    rewriter.replaceOpWithMultiple(op, {newConsts});
-    return success();
+    auto setLayoutIfNeeded = [&](Value val) {
+      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+          !layout.getEffectiveInstDataAsInt().empty()) {
+        xegpu::setDistributeLayoutAttr(llvm::dyn_cast<OpResult>(val),
+                                       layout.dropSgLayoutAndData());
+      }
+    };
+
+    if (vecAttr.isSplat()) {
+      // Splat: single value for all subgroups
+      Attribute singleVal = vecAttr.getSplatValue<Attribute>();
+      auto sgAttr = DenseElementsAttr::get(newType, singleVal);
+      auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
+      setLayoutIfNeeded(cstOp->getResult(0));
+      rewriter.replaceOp(op, cstOp);
+      return success();
+    } else if (sgShape == wgShape) { // if the entire vector is shared by all
+                                     // subgroups, don't distribute
+      auto newConstOp =
+          arith::ConstantOp::create(rewriter, op.getLoc(), vecType, vecAttr);
+      setLayoutIfNeeded(newConstOp->getResult(0));
+      rewriter.replaceOp(op, newConstOp);
+      return success();
+    } else {
+      // Non-splat constant
+      // Only supports 1D & 2D
+      // TODO: support other cases that require SLM access
+      if (!eltType.isIndex())
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported element type for non-splat constant op.");
+
+      if (wgShape.size() > 2)
+        return rewriter.notifyMatchFailure(
+            op, "Only 1D & 2D vector constant supported");
+
+      SmallVector<Attribute> values(vecAttr.getValues<Attribute>());
+      int64_t rowStride = 0, colStride = 0;
+      int64_t rows = wgShape.size() == 1 ? 1 : wgShape[0];
+      int64_t cols = wgShape.size() == 1 ? wgShape[0] : wgShape[1];
+
+      // Compute colStride and rowStride, and check for constant strides.
+      if (cols > 1) {
+        colStride = cast<IntegerAttr>(values[1]).getInt() -
+                    cast<IntegerAttr>(values[0]).getInt();
+      }
+      if (rows > 1) {
+        rowStride = cast<IntegerAttr>(values[cols]).getInt() -
+                    cast<IntegerAttr>(values[0]).getInt();
+      }
+
+      for (int64_t r = 0; r < rows; ++r) {
+        for (int64_t c = 0; c < cols; ++c) {
+          int64_t idx = r * cols + c;
+          // Check column stride
+          if (c > 0 && cols > 1) {
+            int64_t prevIdx = r * cols + (c - 1);
+            int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
+                           cast<IntegerAttr>(values[prevIdx]).getInt();
+            if (diff != colStride)
+              return rewriter.notifyMatchFailure(
+                  op, "Non-constant column stride in constant op.");
+          }
+          // Check row stride
+          if (r > 0 && rows > 1) {
+            int64_t prevIdx = (r - 1) * cols + c;
+            int64_t diff = cast<IntegerAttr>(values[idx]).getInt() -
+                           cast<IntegerAttr>(values[prevIdx]).getInt();
+            if (diff != rowStride)
+              return rewriter.notifyMatchFailure(
+                  op, "Non-constant row stride in constant op.");
+          }
+        }
+      }
+
+      // Create a constant for the base tile.
+      // For 2D case, extract the top-left sgShape[0] x sgShape[1] submatrix.
+      // For 1D case, extract the first sgShape[0] elements.
+      SmallVector<Attribute> baseTileValues;
+      int baseTileCols = sgShape[sgShape.size() - 1];
+      int64_t baseTileRows = sgShape.size() == 1 ? 1 : sgShape[0];
+      for (int64_t r = 0; r < baseTileRows; ++r) {
+        for (int64_t c = 0; c < baseTileCols; ++c) {
+          baseTileValues.push_back(values[r * cols + c]);
+        }
+      }
+
+      auto tileAttr = DenseElementsAttr::get(VectorType::get(sgShape, eltType),
+                                             baseTileValues);
+      auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
+
+      // Get subgroup id
+      Value sgId =
+          gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
+
+      auto sgOffsets = layout.getOffsets(rewriter, loc, sgId, wgShape);
+      if (failed(sgOffsets))
+        return failure();
+
+      SmallVector<Value, 2> strideConsts;
+      strideConsts.push_back(
+          rewriter.create<arith::ConstantIndexOp>(loc, colStride));
+      if (rows > 1)
+        strideConsts.insert(
+            strideConsts.begin(),
+            rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
+
+      SmallVector<Value> newConstOps;
+      for (auto offsets : *sgOffsets) {
+        // Multiply offset with stride, broadcast it and add to baseConstVec
+        Value mulOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+        for (size_t i = 0; i < strideConsts.size(); ++i) {
+          Value mul = rewriter.create<arith::MulIOp>(
+              loc, rewriter.getIndexType(), offsets[i], strideConsts[i]);
+          mulOffset = rewriter.create<arith::AddIOp>(
+              loc, rewriter.getIndexType(), mulOffset, mul);
+        }
+        // Broadcast to baseConstVec size
+        auto bcastOffset = rewriter.create<vector::BroadcastOp>(
+            loc, baseConstVec.getType(), mulOffset);
+        auto finalConst =
+            arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
+        setLayoutIfNeeded(baseConstVec);
+        setLayoutIfNeeded(bcastOffset);
+        setLayoutIfNeeded(finalConst);
+        newConstOps.push_back(finalConst);
+      }
+      rewriter.replaceOpWithMultiple(op, {newConstOps});
+      return success();
+    }
   }
 };
 

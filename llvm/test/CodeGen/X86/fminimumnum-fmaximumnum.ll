@@ -2479,3 +2479,102 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
   %r = call <4 x bfloat> @llvm.maximumnum.v4bf16(<4 x bfloat> %x, <4 x bfloat> %y)
   ret <4 x bfloat> %r
 }
+
+; nnan minimumnum(Y, +inf) -> Y
+define float @test_fminimumnum_inf_nnan(float %x, float %y) nounwind {
+; SSE2-LABEL: test_fminimumnum_inf_nnan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fminimumnum_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fminimumnum_inf_nnan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fminimumnum_inf_nnan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+  %1 = call nnan float @llvm.minimumnum.f32(float %y, float 0x7ff0000000000000)
+  ret float %1
+}
+
+; nnan maximumnum(Y, -inf) -> Y
+define float @test_fmaximumnum_neg_inf_nnan(float %x, float %y) nounwind {
+; SSE2-LABEL: test_fmaximumnum_neg_inf_nnan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fmaximumnum_neg_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fmaximumnum_neg_inf_nnan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fmaximumnum_neg_inf_nnan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+  %1 = call nnan float @llvm.maximumnum.f32(float %y, float 0xfff0000000000000)
+  ret float %1
+}
+
+; Test we propagate the non-NaN arg, even if one arg is SNaN
+define float @test_fmaximumnum_snan(float %x, float %y) {
+; SSE2-LABEL: test_fmaximumnum_snan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fmaximumnum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fmaximumnum_snan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fmaximumnum_snan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+  %1 = tail call float @llvm.maximumnum.f32(float 0x7ff4000000000000, float %y)
+  ret float %1
+}
+
+define float @test_fminimumnum_snan(float %x, float %y) {
+; SSE2-LABEL: test_fminimumnum_snan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fminimumnum_snan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX10_2-LABEL: test_fminimumnum_snan:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vmovaps %xmm1, %xmm0
+; AVX10_2-NEXT:    retq
+;
+; X86-LABEL: test_fminimumnum_snan:
+; X86:       # %bb.0:
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    retl
+  %1 = tail call float @llvm.minimumnum.f32(float 0x7ff4000000000000, float %y)
+  ret float %1
+}
