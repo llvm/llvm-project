@@ -159,6 +159,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
             GetBasicQualType("unsigned long long"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedLongLong),
             GetBasicQualType("unsigned long long int"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
+            GetBasicQualType("__uint128_t"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
             GetBasicQualType("unsigned __int128"));
