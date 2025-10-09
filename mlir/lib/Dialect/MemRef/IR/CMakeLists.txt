@@ -2,7 +2,6 @@ add_mlir_dialect_library(MLIRMemRefDialect
   MemRefDialect.cpp
   MemRefMemorySlot.cpp
   MemRefOps.cpp
-  InferStridedMetadataInterfaceImpl.cpp
   ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS

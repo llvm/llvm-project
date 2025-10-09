@@ -135,9 +135,6 @@ inline raw_ostream &operator<<(raw_ostream &os,
   return os;
 }
 
-/// Callback function type to get the integer range of a value.
-using GetIntRangeFn = function_ref<IntegerValueRange(Value)>;
-
 /// Callback function type for setting the strided metadata of a value.
 using SetStridedMetadataRangeFn =
     function_ref<void(Value, const StridedMetadataRange &)>;

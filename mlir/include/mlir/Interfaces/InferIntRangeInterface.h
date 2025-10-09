@@ -168,6 +168,15 @@ using SetIntRangeFn =
 using SetIntLatticeFn =
     llvm::function_ref<void(Value, const IntegerValueRange &)>;
 
+/// Helper callback type to get the integer range of a value.
+using GetIntRangeFn = function_ref<IntegerValueRange(Value)>;
+
+/// Helper function to collect the integer range values of an array of op fold
+/// results.
+SmallVector<IntegerValueRange> getIntValueRanges(ArrayRef<OpFoldResult> values,
+                                                 GetIntRangeFn getIntRange,
+                                                 int32_t indexBitwidth);
+
 class InferIntRangeInterface;
 
 namespace intrange::detail {
