@@ -66,6 +66,57 @@ define amdgpu_ps i32 @lshr64(i64 inreg %val0, i64 inreg %val1) {
   ret i32 %zext
 }
 
+define amdgpu_ps i32 @ashr32(i32 inreg %val0, i32 inreg %val1) {
+; CHECK-LABEL: ashr32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_ashr_i32 s0, s0, s1
+; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %result = ashr i32 %val0, %val1
+  %cmp = icmp ne i32 %result, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
+define amdgpu_ps i32 @ashr64(i64 inreg %val0, i64 inreg %val1) {
+; CHECK-LABEL: ashr64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
+; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %result = ashr i64 %val0, %val1
+  %cmp = icmp ne i64 %result, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
+define amdgpu_ps i32 @abs32(i32 inreg %val0, ptr addrspace(1) %ptr) {
+; CHECK-LABEL: abs32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_abs_i32 s0, s0
+; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    global_store_dword v[0:1], v2, off
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    ; return to shader part epilog
+  %neg = sub i32 0, %val0
+  %cond = icmp sgt i32 %val0, %neg
+  %result = select i1 %cond, i32 %val0, i32 %neg
+  store i32 %result, ptr addrspace(1) %ptr
+  %cmp = icmp ne i32 %result, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
 define amdgpu_ps i32 @and32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: and32:
 ; CHECK:       ; %bb.0:
