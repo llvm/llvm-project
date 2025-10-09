@@ -1335,3 +1335,62 @@ exit:
   %lcssa.exit = phi i64 [ %phi.sum.next, %loop.latch ]
   ret i64 %lcssa.exit
 }
+
+define float @reduction_sum_float(i64 %n, ptr %a) #0 {
+; CHECK-LABEL: define float @reduction_sum_float(
+; CHECK-SAME: i64 [[N:%.*]], ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -4
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1]] = fadd <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[SUM]] = fadd float [[RDX]], [[TMP4]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ [[SUM]], [[LOOP]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret float [[SUM_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi float [ 0.0, %entry ], [ %sum, %loop ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
+  %0 = load float, ptr %arrayidx, align 4
+  %sum = fadd float %rdx, %0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %sum.lcssa = phi float [ %sum, %loop ]
+  ret float %sum.lcssa
+}
+
+attributes #0 = { "no-signed-zeros-fp-math"="true" }
