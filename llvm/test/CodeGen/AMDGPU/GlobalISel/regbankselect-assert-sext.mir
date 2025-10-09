@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=amdgpu-regbankselect,amdgpu-regbanklegalize %s -verify-machineinstrs -o - | FileCheck %s
 
 ---
-name:            assert_zext_vgpr
+name:            assert_sext_vgpr
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -10,19 +10,19 @@ body:             |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: assert_zext_vgpr
+    ; CHECK-LABEL: name: assert_sext_vgpr
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %assert_zext:vgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
+    ; CHECK-NEXT: %assert_sext:vgpr(s32) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s32)
     %copy:_(s32) = COPY $vgpr0
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:_(s32) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_sgpr
+name:            assert_sext_sgpr
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -30,19 +30,19 @@ body:             |
   bb.0:
     liveins: $sgpr8
 
-    ; CHECK-LABEL: name: assert_zext_sgpr
+    ; CHECK-LABEL: name: assert_sext_sgpr
     ; CHECK: liveins: $sgpr8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:sgpr(s32) = COPY $sgpr8
-    ; CHECK-NEXT: %assert_zext:sgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
+    ; CHECK-NEXT: %assert_sext:sgpr(s32) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s32)
     %copy:_(s32) = COPY $sgpr8
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:_(s32) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_agpr
+name:            assert_sext_agpr
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -50,19 +50,19 @@ body:             |
   bb.0:
     liveins: $agpr0
 
-    ; CHECK-LABEL: name: assert_zext_agpr
+    ; CHECK-LABEL: name: assert_sext_agpr
     ; CHECK: liveins: $agpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:vgpr(s32) = COPY $agpr0
-    ; CHECK-NEXT: %assert_zext:vgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
+    ; CHECK-NEXT: %assert_sext:vgpr(s32) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s32)
     %copy:_(s32) = COPY $agpr0
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:_(s32) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_vgpr_regclass
+name:            assert_sext_vgpr_regclass
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -70,20 +70,20 @@ body:             |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: assert_zext_vgpr_regclass
+    ; CHECK-LABEL: name: assert_sext_vgpr_regclass
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:vgpr_32(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY %copy(s32)
-    ; CHECK-NEXT: %assert_zext:vgpr(s32) = G_ASSERT_ZEXT [[COPY]], 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
+    ; CHECK-NEXT: %assert_sext:vgpr(s32) = G_ASSERT_SEXT [[COPY]], 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s32)
     %copy:vgpr_32(s32) = COPY $vgpr0
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:_(s32) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_sgpr_regcllass
+name:            assert_sext_sgpr_regcllass
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -91,20 +91,20 @@ body:             |
   bb.0:
     liveins: $sgpr8
 
-    ; CHECK-LABEL: name: assert_zext_sgpr_regcllass
+    ; CHECK-LABEL: name: assert_sext_sgpr_regcllass
     ; CHECK: liveins: $sgpr8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:sgpr_32(s32) = COPY $sgpr8
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY %copy(s32)
-    ; CHECK-NEXT: %assert_zext:sgpr(s32) = G_ASSERT_ZEXT [[COPY]], 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
+    ; CHECK-NEXT: %assert_sext:sgpr(s32) = G_ASSERT_SEXT [[COPY]], 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s32)
     %copy:sgpr_32(s32) = COPY $sgpr8
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:_(s32) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_vgpr_64
+name:            assert_sext_vgpr_64
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -112,21 +112,21 @@ body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
 
-    ; CHECK-LABEL: name: assert_zext_vgpr_64
+    ; CHECK-LABEL: name: assert_sext_vgpr_64
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:vreg_64(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY %copy(s64)
-    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:vgpr(s64) = G_ASSERT_ZEXT [[COPY]], 4
-    ; CHECK-NEXT: %assert_zext:vreg_64(s64) = COPY [[ASSERT_ZEXT]](s64)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s64)
+    ; CHECK-NEXT: [[ASSERT_SEXT:%[0-9]+]]:vgpr(s64) = G_ASSERT_SEXT [[COPY]], 4
+    ; CHECK-NEXT: %assert_sext:vreg_64(s64) = COPY [[ASSERT_SEXT]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s64)
     %copy:vreg_64(s64) = COPY $vgpr0_vgpr1
-    %assert_zext:vreg_64(s64) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:vreg_64(s64) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_sgpr_64
+name:            assert_sext_sgpr_64
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -134,21 +134,21 @@ body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
 
-    ; CHECK-LABEL: name: assert_zext_sgpr_64
+    ; CHECK-LABEL: name: assert_sext_sgpr_64
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:sreg_64(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY %copy(s64)
-    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:sgpr(s64) = G_ASSERT_ZEXT [[COPY]], 4
-    ; CHECK-NEXT: %assert_zext:sreg_64(s64) = COPY [[ASSERT_ZEXT]](s64)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s64)
+    ; CHECK-NEXT: [[ASSERT_SEXT:%[0-9]+]]:sgpr(s64) = G_ASSERT_SEXT [[COPY]], 4
+    ; CHECK-NEXT: %assert_sext:sreg_64(s64) = COPY [[ASSERT_SEXT]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s64)
     %copy:sreg_64(s64) = COPY $sgpr0_sgpr1
-    %assert_zext:sreg_64(s64) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:sreg_64(s64) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
 
 ---
-name:            assert_zext_agpr_64
+name:            assert_sext_agpr_64
 alignment:       4
 legalized:       true
 tracksRegLiveness: true
@@ -156,15 +156,15 @@ body:             |
   bb.0:
     liveins: $agpr0_agpr1
 
-    ; CHECK-LABEL: name: assert_zext_agpr_64
+    ; CHECK-LABEL: name: assert_sext_agpr_64
     ; CHECK: liveins: $agpr0_agpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:areg_64(s64) = COPY $agpr0_agpr1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY %copy(s64)
-    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:vgpr(s64) = G_ASSERT_ZEXT [[COPY]], 4
-    ; CHECK-NEXT: %assert_zext:areg_64(s64) = COPY [[ASSERT_ZEXT]](s64)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s64)
+    ; CHECK-NEXT: [[ASSERT_SEXT:%[0-9]+]]:vgpr(s64) = G_ASSERT_SEXT [[COPY]], 4
+    ; CHECK-NEXT: %assert_sext:areg_64(s64) = COPY [[ASSERT_SEXT]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s64)
     %copy:areg_64(s64) = COPY $agpr0_agpr1
-    %assert_zext:areg_64(s64) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    %assert_sext:areg_64(s64) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
 ...
