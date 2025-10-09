@@ -9561,9 +9561,10 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // Similarly any candidate where the first instruction is ADD/LDR with a
   // page offset should be rejected to avoid ADRP splitting.
-  if ((FirstMI.getOpcode() == AArch64::ADDXri || FirstMI.getOpcode() == AArch64::LDRXui) &&
-       (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_PAGEOFF) != 0 &&
-       (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_GOT) != 0) {
+  if ((FirstMI.getOpcode() == AArch64::ADDXri ||
+       FirstMI.getOpcode() == AArch64::LDRXui) &&
+      (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_PAGEOFF) != 0 &&
+      (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_GOT) != 0) {
     return std::nullopt;
   }
 
