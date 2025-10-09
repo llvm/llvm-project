@@ -2066,7 +2066,17 @@ public:
     UserProvidedConstructor(const UserProvidedConstructor&)            = delete;
     UserProvidedConstructor& operator=(const UserProvidedConstructor&) = delete;
 };
+struct Ctr {
+    Ctr();
+};
+struct Ctr2 {
+    Ctr2();
+private:
+  NoEligibleTrivialContructor inner;
+};
 
+static_assert(__builtin_is_implicit_lifetime(Ctr));
+static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
 static_assert(__builtin_is_implicit_lifetime(NonAggregate));
 static_assert(!__builtin_is_implicit_lifetime(DataMemberInitializer));
 static_assert(!__builtin_is_implicit_lifetime(UserProvidedConstructor));
@@ -2076,7 +2086,7 @@ template <typename T>
 class Tpl {
     Tpl() requires false = default ;
 };
-static_assert(!__builtin_is_implicit_lifetime(Tpl<int>));
+static_assert(__builtin_is_implicit_lifetime(Tpl<int>));
 
 #endif
 }
