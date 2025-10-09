@@ -1104,9 +1104,8 @@ map_from_llvmChecksumKind(LLVMChecksumKind CSKind) {
     return llvm::DIFile::CSK_SHA1;
   case LLVMChecksumKind::CSK_SHA256:
     return llvm::DIFile::CSK_SHA256;
-  default:
-    llvm_unreachable("Unhandled Checksum Kind");
   }
+  llvm_unreachable("Unhandled Checksum Kind");
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateFileWithCheckSum(
