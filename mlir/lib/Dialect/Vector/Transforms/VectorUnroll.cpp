@@ -484,8 +484,6 @@ struct UnrollElementwisePattern : public RewritePattern {
     Value result = arith::ConstantOp::create(rewriter, loc, dstVecType,
                                              rewriter.getZeroAttr(dstVecType));
     SmallVector<int64_t> strides(adjustedTargetShape.size(), 1);
-    VectorType extractVecType =
-        VectorType::get(adjustedTargetShape, dstVecType.getElementType());
     VectorType computeVecType =
         VectorType::get(*targetShape, dstVecType.getElementType());
 
@@ -516,14 +514,14 @@ struct UnrollElementwisePattern : public RewritePattern {
 
       Value computeResult = newOp->getResult(0);
 
-      // Reshape back to higher rank if needed for insertion
-      if (adjustedTargetShape.size() > targetShape->size()) {
-        computeResult = rewriter.createOrFold<vector::ShapeCastOp>(
-            loc, extractVecType, computeResult);
-      }
+      // Use strides sized to targetShape for proper insertion
+      SmallVector<int64_t> insertStrides =
+          (adjustedTargetShape.size() > targetShape->size())
+              ? SmallVector<int64_t>(targetShape->size(), 1)
+              : strides;
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, computeResult, result, offsets, strides);
+          loc, computeResult, result, offsets, insertStrides);
     }
     rewriter.replaceOp(op, result);
     return success();
