@@ -58,10 +58,10 @@ define <vscale x 32 x i1> @cmp_nxv32i1() {
 ; Check fcmp for legal FP vectors
 define void @cmp_legal_fp() #0 {
 ; CHECK-LABEL: 'cmp_legal_fp'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %1 = fcmp oge <vscale x 2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %2 = fcmp oge <vscale x 4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %3 = fcmp oge <vscale x 8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:5 Lat:5 SizeLat:5 for: %4 = fcmp oge <vscale x 8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %1 = fcmp oge <vscale x 2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %2 = fcmp oge <vscale x 4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %3 = fcmp oge <vscale x 8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:5 Lat:5 SizeLat:5 for: %4 = fcmp oge <vscale x 8 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = fcmp oge <vscale x 2 x double> undef, undef
@@ -74,7 +74,7 @@ define void @cmp_legal_fp() #0 {
 ; Check fcmp for an illegal FP vector
 define <vscale x 16 x i1> @cmp_nxv16f16() {
 ; CHECK-LABEL: 'cmp_nxv16f16'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %res = fcmp oge <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:2 SizeLat:2 for: %res = fcmp oge <vscale x 16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 16 x i1> %res
 ;
   %res = fcmp oge <vscale x 16 x half> undef, undef

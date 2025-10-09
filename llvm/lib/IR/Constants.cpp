@@ -2135,6 +2135,11 @@ bool ConstantPtrAuth::hasSpecialAddressDiscriminator(uint64_t Value) const {
 bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const Value *Discriminator,
                                             const DataLayout &DL) const {
+  // This function may only be validly called to analyze a ptrauth operation with
+  // no deactivation symbol, so if we have one it isn't compatible.
+  if (!getDeactivationSymbol()->isNullValue())
+    return false;
+
   // If the keys are different, there's no chance for this to be compatible.
   if (getKey() != Key)
     return false;
@@ -2869,7 +2874,7 @@ uint64_t ConstantDataSequential::getNumElements() const {
 }
 
 uint64_t ConstantDataSequential::getElementByteSize() const {
-  return getElementType()->getPrimitiveSizeInBits() / 8;
+  return getElementType()->getPrimitiveSizeInBits().getFixedValue() / 8;
 }
 
 /// Return the start of the specified element.

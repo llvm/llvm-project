@@ -230,13 +230,17 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CStackLoad<bits<3> funct3, string OpcodeStr,
                  DAGOperand cls, DAGOperand opnd>
     : RVInst16CI<funct3, 0b10, (outs cls:$rd), (ins SPMem:$rs1, opnd:$imm),
-                 OpcodeStr, "$rd, ${imm}(${rs1})">;
+                 OpcodeStr, "$rd, ${imm}(${rs1})"> {
+  bits<0> rs1;
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStackStore<bits<3> funct3, string OpcodeStr,
                   DAGOperand cls, DAGOperand opnd>
     : RVInst16CSS<funct3, 0b10, (outs), (ins cls:$rs2, SPMem:$rs1, opnd:$imm),
-                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
+                  OpcodeStr, "$rs2, ${imm}(${rs1})"> {
+  bits<0> rs1;
+}
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoad_ri<bits<3> funct3, string OpcodeStr,
@@ -294,7 +298,7 @@ def C_ADDI4SPN : RVInst16CIW<0b000, 0b00, (outs GPRC:$rd),
                              (ins SP:$rs1, uimm10_lsb00nonzero:$imm),
                              "c.addi4spn", "$rd, $rs1, $imm">,
                              Sched<[WriteIALU, ReadIALU]> {
-  bits<5> rs1;
+  bits<0> rs1;
   let Inst{12-11} = imm{5-4};
   let Inst{10-7} = imm{9-6};
   let Inst{6} = imm{2};
@@ -400,8 +404,8 @@ def C_ADDI16SP : RVInst16CI<0b011, 0b01, (outs SP:$rd_wb),
                             "c.addi16sp", "$rd, $imm">,
                  Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
+  let rd = 2;
   let Inst{12} = imm{9};
-  let Inst{11-7} = 2;
   let Inst{6} = imm{4};
   let Inst{5} = imm{6};
   let Inst{4-3} = imm{8-7};
@@ -961,4 +965,3 @@ let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
   def : CompressPat<(FSD FPR64:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
                     (C_FSDSP FPR64:$rs2, SPMem:$rs1, uimm9_lsb000:$imm)>;
 } // Predicates = [HasStdExtCOrZcd, HasStdExtD]
-

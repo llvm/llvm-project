@@ -576,7 +576,7 @@ void Writer::populateTargetFeatures() {
 
   if (ctx.isPic) {
     // This should not be necessary because all PIC objects should
-    // contain the mutable-globals feature.
+    // contain the `mutable-globals` feature.
     // TODO (https://github.com/llvm/llvm-project/issues/51681)
     allowed.insert("mutable-globals");
   }
@@ -703,10 +703,12 @@ void Writer::checkImportExportTargetFeatures() {
       }
     }
     for (const Symbol *sym : out.exportSec->exportedSymbols) {
-      if (isa<GlobalSymbol>(sym)) {
-        error(Twine("mutable global exported but 'mutable-globals' feature "
-                    "not present in inputs: `") +
-              toString(*sym) + "`. Use --no-check-features to suppress.");
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        if (global->getGlobalType()->Mutable) {
+          error(Twine("mutable global exported but 'mutable-globals' feature "
+                      "not present in inputs: `") +
+                toString(*sym) + "`. Use --no-check-features to suppress.");
+        }
       }
     }
   }
@@ -782,6 +784,9 @@ void Writer::calculateExports() {
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
+  bool hasMutableGlobals =
+      out.targetFeaturesSec->features.count("mutable-globals") > 0;
+
   for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
       continue;
@@ -799,7 +804,8 @@ void Writer::calculateExports() {
       }
       export_ = {name, WASM_EXTERNAL_FUNCTION, f->getExportedFunctionIndex()};
     } else if (auto *g = dyn_cast<DefinedGlobal>(sym)) {
-      if (g->getGlobalType()->Mutable && !g->getFile() && !g->forceExport) {
+      if (!hasMutableGlobals && g->getGlobalType()->Mutable && !g->getFile() &&
+          !g->isExportedExplicit()) {
         // Avoid exporting mutable globals are linker synthesized (e.g.
         // __stack_pointer or __tls_base) unless they are explicitly exported
         // from the command line.

@@ -159,11 +159,29 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+def CIR_AnyIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyFloatType, CIR_AnyIntType],
+                "integer, boolean or floating point type"> {
+  let cppFunctionName = "isAnyIntegerOrBooleanOrFloatingPointType";
+}
+
 //===----------------------------------------------------------------------===//
 // Complex Type predicates
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
+
+def CIR_AnyComplexOrIntOrBoolOrFloatType
+    : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
+                "complex, integer or floating point type"> {
+  let cppFunctionName = "isComplexOrIntegerOrBoolOrFloatingPointType";
+}
+
+//===----------------------------------------------------------------------===//
+// Record Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyRecordType : CIR_TypeBase<"::cir::RecordType", "record type">;
 
 //===----------------------------------------------------------------------===//
 // Array Type predicates
@@ -221,6 +239,8 @@ class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
 def CIR_PtrToComplexType : CIR_PtrToType<CIR_AnyComplexType>;
+
+def CIR_PtrToRecordType : CIR_PtrToType<CIR_AnyRecordType>;
 
 def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 

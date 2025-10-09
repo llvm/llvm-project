@@ -153,6 +153,8 @@ public:
   LLVM_ABI json::Object *getObject(StringRef K);
   LLVM_ABI const json::Array *getArray(StringRef K) const;
   LLVM_ABI json::Array *getArray(StringRef K);
+
+  friend bool operator==(const Object &LHS, const Object &RHS);
 };
 LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 inline bool operator!=(const Object &LHS, const Object &RHS) {

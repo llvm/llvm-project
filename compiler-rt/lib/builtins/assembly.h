@@ -304,7 +304,7 @@
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
   DECLARE_SYMBOL_VISIBILITY(name) SEPARATOR                                    \
-  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target) SEPARATOR
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(SYMBOL_NAME(target)) SEPARATOR
 
 #if defined(__ARM_EABI__)
 #define DEFINE_AEABI_FUNCTION_ALIAS(aeabi_name, name)                          \

@@ -48,7 +48,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI) {
 }
 
 XtensaInstrInfo::XtensaInstrInfo(const XtensaSubtarget &STI)
-    : XtensaGenInstrInfo(Xtensa::ADJCALLSTACKDOWN, Xtensa::ADJCALLSTACKUP),
+    : XtensaGenInstrInfo(STI, Xtensa::ADJCALLSTACKDOWN, Xtensa::ADJCALLSTACKUP),
       RI(STI), STI(STI) {}
 
 Register XtensaInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,

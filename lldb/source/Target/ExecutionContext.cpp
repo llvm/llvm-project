@@ -429,6 +429,16 @@ ExecutionContextRef::ExecutionContextRef(Target *target, bool adopt_selected)
   SetTargetPtr(target, adopt_selected);
 }
 
+ExecutionContextRef::ExecutionContextRef(Process *process, bool adopt_selected)
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
+  SetProcessPtr(process, adopt_selected);
+}
+
+ExecutionContextRef::ExecutionContextRef(Thread *thread, bool adopt_selected)
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {
+  SetThreadPtr(thread, adopt_selected);
+}
+
 ExecutionContextRef::ExecutionContextRef(const ExecutionContextRef &rhs)
 
     = default;
@@ -513,55 +523,66 @@ void ExecutionContextRef::SetFrameSP(const lldb::StackFrameSP &frame_sp) {
 void ExecutionContextRef::SetTargetPtr(Target *target, bool adopt_selected) {
   Clear();
   if (target) {
-    lldb::TargetSP target_sp(target->shared_from_this());
-    if (target_sp) {
-      m_target_wp = target_sp;
-      if (adopt_selected) {
-        lldb::ProcessSP process_sp(target_sp->GetProcessSP());
-        if (process_sp) {
-          m_process_wp = process_sp;
-          if (process_sp) {
-            // Only fill in the thread and frame if our process is stopped
-            // Don't just check the state, since we might be in the middle of
-            // resuming.
-            Process::StopLocker stop_locker;
-
-            if (stop_locker.TryLock(&process_sp->GetRunLock()) &&
-                StateIsStoppedState(process_sp->GetState(), true)) {
-              lldb::ThreadSP thread_sp(
-                  process_sp->GetThreadList().GetSelectedThread());
-              if (!thread_sp)
-                thread_sp = process_sp->GetThreadList().GetThreadAtIndex(0);
-
-              if (thread_sp) {
-                SetThreadSP(thread_sp);
-                lldb::StackFrameSP frame_sp(
-                    thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame));
-                if (!frame_sp)
-                  frame_sp = thread_sp->GetStackFrameAtIndex(0);
-                if (frame_sp)
-                  SetFrameSP(frame_sp);
-              }
-            }
-          }
-        }
-      }
+    lldb::TargetSP target_sp = target->shared_from_this();
+    SetTargetSP(target_sp);
+    if (adopt_selected) {
+      if (lldb::ProcessSP process_sp = target_sp->GetProcessSP())
+        SetProcessPtr(process_sp.get(), adopt_selected);
     }
   }
 }
 
-void ExecutionContextRef::SetProcessPtr(Process *process) {
+void ExecutionContextRef::SetProcessPtr(Process *process, bool adopt_selected) {
   if (process) {
-    SetProcessSP(process->shared_from_this());
+    lldb::ProcessSP process_sp = process->shared_from_this();
+    SetProcessSP(process_sp);
+    if (adopt_selected) {
+      // Only fill in the thread if our process is stopped.
+      // Don't just check the state, since we might be in the middle of
+      // resuming.
+      Process::StopLocker stop_locker;
+      if (stop_locker.TryLock(&process_sp->GetRunLock()) &&
+          StateIsStoppedState(process_sp->GetState(), true)) {
+        lldb::ThreadSP thread_sp(
+            process_sp->GetThreadList().GetSelectedThread());
+        if (!thread_sp)
+          thread_sp = process_sp->GetThreadList().GetThreadAtIndex(0);
+        if (thread_sp) {
+          SetThreadSP(thread_sp);
+          lldb::StackFrameSP frame_sp =
+              thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
+          if (!frame_sp)
+            frame_sp = thread_sp->GetStackFrameAtIndex(0);
+          if (frame_sp)
+            SetFrameSP(frame_sp);
+        }
+      }
+    }
   } else {
     m_process_wp.reset();
     m_target_wp.reset();
   }
 }
 
-void ExecutionContextRef::SetThreadPtr(Thread *thread) {
+void ExecutionContextRef::SetThreadPtr(Thread *thread, bool adopt_selected) {
   if (thread) {
-    SetThreadSP(thread->shared_from_this());
+    lldb::ThreadSP thread_sp = thread->shared_from_this();
+    SetThreadSP(thread_sp);
+    if (adopt_selected) {
+      // Only fill in the frame if our process is stopped.
+      // Don't just check the state, since we might be in the middle of
+      // resuming.
+      Process::StopLocker stop_locker;
+      if (stop_locker.TryLock(&thread->GetProcess()->GetRunLock()) &&
+          StateIsStoppedState(thread->GetProcess()->GetState(), true)) {
+        lldb::StackFrameSP frame_sp =
+            thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
+        if (!frame_sp)
+          frame_sp = thread_sp->GetStackFrameAtIndex(0);
+        if (frame_sp)
+          SetFrameSP(frame_sp);
+      }
+    }
   } else {
     ClearThread();
     m_process_wp.reset();
