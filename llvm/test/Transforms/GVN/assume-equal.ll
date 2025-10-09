@@ -221,21 +221,22 @@ define i32 @_Z1ii(i32 %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[P]], 42
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    br i1 true, label %[[BB2:.*]], label %[[BB2]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br i1 true, label %[[BB2]], label %[[BB2]]
-; CHECK:       [[BB0:.*:]]
+; CHECK-NEXT:    br i1 true, label %[[COMMON:.*]], label %[[COMMON]]
+; CHECK:       [[COMMON]]:
+; CHECK-NEXT:    br i1 true, label %[[COMMON]], label %[[COMMON]]
+; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 42
 ;
 entry:
   %cmp = icmp eq i32 %p, 42
   call void @llvm.assume(i1 %cmp)
 
-  br i1 %cmp, label %bb2, label %bb2
-bb2:
+  br i1 %cmp, label %common, label %common
+common:
   call void @llvm.assume(i1 true)
-  br i1 %cmp, label %bb2, label %bb2
+  br i1 %cmp, label %common, label %common
 
+exit:
   ret i32 %p
 }
 
@@ -357,8 +358,8 @@ define i8 @assume_ptr_eq_different_prov_matters(ptr %p, ptr %p2) {
   ret i8 %v
 }
 
-define i1 @assume_ptr_eq_different_prov_does_not_matter(ptr %p, ptr %p2) {
-; CHECK-LABEL: define i1 @assume_ptr_eq_different_prov_does_not_matter(
+define i1 @assume_ptr_eq_different_prov_does_not_matter_icmp(ptr %p, ptr %p2) {
+; CHECK-LABEL: define i1 @assume_ptr_eq_different_prov_does_not_matter_icmp(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
@@ -369,6 +370,36 @@ define i1 @assume_ptr_eq_different_prov_does_not_matter(ptr %p, ptr %p2) {
   call void @llvm.assume(i1 %cmp)
   %c = icmp eq ptr %p2, null
   ret i1 %c
+}
+
+; This is not correct, as it may change the provenance exposed by ptrtoint.
+; We still allow it for now.
+define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint(ptr %p, ptr %p2) {
+; CHECK-LABEL: define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    ret i64 [[INT]]
+;
+  %cmp = icmp eq ptr %p, %p2
+  call void @llvm.assume(i1 %cmp)
+  %int = ptrtoint ptr %p2 to i64
+  ret i64 %int
+}
+
+define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoaddr(ptr %p, ptr %p2) {
+; CHECK-LABEL: define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; CHECK-NEXT:    ret i64 [[INT]]
+;
+  %cmp = icmp eq ptr %p, %p2
+  call void @llvm.assume(i1 %cmp)
+  %int = ptrtoaddr ptr %p2 to i64
+  ret i64 %int
 }
 
 define i8 @assume_ptr_eq_same_prov(ptr %p, i64 %x) {
