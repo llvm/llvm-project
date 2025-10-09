@@ -792,18 +792,18 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
-  // Block pointers are the only ones we can actually read from.
-  if (!Ptr.isBlockPointer()) {
-    if (Ptr.isZero()) {
-      const auto &Src = S.Current->getSource(OpPC);
+  if (Ptr.isZero()) {
+    const auto &Src = S.Current->getSource(OpPC);
 
-      if (Ptr.isField())
-        S.FFDiag(Src, diag::note_constexpr_null_subobject) << CSK_Field;
-      else
-        S.FFDiag(Src, diag::note_constexpr_access_null) << AK;
-    }
+    if (Ptr.isField())
+      S.FFDiag(Src, diag::note_constexpr_null_subobject) << CSK_Field;
+    else
+      S.FFDiag(Src, diag::note_constexpr_access_null) << AK;
     return false;
   }
+  // Block pointers are the only ones we can actually read from.
+  if (!Ptr.isBlockPointer())
+    return false;
 
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
@@ -1027,8 +1027,8 @@ static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
-  if (!This.isZero())
+bool CheckThis(InterpState &S, CodePtr OpPC) {
+  if (S.Current->hasThisPointer())
     return true;
 
   const Expr *E = S.Current->getExpr(OpPC);
@@ -1198,8 +1198,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis()) &&
-      S.Current->getFunction()->isDestructor()) {
+  if (S.Current->hasThisPointer() && S.Current->getFunction()->isDestructor() &&
+      Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);
     return false;
@@ -1493,9 +1493,12 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
+  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  if (!Definition)
+    return;
+
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Func->getDecl()->getMostRecentDecl(),
-                   const_cast<Function *>(Func));
+      .compileFunc(Definition, const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1747,9 +1750,8 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   if (Ptr.isZero()) {
-    const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
-    S.FFDiag(E, diag::note_constexpr_null_callee)
-        << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_null_callee)
+        << const_cast<Expr *>(CE->getCallee()) << CE->getSourceRange();
     return false;
   }
 
@@ -1773,6 +1775,14 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   if (F->hasNonNullAttr()) {
     if (!CheckNonNullArgs(S, OpPC, F, CE, ArgSize))
       return false;
+  }
+
+  // Can happen when casting function pointers around.
+  QualType CalleeType = CE->getCallee()->getType();
+  if (CalleeType->isPointerType() &&
+      !S.getASTContext().hasSameFunctionTypeIgnoringExceptionSpec(
+          F->getDecl()->getType(), CalleeType->getPointeeType())) {
+    return false;
   }
 
   assert(ArgSize >= F->getWrittenArgSize());

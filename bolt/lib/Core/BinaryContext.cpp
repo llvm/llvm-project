@@ -33,6 +33,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <functional>
@@ -207,7 +208,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
                              Twine("BOLT-ERROR: ", Error));
 
   std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
+      TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return createStringError(
         make_error_code(std::errc::not_supported),
@@ -215,7 +216,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   // Set up disassembler.
   std::unique_ptr<MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
   if (!AsmInfo)
     return createStringError(
         make_error_code(std::errc::not_supported),
@@ -227,7 +228,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   AsmInfo->setAllowAtInName(true);
 
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", FeaturesStr));
   if (!STI)
     return createStringError(
         make_error_code(std::errc::not_supported),
@@ -1623,20 +1624,45 @@ DWARFContext *BinaryContext::getDWOContext() const {
   return &DWOCUs.begin()->second->getContext();
 }
 
+bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
+  // Invalid DWARF unit with a DWOId but lacking a dwo_name.
+  if (DU.getDWOId() && !DU.isDWOUnit() &&
+      !DU.getUnitDIE().find(
+          {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name})) {
+    this->outs() << "BOLT-ERROR: broken DWARF found in CU at offset 0x"
+                 << Twine::utohexstr(DU.getOffset()) << " (DWOId=0x"
+                 << Twine::utohexstr(*(DU.getDWOId()))
+                 << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name)\n";
+    return false;
+  }
+  return true;
+}
+
 /// Handles DWO sections that can either be in .o, .dwo or .dwp files.
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
+    if (!isValidDwarfUnit(*DwarfUnit))
+      continue;
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       std::string DWOName = dwarf::toString(
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
           "");
-      SmallString<16> AbsolutePath;
+      SmallString<16> AbsolutePath(DWOName);
+      std::string DWOCompDir = DwarfUnit->getCompilationDir();
       if (!opts::CompDirOverride.empty()) {
-        sys::path::append(AbsolutePath, opts::CompDirOverride);
-        sys::path::append(AbsolutePath, DWOName);
+        DWOCompDir = opts::CompDirOverride;
+      } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
+        DWOCompDir = ".";
+        this->outs()
+            << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
+            << DWOName
+            << " does not exist. Relative path will be used to process .dwo "
+               "files.\n";
       }
+      // Prevent failures when DWOName is already an absolute path.
+      sys::fs::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
@@ -1644,7 +1670,8 @@ void BinaryContext::preprocessDWODebugInfo() {
             << "BOLT-WARNING: Debug Fission: DWO debug information for "
             << DWOName
             << " was not retrieved and won't be updated. Please check "
-               "relative path.\n";
+               "relative path or use '--comp-dir-override' to specify the base "
+               "location.\n";
         continue;
       }
       DWOCUs[*DWOId] = DWOCU;
@@ -1693,22 +1720,39 @@ void BinaryContext::preprocessDebugInfo() {
 
     auto It = llvm::partition_point(
         AllRanges, [=](CURange R) { return R.HighPC <= FunctionAddress; });
-    if (It != AllRanges.end() && It->LowPC <= FunctionAddress)
-      Function.setDWARFUnit(It->Unit);
+    if (It == AllRanges.end() || It->LowPC > FunctionAddress) {
+      continue;
+    }
+    Function.addDWARFUnit(It->Unit);
+
+    // Go forward and add all units from ranges that cover the function.
+    while (++It != AllRanges.end()) {
+      if (It->LowPC > FunctionAddress || FunctionAddress >= It->HighPC)
+        break;
+      Function.addDWARFUnit(It->Unit);
+    }
   }
 
   // Discover units with debug info that needs to be updated.
   for (const auto &KV : BinaryFunctions) {
     const BinaryFunction &BF = KV.second;
-    if (shouldEmit(BF) && BF.getDWARFUnit())
-      ProcessedCUs.insert(BF.getDWARFUnit());
+    if (shouldEmit(BF) && !BF.getDWARFUnits().empty())
+      for (const auto &[_, Unit] : BF.getDWARFUnits())
+        ProcessedCUs.insert(Unit);
   }
-
   // Clear debug info for functions from units that we are not going to process.
   for (auto &KV : BinaryFunctions) {
     BinaryFunction &BF = KV.second;
-    if (BF.getDWARFUnit() && !ProcessedCUs.count(BF.getDWARFUnit()))
-      BF.setDWARFUnit(nullptr);
+    // Collect units to remove to avoid iterator invalidation
+    SmallVector<DWARFUnit *, 1> UnitsToRemove;
+    for (const auto &[_, Unit] : BF.getDWARFUnits()) {
+      if (!ProcessedCUs.count(Unit))
+        UnitsToRemove.push_back(Unit);
+    }
+    // Remove the collected units
+    for (auto *Unit : UnitsToRemove) {
+      BF.removeDWARFUnit(Unit);
+    }
   }
 
   if (opts::Verbosity >= 1) {
@@ -1903,23 +1947,23 @@ bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
 static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
                            const BinaryFunction *Function,
                            DWARFContext *DwCtx) {
-  DebugLineTableRowRef RowRef =
-      DebugLineTableRowRef::fromSMLoc(Instruction.getLoc());
-  if (RowRef == DebugLineTableRowRef::NULL_ROW)
+  const ClusteredRows *LineTableRows =
+      ClusteredRows::fromSMLoc(Instruction.getLoc());
+  if (LineTableRows == nullptr)
     return;
 
-  const DWARFDebugLine::LineTable *LineTable;
-  if (Function && Function->getDWARFUnit() &&
-      Function->getDWARFUnit()->getOffset() == RowRef.DwCompileUnitIndex) {
-    LineTable = Function->getDWARFLineTable();
-  } else {
-    LineTable = DwCtx->getLineTableForUnit(
-        DwCtx->getCompileUnitForOffset(RowRef.DwCompileUnitIndex));
-  }
-  assert(LineTable && "line table expected for instruction with debug info");
+  // File name and line number should be the same for all CUs.
+  // So it is sufficient to check the first one.
+  DebugLineTableRowRef RowRef = LineTableRows->getRows().front();
+  const DWARFDebugLine::LineTable *LineTable = DwCtx->getLineTableForUnit(
+      DwCtx->getCompileUnitForOffset(RowRef.DwCompileUnitIndex));
+
+  if (!LineTable)
+    return;
 
   const DWARFDebugLine::Row &Row = LineTable->Rows[RowRef.RowIndex - 1];
   StringRef FileName = "";
+
   if (std::optional<const char *> FName =
           dwarf::toString(LineTable->Prologue.getFileNameEntry(Row.File).Name))
     FileName = *FName;
@@ -2027,7 +2071,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   if (MCSymbol *Label = MIB->getInstLabel(Instruction))
     OS << " # Label: " << *Label;
 
-  MIB->printAnnotations(Instruction, OS);
+  MIB->printAnnotations(Instruction, OS, PrintMemData || opts::PrintMemData);
 
   if (opts::PrintDebugInfo)
     printDebugInfo(OS, Instruction, Function, DwCtx.get());

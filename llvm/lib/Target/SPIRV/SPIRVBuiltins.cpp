@@ -1778,7 +1778,7 @@ static bool generateDotOrFMulInst(const StringRef DemangledCall,
   // Add Packed Vector Format for Integer dot product builtins if arguments are
   // scalar
   if (!IsVec && OC != SPIRV::OpFMulS)
-    MIB.addImm(0);
+    MIB.addImm(SPIRV::PackedVectorFormat4x8Bit);
 
   return true;
 }

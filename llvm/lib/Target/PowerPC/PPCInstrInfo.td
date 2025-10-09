@@ -714,42 +714,6 @@ let WantsParent = true in {
 }
 
 //===----------------------------------------------------------------------===//
-// PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
-def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
-
-// AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
-                 AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
-
-//===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
 multiclass XForm_base_r3xo_r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmbase, string asmstr, list<dag> pattern> {

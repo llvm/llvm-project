@@ -1745,15 +1745,13 @@ ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
-  if (DeclForType->isUsed()) {
-    // If there is a definition of the 'OriginalDecl', it should be imported to
-    // have all information for the type in the "To" AST. (In some cases no
-    // other reference may exist to the definition decl and it would not be
-    // imported otherwise.)
-    Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
-    if (!ToDefDeclOrErr)
-      return ToDefDeclOrErr.takeError();
-  }
+  // If there is a definition of the 'OriginalDecl', it should be imported to
+  // have all information for the type in the "To" AST. (In some cases no
+  // other reference may exist to the definition decl and it would not be
+  // imported otherwise.)
+  Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
+  if (!ToDefDeclOrErr)
+    return ToDefDeclOrErr.takeError();
 
   if (T->isCanonicalUnqualified())
     return Importer.getToContext().getCanonicalTagType(*ToDeclOrErr);
@@ -1890,25 +1888,6 @@ ASTNodeImporter::VisitPackExpansionType(const PackExpansionType *T) {
   return Importer.getToContext().getPackExpansionType(*ToPatternOrErr,
                                                       T->getNumExpansions(),
                                                       /*ExpactPack=*/false);
-}
-
-ExpectedType ASTNodeImporter::VisitDependentTemplateSpecializationType(
-    const DependentTemplateSpecializationType *T) {
-  const DependentTemplateStorage &DTN = T->getDependentTemplateName();
-  auto QualifierOrErr = import(DTN.getQualifier());
-  if (!QualifierOrErr)
-    return QualifierOrErr.takeError();
-
-  SmallVector<TemplateArgument, 2> ToPack;
-  ToPack.reserve(T->template_arguments().size());
-  if (Error Err = ImportTemplateArguments(T->template_arguments(), ToPack))
-    return std::move(Err);
-
-  return Importer.getToContext().getDependentTemplateSpecializationType(
-      T->getKeyword(),
-      {*QualifierOrErr, Importer.Import(DTN.getName()),
-       DTN.hasTemplateKeyword()},
-      ToPack);
 }
 
 ExpectedType

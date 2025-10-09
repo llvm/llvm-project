@@ -60,8 +60,6 @@ void checkCaptureByLifetime(Sema &SemaRef, const CapturingEntity &Entity,
 void checkExprLifetimeMustTailArg(Sema &SemaRef,
                                   const InitializedEntity &Entity, Expr *Init);
 
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
-
 } // namespace clang::sema
 
 #endif // LLVM_CLANG_SEMA_CHECK_EXPR_LIFETIME_H

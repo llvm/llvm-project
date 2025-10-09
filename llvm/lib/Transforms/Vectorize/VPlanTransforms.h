@@ -117,6 +117,13 @@ struct VPlanTransforms {
       bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
       const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE);
 
+  /// Add a check to \p Plan to see if the epilogue vector loop should be
+  /// executed.
+  static void addMinimumVectorEpilogueIterationCheck(
+      VPlan &Plan, Value *TripCount, Value *VectorTripCount,
+      bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
+      unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE);
+
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
@@ -158,10 +165,10 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
-  /// with \p VF single-scalar recipes.
-  /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
-  /// dissolving the latter.
+  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
+  /// any replicate region in \p Plan with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
+  /// replicate regions, thereby dissolving the latter.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the

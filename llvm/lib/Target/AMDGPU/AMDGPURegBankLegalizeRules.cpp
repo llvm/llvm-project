@@ -467,6 +467,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
     : ST(&_ST), MRI(&_MRI) {
 
   addRulesForGOpcs({G_ADD, G_SUB}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
@@ -615,8 +617,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS64, S64}, {{Sgpr64}, {Sgpr64}}})
       .Any({{DivS64, S64}, {{Vgpr64}, {Vgpr64}, SplitTo32SExtInReg}});
 
-  bool hasUnalignedLoads = ST->getGeneration() >= AMDGPUSubtarget::GFX12;
+  bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
+  bool usesTrue16 = ST->useRealTrue16Insts();
 
   Predicate isAlign16([](const MachineInstr &MI) -> bool {
     return (*MI.memoperands_begin())->getAlign() >= Align(16);
@@ -654,54 +657,187 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
     return (*MI.memoperands_begin())->getFlags() & MONoClobber;
   });
 
-  Predicate isNaturalAlignedSmall([](const MachineInstr &MI) -> bool {
+  Predicate isNaturalAligned([](const MachineInstr &MI) -> bool {
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    return MMO->getAlign() >= Align(MMO->getSize().getValue());
+  });
+
+  Predicate is8Or16BitMMO([](const MachineInstr &MI) -> bool {
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     const unsigned MemSize = 8 * MMO->getSize().getValue();
-    return (MemSize == 16 && MMO->getAlign() >= Align(2)) ||
-           (MemSize == 8 && MMO->getAlign() >= Align(1));
+    return MemSize == 16 || MemSize == 8;
+  });
+
+  Predicate is32BitMMO([](const MachineInstr &MI) -> bool {
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    return 8 * MMO->getSize().getValue() == 32;
   });
 
   auto isUL = !isAtomicMMO && isUniMMO && (isConst || !isVolatileMMO) &&
               (isConst || isInvMMO || isNoClobberMMO);
 
   // clang-format off
+  // TODO: S32Dst, 16-bit any-extending load should not appear on True16 targets
   addRulesForGOpcs({G_LOAD})
-      .Any({{DivB32, DivP0}, {{VgprB32}, {VgprP0}}})
-      .Any({{DivB32, UniP0}, {{VgprB32}, {VgprP0}}})
+      // flat, addrspace(0), never uniform - flat_load
+      .Any({{DivS16, P0}, {{Vgpr16}, {VgprP0}}}, usesTrue16)
+      .Any({{DivB32, P0}, {{VgprB32}, {VgprP0}}}) // 32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{DivB64, P0}, {{VgprB64}, {VgprP0}}})
+      .Any({{DivB96, P0}, {{VgprB96}, {VgprP0}}})
+      .Any({{DivB128, P0}, {{VgprB128}, {VgprP0}}})
 
-      .Any({{DivB32, DivP1}, {{VgprB32}, {VgprP1}}})
-      .Any({{{UniB256, UniP1}, isAlign4 && isUL}, {{SgprB256}, {SgprP1}}})
-      .Any({{{UniB512, UniP1}, isAlign4 && isUL}, {{SgprB512}, {SgprP1}}})
-      .Any({{{UniB32, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB32}, {SgprP1}}})
-      .Any({{{UniB64, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB64}, {SgprP1}}})
-      .Any({{{UniB96, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB96}, {SgprP1}}})
-      .Any({{{UniB128, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB128}, {SgprP1}}})
-      .Any({{{UniB256, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB256}, {VgprP1}, SplitLoad}})
-      .Any({{{UniB512, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB512}, {VgprP1}, SplitLoad}})
+       // global, addrspace(1)
+       // divergent - global_load
+      .Any({{DivS16, P1}, {{Vgpr16}, {VgprP1}}}, usesTrue16)
+      .Any({{DivB32, P1}, {{VgprB32}, {VgprP1}}}) //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{DivB64, P1}, {{VgprB64}, {VgprP1}}})
+      .Any({{DivB96, P1}, {{VgprB96}, {VgprP1}}})
+      .Any({{DivB128, P1}, {{VgprB128}, {VgprP1}}})
+      .Any({{DivB256, P1}, {{VgprB256}, {VgprP1}, SplitLoad}})
+      .Any({{DivB512, P1}, {{VgprB512}, {VgprP1}, SplitLoad}})
 
-      .Any({{DivB32, UniP3}, {{VgprB32}, {VgprP3}}})
-      .Any({{{UniB32, UniP3}, isAlign4 && isUL}, {{SgprB32}, {SgprP3}}})
-      .Any({{{UniB32, UniP3}, !isAlign4 || !isUL}, {{UniInVgprB32}, {VgprP3}}})
+       // uniform - s_load
+      .Any({{{UniS16, P1}, isNaturalAligned && isUL}, {{Sgpr32Trunc}, {SgprP1}}}, usesTrue16 && hasSMRDSmall) // s16 load
+      .Any({{{UniS16, P1}, isAlign4 && isUL}, {{Sgpr32Trunc}, {SgprP1}, WidenMMOToS32}}, usesTrue16 && !hasSMRDSmall) // s16 load to 32-bit load
+      .Any({{{UniB32, P1}, isNaturalAligned && isUL}, {{SgprB32}, {SgprP1}}}, hasSMRDSmall) //32-bit load, 8-bit and 16-bit any-extending load
+       // TODO: SplitLoad when !isNaturalAligned && isUL and target hasSMRDSmall
+      .Any({{{UniB32, P1}, is8Or16BitMMO && isAlign4 && isUL}, {{SgprB32}, {SgprP1}, WidenMMOToS32}}, !hasSMRDSmall)  //8-bit and 16-bit any-extending load to 32-bit load
+      .Any({{{UniB32, P1}, is32BitMMO && isAlign4 && isUL}, {{SgprB32}, {SgprP1}}}) //32-bit load
+      .Any({{{UniB64, P1}, isAlign4 && isUL}, {{SgprB64}, {SgprP1}}})
+      .Any({{{UniB96, P1}, isAlign16 && isUL}, {{SgprB96}, {SgprP1}, WidenLoad}}, !hasSMRDx3)
+      .Any({{{UniB96, P1}, isAlign4 && !isAlign16 && isUL}, {{SgprB96}, {SgprP1}, SplitLoad}}, !hasSMRDx3)
+      .Any({{{UniB96, P1}, isAlign4 && isUL}, {{SgprB96}, {SgprP1}}}, hasSMRDx3)
+      .Any({{{UniB128, P1}, isAlign4 && isUL}, {{SgprB128}, {SgprP1}}})
+      .Any({{{UniB256, P1}, isAlign4 && isUL}, {{SgprB256}, {SgprP1}}})
+      .Any({{{UniB512, P1}, isAlign4 && isUL}, {{SgprB512}, {SgprP1}}})
 
-      .Any({{{DivB256, DivP4}}, {{VgprB256}, {VgprP4}, SplitLoad}})
-      .Any({{{UniB32, UniP4}, isNaturalAlignedSmall && isUL}, {{SgprB32}, {SgprP4}}}, hasSMRDSmall) // i8 and i16 load
-      .Any({{{UniB32, UniP4}, isAlign4 && isUL}, {{SgprB32}, {SgprP4}}})
-      .Any({{{UniB96, UniP4}, isAlign16 && isUL}, {{SgprB96}, {SgprP4}, WidenLoad}}, !hasUnalignedLoads)
-      .Any({{{UniB96, UniP4}, isAlign4 && !isAlign16 && isUL}, {{SgprB96}, {SgprP4}, SplitLoad}}, !hasUnalignedLoads)
-      .Any({{{UniB96, UniP4}, isAlign4 && isUL}, {{SgprB96}, {SgprP4}}}, hasUnalignedLoads)
-      .Any({{{UniB128, UniP4}, isAlign4 && isUL}, {{SgprB128}, {SgprP4}}})
-      .Any({{{UniB256, UniP4}, isAlign4 && isUL}, {{SgprB256}, {SgprP4}}})
-      .Any({{{UniB512, UniP4}, isAlign4 && isUL}, {{SgprB512}, {SgprP4}}})
-      .Any({{{UniB32, UniP4}, !isNaturalAlignedSmall || !isUL}, {{UniInVgprB32}, {VgprP4}}}, hasSMRDSmall) // i8 and i16 load
-      .Any({{{UniB32, UniP4}, !isAlign4 || !isUL}, {{UniInVgprB32}, {VgprP4}}})
-      .Any({{{UniB256, UniP4}, !isAlign4 || !isUL}, {{UniInVgprB256}, {VgprP4}, SplitLoad}})
-      .Any({{{UniB512, UniP4}, !isAlign4 || !isUL}, {{UniInVgprB512}, {VgprP4}, SplitLoad}})
+      // Uniform via global or buffer load, for example volatile or non-aligned
+      // uniform load. Not using standard {{UniInVgprTy}, {VgprP1}} since it is
+      // selected as global_load, use SgprP1 for pointer instead to match
+      // patterns without flat-for-global, default for GFX7 and older.
+      // -> +flat-for-global + {{UniInVgprTy}, {SgprP1}} - global_load
+      // -> -flat-for-global + {{UniInVgprTy}, {SgprP1}} - buffer_load
+      .Any({{{UniS16, P1}, !isNaturalAligned || !isUL}, {{UniInVgprS16}, {SgprP1}}}, usesTrue16 && hasSMRDSmall) // s16 load
+      .Any({{{UniS16, P1}, !isAlign4 || !isUL}, {{UniInVgprS16}, {SgprP1}}}, usesTrue16 && !hasSMRDSmall) // s16 load
+      .Any({{{UniB32, P1}, !isNaturalAligned || !isUL}, {{UniInVgprB32}, {SgprP1}}}, hasSMRDSmall) //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{{UniB32, P1}, !isAlign4 || !isUL}, {{UniInVgprB32}, {SgprP1}}}, !hasSMRDSmall)  //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{{UniB64, P1}, !isAlign4 || !isUL}, {{UniInVgprB64}, {SgprP1}}})
+      .Any({{{UniB96, P1}, !isAlign4 || !isUL}, {{UniInVgprB96}, {SgprP1}}})
+      .Any({{{UniB128, P1}, !isAlign4 || !isUL}, {{UniInVgprB128}, {SgprP1}}})
+      .Any({{{UniB256, P1}, !isAlign4 || !isUL}, {{UniInVgprB256}, {SgprP1}, SplitLoad}})
+      .Any({{{UniB512, P1}, !isAlign4 || !isUL}, {{UniInVgprB512}, {SgprP1}, SplitLoad}})
 
-      .Any({{DivB32, P5}, {{VgprB32}, {VgprP5}}});
+      // local, addrspace(3) - ds_load
+      .Any({{DivS16, P3}, {{Vgpr16}, {VgprP3}}}, usesTrue16)
+      .Any({{DivB32, P3}, {{VgprB32}, {VgprP3}}}) // 32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{DivB64, P3}, {{VgprB64}, {VgprP3}}})
+      .Any({{DivB96, P3}, {{VgprB96}, {VgprP3}}})
+      .Any({{DivB128, P3}, {{VgprB128}, {VgprP3}}})
 
-  addRulesForGOpcs({G_ZEXTLOAD}) // i8 and i16 zero-extending loads
-      .Any({{{UniB32, UniP3}, !isAlign4 || !isUL}, {{UniInVgprB32}, {VgprP3}}})
-      .Any({{{UniB32, UniP4}, !isAlign4 || !isUL}, {{UniInVgprB32}, {VgprP4}}});
+      .Any({{UniS16, P3}, {{UniInVgprS16}, {SgprP3}}}, usesTrue16) // 16-bit load
+      .Any({{UniB32, P3}, {{UniInVgprB32}, {VgprP3}}}) // 32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{UniB64, P3}, {{UniInVgprB64}, {VgprP3}}})
+      .Any({{UniB96, P3}, {{UniInVgprB96}, {VgprP3}}})
+      .Any({{UniB128, P3}, {{UniInVgprB128}, {VgprP3}}})
+
+      // constant, addrspace(4)
+      // divergent - global_load
+      .Any({{DivS16, P4}, {{Vgpr16}, {VgprP4}}}, usesTrue16)
+      .Any({{DivB32, P4}, {{VgprB32}, {VgprP4}}}) //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{DivB64, P4}, {{VgprB64}, {VgprP4}}})
+      .Any({{DivB96, P4}, {{VgprB96}, {VgprP4}}})
+      .Any({{DivB128, P4}, {{VgprB128}, {VgprP4}}})
+      .Any({{DivB256, P4}, {{VgprB256}, {VgprP4}, SplitLoad}})
+      .Any({{DivB512, P4}, {{VgprB512}, {VgprP4}, SplitLoad}})
+
+       // uniform - s_load
+      .Any({{{UniS16, P4}, isNaturalAligned && isUL}, {{Sgpr32Trunc}, {SgprP4}}}, usesTrue16 && hasSMRDSmall) // s16 load
+      .Any({{{UniS16, P4}, isAlign4 && isUL}, {{Sgpr32Trunc}, {SgprP4}, WidenMMOToS32}}, usesTrue16 && !hasSMRDSmall) // s16 load to 32-bit load
+      .Any({{{UniB32, P4}, isNaturalAligned && isUL}, {{SgprB32}, {SgprP4}}}, hasSMRDSmall) //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{{UniB32, P4}, is8Or16BitMMO && isAlign4 && isUL}, {{SgprB32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)  //8-bit and 16-bit any-extending load to 32-bit load
+      .Any({{{UniB32, P4}, is32BitMMO && isAlign4 && isUL}, {{SgprB32}, {SgprP4}}}) //32-bit load
+      .Any({{{UniB64, P4}, isAlign4 && isUL}, {{SgprB64}, {SgprP4}}})
+      .Any({{{UniB96, P4}, isAlign16 && isUL}, {{SgprB96}, {SgprP4}, WidenLoad}}, !hasSMRDx3)
+      .Any({{{UniB96, P4}, isAlign4 && !isAlign16 && isUL}, {{SgprB96}, {SgprP4}, SplitLoad}}, !hasSMRDx3)
+      .Any({{{UniB96, P4}, isAlign4 && isUL}, {{SgprB96}, {SgprP4}}}, hasSMRDx3)
+      .Any({{{UniB128, P4}, isAlign4 && isUL}, {{SgprB128}, {SgprP4}}})
+      .Any({{{UniB256, P4}, isAlign4 && isUL}, {{SgprB256}, {SgprP4}}})
+      .Any({{{UniB512, P4}, isAlign4 && isUL}, {{SgprB512}, {SgprP4}}})
+
+      // uniform in vgpr - global_load or buffer_load
+      .Any({{{UniS16, P4}, !isNaturalAligned || !isUL}, {{UniInVgprS16}, {SgprP4}}}, usesTrue16 && hasSMRDSmall) // s16 load
+      .Any({{{UniS16, P4}, !isAlign4 || !isUL}, {{UniInVgprS16}, {SgprP4}}}, usesTrue16 && !hasSMRDSmall) // s16 load
+      .Any({{{UniB32, P4}, !isNaturalAligned || !isUL}, {{UniInVgprB32}, {SgprP4}}}, hasSMRDSmall) //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{{UniB32, P4}, !isAlign4 || !isUL}, {{UniInVgprB32}, {SgprP4}}}, !hasSMRDSmall)  //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{{UniB64, P4}, !isAlign4 || !isUL}, {{UniInVgprB64}, {SgprP4}}})
+      .Any({{{UniB96, P4}, !isAlign4 || !isUL}, {{UniInVgprB96}, {SgprP4}}})
+      .Any({{{UniB128, P4}, !isAlign4 || !isUL}, {{UniInVgprB128}, {SgprP4}}})
+      .Any({{{UniB256, P4}, !isAlign4 || !isUL}, {{UniInVgprB256}, {SgprP4}, SplitLoad}})
+      .Any({{{UniB512, P4}, !isAlign4 || !isUL}, {{UniInVgprB512}, {SgprP4}, SplitLoad}})
+
+      // private, addrspace(5), never uniform - scratch_load
+      .Any({{DivS16, P5}, {{Vgpr16}, {VgprP5}}}, usesTrue16)
+      .Any({{DivB32, P5}, {{VgprB32}, {VgprP5}}}) // 32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{DivB64, P5}, {{VgprB64}, {VgprP5}}})
+      .Any({{DivB96, P5}, {{VgprB96}, {VgprP5}}})
+      .Any({{DivB128, P5}, {{VgprB128}, {VgprP5}}})
+      
+      .Any({{DivS32, Ptr128}, {{Vgpr32}, {VgprPtr128}}});
+
+
+  addRulesForGOpcs({G_ZEXTLOAD, G_SEXTLOAD}) // i8 and i16 zeroextending loads
+      .Any({{DivS32, P0}, {{Vgpr32}, {VgprP0}}})
+
+      .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1}}})
+      .Any({{{UniS32, P1}, isAlign4 && isUL}, {{Sgpr32}, {SgprP1}, WidenMMOToS32}}, !hasSMRDSmall)
+      .Any({{{UniS32, P1}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP1}}}, hasSMRDSmall)
+      .Any({{{UniS32, P1}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP1}}}, !hasSMRDSmall)
+      .Any({{{UniS32, P1}, !isNaturalAligned || !isUL}, {{UniInVgprS32}, {SgprP1}}}, hasSMRDSmall)
+
+      .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3}}})
+      .Any({{UniS32, P3}, {{UniInVgprS32}, {VgprP3}}})
+
+      .Any({{DivS32, P4}, {{Vgpr32}, {VgprP4}}})
+      .Any({{{UniS32, P4}, isAlign4 && isUL}, {{Sgpr32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)
+      .Any({{{UniS32, P4}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP4}}}, hasSMRDSmall)
+      .Any({{{UniS32, P4}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP4}}}, !hasSMRDSmall)
+      .Any({{{UniS32, P4}, !isNaturalAligned || !isUL}, {{UniInVgprS32}, {SgprP4}}}, hasSMRDSmall)
+
+      .Any({{DivS32, P5}, {{Vgpr32}, {VgprP5}}});
+
+  addRulesForGOpcs({G_STORE})
+      // addrspace(0)
+      .Any({{S16, P0}, {{}, {Vgpr16, VgprP0}}}, usesTrue16) // 16-bit store
+      .Any({{B32, P0}, {{}, {VgprB32, VgprP0}}}) // 32-bit store, 8-bit and 16-bit truncating store
+      .Any({{B64, P0}, {{}, {VgprB64, VgprP0}}})
+      .Any({{B96, P0}, {{}, {VgprB96, VgprP0}}})
+      .Any({{B128, P0}, {{}, {VgprB128, VgprP0}}})
+
+       // addrspace(1), there are no stores to addrspace(4)
+       // For targets:
+       // - with "+flat-for-global" - global_store
+       // - without(-flat-for-global) - buffer_store addr64
+      .Any({{S16, DivP1}, {{}, {Vgpr16, VgprP1}}}, usesTrue16) // 16-bit store
+      .Any({{B32, DivP1}, {{}, {VgprB32, VgprP1}}}) // 32-bit store, 8-bit and 16-bit truncating store
+      .Any({{B64, DivP1}, {{}, {VgprB64, VgprP1}}})
+      .Any({{B96, DivP1}, {{}, {VgprB96, VgprP1}}})
+      .Any({{B128, DivP1}, {{}, {VgprB128, VgprP1}}})
+
+       // For UniP1, use sgpr ptr to match flat-for-global patterns. Targets:
+       // - with "+flat-for-global" - global_store for both sgpr and vgpr ptr
+       // - without(-flat-for-global) - need sgpr ptr to select buffer_store
+      .Any({{S16, UniP1}, {{}, {Vgpr16, SgprP1}}}, usesTrue16) // 16-bit store
+      .Any({{B32, UniP1}, {{}, {VgprB32, SgprP1}}}) // 32-bit store, 8-bit and 16-bit truncating store
+      .Any({{B64, UniP1}, {{}, {VgprB64, SgprP1}}})
+      .Any({{B96, UniP1}, {{}, {VgprB96, SgprP1}}})
+      .Any({{B128, UniP1}, {{}, {VgprB128, SgprP1}}})
+
+      // addrspace(3) and addrspace(5)
+      .Any({{S16, Ptr32}, {{}, {Vgpr16, VgprPtr32}}}, usesTrue16) // 16-bit store
+      .Any({{B32, Ptr32}, {{}, {VgprB32, VgprPtr32}}}) // 32-bit store, 8-bit and 16-bit truncating store
+      .Any({{B64, Ptr32}, {{}, {VgprB64, VgprPtr32}}})
+      .Any({{B96, Ptr32}, {{}, {VgprB96, VgprPtr32}}})
+      .Any({{B128, Ptr32}, {{}, {VgprB128, VgprPtr32}}});
   // clang-format on
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, StandardB)
@@ -713,12 +849,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(B96, {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
-
-  addRulesForGOpcs({G_STORE})
-      .Any({{S32, P0}, {{}, {Vgpr32, VgprP0}}})
-      .Any({{S32, P1}, {{}, {Vgpr32, VgprP1}}})
-      .Any({{S64, P1}, {{}, {Vgpr64, VgprP1}}})
-      .Any({{V4S32, P1}, {{}, {VgprV4S32, VgprP1}}});
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE})
       .Any({{S32}, {{}, {Vgpr32, SgprV4S32, Vgpr32, Vgpr32, Sgpr32}}});

@@ -1287,6 +1287,15 @@ public:
   // Helper function for MIRPrinter.
   LLVM_ABI bool canPredictBranchProbabilities() const;
 
+  /// Iterate over block PHI instructions and remove all incoming values for
+  /// PredMBB.
+  ///
+  /// Method does not erase PHI instructions even if they have single income or
+  /// do not have incoming values ar all. It is a caller responsibility to make
+  /// decision how to process PHI instructions after incoming values removal.
+  LLVM_ABI void
+  removePHIsIncomingValuesForPredecessor(const MachineBasicBlock &PredMBB);
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);

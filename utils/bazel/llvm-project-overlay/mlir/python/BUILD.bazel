@@ -33,6 +33,13 @@ filegroup(
 )
 
 filegroup(
+    name = "ExecutionEnginePyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlirExecutionEngine.pyi",
+    ],
+)
+
+filegroup(
     name = "IRPyFiles",
     srcs = [
         "mlir/ir.py",
@@ -516,6 +523,38 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# IRDL dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "IRDLOpsPyGen",
+    tbl_outs = {
+        "mlir/dialects/_irdl_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=irdl",
+        ],
+        "mlir/dialects/_irdl_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=irdl",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/IRDLOps.td",
+    deps = [
+        "//mlir:IRDLTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "IRDLPyFiles",
+    srcs = [
+        "mlir/dialects/irdl.py",
+        ":IRDLOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Math dialect.
 ##---------------------------------------------------------------------------##
 
@@ -638,6 +677,13 @@ gentbl_filegroup(
 )
 
 filegroup(
+    name = "PDLPyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlir/dialects/pdl.pyi",
+    ],
+)
+
+filegroup(
     name = "PDLPyFiles",
     srcs = [
         "mlir/dialects/pdl.py",
@@ -726,6 +772,13 @@ filegroup(
 ##---------------------------------------------------------------------------##
 # Quant dialect.
 ##---------------------------------------------------------------------------##
+
+filegroup(
+    name = "QuantPyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlir/dialects/quant.pyi",
+    ],
+)
 
 filegroup(
     name = "QuantPyFiles",
@@ -1393,6 +1446,22 @@ gentbl_filegroup(
     ],
 )
 
+gentbl_filegroup(
+    name = "TransformSMTExtensionOpsPyGen",
+    tbl_outs = {"mlir/dialects/_transform_smt_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=smt_transform",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TransformSMTExtensionOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:TransformSMTExtensionOpsTdFiles",
+    ],
+)
+
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
@@ -1408,6 +1477,7 @@ filegroup(
         ":TensorTransformOpsPyGen",
         ":TransformEnumPyGen",
         ":TransformOpsPyGen",
+        ":TransformSMTExtensionOpsPyGen",
         ":VectorTransformEnumPyGen",
         ":VectorTransformOpsPyGen",
     ],
@@ -1426,6 +1496,31 @@ filegroup(
 filegroup(
     name = "TransformInterpreterPackagePyFiles",
     srcs = glob(["mlir/dialects/transform/interpreter/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
+# UB dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "UbOpsPyGen",
+    tbl_outs = {"mlir/dialects/_ub_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=ub",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/UBOps.td",
+    deps = [
+        "//mlir:UBDialectTdFiles",
+    ],
+)
+
+filegroup(
+    name = "UbPyFiles",
+    srcs = [
+        "mlir/dialects/ub.py",
+        ":UbOpsPyGen",
+    ],
 )
 
 ##---------------------------------------------------------------------------##

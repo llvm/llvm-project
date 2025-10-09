@@ -46,6 +46,21 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Renamed :program:`clang-tidy`'s option name of check
+  :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
+  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
+  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
+  correcting a spelling mistake.
+
 Improvements to clangd
 ----------------------
 
@@ -112,6 +127,10 @@ Improvements to clang-tidy
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
 
+- :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
+  configuration option.
+  :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
+
 - The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
@@ -135,7 +154,7 @@ Improvements to clang-tidy
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` 
+- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
@@ -148,12 +167,23 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
+
+  Finds derived class methods that shadow a (non-virtual) base class method.
+
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
   check.
 
   Finds calls to ``operator[]`` in STL containers and suggests replacing them
   with safe alternatives.
+
+- New :doc:`google-runtime-float
+  <clang-tidy/checks/google/runtime-float>` check.
+
+  Finds uses of ``long double`` and suggests against their use due to lack of
+  portability.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
@@ -173,11 +203,46 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check.
+
+  Detect redundant parentheses.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`cert-dcl50-cpp <clang-tidy/checks/cert/dcl50-cpp>` to
+  :doc:`modernize-avoid-variadic-functions
+  <clang-tidy/checks/modernize/avoid-variadic-functions>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
+  :doc:`bugprone-command-processor
+  <clang-tidy/checks/bugprone/command-processor>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
+  :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err52-cpp <clang-tidy/checks/cert/err52-cpp>` to
+  :doc:`modernize-avoid-setjmp-longjmp
+  <clang-tidy/checks/modernize/avoid-setjmp-longjmp>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
+  :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
+  correcting a spelling mistake on its option
+  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
@@ -195,11 +260,24 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
+  a crash on ``sizeof`` of an array of dependent type.
+
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
   positive when enums or unions from system header files or the ``std``
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
+
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
+  the canonical types of base classes as written.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
@@ -215,6 +293,16 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
+
+  - Fix-it handles callees with nested-name-specifier correctly.
+
+  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+    handled correctly.
+
+  - ``for`` loops are supported.
+
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
@@ -226,6 +314,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
   uses of non-standard ``enable_if`` with a signature different from
   ``std::enable_if`` (such as ``boost::enable_if``).
+
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check to
+  enhance the robustness of the member initializer detection.
 
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
@@ -252,6 +344,11 @@ Changes in existing checks
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to support string
+  comparisons to ``npos``. Internal changes may cause new rare false positives
+  in non-standard containers.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly

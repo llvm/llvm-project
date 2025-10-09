@@ -390,7 +390,11 @@ def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                        FeatureStdExtC,
                                        FeatureStdExtZba,
                                        FeatureStdExtZbb],
-                                      SiFiveP500TuneFeatures>;
+                                      SiFiveP500TuneFeatures> {
+  let MVendorID = 0x489;
+  let MArchID = 0x8000000000000008;
+  let MImpID = 0x6220425;
+}
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       !listconcat(RVA22U64Features,

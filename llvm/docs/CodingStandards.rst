@@ -78,6 +78,12 @@ Each toolchain provides a good reference for what it accepts:
 Additionally, there are compiler comparison tables of supported C++ features on
 `cppreference.com <https://en.cppreference.com/w/cpp/compiler_support/17>`_.
 
+To keep track with the evolution of the standard, newer C++ versions can be used
+to build LLVM. However, our support focuses on the minimum supported C++
+version and a very recent standard may not yet be supported, or only using the
+latest version of the supported toolchains and possibly not across all the
+subprojects.
+
 
 C++ Standard Library
 --------------------

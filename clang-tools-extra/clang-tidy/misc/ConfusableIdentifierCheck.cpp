@@ -1,4 +1,4 @@
-//===--- ConfusableIdentifierCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +30,7 @@ ConfusableIdentifierCheck::ConfusableIdentifierCheck(StringRef Name,
 ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 
 // Build a skeleton out of the Original identifier, inspired by the algorithm
-// described in http://www.unicode.org/reports/tr39/#def-skeleton
+// described in https://www.unicode.org/reports/tr39/#def-skeleton
 //
 // FIXME: TR39 mandates:
 //

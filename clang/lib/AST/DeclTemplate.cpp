@@ -663,6 +663,7 @@ CanQualType ClassTemplateDecl::getCanonicalInjectedSpecializationType(
     Ctx.canonicalizeTemplateArguments(CanonicalArgs);
     CommonPtr->CanonInjectedTST =
         CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
+            ElaboratedTypeKeyword::None,
             TemplateName(const_cast<ClassTemplateDecl *>(getCanonicalDecl())),
             CanonicalArgs));
   }
@@ -1209,6 +1210,7 @@ ClassTemplatePartialSpecializationDecl::getCanonicalInjectedSpecializationType(
   if (CanonInjectedTST.isNull()) {
     CanonInjectedTST =
         CanQualType::CreateUnsafe(Ctx.getCanonicalTemplateSpecializationType(
+            ElaboratedTypeKeyword::None,
             TemplateName(getSpecializedTemplate()->getCanonicalDecl()),
             getTemplateArgs().asArray()));
   }

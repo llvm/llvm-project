@@ -5346,6 +5346,19 @@ bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
 
   return false;
 }
+
+int getRoundingModeX86(unsigned RM) {
+  switch (static_cast<::llvm::RoundingMode>(RM)) {
+    // clang-format off
+  case ::llvm::RoundingMode::NearestTiesToEven: return X86::rmToNearest; break;
+  case ::llvm::RoundingMode::TowardNegative:    return X86::rmDownward; break;
+  case ::llvm::RoundingMode::TowardPositive:    return X86::rmUpward; break;
+  case ::llvm::RoundingMode::TowardZero:        return X86::rmTowardZero; break;
+  default:
+    return X86::rmInvalid; // Invalid rounding mode
+  }
+}
+
 } // namespace X86
 } // namespace llvm
 
@@ -11721,10 +11734,19 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   // we'll have to do 2x as many shuffles in order to achieve this, a 2-input
   // pre-shuffle first is a better strategy.
   if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
+    // If we don't have blends, see if we can create a cheap unpack.
+    if (!Subtarget.hasSSE41() && VT.is128BitVector() &&
+        (is128BitUnpackShuffleMask(V1Mask, DAG) ||
+         is128BitUnpackShuffleMask(V2Mask, DAG)))
+      if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
+              DL, VT, V1, V2, Mask, Subtarget, DAG))
+        return PermUnpack;
+
     // Only prefer immediate blends to unpack/rotate.
-    if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
-                                                          DAG, true))
+    if (SDValue BlendPerm =
+            lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask, DAG, true))
       return BlendPerm;
+
     // If either input vector provides only a single element which is repeated
     // multiple times, unpacking from both input vectors would generate worse
     // code. e.g. for
@@ -11736,13 +11758,16 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
       if (SDValue UnpackPerm =
               lowerShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask, DAG))
         return UnpackPerm;
+
     if (SDValue RotatePerm = lowerShuffleAsByteRotateAndPermute(
             DL, VT, V1, V2, Mask, Subtarget, DAG))
       return RotatePerm;
+
     // Unpack/rotate failed - try again with variable blends.
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG))
       return BlendPerm;
+
     if (VT.getScalarSizeInBits() >= 32)
       if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
               DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -25093,7 +25118,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     } else if (SDValue R = LowerSELECTWithCmpZero(CmpOp0, Op1, Op2, CondCode,
                                                   DL, DAG, Subtarget)) {
       return R;
-    } else if ((VT == MVT::i32 || VT == MVT::i64) && isNullConstant(Op2) &&
+    } else if (VT.isScalarInteger() && isNullConstant(Op2) &&
                Cmp.getNode()->hasOneUse() && (CmpOp0 == Op1) &&
                ((CondCode == X86::COND_S) ||                    // smin(x, 0)
                 (CondCode == X86::COND_G && hasAndNot(Op1)))) { // smax(x, 0)
@@ -28686,16 +28711,14 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
   SDValue RMBits;
   if (auto *CVal = dyn_cast<ConstantSDNode>(NewRM)) {
     uint64_t RM = CVal->getZExtValue();
-    int FieldVal;
-    switch (static_cast<RoundingMode>(RM)) {
-    // clang-format off
-    case RoundingMode::NearestTiesToEven: FieldVal = X86::rmToNearest; break;
-    case RoundingMode::TowardNegative:    FieldVal = X86::rmDownward; break;
-    case RoundingMode::TowardPositive:    FieldVal = X86::rmUpward; break;
-    case RoundingMode::TowardZero:        FieldVal = X86::rmTowardZero; break;
-    default:
-      llvm_unreachable("rounding mode is not supported by X86 hardware");
-    // clang-format on
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(DL.getDebugLoc()), DS_Error));
+      return {};
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
@@ -38999,6 +39022,26 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H: {
+    assert(Op.getValueType().isVector() &&
+           Op.getValueType().getScalarType() == MVT::i64 &&
+           "Unexpected VPMADD52 type");
+    KnownBits K0 =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits K1 =
+        DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    KnownBits KAcc =
+        DAG.computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+    K0 = K0.trunc(52);
+    K1 = K1.trunc(52);
+    KnownBits KnownMul = (Op.getOpcode() == X86ISD::VPMADD52L)
+                             ? KnownBits::mul(K0, K1)
+                             : KnownBits::mulhu(K0, K1);
+    KnownMul = KnownMul.zext(64);
+    Known = KnownBits::add(KAcc, KnownMul);
+    return;
+  }
   }
 
   // Handle target shuffles.
@@ -41566,6 +41609,17 @@ static SDValue combineX86ShufflesRecursively(
     // Reresolve - we might have repeated subvector sources.
     resolveTargetShuffleInputsAndMask(Ops, Mask);
   }
+
+  // Handle the all undef/zero/ones cases.
+  if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
+    return DAG.getUNDEF(RootVT);
+  if (all_of(Mask, [](int Idx) { return Idx < 0; }))
+    return getZeroVector(RootVT, Subtarget, DAG, DL);
+  if (Ops.size() == 1 && ISD::isBuildVectorAllOnes(Ops[0].getNode()) &&
+      !llvm::is_contained(Mask, SM_SentinelZero))
+    return getOnesVector(RootVT, DAG, DL);
+
+  assert(!Ops.empty() && "Shuffle with no inputs detected");
 
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {
@@ -48396,13 +48450,17 @@ static SDValue checkSignTestSetCCCombine(SDValue Cmp, X86::CondCode &CC,
   MVT SrcVT = Src.getSimpleValueType();
   APInt BitMask = APInt::getSignMask(SrcVT.getScalarSizeInBits());
 
-  // If Src came from a SHL (probably from an expanded SIGN_EXTEND_INREG), then
-  // peek through and adjust the TEST bit.
+  // If Src came from a SIGN_EXTEND_INREG or SHL (probably from an expanded
+  // SIGN_EXTEND_INREG), then peek through and adjust the TEST bit.
   if (Src.getOpcode() == ISD::SHL) {
     if (std::optional<unsigned> ShiftAmt = DAG.getValidShiftAmount(Src)) {
       Src = Src.getOperand(0);
       BitMask.lshrInPlace(*ShiftAmt);
     }
+  } else if (Src.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    EVT ExtVT = cast<VTSDNode>(Src.getOperand(1))->getVT();
+    Src = Src.getOperand(0);
+    BitMask.lshrInPlace(BitMask.getBitWidth() - ExtVT.getScalarSizeInBits());
   }
 
   SDValue Mask = DAG.getNode(ISD::AND, DL, SrcVT, Src,
@@ -50936,10 +50994,12 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
 // Given a target type \p VT, we generate
 //   or (and x, y), (xor z, zext(build_vector (constants)))
 // given x, y and z are of type \p VT. We can do so, if operands are either
-// truncates from VT types, the second operand is a vector of constants or can
-// be recursively promoted.
+// truncates from VT types, the second operand is a vector of constants, can
+// be recursively promoted or is an existing extension we can extend further.
 static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL, EVT VT,
-                                     SelectionDAG &DAG, unsigned Depth) {
+                                     SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget,
+                                     unsigned Depth) {
   // Limit recursion to avoid excessive compile times.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
@@ -50954,28 +51014,32 @@ static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL, EVT VT,
   if (!TLI.isOperationLegalOrPromote(N.getOpcode(), VT))
     return SDValue();
 
-  if (SDValue NN0 = PromoteMaskArithmetic(N0, DL, VT, DAG, Depth + 1))
+  if (SDValue NN0 =
+          PromoteMaskArithmetic(N0, DL, VT, DAG, Subtarget, Depth + 1))
     N0 = NN0;
   else {
-    // The left side has to be a trunc.
-    if (N0.getOpcode() != ISD::TRUNCATE)
+    // The left side has to be a 'trunc'.
+    bool LHSTrunc = N0.getOpcode() == ISD::TRUNCATE &&
+                    N0.getOperand(0).getValueType() == VT;
+    if (LHSTrunc)
+      N0 = N0.getOperand(0);
+    else
       return SDValue();
-
-    // The type of the truncated inputs.
-    if (N0.getOperand(0).getValueType() != VT)
-      return SDValue();
-
-    N0 = N0.getOperand(0);
   }
 
-  if (SDValue NN1 = PromoteMaskArithmetic(N1, DL, VT, DAG, Depth + 1))
+  if (SDValue NN1 =
+          PromoteMaskArithmetic(N1, DL, VT, DAG, Subtarget, Depth + 1))
     N1 = NN1;
   else {
-    // The right side has to be a 'trunc' or a (foldable) constant.
+    // The right side has to be a 'trunc', a (foldable) constant or an
+    // existing extension we can extend further.
     bool RHSTrunc = N1.getOpcode() == ISD::TRUNCATE &&
                     N1.getOperand(0).getValueType() == VT;
     if (RHSTrunc)
       N1 = N1.getOperand(0);
+    else if (ISD::isExtVecInRegOpcode(N1.getOpcode()) && VT.is256BitVector() &&
+             Subtarget.hasInt256() && N1.hasOneUse())
+      N1 = DAG.getNode(N1.getOpcode(), DL, VT, N1.getOperand(0));
     else if (SDValue Cst =
                  DAG.FoldConstantArithmetic(ISD::ZERO_EXTEND, DL, VT, {N1}))
       N1 = Cst;
@@ -51005,7 +51069,7 @@ static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL,
   EVT NarrowVT = Narrow.getValueType();
 
   // Generate the wide operation.
-  SDValue Op = PromoteMaskArithmetic(Narrow, DL, VT, DAG, 0);
+  SDValue Op = PromoteMaskArithmetic(Narrow, DL, VT, DAG, Subtarget, 0);
   if (!Op)
     return SDValue();
   switch (N.getOpcode()) {
@@ -57964,6 +58028,51 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
                      Cmov.getOperand(3));
 }
 
+// Attempt to turn ADD(MUL(x, y), acc)) -> VPMADD52L
+// When upper 12 bits of x, y and MUL(x, y) are known to be 0
+static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
+                             EVT VT, const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+  if (!VT.isVector() || VT.getScalarSizeInBits() != 64 ||
+      (!Subtarget.hasAVXIFMA() && !Subtarget.hasIFMA()))
+    return SDValue();
+
+  // Need AVX-512VL vector length extensions if operating on XMM/YMM registers
+  if (!Subtarget.hasAVXIFMA() && !Subtarget.hasVLX() &&
+      VT.getSizeInBits() < 512)
+    return SDValue();
+
+  const auto TotalSize = VT.getSizeInBits();
+  if (TotalSize < 128 || !isPowerOf2_64(TotalSize))
+    return SDValue();
+
+  SDValue X, Y, Acc;
+  if (!sd_match(N, m_Add(m_Mul(m_Value(X), m_Value(Y)), m_Value(Acc))))
+    return SDValue();
+
+  KnownBits KnownX = DAG.computeKnownBits(X);
+  if (KnownX.countMinLeadingZeros() < 12)
+    return SDValue();
+  KnownBits KnownY = DAG.computeKnownBits(Y);
+  if (KnownY.countMinLeadingZeros() < 12)
+    return SDValue();
+  KnownBits KnownMul = KnownBits::mul(KnownX, KnownY);
+  if (KnownMul.countMinLeadingZeros() < 12)
+    return SDValue();
+
+  auto VPMADD52Builder = [](SelectionDAG &G, SDLoc DL,
+                            ArrayRef<SDValue> SubOps) {
+    EVT SubVT = SubOps[0].getValueType();
+    assert(SubVT.getScalarSizeInBits() == 64 &&
+           "Unexpected element size, only supports 64bit size");
+    return G.getNode(X86ISD::VPMADD52L, DL, SubVT, SubOps[1] /*X*/,
+                     SubOps[2] /*Y*/, SubOps[0] /*Acc*/);
+  };
+
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
+                          /*CheckBWI*/ false);
+}
+
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -58066,6 +58175,9 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::ADC, SDLoc(Op0), Op0->getVTList(), Op1,
                        Op0.getOperand(0), Op0.getOperand(2));
   }
+
+  if (SDValue IFMA52 = matchVPMADD52(N, DAG, DL, VT, Subtarget))
+    return IFMA52;
 
   return combineAddOrSubToADCOrSBB(N, DL, DAG);
 }
@@ -60132,8 +60244,30 @@ static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   MVT VT = N->getSimpleValueType(0);
-  unsigned NumEltBits = VT.getScalarSizeInBits();
+
+  bool AddLow = N->getOpcode() == X86ISD::VPMADD52L;
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+  SDLoc DL(N);
+
+  APInt C0, C1;
+  bool HasC0 = X86::isConstantSplat(Op0, C0),
+       HasC1 = X86::isConstantSplat(Op1, C1);
+
+  // lo/hi(C * X) + Z --> lo/hi(X * C) + Z
+  if (HasC0 && !HasC1)
+    return DAG.getNode(N->getOpcode(), DL, VT, Op1, Op0, Op2);
+
+  // lo(X * 1) + Z --> lo(X) + Z iff X == lo(X)
+  if (AddLow && HasC1 && C1.trunc(52).isOne()) {
+    KnownBits KnownOp0 = DAG.computeKnownBits(Op0);
+    if (KnownOp0.countMinLeadingZeros() >= 12)
+      return DAG.getNode(ISD::ADD, DL, VT, Op0, Op2);
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned NumEltBits = VT.getScalarSizeInBits();
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumEltBits),
                                DCI))
     return SDValue(N, 0);

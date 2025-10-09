@@ -1026,18 +1026,40 @@ public:
     if (x.base().Rank() == 0) {
       return (*this)(x.GetLastSymbol());
     } else {
-      if (Result baseIsContiguous{(*this)(x.base())}) {
+      const DataRef &base{x.base()};
+      if (Result baseIsContiguous{(*this)(base)}) {
         if (!*baseIsContiguous) {
           return false;
+        } else {
+          bool sizeKnown{false};
+          if (auto constShape{GetConstantExtents(context_, x)}) {
+            sizeKnown = true;
+            if (GetSize(*constShape) <= 1) {
+              return true; // empty or singleton
+            }
+          }
+          const Symbol &last{base.GetLastSymbol()};
+          if (auto type{DynamicType::From(last)}) {
+            CHECK(type->category() == TypeCategory::Derived);
+            if (!type->IsPolymorphic()) {
+              const auto &derived{type->GetDerivedTypeSpec()};
+              if (const auto *scope{derived.scope()}) {
+                auto iter{scope->begin()};
+                if (++iter == scope->end()) {
+                  return true; // type has but one component
+                } else if (sizeKnown) {
+                  return false; // multiple components & array size is known > 1
+                }
+              }
+            }
+          }
         }
-        // TODO: should be true if base is contiguous and this is only
-        // component, or when the base has at most one element
       }
       return std::nullopt;
     }
   }
   Result operator()(const ComplexPart &x) const {
-    // TODO: should be true when base is empty array, too
+    // TODO: should be true when base is empty array or singleton, too
     return x.complex().Rank() == 0;
   }
   Result operator()(const Substring &x) const {

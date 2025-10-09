@@ -112,6 +112,7 @@ add_header_library(
     libc.src.__support.libc_assert
     libc.src.__support.uint128
     libc.src.__support.StringUtil.error_to_string
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(

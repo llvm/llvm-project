@@ -403,7 +403,7 @@ EhFrameSection::EhFrameSection(Ctx &ctx)
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
 // and where their relocations point to.
-template <class ELFT, class RelTy>
+template <class RelTy>
 CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
@@ -424,7 +424,7 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
 
 // There is one FDE per function. Returns a non-null pointer to the function
 // symbol if the given FDE points to a live function.
-template <class ELFT, class RelTy>
+template <class RelTy>
 Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
   auto *sec = cast<EhInputSection>(fde.sec);
   unsigned firstRelI = fde.firstRelocation;
@@ -456,14 +456,14 @@ template <class ELFT, class RelTy>
 void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   offsetToCie.clear();
   for (EhSectionPiece &cie : sec->cies)
-    offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
+    offsetToCie[cie.inputOff] = addCie<RelTy>(cie, rels);
   for (EhSectionPiece &fde : sec->fdes) {
     uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       Fatal(ctx) << sec << ": invalid CIE reference";
 
-    if (!isFdeLive<ELFT>(fde, rels))
+    if (!isFdeLive(fde, rels))
       continue;
     rec->fdes.push_back(&fde);
     numFdes++;
@@ -497,7 +497,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
       continue;
 
     // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive<ELFT>(fde, rels))
+    if (Defined *d = isFdeLive(fde, rels))
       if (auto *s = dyn_cast_or_null<InputSection>(d->section))
         fn(*s);
   }
@@ -662,7 +662,7 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   // in the output buffer, but relocateAlloc() still works because
   // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *s : sections)
-    ctx.target->relocateAlloc(*s, buf);
+    ctx.target->relocateEh(*s, buf);
 
   if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
     getPartition(ctx).ehFrameHdr->write();

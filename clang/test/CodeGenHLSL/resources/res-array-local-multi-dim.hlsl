@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -finclude-default-header \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
-// https://github.com/llvm/llvm-project/issues/156786
-// XFAIL: *
-
 // This test verifies handling of multi-dimensional local arrays of resources
 // when used as a function argument and local variable.
 

@@ -149,9 +149,7 @@ public:
         : connection_{connection} {}
     RT_API_ATTRS FastAsciiField(
         ConnectionState &connection, const char *start, std::size_t bytes)
-        : connection_{connection}, at_{start}, limit_{start + bytes} {
-      CheckForAsterisk();
-    }
+        : connection_{connection}, at_{start}, limit_{start + bytes} {}
     RT_API_ATTRS ConnectionState &connection() { return connection_; }
     RT_API_ATTRS std::size_t got() const { return got_; }
 
@@ -168,7 +166,6 @@ public:
       if (at_) {
         if (std::size_t bytes{io.GetNextInputBytes(at_)}) {
           limit_ = at_ + bytes;
-          CheckForAsterisk();
         } else {
           at_ = limit_ = nullptr;
         }
@@ -181,19 +178,28 @@ public:
       }
       connection_.HandleRelativePosition(bytes);
     }
-    RT_API_ATTRS bool MightHaveAsterisk() const { return !at_ || hasAsterisk_; }
 
-  private:
-    RT_API_ATTRS void CheckForAsterisk() {
-      hasAsterisk_ = at_ && at_ < limit_ &&
-          runtime::memchr(at_, '*', limit_ - at_) != nullptr;
+    // Could there be a list-directed repetition count here?
+    RT_API_ATTRS bool MightBeRepetitionCount() const {
+      if (!at_) {
+        return true; // must use slow path for internal KIND/=1 input
+      } else {
+        if (const char *p{at_}; *p >= '0' && *p <= '9') {
+          while (++p < limit_) {
+            if (*p < '0' || *p > '9') {
+              return *p == '*';
+            }
+          }
+        }
+        return false;
+      }
     }
 
+  private:
     ConnectionState &connection_;
     const char *at_{nullptr};
     const char *limit_{nullptr};
     std::size_t got_{0}; // for READ(..., SIZE=)
-    bool hasAsterisk_{false};
   };
 
   RT_API_ATTRS FastAsciiField GetUpcomingFastAsciiField();
@@ -457,6 +463,11 @@ public:
     realPart_ = imaginaryPart_ = false;
     namelistGroup_ = namelistGroup;
   }
+
+  RT_API_ATTRS bool eatComma() const { return eatComma_; }
+  RT_API_ATTRS void set_eatComma(bool yes) { eatComma_ = yes; }
+  RT_API_ATTRS bool hitSlash() const { return hitSlash_; }
+  RT_API_ATTRS void set_hitSlash(bool yes) { hitSlash_ = yes; }
 
 protected:
   const NamelistGroup *namelistGroup_{nullptr};

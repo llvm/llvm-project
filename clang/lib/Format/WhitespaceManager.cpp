@@ -279,20 +279,19 @@ void WhitespaceManager::calculateLineBreakInformation() {
 }
 
 // Align a single sequence of tokens, see AlignTokens below.
-// Column - The token for which Matches returns true is moved to this column.
+// Column - The tokens indexed in Matches are moved to this column.
 // RightJustify - Whether it is the token's right end or left end that gets
 // moved to that column.
-template <typename F>
 static void
 AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
-                   unsigned Column, bool RightJustify, F &&Matches,
+                   unsigned Column, bool RightJustify,
+                   ArrayRef<unsigned> Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
-  bool FoundMatchOnLine = false;
   int Shift = 0;
 
   // ScopeStack keeps track of the current scope depth. It contains indices of
   // the first token on each scope.
-  // We only run the "Matches" function on tokens from the outer-most scope.
+  // The "Matches" indices should only have tokens from the outer-most scope.
   // However, we do need to pay special attention to one class of tokens
   // that are not in the outer-most scope, and that is function parameters
   // which are split across multiple lines, as illustrated by this example:
@@ -314,6 +313,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 
   for (unsigned i = Start; i != End; ++i) {
     auto &CurrentChange = Changes[i];
+    if (!Matches.empty() && Matches[0] < i)
+      Matches.consume_front();
+    assert(Matches.empty() || Matches[0] >= i);
     if (!ScopeStack.empty() &&
         CurrentChange.indentAndNestingLevel() <
             Changes[ScopeStack.back()].indentAndNestingLevel()) {
@@ -338,26 +340,16 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                                   Changes[i - 1].Tok->is(tok::string_literal);
     bool SkipMatchCheck = InsideNestedScope || ContinuedStringLiteral;
 
-    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck) {
+    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck)
       Shift = 0;
-      FoundMatchOnLine = false;
-    }
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
     // shifted by the same amount
-    if (!FoundMatchOnLine && !SkipMatchCheck && Matches(CurrentChange)) {
-      FoundMatchOnLine = true;
+    if (!Matches.empty() && Matches[0] == i) {
       Shift = Column - (RightJustify ? CurrentChange.TokenLength : 0) -
               CurrentChange.StartOfTokenColumn;
       CurrentChange.Spaces += Shift;
-      // FIXME: This is a workaround that should be removed when we fix
-      // http://llvm.org/PR53699. An assertion later below verifies this.
-      if (CurrentChange.NewlinesBefore == 0) {
-        CurrentChange.Spaces =
-            std::max(CurrentChange.Spaces,
-                     static_cast<int>(CurrentChange.Tok->SpacesRequiredBefore));
-      }
     }
 
     if (Shift == 0)
@@ -532,12 +524,14 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                             bool RightJustify = false) {
   // We arrange each line in 3 parts. The operator to be aligned (the anchor),
   // and text to its left and right. In the aligned text the width of each part
-  // will be the maximum of that over the block that has been aligned. Maximum
-  // widths of each part so far. When RightJustify is true and ACS.PadOperators
-  // is false, the part from start of line to the right end of the anchor.
-  // Otherwise, only the part to the left of the anchor. Including the space
-  // that exists on its left from the start. Not including the padding added on
-  // the left to right-justify the anchor.
+  // will be the maximum of that over the block that has been aligned.
+
+  // Maximum widths of each part so far.
+  // When RightJustify is true and ACS.PadOperators is false, the part from
+  // start of line to the right end of the anchor. Otherwise, only the part to
+  // the left of the anchor. Including the space that exists on its left from
+  // the start. Not including the padding added on the left to right-justify the
+  // anchor.
   unsigned WidthLeft = 0;
   // The operator to be aligned when RightJustify is true and ACS.PadOperators
   // is false. 0 otherwise.
@@ -549,6 +543,9 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   // Line number of the start and the end of the current token sequence.
   unsigned StartOfSequence = 0;
   unsigned EndOfSequence = 0;
+
+  // The positions of the tokens to be aligned.
+  SmallVector<unsigned> MatchedIndices;
 
   // Measure the scope level (i.e. depth of (), [], {}) of the first token, and
   // abort when we hit any token in a higher scope than the starting one.
@@ -578,7 +575,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   auto AlignCurrentSequence = [&] {
     if (StartOfSequence > 0 && StartOfSequence < EndOfSequence) {
       AlignTokenSequence(Style, StartOfSequence, EndOfSequence,
-                         WidthLeft + WidthAnchor, RightJustify, Matches,
+                         WidthLeft + WidthAnchor, RightJustify, MatchedIndices,
                          Changes);
     }
     WidthLeft = 0;
@@ -586,6 +583,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     WidthRight = 0;
     StartOfSequence = 0;
     EndOfSequence = 0;
+    MatchedIndices.clear();
   };
 
   unsigned i = StartAt;
@@ -637,8 +635,10 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
     // If there is more than one matching token per line, or if the number of
     // preceding commas, do not match anymore, end the sequence.
-    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch)
+    if (FoundMatchOnLine || CommasBeforeMatch != CommasBeforeLastMatch) {
+      MatchedIndices.push_back(i);
       AlignCurrentSequence();
+    }
 
     CommasBeforeLastMatch = CommasBeforeMatch;
     FoundMatchOnLine = true;
@@ -684,6 +684,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       WidthAnchor = NewAnchor;
       WidthRight = NewRight;
     }
+    MatchedIndices.push_back(i);
   }
 
   EndOfSequence = i;

@@ -99,16 +99,14 @@ define <2 x i64> @load_zext_v2i32i64(ptr %ap) {
 define <2 x i256> @load_zext_v2i64i256(ptr %ap) {
 ; CHECK-LABEL: load_zext_v2i64i256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldp x8, x4, [x0]
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    mov x3, xzr
 ; CHECK-NEXT:    mov x5, xzr
 ; CHECK-NEXT:    mov x6, xzr
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    mov x7, xzr
-; CHECK-NEXT:    fmov x4, d1
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_zext_v2i64i256:
@@ -282,14 +280,12 @@ define <4 x i256> @load_sext_v4i32i256(ptr %ap) {
 define <2 x i256> @load_sext_v2i64i256(ptr %ap) {
 ; CHECK-LABEL: load_sext_v2i64i256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    fmov x4, d1
-; CHECK-NEXT:    asr x1, x0, #63
+; CHECK-NEXT:    ldp x8, x4, [x0]
+; CHECK-NEXT:    asr x1, x8, #63
+; CHECK-NEXT:    asr x5, x4, #63
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    mov x2, x1
 ; CHECK-NEXT:    mov x3, x1
-; CHECK-NEXT:    asr x5, x4, #63
 ; CHECK-NEXT:    mov x6, x5
 ; CHECK-NEXT:    mov x7, x5
 ; CHECK-NEXT:    ret

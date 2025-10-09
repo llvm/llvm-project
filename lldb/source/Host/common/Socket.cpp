@@ -506,7 +506,7 @@ Socket::GetProtocolAndMode(llvm::StringRef scheme) {
       .Case("unix-abstract-accept",
             ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
                              SocketMode::ModeAccept})
-      .Cases("connect", "tcp-connect",
+      .Cases("connect", "tcp-connect", "connection",
              ProtocolModePair{SocketProtocol::ProtocolTcp,
                               SocketMode::ModeConnect})
       .Case("udp", ProtocolModePair{SocketProtocol::ProtocolTcp,
