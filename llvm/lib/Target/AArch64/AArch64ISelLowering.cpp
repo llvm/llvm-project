@@ -17191,6 +17191,28 @@ bool AArch64TargetLowering::shouldRemoveRedundantExtend(SDValue Extend) const {
   return true;
 }
 
+bool AArch64TargetLowering::isBinOp(unsigned Opcode) const {
+  switch (Opcode) {
+  // TODO: Add more?
+  case AArch64ISD::SUBS:
+  case AArch64ISD::SBC:
+  case AArch64ISD::SBCS:
+    return true;
+  }
+  return TargetLoweringBase::isBinOp(Opcode);
+}
+
+bool AArch64TargetLowering::isCommutativeBinOp(unsigned Opcode) const {
+  switch (Opcode) {
+  case AArch64ISD::ANDS:
+  case AArch64ISD::ADDS:
+  case AArch64ISD::ADC:
+  case AArch64ISD::ADCS:
+    return true;
+  }
+  return TargetLoweringBase::isCommutativeBinOp(Opcode);
+}
+
 // Truncations from 64-bit GPR to 32-bit GPR is free.
 bool AArch64TargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
   if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
@@ -26178,9 +26200,9 @@ static SDValue performSETCCCombine(SDNode *N,
 
 // Replace a flag-setting operator (eg ANDS) with the generic version
 // (eg AND) if the flag is unused.
-static SDValue performFlagSettingCombine(SDNode *N,
-                                         TargetLowering::DAGCombinerInfo &DCI,
-                                         unsigned GenericOpcode) {
+SDValue AArch64TargetLowering::performFlagSettingCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+    unsigned GenericOpcode) const {
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -26196,6 +26218,16 @@ static SDValue performFlagSettingCombine(SDNode *N,
   if (SDNode *Generic = DCI.DAG.getNodeIfExists(
           GenericOpcode, DCI.DAG.getVTList(VT), {LHS, RHS}))
     DCI.CombineTo(Generic, SDValue(N, 0));
+
+  // Not every non-commutative opcode isn't commutative. By that, ADCS is not
+  // considered commutative by the rest of the codebase as ADCS has a
+  // non-commutative flag. However, other than that, the operands don't matter
+  // for ADCS.
+  if (isCommutativeBinOp(GenericOpcode)) {
+    if (SDNode *Generic = DCI.DAG.getNodeIfExists(
+            GenericOpcode, DCI.DAG.getVTList(VT), {RHS, LHS}))
+      DCI.CombineTo(Generic, SDValue(N, 0));
+  }
 
   return SDValue();
 }
