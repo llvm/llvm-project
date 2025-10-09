@@ -13,9 +13,13 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Interpreter/ScriptedFrameProvider.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -45,6 +49,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -1439,11 +1444,138 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  if (!m_curr_frames_sp)
-    m_curr_frames_sp =
+  if (!m_curr_frames_sp) {
+
+    StackFrameListSP real_frames_sp =
         std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
 
+    if (m_frame_provider_sp) {
+      lldb::ScriptedFrameProviderMergeStrategy strategy =
+          m_frame_provider_sp->GetMergeStrategy();
+
+      auto scripted_list_or_err = GetScriptedFrameList(real_frames_sp);
+      if (!scripted_list_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread),
+                       scripted_list_or_err.takeError(),
+                       "Failed to get scripted frame list: {0}");
+        m_curr_frames_sp = real_frames_sp;
+        return m_curr_frames_sp;
+      }
+
+      StackFrameListSP scripted_frames_sp = *scripted_list_or_err;
+      uint32_t num_real = real_frames_sp->GetNumFrames(true);
+      uint32_t num_scripted = scripted_frames_sp->GetNumFrames(false);
+
+      switch (strategy) {
+      case lldb::eScriptedFrameProviderMergeStrategyReplace: {
+        m_curr_frames_sp = *scripted_list_or_err;
+        return m_curr_frames_sp;
+      }
+
+      case lldb::eScriptedFrameProviderMergeStrategyReplaceByIndex: {
+        // Create normal frame list first
+        for (uint32_t i = 0; i < num_scripted; i++) {
+          StackFrameSP scripted_frame = scripted_frames_sp->GetFrameAtIndex(i);
+          if (scripted_frame) {
+            uint32_t frame_idx = scripted_frame->GetFrameIndex();
+            m_curr_frames_sp->SetFrameAtIndex(frame_idx, scripted_frame);
+          }
+        }
+        return m_curr_frames_sp;
+      }
+
+      case lldb::eScriptedFrameProviderMergeStrategyPrepend: {
+        // Prepend: Scripted frames go first (0..n-1), real frames follow
+        // (n..n+m-1) Start with scripted frames and add adjusted real frames
+        m_curr_frames_sp = scripted_frames_sp;
+
+        // Real frames need to be shifted by num_scripted
+        for (uint32_t i = 0; i < num_real; i++) {
+          StackFrameSP real_frame = real_frames_sp->GetFrameAtIndex(i);
+          if (real_frame) {
+            uint32_t new_idx = num_scripted + i;
+            real_frame->SetFrameIndex(new_idx);
+            m_curr_frames_sp->SetFrameAtIndex(new_idx, real_frame);
+          }
+        }
+
+        m_curr_frames_sp->SetAllFramesFetched();
+        return m_curr_frames_sp;
+      }
+
+      case lldb::eScriptedFrameProviderMergeStrategyAppend: {
+        // Append: Real frames go first (0..m-1), scripted frames follow
+        // (m..m+n-1)
+        m_curr_frames_sp = real_frames_sp;
+
+        // Scripted frames should be at indices m, m+1, ...
+        // But they were created with indices 0, 1, ...
+        // Update their indices to place them after real frames
+        for (uint32_t i = 0; i < num_scripted; i++) {
+          StackFrameSP scripted_frame = scripted_frames_sp->GetFrameAtIndex(i);
+          if (scripted_frame) {
+            uint32_t new_idx = num_real + i;
+            scripted_frame->SetFrameIndex(new_idx);
+            m_curr_frames_sp->SetFrameAtIndex(new_idx, scripted_frame);
+          }
+        }
+
+        m_curr_frames_sp->SetAllFramesFetched();
+        return m_curr_frames_sp;
+      }
+      }
+    }
+
+    m_curr_frames_sp = real_frames_sp;
+  }
+
   return m_curr_frames_sp;
+}
+
+llvm::Expected<StackFrameListSP>
+Thread::GetScriptedFrameList(StackFrameListSP real_frames_sp) {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  if (!m_frame_provider_sp)
+    return llvm::createStringError("No scripted frame provider has been set");
+
+  // Pass the real unwound frames to the scripted frame provider.
+  // This ensures the provider can iterate, filter, and replace frames without
+  // causing infinite recursion (if the provider calls GetFrames() on the
+  // thread, it would re-enter GetStackFrameList() which would call us again).
+  return m_frame_provider_sp->GetStackFrames(real_frames_sp);
+}
+
+Status
+Thread::SetScriptedFrameProvider(const ScriptedMetadata &scripted_metadata) {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  Status error;
+  m_frame_provider_sp = std::make_shared<ScriptedFrameProvider>(
+      shared_from_this(), scripted_metadata, error);
+
+  if (error.Fail()) {
+    m_frame_provider_sp.reset();
+    return error;
+  }
+
+  // Clear cached frames to ensure scripted frames are used
+  if (m_curr_frames_sp)
+    m_curr_frames_sp.reset();
+  if (m_prev_frames_sp)
+    m_prev_frames_sp.reset();
+
+  return {};
+}
+
+void Thread::ClearScriptedFrameProvider() {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+  if (m_frame_provider_sp)
+    m_frame_provider_sp.reset();
+  if (m_curr_frames_sp)
+    m_curr_frames_sp.reset();
+  if (m_prev_frames_sp)
+    m_prev_frames_sp.reset();
 }
 
 std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {

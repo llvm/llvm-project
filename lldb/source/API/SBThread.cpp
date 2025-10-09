@@ -14,6 +14,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
@@ -39,6 +40,7 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -1079,6 +1081,26 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   return sb_frame;
 }
 
+lldb::SBFrameList SBThread::GetFrames() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBFrameList sb_frame_list;
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return SBFrameList();
+  }
+
+  if (exe_ctx->HasThreadScope()) {
+    StackFrameListSP frame_list_sp =
+        exe_ctx->GetThreadPtr()->GetStackFrameList();
+    sb_frame_list.SetOpaque(frame_list_sp);
+  }
+
+  return sb_frame_list;
+}
+
 lldb::SBFrame SBThread::GetSelectedFrame() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1323,4 +1345,33 @@ SBValue SBThread::GetSiginfo() {
   if (!thread_sp)
     return SBValue();
   return thread_sp->GetSiginfoValue();
+}
+
+SBError SBThread::RegisterFrameProvider(const char *class_name,
+                                        SBStructuredData &dict) {
+  LLDB_INSTRUMENT_VA(this, class_name, dict);
+
+  ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
+  if (!thread_sp)
+    return SBError("invalid thread");
+
+  if (!dict.m_impl_up)
+    return SBError("invalid dictionary");
+
+  StructuredData::DictionarySP dict_sp =
+      std::make_shared<StructuredData::Dictionary>(
+          dict.m_impl_up->GetObjectSP());
+  if (!dict_sp)
+    return SBError("invalid dictionary");
+
+  ScriptedMetadata metadata(class_name, dict_sp);
+  return SBError(thread_sp->SetScriptedFrameProvider(metadata));
+}
+
+void SBThread::ClearScriptedFrameProvider() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
+  if (thread_sp)
+    thread_sp->ClearScriptedFrameProvider();
 }
