@@ -260,16 +260,8 @@ public:
   /// \param[in] text
   ///     The string to be output to the stream.
   ///
-  /// \param[in] pattern
-  ///     The regex pattern to match against the \a text string. Portions of \a
-  ///     text matching this pattern will be colorized. If this parameter is
-  ///     nullptr, highlighting is not performed.
-  /// \param[in] prefix
-  ///     The ANSI color code to start colorization. This is
-  ///     environment-dependent.
-  /// \param[in] suffix
-  ///     The ANSI color code to end colorization. This is
-  ///     environment-dependent.
+  /// \param[in] settings
+  ///     Optional print hilight settings.
   void PutCStringColorHighlighted(
       llvm::StringRef text,
       std::optional<HighlightSettings> settings = std::nullopt);

@@ -274,6 +274,8 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -426,6 +428,13 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Emit the function that initializes the specified global
+  void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                bool performInit);
+
+  void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
+                                    bool performInit);
+
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
   // C++ related functions.
@@ -465,6 +474,13 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

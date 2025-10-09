@@ -76,6 +76,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
   UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
   UInt8PtrTy = cir::PointerType::get(UInt8Ty);
+  cirAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
   UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
   UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
@@ -730,7 +731,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   // since this is the job for its original source.
   bool isDefinitionAvailableExternally =
       astContext.GetGVALinkageForVariable(vd) == GVA_AvailableExternally;
-  assert(!cir::MissingFeatures::needsGlobalCtorDtor());
 
   // It is useless to emit the definition for an available_externally variable
   // which can't be marked as const.
@@ -743,6 +743,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     return;
 
   mlir::Attribute init;
+  bool needsGlobalCtor = false;
+  bool needsGlobalDtor =
+      !isDefinitionAvailableExternally &&
+      vd->needsDestruction(astContext) == QualType::DK_cxx_destructor;
   const VarDecl *initDecl;
   const Expr *initExpr = vd->getAnyInitializer(initDecl);
 
@@ -777,8 +781,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         if (initDecl->hasFlexibleArrayInit(astContext))
           errorNYI(vd->getSourceRange(), "flexible array initializer");
         init = builder.getZeroInitAttr(convertType(qt));
-        if (astContext.GetGVALinkageForVariable(vd) != GVA_AvailableExternally)
-          errorNYI(vd->getSourceRange(), "global constructor");
+        if (!isDefinitionAvailableExternally)
+          needsGlobalCtor = true;
       } else {
         errorNYI(vd->getSourceRange(), "static initializer");
       }
@@ -787,8 +791,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
       // We don't need an initializer, so remove the entry for the delayed
       // initializer position (just in case this entry was delayed) if we
       // also don't need to register a destructor.
-      if (vd->needsDestruction(astContext) == QualType::DK_cxx_destructor)
-        errorNYI(vd->getSourceRange(), "delayed destructor");
+      assert(!cir::MissingFeatures::deferredCXXGlobalInit());
     }
   }
 
@@ -827,6 +830,9 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (emitter)
     emitter->finalize(gv);
 
+  assert(!cir::MissingFeatures::opGlobalConstant());
+  assert(!cir::MissingFeatures::opGlobalSection());
+
   // Set CIR's linkage type as appropriate.
   cir::GlobalLinkageKind linkage =
       getCIRLinkageVarDefinition(vd, /*IsConstant=*/false);
@@ -844,6 +850,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
   maybeSetTrivialComdat(*vd, gv);
+
+  // Emit the initializer function if necessary.
+  if (needsGlobalCtor || needsGlobalDtor)
+    emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -1334,32 +1344,36 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
 
   mlir::Attribute c = getConstantArrayFromStringLiteral(s);
 
-  if (getLangOpts().WritableStrings) {
-    errorNYI(s->getSourceRange(),
-             "getGlobalForStringLiteral: Writable strings");
+  cir::GlobalOp gv;
+  if (!getLangOpts().WritableStrings && constantStringMap.count(c)) {
+    gv = constantStringMap[c];
+    // The bigger alignment always wins.
+    if (!gv.getAlignment() ||
+        uint64_t(alignment.getQuantity()) > *gv.getAlignment())
+      gv.setAlignmentAttr(getSize(alignment));
+  } else {
+    // Mangle the string literal if that's how the ABI merges duplicate strings.
+    // Don't do it if they are writable, since we don't want writes in one TU to
+    // affect strings in another.
+    if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
+        !getLangOpts().WritableStrings) {
+      errorNYI(s->getSourceRange(),
+               "getGlobalForStringLiteral: mangle string literals");
+    }
+
+    // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+    // we need to do that explicitly.
+    std::string uniqueName = getUniqueGlobalName(name.str());
+    mlir::Location loc = getLoc(s->getSourceRange());
+    auto typedC = llvm::cast<mlir::TypedAttr>(c);
+    gv = generateStringLiteral(loc, typedC,
+                               cir::GlobalLinkageKind::PrivateLinkage, *this,
+                               uniqueName, alignment);
+    setDSOLocal(static_cast<mlir::Operation *>(gv));
+    constantStringMap[c] = gv;
+
+    assert(!cir::MissingFeatures::sanitizers());
   }
-
-  // Mangle the string literal if that's how the ABI merges duplicate strings.
-  // Don't do it if they are writable, since we don't want writes in one TU to
-  // affect strings in another.
-  if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
-      !getLangOpts().WritableStrings) {
-    errorNYI(s->getSourceRange(),
-             "getGlobalForStringLiteral: mangle string literals");
-  }
-
-  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
-  // we need to do that explicitly.
-  std::string uniqueName = getUniqueGlobalName(name.str());
-  mlir::Location loc = getLoc(s->getSourceRange());
-  auto typedC = llvm::cast<mlir::TypedAttr>(c);
-  cir::GlobalOp gv =
-      generateStringLiteral(loc, typedC, cir::GlobalLinkageKind::PrivateLinkage,
-                            *this, uniqueName, alignment);
-  setDSOLocal(static_cast<mlir::Operation *>(gv));
-
-  assert(!cir::MissingFeatures::sanitizers());
-
   return gv;
 }
 
@@ -2054,6 +2068,15 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       theModule.push_back(func);
   }
   return func;
+}
+
+cir::FuncOp
+CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd) {
+  cir::FuncOp fnOp = createCIRFunction(loc, name, ty, fd);
+  fnOp.setBuiltin(true);
+  return fnOp;
 }
 
 mlir::SymbolTable::Visibility

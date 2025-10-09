@@ -1470,7 +1470,7 @@ def Constructor : InheritableAttr {
   let TemplateDependent = 1;
   let Documentation = [CtorDtorDocs];
   let AdditionalMembers = [{
-    static constexpr unsigned DefaultPriority = 65535; 
+    static constexpr unsigned DefaultPriority = 65535;
   }];
 }
 
@@ -1815,7 +1815,7 @@ def Destructor : InheritableAttr {
   let TemplateDependent = 1;
   let Documentation = [CtorDtorDocs];
   let AdditionalMembers = [{
-    static constexpr unsigned int DefaultPriority = 65535; 
+    static constexpr unsigned int DefaultPriority = 65535;
   }];
 }
 
@@ -5070,6 +5070,12 @@ def HLSLContainedType : TypeAttr {
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLIsCounter : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_counter">];
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
