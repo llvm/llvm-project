@@ -3013,10 +3013,11 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
   // having the same value, but not from the same parent instruction.
   // This is possible if the values come via phi nodes. So check
   // for the parents of phi nodes.
-  auto doesOverlap = [&](MachineInstr* MI, MachineInstr* MI2) {
+  auto doesOverlap = [&](MachineInstr *MI, MachineInstr *MI2) {
     if (MI->isPHI()) {
       for (auto MO : MI->operands()) {
-        if (!MO.isReg()) continue;
+        if (!MO.isReg())
+          continue;
         if (MI2 == MRI.getVRegDef(MO.getReg()))
           return true;
       }
