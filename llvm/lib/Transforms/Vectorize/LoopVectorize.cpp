@@ -8798,7 +8798,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
+      if (match(U,
+                m_CombineOr(m_VPInstruction<VPInstruction::ExtractLastElement>(
+                                m_VPValue()),
+                            m_VPInstruction<VPInstruction::ExtractLane>(
+                                m_VPValue(), m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
