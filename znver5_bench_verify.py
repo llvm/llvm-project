@@ -112,38 +112,29 @@ def load_sched_info() -> Tuple[Dict, Dict]:
     # Extract Znver5Model.SchedWrites
     znver5_model = json_data.get('Znver5Model', {})
     schedule_info = znver5_model.get('SchedWrites', {})
+    instruction_mappings = znver5_model.get('InstructionMappings', {})
 
-    # Create instruction to write class mappings
-    # This is a simplified mapping - in production you would parse InstRW from TableGen
-    instr_to_write_class = {
-        # Integer multiply
-        'IMUL8r': 'WriteIMul8',
-        'IMUL16rr': 'WriteIMul16Reg',
-        'IMUL16rm': 'WriteIMul16RegLd',
-        'IMUL32rr': 'WriteIMul32Reg',
-        'IMUL32rm': 'WriteIMul32RegLd',
-        'IMUL64rr': 'WriteIMul64Reg',
-        'IMUL64rm': 'WriteIMul64RegLd',
-
-        # Basic ALU
-        'ADD32rr': 'WriteALU',
-        'ADD32rm': 'WriteALULd',
-        'ADD64rr': 'WriteALU',
-        'SUB32rr': 'WriteALU',
-        'XOR32rr': 'WriteALU',
-        'CMP32rr': 'WriteALU',
-
-        # FMA instructions
-        'VFMADD213PSr': 'WriteFMA',
-        'VFMADD213PSYr': 'WriteFMAY',
-        'VFMADD213PSZr': 'WriteFMAZ',
-        'VFMADD213PDr': 'WriteFMA',
-        'VFMADD213PDYr': 'WriteFMAY',
-        'VFMADD213PDZr': 'WriteFMAZ',
-    }
+    # Create instruction to write class mappings from TableGen data
+    instr_to_write_class = {}
+    for instr_name, instr_info in instruction_mappings.items():
+        # Get the first WriteDef if available
+        write_defs = instr_info.get('WriteDefs', [])
+        if write_defs:
+            # Use the first WriteDef as the primary mapping
+            instr_to_write_class[instr_name] = write_defs[0]
 
     print(f"Loaded {len(schedule_info)} scheduling definitions from TableGen")
-    print(f"Using {len(instr_to_write_class)} instruction-to-write-class mappings")
+    print(f"Loaded {len(instr_to_write_class)} instruction-to-write-class mappings from TableGen")
+
+    # Debug: print a few examples
+    sample_instrs = ['IMUL32rr', 'ADD32rr', 'VFMADD213PSZr', 'IMUL8r']
+    print("Sample instruction mappings:")
+    for instr in sample_instrs:
+        if instr in instr_to_write_class:
+            write_class = instr_to_write_class[instr]
+            if write_class in schedule_info:
+                sched_info = schedule_info[write_class]
+                print(f"  {instr} -> {write_class}: Latency={sched_info.get('Latency')}, InverseThroughput={sched_info.get('InverseThroughput'):.3f}")
 
     return schedule_info, instr_to_write_class
 
