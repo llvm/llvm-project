@@ -1,0 +1,19 @@
+; RUN: llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; Verify that llvm.compiler.used is not lowered
+; Currently we do lower it.
+; CHECK: OpName %[[UNUSED:[0-9]+]] "unused"
+; CHECK: OpName %[[LLVM_COMPILER_USED_NAME:[0-9]+]] "llvm.compiler.used"
+
+; Check that the type of llvm.compiler.used is not emited too
+; Currently we do lower it.
+; CHECK: OpTypeArray
+
+@unused = private addrspace(3) global i32 0
+@llvm.compiler.used = appending addrspace(2) global [1 x ptr addrspace (4)] [ptr addrspace(4) addrspacecast (ptr addrspace(3) @unused to ptr addrspace(4))]
+
+define spir_kernel void @foo() {
+entry:
+  ret void
+}
