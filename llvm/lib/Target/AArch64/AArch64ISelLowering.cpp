@@ -30705,14 +30705,14 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Ops.push_back(StackPtr);
 
     // Interleave operands and store.
-    SDValue Ch = DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops);
+    SDValue Chain = DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops);
 
     // Read back the interleaved data.
     SmallVector<SDValue, 3> Results;
     for (unsigned I = 0; I < 3; ++I) {
       SDValue Ptr =
           DAG.getMemBasePlusOffset(StackPtr, PackedVT.getStoreSize() * I, DL);
-      SDValue L = DAG.getLoad(PackedVT, DL, Ch, Ptr, MachinePointerInfo());
+      SDValue L = DAG.getLoad(PackedVT, DL, Chain, Ptr, MachinePointerInfo());
       Results.push_back(getSVESafeBitCast(OpVT, L, DAG));
     }
 
