@@ -19885,7 +19885,9 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   // TODO: Allow FP_TO_UINT.
   SDValue CastToInt = CastToFP.getOperand(0);
   MVT VT = CastToFP.getSimpleValueType();
-  if ((CastToInt.getOpcode() != ISD::FP_TO_SINT && CastToInt.getOpcode() != ISD::FP_TO_UINT) || VT.isVector())
+  if ((CastToInt.getOpcode() != ISD::FP_TO_SINT &&
+       CastToInt.getOpcode() != ISD::FP_TO_UINT) ||
+      VT.isVector())
     return SDValue();
 
   MVT IntVT = CastToInt.getSimpleValueType();
@@ -19913,25 +19915,35 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
 
     if (Subtarget.hasVLX()) {
       if (IsUnsigned) {
-        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
-        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
+        ToIntOpcode =
+            SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
+        ToFPOpcode =
+            IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
       } else {
-        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
-        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+        ToIntOpcode =
+            SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+        ToFPOpcode =
+            IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
       }
-     } else {
+    } else {
       // SSE2
-      ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
-      ToFPOpcode = IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+      ToIntOpcode =
+          SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+      ToFPOpcode =
+          IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
     }
   } else {
     if (Subtarget.hasVLX()) {
       if (IsUnsigned) {
-        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
-        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
+        ToIntOpcode =
+            SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
+        ToFPOpcode =
+            IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
       } else {
-        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
-        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+        ToIntOpcode =
+            SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+        ToFPOpcode =
+            IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
       }
     } else {
       // Need to extend width for AVX512DQ
@@ -19941,19 +19953,19 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
     }
   }
 
-  MVT VecSrcVT; 
+  MVT VecSrcVT;
   MVT VecIntVT;
   MVT VecVT;
   if (IntVT == MVT::i64) {
     unsigned NumElts = Width / IntSize;
     VecIntVT = MVT::getVectorVT(IntVT, NumElts);
-    
+
     // minimum legal size is v4f32
     unsigned SrcElts = (SrcVT == MVT::f32) ? std::max(NumElts, 4u) : NumElts;
     unsigned VTElts = (VT == MVT::f32) ? std::max(NumElts, 4u) : NumElts;
-    
+
     VecSrcVT = MVT::getVectorVT(SrcVT, SrcElts);
-    VecVT = MVT::getVectorVT(VT, VTElts); 
+    VecVT = MVT::getVectorVT(VT, VTElts);
   } else {
     VecSrcVT = MVT::getVectorVT(SrcVT, Width / SrcSize);
     VecIntVT = MVT::getVectorVT(IntVT, Width / IntSize);
