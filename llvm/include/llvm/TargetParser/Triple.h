@@ -801,8 +801,8 @@ public:
 
   /// Tests whether the target uses WALI Wasm
   bool isWALI() const {
-    return getArch() == Triple::wasm32 &&
-           isOSLinux() && getEnvironment() == Triple::MuslWALI;
+    return getArch() == Triple::wasm32 && isOSLinux() &&
+           getEnvironment() == Triple::MuslWALI;
   }
 
   /// Tests whether the target is the PS4 platform.
