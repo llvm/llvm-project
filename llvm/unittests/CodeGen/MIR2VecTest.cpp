@@ -53,7 +53,7 @@ protected:
   std::unique_ptr<LLVMContext> Ctx;
   std::unique_ptr<Module> M;
   std::unique_ptr<TargetMachine> TM;
-  const TargetInstrInfo *TII;
+  const TargetInstrInfo *TII = nullptr;
 
   static void SetUpTestCase() {
     InitializeAllTargets();
@@ -94,6 +94,8 @@ protected:
       return;
     }
   }
+
+  void TearDown() override { TII = nullptr; }
 };
 
 // Function to find an opcode by name
