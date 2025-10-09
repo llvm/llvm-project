@@ -943,7 +943,7 @@ public:
 
   AttributePool &getPool() const { return pool; }
 
-  void takeAllPrependFrom(ParsedAttributes &Other) {
+  void takeAllPrependingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
     prependAll(Other.begin(), Other.end());
@@ -951,7 +951,7 @@ public:
     pool.takeAllFrom(Other.pool);
   }
 
-  void takeAllAppendFrom(ParsedAttributes &Other) {
+  void takeAllAppendingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
     appendAll(Other.begin(), Other.end());

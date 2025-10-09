@@ -843,8 +843,8 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  void takeAttributesAppendFrom(ParsedAttributes &attrs) {
-    Attrs.takeAllAppendFrom(attrs);
+  void takeAttributesAppendingFrom(ParsedAttributes &attrs) {
+    Attrs.takeAllAppendingFrom(attrs);
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
@@ -2648,7 +2648,7 @@ public:
   ///
   /// Also extends the range of the declarator.
   void takeAttributesAppend(ParsedAttributes &attrs) {
-    Attrs.takeAllAppendFrom(attrs);
+    Attrs.takeAllAppendingFrom(attrs);
 
     if (attrs.Range.getEnd().isValid())
       SetRangeEnd(attrs.Range.getEnd());
