@@ -869,6 +869,8 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
       CGM.getLangOpts().OpenMPOffloadMandatory,
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
+  Config.setDefaultTargetAS(
+      CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
@@ -1243,7 +1245,10 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
     if (WFn)
       ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
-    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
+    llvm::Type *FnPtrTy = llvm::PointerType::get(
+        CGF.getLLVMContext(), CGM.getDataLayout().getProgramAddressSpace());
+
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, FnPtrTy);
 
     // Create a private scope that will globalize the arguments
     // passed from the outside of the target region.
