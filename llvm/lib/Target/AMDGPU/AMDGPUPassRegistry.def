@@ -34,6 +34,7 @@ MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunc
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 MODULE_PASS("amdgpu-expand-feature-predicates",
             AMDGPUExpandFeaturePredicatesPass(*this))
+MODULE_PASS("amdgpu-uniform-intrinsic-combine", AMDGPUUniformIntrinsicCombinePass())
 #undef MODULE_PASS
 
 #ifndef MODULE_PASS_WITH_PARAMS
