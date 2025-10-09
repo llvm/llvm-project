@@ -438,7 +438,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 inline std::wstring GetPathToExecutableW() {
   // Iterate until we reach the Windows API maximum path length (32,767).
   std::vector<WCHAR> buffer;
-  buffer.resize(MAX_PATH/*=260*/);
+  buffer.resize(MAX_PATH /*=260*/);
   while (buffer.size() < 32767) {
     if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
       return std::wstring(buffer.begin(), buffer.end());
@@ -448,12 +448,12 @@ inline std::wstring GetPathToExecutableW() {
 }
 
 /// Resolve the full path of the directory defined by
-/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL search
-/// directories.
+/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL
+/// search directories.
 void AddPythonDLLToSearchPath() {
   std::wstring modulePath = GetPathToExecutableW();
   if (modulePath.empty()) {
-    WithColor::error() << "Unable to find python: " << GetLastError() << '\n';
+    llvm::errs() << "error: unable to find python.dll." << '\n';
     return;
   }
 
