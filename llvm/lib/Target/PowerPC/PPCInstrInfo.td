@@ -4325,12 +4325,10 @@ def TLBIE : XForm_26<31, 306, (outs), (ins gprc:$RST, gprc:$RB),
             Requires<[IsNotISA3_0]>;
 
 let Predicates = [IsISA3_0] in {
-  //let isCodeGenOnly = 1 in {
-    def TLBIEP9 : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
-                                          (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
-                                              u1imm:$PRS, u1imm:$R),
-                                          "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
-  //}
+  def TLBIEP9 : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                        (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                            u1imm:$PRS, u1imm:$R),
+                                        "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def TLBIE8P9
         : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
