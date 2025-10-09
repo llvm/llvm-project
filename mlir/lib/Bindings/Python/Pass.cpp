@@ -52,6 +52,23 @@ private:
   MlirPassManager passManager;
 };
 
+class PyTypeIDAllocator {
+public:
+  PyTypeIDAllocator() : allocator(mlirTypeIDAllocatorCreate()) {}
+  ~PyTypeIDAllocator() {
+    if (!allocator.ptr)
+      mlirTypeIDAllocatorDestroy(allocator);
+  }
+
+  MlirTypeIDAllocator get() { return allocator; }
+  MlirTypeID allocate() { return mlirTypeIDAllocatorAllocateTypeID(allocator); }
+
+private:
+  MlirTypeIDAllocator allocator;
+};
+
+PyTypeIDAllocator globalTypeIDAllocator;
+
 } // namespace
 
 /// Create the `mlir.passmanager` here.
@@ -181,9 +198,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               name = nb::cast<std::string>(
                   nb::borrow<nb::str>(run.attr("__name__")));
             }
-            MlirTypeIDAllocator typeIDAllocator = mlirTypeIDAllocatorCreate();
-            MlirTypeID passID =
-                mlirTypeIDAllocatorAllocateTypeID(typeIDAllocator);
+            MlirTypeID passID = globalTypeIDAllocator.allocate();
             MlirExternalPassCallbacks callbacks;
             callbacks.construct = [](void *obj) {
               (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
