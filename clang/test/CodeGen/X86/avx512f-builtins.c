@@ -11,17 +11,6 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
-// Constexpr coverage for DQ broadcast features (f64x2/i32x8) that don't have test functions in this file.
-// The corresponding test_mm512_*_broadcast_* functions are in avx512dq-builtins.c.
-TEST_CONSTEXPR(match_m512d(_mm512_mask_broadcast_f64x2(_mm512_setzero_pd(), 0xFF, (__m128d)(__v2df){1,2}),
-  1,2,1,2,1,2,1,2));
-
-TEST_CONSTEXPR(match_m512d(_mm512_maskz_broadcast_f64x2(0xFF, (__m128d)(__v2df){1,2}),
-  1,2,1,2,1,2,1,2));
-
-TEST_CONSTEXPR(match_v16si(_mm512_maskz_broadcast_i32x8(0xFFFF, _mm256_set1_epi32(9)),
-  9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9));
-
 __m512d test_mm512_sqrt_pd(__m512d a)
 {
   // CHECK-LABEL: test_mm512_sqrt_pd
