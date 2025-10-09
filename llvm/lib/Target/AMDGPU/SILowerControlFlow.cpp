@@ -807,7 +807,7 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
     }
   }
 
-  bool Changed = false;
+  bool Changed = makeEverySuccessorBeBranchTarget(MF);
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
