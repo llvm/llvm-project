@@ -20,7 +20,7 @@ functions:
       - type: uint16_t
   - name: inet_aton
     standards:
-      - POSIX
+      - llvm_libc_ext
     return_type: int
     arguments:
       - type: const char *
