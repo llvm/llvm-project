@@ -9,10 +9,6 @@
 // RUN: %env_tool_opts=handle_segv=1:cloak_sanitizer_signal_handlers=false not %run %t 2>&1 | FileCheck %s --check-prefix=UNCLOAKED
 // RUN: %env_tool_opts=handle_segv=1:cloak_sanitizer_signal_handlers=true not %run %t 2>&1 | FileCheck %s --check-prefix=CLOAKED
 
-// RUN: %clangxx -O0 %s -DUNCLOAK_RT -o %t
-// RUN: %env_tool_opts=handle_segv=1:cloak_sanitizer_signal_handlers=false not %run %t 2>&1 | FileCheck %s --check-prefix=UNCLOAKED
-// RUN: %env_tool_opts=handle_segv=1:cloak_sanitizer_signal_handlers=true not %run %t 2>&1 | FileCheck %s --check-prefix=UNCLOAKED
-
 #include <sanitizer/common_interface_defs.h>
 #include <signal.h>
 #include <stdio.h>
@@ -24,10 +20,6 @@ void my_signal_sighandler(int signum) {
 }
 
 int main(int argc, char *argv[]) {
-#ifdef UNCLOAK_RT
-  __sanitizer_uncloak_preinstalled_signal_handlers();
-#endif
-
   __sighandler_t old = signal(SIGSEGV, &my_signal_sighandler);
   if (old == SIG_DFL)
     printf("Old handler: default\n");
