@@ -103,6 +103,7 @@ steps:
       queue: libcxx-builders
       os: aix
     <<: *common
+    skip: "Until https://github.com/llvm/llvm-project/issues/162516 has been resolved"
 
   - label: AIX (64-bit)
     command: libcxx/utils/ci/run-buildbot aix
@@ -114,6 +115,7 @@ steps:
       queue: libcxx-builders
       os: aix
     <<: *common
+    skip: "Until https://github.com/llvm/llvm-project/issues/162516 has been resolved"
 
 - group: ':freebsd: FreeBSD'
   steps:

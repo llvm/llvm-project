@@ -270,7 +270,7 @@ template <class _Op, class _Yp>
 void __is_derived_from_view_interface();
 template <class _Tp>
 bool enable_view = derived_from<_Tp, int> ||
-                   requires { ranges::__is_derived_from_view_interface; };
+                   requires { ranges::__is_derived_from_view_interface<_Tp, int>(); };
 template <class>
 concept range = requires { ranges::end; };
 template <class _Tp>

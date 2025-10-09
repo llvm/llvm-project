@@ -326,13 +326,13 @@ func.func @_QPreuse_alloca(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = 
 // CHECK:       %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
 // CHECK:       %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
 // CHECK:       omp.target_data map_entries
-// CHECK:         %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
-// CHECK:         %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
+// CHECK:         %[[BOX_OFFSET:.*]] = fir.box_offset %[[ALLOCA]]
+// CHECK:         %[[LOAD_OFFSET:.*]] = fir.load %[[BOX_OFFSET]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>
+// CHECK:         %{{[0-9]+}} = omp.map.info var_ptr(%[[LOAD_OFFSET]]
 // CHECK:         omp.target_update map_entries
 // CHECK:         omp.terminator
 // CHECK:       }
 // CHECK:       return
-
 
 
 omp.private {type = firstprivate} @boxchar.privatizer : !fir.boxchar<1> copy {
