@@ -224,7 +224,8 @@ fir::FortranVariableOpInterface
 genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
-           mlir::Value dummyScope = nullptr,
+           mlir::Value dummyScope = nullptr, mlir::Value storage = nullptr,
+           std::uint64_t storageOffset = 0,
            cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
@@ -322,6 +323,10 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 /// a character entity.
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
+
+/// Return character length if known at compile time. Unlike genCharLength
+/// it does not create any new op as specifically is intended for analysis.
+std::optional<std::int64_t> getCharLengthIfConst(Entity entity);
 
 mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity entity, mlir::Type resultType);

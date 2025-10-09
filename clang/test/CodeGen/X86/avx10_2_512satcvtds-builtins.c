@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2-512 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X86
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2-512 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,X64
 
 #include <immintrin.h>
 #include <stddef.h>

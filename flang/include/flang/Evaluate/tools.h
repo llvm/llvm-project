@@ -750,11 +750,11 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // one of the operands to the type of the other.  Handles special cases with
 // typeless literal operands and with REAL/COMPLEX exponentiation to INTEGER
 // powers.
-template <template <typename> class OPR, bool CAN_BE_UNSIGNED = true>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
     Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
 
-extern template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
+extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -1521,6 +1521,9 @@ bool IsVarSubexpressionOf(
 // it returns std::nullopt.
 std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
+// How many ancestors does have a derived type have?
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1530,6 +1533,12 @@ class Scope;
 // If a symbol represents an ENTRY, return the symbol of the main entry
 // point to its subprogram.
 const Symbol *GetMainEntry(const Symbol *);
+
+inline bool IsAlternateEntry(const Symbol *symbol) {
+  // If symbol is not alternate entry symbol, GetMainEntry() returns the same
+  // symbol.
+  return symbol && GetMainEntry(symbol) != symbol;
+}
 
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.

@@ -59,8 +59,10 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -107,6 +109,16 @@ STATISTIC(StableHashAttempts,
 STATISTIC(StableHashDropped,
           "Count of unsuccessful hashing attempts for outlined functions");
 STATISTIC(NumRemovedLOHs, "Total number of Linker Optimization Hints removed");
+STATISTIC(NumPGOBlockedOutlined,
+          "Number of times outlining was blocked by PGO");
+STATISTIC(NumPGOAllowedCold,
+          "Number of times outlining was allowed from cold functions");
+STATISTIC(NumPGOConservativeBlockedOutlined,
+          "Number of times outlining was blocked conservatively when profile "
+          "counts were missing");
+STATISTIC(NumPGOOptimisticOutlined,
+          "Number of times outlining was allowed optimistically when profile "
+          "counts were missing");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -438,11 +450,10 @@ struct MachineOutliner : public ModulePass {
   /// The current repeat number of machine outlining.
   unsigned OutlineRepeatedNum = 0;
 
-  /// Set to true if the outliner should run on all functions in the module
-  /// considered safe for outlining.
-  /// Set to true by default for compatibility with llc's -run-pass option.
-  /// Set when the pass is constructed in TargetPassConfig.
-  bool RunOnAllFunctions = true;
+  /// The mode for whether to run the outliner
+  /// Set to always-outline by default for compatibility with llc's -run-pass
+  /// option.
+  RunOutliner RunOutlinerMode = RunOutliner::AlwaysOutline;
 
   /// This is a compact representation of hash sequences of outlined functions.
   /// It is used when OutlinerMode = CGDataMode::Write.
@@ -468,6 +479,11 @@ struct MachineOutliner : public ModulePass {
     AU.addRequired<TargetPassConfig>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
+    if (RunOutlinerMode == RunOutliner::OptimisticPGO ||
+        RunOutlinerMode == RunOutliner::ConservativePGO) {
+      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+      AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    }
     AU.setPreservesAll();
     ModulePass::getAnalysisUsage(AU);
   }
@@ -578,9 +594,9 @@ struct MachineOutliner : public ModulePass {
 char MachineOutliner::ID = 0;
 
 namespace llvm {
-ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions) {
+ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
   MachineOutliner *OL = new MachineOutliner();
-  OL->RunOnAllFunctions = RunOnAllFunctions;
+  OL->RunOutlinerMode = RunOutlinerMode;
   return OL;
 }
 
@@ -1198,10 +1214,49 @@ bool MachineOutliner::outline(
   return OutlinedSomething;
 }
 
+static bool allowPGOOutlining(RunOutliner RunOutlinerMode,
+                              const ProfileSummaryInfo *PSI,
+                              const BlockFrequencyInfo *BFI,
+                              MachineBasicBlock &MBB) {
+  if (RunOutlinerMode != RunOutliner::OptimisticPGO &&
+      RunOutlinerMode != RunOutliner::ConservativePGO)
+    return true;
+  auto *MF = MBB.getParent();
+  if (MF->getFunction().hasFnAttribute(Attribute::Cold)) {
+    ++NumPGOAllowedCold;
+    return true;
+  }
+
+  auto *BB = MBB.getBasicBlock();
+  if (BB && PSI && BFI)
+    if (auto Count = BFI->getBlockProfileCount(BB))
+      return *Count <= PSI->getOrCompColdCountThreshold();
+
+  if (RunOutlinerMode == RunOutliner::OptimisticPGO) {
+    auto *TII = MF->getSubtarget().getInstrInfo();
+    if (TII->shouldOutlineFromFunctionByDefault(*MF)) {
+      // Profile data is unavailable, but we optimistically allow outlining
+      ++NumPGOOptimisticOutlined;
+      return true;
+    }
+    return false;
+  }
+  assert(RunOutlinerMode == RunOutliner::ConservativePGO);
+  // Profile data is unavailable, so we conservatively block outlining
+  ++NumPGOConservativeBlockedOutlined;
+  return false;
+}
+
 void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   // Build instruction mappings for each function in the module. Start by
   // iterating over each Function in M.
   LLVM_DEBUG(dbgs() << "*** Populating mapper ***\n");
+  bool EnableProfileGuidedOutlining =
+      RunOutlinerMode == RunOutliner::OptimisticPGO ||
+      RunOutlinerMode == RunOutliner::ConservativePGO;
+  ProfileSummaryInfo *PSI = nullptr;
+  if (EnableProfileGuidedOutlining)
+    PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   for (Function &F : M) {
     LLVM_DEBUG(dbgs() << "MAPPING FUNCTION: " << F.getName() << "\n");
 
@@ -1222,7 +1277,11 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
     }
 
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-    if (!RunOnAllFunctions && !TII->shouldOutlineFromFunctionByDefault(*MF)) {
+    BlockFrequencyInfo *BFI = nullptr;
+    if (EnableProfileGuidedOutlining && F.hasProfileData())
+      BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
+    if (RunOutlinerMode == RunOutliner::TargetDefault &&
+        !TII->shouldOutlineFromFunctionByDefault(*MF)) {
       LLVM_DEBUG(dbgs() << "SKIP: Target does not want to outline from "
                            "function by default\n");
       continue;
@@ -1259,6 +1318,11 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
       // we don't want to outline from it.
       if (MBB.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "    SKIP: MBB's address is taken\n");
+        continue;
+      }
+
+      if (!allowPGOOutlining(RunOutlinerMode, PSI, BFI, MBB)) {
+        ++NumPGOBlockedOutlined;
         continue;
       }
 
@@ -1434,10 +1498,22 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // the user how the outliner is running.
   LLVM_DEBUG({
     dbgs() << "Machine Outliner: Running on ";
-    if (RunOnAllFunctions)
+    switch (RunOutlinerMode) {
+    case RunOutliner::AlwaysOutline:
       dbgs() << "all functions";
-    else
+      break;
+    case RunOutliner::OptimisticPGO:
+      dbgs() << "optimistically cold functions";
+      break;
+    case RunOutliner::ConservativePGO:
+      dbgs() << "conservatively cold functions";
+      break;
+    case RunOutliner::TargetDefault:
       dbgs() << "target-default functions";
+      break;
+    case RunOutliner::NeverOutline:
+      llvm_unreachable("should not outline");
+    }
     dbgs() << "\n";
   });
 

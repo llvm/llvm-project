@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: @test_phi_iterator_invalidation(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 1002)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -69,20 +69,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[FOR_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i16 [[SCALAR_RECUR]] to i32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[FOR_NEXT]] = load i16, ptr [[GEP_A]], align 2
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    store i32 [[SEXT]], ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1001
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This tests that swapping filebufs works correctly even when the small buffer
-// optimization is in use (https://github.com/llvm/llvm-project/issues/49282).
+// optimization is in use (https://llvm.org/PR49938).
 
 // <fstream>
 
