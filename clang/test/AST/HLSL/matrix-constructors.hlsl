@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s  FileCheck %s 
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
 typedef float float2x1 __attribute__((matrix_type(2,1)));
 typedef float float2x3 __attribute__((matrix_type(2,3)));
