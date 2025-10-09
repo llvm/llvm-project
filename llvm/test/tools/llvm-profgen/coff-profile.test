@@ -1,37 +1,77 @@
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=DWARF
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t
-; RUN: FileCheck %s --input-file %t
+; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
 
-CHECK:      main:31837:0
-CHECK-NEXT:  0: 0
-CHECK-NEXT:  3.1: 0
-CHECK-NEXT:  3.2: 0
-CHECK-NEXT:  8: 0
-CHECK-NEXT:  65501: 0
-CHECK-NEXT:  1: ??$init@HG@MyNameSpace2@@YAXHPEAG@Z:0
-CHECK-NEXT:   1: 0
-CHECK-NEXT:   1.1: 0
-CHECK-NEXT:   1.2: 0
-CHECK-NEXT:   2: 0
-CHECK-NEXT:   65514: 0
-CHECK-NEXT:  4: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:3193
-CHECK-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:3193
-CHECK-NEXT:    1.1: 31
-CHECK-NEXT:    1.2: 31
-CHECK-NEXT:    2: 31
-CHECK-NEXT:    3: 31
-CHECK-NEXT:    65530: 0
-CHECK-NEXT:  5: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:28644
-CHECK-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:28644
-CHECK-NEXT:    1.1: 341
-CHECK-NEXT:    1.2: 341
-CHECK-NEXT:    2: 341
-CHECK-NEXT:    3: 341
-CHECK-NEXT:    65530: 0
-CHECK-NEXT:  7: ?print@MyNameSpace2@@YAXPEAGH@Z:0
-CHECK-NEXT:   1: 0
+DWARF:      main:31341:0
+DWARF-NEXT:  0: 0
+DWARF-NEXT:  3: 0
+DWARF-NEXT:  3.1: 0
+DWARF-NEXT:  3.2: 0
+DWARF-NEXT:  8: 0
+DWARF-NEXT:  65501: 0
+DWARF-NEXT:  1: ??$init@HG@MyNameSpace2@@YAXHPEAG@Z:0
+DWARF-NEXT:   1: 0
+DWARF-NEXT:   1.1: 0
+DWARF-NEXT:   1.2: 0
+DWARF-NEXT:   2: 0
+DWARF-NEXT:   65514: 0
+DWARF-NEXT:  4: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:3038
+DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:3038
+DWARF-NEXT:    1.1: 31
+DWARF-NEXT:    1.2: 31
+DWARF-NEXT:    2: 31
+DWARF-NEXT:    3: 31
+DWARF-NEXT:  5: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:28303
+DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:28303
+DWARF-NEXT:    1.1: 341
+DWARF-NEXT:    1.2: 341
+DWARF-NEXT:    2: 341
+DWARF-NEXT:    3: 341
+DWARF-NEXT:  7: ?print@MyNameSpace2@@YAXPEAGH@Z:0
+DWARF-NEXT:   1: 0
+
+PROBE:       main:1116:0
+PROBE-NEXT:   1: 0
+PROBE-NEXT:   3: 0
+PROBE-NEXT:   4: 0
+PROBE-NEXT:   5: 0
+PROBE-NEXT:   8: 0
+PROBE-NEXT:   9: 0
+PROBE-NEXT:   2: ??$init@HG@MyNameSpace2@@YAXHPEAG@Z:0
+PROBE-NEXT:    1: 0
+PROBE-NEXT:    2: 0
+PROBE-NEXT:    3: 0
+PROBE-NEXT:    4: 0
+PROBE-NEXT:    5: 0
+PROBE-NEXT:    6: 0
+PROBE-NEXT:    !CFGChecksum: 107105011060
+PROBE-NEXT:   6: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:93
+PROBE-NEXT:    1: 0
+PROBE-NEXT:    2: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:93
+PROBE-NEXT:     1: 0
+PROBE-NEXT:     2: 31
+PROBE-NEXT:     4: 31
+PROBE-NEXT:     5: 31
+PROBE-NEXT:     !CFGChecksum: 107105011060
+PROBE-NEXT:    !CFGChecksum: 281479271677951
+PROBE-NEXT:   7: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:1023
+PROBE-NEXT:    2: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:1023
+PROBE-NEXT:     2: 341
+PROBE-NEXT:     3: 0
+PROBE-NEXT:     4: 341
+PROBE-NEXT:     5: 341
+PROBE-NEXT:     6: 0
+PROBE-NEXT:     !CFGChecksum: 107105011060
+PROBE-NEXT:    !CFGChecksum: 281479271677951
+PROBE-NEXT:   10: ?print@MyNameSpace2@@YAXPEAGH@Z:0
+PROBE-NEXT:    1: 0
+PROBE-NEXT:    2: 0
+PROBE-NEXT:    !CFGChecksum: 281479271677951
+PROBE-NEXT:   !CFGChecksum: 1126005794311845
 
 ; Original code
-; clang-cl.exe -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -Xclang -fdebug-info-for-profiling -link -debug:dwarf
+; clang-cl.exe -O2 -gdwarf -gline-tables-only -fpseudo-probe-for-profiling coff-profile.cpp -fuse-ld=lld -Xclang -fdebug-info-for-profiling -link -debug:dwarf
 
 #include <stdio.h>
 

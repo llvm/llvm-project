@@ -61,6 +61,9 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
 
+  /// Materialize global ctor/dtor list
+  void buildGlobalCtorDtorList();
+
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       cir::FuncType type,
@@ -78,6 +81,9 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
   llvm::SmallVector<cir::FuncOp> dynamicInitializers;
+
+  /// List of ctors and their priorities to be called before main()
+  llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalCtorList;
 
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
@@ -689,11 +695,36 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
   assert(!cir::MissingFeatures::opGlobalAnnotations());
 }
 
+template <typename AttributeTy>
+static llvm::SmallVector<mlir::Attribute>
+prepareCtorDtorAttrList(mlir::MLIRContext *context,
+                        llvm::ArrayRef<std::pair<std::string, uint32_t>> list) {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  for (const auto &[name, priority] : list)
+    attrs.push_back(AttributeTy::get(context, name, priority));
+  return attrs;
+}
+
+void LoweringPreparePass::buildGlobalCtorDtorList() {
+  if (!globalCtorList.empty()) {
+    llvm::SmallVector<mlir::Attribute> globalCtors =
+        prepareCtorDtorAttrList<cir::GlobalCtorAttr>(&getContext(),
+                                                     globalCtorList);
+
+    mlirModule->setAttr(cir::CIRDialect::getGlobalCtorsAttrName(),
+                        mlir::ArrayAttr::get(&getContext(), globalCtors));
+  }
+
+  assert(!cir::MissingFeatures::opGlobalDtorLowering());
+}
+
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
   if (dynamicInitializers.empty())
     return;
 
-  assert(!cir::MissingFeatures::opGlobalCtorList());
+  // TODO: handle globals with a user-specified initialzation priority.
+  // TODO: handle default priority more nicely.
+  assert(!cir::MissingFeatures::opGlobalCtorPriority());
 
   SmallString<256> fnName;
   // Include the filename in the symbol name. Including "sub_" matches gcc
@@ -722,6 +753,10 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (cir::FuncOp &f : dynamicInitializers)
     builder.createCallOp(f.getLoc(), f, {});
+  // Add the global init function (not the individual ctor functions) to the
+  // global ctor list.
+  globalCtorList.emplace_back(fnName,
+                              cir::GlobalCtorAttr::getDefaultPriority());
 
   cir::ReturnOp::create(builder, f.getLoc());
 }
@@ -852,6 +887,7 @@ void LoweringPreparePass::runOnOperation() {
     runOnOp(o);
 
   buildCXXGlobalInitFunc();
+  buildGlobalCtorDtorList();
 }
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {

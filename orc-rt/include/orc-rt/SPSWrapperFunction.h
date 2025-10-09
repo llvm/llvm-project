@@ -14,8 +14,11 @@
 #ifndef ORC_RT_SPSWRAPPERFUNCTION_H
 #define ORC_RT_SPSWRAPPERFUNCTION_H
 
+#include "orc-rt/Compiler.h"
 #include "orc-rt/SimplePackedSerialization.h"
 #include "orc-rt/WrapperFunction.h"
+
+#define ORC_RT_SPS_INTERFACE ORC_RT_INTERFACE
 
 namespace orc_rt {
 namespace detail {
@@ -63,6 +66,21 @@ private:
     }
   };
 
+  template <typename T> struct Serializable<Expected<T *>> {
+    typedef SPSSerializableExpected<ExecutorAddr> serializable_type;
+    static SPSSerializableExpected<ExecutorAddr> to(Expected<T *> Val) {
+      return SPSSerializableExpected<ExecutorAddr>(
+          Val ? Expected<ExecutorAddr>(ExecutorAddr::fromPtr(*Val))
+              : Expected<ExecutorAddr>(Val.takeError()));
+    }
+    static Expected<T *> from(SPSSerializableExpected<ExecutorAddr> Val) {
+      if (auto Tmp = Val.toExpected())
+        return Tmp->toPtr<T *>();
+      else
+        return Tmp.takeError();
+    }
+  };
+
   template <typename... Ts> struct DeserializableTuple;
 
   template <typename... Ts> struct DeserializableTuple<std::tuple<Ts...>> {
@@ -87,7 +105,8 @@ private:
 public:
   template <typename... ArgTs>
   std::optional<WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
-    return serializeImpl(Serializable<ArgTs>::to(std::forward<ArgTs>(Args))...);
+    return serializeImpl(
+        Serializable<std::decay_t<ArgTs>>::to(std::forward<ArgTs>(Args))...);
   }
 
   template <typename ArgTuple>

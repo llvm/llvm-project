@@ -702,13 +702,13 @@ def : Pat<(binop_allwusers<or>
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 def : Pat<(binop_allwusers<or>
                (or (zexti16 (XLenVT GPR:$rs1)),
-                   (shl GPR:$op1rs1, (XLenVT 24))),
-               (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
+                   (shl GPR:$op1rs2, (XLenVT 24))),
+               (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 
 def : Pat<(i64 (or (or (zexti16 (XLenVT GPR:$rs1)),
-                       (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
-                   (sext_inreg (shl GPR:$op1rs1, (XLenVT 24)), i32))),
+                       (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+                   (sext_inreg (shl GPR:$op1rs2, (XLenVT 24)), i32))),
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 
 // Match a pattern of 2 halfwords being inserted into bits [63:32], with bits
@@ -788,32 +788,32 @@ multiclass ShxAdd_UWPat<int i, Instruction shxadd_uw> {
 }
 
 multiclass Sh1Add_UWPat<Instruction sh1add_uw> {
-  def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 1)), 0x1FFFFFFFF),
-                                     (XLenVT GPR:$rs2))),
+  def : Pat<(add_like_non_imm12 (and (shl GPR:$rs1, (i64 1)), (i64 0x1FFFFFFFF)),
+                                     (XLenVT GPR:$rs2)),
             (sh1add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-  def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x1FFFFFFFE),
-                                     (XLenVT GPR:$rs2))),
+  def : Pat<(add_like_non_imm12 (and GPR:$rs1, (i64 0x1FFFFFFFE)),
+                                (XLenVT GPR:$rs2)),
             (sh1add_uw (XLenVT (SRLI GPR:$rs1, 1)), GPR:$rs2)>;
 }
 
 multiclass Sh2Add_UWPat<Instruction sh2add_uw> {
-  def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF),
-                                     (XLenVT GPR:$rs2))),
+  def : Pat<(add_like_non_imm12 (and (shl GPR:$rs1, (i64 2)), (i64 0x3FFFFFFFF)),
+                                (XLenVT GPR:$rs2)),
             (sh2add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-  def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x3FFFFFFFC),
-                                     (XLenVT GPR:$rs2))),
+  def : Pat<(add_like_non_imm12 (and GPR:$rs1, (i64 0x3FFFFFFFC)),
+                                (XLenVT GPR:$rs2)),
             (sh2add_uw (XLenVT (SRLI GPR:$rs1, 2)), GPR:$rs2)>;
 }
 
 multiclass Sh3Add_UWPat<Instruction sh3add_uw> {
-  def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFF8),
-                                     (XLenVT GPR:$rs2))),
-            (sh3add_uw (XLenVT (SRLIW GPR:$rs1, 3)), GPR:$rs2)>;
+  def : Pat<(add_like_non_imm12 (and (shl GPR:$rs1, (i64 3)), (i64 0x7FFFFFFFF)),
+                                (XLenVT GPR:$rs2)),
+            (sh3add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-  def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x7FFFFFFF8),
-                                     (XLenVT GPR:$rs2))),
+  def : Pat<(add_like_non_imm12 (and GPR:$rs1, (i64 0x7FFFFFFF8)),
+                                (XLenVT GPR:$rs2)),
             (sh3add_uw (XLenVT (SRLI GPR:$rs1, 3)), GPR:$rs2)>;
 }
 
