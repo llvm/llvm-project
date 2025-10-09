@@ -87,6 +87,13 @@ class NoUndef<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// PrettyPrintImmArg - The specified immediate argument has a custom pretty-print
+// function for diagnostic output.
+class PrettyPrintImmArg<AttrIndex idx, string funcname> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  string FunctionName = funcname;
+}
+
 // NonNull - The return value or specified argument is not null.
 class NonNull<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;

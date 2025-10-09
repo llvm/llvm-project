@@ -441,6 +441,14 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("PrettyPrintImmArg")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    if (ArgNo < 1)
+      PrintFatalError(
+          R->getLoc(),
+          "PrettyPrintImmArg requires ArgNo >= 1 (0 is return value)");
+    StringRef FuncName = R->getValueAsString("FunctionName");
+    addPrettyPrintFunction(ArgNo - 1, FuncName);
   } else {
     llvm_unreachable("Unknown property!");
   }
@@ -467,4 +475,18 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+}
+
+void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
+                                              StringRef FuncName) {
+  auto It = llvm::find_if(PrettyPrintFunctions, [ArgIdx](const auto &Pair) {
+    return Pair.first == ArgIdx;
+  });
+  if (It != PrettyPrintFunctions.end()) {
+    PrintFatalError(TheDef->getLoc(),
+                    "PrettyPrintImmArg for argument " + Twine(ArgIdx) +
+                        " is already defined as '" + It->second + "'");
+    return;
+  }
+  PrettyPrintFunctions.emplace_back(ArgIdx, FuncName);
 }

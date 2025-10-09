@@ -149,6 +149,11 @@ struct CodeGenIntrinsic {
   void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
                        uint64_t V2 = 0);
 
+  /// Vector that stores ArgIndex, functionName.
+  SmallVector<std::pair<unsigned, StringRef>> PrettyPrintFunctions;
+
+  void addPrettyPrintFunction(unsigned ArgIdx, StringRef FuncName);
+
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
   /// Goes through all IntrProperties that have IsDefault value set and sets
