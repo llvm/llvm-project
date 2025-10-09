@@ -7666,38 +7666,31 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
     MachineRegisterInfo &MRI, Register DstReg, MachineInstr &Inst) const {
   // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
   // hope for the best.
-  if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {
+  unsigned RegSize = RI.getRegSizeInBits(DstReg, MRI);
+  unsigned NumSubRegs = RegSize / 32;
+  if (NumSubRegs == 1) {
+    Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-            get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+            get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
         .add(Inst.getOperand(1));
+    BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
+            DstReg)
+        .addReg(NewDst);
   } else {
-    unsigned RegSize = RI.getRegSizeInBits(DstReg, MRI);
-    unsigned NumSubRegs = RegSize / 32;
-    if (NumSubRegs == 1) {
+    SmallVector<Register, 8> DstRegs;
+    for (unsigned i = 0; i < NumSubRegs; ++i) {
       Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
               get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-          .add(Inst.getOperand(1));
-      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
-              DstReg)
-          .addReg(NewDst);
-    } else {
-      SmallVector<Register, 8> DstRegs;
-      for (unsigned i = 0; i < NumSubRegs; ++i) {
-        Register NewDst =
-            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+          .addReg(Inst.getOperand(1).getReg(), 0, RI.getSubRegFromChannel(i));
+      DstRegs.push_back(NewDst);
+    }
+    MachineInstrBuilder MIB =
         BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-            .addReg(Inst.getOperand(1).getReg(), 0, RI.getSubRegFromChannel(i));
-        DstRegs.push_back(NewDst);
-      }
-      MachineInstrBuilder MIB =
-          BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                  get(AMDGPU::REG_SEQUENCE), DstReg);
-      for (unsigned i = 0; i < NumSubRegs; ++i) {
-        MIB.addReg(DstRegs[i]);
-        MIB.addImm(RI.getSubRegFromChannel(i));
-      }
+                get(AMDGPU::REG_SEQUENCE), DstReg);
+    for (unsigned i = 0; i < NumSubRegs; ++i) {
+      MIB.addReg(DstRegs[i]);
+      MIB.addImm(RI.getSubRegFromChannel(i));
     }
   }
 }
