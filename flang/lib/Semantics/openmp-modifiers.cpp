@@ -75,6 +75,22 @@ unsigned OmpModifierDescriptor::since(llvm::omp::Clause id) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAccessGroup>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"access-group",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61, {Clause::OMPC_dyn_groupprivate}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignment>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"alignment",
@@ -482,6 +498,9 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPrescriptiveness>() {
       /*clauses=*/
       {
           {51, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}},
+          {61,
+              {Clause::OMPC_dyn_groupprivate, Clause::OMPC_grainsize,
+                  Clause::OMPC_num_tasks}},
       },
   };
   return desc;
