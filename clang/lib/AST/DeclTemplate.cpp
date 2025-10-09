@@ -1653,57 +1653,65 @@ void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS,
   getValue().printPretty(OS, Policy, getType(), &getASTContext());
 }
 
-TemplateParameterList *clang::getReplacedTemplateParameterList(const Decl *D) {
+std::tuple<NamedDecl *, TemplateArgument>
+clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
   switch (D->getKind()) {
-  case Decl::Kind::CXXRecord:
-    return cast<CXXRecordDecl>(D)
-        ->getDescribedTemplate()
-        ->getTemplateParameters();
+  case Decl::Kind::BuiltinTemplate:
   case Decl::Kind::ClassTemplate:
-    return cast<ClassTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::Concept:
+  case Decl::Kind::FunctionTemplate:
+  case Decl::Kind::TemplateTemplateParm:
+  case Decl::Kind::TypeAliasTemplate:
+  case Decl::Kind::VarTemplate:
+    return {cast<TemplateDecl>(D)->getTemplateParameters()->getParam(Index),
+            {}};
   case Decl::Kind::ClassTemplateSpecialization: {
     const auto *CTSD = cast<ClassTemplateSpecializationDecl>(D);
     auto P = CTSD->getSpecializedTemplateOrPartial();
+    TemplateParameterList *TPL;
     if (const auto *CTPSD =
             dyn_cast<ClassTemplatePartialSpecializationDecl *>(P))
-      return CTPSD->getTemplateParameters();
-    return cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+      TPL = CTPSD->getTemplateParameters();
+    else
+      TPL = cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+    return {TPL->getParam(Index), CTSD->getTemplateArgs()[Index]};
+  }
+  case Decl::Kind::VarTemplateSpecialization: {
+    const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
+    auto P = VTSD->getSpecializedTemplateOrPartial();
+    TemplateParameterList *TPL;
+    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl *>(P))
+      TPL = VTPSD->getTemplateParameters();
+    else
+      TPL = cast<VarTemplateDecl *>(P)->getTemplateParameters();
+    return {TPL->getParam(Index), VTSD->getTemplateArgs()[Index]};
   }
   case Decl::Kind::ClassTemplatePartialSpecialization:
-    return cast<ClassTemplatePartialSpecializationDecl>(D)
-        ->getTemplateParameters();
-  case Decl::Kind::TypeAliasTemplate:
-    return cast<TypeAliasTemplateDecl>(D)->getTemplateParameters();
-  case Decl::Kind::BuiltinTemplate:
-    return cast<BuiltinTemplateDecl>(D)->getTemplateParameters();
+    return {cast<ClassTemplatePartialSpecializationDecl>(D)
+                ->getTemplateParameters()
+                ->getParam(Index),
+            {}};
+  case Decl::Kind::VarTemplatePartialSpecialization:
+    return {cast<VarTemplatePartialSpecializationDecl>(D)
+                ->getTemplateParameters()
+                ->getParam(Index),
+            {}};
+  // This is used as the AssociatedDecl for placeholder type deduction.
+  case Decl::TemplateTypeParm:
+    return {cast<NamedDecl>(D), {}};
+  // FIXME: Always use the template decl as the AssociatedDecl.
+  case Decl::Kind::CXXRecord:
+    return getReplacedTemplateParameter(
+        cast<CXXRecordDecl>(D)->getDescribedClassTemplate(), Index);
   case Decl::Kind::CXXDeductionGuide:
   case Decl::Kind::CXXConversion:
   case Decl::Kind::CXXConstructor:
   case Decl::Kind::CXXDestructor:
   case Decl::Kind::CXXMethod:
   case Decl::Kind::Function:
-    return cast<FunctionDecl>(D)
-        ->getTemplateSpecializationInfo()
-        ->getTemplate()
-        ->getTemplateParameters();
-  case Decl::Kind::FunctionTemplate:
-    return cast<FunctionTemplateDecl>(D)->getTemplateParameters();
-  case Decl::Kind::VarTemplate:
-    return cast<VarTemplateDecl>(D)->getTemplateParameters();
-  case Decl::Kind::VarTemplateSpecialization: {
-    const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
-    auto P = VTSD->getSpecializedTemplateOrPartial();
-    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl *>(P))
-      return VTPSD->getTemplateParameters();
-    return cast<VarTemplateDecl *>(P)->getTemplateParameters();
-  }
-  case Decl::Kind::VarTemplatePartialSpecialization:
-    return cast<VarTemplatePartialSpecializationDecl>(D)
-        ->getTemplateParameters();
-  case Decl::Kind::TemplateTemplateParm:
-    return cast<TemplateTemplateParmDecl>(D)->getTemplateParameters();
-  case Decl::Kind::Concept:
-    return cast<ConceptDecl>(D)->getTemplateParameters();
+    return getReplacedTemplateParameter(
+        cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
+        Index);
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }

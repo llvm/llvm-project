@@ -152,9 +152,9 @@ namespace llvm {
     /// \param SDK           The SDK name. On Darwin, this is the last component
     ///                      of the sysroot.
     LLVM_ABI DICompileUnit *
-    createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
-                      bool isOptimized, StringRef Flags, unsigned RV,
-                      StringRef SplitName = StringRef(),
+    createCompileUnit(DISourceLanguageName Lang, DIFile *File,
+                      StringRef Producer, bool isOptimized, StringRef Flags,
+                      unsigned RV, StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true,
@@ -737,7 +737,8 @@ namespace llvm {
     /// \param Subscripts   Subscripts.
     LLVM_ABI DICompositeType *createVectorType(uint64_t Size,
                                                uint32_t AlignInBits, DIType *Ty,
-                                               DINodeArray Subscripts);
+                                               DINodeArray Subscripts,
+                                               Metadata *BitStride = nullptr);
 
     /// Create debugging information entry for an
     /// enumeration.

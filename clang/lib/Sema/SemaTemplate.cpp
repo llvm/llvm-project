@@ -318,7 +318,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
     }
   }
 
-  if (isPackProducingBuiltinTemplateName(Template) &&
+  if (isPackProducingBuiltinTemplateName(Template) && S &&
       S->getTemplateParamParent() == nullptr)
     Diag(Name.getBeginLoc(), diag::err_builtin_pack_outside_template) << TName;
   // Recover by returning the template, even though we would never be able to

@@ -2063,11 +2063,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Ignore Record[0], which indicates whether this compile unit is
     // distinct.  It's always distinct.
     IsDistinct = true;
+
     auto *CU = DICompileUnit::getDistinct(
-        Context, Record[1], getMDOrNull(Record[2]), getMDString(Record[3]),
-        Record[4], getMDString(Record[5]), Record[6], getMDString(Record[7]),
-        Record[8], getMDOrNull(Record[9]), getMDOrNull(Record[10]),
-        getMDOrNull(Record[12]), getMDOrNull(Record[13]),
+        Context, DISourceLanguageName(Record[1]), getMDOrNull(Record[2]),
+        getMDString(Record[3]), Record[4], getMDString(Record[5]), Record[6],
+        getMDString(Record[7]), Record[8], getMDOrNull(Record[9]),
+        getMDOrNull(Record[10]), getMDOrNull(Record[12]),
+        getMDOrNull(Record[13]),
         Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
         Record.size() <= 14 ? 0 : Record[14],
         Record.size() <= 16 ? true : Record[16],
