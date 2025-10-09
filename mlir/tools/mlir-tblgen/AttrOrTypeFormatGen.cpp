@@ -174,8 +174,7 @@ static const char *const defaultParameterPrinter =
 
 /// Qualified printer for attribute or type parameters: it does not elide
 /// dialect and mnemonic.
-static const char *const qualifiedParameterPrinter =
-  "$_printer.printQualifiedAttrOrType($_self)";
+static const char *const qualifiedParameterPrinter = "$_printer << $_self";
 
 /// Print an error when failing to parse an element.
 ///
