@@ -77,6 +77,13 @@ struct A {
   static constexpr B b{nullptr}; // This used to crash.
 };
 
+struct B1 { void *p; };
+template <class T>
+struct A1 {
+  __attribute__((section("non_trivial_ctor")))
+  static constexpr B1 b{nullptr}; // no diagnostic expected
+};
+
 template <class T>
 struct C {
   __attribute__((section("non_trivial_ctor")))
