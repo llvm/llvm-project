@@ -33,8 +33,6 @@
 
 #include <numeric>
 
-#define DEBUG_TYPE "xegpu-to-xevm"
-
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTXEGPUTOXEVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -519,9 +517,6 @@ public:
   LogicalResult
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // DEBUG: Print operation and types
-    LLVM_DEBUG(llvm::dbgs()
-               << "[XeGPUToXeVM] Lowering CreateMemDescOp: " << op << "\n");
     TypedValue<MemRefType> src = op.getSource();
     auto resTy = cast<xegpu::MemDescType>(op.getResult().getType());
 
@@ -529,19 +524,10 @@ public:
     // memory space
     auto newResTy = getTypeConverter()->convertType<MemRefType>(resTy);
 
-    LLVM_DEBUG(llvm::dbgs()
-               << "[XeGPUToXeVM] Source MemRefType: " << src.getType() << "\n");
-    LLVM_DEBUG(llvm::dbgs()
-               << "[XeGPUToXeVM] Result MemDescType: " << resTy << "\n");
-    LLVM_DEBUG(llvm::dbgs()
-               << "[XeGPUToXeVM] Converted MemRefType: " << newResTy << "\n");
     Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
     auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy,
                                          Value(src), zero, ValueRange());
     rewriter.replaceOp(op, viewOp);
-    LLVM_DEBUG(
-        llvm::dbgs()
-        << "[XeGPUToXeVM] Replaced CreateMemDescOp with memref::ViewOp\n");
     return success();
   }
 };
@@ -635,16 +621,33 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       // if the attribute 'subgroup_block_io' is set to true, it lowers to
       // xevm.blockload
       auto subgroupBlockIoAttr = op.getSubgroupBlockIoAttr();
-      bool subgroup_block_io =
-          subgroupBlockIoAttr && cast<BoolAttr>(subgroupBlockIoAttr).getValue();
+      bool subgroup_block_io = static_cast<bool>(subgroupBlockIoAttr);
+
+      // BlockLoadOp only supports integer types, so we need to bitcast
+      // Get integer type with matching bit width
+      Type elemTy = valOrResVecTy.getElementType();
+      int64_t bitWidth = elemTy.getIntOrFloatBitWidth();
+      Type intElemTy = rewriter.getIntegerType(bitWidth);
+      VectorType intVecTy =
+          VectorType::get(valOrResVecTy.getShape(), intElemTy);
+
       if (subgroup_block_io) {
         if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-          Value loadOp = xevm::BlockLoadOp::create(rewriter, loc, valOrResVecTy,
-                                                   basePtrLLVM);
+          Value loadOp =
+              xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
+          if (intVecTy != valOrResVecTy) {
+            loadOp =
+                vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);
+          }
           rewriter.replaceOp(op, loadOp);
         } else {
-          xevm::BlockStoreOp::create(rewriter, loc, basePtrLLVM,
-                                     adaptor.getData(), nullptr);
+          Value dataToStore = adaptor.getData();
+          if (valOrResVecTy != intVecTy) {
+            dataToStore =
+                vector::BitCastOp::create(rewriter, loc, intVecTy, dataToStore);
+          }
+          xevm::BlockStoreOp::create(rewriter, loc, basePtrLLVM, dataToStore,
+                                     nullptr);
           rewriter.eraseOp(op);
         }
       } else {

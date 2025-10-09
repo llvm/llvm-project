@@ -858,7 +858,7 @@ func.func @load_mem_desc_mismatch_element_type(%arg0: !xegpu.mem_desc<16x64xf16>
 
 // -----
 func.func @load_mem_desc_invalid_result_size(%arg0: !xegpu.mem_desc<16x64xf16>) {
-  // expected-error@+1 {{result shape must not exceed mem_desc shape}}
+  // expected-error@+1 {{data shape must not exceed mem_desc shape}}
   %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.mem_desc<16x64xf16> -> vector<32x16xf16>
   return
 }

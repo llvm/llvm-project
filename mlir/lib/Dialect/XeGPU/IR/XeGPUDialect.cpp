@@ -37,8 +37,6 @@ void XeGPUDialect::initialize() {
       >();
 }
 
-#define DEBUG_TYPE "xegpu"
-
 /// Generates instructions to compute offsets for a subgroup identified by
 /// its multidimensional indices (sgId), using the specified subgroup layout
 /// (sgLayout), subgroup data dimensions (sizePerSg), and the overall data
@@ -788,30 +786,7 @@ SmallVector<int64_t> MemDescType::getStrides() {
     strides.push_back(cast<IntegerAttr>(attr).getInt());
   }
 
-  llvm::dbgs() << "DEBUG: matrixShape = [";
-  for (size_t i = 0; i < matrixShape.size(); ++i) {
-    llvm::dbgs() << matrixShape[i];
-    if (i < matrixShape.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
-
-  llvm::dbgs() << "DEBUG: strides = [";
-  for (size_t i = 0; i < strides.size(); ++i) {
-    llvm::dbgs() << strides[i];
-    if (i < strides.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
-
   SmallVector<int64_t> innerBlkShape = getBlockSize();
-  llvm::dbgs() << "DEBUG: innerBlkShape = [";
-  for (size_t i = 0; i < innerBlkShape.size(); ++i) {
-    llvm::dbgs() << innerBlkShape[i];
-    if (i < innerBlkShape.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
 
   // get perm from FCD to LCD
   // perm[i] = the dim with i-th smallest stride
@@ -819,25 +794,13 @@ SmallVector<int64_t> MemDescType::getStrides() {
       llvm::to_vector<4>(llvm::seq<int>(0, strides.size()));
   llvm::sort(perm, [&](int a, int b) { return strides[a] < strides[b]; });
 
-  llvm::dbgs() << "DEBUG: perm = [";
-  for (size_t i = 0; i < perm.size(); ++i) {
-    llvm::dbgs() << perm[i];
-    if (i < perm.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
-
   assert(strides[perm[0]] == 1 && "inner most dim must have stride 1");
 
-  SmallVector<int64_t> innerBlkStride = computeStrides(innerBlkShape);
-
-  llvm::dbgs() << "DEBUG: innerBlkStride = [";
-  for (size_t i = 0; i < innerBlkStride.size(); ++i) {
-    llvm::dbgs() << innerBlkStride[i];
-    if (i < innerBlkStride.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
+  SmallVector<int64_t> innerBlkStride(innerBlkShape.size());
+  innerBlkStride[perm[0]] = 1;
+  for (size_t i = 1; i < perm.size(); ++i)
+    innerBlkStride[perm[i]] =
+        innerBlkStride[perm[i - 1]] * innerBlkShape[perm[i - 1]];
 
   // compute the original matrix shape using the stride info
   // and compute the number of blocks in each dimension
@@ -850,27 +813,9 @@ SmallVector<int64_t> MemDescType::getStrides() {
     BlkShapeOrig[perm[i]] = matrixShapeOrig[perm[i]] / innerBlkShape[perm[i]];
   }
 
-  llvm::dbgs() << "DEBUG: matrixShapeOrig = [";
-  for (size_t i = 0; i < matrixShapeOrig.size(); ++i) {
-    llvm::dbgs() << matrixShapeOrig[i];
-    if (i < matrixShapeOrig.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
-
-  llvm::dbgs() << "DEBUG: BlkShapeOrig = [";
-  for (size_t i = 0; i < BlkShapeOrig.size(); ++i) {
-    llvm::dbgs() << BlkShapeOrig[i];
-    if (i < BlkShapeOrig.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
-
   int64_t innerBlkSize = 1;
   for (auto s : innerBlkShape)
     innerBlkSize *= s;
-
-  llvm::dbgs() << "DEBUG: innerBlkSize = " << innerBlkSize << "\n";
 
   SmallVector<int64_t> outerBlkStride(matrixShape.size());
   outerBlkStride[perm[0]] = innerBlkSize;
@@ -879,26 +824,10 @@ SmallVector<int64_t> MemDescType::getStrides() {
         outerBlkStride[perm[i]] * BlkShapeOrig[perm[i]];
   }
 
-  llvm::dbgs() << "DEBUG: outerBlkStride = [";
-  for (size_t i = 0; i < outerBlkStride.size(); ++i) {
-    llvm::dbgs() << outerBlkStride[i];
-    if (i < outerBlkStride.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
-
   // combine the inner and outer strides
   SmallVector<int64_t> blockedStrides;
   blockedStrides.append(outerBlkStride.begin(), outerBlkStride.end());
   blockedStrides.append(innerBlkStride.begin(), innerBlkStride.end());
-
-  llvm::dbgs() << "DEBUG: blockedStrides = [";
-  for (size_t i = 0; i < blockedStrides.size(); ++i) {
-    llvm::dbgs() << blockedStrides[i];
-    if (i < blockedStrides.size() - 1)
-      llvm::dbgs() << ", ";
-  }
-  llvm::dbgs() << "]\n";
 
   return blockedStrides;
 }
@@ -910,12 +839,6 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
   SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
   SmallVector<int64_t> blockShape = getBlockSize();
   SmallVector<int64_t> strides = getStrides();
-
-  LLVM_DEBUG(llvm::dbgs() << "getLinearOffsets: blockShape=[";
-             llvm::interleaveComma(blockShape, llvm::dbgs());
-             llvm::dbgs() << "], strides=[";
-             llvm::interleaveComma(strides, llvm::dbgs());
-             llvm::dbgs() << "]\n");
 
   // blockshape equal to matrixshape means no blocking
   if (llvm::equal(blockShape, matrixShape)) {
@@ -937,8 +860,6 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
     blockedOffsets.append(rems.begin(), rems.end());
 
     offsets = blockedOffsets;
-    LLVM_DEBUG(llvm::dbgs() << "getLinearOffsets: blocked offsets size="
-                            << offsets.size() << "\n");
   }
 
   // Start with initial value as matrix descriptor's base offset.
@@ -948,9 +869,6 @@ Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
     Value mulVal = getValueOrCreateConstantIndexOp(builder, loc, mulResult);
     linearOffset = arith::AddIOp::create(builder, loc, mulVal, linearOffset);
   }
-
-  LLVM_DEBUG(llvm::dbgs() << "getLinearOffsets: final linearOffset="
-                          << linearOffset << "\n");
 
   return linearOffset;
 }

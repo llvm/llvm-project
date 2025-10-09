@@ -55,7 +55,7 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   //CHECK-LABEL: load_store_matrix_5
   gpu.func @load_store_matrix_5(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>
-    //CHECK: llvm.load {{.*}} : !llvm.ptr<3> -> vector<8xf16>
+    //CHECK: xevm.blockload {{.*}} : (!llvm.ptr<3>) -> vector<8xi16> 
     %c16 = arith.constant 16 : index
     %c48 = arith.constant 48 : index
     %1 = xegpu.load_matrix %0[%c16, %c48] {subgroup_block_io}: !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index -> vector<8xf16>
