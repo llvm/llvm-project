@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify=ext -std=c23 -pedantic %s
+// RUN: %clang_cc1 -verify=ext -pedantic -x c++ %s
 // RUN: %clang_cc1 -verify=pre -std=c2y -pedantic -Wpre-c2y-compat %s
 
 /* WG14 N3457: Clang 22
