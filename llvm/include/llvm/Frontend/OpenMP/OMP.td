@@ -177,6 +177,8 @@ def OMPC_Doacross : Clause<[Spelling<"doacross">]> {
 }
 def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let clangClass = "OMPDynamicAllocatorsClause";
+  let flangClass = "OmpDynamicAllocatorsClause";
+  let isValueOptional = true;
 }
 def OMPC_DynGroupprivate : Clause<[Spelling<"dyn_groupprivate">]> {
   let flangClass = "OmpDynGroupprivateClause";
@@ -467,6 +469,8 @@ def OMPC_Replayable : Clause<[Spelling<"replayable">]> {
 }
 def OMPC_ReverseOffload : Clause<[Spelling<"reverse_offload">]> {
   let clangClass = "OMPReverseOffloadClause";
+  let flangClass = "OmpReverseOffloadClause";
+  let isValueOptional = true;
 }
 def OMPC_SafeLen : Clause<[Spelling<"safelen">]> {
   let clangClass = "OMPSafelenClause";
@@ -541,12 +545,18 @@ def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
 }
 def OMPC_UnifiedAddress : Clause<[Spelling<"unified_address">]> {
   let clangClass = "OMPUnifiedAddressClause";
+  let flangClass = "OmpUnifiedAddressClause";
+  let isValueOptional = true;
 }
 def OMPC_UnifiedSharedMemory : Clause<[Spelling<"unified_shared_memory">]> {
   let clangClass = "OMPUnifiedSharedMemoryClause";
+  let flangClass = "OmpUnifiedSharedMemoryClause";
+  let isValueOptional = true;
 }
 def OMPC_SelfMaps : Clause<[Spelling<"self_maps">]> {
   let clangClass = "OMPSelfMapsClause";
+  let flangClass = "OmpSelfMapsClause";
+  let isValueOptional = true;
 }
 def OMPC_Uniform : Clause<[Spelling<"uniform">]> {
   let flangClass = "Name";

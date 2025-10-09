@@ -1517,19 +1517,42 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   const auto &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
+  unsigned version{context_.langOptions().OpenMPVersion};
 
-  if (visitedAtomicSource_.empty()) {
-    return;
-  }
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
     if (id == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-      parser::MessageFormattedText txt(
-          "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-      parser::Message message(clause.source, txt);
-      message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
-      context_.Say(std::move(message));
+      if (!visitedAtomicSource_.empty()) {
+        parser::MessageFormattedText txt(
+            "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+        parser::Message message(clause.source, txt);
+        message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
+        context_.Say(std::move(message));
+      }
+    } else {
+      bool hasArgument{common::visit(
+          [&](auto &&s) {
+            using TypeS = llvm::remove_cvref_t<decltype(s)>;
+            if constexpr ( //
+                std::is_same_v<TypeS, parser::OmpClause::DynamicAllocators> ||
+                std::is_same_v<TypeS, parser::OmpClause::ReverseOffload> ||
+                std::is_same_v<TypeS, parser::OmpClause::SelfMaps> ||
+                std::is_same_v<TypeS, parser::OmpClause::UnifiedAddress> ||
+                std::is_same_v<TypeS, parser::OmpClause::UnifiedSharedMemory>) {
+              return s.v.has_value();
+            } else {
+              return false;
+            }
+          },
+          clause.u)};
+      if (version < 60 && hasArgument) {
+        context_.Say(clause.source,
+            "An argument to %s is an %s feature, %s"_warn_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPClauseName(clause.Id())),
+            ThisVersion(60), TryVersion(60));
+      }
     }
   }
 }
