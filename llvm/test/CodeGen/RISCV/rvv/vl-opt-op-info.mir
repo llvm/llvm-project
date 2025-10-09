@@ -2192,3 +2192,234 @@ body: |
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
     %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, %x, 1, 5 /* e32 */, 0
     $v8 = COPY %y
+...
+---
+name: vsseg3e32_v
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vsseg3e32_v
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSSEG3E32_V_M1 killed [[INSERT_SUBREG2]], $noreg, 1, 5 /* e32 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSSEG3E32_V_M1 killed %8, $noreg, 1, 5 /* e32 */
+...
+---
+name: vsseg3e64_v_incompatible_eew
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vsseg3e64_v_incompatible_eew
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSSEG3E64_V_M1 killed [[INSERT_SUBREG2]], $noreg, 1, 6 /* e64 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSSEG3E64_V_M1 killed %8, $noreg, 1, 6 /* e64 */
+...
+---
+name: vsseg3e32_v_incompatible_emul
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vsseg3e32_v_incompatible_emul
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSSEG3E32_V_M1 killed [[INSERT_SUBREG2]], $noreg, 1, 6 /* e64 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSSEG3E32_V_M1 killed %8, $noreg, 1, 6 /* e64 */
+...
+---
+name: vsseg3e32_v_incompatible_insert_subreg
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: vsseg3e32_v_incompatible_insert_subreg
+    ; CHECK: [[PseudoVADD_VV_M2_:%[0-9]+]]:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[PseudoVADD_VV_M2_]], %subreg.sub_vrm2_0
+    ; CHECK-NEXT: PseudoVSSEG3E32_V_M1 killed [[INSERT_SUBREG]], $noreg, 1, 5 /* e32 */
+    %2:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %2, %subreg.sub_vrm2_0
+    PseudoVSSEG3E32_V_M1 killed %5, $noreg, 1, 5 /* e32 */
+...
+---
+name: vssseg3e32_v
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vssseg3e32_v
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSSSEG3E32_V_M1 killed [[INSERT_SUBREG2]], $noreg, $noreg, 1, 5 /* e32 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSSSEG3E32_V_M1 killed %8, $noreg, $noreg, 1, 5 /* e32 */
+...
+---
+name: vsuxseg3ei64_v
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vsuxseg3ei64_v
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSUXSEG3EI64_V_M2_M1 killed [[INSERT_SUBREG2]], $noreg, $noreg, 1, 5 /* e32 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSUXSEG3EI64_V_M2_M1 killed %8, $noreg, $noreg, 1, 5 /* e32 */
+...
+---
+name: vsuxseg3ei64_v_incompatible_data_eew
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vsuxseg3ei64_v_incompatible_data_eew
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 6 /* e64 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 6 /* e64 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSUXSEG3EI64_V_M2_M1 killed [[INSERT_SUBREG2]], $noreg, $noreg, 1, 5 /* e32 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 6 /* e64 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 6 /* e64 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSUXSEG3EI64_V_M2_M1 killed %8, $noreg, $noreg, 1, 5 /* e32 */
+...
+---
+name: vsuxseg3ei32_v_index
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: vsuxseg3ei32_v_index
+    ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSUXSEG3EI32_V_M1_M2 $noreg, $noreg, [[PseudoVADD_VV_M1_]], 1, 6 /* e64 */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    PseudoVSUXSEG3EI32_V_M1_M2 $noreg, $noreg, %2, 1, 6 /* e64 */
+...
+---
+name: vsuxseg3ei32_v_incompatible_index_eew
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: vsuxseg3ei32_v_incompatible_index_eew
+    ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 6 /* e64 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSUXSEG3EI32_V_M1_M2 $noreg, $noreg, [[PseudoVADD_VV_M1_]], 1, 6 /* e64 */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 6 /* e64 */, 3 /* ta, ma */
+    PseudoVSUXSEG3EI32_V_M1_M2 $noreg, $noreg, %2, 1, 6 /* e64 */
+...
+---
+name: vsoxseg3ei64_v
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: vsoxseg3ei64_v
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrn3m1 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_vrm1_0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG]], [[PseudoVADD_VV_M1_]], %subreg.sub_vrm1_1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:vrn3m1 = INSERT_SUBREG [[INSERT_SUBREG1]], [[PseudoVADD_VV_M1_1]], %subreg.sub_vrm1_2
+    ; CHECK-NEXT: PseudoVSOXSEG3EI64_V_M2_M1 killed [[INSERT_SUBREG2]], $noreg, $noreg, 1, 5 /* e32 */
+    %0:vr = COPY $v8
+    %1:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    %6:vrn3m1 = IMPLICIT_DEF
+    %5:vrn3m1 = INSERT_SUBREG %6, %0, %subreg.sub_vrm1_0
+    %7:vrn3m1 = INSERT_SUBREG %5, %1, %subreg.sub_vrm1_1
+    %8:vrn3m1 = INSERT_SUBREG %7, %2, %subreg.sub_vrm1_2
+    PseudoVSOXSEG3EI64_V_M2_M1 killed %8, $noreg, $noreg, 1, 5 /* e32 */
+...
+---
+name: vsoxseg3ei32_v_index
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: vsoxseg3ei32_v_index
+    ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: PseudoVSOXSEG3EI32_V_M1_M2 $noreg, $noreg, [[PseudoVADD_VV_M1_]], 1, 6 /* e64 */
+    %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
+    PseudoVSOXSEG3EI32_V_M1_M2 $noreg, $noreg, %2, 1, 6 /* e64 */
+...

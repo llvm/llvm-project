@@ -11,7 +11,7 @@
 
 #include <cstddef>
 
-class OpCounter {
+template <size_t Idx = 0> class OpCounter {
 public:
   OpCounter() { ++DefaultConstructions; }
   OpCounter(const OpCounter &Other) { ++CopyConstructions; }
@@ -56,5 +56,12 @@ private:
   static size_t MoveAssignments;
   static size_t Destructions;
 };
+
+template <size_t Idx> size_t OpCounter<Idx>::DefaultConstructions = 0;
+template <size_t Idx> size_t OpCounter<Idx>::CopyConstructions = 0;
+template <size_t Idx> size_t OpCounter<Idx>::CopyAssignments = 0;
+template <size_t Idx> size_t OpCounter<Idx>::MoveConstructions = 0;
+template <size_t Idx> size_t OpCounter<Idx>::MoveAssignments = 0;
+template <size_t Idx> size_t OpCounter<Idx>::Destructions = 0;
 
 #endif // ORC_RT_UNITTEST_COMMONTESTUTILS_H

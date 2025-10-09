@@ -43,8 +43,8 @@ address, the first store can be erased. This transformation is not allowed for a
 pair of volatile stores. On the other hand, a non-volatile non-atomic load can
 be moved across a volatile load freely, but not an Acquire load.
 
-This document is intended to provide a guide to anyone either writing a frontend
-for LLVM or working on optimization passes for LLVM with a guide for how to deal
+This document is intended to guide anyone writing a frontend
+for LLVM or working on optimization passes for LLVM on how to deal
 with instructions with special semantics in the presence of concurrency. This
 is not intended to be a precise guide to the semantics; the details can get
 extremely complicated and unreadable, and are not usually necessary.
@@ -94,7 +94,7 @@ The following is equivalent in non-concurrent situations:
 
 However, LLVM is not allowed to transform the former to the latter: it could
 indirectly introduce undefined behavior if another thread can access ``x`` at
-the same time. That thread would read `undef` instead of the value it was
+the same time. That thread would read ``undef`` instead of the value it was
 expecting, which can lead to undefined behavior down the line. (This example is
 particularly of interest because before the concurrency model was implemented,
 LLVM would perform this transformation.)
@@ -149,7 +149,7 @@ NotAtomic
 NotAtomic is the obvious, a load or store which is not atomic. (This isn't
 really a level of atomicity, but is listed here for comparison.) This is
 essentially a regular load or store. If there is a race on a given memory
-location, loads from that location return undef.
+location, loads from that location return ``undef``.
 
 Relevant standard
   This is intended to match shared variables in C/C++, and to be used in any
@@ -429,7 +429,7 @@ support *ALL* operations of that size in a lock-free manner.
 
 When the target implements atomic ``cmpxchg`` or LL/SC instructions (as most do)
 this is trivial: all the other operations can be implemented on top of those
-primitives. However, on many older CPUs (e.g. ARMv5, SparcV8, Intel 80386) there
+primitives. However, on many older CPUs (e.g. ARMv5, Sparc V8, Intel 80386) there
 are atomic load and store instructions, but no ``cmpxchg`` or LL/SC. As it is
 invalid to implement ``atomic load`` using the native instruction, but
 ``cmpxchg`` using a library call to a function that uses a mutex, ``atomic
@@ -475,7 +475,7 @@ atomic constructs. Here are some lowerings it can do:
   ``shouldExpandAtomicRMWInIR``, ``emitMaskedAtomicRMWIntrinsic``,
   ``shouldExpandAtomicCmpXchgInIR``, and ``emitMaskedAtomicCmpXchgIntrinsic``.
 
-For an example of these look at the ARM (first five lowerings) or RISC-V (last
+For an example of these, look at the ARM (first five lowerings) or RISC-V (last
 lowering) backend.
 
 AtomicExpandPass supports two strategies for lowering atomicrmw/cmpxchg to
@@ -542,7 +542,7 @@ to take note of:
 
 - They support all sizes and alignments -- including those which cannot be
   implemented natively on any existing hardware. Therefore, they will certainly
-  use mutexes in for some sizes/alignments.
+  use mutexes for some sizes/alignments.
 
 - As a consequence, they cannot be shipped in a statically linked
   compiler-support library, as they have state which must be shared amongst all
@@ -568,7 +568,7 @@ Libcalls: __sync_*
 Some targets or OS/target combinations can support lock-free atomics, but for
 various reasons, it is not practical to emit the instructions inline.
 
-There's two typical examples of this.
+There are two typical examples of this.
 
 Some CPUs support multiple instruction sets which can be switched back and forth
 on function-call boundaries. For example, MIPS supports the MIPS16 ISA, which
@@ -589,7 +589,7 @@ case. The only common architecture without that property is SPARC -- SPARCV8 SMP
 systems were common, yet it doesn't support any sort of compare-and-swap
 operation.
 
-Some targets (like RISCV) support a ``+forced-atomics`` target feature, which
+Some targets (like RISC-V) support a ``+forced-atomics`` target feature, which
 enables the use of lock-free atomics even if LLVM is not aware of any specific
 OS support for them. In this case, the user is responsible for ensuring that
 necessary ``__sync_*`` implementations are available. Code using
@@ -653,6 +653,6 @@ implemented in both ``compiler-rt`` and ``libgcc`` libraries
   iN __aarch64_ldeorN_ORDER(iN val, iN *ptr)
   iN __aarch64_ldsetN_ORDER(iN val, iN *ptr)
 
-Please note, if LSE instruction set is specified for AArch64 target then
+Please note, if LSE instruction set is specified for AArch64 target, then
 out-of-line atomics calls are not generated and single-instruction atomic
 operations are used in place.

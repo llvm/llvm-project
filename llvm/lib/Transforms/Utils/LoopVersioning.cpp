@@ -81,6 +81,8 @@ void LoopVersioning::versionLoop(
   } else
     RuntimeCheck = MemRuntimeCheck ? MemRuntimeCheck : SCEVRuntimeCheck;
 
+  Exp.eraseDeadInstructions(SCEVRuntimeCheck);
+
   assert(RuntimeCheck && "called even though we don't need "
                          "any runtime checks");
 

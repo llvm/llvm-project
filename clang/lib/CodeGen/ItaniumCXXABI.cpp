@@ -91,6 +91,8 @@ public:
 
       case Dtor_Comdat:
         llvm_unreachable("emitting dtor comdat as function?");
+      case Dtor_Unified:
+        llvm_unreachable("emitting unified dtor as function?");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -108,6 +110,9 @@ public:
 
       case Ctor_Comdat:
         llvm_unreachable("emitting ctor comdat as function?");
+
+      case Ctor_Unified:
+        llvm_unreachable("emitting unified ctor as function?");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -1741,7 +1746,14 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
     llvm::BasicBlock *CastFail) {
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
+  auto AuthenticateVTable = [&](Address ThisAddr, const CXXRecordDecl *Decl) {
+    if (!CGF.getLangOpts().PointerAuthCalls)
+      return;
+    (void)CGF.GetVTablePtr(ThisAddr, CGF.UnqualPtrTy, Decl,
+                           CodeGenFunction::VTableAuthMode::MustTrap);
+  };
 
+  bool PerformPostCastAuthentication = false;
   llvm::Value *VTable = nullptr;
   if (ExactCastInfo.RequiresCastToPrimaryBase) {
     // Base appears in at least two different places. Find the most-derived
@@ -1752,8 +1764,16 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
         emitDynamicCastToVoid(CGF, ThisAddr, SrcRecordTy);
     ThisAddr = Address(PrimaryBase, CGF.VoidPtrTy, ThisAddr.getAlignment());
     SrcDecl = DestDecl;
+    // This unauthenticated load is unavoidable, so we're relying on the
+    // authenticated load in the dynamic cast to void, and we'll manually
+    // authenticate the resulting v-table at the end of the cast check.
+    PerformPostCastAuthentication = CGF.getLangOpts().PointerAuthCalls;
+    CGPointerAuthInfo StrippingAuthInfo(0, PointerAuthenticationMode::Strip,
+                                        false, false, nullptr);
     Address VTablePtrPtr = ThisAddr.withElementType(CGF.VoidPtrPtrTy);
     VTable = CGF.Builder.CreateLoad(VTablePtrPtr, "vtable");
+    if (PerformPostCastAuthentication)
+      VTable = CGF.EmitPointerAuthAuth(StrippingAuthInfo, VTable);
   } else
     VTable = CGF.GetVTablePtr(ThisAddr, CGF.UnqualPtrTy, SrcDecl);
 
@@ -1770,8 +1790,32 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
         llvm::ConstantInt::get(CGF.PtrDiffTy, -Offset);
     AdjustedThisPtr = CGF.Builder.CreateInBoundsGEP(CGF.CharTy, AdjustedThisPtr,
                                                     OffsetConstant);
+    PerformPostCastAuthentication = CGF.getLangOpts().PointerAuthCalls;
   }
 
+  if (PerformPostCastAuthentication) {
+    // If we've changed the object pointer we authenticate the vtable pointer
+    // of the resulting object.
+    llvm::BasicBlock *NonNullBlock = CGF.Builder.GetInsertBlock();
+    llvm::BasicBlock *PostCastAuthSuccess =
+        CGF.createBasicBlock("dynamic_cast.postauth.success");
+    llvm::BasicBlock *PostCastAuthComplete =
+        CGF.createBasicBlock("dynamic_cast.postauth.complete");
+    CGF.Builder.CreateCondBr(Success, PostCastAuthSuccess,
+                             PostCastAuthComplete);
+    CGF.EmitBlock(PostCastAuthSuccess);
+    Address AdjustedThisAddr =
+        Address(AdjustedThisPtr, CGF.IntPtrTy, CGF.getPointerAlign());
+    AuthenticateVTable(AdjustedThisAddr, DestDecl);
+    CGF.EmitBranch(PostCastAuthComplete);
+    CGF.EmitBlock(PostCastAuthComplete);
+    llvm::PHINode *PHI = CGF.Builder.CreatePHI(AdjustedThisPtr->getType(), 2);
+    PHI->addIncoming(AdjustedThisPtr, PostCastAuthSuccess);
+    llvm::Value *NullValue =
+        llvm::Constant::getNullValue(AdjustedThisPtr->getType());
+    PHI->addIncoming(NullValue, NonNullBlock);
+    AdjustedThisPtr = PHI;
+  }
   CGF.Builder.CreateCondBr(Success, CastSuccess, CastFail);
   return AdjustedThisPtr;
 }
