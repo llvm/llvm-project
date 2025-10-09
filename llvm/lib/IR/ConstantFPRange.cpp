@@ -432,10 +432,12 @@ ConstantFPRange ConstantFPRange::cast(const fltSemantics &DstSem) const {
   APFloat NewUpper = Upper;
   // For conservative, return full range if conversion is invalid.
   if (NewLower.convert(DstSem, APFloat::rmNearestTiesToEven, &LosesInfo) ==
-      APFloat::opInvalidOp)
+          APFloat::opInvalidOp ||
+      NewLower.isNaN())
     return getFull(DstSem);
   if (NewUpper.convert(DstSem, APFloat::rmNearestTiesToEven, &LosesInfo) ==
-      APFloat::opInvalidOp)
+          APFloat::opInvalidOp ||
+      NewUpper.isNaN())
     return getFull(DstSem);
   return ConstantFPRange(std::move(NewLower), std::move(NewUpper),
                          /*MayBeQNaNVal=*/MayBeQNaN || MayBeSNaN,

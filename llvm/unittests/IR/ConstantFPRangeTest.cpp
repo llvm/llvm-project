@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFPRange.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "gtest/gtest.h"
@@ -822,6 +823,7 @@ TEST_F(ConstantFPRangeTest, cast) {
   const fltSemantics &F16Sem = APFloat::IEEEhalf();
   const fltSemantics &BF16Sem = APFloat::BFloat();
   const fltSemantics &F32Sem = APFloat::IEEEsingle();
+  const fltSemantics &F8NanOnlySem = APFloat::Float8E4M3FN();
   // normal -> normal (exact)
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0)).cast(F32Sem),
             ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(2.0f)));
@@ -872,6 +874,11 @@ TEST_F(ConstantFPRangeTest, cast) {
                 .cast(F32Sem),
             ConstantFPRange::getNaNOnly(F32Sem, /*MayBeQNaN=*/true,
                                         /*MayBeSNaN=*/false));
+  // inf -> nan only (return full set for now)
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat::getInf(Sem, /*Negative=*/false))
+                .cast(F8NanOnlySem),
+            ConstantFPRange::getFull(F8NanOnlySem));
 
   EnumerateValuesInConstantFPRange(
       ConstantFPRange::getFull(APFloat::Float8E4M3()),
