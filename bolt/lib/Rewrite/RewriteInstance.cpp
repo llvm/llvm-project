@@ -4005,10 +4005,12 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       BC->outs() << '\n';
       AllocationDone = true;
     } else {
-      BC->errs() << "BOLT-WARNING: original .text too small to fit the new code"
-                 << " using 0x" << Twine::utohexstr(opts::AlignText)
-                 << " alignment. " << CodeSize << " bytes needed, have "
-                 << BC->OldTextSectionSize << " bytes available.\n";
+      BC->errs() << "BOLT-WARNING: --use-old-text failed. The original .text "
+                    "too small to fit the new code using 0x"
+                 << Twine::utohexstr(opts::AlignText) << " alignment. "
+                 << CodeSize << " bytes needed, have " << BC->OldTextSectionSize
+                 << " bytes available. Rebuilding without --use-old-text may "
+                    "produce a smaller binary\n";
       opts::UseOldText = false;
     }
   }
