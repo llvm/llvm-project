@@ -138,7 +138,7 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
       continue;
     }
 
-    for (User *U : F.users()) {
+    for (User *U : make_early_inc_range(F.users())) {
       auto *II = cast<IntrinsicInst>(U);
       Function *ParentF = II->getFunction();
       const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
