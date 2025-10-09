@@ -52,8 +52,19 @@ public:
 
   void run();
 
-  /// Returns the set of loans an origin holds at a specific program point.
-  LoanSet getLoansAtPoint(OriginID OID, ProgramPoint PP) const;
+  /// Returns the loan propagation analysis object.
+  /// \note This is intended for testing only.
+  LoanPropagationAnalysis &getLoanPropagationAnalysis() const {
+    assert(LoanPropagation && "Analysis has not been run.");
+    return *LoanPropagation;
+  }
+
+  /// Returns the live origin analysis object.
+  /// \note This is intended for testing only.
+  LiveOriginAnalysis &getLiveOriginAnalysis() const {
+    assert(LiveOrigins && "Analysis has not been run.");
+    return *LiveOrigins;
+  }
 
   /// Returns the set of origins that are live at a specific program point,
   /// along with the confidence level of their liveness.

@@ -1,7 +1,7 @@
+// TODO: Add file header
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 void LoanPropagationLattice::dump(llvm::raw_ostream &OS) const {
   OS << "LoanPropagationLattice State:\n";
@@ -59,5 +59,4 @@ Lattice LoanPropagationAnalysis::transfer(Lattice In, const OriginFlowFact &F) {
   return LoanPropagationLattice(
       OriginLoanMapFactory.add(In.Origins, DestOID, MergedLoans));
 }
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal

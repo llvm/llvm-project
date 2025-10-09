@@ -123,7 +123,7 @@ public:
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getLoansAtPoint(OID, PP);
+    return Analysis.getLoanPropagationAnalysis().getLoans(OID, PP);
   }
 
   std::optional<std::vector<std::pair<OriginID, LivenessKind>>>

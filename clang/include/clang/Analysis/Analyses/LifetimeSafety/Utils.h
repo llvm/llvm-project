@@ -14,10 +14,7 @@
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 
-namespace clang::lifetimes {
-namespace internal {
-
-namespace utils {
+namespace clang::lifetimes::internal::utils {
 
 /// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
 /// Used for giving ID to loans and origins.
@@ -95,9 +92,7 @@ join(const llvm::ImmutableMap<K, V> &A, const llvm::ImmutableMap<K, V> &B,
   }
   return Res;
 }
-} // namespace utils
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal::utils
 
 namespace llvm {
 template <typename Tag>

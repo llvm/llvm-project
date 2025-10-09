@@ -23,8 +23,7 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/Debug.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 // Using LLVM's immutable collections is efficient for dataflow analysis
 // as it avoids deep copies during state transitions.
@@ -91,7 +90,6 @@ private:
     return LoanSetFactory.getEmptySet();
   }
 };
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H

@@ -18,8 +18,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 using LoanID = utils::ID<struct LoanTag>;
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
@@ -49,10 +48,7 @@ struct Loan {
   Loan(LoanID id, AccessPath path, const Expr *IssueExpr)
       : ID(id), Path(path), IssueExpr(IssueExpr) {}
 
-  void dump(llvm::raw_ostream &OS) const {
-    OS << ID << " (Path: ";
-    OS << Path.D->getNameAsString() << ")";
-  }
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Manages the creation, storage and retrieval of loans.
@@ -79,7 +75,6 @@ private:
   /// optimisation.
   llvm::SmallVector<Loan> AllLoans;
 };
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOANS_H

@@ -29,8 +29,7 @@
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Debug.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 using OriginSet = llvm::ImmutableSet<OriginID>;
 
@@ -132,7 +131,6 @@ private:
   FactManager &FactMgr;
   LivenessMap::Factory &Factory;
 };
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H

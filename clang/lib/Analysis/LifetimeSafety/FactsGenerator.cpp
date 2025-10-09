@@ -1,9 +1,11 @@
+// TODO: Add file header
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "llvm/Support/TimeProfiler.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
+
 static bool isGslPointerType(QualType QT) {
   if (const auto *RD = QT->getAsCXXRecordDecl()) {
     // We need to check the template definition for specializations.
@@ -336,5 +338,4 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
   UseFacts[DRE]->markAsWritten();
 }
 
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal

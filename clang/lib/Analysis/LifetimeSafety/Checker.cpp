@@ -25,8 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 /// Struct to store the complete context for a potential lifetime violation.
 struct PendingWarning {
@@ -141,5 +140,4 @@ void runLifetimeChecker(LoanPropagationAnalysis &LoanPropagation,
   Checker.run();
 }
 
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal

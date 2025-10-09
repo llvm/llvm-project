@@ -1,8 +1,8 @@
+// TODO: Add file header
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 using Lattice = LiveOriginAnalysis::Lattice;
 
@@ -105,5 +105,4 @@ void LiveOriginAnalysis::dump(llvm::raw_ostream &OS,
   }
 }
 
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal

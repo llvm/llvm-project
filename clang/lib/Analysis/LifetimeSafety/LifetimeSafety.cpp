@@ -77,12 +77,6 @@ void LifetimeSafetyAnalysis::run() {
   runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
 }
 
-LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,
-                                                ProgramPoint PP) const {
-  assert(LoanPropagation && "Analysis has not been run.");
-  return LoanPropagation->getLoans(OID, PP);
-}
-
 std::optional<OriginID>
 LifetimeSafetyAnalysis::getOriginIDForDecl(const ValueDecl *D) const {
   // This assumes the OriginManager's `get` can find an existing origin.

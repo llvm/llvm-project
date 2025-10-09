@@ -13,8 +13,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 
-namespace clang {
-namespace lifetimes {
+namespace clang::lifetimes {
 
 const FunctionDecl *
 getDeclWithMergedLifetimeBoundAttrs(const FunctionDecl *FD) {
@@ -71,5 +70,4 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
-} // namespace lifetimes
-} // namespace clang
+} // namespace clang::lifetimes

@@ -24,8 +24,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 enum class Direction { Forward, Backward };
 
@@ -185,6 +184,5 @@ public:
   Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }
 };
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_DATAFLOW_H

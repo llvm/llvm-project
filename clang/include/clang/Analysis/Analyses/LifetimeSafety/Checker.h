@@ -19,9 +19,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Reporter.h"
 
-namespace clang {
-namespace lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 /// Runs the lifetime checker, which detects use-after-free errors by
 /// examining loan expiration points and checking if any live origins hold
@@ -31,8 +29,6 @@ void runLifetimeChecker(LoanPropagationAnalysis &LoanPropagation,
                         AnalysisDeclContext &ADC,
                         LifetimeSafetyReporter *Reporter);
 
-} // namespace internal
-} // namespace lifetimes
-} // namespace clang
+} // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_CHECKER_H

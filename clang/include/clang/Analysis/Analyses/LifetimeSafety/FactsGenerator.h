@@ -22,8 +22,7 @@
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
   using Base = ConstStmtVisitor<FactsGenerator>;
@@ -102,7 +101,6 @@ private:
   llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
 };
 
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTSGENERATOR_H

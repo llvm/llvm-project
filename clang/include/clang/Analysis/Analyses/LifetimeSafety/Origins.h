@@ -18,8 +18,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 
-namespace clang::lifetimes {
-namespace internal {
+namespace clang::lifetimes::internal {
 
 using OriginID = utils::ID<struct OriginTag>;
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
@@ -123,17 +122,7 @@ public:
     return NewID;
   }
 
-  void dump(OriginID OID, llvm::raw_ostream &OS) const {
-    OS << OID << " (";
-    Origin O = getOrigin(OID);
-    if (const ValueDecl *VD = O.getDecl())
-      OS << "Decl: " << VD->getNameAsString();
-    else if (const Expr *E = O.getExpr())
-      OS << "Expr: " << E->getStmtClassName();
-    else
-      OS << "Unknown";
-    OS << ")";
-  }
+  void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
@@ -145,7 +134,6 @@ private:
   llvm::DenseMap<const clang::ValueDecl *, OriginID> DeclToOriginID;
   llvm::DenseMap<const clang::Expr *, OriginID> ExprToOriginID;
 };
-} // namespace internal
-} // namespace clang::lifetimes
+} // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINS_H
