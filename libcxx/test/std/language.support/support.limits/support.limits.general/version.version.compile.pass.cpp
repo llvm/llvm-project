@@ -2253,7 +2253,7 @@
 #    error "__cpp_lib_expected should not be defined before c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
 #    ifndef __cpp_lib_filesystem
 #      error "__cpp_lib_filesystem should be defined in c++17"
 #    endif
@@ -2262,7 +2262,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_filesystem
-#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM' is not met!"
 #    endif
 #  endif
 
@@ -3208,20 +3208,14 @@
 #    error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC
-#    ifndef __cpp_lib_atomic_wait
-#      error "__cpp_lib_atomic_wait should be defined in c++20"
-#    endif
-#    if __cpp_lib_atomic_wait != 201907L
-#      error "__cpp_lib_atomic_wait should have the value 201907L in c++20"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_wait
-#      error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC' is not met!"
-#    endif
+#  ifndef __cpp_lib_atomic_wait
+#    error "__cpp_lib_atomic_wait should be defined in c++20"
+#  endif
+#  if __cpp_lib_atomic_wait != 201907L
+#    error "__cpp_lib_atomic_wait should have the value 201907L in c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_barrier
 #      error "__cpp_lib_barrier should be defined in c++20"
 #    endif
@@ -3230,7 +3224,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_barrier
-#      error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -3558,7 +3552,7 @@
 #    error "__cpp_lib_expected should not be defined before c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
 #    ifndef __cpp_lib_filesystem
 #      error "__cpp_lib_filesystem should be defined in c++20"
 #    endif
@@ -3567,7 +3561,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_filesystem
-#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM' is not met!"
 #    endif
 #  endif
 
@@ -3867,7 +3861,7 @@
 #    error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++20"
 #    endif
@@ -3876,11 +3870,11 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_latch
 #      error "__cpp_lib_latch should be defined in c++20"
 #    endif
@@ -3889,7 +3883,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_latch
-#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -4223,7 +4217,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_semaphore
 #      error "__cpp_lib_semaphore should be defined in c++20"
 #    endif
@@ -4232,7 +4226,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_semaphore
-#      error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -4669,20 +4663,14 @@
 #    error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC
-#    ifndef __cpp_lib_atomic_wait
-#      error "__cpp_lib_atomic_wait should be defined in c++23"
-#    endif
-#    if __cpp_lib_atomic_wait != 201907L
-#      error "__cpp_lib_atomic_wait should have the value 201907L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_wait
-#      error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC' is not met!"
-#    endif
+#  ifndef __cpp_lib_atomic_wait
+#    error "__cpp_lib_atomic_wait should be defined in c++23"
+#  endif
+#  if __cpp_lib_atomic_wait != 201907L
+#    error "__cpp_lib_atomic_wait should have the value 201907L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_barrier
 #      error "__cpp_lib_barrier should be defined in c++23"
 #    endif
@@ -4691,7 +4679,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_barrier
-#      error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -5049,7 +5037,7 @@
 #    error "__cpp_lib_expected should have the value 202211L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
 #    ifndef __cpp_lib_filesystem
 #      error "__cpp_lib_filesystem should be defined in c++23"
 #    endif
@@ -5058,7 +5046,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_filesystem
-#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM' is not met!"
 #    endif
 #  endif
 
@@ -5397,7 +5385,7 @@
 #    error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++23"
 #    endif
@@ -5406,11 +5394,11 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_latch
 #      error "__cpp_lib_latch should be defined in c++23"
 #    endif
@@ -5419,7 +5407,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_latch
-#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -5852,7 +5840,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_semaphore
 #      error "__cpp_lib_semaphore should be defined in c++23"
 #    endif
@@ -5861,7 +5849,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_semaphore
-#      error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -6361,20 +6349,14 @@
 #    error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC
-#    ifndef __cpp_lib_atomic_wait
-#      error "__cpp_lib_atomic_wait should be defined in c++26"
-#    endif
-#    if __cpp_lib_atomic_wait != 201907L
-#      error "__cpp_lib_atomic_wait should have the value 201907L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_wait
-#      error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC' is not met!"
-#    endif
+#  ifndef __cpp_lib_atomic_wait
+#    error "__cpp_lib_atomic_wait should be defined in c++26"
+#  endif
+#  if __cpp_lib_atomic_wait != 201907L
+#    error "__cpp_lib_atomic_wait should have the value 201907L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_barrier
 #      error "__cpp_lib_barrier should be defined in c++26"
 #    endif
@@ -6383,7 +6365,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_barrier
-#      error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -6792,7 +6774,7 @@
 #    error "__cpp_lib_expected should have the value 202211L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
 #    ifndef __cpp_lib_filesystem
 #      error "__cpp_lib_filesystem should be defined in c++26"
 #    endif
@@ -6801,7 +6783,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_filesystem
-#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#      error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM' is not met!"
 #    endif
 #  endif
 
@@ -7287,7 +7269,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++26"
 #    endif
@@ -7296,11 +7278,11 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_latch
 #      error "__cpp_lib_latch should be defined in c++26"
 #    endif
@@ -7309,7 +7291,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_latch
-#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
@@ -7793,7 +7775,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_semaphore
 #      error "__cpp_lib_semaphore should be defined in c++26"
 #    endif
@@ -7802,7 +7784,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_semaphore
-#      error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
