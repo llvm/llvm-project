@@ -1022,7 +1022,6 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
 
   // Remove the original pseudo instruction
   MI.eraseFromParent();
-
   return true;
 }
 

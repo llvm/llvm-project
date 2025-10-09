@@ -37999,8 +37999,10 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
 /// This approach ensures that when i64 is type-legalized into two i32
 /// operations, both operations share the same condition byte rather than
 /// each independently reading (and destroying) EFLAGS.
-static MachineBasicBlock *emitCTSelectI386WithConditionMaterialization(
-    MachineInstr &MI, MachineBasicBlock *BB, unsigned InternalPseudoOpcode) {
+static MachineBasicBlock *
+emitCTSelectI386WithConditionMaterialization(MachineInstr &MI,
+                                              MachineBasicBlock *BB,
+                                              unsigned InternalPseudoOpcode) {
   const TargetInstrInfo *TII = BB->getParent()->getSubtarget().getInstrInfo();
   const MIMetadata MIMD(MI);
   MachineFunction *MF = BB->getParent();
@@ -38033,23 +38035,23 @@ static MachineBasicBlock *emitCTSelectI386WithConditionMaterialization(
   Register TmpMaskReg;
 
   // Determine the register class for tmp_mask based on the data type
-  if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR8rr)
+  if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR8rr) {
     TmpMaskReg = MRI.createVirtualRegister(&X86::GR8RegClass);
-  else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR16rr)
+  } else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR16rr) {
     TmpMaskReg = MRI.createVirtualRegister(&X86::GR16RegClass);
-  else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR32rr)
+  } else if (InternalPseudoOpcode == X86::CTSELECT_I386_INT_GR32rr) {
     TmpMaskReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-  else {
+  } else {
     llvm_unreachable("Unknown internal pseudo opcode");
   }
 
   BuildMI(*BB, MI, MIMD, TII->get(InternalPseudoOpcode))
-      .addDef(DstReg)       // dst (output)
-      .addDef(TmpByteReg)   // tmp_byte (output)
-      .addDef(TmpMaskReg)   // tmp_mask (output)
-      .addReg(Src1Reg)      // src1 (input)
-      .addReg(Src2Reg)      // src2 (input)
-      .addReg(CondByteReg); // pre-materialized condition byte (input)
+      .addDef(DstReg)         // dst (output)
+      .addDef(TmpByteReg)     // tmp_byte (output)
+      .addDef(TmpMaskReg)     // tmp_mask (output)
+      .addReg(Src1Reg)        // src1 (input)
+      .addReg(Src2Reg)        // src2 (input)
+      .addReg(CondByteReg);   // pre-materialized condition byte (input)
 
   MI.eraseFromParent();
   return BB;

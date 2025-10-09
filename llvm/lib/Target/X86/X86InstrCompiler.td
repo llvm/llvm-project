@@ -702,43 +702,45 @@ def : Pat<(v8f64 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
 let isPseudo = 1, isNotDuplicable = 1 in {
   // Phase 1: Initial pseudos that consume EFLAGS (via custom inserter)
   // These are matched by patterns and convert EFLAGS to condition byte
-  multiclass CTSELECT_I386_INITIAL<RegisterClass RC, ValueType VT> {
-    let Uses = [EFLAGS], Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-      def rr : PseudoI<(outs RC:$dst),
-                       (ins RC:$src1, RC:$src2, i8imm:$cond), 
-                       [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2, timm:$cond, EFLAGS)))]>;
-    }
+  class CTSELECT_I386_INITIAL<RegisterClass RC, ValueType VT>
+      : PseudoI<(outs RC:$dst),
+                (ins RC:$src1, RC:$src2, i8imm:$cond),
+                [(set RC:$dst, (VT(X86ctselect RC:$src1, RC:$src2, timm:$cond,
+                                        EFLAGS)))]> {
+    let Uses = [EFLAGS];
+    let Defs = [EFLAGS];
+    let usesCustomInserter = 1;
+    let hasNoSchedulingInfo = 1;
   }
 
   // Phase 2: Internal pseudos with pre-materialized condition byte (post-RA expansion)
   // These generate the actual constant-time instruction bundles
-  multiclass CTSELECT_I386_INTERNAL<RegisterClass RC, RegisterClass ByteRC> {
-    let hasNoSchedulingInfo = 1 in {
-      def rr : PseudoI<(outs RC:$dst, ByteRC:$tmp_byte, RC:$tmp_mask),
-                       (ins RC:$src1, RC:$src2, ByteRC:$cond_byte), []> {
-        let Constraints =
-            "@earlyclobber $dst,@earlyclobber $tmp_byte,@earlyclobber "
-            "$tmp_mask";
-      }
-    }
+  class CTSELECT_I386_INTERNAL<RegisterClass RC, RegisterClass ByteRC>
+      : PseudoI<(outs RC:$dst, ByteRC:$tmp_byte, RC:$tmp_mask),
+                (ins RC:$src1, RC:$src2, ByteRC:$cond_byte), []> {
+    let hasNoSchedulingInfo = 1;
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmp_byte,@earlyclobber $tmp_mask";
   }
 }
 
 // Phase 1 pseudos for non-CMOV targets (custom inserter materializes condition)
 let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
   let Predicates = [NoNativeCMOV] in {
-    defm CTSELECT_I386_GR8 : CTSELECT_I386_INITIAL<GR8, i8>;
-    defm CTSELECT_I386_GR16 : CTSELECT_I386_INITIAL<GR16, i16>;
-    defm CTSELECT_I386_GR32 : CTSELECT_I386_INITIAL<GR32, i32>;
+    def CTSELECT_I386_GR8rr : CTSELECT_I386_INITIAL<GR8, i8>;
+    def CTSELECT_I386_GR16rr : CTSELECT_I386_INITIAL<GR16, i16>;
+    def CTSELECT_I386_GR32rr : CTSELECT_I386_INITIAL<GR32, i32>;
   }
 }
 
 // Phase 2 pseudos (post-RA expansion with pre-materialized condition byte)
 let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
   let Predicates = [NoNativeCMOV] in {
-    defm CTSELECT_I386_INT_GR8 : CTSELECT_I386_INTERNAL<GR8, GR8>;
-    defm CTSELECT_I386_INT_GR16 : CTSELECT_I386_INTERNAL<GR16, GR8>;
-    defm CTSELECT_I386_INT_GR32 : CTSELECT_I386_INTERNAL<GR32, GR8>;
+    def CTSELECT_I386_INT_GR8rr :
+        CTSELECT_I386_INTERNAL<GR8, GR8>;
+    def CTSELECT_I386_INT_GR16rr :
+        CTSELECT_I386_INTERNAL<GR16, GR8>;
+    def CTSELECT_I386_INT_GR32rr :
+        CTSELECT_I386_INTERNAL<GR32, GR8>;
   }
 }
 
@@ -747,12 +749,12 @@ let hasSideEffects = 1,
     Constraints = "$dst = $src1" in {
 
   let Predicates = [FPStackf32] in
-    defm CTSELECT_I386_FP32 : CTSELECT_I386_INITIAL<RFP32, f32>;
+    def CTSELECT_I386_FP32rr : CTSELECT_I386_INITIAL<RFP32, f32>;
 
   let Predicates = [FPStackf64] in
-    defm CTSELECT_I386_FP64 : CTSELECT_I386_INITIAL<RFP64, f64>;
+    def CTSELECT_I386_FP64rr : CTSELECT_I386_INITIAL<RFP64, f64>;
 
-  defm CTSELECT_I386_FP80 : CTSELECT_I386_INITIAL<RFP80, f80>;
+  def CTSELECT_I386_FP80rr : CTSELECT_I386_INITIAL<RFP80, f80>;
 }
 
 // Pattern matching for non-native-CMOV CTSELECT (routes to custom inserter for condition materialization)
