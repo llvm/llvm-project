@@ -18,7 +18,7 @@ architecture=''
 runtime='dotnet'
 runtimeSourceFeed=''
 runtimeSourceFeedKey=''
-while [[ $# > 0 ]]; do
+while [[ $# -gt 0 ]]; do
   opt="$(echo "$1" | tr "[:upper:]" "[:lower:]")"
   case "$opt" in
     -version|-v)

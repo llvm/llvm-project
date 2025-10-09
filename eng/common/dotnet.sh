@@ -19,7 +19,7 @@ source $scriptroot/tools.sh
 InitializeDotNetCli true # install
 
 # Invoke acquired SDK with args if they are provided
-if [[ $# > 0 ]]; then
+if [[ $# -gt 0 ]]; then
   __dotnetDir=${_InitializeDotNetCli}
   dotnetPath=${__dotnetDir}/dotnet
   ${dotnetPath} "$@"

@@ -30,7 +30,7 @@
 [CmdletBinding(PositionalBinding = $false)]
 param(
    [string]$NuGetExePath,
-   [string]$PackageSource = "https://api.nuget.org/v3/index.json",
+   [string]$PackageSource = "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json",
    [string]$DownloadPath,
    [Parameter(ValueFromRemainingArguments = $true)]
    [string[]]$args
