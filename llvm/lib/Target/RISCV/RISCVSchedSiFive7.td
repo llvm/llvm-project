@@ -838,28 +838,28 @@ multiclass SiFive7WriteResBase<int VLEN,
                                   "WriteVFMulAddV", "WriteVFMulAddF"] in
         defm : LMULSEWWriteResMXSEWVariant<SchedWriteName, SingleElementVecFP64SchedPred,
                                            // Predicated
-                                           [VCQ, VA1], SingleElementCycles, [0, 1], [1, !add(1, SingleElementCycles)],
+                                           [VCQ, VA1], !add(SingleElementCycles, 7), [0, 1], [1, !add(1, SingleElementCycles)],
                                            // Not Predicated
                                            [VCQ, VA1OrVA2], 8, [0, 1], [1, !add(1, SiFive7GetCyclesDefault<mx>.c)],
                                            mx, sew, IsWorstCase>;
         foreach SchedWriteName = ["WriteVFRecpV", "WriteVFCvtIToFV"] in
         defm : LMULSEWWriteResMXSEWVariant<SchedWriteName, SingleElementVecFP64SchedPred,
                                            // Predicated
-                                           [VCQ, VA1], SingleElementCycles, [0, 1], [1, !add(1, SingleElementCycles)],
+                                           [VCQ, VA1], !add(SingleElementCycles, 7), [0, 1], [1, !add(1, SingleElementCycles)],
                                            // Not Predicated
                                            [VCQ, VA1], 8, [0, 1], [1, !add(1, SiFive7GetCyclesDefault<mx>.c)],
                                            mx, sew, IsWorstCase>;
         foreach SchedWriteName = ["WriteVFSgnjV", "WriteVFSgnjF"] in
         defm : LMULSEWWriteResMXSEWVariant<SchedWriteName, SingleElementVecFP64SchedPred,
                                            // Predicated
-                                           [VCQ, VA1], SingleElementCycles, [0, 1], [1, !add(1, SingleElementCycles)],
+                                           [VCQ, VA1], !add(SingleElementCycles, 3), [0, 1], [1, !add(1, SingleElementCycles)],
                                            // Not Predicated
                                            [VCQ, VA1OrVA2], 4, [0, 1], [1, !add(1, SiFive7GetCyclesDefault<mx>.c)],
                                            mx, sew, IsWorstCase>;
         foreach SchedWriteName = ["WriteVFMinMaxV", "WriteVFMinMaxF"] in
         defm : LMULSEWWriteResMXSEWVariant<SchedWriteName, SingleElementVecFP64SchedPred,
                                            // Predicated
-                                           [VCQ, VA1], SingleElementCycles, [0, 1], [1, !add(1, SingleElementCycles)],
+                                           [VCQ, VA1], !add(SingleElementCycles, 3), [0, 1], [1, !add(1, SingleElementCycles)],
                                            // Not Predicated
                                            [VCQ, VA1], 4, [0, 1], [1, !add(1, SiFive7GetCyclesDefault<mx>.c)],
                                            mx, sew, IsWorstCase>;
