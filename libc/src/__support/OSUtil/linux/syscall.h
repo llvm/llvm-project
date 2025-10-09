@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_X86_32
@@ -43,8 +44,7 @@ LIBC_INLINE_VAR constexpr unsigned long MAX_ERRNO = 4095;
 template <typename PointerLike>
 LIBC_INLINE constexpr bool is_valid_mmap(PointerLike ptr) {
   long addr = cpp::bit_cast<long>(ptr);
-  return __builtin_expect(addr > 0 || addr < -cpp::bit_cast<long>(MAX_ERRNO),
-                          true);
+  return LIBC_LIKELY(addr > 0 || addr < -static_cast<long>(MAX_ERRNO));
 }
 } // namespace linux_utils
 
