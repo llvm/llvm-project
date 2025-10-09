@@ -30,6 +30,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -1351,6 +1352,115 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   auto *MDN =
       llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
   CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
+}
+
+namespace {
+/// Infer type from a simple sizeof expression.
+QualType inferTypeFromSizeofExpr(const Expr *E) {
+  const Expr *Arg = E->IgnoreParenImpCasts();
+  if (const auto *UET = dyn_cast<UnaryExprOrTypeTraitExpr>(Arg)) {
+    if (UET->getKind() == UETT_SizeOf) {
+      if (UET->isArgumentType())
+        return UET->getArgumentTypeInfo()->getType();
+      else
+        return UET->getArgumentExpr()->getType();
+    }
+  }
+  return QualType();
+}
+
+/// Infer type from an arithmetic expression involving a sizeof. For example:
+///
+///   malloc(sizeof(MyType) + padding);  // infers 'MyType'
+///   malloc(sizeof(MyType) * 32);       // infers 'MyType'
+///   malloc(32 * sizeof(MyType));       // infers 'MyType'
+///   malloc(sizeof(MyType) << 1);       // infers 'MyType'
+///   ...
+///
+/// More complex arithmetic expressions are supported, but are a heuristic, e.g.
+/// when considering allocations for structs with flexible array members:
+///
+///   malloc(sizeof(HasFlexArray) + sizeof(int) * 32);  // infers 'HasFlexArray'
+///
+QualType inferPossibleTypeFromArithSizeofExpr(const Expr *E) {
+  const Expr *Arg = E->IgnoreParenImpCasts();
+  // The argument is a lone sizeof expression.
+  if (QualType T = inferTypeFromSizeofExpr(Arg); !T.isNull())
+    return T;
+  if (const auto *BO = dyn_cast<BinaryOperator>(Arg)) {
+    // Argument is an arithmetic expression. Cover common arithmetic patterns
+    // involving sizeof.
+    switch (BO->getOpcode()) {
+    case BO_Add:
+    case BO_Div:
+    case BO_Mul:
+    case BO_Shl:
+    case BO_Shr:
+    case BO_Sub:
+      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getLHS());
+          !T.isNull())
+        return T;
+      if (QualType T = inferPossibleTypeFromArithSizeofExpr(BO->getRHS());
+          !T.isNull())
+        return T;
+      break;
+    default:
+      break;
+    }
+  }
+  return QualType();
+}
+
+/// If the expression E is a reference to a variable, infer the type from a
+/// variable's initializer if it contains a sizeof. Beware, this is a heuristic
+/// and ignores if a variable is later reassigned. For example:
+///
+///   size_t my_size = sizeof(MyType);
+///   void *x = malloc(my_size);  // infers 'MyType'
+///
+QualType inferPossibleTypeFromVarInitSizeofExpr(const Expr *E) {
+  const Expr *Arg = E->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (const Expr *Init = VD->getInit())
+        return inferPossibleTypeFromArithSizeofExpr(Init);
+    }
+  }
+  return QualType();
+}
+
+/// Deduces the allocated type by checking if the allocation call's result
+/// is immediately used in a cast expression. For example:
+///
+///   MyType *x = (MyType *)malloc(4096);  // infers 'MyType'
+///
+QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
+                                       const CastExpr *CastE) {
+  if (!CastE)
+    return QualType();
+  QualType PtrType = CastE->getType();
+  if (PtrType->isPointerType())
+    return PtrType->getPointeeType();
+  return QualType();
+}
+} // end anonymous namespace
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
+  QualType AllocType;
+  // First check arguments.
+  for (const Expr *Arg : E->arguments()) {
+    AllocType = inferPossibleTypeFromArithSizeofExpr(Arg);
+    if (AllocType.isNull())
+      AllocType = inferPossibleTypeFromVarInitSizeofExpr(Arg);
+    if (!AllocType.isNull())
+      break;
+  }
+  // Then check later casts.
+  if (AllocType.isNull())
+    AllocType = inferPossibleTypeFromCastExpr(E, CurCast);
+  // Emit if we were able to infer the type.
+  if (!AllocType.isNull())
+    EmitAllocToken(CB, AllocType);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -5723,6 +5833,9 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 /// are permitted with aggregate result, including noop aggregate casts, and
 /// cast from scalar to union.
 LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
+  auto RestoreCurCast =
+      llvm::make_scope_exit([this, Prev = CurCast] { CurCast = Prev; });
+  CurCast = E;
   switch (E->getCastKind()) {
   case CK_ToVoid:
   case CK_BitCast:
@@ -6683,15 +6796,23 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke,
                          E == MustTailCall, E->getExprLoc());
 
-  // Generate function declaration DISuprogram in order to be used
-  // in debug info about call sites.
-  if (CGDebugInfo *DI = getDebugInfo()) {
-    if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+  if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+    // Generate function declaration DISuprogram in order to be used
+    // in debug info about call sites.
+    if (CGDebugInfo *DI = getDebugInfo()) {
       FunctionArgList Args;
       QualType ResTy = BuildFunctionArgList(CalleeDecl, Args);
       DI->EmitFuncDeclForCallSite(LocalCallOrInvoke,
                                   DI->getFunctionType(CalleeDecl, ResTy, Args),
                                   CalleeDecl);
+    }
+    if (CalleeDecl->hasAttr<RestrictAttr>() ||
+        CalleeDecl->hasAttr<AllocSizeAttr>()) {
+      // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
+      if (SanOpts.has(SanitizerKind::AllocToken)) {
+        // Set !alloc_token metadata.
+        EmitAllocToken(LocalCallOrInvoke, E);
+      }
     }
   }
   if (CallOrInvoke)
