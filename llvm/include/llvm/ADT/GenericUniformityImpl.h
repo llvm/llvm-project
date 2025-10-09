@@ -957,8 +957,11 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
       // Phi uniformity is maintained if all values on divergent path match.
       if (!PathCommon)
         PathCommon = Values[I];
-      else if (Values[I] != *PathCommon)
+      else if (Values[I] != *PathCommon) {
         UniformOnPath = false;
+        assert(!HasSingleValue);
+        break;
+      }
     }
 
     if (UniformOnPath || HasSingleValue)
