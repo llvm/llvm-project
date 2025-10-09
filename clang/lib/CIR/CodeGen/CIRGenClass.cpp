@@ -126,6 +126,30 @@ static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
 }
 
 namespace {
+/// Call the destructor for a direct base class.
+struct CallBaseDtor final : EHScopeStack::Cleanup {
+  const CXXRecordDecl *baseClass;
+  bool baseIsVirtual;
+  CallBaseDtor(const CXXRecordDecl *base, bool baseIsVirtual)
+      : baseClass(base), baseIsVirtual(baseIsVirtual) {}
+
+  void emit(CIRGenFunction &cgf) override {
+    const CXXRecordDecl *derivedClass =
+        cast<CXXMethodDecl>(cgf.curFuncDecl)->getParent();
+
+    const CXXDestructorDecl *d = baseClass->getDestructor();
+    // We are already inside a destructor, so presumably the object being
+    // destroyed should have the expected type.
+    QualType thisTy = d->getFunctionObjectParameterType();
+    assert(cgf.currSrcLoc && "expected source location");
+    Address addr = cgf.getAddressOfDirectBaseInCompleteClass(
+        *cgf.currSrcLoc, cgf.loadCXXThisAddress(), derivedClass, baseClass,
+        baseIsVirtual);
+    cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
+                              /*delegating=*/false, addr, thisTy);
+  }
+};
+
 /// A visitor which checks whether an initializer uses 'this' in a
 /// way which requires the vtable to be properly set.
 struct DynamicThisUseChecker
@@ -922,8 +946,21 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
   if (dtorType == Dtor_Complete) {
     assert(!cir::MissingFeatures::sanitizers());
 
-    if (classDecl->getNumVBases())
-      cgm.errorNYI(dd->getSourceRange(), "virtual base destructor cleanups");
+    // We push them in the forward order so that they'll be popped in
+    // the reverse order.
+    for (const CXXBaseSpecifier &base : classDecl->vbases()) {
+      auto *baseClassDecl = base.getType()->castAsCXXRecordDecl();
+
+      if (baseClassDecl->hasTrivialDestructor()) {
+        // Under SanitizeMemoryUseAfterDtor, poison the trivial base class
+        // memory. For non-trival base classes the same is done in the class
+        // destructor.
+        assert(!cir::MissingFeatures::sanitizers());
+      } else {
+        ehStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, baseClassDecl,
+                                          /*baseIsVirtual=*/true);
+      }
+    }
 
     return;
   }
@@ -942,8 +979,8 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
     if (baseClassDecl->hasTrivialDestructor())
       assert(!cir::MissingFeatures::sanitizers());
     else
-      cgm.errorNYI(dd->getSourceRange(),
-                   "non-trivial base destructor cleanups");
+      ehStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, baseClassDecl,
+                                        /*baseIsVirtual=*/false);
   }
 
   assert(!cir::MissingFeatures::sanitizers());

@@ -698,8 +698,7 @@ static void toMustacheString(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case json::Value::String: {
-    auto Str = *Data.getAsString();
-    OS << Str.str();
+    OS << *Data.getAsString();
     return;
   }
 

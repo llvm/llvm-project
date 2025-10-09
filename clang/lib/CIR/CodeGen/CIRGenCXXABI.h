@@ -155,6 +155,14 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  /// Get the implicit (second) parameter that comes after the "this" pointer,
+  /// or nullptr if there is isn't one.
+  virtual mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &cgf,
+                                                    const CXXDestructorDecl *dd,
+                                                    CXXDtorType type,
+                                                    bool forVirtualBase,
+                                                    bool delegating) = 0;
+
   /// Emit constructor variants required by this ABI.
   virtual void emitCXXConstructors(const clang::CXXConstructorDecl *d) = 0;
 
