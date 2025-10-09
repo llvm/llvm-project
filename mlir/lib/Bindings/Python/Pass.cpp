@@ -8,6 +8,7 @@
 
 #include "Pass.h"
 
+#include "Globals.h"
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
 // clang-format off
@@ -181,9 +182,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               name = nb::cast<std::string>(
                   nb::borrow<nb::str>(run.attr("__name__")));
             }
-            MlirTypeIDAllocator typeIDAllocator = mlirTypeIDAllocatorCreate();
-            MlirTypeID passID =
-                mlirTypeIDAllocatorAllocateTypeID(typeIDAllocator);
+            MlirTypeID passID = PyGlobals::get().allocateTypeID();
             MlirExternalPassCallbacks callbacks;
             callbacks.construct = [](void *obj) {
               (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
