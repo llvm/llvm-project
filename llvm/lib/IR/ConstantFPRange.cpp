@@ -393,7 +393,7 @@ ConstantFPRange ConstantFPRange::unionWith(const ConstantFPRange &CR) const {
 }
 
 ConstantFPRange ConstantFPRange::abs() const {
-  if (isEmptySet())
+  if (isNaNOnly())
     return *this;
   // Check if the range is all non-negative or all non-positive.
   if (Lower.isNegative() == Upper.isNegative()) {

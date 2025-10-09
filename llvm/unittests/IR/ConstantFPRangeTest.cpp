@@ -779,6 +779,7 @@ TEST_F(ConstantFPRangeTest, abs) {
   EXPECT_EQ(NegInf.abs(), PosInf);
   EXPECT_EQ(Some.abs(), SomePos);
   EXPECT_EQ(SomeNeg.abs(), SomePos);
+  EXPECT_EQ(NaN.abs(), NaN);
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)).abs(),
             ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(3.0)));
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)).abs(),
@@ -794,6 +795,7 @@ TEST_F(ConstantFPRangeTest, negate) {
   EXPECT_EQ(Some.negate(), Some);
   EXPECT_EQ(SomePos.negate(), SomeNeg);
   EXPECT_EQ(SomeNeg.negate(), SomePos);
+  EXPECT_EQ(NaN.negate(), NaN);
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)).negate(),
             ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)));
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)).negate(),
