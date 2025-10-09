@@ -179,6 +179,8 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
   atomic_sint32_t pending_signals;
 
   VectorClock clock;
+  VectorClock clockR;
+  VectorClock clockA;
 
   // This is a slow path flag. On fast path, fast_state.GetIgnoreBit() is read.
   // We do not distinguish beteween ignoring reads and writes

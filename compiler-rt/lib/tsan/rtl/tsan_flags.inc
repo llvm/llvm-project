@@ -80,3 +80,7 @@ TSAN_FLAG(bool, shared_ptr_interceptor, true,
 TSAN_FLAG(bool, print_full_thread_history, false,
           "If set, prints thread creation stacks for the threads involved in "
           "the report and their ancestors up to the main thread.")
+TSAN_FLAG(
+    bool, relaxed_support, false,
+    "If set, slows relaxed access fast path and support fences and release"
+    "sequence in race detection.")

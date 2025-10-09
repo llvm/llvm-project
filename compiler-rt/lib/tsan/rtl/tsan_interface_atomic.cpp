@@ -27,6 +27,8 @@
 
 using namespace __tsan;
 
+static bool relaxedSupport() { return flags()->relaxed_support; }
+
 #if !SANITIZER_GO && __TSAN_HAS_INT128
 // Protects emulation of 128-bit atomic operations.
 static StaticSpinMutex mutex128;
@@ -227,18 +229,36 @@ namespace {
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
   MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
-  if (LIKELY(mo == mo_relaxed))
-    return F(a, v);
+  if (!relaxedSupport()) {
+    if (LIKELY(mo == mo_relaxed))
+      return F(a, v);
+  }
   SlotLocker locker(thr);
   {
     auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-    RWLock lock(&s->mtx, IsReleaseOrder(mo));
-    if (IsAcqRelOrder(mo))
-      thr->clock.ReleaseAcquire(&s->clock);
-    else if (IsReleaseOrder(mo))
-      thr->clock.Release(&s->clock);
-    else if (IsAcquireOrder(mo))
-      thr->clock.Acquire(s->clock);
+    bool fullLock = relaxedSupport() || IsReleaseOrder(mo);
+    RWLock lock(&s->mtx, fullLock);
+    if (!relaxedSupport()) {
+      if (IsAcqRelOrder(mo))
+        thr->clock.ReleaseAcquire(&s->clock);
+      else if (IsReleaseOrder(mo))
+        thr->clock.Release(&s->clock);
+      else if (IsAcquireOrder(mo))
+        thr->clock.Acquire(s->clock);
+    } else {
+      if (mo == mo_relaxed){
+	  	thr->clockA.Acquire(s->clock);
+	  	thr->clockR.Release(&s->clock);
+	  } else if (IsAcqRelOrder(mo)) {
+	  	thr->clock.ReleaseAcquire(&s->clock);
+	  } else if (IsReleaseOrder(mo)) {
+	  	thr->clockA.Acquire(s->clock);
+	  	thr->clock.Release(&s->clock);
+	  } else if (IsAcquireOrder(mo)) {
+	  	thr->clock.Acquire(s->clock);
+	  	thr->clockR.Release(&s->clock);
+	  }
+    }
     v = F(a, v);
   }
   if (IsReleaseOrder(mo))
@@ -264,7 +284,7 @@ struct OpLoad {
     DCHECK(IsLoadOrder(mo));
     // This fast-path is critical for performance.
     // Assume the access is atomic.
-    if (!IsAcquireOrder(mo)) {
+    if (!relaxedSupport() && !IsAcquireOrder(mo)) {
       MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                    kAccessRead | kAccessAtomic);
       return NoTsanAtomic(mo, a);
@@ -276,7 +296,11 @@ struct OpLoad {
     if (s) {
       SlotLocker locker(thr);
       ReadLock lock(&s->mtx);
-      thr->clock.Acquire(s->clock);
+	  if (IsAcquireOrder(mo)) {
+		  thr->clock.Acquire(s->clock);
+          } else if (relaxedSupport()) {
+            thr->clockA.Acquire(s->clock);
+          }
       // Re-read under sync mutex because we need a consistent snapshot
       // of the value and the clock we acquire.
       v = NoTsanAtomic(mo, a);
@@ -309,7 +333,7 @@ struct OpStore {
     // Assume the access is atomic.
     // Strictly saying even relaxed store cuts off release sequence,
     // so must reset the clock.
-    if (!IsReleaseOrder(mo)) {
+    if (!relaxedSupport() && !IsReleaseOrder(mo)) {
       NoTsanAtomic(mo, a, v);
       return;
     }
@@ -317,10 +341,14 @@ struct OpStore {
     {
       auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
       Lock lock(&s->mtx);
-      thr->clock.ReleaseStore(&s->clock);
-      NoTsanAtomic(mo, a, v);
+	  if (IsReleaseOrder(mo))
+        thr->clock.ReleaseStore(&s->clock);
+          else if (relaxedSupport())
+            thr->clockR.ReleaseStore(&s->clock);
+          NoTsanAtomic(mo, a, v);
     }
-    IncrementEpoch(thr);
+	if (IsReleaseOrder(mo))
+      IncrementEpoch(thr);
   }
 };
 
@@ -441,7 +469,7 @@ struct OpCAS {
 
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessWrite | kAccessAtomic);
-    if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
+    if (LIKELY(!relaxedSupport() && mo == mo_relaxed && fmo == mo_relaxed)) {
       T cc = *c;
       T pr = func_cas(a, cc, v);
       if (pr == cc)
@@ -454,7 +482,8 @@ struct OpCAS {
     bool success;
     {
       auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-      RWLock lock(&s->mtx, release);
+      bool fullLock = relaxedSupport() || release;
+      RWLock lock(&s->mtx, fullLock);
       T cc = *c;
       T pr = func_cas(a, cc, v);
       success = pr == cc;
@@ -462,12 +491,27 @@ struct OpCAS {
         *c = pr;
         mo = fmo;
       }
-      if (success && IsAcqRelOrder(mo))
-        thr->clock.ReleaseAcquire(&s->clock);
-      else if (success && IsReleaseOrder(mo))
-        thr->clock.Release(&s->clock);
-      else if (IsAcquireOrder(mo))
-        thr->clock.Acquire(s->clock);
+      if (!relaxedSupport()) {
+        if (success && IsAcqRelOrder(mo))
+          thr->clock.ReleaseAcquire(&s->clock);
+        else if (success && IsReleaseOrder(mo))
+          thr->clock.Release(&s->clock);
+        else if (IsAcquireOrder(mo))
+          thr->clock.Acquire(s->clock);
+      } else {
+        if (!IsAcquireOrder(mo)) {
+          thr->clockA.Acquire(s->clock);
+        } else {
+          thr->clock.Acquire(s->clock);
+        }
+        if (success) {
+          if (!IsReleaseOrder(mo)) {
+            thr->clockR.Release(&s->clock);
+          } else {
+            thr->clock.Release(&s->clock);
+          }
+        }
+      }
     }
     if (success && release)
       IncrementEpoch(thr);
@@ -487,7 +531,19 @@ struct OpFence {
   static void NoTsanAtomic(morder mo) { __sync_synchronize(); }
 
   static void Atomic(ThreadState *thr, uptr pc, morder mo) {
-    // FIXME(dvyukov): not implemented.
+    if (relaxedSupport()) {
+      SlotLocker locker(thr);
+      if (IsAcquireOrder(mo))
+        thr->clock.Acquire(&thr->clockA);
+      if (mo == mo_seq_cst) {
+        auto s = ctx->metamap.GetSyncOrCreate(thr, pc, 0, false);
+        thr->clock.ReleaseAcquire(&s->clock);
+      }
+      if (IsReleaseOrder(mo)) {
+        thr->clockR.Acquire(&thr->clock);
+        IncrementEpoch(thr);
+      }
+    }
     __sync_synchronize();
   }
 };
