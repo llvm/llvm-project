@@ -2444,8 +2444,8 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 /// The given values are known to be equal in every use
 /// dominated by 'Root'.  Exploit this, for example by replacing 'LHS' with
 /// 'RHS' everywhere in the scope.  Returns whether a change was made.
-/// If DominatesByEdge is false, then it means that we will propagate the RHS
-/// value starting from the end of Root.Start.
+/// The Root may either be a basic block edge (for conditions) or an
+/// instruction (for assumes).
 bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
