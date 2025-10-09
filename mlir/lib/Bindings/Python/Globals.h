@@ -17,6 +17,7 @@
 
 #include "NanobindUtils.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/Support.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
@@ -155,8 +156,12 @@ public:
   public:
     TypeIDAllocator() : allocator(mlirTypeIDAllocatorCreate()) {}
     ~TypeIDAllocator() {
-      if (!allocator.ptr)
+      if (allocator.ptr)
         mlirTypeIDAllocatorDestroy(allocator);
+    }
+    TypeIDAllocator(const TypeIDAllocator &) = delete;
+    TypeIDAllocator(TypeIDAllocator &&other) : allocator(other.allocator) {
+      other.allocator.ptr = nullptr;
     }
 
     MlirTypeIDAllocator get() { return allocator; }
