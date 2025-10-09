@@ -63,7 +63,7 @@ def expand_listfile_args(arg_list):
     return exp_arg_list
 
 
-def utc_lit_plugin(result, test):
+def utc_lit_plugin(result, test, commands):
     testname = test.getFilePath()
     if not testname:
         return None

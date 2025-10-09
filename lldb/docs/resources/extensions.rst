@@ -134,5 +134,5 @@ Objective-C runtime
 
 Clang emits the Objective-C runtime version into the
 ``DW_TAG_compile_unit`` using the
-``DW_AT_APPLE_major_runtime_version`` attribute. The value 2 stands
+``DW_AT_APPLE_major_runtime_vers`` attribute. The value 2 stands
 for Objective-C 2.0.

@@ -56,15 +56,15 @@ define {i1, i32} @load_global_struct() {
 
 define {i1, i32} @select_struct(i1 %c, {i1, i32} %a, {i1, i32} %b) {
   ; NO_SELECT_CONTROL: @select_struct.dfsan
-  ; NO_SELECT_CONTROL: [[B:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align [[ALIGN:2]]
-  ; NO_SELECT_CONTROL: [[A:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; NO_SELECT_CONTROL: [[B:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align [[ALIGN:2]]
+  ; NO_SELECT_CONTROL: [[A:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
   ; NO_SELECT_CONTROL: [[C:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; NO_SELECT_CONTROL: [[S:%.*]] = select i1 %c, { i8, i8 } [[A]], { i8, i8 } [[B]]
   ; NO_SELECT_CONTROL: store { i8, i8 } [[S]], ptr @__dfsan_retval_tls, align [[ALIGN]]
 
   ; FAST: @select_struct.dfsan
-  ; FAST: %[[#R:]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align [[ALIGN:2]]
-  ; FAST: %[[#R+1]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; FAST: %[[#R:]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align [[ALIGN:2]]
+  ; FAST: %[[#R+1]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
   ; FAST: %[[#R+2]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; FAST: %[[#R+3]] = select i1 %c, { i8, i8 } %[[#R+1]], { i8, i8 } %[[#R]]
   ; FAST: %[[#R+4]] = extractvalue { i8, i8 } %[[#R+3]], 0
@@ -81,7 +81,7 @@ define {i1, i32} @select_struct(i1 %c, {i1, i32} %a, {i1, i32} %b) {
 
 define { i32, i32 } @asm_struct(i32 %0, i32 %1) {
   ; FAST: @asm_struct.dfsan
-  ; FAST: [[E1:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; FAST: [[E1:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; FAST: [[E0:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; FAST: [[E01:%.*]] = or i8 [[E0]], [[E1]]
   ; FAST: [[S0:%.*]] = insertvalue { i8, i8 } undef, i8 [[E01]], 0
@@ -111,7 +111,7 @@ define i1 @extract_struct({i1, i5} %s) {
 
 define {i1, i5} @insert_struct({i1, i5} %s, i5 %e1) {
   ; FAST: @insert_struct.dfsan
-  ; FAST: [[EM:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; FAST: [[EM:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; FAST: [[SM:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; FAST: [[SM1:%.*]] = insertvalue { i8, i8 } [[SM]], i8 [[EM]], 1
   ; FAST: store { i8, i8 } [[SM1]], ptr @__dfsan_retval_tls, align [[ALIGN]]
@@ -138,7 +138,7 @@ define {i1, i1} @load_struct(ptr %p) {
 
 define void @store_struct(ptr %p, {i1, i1} %s) {
   ; FAST: @store_struct.dfsan
-  ; FAST: [[S:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; FAST: [[S:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; FAST: [[E0:%.*]] = extractvalue { i8, i8 } [[S]], 0
   ; FAST: [[E1:%.*]] = extractvalue { i8, i8 } [[S]], 1
   ; FAST: [[E:%.*]] = or i8 [[E0]], [[E1]]
@@ -153,7 +153,7 @@ define void @store_struct(ptr %p, {i1, i1} %s) {
 
   ; COMBINE_STORE_PTR: @store_struct.dfsan
   ; COMBINE_STORE_PTR: [[PL:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN:2]]
-  ; COMBINE_STORE_PTR: [[SL:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; COMBINE_STORE_PTR: [[SL:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
   ; COMBINE_STORE_PTR: [[SL0:%.*]] = extractvalue { i8, i8 } [[SL]], 0
   ; COMBINE_STORE_PTR: [[SL1:%.*]] = extractvalue { i8, i8 } [[SL]], 1
   ; COMBINE_STORE_PTR: [[SL01:%.*]] = or i8 [[SL0]], [[SL1]]
@@ -215,7 +215,7 @@ define i1 @extract_struct_of_aggregate31(%StructOfAggr %s) {
 
 define %StructOfAggr @insert_struct_of_aggregate11(%StructOfAggr %s, i2 %e11) {
   ; FAST: @insert_struct_of_aggregate11.dfsan
-  ; FAST: [[E11:%.*]]  = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 8) to ptr), align [[ALIGN:2]]
+  ; FAST: [[E11:%.*]]  = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 8), align [[ALIGN:2]]
   ; FAST: [[S:%.*]] = load { i8, [4 x i8], i8, { i8, i8 } }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; FAST: [[S1:%.*]] = insertvalue { i8, [4 x i8], i8, { i8, i8 } } [[S]], i8 [[E11]], 1, 1
   ; FAST: store { i8, [4 x i8], i8, { i8, i8 } } [[S1]], ptr @__dfsan_retval_tls, align [[ALIGN]]
@@ -239,12 +239,12 @@ declare %StructOfAggr @fun_with_many_aggr_args(<2 x i7> %v, [2 x i5] %a, {i3, i3
 
 define %StructOfAggr @call_many_aggr_args(<2 x i7> %v, [2 x i5] %a, {i3, i3} %s) {
   ; FAST: @call_many_aggr_args.dfsan
-  ; FAST: [[S:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align [[ALIGN:2]]
-  ; FAST: [[A:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; FAST: [[S:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align [[ALIGN:2]]
+  ; FAST: [[A:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
   ; FAST: [[V:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; FAST: store i8 [[V]], ptr @__dfsan_arg_tls, align [[ALIGN]]
-  ; FAST: store [2 x i8] [[A]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
-  ; FAST: store { i8, i8 } [[S]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align [[ALIGN]]
+  ; FAST: store [2 x i8] [[A]], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
+  ; FAST: store { i8, i8 } [[S]], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align [[ALIGN]]
   ; FAST: %_dfsret = load { i8, [4 x i8], i8, { i8, i8 } }, ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; FAST: store { i8, [4 x i8], i8, { i8, i8 } } %_dfsret, ptr @__dfsan_retval_tls, align [[ALIGN]]
 
