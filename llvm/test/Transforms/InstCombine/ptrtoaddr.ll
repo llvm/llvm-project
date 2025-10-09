@@ -109,3 +109,24 @@ define ptr @inttoptr_of_ptrtoaddr() {
 ;
   ret ptr inttoptr (i64 ptrtoaddr (ptr @g to i64) to ptr)
 }
+
+define i64 @ptrtoaddr_sub_consts_unrelated() {
+; CHECK-LABEL: define i64 @ptrtoaddr_sub_consts_unrelated() {
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoaddr (ptr @g to i64), i64 ptrtoaddr (ptr @g2 to i64))
+;
+  ret i64 sub (i64 ptrtoaddr (ptr @g to i64), i64 ptrtoaddr (ptr @g2 to i64))
+}
+
+define i64 @ptrtoaddr_sub_consts_offset() {
+; CHECK-LABEL: define i64 @ptrtoaddr_sub_consts_offset() {
+; CHECK-NEXT:    ret i64 42
+;
+  ret i64 sub (i64 ptrtoaddr (ptr getelementptr (i8, ptr @g, i64 42) to i64), i64 ptrtoaddr (ptr @g to i64))
+}
+
+define i32 @ptrtoaddr_sub_consts_offset_addrsize() {
+; CHECK-LABEL: define i32 @ptrtoaddr_sub_consts_offset_addrsize() {
+; CHECK-NEXT:    ret i32 42
+;
+  ret i32 sub (i32 ptrtoaddr (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g.as1, i32 42) to i32), i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32))
+}
