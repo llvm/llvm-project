@@ -13,6 +13,7 @@
 #include <__config>
 #include <__configuration/abi.h>
 #include <__cstddef/size_t.h>
+#include <__memory/addressof.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/negation.h>
@@ -118,7 +119,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
   _ArrayCookie __cookie;
   // This is necessary to avoid violating strict aliasing. It's valid because _ArrayCookie is an
   // implicit lifetime type.
-  __builtin_memcpy(&__cookie, __allocation_start, sizeof(_ArrayCookie));
+  __builtin_memcpy(std::addressof(__cookie), __allocation_start, sizeof(_ArrayCookie));
   return __cookie.__element_count;
 }
 
