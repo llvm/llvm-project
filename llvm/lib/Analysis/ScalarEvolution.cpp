@@ -16054,7 +16054,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
               SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));
           if (const SCEV *S =
                   Map.lookup(SE.getAddExpr(NewC, Expr->getOperand(1))))
-            return SE.getMinusSCEV(S, SE.getOne(Expr->getType()));
+            return SE.getAddExpr(S, SE.getMinusOne(Expr->getType()));
         }
       }
 
