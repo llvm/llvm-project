@@ -614,6 +614,48 @@ bool isaConv2DNgchwGfchwOp(LinalgOp op) {
       matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 2));
 }
 
+bool isaConv2DNhwcHwcfQOp(LinalgOp op) {
+  if (isa<linalg::Conv2DNhwcHwcfQOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,4,0,0,4})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 4;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+      matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 3));
+}
+
+bool isaConv2DNhwgcGfhwcQOp(LinalgOp op) {
+  if (isa<linalg::Conv2DNhwgcGfhwcQOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,0,0,5})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 4;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3, d7)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d3, d4, d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/2, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/3, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 4) &&
+      matchConvDimExprPattern(indexingMaps, fIndex, 1, oIndex, 4));
+}
+
 bool isaConv2DNgchwGfchwQOp(LinalgOp op) {
   if (isa<linalg::Conv2DNgchwGfchwQOp>(op)) return true;
 
@@ -736,6 +778,26 @@ bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op) {
       matchConvDimExprPattern(indexingMaps, fIndex, 3, oIndex, 4));
 }
 
+bool isaDepthwiseConv2DNhwcHwcQOp(LinalgOp op) {
+  if (isa<linalg::DepthwiseConv2DNhwcHwcQOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,3,0,0,4})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 4;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, fIndex, 2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3));
+}
+
 bool isaConv3DOp(LinalgOp op) {
   if (isa<linalg::Conv3DOp>(op)) return true;
 
@@ -784,6 +846,27 @@ bool isaConv3DNdhwcDhwcfOp(LinalgOp op) {
   // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
   // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
   // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
+      matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 4));
+}
+
+bool isaConv3DNdhwcDhwcfQOp(LinalgOp op) {
+  if (isa<linalg::Conv3DNdhwcDhwcfQOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5,5,0,0,5})) return false;
+  
+  unsigned iIndex = 0, fIndex = 1, oIndex = 4;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> ()>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&

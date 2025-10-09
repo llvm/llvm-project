@@ -277,6 +277,8 @@ static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.depthwise_conv_2d_nchw_chw";
   if (isaDepthwiseConv2DNhwcHwcOp(genericOp))
     return "linalg.depthwise_conv_2d_nhwc_hwc";
+  if (isaDepthwiseConv2DNhwcHwcQOp(genericOp))
+    return "linalg.depthwise_conv_2d_nhwc_hwc_q";
   if (isaConv3DOp(genericOp))
     return "linalg.conv_3d";
   if (isaPoolingNchwMaxOp(genericOp))
@@ -307,6 +309,8 @@ static std::string inferBasedOnRank7ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.conv_2d_nhwc_fhwc_q";
   if (isaConv2DNchwFchwQOp(genericOp))
     return "linalg.conv_2d_nchw_fchw_q";
+  if (isaConv2DNhwcHwcfQOp(genericOp))
+    return "linalg.conv_2d_nhwc_hwcf_q";
   if (isaDepthwiseConv2DNhwcHwcmOp(genericOp))
     return "linalg.depthwise_conv_2d_nhwc_hwcm";
   if (isaDepthwiseConv2DNhwcHwcmQOp(genericOp))
@@ -323,6 +327,8 @@ static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.conv_2d_ngchw_gfchw_q";
   if (isaConv2DNhwgcGfhwcOp(genericOp))
     return "linalg.conv_2d_nhwgc_gfhwc";
+  if (isaConv2DNhwgcGfhwcQOp(genericOp))
+    return "linalg.conv_2d_nhwgc_gfhwc_q";
   if (isaDepthwiseConv3DNcdhwCdhwOp(genericOp))
     return "linalg.depthwise_conv_3d_ncdhw_cdhw";
   if (isaDepthwiseConv3DNdhwcDhwcOp(genericOp))
@@ -341,6 +347,8 @@ static std::string inferBasedOnRank9ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.conv_3d_ncdhw_fcdhw";
   if (isaConv3DNdhwcDhwcfOp(genericOp))
     return "linalg.conv_3d_ndhwc_dhwcf";
+  if (isaConv3DNdhwcDhwcfQOp(genericOp))
+    return "linalg.conv_3d_ndhwc_dhwcf_q";
   if (isaDepthwiseConv3DNdhwcDhwcmOp(genericOp))
     return "linalg.depthwise_conv_3d_ndhwc_dhwcm";
   return "";
@@ -412,6 +420,10 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
     namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNgchwGfchwQOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.conv_2d_nhwgc_gfhwc") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwgcGfhwcOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nhwc_hwcf_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwcHwcfQOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d_nhwgc_gfhwc_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DNhwgcGfhwcQOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_2d_nchw_chw") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNchwChwOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwc") {
@@ -420,12 +432,16 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcmOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwcm_q") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcmQOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.depthwise_conv_2d_nhwc_hwc_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv2DNhwcHwcQOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.conv_3d") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.conv_3d_ncdhw_fcdhw") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DNcdhwFcdhwOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.conv_3d_ndhwc_dhwcf") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DNdhwcDhwcfOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_3d_ndhwc_dhwcf_q") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv3DNdhwcDhwcfQOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_3d_ndhwc_dhwcm") {
     namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(genericOp, resultTypes, inputs, outputs);
   } else if (convKind == "linalg.depthwise_conv_3d_ncdhw_cdhw") {
