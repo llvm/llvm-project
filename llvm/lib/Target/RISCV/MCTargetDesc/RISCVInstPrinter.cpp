@@ -95,6 +95,11 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     return;
   }
 
+  if (MO.isImm() && STI.getTargetTriple().isOSBinFormatMachO()) {
+    printImmMachO(MI, OpNo, STI, O);
+    return;
+  }
+
   if (MO.isImm()) {
     markup(O, Markup::Immediate) << formatImm(MO.getImm());
     return;
@@ -335,6 +340,30 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".t";
+}
+
+void RISCVInstPrinter::printImmMachO(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+
+  switch (MI->getOpcode()) {
+  case RISCV::ANDI:
+  case RISCV::ORI:
+  case RISCV::XORI:
+  case RISCV::C_ANDI:
+  case RISCV::AUIPC:
+  case RISCV::LUI:
+    break;
+  default:
+    markup(O, Markup::Immediate) << formatImm(Op.getImm());
+    return;
+  }
+
+  uint64_t Imm = Op.getImm();
+  if (!STI.hasFeature(RISCV::Feature64Bit))
+    Imm = static_cast<uint32_t>(Imm);
+  markup(O, Markup::Immediate) << formatHex(Imm);
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
