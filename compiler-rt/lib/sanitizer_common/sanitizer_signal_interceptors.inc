@@ -49,6 +49,7 @@ INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return 0;
 
+  // TODO: support cloak_sanitizer_signal_handlers
   int ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(bsd_signal, signum, handler);
   return ret;
