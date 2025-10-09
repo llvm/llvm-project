@@ -359,8 +359,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // the ScopeStack comment. The stack size being 1 means that the token is
     // not in a scope that should not move.
     if (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
-        (ContinuedStringLiteral ||
-         (InsideNestedScope && CurrentChange.IsAligned))) {
+        (ContinuedStringLiteral || InsideNestedScope)) {
       CurrentChange.Spaces += Shift;
     }
 
