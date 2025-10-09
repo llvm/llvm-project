@@ -9547,7 +9547,10 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   unsigned NumBytesToCreateFrame = 0;
 
-  // Avoid splitting ADRP-ADD/LDR pair into outlined functions.
+  // Avoid splitting ADRP ADD/LDR pair into outlined functions.
+  // These instructions are fused together by the scheduler.
+  // Any candidate where ADRP is the last instruction should be rejected
+  // as that will lead to splitting ADRP pair.
   MachineInstr &LastMI = RepeatedSequenceLocs[0].back();
   MachineInstr &FirstMI = RepeatedSequenceLocs[0].front();
   if (LastMI.getOpcode() == AArch64::ADRP &&
@@ -9556,6 +9559,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     return std::nullopt;
   }
 
+  // Similarly any candidate where the first instruction is ADD/LDR with a
+  // page offset should be rejected to avoid ADRP splitting.
   if ((FirstMI.getOpcode() == AArch64::ADDXri || FirstMI.getOpcode() == AArch64::LDRXui) &&
        (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_PAGEOFF) != 0 &&
        (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_GOT) != 0) {
@@ -10193,6 +10198,12 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
         (MOP.getReg() == AArch64::LR || MOP.getReg() == AArch64::W30))
       return outliner::InstrType::Illegal;
   }
+
+  // Special cases for instructions that can always be outlined, but will fail
+  // the later tests. e.g, ADRPs, which are PC-relative use LR, but can always
+  // be outlined because they don't require a *specific* value to be in LR.
+  if (MI.getOpcode() == AArch64::ADRP)
+    return outliner::InstrType::Legal;
 
   // If MI is a call we might be able to outline it. We don't want to outline
   // any calls that rely on the position of items on the stack. When we outline
