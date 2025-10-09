@@ -13,35 +13,48 @@
 define float @test_ctselect_f32_basic(i1 %cond, float %a, float %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_basic:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $12, %esp
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NOCMOV-NEXT:    fstps (%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $12, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_basic:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $12, %esp
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB0_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB0_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $12, %esp
 ; I386-CMOV-NEXT:    retl
   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
   ret float %result
@@ -51,8 +64,6 @@ define float @test_ctselect_f32_basic(i1 %cond, float %a, float %b) nounwind {
 define float @test_ctselect_f32_eq(float %x, float %y, float %a, float %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_eq:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $12, %esp
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
@@ -62,38 +73,53 @@ define float @test_ctselect_f32_eq(float %x, float %y, float %a, float %b) nounw
 ; I386-NOCMOV-NEXT:    fnstsw %ax
 ; I386-NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; I386-NOCMOV-NEXT:    sahf
-; I386-NOCMOV-NEXT:    setnp %al
-; I386-NOCMOV-NEXT:    sete %cl
-; I386-NOCMOV-NEXT:    testb %al, %cl
+; I386-NOCMOV-NEXT:    setnp %cl
+; I386-NOCMOV-NEXT:    sete %dl
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
+; I386-NOCMOV-NEXT:    testb %cl, %dl
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NOCMOV-NEXT:    fstps (%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $12, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_eq:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $12, %esp
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    fucompi %st(1), %st
 ; I386-CMOV-NEXT:    fstp %st(0)
-; I386-CMOV-NEXT:    setnp %al
-; I386-CMOV-NEXT:    sete %cl
-; I386-CMOV-NEXT:    testb %al, %cl
-; I386-CMOV-NEXT:    jne .LBB1_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB1_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    setnp %cl
+; I386-CMOV-NEXT:    sete %dl
+; I386-CMOV-NEXT:    xorl %eax, %eax
+; I386-CMOV-NEXT:    testb %cl, %dl
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $12, %esp
 ; I386-CMOV-NEXT:    retl
   %cmp = fcmp oeq float %x, %y
   %result = call float @llvm.ct.select.f32(i1 %cmp, float %a, float %b)
@@ -104,39 +130,66 @@ define float @test_ctselect_f32_eq(float %x, float %y, float %a, float %b) nounw
 define double @test_ctselect_f64_basic(i1 %cond, double %a, double %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f64_basic:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
 ; I386-NOCMOV-NEXT:    pushl %esi
-; I386-NOCMOV-NEXT:    subl $28, %esp
+; I386-NOCMOV-NEXT:    subl $24, %esp
 ; I386-NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fldl {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    movl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %ecx
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fstpl {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, (%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fldl (%esp)
-; I386-NOCMOV-NEXT:    addl $28, %esp
+; I386-NOCMOV-NEXT:    addl $24, %esp
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f64_basic:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    pushl %esi
+; I386-CMOV-NEXT:    subl $24, %esp
 ; I386-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB2_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB2_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    movl %eax, %ecx
+; I386-CMOV-NEXT:    notl %ecx
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstpl {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstpl {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fldl (%esp)
+; I386-CMOV-NEXT:    addl $24, %esp
+; I386-CMOV-NEXT:    popl %esi
 ; I386-CMOV-NEXT:    retl
   %result = call double @llvm.ct.select.f64(i1 %cond, double %a, double %b)
   ret double %result
@@ -146,43 +199,78 @@ define double @test_ctselect_f64_basic(i1 %cond, double %a, double %b) nounwind 
 define x86_fp80 @test_ctselect_f80_basic(i1 %cond, x86_fp80 %a, x86_fp80 %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f80_basic:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
 ; I386-NOCMOV-NEXT:    pushl %esi
-; I386-NOCMOV-NEXT:    subl $44, %esp
+; I386-NOCMOV-NEXT:    subl $36, %esp
 ; I386-NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    movl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %ecx
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movw %dx, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, (%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fldt (%esp)
-; I386-NOCMOV-NEXT:    addl $44, %esp
+; I386-NOCMOV-NEXT:    addl $36, %esp
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f80_basic:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    pushl %esi
+; I386-CMOV-NEXT:    subl $36, %esp
 ; I386-CMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB3_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB3_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    movl %eax, %ecx
+; I386-CMOV-NEXT:    notl %ecx
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fldt (%esp)
+; I386-CMOV-NEXT:    addl $36, %esp
+; I386-CMOV-NEXT:    popl %esi
 ; I386-CMOV-NEXT:    retl
   %result = call x86_fp80 @llvm.ct.select.f80(i1 %cond, x86_fp80 %a, x86_fp80 %b)
   ret x86_fp80 %result
@@ -192,8 +280,6 @@ define x86_fp80 @test_ctselect_f80_basic(i1 %cond, x86_fp80 %a, x86_fp80 %b) nou
 define float @test_ctselect_f32_gt(float %x, float %y, float %a, float %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_gt:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $12, %esp
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
@@ -203,36 +289,51 @@ define float @test_ctselect_f32_gt(float %x, float %y, float %a, float %b) nounw
 ; I386-NOCMOV-NEXT:    fnstsw %ax
 ; I386-NOCMOV-NEXT:    # kill: def $ah killed $ah killed $ax
 ; I386-NOCMOV-NEXT:    sahf
-; I386-NOCMOV-NEXT:    seta %al
-; I386-NOCMOV-NEXT:    testb %al, %al
+; I386-NOCMOV-NEXT:    seta %cl
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
+; I386-NOCMOV-NEXT:    testb %cl, %cl
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NOCMOV-NEXT:    fstps (%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $12, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_gt:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $12, %esp
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    fucompi %st(1), %st
 ; I386-CMOV-NEXT:    fstp %st(0)
-; I386-CMOV-NEXT:    seta %al
-; I386-CMOV-NEXT:    testb %al, %al
-; I386-CMOV-NEXT:    jne .LBB4_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB4_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    seta %cl
+; I386-CMOV-NEXT:    xorl %eax, %eax
+; I386-CMOV-NEXT:    testb %cl, %cl
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $12, %esp
 ; I386-CMOV-NEXT:    retl
   %cmp = fcmp ogt float %x, %y
   %result = call float @llvm.ct.select.f32(i1 %cmp, float %a, float %b)
@@ -243,35 +344,48 @@ define float @test_ctselect_f32_gt(float %x, float %y, float %a, float %b) nounw
 define float @test_ctselect_f32_no_branches(i1 %cond, float %a, float %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_no_branches:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $12, %esp
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NOCMOV-NEXT:    fstps (%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $12, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_no_branches:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $12, %esp
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB5_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB5_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $12, %esp
 ; I386-CMOV-NEXT:    retl
   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
   ret float %result
@@ -281,35 +395,48 @@ define float @test_ctselect_f32_no_branches(i1 %cond, float %a, float %b) nounwi
 define float @test_ctselect_f32_bundled(i1 %cond, float %a, float %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_bundled:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $12, %esp
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NOCMOV-NEXT:    fstps (%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $12, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_bundled:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $12, %esp
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB6_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB6_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $12, %esp
 ; I386-CMOV-NEXT:    retl
   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
   ret float %result
@@ -319,35 +446,48 @@ define float @test_ctselect_f32_bundled(i1 %cond, float %a, float %b) nounwind {
 define float @test_ctselect_f32_nan(i1 %cond) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_nan:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $12, %esp
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; I386-NOCMOV-NEXT:    fldz
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NOCMOV-NEXT:    fstps (%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $12, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_nan:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $12, %esp
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:    jne .LBB7_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB7_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $12, %esp
 ; I386-CMOV-NEXT:    retl
   %nan = bitcast i32 2139095040 to float  ; 0x7F800000 = +inf
   %zero = bitcast i32 0 to float
@@ -359,43 +499,78 @@ define float @test_ctselect_f32_nan(i1 %cond) nounwind {
 define x86_fp80 @test_ctselect_f80_alignment(i1 %cond, x86_fp80 %a, x86_fp80 %b) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f80_alignment:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
 ; I386-NOCMOV-NEXT:    pushl %esi
-; I386-NOCMOV-NEXT:    subl $44, %esp
+; I386-NOCMOV-NEXT:    subl $36, %esp
 ; I386-NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    movl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %ecx
+; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movw %dx, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, (%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-NOCMOV-NEXT:    andl %eax, %edx
+; I386-NOCMOV-NEXT:    andl %ecx, %esi
+; I386-NOCMOV-NEXT:    orl %edx, %esi
+; I386-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fldt (%esp)
-; I386-NOCMOV-NEXT:    addl $44, %esp
+; I386-NOCMOV-NEXT:    addl $36, %esp
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f80_alignment:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    pushl %esi
+; I386-CMOV-NEXT:    subl $36, %esp
 ; I386-CMOV-NEXT:    fldt {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    fldt {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB8_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB8_2:
-; I386-CMOV-NEXT:    fstp %st(0)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    movl %eax, %ecx
+; I386-CMOV-NEXT:    notl %ecx
+; I386-CMOV-NEXT:    fxch %st(1)
+; I386-CMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstpt {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; I386-CMOV-NEXT:    andl %eax, %edx
+; I386-CMOV-NEXT:    andl %ecx, %esi
+; I386-CMOV-NEXT:    orl %edx, %esi
+; I386-CMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fldt (%esp)
+; I386-CMOV-NEXT:    addl $36, %esp
+; I386-CMOV-NEXT:    popl %esi
 ; I386-CMOV-NEXT:    retl
   %result = call x86_fp80 @llvm.ct.select.f80(i1 %cond, x86_fp80 %a, x86_fp80 %b)
   ret x86_fp80 %result
@@ -405,54 +580,78 @@ define x86_fp80 @test_ctselect_f80_alignment(i1 %cond, x86_fp80 %a, x86_fp80 %b)
 define float @test_ctselect_f32_multiple(i1 %cond1, i1 %cond2, float %a, float %b, float %c, float %d) nounwind {
 ; I386-NOCMOV-LABEL: test_ctselect_f32_multiple:
 ; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    subl $24, %esp
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
 ; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
 ; I386-NOCMOV-NEXT:    fxch %st(1)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl %edx, (%esp)
-; I386-NOCMOV-NEXT:    flds (%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    xorl %eax, %eax
+; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    negl %eax
+; I386-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    fstps (%esp)
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-NOCMOV-NEXT:    movl (%esp), %edx
+; I386-NOCMOV-NEXT:    andl %eax, %ecx
+; I386-NOCMOV-NEXT:    notl %eax
+; I386-NOCMOV-NEXT:    andl %edx, %eax
+; I386-NOCMOV-NEXT:    orl %ecx, %eax
+; I386-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    addl $24, %esp
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
 ; I386-CMOV-LABEL: test_ctselect_f32_multiple:
 ; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    subl $24, %esp
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
 ; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB9_2
-; I386-CMOV-NEXT:  # %bb.1:
-; I386-CMOV-NEXT:    fstp %st(1)
-; I386-CMOV-NEXT:    fldz
-; I386-CMOV-NEXT:  .LBB9_2:
-; I386-CMOV-NEXT:    fstp %st(0)
-; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    jne .LBB9_4
-; I386-CMOV-NEXT:  # %bb.3:
-; I386-CMOV-NEXT:    fstp %st(0)
-; I386-CMOV-NEXT:    fldz
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
 ; I386-CMOV-NEXT:    fxch %st(1)
-; I386-CMOV-NEXT:  .LBB9_4:
-; I386-CMOV-NEXT:    fstp %st(1)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    xorl %eax, %eax
+; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    sete %al
+; I386-CMOV-NEXT:    negl %eax
+; I386-CMOV-NEXT:    fstps {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    fstps (%esp)
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    movl (%esp), %edx
+; I386-CMOV-NEXT:    andl %eax, %ecx
+; I386-CMOV-NEXT:    notl %eax
+; I386-CMOV-NEXT:    andl %edx, %eax
+; I386-CMOV-NEXT:    orl %ecx, %eax
+; I386-CMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    addl $24, %esp
 ; I386-CMOV-NEXT:    retl
   %sel1 = call float @llvm.ct.select.f32(i1 %cond1, float %a, float %b)
   %sel2 = call float @llvm.ct.select.f32(i1 %cond2, float %sel1, float %c)
