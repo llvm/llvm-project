@@ -1771,9 +1771,13 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   }
 
   // Rewrite op.
-  rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+  auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
+  newOp.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
+      getContext(), lowerCIRVisibilityToLLVMVisibility(
+                        op.getGlobalVisibilityAttr().getValue())));
+
   return mlir::success();
 }
 
@@ -2594,6 +2598,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                       return std::make_pair(ctorAttr.getName(),
                                             ctorAttr.getPriority());
                     });
+  assert(!cir::MissingFeatures::opGlobalDtorList());
 }
 
 mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
