@@ -909,9 +909,9 @@ bool isaPoolingNhwcMaxOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
@@ -931,9 +931,9 @@ bool isaPoolingNhwcMinOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
@@ -953,9 +953,9 @@ bool isaPoolingNhwcSumOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
@@ -1019,9 +1019,9 @@ bool isaPoolingNcwMaxOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
@@ -1040,9 +1040,9 @@ bool isaPoolingNcwSumOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
@@ -1061,9 +1061,9 @@ bool isaPoolingNwcMaxOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
@@ -1082,9 +1082,9 @@ bool isaPoolingNwcMinOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
@@ -1103,9 +1103,9 @@ bool isaPoolingNwcSumOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  // #map = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map1 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
@@ -1124,9 +1124,9 @@ bool isaPoolingNdhwcMaxOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
@@ -1147,9 +1147,9 @@ bool isaPoolingNdhwcMinOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
@@ -1170,9 +1170,9 @@ bool isaPoolingNdhwcSumOp(LinalgOp op) {
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
   unsigned iIndex = 0, oIndex = 2;
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
   return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
       matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
