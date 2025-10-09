@@ -194,10 +194,7 @@ public:
 
     // Delete the overlapping intervals. Split up intervals that only partially
     // intersect an overlap.
-    for (IntervalT Overlap : Overlaps) {
-      IndexT OlapStart, OlapStop;
-      std::tie(OlapStart, OlapStop) = Overlap;
-
+    for (auto [OlapStart, OlapStop] : Overlaps) {
       auto It = Intervals.find(OlapStart);
       IndexT CurrStart = It.start();
       IndexT CurrStop = It.stop();
@@ -420,10 +417,7 @@ private:
                               const SmallVectorImpl<IntervalT> &Overlaps,
                               SmallVectorImpl<IntervalT> &NonOverlappingParts) {
     IndexT NextUncoveredBit = Start;
-    for (IntervalT Overlap : Overlaps) {
-      IndexT OlapStart, OlapStop;
-      std::tie(OlapStart, OlapStop) = Overlap;
-
+    for (auto [OlapStart, OlapStop] : Overlaps) {
       // [Start;Stop] and [OlapStart;OlapStop] overlap iff OlapStart <= Stop
       // and Start <= OlapStop.
       bool DoesOverlap = OlapStart <= Stop && Start <= OlapStop;

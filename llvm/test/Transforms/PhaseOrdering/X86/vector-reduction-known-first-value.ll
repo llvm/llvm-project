@@ -26,8 +26,8 @@ define i16 @test(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP5]] = add <8 x i16> [[VEC_PHI1]], [[TMP3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       exit:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i16> [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[BIN_RDX]])
 ; CHECK-NEXT:    ret i16 [[TMP7]]

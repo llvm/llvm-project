@@ -342,12 +342,48 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
                                                 ~(PageSize - 1U));
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+      } else {
+        PhdrInfo Info;
+        Info.FileOffset = Phdr.p_offset;
+        Info.FileSz = Phdr.p_filesz;
+        Info.VirtualAddr = Phdr.p_vaddr;
+        NonTextPhdrInfo.push_back(Info);
       }
     }
   }
 
   if (PreferredTextSegmentAddresses.empty())
     exitWithError("no executable segment found", FileName);
+}
+
+uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
+  uint64_t FileOffset = 0;
+  auto MMapIter = NonTextMMapEvents.lower_bound(Address);
+  if (MMapIter == NonTextMMapEvents.end())
+    return Address; // No non-text mmap event found, return the address as is.
+
+  const auto &MMapEvent = MMapIter->second;
+
+  // If the address is within the non-text mmap event, calculate its file
+  // offset in the binary.
+  if (MMapEvent.Address <= Address &&
+      Address < MMapEvent.Address + MMapEvent.Size)
+    FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
+
+  // If the address is not within the non-text mmap event, return the address
+  // as is.
+  if (FileOffset == 0)
+    return Address;
+
+  for (const auto &PhdrInfo : NonTextPhdrInfo) {
+    // Find the program section that contains the file offset and map the
+    // file offset to the virtual address.
+    if (PhdrInfo.FileOffset <= FileOffset &&
+        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz)
+      return PhdrInfo.VirtualAddr + (FileOffset - PhdrInfo.FileOffset);
+  }
+
+  return Address;
 }
 
 void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
@@ -628,43 +664,43 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
 void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   const Target *TheTarget = getTarget(Obj);
-  std::string TripleName = TheTriple.getTriple();
   StringRef FileName = Obj->getFileName();
 
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
-    exitWithError("no register info for target " + TripleName, FileName);
+    exitWithError("no register info for target " + TheTriple.str(), FileName);
 
   MCTargetOptions MCOptions;
-  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
-    exitWithError("no assembly info for target " + TripleName, FileName);
+    exitWithError("no assembly info for target " + TheTriple.str(), FileName);
 
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
   STI.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, "", Features->getString()));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)
-    exitWithError("no subtarget info for target " + TripleName, FileName);
+    exitWithError("no subtarget info for target " + TheTriple.str(), FileName);
 
   MII.reset(TheTarget->createMCInstrInfo());
   if (!MII)
-    exitWithError("no instruction info for target " + TripleName, FileName);
+    exitWithError("no instruction info for target " + TheTriple.str(),
+                  FileName);
 
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());
   DisAsm.reset(TheTarget->createMCDisassembler(*STI, Ctx));
   if (!DisAsm)
-    exitWithError("no disassembler for target " + TripleName, FileName);
+    exitWithError("no disassembler for target " + TheTriple.str(), FileName);
 
   MIA.reset(TheTarget->createMCInstrAnalysis(MII.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  IPrinter.reset(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+  IPrinter.reset(TheTarget->createMCInstPrinter(TheTriple, AsmPrinterVariant,
+                                                *AsmInfo, *MII, *MRI));
   IPrinter->setPrintBranchImmAsAddress(true);
 }
 
@@ -919,11 +955,10 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
                                                    bool UseProbeDiscriminator) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
-  auto Addr = object::SectionedAddress{IP.Address,
-                                       object::SectionedAddress::UndefSection};
-  DIInliningInfo InlineStack = unwrapOrError(
-      Symbolizer->symbolizeInlinedCode(SymbolizerPath.str(), Addr),
-      SymbolizerPath);
+  DIInliningInfo InlineStack =
+      unwrapOrError(Symbolizer->symbolizeInlinedCode(
+                        SymbolizerPath.str(), getSectionedAddress(IP.Address)),
+                    SymbolizerPath);
 
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
@@ -950,6 +985,16 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   }
 
   return CallStack;
+}
+
+StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
+  DIGlobal DataDIGlobal =
+      unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
+                                              getSectionedAddress(Address)),
+                    SymbolizerPath);
+  decltype(NameStrings)::iterator Iter;
+  std::tie(Iter, std::ignore) = NameStrings.insert(DataDIGlobal.Name);
+  return StringRef(*Iter);
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
