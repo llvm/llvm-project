@@ -406,13 +406,7 @@ static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
   ArrayAttr indexingMaps = genericOp.getIndexingMaps();
   if (indexingMaps.size() < 3) return "";
   unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  // conv_3d
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0 + d3, d1 + d4, d2 + d5)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2)>
-  if (matchConvDimAddExprPattern(indexingMaps, /*iDim=*/0, /*fDim=*/0, /*oDim=*/0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/1, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2))
+  if (isaConv3DOp(genericOp))
     return "linalg.conv_3d";
 
   Block *body = genericOp.getBlock();
@@ -493,29 +487,14 @@ static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.conv_2d_ngchw_gfchw_q";
   if (isaConv2DNhwgcGfhwcOp(genericOp))
     return "linalg.conv_2d_nhwgc_gfhwc";
-  // depthwise_conv_3d_ncdhw_cdhw
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d7, d1 + d4, d2 + d5, d3 + d6)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d7, d4, d5, d6)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d7, d1, d2, d3)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/3, /*oDim=*/4))
+  if (isaDepthwiseConv3DNcdhwCdhwOp(genericOp))
     return "linalg.depthwise_conv_3d_ncdhw_cdhw";
-  // depthwise_conv_3d_ndhwc_dhwc
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d4, d2 + d5, d3 + d6, d7)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d4, d5, d6, d7)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d7)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4))
+  if (isaDepthwiseConv3DNdhwcDhwcOp(genericOp))
     return "linalg.depthwise_conv_3d_ndhwc_dhwc";
 
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
+  if (indexingMaps.size() < 3) return "";
+  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
   Block *body = genericOp.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
@@ -541,42 +520,11 @@ static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
 }
 
 static std::string inferBasedOnRank9ConvIteratorTypes(GenericOp genericOp) {
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() < 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  // conv_3d_ncdhw_fcdhw
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d5, d2 + d6, d3 + d7, d4 + d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d1, d5, d6, d7, d8)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, fIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/2, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/3, /*oDim=*/3) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/4, /*fDim=*/4, /*oDim=*/4) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 0, oIndex, 1))
+  if (isaConv3DNcdhwFcdhwOp(genericOp))
     return "linalg.conv_3d_ncdhw_fcdhw";
-  // conv_3d_ndhwc_dhwcf
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d4)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 4))
+  if (isaConv3DNdhwcDhwcfOp(genericOp))
     return "linalg.conv_3d_ndhwc_dhwcf";
-  // depthwise_conv_3d_ndhwc_dhwcm
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1 + d5, d2 + d6, d3 + d7, d8)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d5, d6, d7, d8, d4)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8) -> (d0, d1, d2, d3, d8, d4)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, fIndex, 3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
-      matchConvDimExprPattern(indexingMaps, fIndex, 4, oIndex, 5))
+  if (isaDepthwiseConv3DNdhwcDhwcmOp(genericOp))
     return "linalg.depthwise_conv_3d_ndhwc_dhwcm";
   return "";
 }
