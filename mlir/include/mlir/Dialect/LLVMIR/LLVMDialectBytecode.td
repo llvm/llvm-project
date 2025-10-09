@@ -188,11 +188,11 @@ def DICompositeTypeAttr : DialectAttribute<(attr
   LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
   VarInt:$sizeInBits,
   VarInt:$alignInBits,
-  OptionalArrayRef<"DINodeAttr">:$elements,
   OptionalAttribute<"DIExpressionAttr">:$dataLocation,
   OptionalAttribute<"DIExpressionAttr">:$rank,
   OptionalAttribute<"DIExpressionAttr">:$allocated,
-  OptionalAttribute<"DIExpressionAttr">:$associated
+  OptionalAttribute<"DIExpressionAttr">:$associated,
+  OptionalArrayRef<"DINodeAttr">:$elements
 )>;
 
 //===----------------------------------------------------------------------===//
