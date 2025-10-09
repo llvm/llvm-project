@@ -435,7 +435,8 @@ private:
   InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
   /// @}
 
-  /// Get the atomic variable that keeps track of the standalone data storage size.
+  /// Get the atomic variable that keeps track of the standalone data storage
+  /// size.
   std::atomic<uint64_t> &standaloneStorageSize() const;
 
   /// Increase the standalone data size.
@@ -446,7 +447,8 @@ private:
   // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                 OnDiskDataAllocator DataPool,
-                std::unique_ptr<OnDiskGraphDB> UpstreamDB, FaultInPolicy Policy);
+                std::unique_ptr<OnDiskGraphDB> UpstreamDB,
+                FaultInPolicy Policy);
 
   /// Mapping from hash to object reference.
   ///
