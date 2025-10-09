@@ -882,4 +882,679 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
     });
 }
 
+//===----------------------------------------------------------------------===//
+// Test 5: Loop with new def in loop body (PHI in loop header)
+//
+// This tests SSA repair when a new definition is inserted inside a loop,
+// requiring a PHI node in the loop header to merge:
+// - Entry path: original value from before the loop
+// - Back edge: new value from loop body
+//
+// CFG:
+//     bb.0 (entry, X = 1)
+//       |
+//       v
+//     bb.1 (loop header) ← PHI needed: %PHI = PHI(X, bb.0, NewReg, bb.2)
+//      / \
+//     /   \
+//  bb.2   bb.3 (loop exit, use X)
+//  (loop
+//  body,
+//  new def)
+//     |
+//     └──→ bb.1 (back edge)
+//
+// Key test: Dominance-based PHI construction should correctly use NewReg
+// for the back edge operand since NewDefBB (bb.2) dominates the loop latch (bb.2).
+//===----------------------------------------------------------------------===//
+
+TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
+  liveIntervalsTest(R"MIR(
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; Original definition of %1 (before loop)
+    %1:vgpr_32 = V_ADD_U32_e32 %0, %0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    ; Loop header - PHI should be inserted here
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+
+  bb.2:
+    successors: %bb.1
+    ; Loop body - new def will be inserted here
+    %2:vgpr_32 = V_ADD_U32_e32 %1, %1, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.3:
+    ; Loop exit - use %1
+    %3:vgpr_32 = V_ADD_U32_e32 %1, %1, implicit $exec
+    S_ENDPGM 0
+)MIR",
+    [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      
+      ASSERT_EQ(MF.size(), 4u) << "Should have bb.0 through bb.3";
+      
+      MachineBasicBlock *BB0 = MF.getBlockNumbered(0); // Entry with original def
+      MachineBasicBlock *BB1 = MF.getBlockNumbered(1); // Loop header
+      MachineBasicBlock *BB2 = MF.getBlockNumbered(2); // Loop body
+      
+      // Get %1 (defined in bb.0, used in loop)
+      // Skip the first V_MOV instruction, get the V_ADD
+      auto It = BB0->begin();
+      ++It; // Skip %0 = V_MOV
+      MachineInstr *OrigDefMI = &*It;
+      Register OrigReg = OrigDefMI->getOperand(0).getReg();
+      ASSERT_TRUE(OrigReg.isValid()) << "Could not get original register";
+      
+      llvm::errs() << "Original register: %" << OrigReg.virtRegIndex() << "\n";
+      
+      // Insert new definition in loop body (bb.2)
+      // This violates SSA because %1 is defined both in bb.0 and bb.2
+      MachineInstr *MovInst = &*BB0->begin();
+      unsigned MovOpcode = MovInst->getOpcode();
+      Register ExecReg = MovInst->getOperand(2).getReg();
+      
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      auto InsertPt = BB2->getFirstNonPHI();
+      MachineInstr *NewDefMI = BuildMI(*BB2, InsertPt, DebugLoc(), 
+                                        TII->get(MovOpcode), OrigReg)
+                                   .addImm(99)
+                                   .addReg(ExecReg, RegState::Implicit);
+      
+      // Set MachineFunction properties
+      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+      
+      // Call SSA updater
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      
+      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      
+      // VERIFY RESULTS:
+      
+      // 1. NewReg should be valid and different from OrigReg
+      EXPECT_TRUE(NewReg.isValid());
+      EXPECT_NE(NewReg, OrigReg);
+      
+      // 2. NewDefMI should now define NewReg
+      EXPECT_EQ(NewDefMI->getOperand(0).getReg(), NewReg);
+      
+      // 3. PHI should be inserted in loop header (bb.1)
+      bool FoundPHIInHeader = false;
+      for (MachineInstr &MI : *BB1) {
+        if (MI.isPHI()) {
+          FoundPHIInHeader = true;
+          llvm::errs() << "Found PHI in loop header (bb.1): ";
+          MI.print(llvm::errs());
+          
+          // Verify PHI has 2 incoming values
+          unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
+          EXPECT_EQ(NumIncoming, 2u) << "Loop header PHI should have 2 incoming values";
+          
+          // Check the operands
+          // One should be from bb.0 (entry, using OrigReg)
+          // One should be from bb.2 (back edge, using NewReg)
+          bool HasEntryPath = false;
+          bool HasBackEdge = false;
+          
+          for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+            Register IncomingReg = MI.getOperand(i).getReg();
+            MachineBasicBlock *IncomingMBB = MI.getOperand(i + 1).getMBB();
+            
+            if (IncomingMBB == BB0) {
+              HasEntryPath = true;
+              EXPECT_EQ(IncomingReg, OrigReg) << "Entry path should use OrigReg";
+              llvm::errs() << "  Entry path (bb.0): %" << IncomingReg.virtRegIndex() << "\n";
+            } else if (IncomingMBB == BB2) {
+              HasBackEdge = true;
+              EXPECT_EQ(IncomingReg, NewReg) << "Back edge should use NewReg";
+              llvm::errs() << "  Back edge (bb.2): %" << IncomingReg.virtRegIndex() << "\n";
+            }
+          }
+          
+          EXPECT_TRUE(HasEntryPath) << "PHI should have entry path from bb.0";
+          EXPECT_TRUE(HasBackEdge) << "PHI should have back edge from bb.2";
+          
+          break;
+        }
+      }
+      EXPECT_TRUE(FoundPHIInHeader) << "Should have inserted PHI in loop header (bb.1)";
+      
+      // 4. Verify LiveIntervals are valid
+      EXPECT_TRUE(LIS.hasInterval(NewReg));
+      EXPECT_TRUE(LIS.hasInterval(OrigReg));
+      
+      // Debug output if verification fails
+      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
+        llvm::errs() << "MachineFunction verification failed:\n";
+        MF.print(llvm::errs());
+        LIS.print(llvm::errs());
+      }
+    });
+}
+
+//===----------------------------------------------------------------------===//
+// Test 6: Complex loop with diamond CFG and use-before-def
+//
+// This is the most comprehensive test combining multiple SSA repair scenarios:
+// 1. Loop with existing PHI (induction variable)
+// 2. Use before redefinition (in loop header)
+// 3. New definition in one branch of if-then-else diamond
+// 4. PHI1 at diamond join
+// 5. PHI2 at loop header (merges entry value and PHI1 result from back edge)
+// 6. Use after diamond (in latch) should use PHI1 result
+//
+// CFG:
+//     bb.0 (entry: X=1, i=0)
+//       |
+//       v
+//     bb.1 (loop header)
+//       PHI_i = PHI(0, bb.0, i+1, bb.5) [already in input MIR]
+//       PHI2 = PHI(X, bb.0, PHI1, bb.5) [created by SSA updater]
+//       USE X (before redef!) [rewritten to PHI2]
+//       if (i < 10)
+//      /  \
+//   bb.2  bb.3 (NEW DEF: X=99)
+//   (then) (else)
+//     |    |
+//     \  /
+//      \/
+//     bb.4 (diamond join)
+//       PHI1 = PHI(X, bb.2, NewReg, bb.3) [created by SSA updater]
+//       |
+//       v
+//     bb.5 (latch)
+//       USE X [rewritten to PHI1]
+//       i = i + 1
+//       branch to bb.1
+//       |
+//     bb.6 (exit)
+//       USE X
+//===----------------------------------------------------------------------===//
+
+TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
+  liveIntervalsTest(R"MIR(
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; X = 1 (the register we'll redefine in loop)
+    %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; i = 0 (induction variable)
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    ; Loop header with existing PHI for induction variable
+    %3:vgpr_32 = PHI %2:vgpr_32, %bb.0, %10:vgpr_32, %bb.5
+    ; USE X before redefinition - should be rewritten to PHI2
+    %4:vgpr_32 = V_ADD_U32_e32 %1, %1, implicit $exec
+    ; Check if i < 10
+    %5:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+
+  bb.2:
+    successors: %bb.4
+    ; Then branch - X unchanged
+    S_NOP 0
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.4
+    ; Else branch - NEW DEF will be inserted here: X = 99
+    S_NOP 0
+
+  bb.4:
+    successors: %bb.5
+    ; Diamond join - PHI1 should be created here
+    S_NOP 0
+
+  bb.5:
+    successors: %bb.1, %bb.6
+    ; Loop latch - USE X (should be rewritten to PHI1)
+    %8:vgpr_32 = V_SUB_U32_e32 %1, %1, implicit $exec
+    ; i = i + 1
+    %9:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %10:vgpr_32 = V_ADD_U32_e32 %3, %9, implicit $exec
+    ; Check loop condition
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr2, $sgpr3, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.6, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.6:
+    ; Loop exit - USE X
+    %11:vgpr_32 = V_OR_B32_e32 %1, %1, implicit $exec
+    S_ENDPGM 0
+)MIR",
+    [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      
+      ASSERT_EQ(MF.size(), 7u) << "Should have bb.0 through bb.6";
+      
+      MachineBasicBlock *BB0 = MF.getBlockNumbered(0); // Entry
+      MachineBasicBlock *BB1 = MF.getBlockNumbered(1); // Loop header
+      MachineBasicBlock *BB2 = MF.getBlockNumbered(2); // Then
+      MachineBasicBlock *BB3 = MF.getBlockNumbered(3); // Else (new def here)
+      MachineBasicBlock *BB4 = MF.getBlockNumbered(4); // Diamond join
+      MachineBasicBlock *BB5 = MF.getBlockNumbered(5); // Latch
+      
+      // Get %1 (X, defined in bb.0)
+      auto It = BB0->begin();
+      ++It; // Skip %0 = V_MOV_B32_e32 0
+      MachineInstr *OrigDefMI = &*It; // %1 = V_MOV_B32_e32 1
+      Register OrigReg = OrigDefMI->getOperand(0).getReg();
+      ASSERT_TRUE(OrigReg.isValid()) << "Could not get original register X";
+      
+      llvm::errs() << "Original register X: %" << OrigReg.virtRegIndex() << "\n";
+      
+      // Find the use-before-def in bb.1 (loop header)
+      MachineInstr *UseBeforeDefMI = nullptr;
+      for (MachineInstr &MI : *BB1) {
+        if (!MI.isPHI() && MI.getOpcode() != TargetOpcode::IMPLICIT_DEF) {
+          // First non-PHI instruction should be V_ADD using %1
+          if (MI.getNumOperands() >= 3 && MI.getOperand(1).isReg() && 
+              MI.getOperand(1).getReg() == OrigReg) {
+            UseBeforeDefMI = &MI;
+            break;
+          }
+        }
+      }
+      ASSERT_TRUE(UseBeforeDefMI) << "Could not find use-before-def in loop header";
+      llvm::errs() << "Found use-before-def in bb.1: %"
+                   << UseBeforeDefMI->getOperand(0).getReg().virtRegIndex() << "\n";
+      
+      // Insert new definition in bb.3 (else branch): X = 99
+      MachineInstr *MovInst = &*BB0->begin();
+      unsigned MovOpcode = MovInst->getOpcode();
+      Register ExecReg = MovInst->getOperand(2).getReg();
+      
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      auto InsertPt = BB3->getFirstNonPHI();
+      MachineInstr *NewDefMI = BuildMI(*BB3, InsertPt, DebugLoc(), 
+                                        TII->get(MovOpcode), OrigReg)
+                                   .addImm(99)
+                                   .addReg(ExecReg, RegState::Implicit);
+      
+      // Set MachineFunction properties
+      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+      
+      // Call SSA updater
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      
+      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      
+      // VERIFY RESULTS:
+      
+      // 1. NewReg should be valid and different from OrigReg
+      EXPECT_TRUE(NewReg.isValid());
+      EXPECT_NE(NewReg, OrigReg);
+      EXPECT_EQ(NewDefMI->getOperand(0).getReg(), NewReg);
+      
+      // 2. PHI1 should exist in diamond join (bb.4)
+      bool FoundPHI1 = false;
+      Register PHI1Reg;
+      for (MachineInstr &MI : *BB4) {
+        if (MI.isPHI()) {
+          FoundPHI1 = true;
+          PHI1Reg = MI.getOperand(0).getReg();
+          llvm::errs() << "Found PHI1 in diamond join (bb.4): ";
+          MI.print(llvm::errs());
+          
+          // Should have 2 incoming: OrigReg from bb.2, NewReg from bb.3
+          unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
+          EXPECT_EQ(NumIncoming, 2u) << "Diamond join PHI should have 2 incoming";
+          break;
+        }
+      }
+      EXPECT_TRUE(FoundPHI1) << "Should have PHI1 in diamond join (bb.4)";
+      
+      // 3. PHI2 should exist in loop header (bb.1)
+      // First, count all PHIs
+      unsigned TotalPHICount = 0;
+      for (MachineInstr &MI : *BB1) {
+        if (MI.isPHI())
+          TotalPHICount++;
+      }
+      llvm::errs() << "Total PHIs in loop header: " << TotalPHICount << "\n";
+      EXPECT_EQ(TotalPHICount, 2u) << "Loop header should have 2 PHIs (induction var + SSA repair)";
+      
+      // Now find the SSA repair PHI (not the induction variable PHI %3)
+      bool FoundPHI2 = false;
+      Register PHI2Reg;
+      Register InductionVarPHI = Register::index2VirtReg(3); // %3 from input MIR
+      for (MachineInstr &MI : *BB1) {
+        if (MI.isPHI()) {
+          Register PHIResult = MI.getOperand(0).getReg();
+          
+          // Skip the induction variable PHI (%3 from input MIR) when looking for SSA repair PHI
+          if (PHIResult == InductionVarPHI)
+            continue;
+          
+          FoundPHI2 = true;
+          PHI2Reg = PHIResult;
+          llvm::errs() << "Found PHI2 (SSA repair) in loop header (bb.1): ";
+          MI.print(llvm::errs());
+          
+          // Should have 2 incoming: OrigReg from bb.0, PHI1Reg from bb.5
+          unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
+          EXPECT_EQ(NumIncoming, 2u) << "Loop header PHI2 should have 2 incoming";
+          
+          // Verify operands
+          bool HasEntryPath = false;
+          bool HasBackEdge = false;
+          for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+            Register IncomingReg = MI.getOperand(i).getReg();
+            MachineBasicBlock *IncomingMBB = MI.getOperand(i + 1).getMBB();
+            
+            if (IncomingMBB == BB0) {
+              HasEntryPath = true;
+              EXPECT_EQ(IncomingReg, OrigReg) << "Entry path should use OrigReg";
+            } else if (IncomingMBB == BB5) {
+              HasBackEdge = true;
+              EXPECT_EQ(IncomingReg, PHI1Reg) << "Back edge should use PHI1 result";
+            }
+          }
+          
+          EXPECT_TRUE(HasEntryPath) << "PHI2 should have entry path from bb.0";
+          EXPECT_TRUE(HasBackEdge) << "PHI2 should have back edge from bb.5";
+          break;
+        }
+      }
+      EXPECT_TRUE(FoundPHI2) << "Should have PHI2 (SSA repair) in loop header (bb.1)";
+      
+      // 4. Use-before-def in bb.1 should be rewritten to PHI2
+      EXPECT_EQ(UseBeforeDefMI->getOperand(1).getReg(), PHI2Reg)
+          << "Use-before-def should be rewritten to PHI2 result";
+      llvm::errs() << "Use-before-def correctly rewritten to PHI2: %"
+                   << PHI2Reg.virtRegIndex() << "\n";
+      
+      // 5. Use in latch (bb.5) should be rewritten to PHI1
+      // Find instruction using PHI1 (originally used %1)
+      bool FoundLatchUse = false;
+      for (MachineInstr &MI : *BB5) {
+        // Skip PHIs and branches
+        if (MI.isPHI() || MI.isBranch())
+          continue;
+        
+        // Look for any instruction that uses PHI1Reg
+        for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+          MachineOperand &MO = MI.getOperand(i);
+          if (MO.isReg() && MO.isUse() && MO.getReg() == PHI1Reg) {
+            llvm::errs() << "Latch use correctly rewritten to PHI1: %"
+                         << PHI1Reg.virtRegIndex() << " in: ";
+            MI.print(llvm::errs());
+            FoundLatchUse = true;
+            break;
+          }
+        }
+        if (FoundLatchUse)
+          break;
+      }
+      EXPECT_TRUE(FoundLatchUse) << "Should find use of PHI1 in latch (bb.5)";
+      
+      // 6. Verify LiveIntervals
+      EXPECT_TRUE(LIS.hasInterval(NewReg));
+      EXPECT_TRUE(LIS.hasInterval(PHI1Reg));
+      EXPECT_TRUE(LIS.hasInterval(PHI2Reg));
+      
+      // Debug output if verification fails
+      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
+        llvm::errs() << "MachineFunction verification failed:\n";
+        MF.print(llvm::errs());
+        LIS.print(llvm::errs());
+      }
+    });
+}
+
+// Test: Multiple subreg redefinitions in loop (X.sub0 in one branch, X.sub1 in latch)
+// This tests the most complex scenario: two separate lane redefinitions with REG_SEQUENCE
+// composition at the backedge.
+TEST(MachineLaneSSAUpdaterTest, MultipleSubregRedefsInLoop) {
+  SmallString<2048> S;
+  StringRef MIRString = (Twine(R"MIR(
+--- |
+  define amdgpu_kernel void @func() { ret void }
+...
+---
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vreg_64 }
+body: |
+  bb.0:
+    successors: %bb.1
+    %1:vreg_64 = IMPLICIT_DEF
+    
+  bb.1:
+    successors: %bb.2, %bb.5
+    %0:vreg_64 = PHI %1:vreg_64, %bb.0, %3:vreg_64, %bb.3
+    %2:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
+    dead %4:vgpr_32 = V_ADD_U32_e32 %0.sub0:vreg_64, %2:vgpr_32, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.5
+    
+  bb.2:
+    successors: %bb.3
+    dead %5:vgpr_32 = V_MOV_B32_e32 %0.sub1:vreg_64, implicit $exec
+    S_BRANCH %bb.3
+    
+  bb.5:
+    successors: %bb.3
+    dead %6:vgpr_32 = V_MOV_B32_e32 %0.sub0:vreg_64, implicit $exec
+    S_BRANCH %bb.3
+    
+  bb.3:
+    successors: %bb.1, %bb.4
+    %3:vreg_64 = V_LSHLREV_B64_e64 1, %0:vreg_64, implicit $exec
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 10
+    S_CMP_LT_U32 $sgpr2, $sgpr3, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.4
+    
+  bb.4:
+    S_ENDPGM 0
+...
+)MIR")).toNullTerminatedStringRef(S);
+
+  doTest<LiveIntervalsWrapperPass>(MIRString,
+             [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      llvm::errs() << "\n=== MultipleSubregRedefsInLoop Test ===\n";
+      
+      // Get basic blocks
+      auto BBI = MF.begin();
+      MachineBasicBlock *BB0 = &*BBI++;  // Entry
+      MachineBasicBlock *BB1 = &*BBI++;  // Loop header
+      MachineBasicBlock *BB2 = &*BBI++;  // True branch (uses X.HI)
+      MachineBasicBlock *BB5 = &*BBI++;  // False branch (uses X.LO, INSERT def X.LO)
+      MachineBasicBlock *BB3 = &*BBI++;  // Latch (increment, INSERT def X.HI)
+      MachineBasicBlock *BB4 = &*BBI++;  // Exit
+      
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      
+      // Find the 64-bit register and its subregister indices
+      Register OrigReg = Register::index2VirtReg(0); // %0 from MIR
+      ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
+      
+      const TargetRegisterClass *RC64 = MRI.getRegClass(OrigReg);
+      unsigned Sub0Idx = 0, Sub1Idx = 0;
+      
+      // Find sub0 (low 32 bits) and sub1 (high 32 bits)
+      for (unsigned Idx = 1; Idx < TRI->getNumSubRegIndices(); ++Idx) {
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(Idx);
+        unsigned SubRegSize = TRI->getSubRegIdxSize(Idx);
+        
+        if (SubRegSize == 32) {
+          if (Mask.getAsInteger() == 0x3) { // Low lanes
+            Sub0Idx = Idx;
+          } else if (Mask.getAsInteger() == 0xC) { // High lanes
+            Sub1Idx = Idx;
+          }
+        }
+      }
+      
+      ASSERT_NE(Sub0Idx, 0u) << "Should find sub0 index";
+      ASSERT_NE(Sub1Idx, 0u) << "Should find sub1 index";
+      
+      llvm::errs() << "Using 64-bit register: %" << OrigReg.virtRegIndex() 
+                   << " with sub0=" << Sub0Idx << ", sub1=" << Sub1Idx << "\n";
+      
+      // Get V_MOV opcode and EXEC register from existing instruction
+      MachineInstr *MovInst = nullptr;
+      Register ExecReg;
+      for (MachineInstr &MI : *BB1) {
+        if (!MI.isPHI() && MI.getNumOperands() >= 3 && MI.getOperand(2).isReg()) {
+          MovInst = &MI;
+          ExecReg = MI.getOperand(2).getReg();
+          break;
+        }
+      }
+      ASSERT_NE(MovInst, nullptr) << "Should find V_MOV in BB1";
+      unsigned MovOpcode = MovInst->getOpcode();
+      
+      // === FIRST INSERTION: X.sub0 in BB5 (else branch) ===
+      llvm::errs() << "\n=== First insertion: X.sub0 in BB5 ===\n";
+      
+      // Find insertion point in BB5 (after the use of X.sub0)
+      MachineInstr *InsertPoint1 = nullptr;
+      for (MachineInstr &MI : *BB5) {
+        if (MI.isBranch()) {
+          InsertPoint1 = &MI;
+          break;
+        }
+      }
+      ASSERT_NE(InsertPoint1, nullptr) << "Should find branch in BB5";
+      
+      // Create first new def: X.sub0 = 99
+      MachineInstrBuilder MIB1 = BuildMI(*BB5, InsertPoint1, DebugLoc(), 
+                                          TII->get(MovOpcode))
+          .addReg(OrigReg, RegState::Define, Sub0Idx)
+          .addImm(99)
+          .addReg(ExecReg, RegState::Implicit);
+      
+      MachineInstr &NewDefMI1 = *MIB1;
+      llvm::errs() << "Created first def in BB5: ";
+      NewDefMI1.print(llvm::errs());
+      
+      // Create SSA updater and repair after first insertion
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      Register NewReg1 = Updater.repairSSAForNewDef(NewDefMI1, OrigReg);
+      
+      llvm::errs() << "SSA repair #1 created new register: %" << NewReg1.virtRegIndex() << "\n";
+      
+      // === SECOND INSERTION: X.sub1 in BB3 (after increment) ===
+      llvm::errs() << "\n=== Second insertion: X.sub1 in BB3 (after increment) ===\n";
+      
+      // Find the increment instruction in BB3 (look for vreg_64 def)
+      MachineInstr *IncrementMI = nullptr;
+      Register IncrementReg;
+      for (MachineInstr &MI : *BB3) {
+        if (!MI.isPHI() && MI.getNumOperands() > 0 && MI.getOperand(0).isReg() && 
+            MI.getOperand(0).isDef()) {
+          Register DefReg = MI.getOperand(0).getReg();
+          if (DefReg.isVirtual() && DefReg == Register::index2VirtReg(3)) {
+            IncrementMI = &MI;
+            IncrementReg = DefReg; // This is %3
+            llvm::errs() << "Found increment: ";
+            MI.print(llvm::errs());
+            break;
+          }
+        }
+      }
+      ASSERT_NE(IncrementMI, nullptr) << "Should find increment (def of %3) in BB3";
+      ASSERT_TRUE(IncrementReg.isValid()) << "Increment register should be valid";
+      
+      // Create second new def: %3.sub1 = 200 (redefine increment result's sub1)
+      MachineBasicBlock::iterator InsertPoint2 = std::next(IncrementMI->getIterator());
+      MachineInstrBuilder MIB2 = BuildMI(*BB3, InsertPoint2, DebugLoc(),
+                                          TII->get(MovOpcode))
+          .addReg(IncrementReg, RegState::Define, Sub1Idx)  // Redefine %3.sub1, not %0.sub1!
+          .addImm(200)
+          .addReg(ExecReg, RegState::Implicit);
+      
+      MachineInstr &NewDefMI2 = *MIB2;
+      llvm::errs() << "Created second def in BB3 (redefining %3.sub1): ";
+      NewDefMI2.print(llvm::errs());
+      
+      // Repair SSA after second insertion (for %3, the increment result)
+      Register NewReg2 = Updater.repairSSAForNewDef(NewDefMI2, IncrementReg);
+      
+      llvm::errs() << "SSA repair #2 created new register: %" << NewReg2.virtRegIndex() << "\n";
+      
+      // === Verification ===
+      llvm::errs() << "\n=== Verification ===\n";
+      
+      // Print final MIR
+      llvm::errs() << "Final BB3 (latch):\n";
+      for (MachineInstr &MI : *BB3) {
+        MI.print(llvm::errs());
+      }
+      
+      // 1. Should have PHI for 32-bit X.sub0 at BB3 (diamond join)
+      bool FoundSub0PHI = false;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isPHI()) {
+          Register PHIResult = MI.getOperand(0).getReg();
+          if (PHIResult != Register::index2VirtReg(3)) { // Not the increment result PHI
+            FoundSub0PHI = true;
+            llvm::errs() << "Found sub0 PHI in BB3: ";
+            MI.print(llvm::errs());
+          }
+        }
+      }
+      
+      // 2. Should have REG_SEQUENCE in BB3 before backedge to compose full 64-bit
+      bool FoundREGSEQ = false;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.getOpcode() == TargetOpcode::REG_SEQUENCE) {
+          FoundREGSEQ = true;
+          llvm::errs() << "Found REG_SEQUENCE in BB3: ";
+          MI.print(llvm::errs());
+          
+          // Verify it composes both lanes
+          unsigned NumSources = (MI.getNumOperands() - 1) / 2;
+          EXPECT_GE(NumSources, 2u) << "REG_SEQUENCE should have at least 2 sources (sub0 and sub1)";
+        }
+      }
+      
+      EXPECT_TRUE(FoundREGSEQ) << "Should have REG_SEQUENCE at backedge in BB3";
+      
+      // 3. Verify LiveIntervals
+      EXPECT_TRUE(LIS.hasInterval(NewReg1));
+      EXPECT_TRUE(LIS.hasInterval(NewReg2));
+      
+      // Debug output if verification fails
+      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
+        llvm::errs() << "MachineFunction verification failed:\n";
+        MF.print(llvm::errs());
+        LIS.print(llvm::errs());
+      }
+    });
+}
+
 } // anonymous namespace
