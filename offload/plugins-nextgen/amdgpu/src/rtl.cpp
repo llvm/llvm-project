@@ -4044,19 +4044,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           nullptr, Size / PatternSize);
   }
 
-  /// Initialize the async info for interoperability purposes.
+  /// Initialize the async info
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     // TODO: Implement this function.
-    return Plugin::success();
-  }
-
-  /// Initialize the device info for interoperability purposes.
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    DeviceInfo->Context = nullptr;
-
-    if (!DeviceInfo->Device)
-      DeviceInfo->Device = reinterpret_cast<void *>(Agent.handle);
-
     return Plugin::success();
   }
 

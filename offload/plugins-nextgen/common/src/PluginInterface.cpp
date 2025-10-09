@@ -1675,12 +1675,6 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
   return Err;
 }
 
-Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
-  assert(DeviceInfo && "Invalid device info");
-
-  return initDeviceInfoImpl(DeviceInfo);
-}
-
 Error GenericDeviceTy::setCoarseGrainMemory(void *ptr, int64_t size) {
   assert(ptr != nullptr);
   assert(size > 0);
@@ -2568,27 +2562,6 @@ int32_t GenericPluginTy::init_async_info(int32_t DeviceId,
              DPxPTR(*AsyncInfoPtr), DeviceId, toString(std::move(Err)).data());
       return OFFLOAD_FAIL;
     }
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::init_device_info(int32_t DeviceId,
-                                          __tgt_device_info *DeviceInfo,
-                                          const char **ErrStr) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, DeviceInfo, ErrStr);
-  auto R = [&]() {
-    *ErrStr = "";
-
-    auto Err = getDevice(DeviceId).initDeviceInfo(DeviceInfo);
-    if (Err) {
-      REPORT("Failure to initialize device info at " DPxMOD
-             " on device %d: %s\n",
-             DPxPTR(DeviceInfo), DeviceId, toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
-
     return OFFLOAD_SUCCESS;
   }();
   T.res(R);
