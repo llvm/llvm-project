@@ -234,8 +234,12 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // will be actually set only once.
   if (common_flags()->use_sigaltstack) SetAlternateSignalStack();
 
-  int signals[] = {SIGSEGV, SIGBUS, SIGABRT, SIGFPE, SIGILL, SIGTRAP};
-  for (int signum : signals) MaybeInstallSigaction(signum, handler);
+  MaybeInstallSigaction(SIGSEGV, handler);
+  MaybeInstallSigaction(SIGBUS, handler);
+  MaybeInstallSigaction(SIGABRT, handler);
+  MaybeInstallSigaction(SIGFPE, handler);
+  MaybeInstallSigaction(SIGILL, handler);
+  MaybeInstallSigaction(SIGTRAP, handler);
 }
 
 bool SignalContext::IsStackOverflow() const {
