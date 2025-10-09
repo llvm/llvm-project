@@ -1823,6 +1823,7 @@ Octal literals prefixed with ``0o`` or ``0O``                                  C
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
 ``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
 ``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
+``__COUNTER__`` (N3457)                                                        C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
