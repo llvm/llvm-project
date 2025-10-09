@@ -715,11 +715,20 @@ DICompositeType *DIBuilder::createArrayType(
 
 DICompositeType *DIBuilder::createVectorType(uint64_t Size,
                                              uint32_t AlignInBits, DIType *Ty,
-                                             DINodeArray Subscripts) {
-  auto *R = DICompositeType::get(VMContext, dwarf::DW_TAG_array_type, "",
-                                 nullptr, 0, nullptr, Ty, Size, AlignInBits, 0,
-                                 DINode::FlagVector, Subscripts, 0,
-                                 /*EnumKind=*/std::nullopt, nullptr);
+                                             DINodeArray Subscripts,
+                                             Metadata *BitStride) {
+  auto *R = DICompositeType::get(
+      VMContext, dwarf::DW_TAG_array_type, /*Name=*/"",
+      /*File=*/nullptr, /*Line=*/0, /*Scope=*/nullptr, /*BaseType=*/Ty,
+      /*SizeInBits=*/Size, /*AlignInBits=*/AlignInBits, /*OffsetInBits=*/0,
+      /*Flags=*/DINode::FlagVector, /*Elements=*/Subscripts,
+      /*RuntimeLang=*/0, /*EnumKind=*/std::nullopt, /*VTableHolder=*/nullptr,
+      /*TemplateParams=*/nullptr, /*Identifier=*/"",
+      /*Discriminator=*/nullptr, /*DataLocation=*/nullptr,
+      /*Associated=*/nullptr, /*Allocated=*/nullptr, /*Rank=*/nullptr,
+      /*Annotations=*/nullptr, /*Specification=*/nullptr,
+      /*NumExtraInhabitants=*/0,
+      /*BitStride=*/BitStride);
   trackIfUnresolved(R);
   return R;
 }

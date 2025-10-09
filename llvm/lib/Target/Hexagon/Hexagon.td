@@ -110,8 +110,6 @@ def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
       "Allow GP-relative addressing of global variables">;
 def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
-def FeatureUnsafeFP: SubtargetFeature<"unsafe-fp", "UseUnsafeMath", "true",
-      "Use unsafe FP math">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
@@ -167,7 +165,6 @@ def UseHVXQFloat       : Predicate<"HST->useHVXQFloatOps()">,
 def UseHVXFloatingPoint: Predicate<"HST->useHVXFloatingPoint()">;
 def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
                          AssemblerPredicate<(all_of FeatureMemNoShuf)>;
-def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
 def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
                                    "MF->getFunction().hasOptSize()"> {
   let RecomputePerFunction = 1;
