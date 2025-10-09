@@ -1975,30 +1975,26 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
       Diag(Loc, PD);
 
     Diag(VarLoc, diag::note_acc_reduction_type_summary);
+    return ExprError();
   };
 
   // If the type is already scalar, or is dependent, just give up.
   if (IsValidMemberOfComposite(CurType)) {
     // Nothing to do here, is valid.
   } else if (auto *RD = CurType->getAsRecordDecl()) {
-    if (!RD->isStruct() && !RD->isClass()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << RD << diag::OACCReductionTy::NotClassStruct);
-      return ExprError();
-    }
+    if (!RD->isStruct() && !RD->isClass())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD
+                                   << diag::OACCReductionTy::NotClassStruct);
 
-    if (!RD->isCompleteDefinition()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << RD << diag::OACCReductionTy::NotComplete);
-      return ExprError();
-    }
+    if (!RD->isCompleteDefinition())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD << diag::OACCReductionTy::NotComplete);
 
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-        CXXRD && !CXXRD->isAggregate()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << CXXRD << diag::OACCReductionTy::NotAgg);
-      return ExprError();
-    }
+        CXXRD && !CXXRD->isAggregate())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << CXXRD << diag::OACCReductionTy::NotAgg);
 
     for (FieldDecl *FD : RD->fields()) {
       if (!IsValidMemberOfComposite(FD->getType())) {
@@ -2007,15 +2003,15 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
             << FD->getName() << RD->getName();
         Notes.push_back({FD->getBeginLoc(), PD});
         // TODO: member here.note_acc_reduction_member_of_composite
-        EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                              << FD->getType()
-                              << diag::OACCReductionTy::MemberNotScalar);
-        return ExprError();
+        return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                     << FD->getType()
+                                     << diag::OACCReductionTy::MemberNotScalar);
       }
     }
   } else {
-    EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                          << CurType << diag::OACCReductionTy::NotScalar);
+    return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                 << CurType
+                                 << diag::OACCReductionTy::NotScalar);
   }
 
   // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
