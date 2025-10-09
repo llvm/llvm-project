@@ -6,8 +6,7 @@ define void @vabs_b(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.b $vr1, $vr0
-; CHECK-NEXT:    vmax.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -21,8 +20,7 @@ define void @vabs_b_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_b_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.b $vr1, $vr0
-; CHECK-NEXT:    vmax.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -36,8 +34,7 @@ define void @vabs_h(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.h $vr1, $vr0
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -51,8 +48,7 @@ define void @vabs_h_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_h_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.h $vr1, $vr0
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -66,8 +62,7 @@ define void @vabs_w(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_w:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.w $vr1, $vr0
-; CHECK-NEXT:    vmax.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -81,8 +76,7 @@ define void @vabs_w_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_w_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.w $vr1, $vr0
-; CHECK-NEXT:    vmax.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -96,8 +90,7 @@ define void @vabs_d(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_d:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.d $vr1, $vr0
-; CHECK-NEXT:    vmax.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.d $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -111,8 +104,7 @@ define void @vabs_d_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_d_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vneg.d $vr1, $vr0
-; CHECK-NEXT:    vmax.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsigncov.d $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
