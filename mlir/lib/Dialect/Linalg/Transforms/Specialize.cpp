@@ -237,106 +237,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
-/// Utility to match block body for linalg.pool* ops.
-template <typename... OpTypes>
-static bool bodyMatcherForPoolOps(Value yieldVal, Block *body) {
-  Operation *defOp = yieldVal.getDefiningOp();
-  // if (!defOp) return false;
-  if (!(isa_and_present<OpTypes>(defOp) || ...)) return false;
-
-  BlockArgument lhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(0));
-  BlockArgument rhsArg =  dyn_cast<BlockArgument>(defOp->getOperand(1));
-  if (!lhsArg || !rhsArg) return false;
-  return true;
-}
-
-static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxSIOp>(yieldVal, body);
-}
-
-static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal, body);
-}
-
-static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinSIOp>(yieldVal, body);
-}
-
-static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal, body);
-}
-
-static bool bodyMatcherForSumPoolOps(Value yieldVal, Block *body) {
-  return bodyMatcherForPoolOps<arith::AddIOp, arith::AddFOp>(yieldVal, body);
-}
-
-static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
-                                        uint32_t mapIndex, uint32_t dimIndex) {
-  auto affineMap = cast<AffineMapAttr>(indexingMaps[mapIndex]).getValue();
-  if (dimIndex < affineMap.getNumResults())
-    return affineMap.getResult(dimIndex);
-  return nullptr;
-}
-
-// Check if `expr` is either:
-// - a dimension expr alone (implying *1), or
-// - a multiplication of dimension expr by constant.
-bool isDimTimesConstantOrDimOnly(AffineExpr expr, AffineExpr &dim, int64_t &constantValue) {
-  if (auto dExpr = dyn_cast<AffineDimExpr>(expr)) {
-    dim = dExpr;
-    constantValue = 1;
-    return true;
-  }
-
-  auto mulExpr = dyn_cast<AffineBinaryOpExpr>(expr);
-  if (!mulExpr || mulExpr.getKind() != AffineExprKind::Mul)
-    return false;
-
-  AffineExpr lhs = mulExpr.getLHS();
-  AffineExpr rhs = mulExpr.getRHS();
-
-  if (auto dExpr = dyn_cast<AffineDimExpr>(lhs)) {
-    if (auto cst = dyn_cast<AffineConstantExpr>(rhs)) {
-      dim = dExpr;
-      constantValue = cst.getValue();
-      return true;
-    }
-  }
-  if (auto cst = dyn_cast<AffineConstantExpr>(lhs)) {
-    if (auto dExpr = dyn_cast<AffineDimExpr>(rhs)) {
-      dim = dExpr;
-      constantValue = cst.getValue();
-      return true;
-    }
-  }
-  return false;
-}
-
-bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim, unsigned fDim, unsigned oDim) {
-  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  AffineExpr inpExpr = getAffineMapDim(indexingMaps, iIndex, iDim);
-  auto addExpr = dyn_cast<AffineBinaryOpExpr>(inpExpr);
-  if (!addExpr || addExpr.getKind() != AffineExprKind::Add)
-    return false;
-
-  AffineExpr dim0, dim1;
-  // TODO(Abhishek-Varma): Use this information in specialize.cpp.
-  int64_t c0, c1;
-
-  if (isDimTimesConstantOrDimOnly(addExpr.getLHS(), dim0, c0) &&
-      isDimTimesConstantOrDimOnly(addExpr.getRHS(), dim1, c1)) {
-    // Pattern matched with dims and constants extracted.
-    AffineExpr fExpr = getAffineMapDim(indexingMaps, fIndex, fDim);
-    AffineExpr oExpr = getAffineMapDim(indexingMaps, oIndex, oDim);
-    return ((dim0 == fExpr && dim1 == oExpr) || (dim1 == fExpr && dim0 == oExpr));
-  }
-  return false;
-}
-
-bool matchConvDimExprPattern(ArrayAttr indexingMaps, unsigned aIndex, unsigned aDim, unsigned bIndex, unsigned bDim) {
-  return getAffineMapDim(indexingMaps, aIndex, aDim) == getAffineMapDim(indexingMaps, bIndex, bDim);
-}
-
 static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
   if (isaConv1DOp(genericOp)) return "linalg.conv_1d";
   return "";
@@ -349,41 +249,16 @@ static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.depthwise_conv_1d_nwc_wc";
   if (isaConv2DOp(genericOp))
     return "linalg.conv_2d";
-  
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  Block *body = genericOp.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
-  // pooling_ncw_max
-  // pooling_ncw_sum
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2)) {
-    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_ncw_max";
-    if (bodyMatcherForSumPoolOps(yieldVal, body))
-      return "linalg.pooling_ncw_sum";
-  }
-  // pooling_nwc_max
-  // pooling_nwc_min
-  // pooling_nwc_sum
-  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
-  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
-  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2)) {
-    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nwc_max";
-    if (bodyMatcherForMinSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nwc_min";
-    if (bodyMatcherForSumPoolOps(yieldVal, body))
-      return "linalg.pooling_nwc_sum";
-  }
+  if (isaPoolingNcwMaxOp(genericOp))
+    return "linalg.pooling_ncw_max";
+  if (isaPoolingNcwSumOp(genericOp))
+    return "linalg.pooling_ncw_sum";
+  if (isaPoolingNwcMaxOp(genericOp))
+    return "linalg.pooling_nwc_max";
+  if (isaPoolingNwcMinOp(genericOp))
+    return "linalg.pooling_nwc_min";
+  if (isaPoolingNwcSumOp(genericOp))
+    return "linalg.pooling_nwc_sum";
   return "";
 }
 
@@ -402,61 +277,22 @@ static std::string inferBasedOnRank6ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.depthwise_conv_2d_nchw_chw";
   if (isaDepthwiseConv2DNhwcHwcOp(genericOp))
     return "linalg.depthwise_conv_2d_nhwc_hwc";
-  
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() < 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
   if (isaConv3DOp(genericOp))
     return "linalg.conv_3d";
-
-  Block *body = genericOp.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
-  // pooling_nchw_max
-  // pooling_nchw_sum
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2 + d4, d3 + d5)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1, /*oDim=*/3)) {
-    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nchw_max";
-    if (bodyMatcherForSumPoolOps(yieldVal, body))
-      return "linalg.pooling_nchw_sum";
-  }
-  // pooling_nhwc_max
-  // pooling_nhwc_min
-  // pooling_nhwc_sum
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3)) {
-    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nhwc_max";
-    if (bodyMatcherForMinSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nhwc_min";
-    if (bodyMatcherForSumPoolOps(yieldVal, body))
-      return "linalg.pooling_nhwc_sum";
-  }
-  // pooling_nhwc_max_unsigned
-  // pooling_nhwc_min_unsigned
-  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
-  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3)) {
-    if (bodyMatcherForMaxUnsignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nhwc_max_unsigned";
-    if (bodyMatcherForMinUnsignedPoolOps(yieldVal, body))
-      return "linalg.pooling_nhwc_min_unsigned";
-  }
+  if (isaPoolingNchwMaxOp(genericOp))
+    return "linalg.pooling_nchw_max";
+  if (isaPoolingNchwSumOp(genericOp))
+    return "linalg.pooling_nchw_sum";
+  if (isaPoolingNhwcMaxOp(genericOp))
+    return "linalg.pooling_nhwc_max";
+  if (isaPoolingNhwcMinOp(genericOp))
+    return "linalg.pooling_nhwc_min";
+  if (isaPoolingNhwcSumOp(genericOp))
+    return "linalg.pooling_nhwc_sum";
+  if (isaPoolingNhwcMaxUnsignedOp(genericOp))
+    return "linalg.pooling_nhwc_max_unsigned";
+  if (isaPoolingNhwcMinUnsignedOp(genericOp))
+    return "linalg.pooling_nhwc_min_unsigned";
   return "";
 }
 
@@ -491,31 +327,12 @@ static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
     return "linalg.depthwise_conv_3d_ncdhw_cdhw";
   if (isaDepthwiseConv3DNdhwcDhwcOp(genericOp))
     return "linalg.depthwise_conv_3d_ndhwc_dhwc";
-
-  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
-  if (indexingMaps.size() < 3) return "";
-  unsigned iIndex = 0, fIndex = 1, oIndex = indexingMaps.size() - 1;
-  Block *body = genericOp.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
-  // pooling_ndhwc_max
-  // pooling_ndhwc_min
-  // pooling_ndhwc_sum
-  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
-  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
-  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
-  if (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
-      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
-      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4)) {
-    if (bodyMatcherForMaxSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_ndhwc_max";
-    if (bodyMatcherForMinSignedPoolOps(yieldVal, body))
-      return "linalg.pooling_ndhwc_min";
-    if (bodyMatcherForSumPoolOps(yieldVal, body))
-      return "linalg.pooling_ndhwc_sum";
-  }
+  if (isaPoolingNdhwcMaxOp(genericOp))
+    return "linalg.pooling_ndhwc_max";
+  if (isaPoolingNdhwcMinOp(genericOp))
+    return "linalg.pooling_ndhwc_min";
+  if (isaPoolingNdhwcSumOp(genericOp))
+    return "linalg.pooling_ndhwc_sum";
   return "";
 }
 

@@ -853,6 +853,334 @@ bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op) {
       matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4));
 }
 
+bool isaPoolingNchwMaxOp(LinalgOp op) {
+  if (isa<linalg::PoolingNchwMaxOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2 + d4, d3 + d5)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1, /*oDim=*/3) &&
+      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNchwSumOp(LinalgOp op) {
+  if (isa<linalg::PoolingNchwSumOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2 + d4, d3 + d5)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/1, /*oDim=*/3) &&
+      bodyMatcherForSumPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNhwcMaxOp(LinalgOp op) {
+  if (isa<linalg::PoolingNhwcMaxOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNhwcMinOp(LinalgOp op) {
+  if (isa<linalg::PoolingNhwcMinOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+      bodyMatcherForMinSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNhwcSumOp(LinalgOp op) {
+  if (isa<linalg::PoolingNhwcSumOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+      bodyMatcherForSumPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op) {
+  if (isa<linalg::PoolingNhwcMaxUnsignedOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+      bodyMatcherForMaxUnsignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNhwcMinUnsignedOp(LinalgOp op) {
+  if (isa<linalg::PoolingNhwcMinUnsignedOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {4,2,4})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 + d4, d2 + d5, d3)>
+  // #map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5)>
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 3, oIndex, 3) &&
+      bodyMatcherForMinUnsignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNcwMaxOp(LinalgOp op) {
+  if (isa<linalg::PoolingNcwMaxOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
+      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNcwSumOp(LinalgOp op) {
+  if (isa<linalg::PoolingNcwSumOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 1, oIndex, 1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/0, /*oDim=*/2) &&
+      bodyMatcherForSumPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNwcMaxOp(LinalgOp op) {
+  if (isa<linalg::PoolingNwcMaxOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNwcMinOp(LinalgOp op) {
+  if (isa<linalg::PoolingNwcMinOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+      bodyMatcherForMinSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNwcSumOp(LinalgOp op) {
+  if (isa<linalg::PoolingNwcSumOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {3,1,3})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1 + d3, d2)>
+  // #map3 = affine_map<(d0, d1, d2, d3) -> (d3)>
+  // #map4 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 2, oIndex, 2) &&
+      bodyMatcherForSumPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNdhwcMaxOp(LinalgOp op) {
+  if (isa<linalg::PoolingNdhwcMaxOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5,3,5})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+      bodyMatcherForMaxSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNdhwcMinOp(LinalgOp op) {
+  if (isa<linalg::PoolingNdhwcMinOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5,3,5})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+      bodyMatcherForMinSignedPoolOps(yieldVal, body));
+}
+
+bool isaPoolingNdhwcSumOp(LinalgOp op) {
+  if (isa<linalg::PoolingNdhwcSumOp>(op)) return true;
+
+  if (!isaConvolutionOpInterface(op)) return false;
+
+  ArrayAttr indexingMaps = op.getIndexingMaps();
+  if (!verifyConvIndexingMapSizes(indexingMaps, {5,3,5})) return false;
+  
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
+  unsigned iIndex = 0, oIndex = 2;
+  // #map2 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1 + d5, d2 + d6, d3 + d7, d4)>
+  // #map3 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d5, d6, d7)>
+  // #map4 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+  return (matchConvDimExprPattern(indexingMaps, iIndex, 0, oIndex, 0) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0, /*oDim=*/1) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1, /*oDim=*/2) &&
+      matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2, /*oDim=*/3) &&
+      matchConvDimExprPattern(indexingMaps, iIndex, 4, oIndex, 4) &&
+      bodyMatcherForSumPoolOps(yieldVal, body));
+}
+
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold,
                             ValueRange typeDynDims) {

@@ -140,6 +140,21 @@ bool isaConv3DNdhwcDhwcfOp(LinalgOp op);
 bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op);
 bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op);
 bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op);
+bool isaPoolingNchwMaxOp(LinalgOp op);
+bool isaPoolingNchwSumOp(LinalgOp op);
+bool isaPoolingNhwcMaxOp(LinalgOp op);
+bool isaPoolingNhwcMinOp(LinalgOp op);
+bool isaPoolingNhwcSumOp(LinalgOp op);
+bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op);
+bool isaPoolingNhwcMinUnsignedOp(LinalgOp op);
+bool isaPoolingNcwMaxOp(LinalgOp op);
+bool isaPoolingNcwSumOp(LinalgOp op);
+bool isaPoolingNwcMaxOp(LinalgOp op);
+bool isaPoolingNwcMinOp(LinalgOp op);
+bool isaPoolingNwcSumOp(LinalgOp op);
+bool isaPoolingNdhwcMaxOp(LinalgOp op);
+bool isaPoolingNdhwcMinOp(LinalgOp op);
+bool isaPoolingNdhwcSumOp(LinalgOp op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
