@@ -1737,7 +1737,18 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(getLastFPEvalPragmaLocation(), diag::note_pragma_entered_here);
     }
   } else if (II == Ident__COUNTER__) {
-    // __COUNTER__ expands to a simple numeric value.
+    Diag(Tok.getLocation(),
+         getLangOpts().C2y ? diag::warn_counter : diag::ext_counter);
+    // __COUNTER__ expands to a simple numeric value that must be less than
+    // 2147483647.
+    if (CounterValue > 2147483647) {
+      Diag(Tok.getLocation(), diag::err_counter_overflow);
+      // Retain the maximal value so we don't issue conversion-related
+      // diagnostics by overflowing into a long long. While this does produce
+      // a duplicate value, there's no way to ignore this error so there's no
+      // translation anyway.
+      CounterValue = 2147483647;
+    }
     OS << CounterValue++;
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_feature) {

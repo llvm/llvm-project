@@ -226,7 +226,7 @@ class Preprocessor {
       LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
 
   // Next __COUNTER__ value, starts at 0.
-  unsigned CounterValue = 0;
+  unsigned long CounterValue = 0;
 
   enum {
     /// Maximum depth of \#includes.
@@ -2421,8 +2421,8 @@ public:
   bool SawDateOrTime() const {
     return DATELoc != SourceLocation() || TIMELoc != SourceLocation();
   }
-  unsigned getCounterValue() const { return CounterValue; }
-  void setCounterValue(unsigned V) { CounterValue = V; }
+  unsigned long getCounterValue() const { return CounterValue; }
+  void setCounterValue(unsigned long V) { CounterValue = V; }
 
   LangOptions::FPEvalMethodKind getCurrentFPEvalMethod() const {
     assert(CurrentFPEvalMethod != LangOptions::FEM_UnsetOnCommandLine &&

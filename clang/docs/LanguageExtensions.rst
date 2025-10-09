@@ -385,7 +385,9 @@ Builtin Macros
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
-  the ``__COUNTER__`` macro is expanded.
+  the ``__COUNTER__`` macro is expanded. This is a standard feature in C2y but
+  is an extension in earlier language modes and in C++. This macro can only be
+  expanded 2147483647 times at most.
 
 ``__INCLUDE_LEVEL__``
   Defined to an integral value that is the include depth of the file currently

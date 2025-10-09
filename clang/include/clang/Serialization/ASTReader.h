@@ -221,7 +221,7 @@ public:
 
   /// Receives __COUNTER__ value.
   virtual void ReadCounter(const serialization::ModuleFile &M,
-                           unsigned Value) {}
+                           unsigned long Value) {}
 
   /// This is called for each AST file loaded.
   virtual void visitModuleFile(StringRef Filename,
@@ -312,7 +312,8 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
 
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M,
+                   unsigned long Value) override;
   bool needsInputFileVisitation() override;
   bool needsSystemInputFileVisitation() override;
   void visitModuleFile(StringRef Filename,
@@ -352,7 +353,8 @@ public:
                                StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
-  void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
+  void ReadCounter(const serialization::ModuleFile &M,
+                   unsigned long Value) override;
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
