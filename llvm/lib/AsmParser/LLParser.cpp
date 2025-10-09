@@ -5905,11 +5905,11 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = DICompileUnit::getDistinct(
-      Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
-      runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      rangesBaseAddress.Val, sysroot.Val, sdk.Val);
+      Context, DISourceLanguageName(language.Val), file.Val, producer.Val,
+      isOptimized.Val, flags.Val, runtimeVersion.Val, splitDebugFilename.Val,
+      emissionKind.Val, enums.Val, retainedTypes.Val, globals.Val, imports.Val,
+      macros.Val, dwoId.Val, splitDebugInlining.Val, debugInfoForProfiling.Val,
+      nameTableKind.Val, rangesBaseAddress.Val, sysroot.Val, sdk.Val);
   return false;
 }
 
