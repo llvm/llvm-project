@@ -33,7 +33,6 @@ add_entrypoint_object(
     libc.include.llvm-libc-types.in_addr
     libc.src.__support.common
     libc.src.__support.str_to_integer
-    libc.src.arpa.inet.htonl
 )
 
 add_entrypoint_object(

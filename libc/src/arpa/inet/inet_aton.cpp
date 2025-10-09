@@ -8,8 +8,8 @@
 
 #include "src/arpa/inet/inet_aton.h"
 #include "src/__support/common.h"
+#include "src/__support/endian_internal.h"
 #include "src/__support/str_to_integer.h"
-#include "src/arpa/inet/htonl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,29 +33,34 @@ LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
   }
 
   unsigned long result = 0;
-  if (dot_num == 0) {
+  switch (dot_num) {
+  case 0:
     if (parts[0] > 0xffffffff)
       return 0;
     result = parts[0];
-  } else if (dot_num == 1) {
+    break;
+  case 1:
     if (parts[0] > 0xff || parts[1] > 0xffffff)
       return 0;
     result = (parts[0] << 24) | parts[1];
-  } else if (dot_num == 2) {
+    break;
+  case 2:
     if (parts[0] > 0xff || parts[1] > 0xff || parts[2] > 0xffff)
       return 0;
     result = (parts[0] << 24) | (parts[1] << 16) | parts[2];
-  } else if (dot_num == 3) {
+    break;
+  case 3:
     if (parts[0] > 0xff || parts[1] > 0xff || parts[2] > 0xff ||
         parts[3] > 0xff)
       return 0;
     result = (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3];
-  } else {
+    break;
+  default:
     return 0;
   }
 
   if (inp)
-    inp->s_addr = LIBC_NAMESPACE::htonl(static_cast<uint32_t>(result));
+    inp->s_addr = Endian::to_big_endian(static_cast<uint32_t>(result));
 
   return 1;
 }
