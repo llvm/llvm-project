@@ -216,6 +216,9 @@ public:
   /// Get the range without infinities. It is useful when we apply ninf flag to
   /// range of operands/results.
   LLVM_ABI ConstantFPRange getWithoutInf() const;
+
+  /// Return a new range in the specified format.
+  LLVM_ABI ConstantFPRange cast(const fltSemantics &DstSem) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {
