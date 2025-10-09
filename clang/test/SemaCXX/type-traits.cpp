@@ -2075,7 +2075,17 @@ private:
   NoEligibleTrivialContructor inner;
 };
 
+struct NonCopyable{
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+};
+
+class C {
+    NonCopyable nc;
+};
+
 static_assert(__builtin_is_implicit_lifetime(Ctr));
+static_assert(__builtin_is_implicit_lifetime(C));
 static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
 static_assert(__builtin_is_implicit_lifetime(NonAggregate));
 static_assert(!__builtin_is_implicit_lifetime(DataMemberInitializer));
