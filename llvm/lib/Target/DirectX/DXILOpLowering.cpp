@@ -627,7 +627,7 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerGetDimensions(Function &F) {
+  [[nodiscard]] bool lowerGetDimensionsBuffer(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
 
@@ -635,17 +635,15 @@ public:
       IRB.SetInsertPoint(CI);
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
-      Value *Op1 = CI->getArgOperand(1);
-      if (isa<llvm::PoisonValue>(Op1))
-        Op1 = UndefValue::get(Int32Ty);
+      Value *Undef = UndefValue::get(Int32Ty);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          OpCode::GetDimensions, {Handle, Op1}, CI->getName(), Int32Ty);
+          OpCode::GetDimensions, {Handle, Undef}, CI->getName(), Int32Ty);
       if (Error E = OpCall.takeError())
         return E;
-      if (Error E = replaceNamedStructUses(CI, *OpCall))
-        return E;
+      Value *Dim = IRB.CreateExtractValue(*OpCall, 0);
 
+      CI->replaceAllUsesWith(Dim);
       CI->eraseFromParent();
       return Error::success();
     });
@@ -958,8 +956,8 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
-      case Intrinsic::dx_resource_getdimensions:
-        HasErrors |= lowerGetDimensions(F);
+      case Intrinsic::dx_resource_getdimensions_buffer:
+        HasErrors |= lowerGetDimensionsBuffer(F);
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
