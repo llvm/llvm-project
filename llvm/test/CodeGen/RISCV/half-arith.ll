@@ -2883,39 +2883,20 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV32IZFHMIN-LABEL: fsgnjx_f16:
-; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV32IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
-; RV32IZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV32IZFHMIN-NEXT:    lui a2, 1048568
-; RV32IZFHMIN-NEXT:    and a1, a1, a2
-; RV32IZFHMIN-NEXT:    slli a0, a0, 17
-; RV32IZFHMIN-NEXT:    srli a0, a0, 17
-; RV32IZFHMIN-NEXT:    or a0, a0, a1
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; RV32IZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV32IZFHMIN-NEXT:    ret
-;
-; RV64IZFHMIN-LABEL: fsgnjx_f16:
-; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    lui a0, %hi(.LCPI23_0)
-; RV64IZFHMIN-NEXT:    lhu a0, %lo(.LCPI23_0)(a0)
-; RV64IZFHMIN-NEXT:    fmv.x.h a1, fa0
-; RV64IZFHMIN-NEXT:    lui a2, 1048568
-; RV64IZFHMIN-NEXT:    and a1, a1, a2
-; RV64IZFHMIN-NEXT:    slli a0, a0, 49
-; RV64IZFHMIN-NEXT:    srli a0, a0, 49
-; RV64IZFHMIN-NEXT:    or a0, a0, a1
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; RV64IZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
-; RV64IZFHMIN-NEXT:    ret
+; CHECKIZFHMIN-LABEL: fsgnjx_f16:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    fmv.x.h a0, fa0
+; CHECKIZFHMIN-NEXT:    lui a1, 1048568
+; CHECKIZFHMIN-NEXT:    and a0, a0, a1
+; CHECKIZFHMIN-NEXT:    li a1, 15
+; CHECKIZFHMIN-NEXT:    slli a1, a1, 10
+; CHECKIZFHMIN-NEXT:    or a0, a0, a1
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa5, a0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECKIZFHMIN-NEXT:    fmul.s fa5, fa5, fa4
+; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: fsgnjx_f16:
 ; CHECKIZHINXMIN:       # %bb.0:

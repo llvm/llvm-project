@@ -29,6 +29,18 @@ entry:
   ret void
 }
 
+define <2 x i32> @null(<2 x i1> %mask, <2 x i32> %val) {
+; CHECK-LABEL: define <2 x i32> @null(
+; CHECK-SAME: <2 x i1> [[MASK:%.*]], <2 x i32> [[VAL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MASKED_LOAD:%.*]] = tail call <2 x i32> @llvm.masked.load.v2i32.p0(ptr null, i32 1, <2 x i1> [[MASK]], <2 x i32> [[VAL]])
+; CHECK-NEXT:    ret <2 x i32> [[MASKED_LOAD]]
+;
+entry:
+  %masked_load = tail call <2 x i32> @llvm.masked.load.v2f64.p0(ptr null, i32 1, <2 x i1> %mask, <2 x i32> %val)
+  ret <2 x i32> %masked_load
+}
+
 declare void @llvm.assume(i1)
 declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)

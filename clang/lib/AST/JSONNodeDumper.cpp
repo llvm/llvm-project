@@ -944,6 +944,9 @@ void JSONNodeDumper::VisitVarDecl(const VarDecl *VD) {
     }
   }
   attributeOnlyIfTrue("isParameterPack", VD->isParameterPack());
+  if (const auto *Instance = VD->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 }
 
 void JSONNodeDumper::VisitFieldDecl(const FieldDecl *FD) {
@@ -975,6 +978,10 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
 
   if (StringLiteral *Msg = FD->getDeletedMessage())
     JOS.attribute("deletedMessage", Msg->getString());
+
+  if (const auto *Instance = FD->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 }
 
 void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
@@ -984,6 +991,9 @@ void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
   if (ED->isScoped())
     JOS.attribute("scopedEnumTag",
                   ED->isScopedUsingClassTag() ? "class" : "struct");
+  if (const auto *Instance = ED->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 }
 void JSONNodeDumper::VisitEnumConstantDecl(const EnumConstantDecl *ECD) {
   VisitNamedDecl(ECD);
@@ -1002,6 +1012,10 @@ void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
     if (CTSD->hasStrictPackMatch())
       JOS.attribute("strict-pack-match", true);
   }
+
+  if (const auto *Instance = RD->getTemplateInstantiationPattern())
+    JOS.attribute("TemplateInstantiationPattern",
+                  createPointerRepresentation(Instance));
 
   // All other information requires a complete definition.
   if (!RD->isCompleteDefinition())

@@ -18,7 +18,7 @@ namespace clang::tidy::linuxkernel {
 /// directly return a value from one of these error functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/linuxkernel/must-check-errs.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/linuxkernel/must-check-errs.html
 class MustCheckErrsCheck : public ClangTidyCheck {
 public:
   MustCheckErrsCheck(StringRef Name, ClangTidyContext *Context)

@@ -59,6 +59,10 @@
 /mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
+# DLTI Dialect in MLIR
+/mlir/**/Dialect/DLTI @rolfmorel
+/mlir/**/DataLayoutInterfaces.* @rolfmorel
+
 # Linalg Dialect in MLIR.
 /mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
@@ -96,9 +100,9 @@
 /mlir/lib/Dialect/Tensor/Transforms/* @hanhanW @nicolasvasilache
 
 # Transform Dialect in MLIR.
-/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache
-/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache
-/mlir/**/*TransformOps* @ftynse @nicolasvasilache
+/mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache @rolfmorel
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache @rolfmorel
 
 # SPIR-V Dialect in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar

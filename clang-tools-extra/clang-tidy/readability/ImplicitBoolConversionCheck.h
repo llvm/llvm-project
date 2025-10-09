@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Checks for use of implicit bool conversions in expressions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/implicit-bool-conversion.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/implicit-bool-conversion.html
 class ImplicitBoolConversionCheck : public ClangTidyCheck {
 public:
   ImplicitBoolConversionCheck(StringRef Name, ClangTidyContext *Context);

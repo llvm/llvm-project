@@ -173,6 +173,33 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
+struct bind_const_int {
+  uint64_t &Res;
+
+  bind_const_int(uint64_t &Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    if (!VPV->isLiveIn())
+      return false;
+    Value *V = VPV->getLiveInIRValue();
+    if (!V)
+      return false;
+    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI)
+      return false;
+    if (auto C = CI->getValue().tryZExtValue()) {
+      Res = *C;
+      return true;
+    }
+    return false;
+  }
+};
+
+/// Match a plain integer constant no wider than 64-bits, capturing it if we
+/// match.
+inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;

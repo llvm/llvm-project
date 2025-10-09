@@ -375,13 +375,7 @@ void TailDuplicator::processPHI(
   if (!Remove)
     return;
 
-  // MI might have multiple entries for PredBB. Need to remove them all.
-  for (unsigned N = MI->getNumOperands(); N > 2; N -= 2) {
-    if (MI->getOperand(N - 1).getMBB() == PredBB) {
-      MI->removeOperand(N - 1);
-      MI->removeOperand(N - 2);
-    }
-  }
+  MI->removePHIIncomingValueFor(*PredBB);
 
   if (MI->getNumOperands() == 1 && !TailBB->hasAddressTaken())
     MI->eraseFromParent();

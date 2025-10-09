@@ -60,7 +60,7 @@ class SFBALU_rr
 class SFBALU_ri
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
-                  simm12:$imm), []>,
+                  simm12_lo:$imm), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
   let mayLoad = 0;

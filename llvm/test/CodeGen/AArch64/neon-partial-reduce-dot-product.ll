@@ -1255,3 +1255,199 @@ entry:
     %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %input.wide)
     ret <2 x i64> %partial.reduce
 }
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs6(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-NODOT-LABEL: partial_reduce_shl_sext_const_rhs6:
+; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-NODOT-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-NODOT-NEXT:    sshll v3.4s, v0.4h, #6
+; CHECK-NODOT-NEXT:    sshll2 v4.4s, v2.8h, #6
+; CHECK-NODOT-NEXT:    sshll v2.4s, v2.4h, #6
+; CHECK-NODOT-NEXT:    sshll2 v0.4s, v0.8h, #6
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: partial_reduce_shl_sext_const_rhs6:
+; CHECK-DOT:       // %bb.0:
+; CHECK-DOT-NEXT:    movi v2.16b, #64
+; CHECK-DOT-NEXT:    sdot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: partial_reduce_shl_sext_const_rhs6:
+; CHECK-DOT-I8MM:       // %bb.0:
+; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #64
+; CHECK-DOT-I8MM-NEXT:    sdot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-I8MM-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 6)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs7(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_const_rhs7:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    sshll v3.4s, v0.4h, #7
+; CHECK-COMMON-NEXT:    sshll2 v4.4s, v2.8h, #7
+; CHECK-COMMON-NEXT:    sshll v2.4s, v2.4h, #7
+; CHECK-COMMON-NEXT:    sshll2 v0.4s, v0.8h, #7
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 7)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs8(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_const_rhs8:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    sshll v3.4s, v0.4h, #8
+; CHECK-COMMON-NEXT:    sshll2 v4.4s, v2.8h, #8
+; CHECK-COMMON-NEXT:    sshll v2.4s, v2.4h, #8
+; CHECK-COMMON-NEXT:    sshll2 v0.4s, v0.8h, #8
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 8)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_const_rhs_9(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_const_rhs_9:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 32)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_sext_non_const_rhs(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_sext_non_const_rhs:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    sshll v3.4s, v2.4h, #0
+; CHECK-COMMON-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-COMMON-NEXT:    sshll v4.4s, v0.4h, #0
+; CHECK-COMMON-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-COMMON-NEXT:    ushl v4.4s, v4.4s, v4.4s
+; CHECK-COMMON-NEXT:    ushl v2.4s, v2.4s, v2.4s
+; CHECK-COMMON-NEXT:    ushl v3.4s, v3.4s, v3.4s
+; CHECK-COMMON-NEXT:    ushl v0.4s, v0.4s, v0.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = sext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, %ext
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_const_rhs6(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-NODOT-LABEL: partial_reduce_shl_zext_const_rhs6:
+; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-NODOT-NEXT:    ushll v3.4s, v0.4h, #6
+; CHECK-NODOT-NEXT:    ushll2 v4.4s, v2.8h, #6
+; CHECK-NODOT-NEXT:    ushll v2.4s, v2.4h, #6
+; CHECK-NODOT-NEXT:    ushll2 v0.4s, v0.8h, #6
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: partial_reduce_shl_zext_const_rhs6:
+; CHECK-DOT:       // %bb.0:
+; CHECK-DOT-NEXT:    movi v2.16b, #64
+; CHECK-DOT-NEXT:    udot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: partial_reduce_shl_zext_const_rhs6:
+; CHECK-DOT-I8MM:       // %bb.0:
+; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #64
+; CHECK-DOT-I8MM-NEXT:    udot v1.4s, v0.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-I8MM-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 6)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_const_rhs8(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_zext_const_rhs8:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    ushll v3.4s, v0.4h, #8
+; CHECK-COMMON-NEXT:    ushll2 v4.4s, v2.8h, #8
+; CHECK-COMMON-NEXT:    ushll v2.4s, v2.4h, #8
+; CHECK-COMMON-NEXT:    ushll2 v0.4s, v0.8h, #8
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v4.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 8)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_const_rhs_9(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_zext_const_rhs_9:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, splat (i32 32)
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}
+
+define <4 x i32> @partial_reduce_shl_zext_non_const_rhs(<16 x i8> %l, <4 x i32> %part) {
+; CHECK-COMMON-LABEL: partial_reduce_shl_zext_non_const_rhs:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-COMMON-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-COMMON-NEXT:    ushll v3.4s, v2.4h, #0
+; CHECK-COMMON-NEXT:    ushll2 v2.4s, v2.8h, #0
+; CHECK-COMMON-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-COMMON-NEXT:    ushll2 v0.4s, v0.8h, #0
+; CHECK-COMMON-NEXT:    ushl v4.4s, v4.4s, v4.4s
+; CHECK-COMMON-NEXT:    ushl v2.4s, v2.4s, v2.4s
+; CHECK-COMMON-NEXT:    ushl v3.4s, v3.4s, v3.4s
+; CHECK-COMMON-NEXT:    ushl v0.4s, v0.4s, v0.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-COMMON-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-COMMON-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-COMMON-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-COMMON-NEXT:    ret
+  %ext = zext <16 x i8> %l to <16 x i32>
+  %shift = shl nsw <16 x i32> %ext, %ext
+  %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
+  ret <4 x i32> %red
+}

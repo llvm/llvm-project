@@ -56,7 +56,7 @@ struct TypeidPointer {
   const Type *TypeInfoType;
 };
 
-enum class Storage { Block, Int, Fn, Typeid };
+enum class Storage { Int, Block, Fn, Typeid };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -252,14 +252,17 @@ public:
 
   /// Checks if the pointer is null.
   bool isZero() const {
-    if (isBlockPointer())
+    switch (StorageKind) {
+    case Storage::Int:
+      return Int.Value == 0 && Offset == 0;
+    case Storage::Block:
       return BS.Pointee == nullptr;
-    if (isFunctionPointer())
+    case Storage::Fn:
       return Fn.isZero();
-    if (isTypeidPointer())
+    case Storage::Typeid:
       return false;
-    assert(isIntegralPointer());
-    return Int.Value == 0 && Offset == 0;
+    }
+    llvm_unreachable("Unknown clang::interp::Storage enum");
   }
   /// Checks if the pointer is live.
   bool isLive() const {

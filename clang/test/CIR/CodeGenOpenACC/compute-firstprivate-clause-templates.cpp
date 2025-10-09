@@ -13,14 +13,24 @@ struct HasDtor {
   ~HasDtor();
 };
 
-// CHECK: acc.firstprivate.recipe @firstprivatization__ZTSi : !cir.ptr<!s32i> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.firstprivate.init"]
+
+// CHECK: acc.firstprivate.recipe @firstprivatization__ZTS13CopyConstruct : !cir.ptr<!rec_CopyConstruct> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
+// CHECK-NEXT: cir.alloca !rec_CopyConstruct, !cir.ptr<!rec_CopyConstruct>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: %[[LOAD:.*]] = cir.load {{.*}} %[[ARG_FROM]] : !cir.ptr<!s32i>, !s32i
-// CHECK-NEXT: cir.store{{.*}} %[[LOAD]], %[[ARG_TO]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
+// CHECK-NEXT:  cir.call @_ZN13CopyConstructC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: }
+//
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS14NonDefaultCtor : !cir.ptr<!rec_NonDefaultCtor> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: } copy {
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
+// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -38,23 +48,14 @@ struct HasDtor {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS14NonDefaultCtor : !cir.ptr<!rec_NonDefaultCtor> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["openacc.firstprivate.init"]
+// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSi : !cir.ptr<!s32i> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
+// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) nothrow : (!cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!rec_NonDefaultCtor>) -> ()
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: }
-//
-// CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS13CopyConstruct : !cir.ptr<!rec_CopyConstruct> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_CopyConstruct, !cir.ptr<!rec_CopyConstruct>, ["openacc.firstprivate.init"]
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
-// CHECK-NEXT:  cir.call @_ZN13CopyConstructC1ERKS_(%[[ARG_TO]], %[[ARG_FROM]]) : (!cir.ptr<!rec_CopyConstruct>, !cir.ptr<!rec_CopyConstruct>) -> ()
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!s32i> {{.*}}):
+// CHECK-NEXT: %[[LOAD:.*]] = cir.load {{.*}} %[[ARG_FROM]] : !cir.ptr<!s32i>, !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LOAD]], %[[ARG_TO]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 

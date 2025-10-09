@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Finds calls to grand..-parent virtual methods instead of parent's.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/parent-virtual-call.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/parent-virtual-call.html
 class ParentVirtualCallCheck : public ClangTidyCheck {
 public:
   ParentVirtualCallCheck(StringRef Name, ClangTidyContext *Context)

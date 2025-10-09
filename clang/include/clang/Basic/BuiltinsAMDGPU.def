@@ -163,7 +163,7 @@ BUILTIN(__builtin_amdgcn_qsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
 BUILTIN(__builtin_amdgcn_mqsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
 BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiWUiUiV4Ui", "nc")
 
-BUILTIN(__builtin_amdgcn_make_buffer_rsrc, "Qbv*sii", "nc")
+BUILTIN(__builtin_amdgcn_make_buffer_rsrc, "Qbv*sWii", "nc")
 BUILTIN(__builtin_amdgcn_raw_buffer_store_b8, "vUcQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_buffer_store_b16, "vUsQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_buffer_store_b32, "vUiQbiiIi", "n")

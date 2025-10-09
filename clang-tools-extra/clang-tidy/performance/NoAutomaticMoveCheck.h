@@ -15,7 +15,7 @@ namespace clang::tidy::performance {
 
 /// Finds local variables that cannot be automatically moved due to constness.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/no-automatic-move.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/no-automatic-move.html
 class NoAutomaticMoveCheck : public ClangTidyCheck {
 public:
   NoAutomaticMoveCheck(StringRef Name, ClangTidyContext *Context);

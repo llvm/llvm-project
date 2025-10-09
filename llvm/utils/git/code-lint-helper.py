@@ -193,7 +193,7 @@ def run_clang_tidy(changed_files: List[str], args: LintArgs) -> Optional[str]:
         return None
 
     tidy_diff_cmd = [
-        "code-lint-tools/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py",
+        "clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py",
         "-path",
         args.build_path,
         "-p1",

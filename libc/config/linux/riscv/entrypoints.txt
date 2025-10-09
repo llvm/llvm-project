@@ -336,6 +336,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getcwd
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
+    libc.src.unistd.gethostname
     libc.src.unistd.getpid
     libc.src.unistd.getppid
     libc.src.unistd.getsid
@@ -907,6 +908,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
   libc.src.math.lroundbf16
@@ -1020,6 +1022,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+    libc.src.stdfix.rdivi
   )
 endif()
 

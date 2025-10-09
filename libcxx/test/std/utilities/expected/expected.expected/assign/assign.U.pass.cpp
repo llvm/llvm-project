@@ -325,6 +325,44 @@ constexpr bool test() {
     }
   }
 
+  // Check move constructor selection
+  {
+    struct MoveOnlyMulti {
+      bool used_move1 = false;
+      bool used_move2 = false;
+
+      constexpr MoveOnlyMulti()                                = default;
+      constexpr MoveOnlyMulti(const MoveOnlyMulti&)            = delete;
+      constexpr MoveOnlyMulti& operator=(const MoveOnlyMulti&) = delete;
+      constexpr MoveOnlyMulti& operator=(MoveOnlyMulti&&) {
+        used_move1 = true;
+        return *this;
+      }
+      constexpr MoveOnlyMulti& operator=(const MoveOnlyMulti&&) {
+        used_move2 = true;
+        return *this;
+      };
+      constexpr MoveOnlyMulti(MoveOnlyMulti&&) : used_move1(true) {}
+      constexpr MoveOnlyMulti(const MoveOnlyMulti&&) : used_move2(true) {}
+    };
+
+    {
+      MoveOnlyMulti t{};
+      std::expected<MoveOnlyMulti, int> e1(std::unexpect);
+      static_assert(std::is_same_v<decltype(std::move(t)), MoveOnlyMulti&&>);
+      e1 = {std::move(t)};
+      assert(e1.value().used_move1);
+    }
+    {
+      const MoveOnlyMulti t{};
+      std::expected<MoveOnlyMulti, int> e1(std::unexpect);
+      static_assert(std::is_same_v<decltype(std::move(t)), const MoveOnlyMulti&&>);
+      // _Up = remove_cv_t<const MoveOnlyMulti&&> --> should use MoveOnlyMulti(MoveOnlyMulti&&)
+      e1 = {std::move(t)};
+      assert(e1.value().used_move1);
+    }
+  }
+
   return true;
 }
 

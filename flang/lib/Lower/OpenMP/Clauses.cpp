@@ -221,8 +221,6 @@ MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
 MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
-MAKE_EMPTY_CLASS(GraphId, GraphId);
-MAKE_EMPTY_CLASS(GraphReset, GraphReset);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
@@ -258,6 +256,8 @@ MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
+MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
@@ -1034,6 +1034,11 @@ Link make(const parser::OmpClause::Link &inp,
           semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpObjectList
   return Link{/*List=*/makeObjects(inp.v, semaCtx)};
+}
+
+LoopRange make(const parser::OmpClause::Looprange &inp,
+               semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: looprange");
 }
 
 Map make(const parser::OmpClause::Map &inp,

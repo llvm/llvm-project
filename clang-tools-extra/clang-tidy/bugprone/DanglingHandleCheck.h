@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Detect dangling references in value handlers like std::string_view.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/dangling-handle.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/dangling-handle.html
 class DanglingHandleCheck : public ClangTidyCheck {
 public:
   DanglingHandleCheck(StringRef Name, ClangTidyContext *Context);

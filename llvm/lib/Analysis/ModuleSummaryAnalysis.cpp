@@ -67,7 +67,6 @@ using namespace llvm::memprof;
 namespace llvm {
 FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
     FunctionSummary::FSHT_None;
-} // namespace llvm
 
 static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
     "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
@@ -91,6 +90,7 @@ LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 extern cl::opt<bool> MemProfReportHintedSizes;
+} // namespace llvm
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an

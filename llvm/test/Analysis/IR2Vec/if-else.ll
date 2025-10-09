@@ -29,7 +29,7 @@ return:                                           ; preds = %if.else, %if.then
 
 ; CHECK: Basic block vectors:
 ; CHECK-NEXT: Basic block: entry:
-; CHECK-NEXT: [ 816.00  825.00  834.00 ]
+; CHECK-NEXT: [ 816.20  825.20  834.20 ]
 ; CHECK-NEXT: Basic block: if.then:
 ; CHECK-NEXT: [ 195.00  198.00  201.00 ]
 ; CHECK-NEXT: Basic block: if.else:
