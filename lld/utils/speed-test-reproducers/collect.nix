@@ -32,14 +32,14 @@
 # - llvm (all targets)
 
 {
-  nixpkgsDir ? fetchTarball "https://github.com/NixOS/nixpkgs/archive/992f916556fcfaa94451ebc7fc6e396134bbf5b1.tar.gz",
-  nixpkgs ? import nixpkgsDir,
+  nixpkgs ? fetchTarball "https://github.com/NixOS/nixpkgs/archive/992f916556fcfaa94451ebc7fc6e396134bbf5b1.tar.gz",
+  system ? builtins.currentSystem,
 }:
 let
   reproducerPkgs =
     crossSystem:
     let
-      pkgs = nixpkgs { inherit crossSystem; };
+      pkgsCross = import nixpkgs { inherit crossSystem; };
       # Wraps the given stdenv and lld package into a variant that collects
       # the reproducer and builds with debug info.
       reproducerCollectingStdenv =
@@ -47,8 +47,8 @@ let
         let
           bintools = stdenv.cc.bintools.override {
             extraBuildCommands = ''
-              wrap ${stdenv.cc.targetPrefix}nix-wrap-lld ${nixpkgsDir}/pkgs/build-support/bintools-wrapper/ld-wrapper.sh ${lld}/bin/ld.lld
-              export lz4=${pkgs.lib.getBin pkgs.buildPackages.lz4}/bin/lz4
+              wrap ${stdenv.cc.targetPrefix}nix-wrap-lld ${pkgsCross.path}/pkgs/build-support/bintools-wrapper/ld-wrapper.sh ${lld}/bin/ld.lld
+              export lz4=${pkgsCross.lib.getBin pkgsCross.buildPackages.lz4}/bin/lz4
               substituteAll ${./ld-wrapper.sh} $out/bin/${stdenv.cc.targetPrefix}ld
               chmod +x $out/bin/${stdenv.cc.targetPrefix}ld
               substituteAll ${./ld-wrapper.sh} $out/bin/${stdenv.cc.targetPrefix}ld.lld
@@ -56,16 +56,22 @@ let
             '';
           };
         in
-        pkgs.withCFlags [ "-g1" ] (stdenv.override (old: {
-          allowedRequisites = null;
-          cc = stdenv.cc.override { inherit bintools; };
-        }));
-      withReproducerCollectingStdenv = pkg: pkg.override {
-        stdenv = reproducerCollectingStdenv pkgs.stdenv pkgs.buildPackages.lld;
-      };
-      withReproducerCollectingClangStdenv = pkg: pkg.override {
-        clangStdenv = reproducerCollectingStdenv pkgs.clangStdenv pkgs.buildPackages.lld;
-      };
+        pkgsCross.withCFlags [ "-g1" ] (
+          stdenv.override (old: {
+            allowedRequisites = null;
+            cc = stdenv.cc.override { inherit bintools; };
+          })
+        );
+      withReproducerCollectingStdenv =
+        pkg:
+        pkg.override {
+          stdenv = reproducerCollectingStdenv pkgsCross.stdenv pkgsCross.buildPackages.lld;
+        };
+      withReproducerCollectingClangStdenv =
+        pkg:
+        pkg.override {
+          clangStdenv = reproducerCollectingStdenv pkgsCross.clangStdenv pkgsCross.buildPackages.lld;
+        };
     in
     {
       # For benchmarking the linker we want to disable LTO as otherwise we would
@@ -76,17 +82,17 @@ let
       # Chromium uses the rustc stdenv unconditionally so we need the stuff
       # below to make sure that it finds our wrapped stdenv.
       chrome =
-        (pkgs.chromium.override {
+        (pkgsCross.chromium.override {
           newScope =
             extra:
-            pkgs.newScope (
+            pkgsCross.newScope (
               extra
               // {
                 pkgsBuildBuild = {
-                  pkg-config = pkgs.pkgsBuildBuild.pkg-config;
+                  pkg-config = pkgsCross.pkgsBuildBuild.pkg-config;
                   rustc = {
                     llvmPackages = rec {
-                      stdenv = reproducerCollectingStdenv pkgs.pkgsBuildBuild.rustc.llvmPackages.stdenv pkgs.pkgsBuildBuild.rustc.llvmPackages.lld;
+                      stdenv = reproducerCollectingStdenv pkgsCross.pkgsBuildBuild.rustc.llvmPackages.stdenv pkgsCross.pkgsBuildBuild.rustc.llvmPackages.lld;
                       bintools = stdenv.cc.bintools;
                     };
                   };
@@ -96,62 +102,51 @@ let
           pkgs = {
             rustc = {
               llvmPackages = {
-                stdenv = reproducerCollectingStdenv pkgs.rustc.llvmPackages.stdenv pkgs.rustc.llvmPackages.lld;
+                stdenv = reproducerCollectingStdenv pkgsCross.rustc.llvmPackages.stdenv pkgsCross.rustc.llvmPackages.lld;
               };
             };
           };
         }).browser.overrideAttrs
           (old: {
-            configurePhase =
-              old.configurePhase
-              + ''
-                echo use_thin_lto = false >> out/Release/args.gn
-                echo is_cfi = false >> out/Release/args.gn
-              '';
+            configurePhase = old.configurePhase + ''
+              echo use_thin_lto = false >> out/Release/args.gn
+              echo is_cfi = false >> out/Release/args.gn
+            '';
           });
-      firefox = (withReproducerCollectingStdenv pkgs.firefox-unwrapped).override {
+      firefox = (withReproducerCollectingStdenv pkgsCross.firefox-unwrapped).override {
         ltoSupport = false;
         pgoSupport = false;
       };
-      # Won't work until https://github.com/NixOS/nixpkgs/pull/390631 lands.
-      # Can replace above line with
-      #   nixpkgsDir ? fetchTarball "https://github.com/NixOS/nixpkgs/archive/fbc5923fb30c7e1957a729f19f22968083fb473f.tar.gz",
-      # for testing with that PR.
-      linux-kernel = (withReproducerCollectingStdenv pkgs.linux_latest).dev;
-      ladybird = withReproducerCollectingStdenv pkgs.ladybird;
-      llvm = withReproducerCollectingStdenv pkgs.llvm;
-      webkitgtk = withReproducerCollectingClangStdenv pkgs.webkitgtk;
-      hello = withReproducerCollectingStdenv pkgs.hello;
+      # Doesn't work as-is because the kernel derivation calls the linker
+      # directly instead of the wrapper. See:
+      # https://github.com/NixOS/nixpkgs/blob/d3fdff1631946f3e51318317375d638dae3d6aa2/pkgs/os-specific/linux/kernel/common-flags.nix#L12
+      linux-kernel = (withReproducerCollectingStdenv pkgsCross.linux_latest).dev;
+      ladybird = withReproducerCollectingStdenv pkgsCross.ladybird;
+      llvm = withReproducerCollectingStdenv pkgsCross.llvm;
+      webkitgtk = withReproducerCollectingClangStdenv pkgsCross.webkitgtk;
+      hello = withReproducerCollectingStdenv pkgsCross.hello;
     };
-    targets = {
-      x86_64 = reproducerPkgs { config = "x86_64-unknown-linux-gnu"; };
-      aarch64 = reproducerPkgs { config = "aarch64-unknown-linux-gnu"; };
-      riscv64 = reproducerPkgs { config = "riscv64-unknown-linux-gnu"; };
-    };
-    nativePkgs = nixpkgs { };
+  targets = {
+    x86_64 = reproducerPkgs { config = "x86_64-unknown-linux-gnu"; };
+    aarch64 = reproducerPkgs { config = "aarch64-unknown-linux-gnu"; };
+    riscv64 = reproducerPkgs { config = "riscv64-unknown-linux-gnu"; };
+  };
+  pkgs = import nixpkgs { };
 in
-derivation {
-  name = "lld-speed-test";
-  system = builtins.currentSystem;
-  builder = "${nativePkgs.bash}/bin/bash";
-  args = [
-    "-c"
-    ''
-      extract_reproducer() {
-        ${nativePkgs.coreutils}/bin/mkdir -p $out/$2
-        ${nativePkgs.llvm}/bin/llvm-objcopy -O binary --only-section=.lld_repro --set-section-flags .lld_repro=alloc $1 - | ${nativePkgs.gnutar}/bin/tar x -I ${nativePkgs.lib.getBin nativePkgs.buildPackages.lz4}/bin/lz4 --strip-components=1 -C $out/$2
-      }
+pkgs.runCommand "lld-speed-test" { } ''
+  extract_reproducer() {
+    ${pkgs.coreutils}/bin/mkdir -p $out/$2
+    ${pkgs.llvm}/bin/llvm-objcopy -O binary --only-section=.lld_repro --set-section-flags .lld_repro=alloc $1 - | ${pkgs.gnutar}/bin/tar x -I ${pkgs.lib.getBin pkgs.buildPackages.lz4}/bin/lz4 --strip-components=1 -C $out/$2
+  }
 
-      extract_reproducer ${targets.aarch64.hello}/bin/hello hello-arm64
-      extract_reproducer ${targets.x86_64.hello}/bin/hello hello-x64
-      extract_reproducer ${targets.aarch64.chrome}/libexec/chromium/chromium chrome
-      extract_reproducer ${targets.aarch64.ladybird}/lib/liblagom-web.so ladybird
-      extract_reproducer ${targets.aarch64.firefox}/lib/firefox/libxul.so firefox-arm64
-      extract_reproducer ${targets.x86_64.firefox}/lib/firefox/libxul.so firefox-x64
-      extract_reproducer ${targets.riscv64.firefox}/lib/firefox/libxul.so firefox-riscv64
-      extract_reproducer ${nativePkgs.lib.getLib targets.aarch64.llvm}/lib/libLLVM.so llvm-arm64
-      extract_reproducer ${nativePkgs.lib.getLib targets.x86_64.llvm}/lib/libLLVM.so llvm-x64
-      extract_reproducer ${nativePkgs.lib.getLib targets.riscv64.llvm}/lib/libLLVM.so llvm-riscv64
-    ''
-  ];
-}
+  extract_reproducer ${targets.aarch64.hello}/bin/hello hello-arm64
+  extract_reproducer ${targets.x86_64.hello}/bin/hello hello-x64
+  extract_reproducer ${targets.aarch64.chrome}/libexec/chromium/chromium chrome
+  extract_reproducer ${targets.aarch64.ladybird}/lib/liblagom-web.so ladybird
+  extract_reproducer ${targets.aarch64.firefox}/lib/firefox/libxul.so firefox-arm64
+  extract_reproducer ${targets.x86_64.firefox}/lib/firefox/libxul.so firefox-x64
+  extract_reproducer ${targets.riscv64.firefox}/lib/firefox/libxul.so firefox-riscv64
+  extract_reproducer ${pkgs.lib.getLib targets.aarch64.llvm}/lib/libLLVM.so llvm-arm64
+  extract_reproducer ${pkgs.lib.getLib targets.x86_64.llvm}/lib/libLLVM.so llvm-x64
+  extract_reproducer ${pkgs.lib.getLib targets.riscv64.llvm}/lib/libLLVM.so llvm-riscv6
+''
