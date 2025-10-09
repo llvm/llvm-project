@@ -381,7 +381,7 @@ static void *calculateTargetPointeeBase(void *HstPteeBase, void *HstPteeBegin,
   return TgtPteeBase;
 }
 
-// Fortran pointer attachments treated descriptors as plain pointers, so
+// Fortran pointer attachments treat descriptors as plain pointers, so
 // automapped arrays lose their declared bounds on the device. Recognize
 // CFI descriptors to compute their actual size before copying, ensuring the
 // full descriptor (including bounds) is transferred during attachment.

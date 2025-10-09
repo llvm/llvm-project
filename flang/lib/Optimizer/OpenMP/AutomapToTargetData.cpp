@@ -243,7 +243,10 @@ class AutomapToTargetDataPass
            llvm::zip_equal(oldMapArgsForMoved, newHDAArgsForMoved))
         oldArg.replaceAllUsesWith(newArg);
 
-      // Finally, erase corresponding map block arguments (descending order).
+      // Finally, erase corresponding map block arguments in descending order.
+      // Descending order is necessary to avoid index invalidation: erasing
+      // arguments from highest to lowest index ensures that earlier erases do
+      // not shift the indices of arguments yet to be erased.
       unsigned mapStart = argIface.getMapBlockArgsStart();
       // Convert indices to absolute argument numbers before erasing.
       llvm::SmallVector<unsigned> absArgNos;
