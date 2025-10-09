@@ -514,6 +514,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
+  addRulesForGOpcs({G_FSHR}, Standard)
+      .Uni(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(V2S16,
+           {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}, UnpackBitShift})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
+      .Uni(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr32}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr32}});
+
   addRulesForGOpcs({G_FRAME_INDEX}).Any({{UniP5, _}, {{SgprP5}, {None}}});
 
   addRulesForGOpcs({G_UBFX, G_SBFX}, Standard)
