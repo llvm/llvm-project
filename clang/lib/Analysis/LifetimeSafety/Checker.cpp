@@ -26,13 +26,6 @@
 
 namespace clang::lifetimes::internal {
 
-/// Struct to store the complete context for a potential lifetime violation.
-struct PendingWarning {
-  SourceLocation ExpiryLoc; // Where the loan expired.
-  const Expr *UseExpr;      // Where the origin holding this loan was used.
-  Confidence ConfidenceLevel;
-};
-
 static Confidence livenessKindToConfidence(LivenessKind K) {
   switch (K) {
   case LivenessKind::Must:
@@ -45,22 +38,29 @@ static Confidence livenessKindToConfidence(LivenessKind K) {
   llvm_unreachable("unknown liveness kind");
 }
 
+namespace {
+
+/// Struct to store the complete context for a potential lifetime violation.
+struct PendingWarning {
+  SourceLocation ExpiryLoc; // Where the loan expired.
+  const Expr *UseExpr;      // Where the origin holding this loan was used.
+  Confidence ConfidenceLevel;
+};
+
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
-  const LoanPropagation &LP;
-  const LiveOrigins &LO;
+  const LoanPropagationAnalysis &LoanPropagation;
+  const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
-  AnalysisDeclContext &ADC;
   LifetimeSafetyReporter *Reporter;
 
 public:
-  LifetimeChecker(const LoanPropagation &LP, const LiveOrigins &LO,
-                  const FactManager &FM, AnalysisDeclContext &ADC,
-                  LifetimeSafetyReporter *Reporter)
-      : LP(LP), LO(LO), FactMgr(FM), ADC(ADC), Reporter(Reporter) {}
-
-  void run() {
+  LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
+                  const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
+                  AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
+      : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
+        Reporter(Reporter) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -81,11 +81,11 @@ public:
   /// propagation (e.g., a loan may only be held on some execution paths).
   void checkExpiry(const ExpireFact *EF) {
     LoanID ExpiredLoan = EF->getLoanID();
-    LivenessMap Origins = LO.getLiveOrigins(EF);
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
     const UseFact *BadUse = nullptr;
     for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LP.getLoans(OID, EF);
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       if (!HeldLoans.contains(ExpiredLoan))
         continue;
       // Loan is defaulted.
@@ -117,13 +117,14 @@ public:
     }
   }
 };
+} // namespace
 
-void runLifetimeChecker(const LoanPropagation &LP, const LiveOrigins &LO,
+void runLifetimeChecker(const LoanPropagationAnalysis &LP,
+                        const LiveOriginsAnalysis &LO,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
                         LifetimeSafetyReporter *Reporter) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
   LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter);
-  Checker.run();
 }
 
 } // namespace clang::lifetimes::internal

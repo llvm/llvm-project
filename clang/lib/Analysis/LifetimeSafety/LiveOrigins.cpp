@@ -56,15 +56,14 @@ struct Lattice {
 /// The analysis that tracks which origins are live, with granular information
 /// about the causing use fact and confidence level. This is a backward
 /// analysis.
-class LiveOriginAnalysis : public DataflowAnalysis<LiveOriginAnalysis, Lattice,
-                                                   Direction::Backward> {
+class AnalysisImpl
+    : public DataflowAnalysis<AnalysisImpl, Lattice, Direction::Backward> {
 
 public:
-  LiveOriginAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                     LivenessMap::Factory &SF)
+  AnalysisImpl(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+               LivenessMap::Factory &SF)
       : DataflowAnalysis(C, AC, F), FactMgr(F), Factory(SF) {}
-  using DataflowAnalysis<LiveOriginAnalysis, Lattice,
-                         Direction::Backward>::transfer;
+  using DataflowAnalysis<AnalysisImpl, Lattice, Direction::Backward>::transfer;
 
   StringRef getAnalysisName() const { return "LiveOrigins"; }
 
@@ -134,7 +133,7 @@ public:
     return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
   }
 
-  LivenessMap getLiveOrigins(ProgramPoint P) const {
+  LivenessMap getLiveOriginsAt(ProgramPoint P) const {
     return getState(P).LiveOrigins;
   }
 
@@ -157,24 +156,25 @@ private:
 } // namespace
 
 // PImpl wrapper implementation
-class LiveOrigins::Impl : public LiveOriginAnalysis {
-  using LiveOriginAnalysis::LiveOriginAnalysis;
+class LiveOriginsAnalysis::Impl : public AnalysisImpl {
+  using AnalysisImpl::AnalysisImpl;
 };
 
-LiveOrigins::LiveOrigins(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                         LivenessMap::Factory &SF)
+LiveOriginsAnalysis::LiveOriginsAnalysis(const CFG &C, AnalysisDeclContext &AC,
+                                         FactManager &F,
+                                         LivenessMap::Factory &SF)
     : PImpl(std::make_unique<Impl>(C, AC, F, SF)) {
   PImpl->run();
 }
 
-LiveOrigins::~LiveOrigins() = default;
+LiveOriginsAnalysis::~LiveOriginsAnalysis() = default;
 
-LivenessMap LiveOrigins::getLiveOrigins(ProgramPoint P) const {
-  return PImpl->getLiveOrigins(P);
+LivenessMap LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
+  return PImpl->getLiveOriginsAt(P);
 }
 
-void LiveOrigins::dump(llvm::raw_ostream &OS,
-                       llvm::StringMap<ProgramPoint> TestPoints) const {
+void LiveOriginsAnalysis::dump(llvm::raw_ostream &OS,
+                               llvm::StringMap<ProgramPoint> TestPoints) const {
   PImpl->dump(OS, TestPoints);
 }
 } // namespace clang::lifetimes::internal

@@ -75,11 +75,11 @@ private:
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
 protected:
-  FactManager &AllFacts;
+  FactManager &FactMgr;
 
-  explicit DataflowAnalysis(const CFG &C, AnalysisDeclContext &AC,
-                            FactManager &F)
-      : Cfg(C), AC(AC), AllFacts(F) {}
+  explicit DataflowAnalysis(const CFG &Cfg, AnalysisDeclContext &AC,
+                            FactManager &FactMgr)
+      : Cfg(Cfg), AC(AC), FactMgr(FactMgr) {}
 
 public:
   void run() {
@@ -140,7 +140,7 @@ private:
   /// Computes the state at one end of a block by applying all its facts
   /// sequentially to a given state from the other end.
   Lattice transferBlock(const CFGBlock *Block, Lattice State) {
-    auto Facts = AllFacts.getFacts(Block);
+    auto Facts = FactMgr.getFacts(Block);
     if constexpr (isForward()) {
       for (const Fact *F : Facts) {
         State = transferFact(State, F);

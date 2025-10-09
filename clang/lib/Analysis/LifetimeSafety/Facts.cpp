@@ -62,6 +62,22 @@ void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
 }
 
+llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
+  llvm::StringMap<ProgramPoint> AnnotationToPointMap;
+  for (const CFGBlock *Block : BlockToFactsMap.keys()) {
+    for (const Fact *F : getFacts(Block)) {
+      if (const auto *TPF = F->getAs<TestPointFact>()) {
+        StringRef PointName = TPF->getAnnotation();
+        assert(AnnotationToPointMap.find(PointName) ==
+                   AnnotationToPointMap.end() &&
+               "more than one test points with the same name");
+        AnnotationToPointMap[PointName] = F;
+      }
+    }
+  }
+  return AnnotationToPointMap;
+}
+
 void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
   llvm::dbgs() << "==========================================\n";
   llvm::dbgs() << "       Lifetime Analysis Facts:\n";

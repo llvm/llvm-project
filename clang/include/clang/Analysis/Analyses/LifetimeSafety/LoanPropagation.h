@@ -29,19 +29,17 @@ namespace clang::lifetimes::internal {
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
-class LoanPropagation {
+class LoanPropagationAnalysis {
 public:
-  LoanPropagation(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                  OriginLoanMap::Factory &OriginLoanMapFactory,
-                  LoanSet::Factory &LoanSetFactory);
-  ~LoanPropagation();
+  LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+                          OriginLoanMap::Factory &OriginLoanMapFactory,
+                          LoanSet::Factory &LoanSetFactory);
+  ~LoanPropagationAnalysis();
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const;
 
 private:
   class Impl;
-
-public:
   std::unique_ptr<Impl> PImpl;
 };
 

@@ -24,7 +24,8 @@ namespace clang::lifetimes::internal {
 /// Runs the lifetime checker, which detects use-after-free errors by
 /// examining loan expiration points and checking if any live origins hold
 /// the expired loan.
-void runLifetimeChecker(const LoanPropagation &LP, const LiveOrigins &LO,
+void runLifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
+                        const LiveOriginsAnalysis &LiveOrigins,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
                         LifetimeSafetyReporter *Reporter);
 

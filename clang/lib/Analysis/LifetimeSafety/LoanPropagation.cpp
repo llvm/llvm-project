@@ -43,13 +43,12 @@ struct Lattice {
   }
 };
 
-class LoanPropagationAnalysis
-    : public DataflowAnalysis<LoanPropagationAnalysis, Lattice,
-                              Direction::Forward> {
+class AnalysisImpl
+    : public DataflowAnalysis<AnalysisImpl, Lattice, Direction::Forward> {
 public:
-  LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                          OriginLoanMap::Factory &OriginLoanMapFactory,
-                          LoanSet::Factory &LoanSetFactory)
+  AnalysisImpl(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+               OriginLoanMap::Factory &OriginLoanMapFactory,
+               LoanSet::Factory &LoanSetFactory)
       : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
         LoanSetFactory(LoanSetFactory) {}
 
@@ -118,22 +117,22 @@ private:
 };
 } // namespace
 
-class LoanPropagation::Impl final : public LoanPropagationAnalysis {
-  using LoanPropagationAnalysis::LoanPropagationAnalysis;
+class LoanPropagationAnalysis::Impl final : public AnalysisImpl {
+  using AnalysisImpl::AnalysisImpl;
 };
 
-LoanPropagation::LoanPropagation(const CFG &C, AnalysisDeclContext &AC,
-                                 FactManager &F,
-                                 OriginLoanMap::Factory &OriginLoanMapFactory,
-                                 LoanSet::Factory &LoanSetFactory)
+LoanPropagationAnalysis::LoanPropagationAnalysis(
+    const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+    OriginLoanMap::Factory &OriginLoanMapFactory,
+    LoanSet::Factory &LoanSetFactory)
     : PImpl(std::make_unique<Impl>(C, AC, F, OriginLoanMapFactory,
                                    LoanSetFactory)) {
   PImpl->run();
 }
 
-LoanPropagation::~LoanPropagation() = default;
+LoanPropagationAnalysis::~LoanPropagationAnalysis() = default;
 
-LoanSet LoanPropagation::getLoans(OriginID OID, ProgramPoint P) const {
+LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
 } // namespace clang::lifetimes::internal

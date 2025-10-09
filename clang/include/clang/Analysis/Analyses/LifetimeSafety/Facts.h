@@ -204,6 +204,17 @@ public:
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC) const;
 
+  /// Retrieves program points that were specially marked in the source code
+  /// for testing.
+  ///
+  /// The analysis recognizes special function calls of the form
+  /// `void("__lifetime_test_point_<name>")` as test points. This method returns
+  /// a map from the annotation string (<name>) to the corresponding
+  /// `ProgramPoint`. This allows test harnesses to query the analysis state at
+  /// user-defined locations in the code.
+  /// \note This is intended for testing only.
+  llvm::StringMap<ProgramPoint> getTestPoints() const;
+
   LoanManager &getLoanMgr() { return LoanMgr; }
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }

@@ -22,8 +22,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/Analysis/CFG.h"
-#include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes {
 
@@ -52,7 +50,6 @@ namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  // llvm::BumpPtrAllocator Allocator;
   OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
   LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
   LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
@@ -67,57 +64,20 @@ public:
 
   void run();
 
-  /// Returns the loan propagation analysis object.
-  /// \note This is intended for testing only.
-  LoanPropagation &getLoanPropagation() const {
-    assert(LP && "Analysis has not been run.");
-    return *LP;
+  /// \note These are provided only for testing purposes.
+  LoanPropagationAnalysis &getLoanPropagation() const {
+    return *LoanPropagation;
   }
-
-  /// Returns the live origin analysis object.
-  /// \note This is intended for testing only.
-  LiveOrigins &getLiveOriginAnalysis() const {
-    assert(LO && "Analysis has not been run.");
-    return *LO;
-  }
-
-  /// Returns the set of origins that are live at a specific program point,
-  /// along with the confidence level of their liveness.
-  ///
-  /// An origin is considered live if there are potential future uses of that
-  /// origin after the given program point. The confidence level indicates
-  /// whether the origin is definitely live (Definite) due to being domintated
-  /// by a set of uses or only possibly live (Maybe) only on some but not all
-  /// control flow paths.
-  std::vector<std::pair<OriginID, LivenessKind>>
-  getLiveOriginsAtPoint(ProgramPoint PP) const;
-
-  /// Finds the OriginID for a given declaration.
-  /// Returns a null optional if not found.
-  std::optional<OriginID> getOriginIDForDecl(const ValueDecl *D) const;
-
-  /// Finds the LoanID's for the loan created with the specific variable as
-  /// their Path.
-  std::vector<LoanID> getLoanIDForVar(const VarDecl *VD) const;
-
-  /// Retrieves program points that were specially marked in the source code
-  /// for testing.
-  ///
-  /// The analysis recognizes special function calls of the form
-  /// `void("__lifetime_test_point_<name>")` as test points. This method returns
-  /// a map from the annotation string (<name>) to the corresponding
-  /// `ProgramPoint`. This allows test harnesses to query the analysis state at
-  /// user-defined locations in the code.
-  /// \note This is intended for testing only.
-  llvm::StringMap<ProgramPoint> getTestPoints() const;
+  LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
+  FactManager &getFactManager() { return FactMgr; }
 
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
   FactManager FactMgr;
-  std::unique_ptr<LiveOrigins> LO;
-  std::unique_ptr<LoanPropagation> LP;
+  std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
+  std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };
 } // namespace internal
 } // namespace clang::lifetimes

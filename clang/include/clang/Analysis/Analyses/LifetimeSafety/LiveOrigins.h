@@ -72,13 +72,16 @@ struct LivenessInfo {
 
 using LivenessMap = llvm::ImmutableMap<OriginID, LivenessInfo>;
 
-class LiveOrigins {
+class LiveOriginsAnalysis {
 public:
-  LiveOrigins(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-              LivenessMap::Factory &SF);
-  ~LiveOrigins();
+  LiveOriginsAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+                      LivenessMap::Factory &SF);
+  ~LiveOriginsAnalysis();
 
-  LivenessMap getLiveOrigins(ProgramPoint P) const;
+  /// Returns the set of origins that are live at a specific program point,
+  /// along with the confidence level of their liveness.
+  LivenessMap getLiveOriginsAt(ProgramPoint P) const;
+
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
             llvm::StringMap<ProgramPoint> TestPoints) const;
