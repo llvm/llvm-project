@@ -25,6 +25,7 @@
 // are placed into the same TBAA root. Since glob is a global
 // and x is a dummy argument, TBAA ends up reporting no-alias
 // for them, which is incorrect.
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @_QPtest1() attributes {noinline} {
   %c1_i32 = arith.constant 1 : i32
   %c2_i32 = arith.constant 2 : i32
@@ -39,6 +40,7 @@ func.func @_QPtest1() attributes {noinline} {
   fir.store %6 to %4 : !fir.ref<i32>
   fir.store %c2_i32 to %2 : !fir.ref<i32>
   return
+}
 }
 // CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest1">
 // CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_0]], 0>}>
@@ -68,6 +70,7 @@ func.func @_QPtest1() attributes {noinline} {
 // -----
 
 // This test has fir.dummy_scope in place, and TBAA is correct.
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @_QPtest2() attributes {noinline} {
   %c1_i32 = arith.constant 1 : i32
   %c2_i32 = arith.constant 2 : i32
@@ -83,6 +86,7 @@ func.func @_QPtest2() attributes {noinline} {
   fir.store %6 to %4 : !fir.ref<i32>
   fir.store %c2_i32 to %2 : !fir.ref<i32>
   return
+}
 }
 // CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest2">
 // CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest2 - Scope 1">

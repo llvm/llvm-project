@@ -14,5 +14,7 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.read
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 

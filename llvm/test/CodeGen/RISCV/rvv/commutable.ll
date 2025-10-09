@@ -15,8 +15,8 @@ define <vscale x 1 x i64> @commutable_vadd_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -30,8 +30,8 @@ define <vscale x 1 x i64> @commutable_vadd_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -47,8 +47,8 @@ define <vscale x 1 x i64> @commutable_vand_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vand.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vand.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vand.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vand.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -62,8 +62,8 @@ define <vscale x 1 x i64> @commutable_vand_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vand.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vand.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vand.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vand.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -79,8 +79,8 @@ define <vscale x 1 x i64> @commutable_vor_vv(<vscale x 1 x i64> %0, <vscale x 1 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vor.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vor.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vor.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vor.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -94,8 +94,8 @@ define <vscale x 1 x i64> @commutable_vor_vv_masked(<vscale x 1 x i64> %0, <vsca
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -111,8 +111,8 @@ define <vscale x 1 x i64> @commutable_vxor_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vxor.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vxor.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vxor.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vxor.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -126,8 +126,8 @@ define <vscale x 1 x i64> @commutable_vxor_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vxor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vxor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vxor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vxor.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -158,8 +158,8 @@ define <vscale x 1 x i1> @commutable_vmseq_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i1> @llvm.riscv.vmseq.mask.nxv1i64(<vscale x 1 x i1> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2)
-  %b = call <vscale x 1 x i1> @llvm.riscv.vmseq.mask.nxv1i64(<vscale x 1 x i1> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2)
+  %a = call <vscale x 1 x i1> @llvm.riscv.vmseq.mask.nxv1i64(<vscale x 1 x i1> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2)
+  %b = call <vscale x 1 x i1> @llvm.riscv.vmseq.mask.nxv1i64(<vscale x 1 x i1> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2)
   %ret = add <vscale x 1 x i1> %a, %b
   ret <vscale x 1 x i1> %ret
 }
@@ -190,8 +190,8 @@ define <vscale x 1 x i1> @commutable_vmsne_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i1> @llvm.riscv.vmsne.mask.nxv1i64(<vscale x 1 x i1> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2)
-  %b = call <vscale x 1 x i1> @llvm.riscv.vmsne.mask.nxv1i64(<vscale x 1 x i1> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2)
+  %a = call <vscale x 1 x i1> @llvm.riscv.vmsne.mask.nxv1i64(<vscale x 1 x i1> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2)
+  %b = call <vscale x 1 x i1> @llvm.riscv.vmsne.mask.nxv1i64(<vscale x 1 x i1> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2)
   %ret = add <vscale x 1 x i1> %a, %b
   ret <vscale x 1 x i1> %ret
 }
@@ -207,8 +207,8 @@ define <vscale x 1 x i64> @commutable_vmin_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmin.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmin.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmin.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmin.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -222,8 +222,8 @@ define <vscale x 1 x i64> @commutable_vmin_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmin.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmin.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmin.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmin.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -239,8 +239,8 @@ define <vscale x 1 x i64> @commutable_vminu_vv(<vscale x 1 x i64> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vminu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vminu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vminu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vminu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -254,8 +254,8 @@ define <vscale x 1 x i64> @commutable_vminu_vv_masked(<vscale x 1 x i64> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vminu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vminu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vminu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vminu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -271,8 +271,8 @@ define <vscale x 1 x i64> @commutable_vmax_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmax.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmax.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmax.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmax.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -286,8 +286,8 @@ define <vscale x 1 x i64> @commutable_vmax_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmax.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmax.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmax.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmax.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -303,8 +303,8 @@ define <vscale x 1 x i64> @commutable_vmaxu_vv(<vscale x 1 x i64> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmaxu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmaxu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmaxu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmaxu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -318,8 +318,8 @@ define <vscale x 1 x i64> @commutable_vmaxu_vv_masked(<vscale x 1 x i64> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmaxu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmaxu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmaxu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmaxu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -335,8 +335,8 @@ define <vscale x 1 x i64> @commutable_vmul_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmul.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmul.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmul.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmul.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -350,8 +350,8 @@ define <vscale x 1 x i64> @commutable_vmul_vv_masked(<vscale x 1 x i64> %0, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -367,8 +367,8 @@ define <vscale x 1 x i64> @commutable_vmulh_vv(<vscale x 1 x i64> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmulh.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmulh.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmulh.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmulh.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -382,8 +382,8 @@ define <vscale x 1 x i64> @commutable_vmulh_vv_masked(<vscale x 1 x i64> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmulh.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmulh.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmulh.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmulh.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -399,8 +399,8 @@ define <vscale x 1 x i64> @commutable_vmulhu_vv(<vscale x 1 x i64> %0, <vscale x
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmulhu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmulhu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmulhu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmulhu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -414,8 +414,8 @@ define <vscale x 1 x i64> @commutable_vmulhu_vv_masked(<vscale x 1 x i64> %0, <v
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vmulhu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vmulhu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmulhu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmulhu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -431,8 +431,8 @@ define <vscale x 1 x i64> @commutable_vwadd_vv(<vscale x 1 x i32> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwadd.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwadd.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwadd.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwadd.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -446,8 +446,8 @@ define <vscale x 1 x i64> @commutable_vwadd_vv_masked(<vscale x 1 x i32> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwadd.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwadd.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwadd.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwadd.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -463,8 +463,8 @@ define <vscale x 1 x i64> @commutable_vwaddu_vv(<vscale x 1 x i32> %0, <vscale x
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwaddu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwaddu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -478,8 +478,8 @@ define <vscale x 1 x i64> @commutable_vwaddu_vv_masked(<vscale x 1 x i32> %0, <v
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwaddu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwaddu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -495,8 +495,8 @@ define <vscale x 1 x i64> @commutable_vwmul_vv(<vscale x 1 x i32> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmul.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmul.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmul.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmul.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -510,8 +510,8 @@ define <vscale x 1 x i64> @commutable_vwmul_vv_masked(<vscale x 1 x i32> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmul.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmul.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmul.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmul.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -527,8 +527,8 @@ define <vscale x 1 x i64> @commutable_vwmulu_vv(<vscale x 1 x i32> %0, <vscale x
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmulu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmulu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmulu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmulu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -542,8 +542,8 @@ define <vscale x 1 x i64> @commutable_vwmulu_vv_masked(<vscale x 1 x i32> %0, <v
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmulu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmulu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmulu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmulu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -559,8 +559,8 @@ define <vscale x 1 x i64> @commutable_vwmacc_vv(<vscale x 1 x i32> %0, <vscale x
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmacc.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmacc.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmacc.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmacc.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -575,8 +575,8 @@ define <vscale x 1 x i64> @commutable_vwmacc_vv_masked(<vscale x 1 x i32> %0, <v
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmacc.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmacc.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmacc.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmacc.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -592,8 +592,8 @@ define <vscale x 1 x i64> @commutable_vwmaccu_vv(<vscale x 1 x i32> %0, <vscale 
 ; CHECK-NEXT:    vadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -608,8 +608,8 @@ define <vscale x 1 x i64> @commutable_vwmaccu_vv_masked(<vscale x 1 x i32> %0, <
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> poison, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -625,8 +625,8 @@ define <vscale x 1 x i64> @commutable_vadc_vv(<vscale x 1 x i64> %0, <vscale x 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vadc.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vadc.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vadc.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vadc.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -642,8 +642,8 @@ define <vscale x 1 x i64> @commutable_vsadd_vv(<vscale x 1 x i64> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vsadd.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vsadd.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vsadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -657,8 +657,8 @@ define <vscale x 1 x i64> @commutable_vsadd_vv_masked(<vscale x 1 x i64> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vsadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vsadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vsadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -674,8 +674,8 @@ define <vscale x 1 x i64> @commutable_vsaddu_vv(<vscale x 1 x i64> %0, <vscale x
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vsaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vsaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vsaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -689,8 +689,8 @@ define <vscale x 1 x i64> @commutable_vsaddu_vv_masked(<vscale x 1 x i64> %0, <v
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vsaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vsaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vsaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -707,8 +707,8 @@ define <vscale x 1 x i64> @commutable_vaadd_vv(<vscale x 1 x i64> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vaadd.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen 0, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vaadd.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen 0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vaadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen 0, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vaadd.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen 0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -723,8 +723,8 @@ define <vscale x 1 x i64> @commutable_vaadd_vv_masked(<vscale x 1 x i64> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vaadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vaadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vaadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vaadd.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -741,8 +741,8 @@ define <vscale x 1 x i64> @commutable_vaaddu_vv(<vscale x 1 x i64> %0, <vscale x
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vaaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen 0, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vaaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen 0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vaaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen 0, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vaaddu.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen 0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -757,8 +757,8 @@ define <vscale x 1 x i64> @commutable_vaaddu_vv_masked(<vscale x 1 x i64> %0, <v
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vaaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vaaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vaaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vaaddu.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -775,8 +775,8 @@ define <vscale x 1 x i64> @commutable_vsmul_vv(<vscale x 1 x i64> %0, <vscale x 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i64> @llvm.riscv.vsmul.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen 0, iXLen %2)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vsmul.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen 0, iXLen %2)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsmul.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, iXLen 0, iXLen %2)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vsmul.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, iXLen 0, iXLen %2)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
@@ -791,8 +791,8 @@ define <vscale x 1 x i64> @commutable_vsmul_vv_masked(<vscale x 1 x i64> %0, <vs
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
-  %b = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %1, <vscale x 1 x i64> %0, <vscale x 1 x i1> %mask, iXLen 0, iXLen %2, iXLen 1)
   %ret = add <vscale x 1 x i64> %a, %b
   ret <vscale x 1 x i64> %ret
 }
