@@ -28,23 +28,25 @@ TEST_CONSTEXPR(match_m128d(_mm_fmadd_pd((__m128d){ 0.0, -4.0 }, (__m128d){ -0.0,
 
 __m128 test_mm_fmadd_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fmadd_ss
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
   // CHECK: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
-  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 0
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_fmadd_ss(a, b, c);
 }
+TEST_CONSTEXPR(match_m128(_mm_fmadd_ss((__m128){ -4.0f, 1.0f, -2.0f, -0.0f }, (__m128){ 2.0f, 4.0f, 2.0f, -0.0f }, (__m128){ 1.0f, -4.0f, 2.0f, 1.0f }), -7.0f, 1.0f, -2.0f, -0.0f));
 
 __m128d test_mm_fmadd_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fmadd_sd
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
   // CHECK: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_fmadd_sd(a, b, c);
 }
+TEST_CONSTEXPR(match_m128d(_mm_fmadd_sd((__m128d){ -4.0, 1.0 }, (__m128d){ 1.0, 2.0 }, (__m128d){ -8.0, 3.0 }), -12.0, 1.0));
 
 __m128 test_mm_fmsub_ps(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fmsub_ps
@@ -64,25 +66,27 @@ TEST_CONSTEXPR(match_m128d(_mm_fmsub_pd((__m128d){ 0.0, -4.0 }, (__m128d){ -0.0,
 
 __m128 test_mm_fmsub_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fmsub_ss
-  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.+}}
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
-  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: [[NEG:%.+]] = fneg float %{{.+}}
+  // CHECK: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float [[NEG]])
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_fmsub_ss(a, b, c);
 }
+TEST_CONSTEXPR(match_m128(_mm_fmsub_ss((__m128){ -4.0f, 1.0f, -2.0f, -0.0f }, (__m128){ 2.0f, 4.0f, 2.0f, -0.0f }, (__m128){ 1.0f, -4.0f, 2.0f, 1.0f }), -9.0f, 1.0f, -2.0f, -0.0f));
 
 __m128d test_mm_fmsub_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fmsub_sd
-  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.+}}
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: [[NEG:%.+]] = fneg double %{{.+}}
+  // CHECK: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double [[NEG]])
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_fmsub_sd(a, b, c);
 }
+TEST_CONSTEXPR(match_m128d(_mm_fmsub_sd((__m128d){ -4.0, 1.0 }, (__m128d){ 1.0, 2.0 }, (__m128d){ -8.0, 3.0 }), 4.0, 1.0));
 
 __m128 test_mm_fnmadd_ps(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fnmadd_ps
@@ -102,25 +106,27 @@ TEST_CONSTEXPR(match_m128d(_mm_fnmadd_pd((__m128d){ 0.0, -4.0 }, (__m128d){ -0.0
 
 __m128 test_mm_fnmadd_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fnmadd_ss
-  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.+}}
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
-  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: [[NEG:%.+]] = fneg float %{{.+}}
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: call float @llvm.fma.f32(float %{{.*}}, float [[NEG]], float %{{.*}})
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_fnmadd_ss(a, b, c);
 }
+TEST_CONSTEXPR(match_m128(_mm_fnmadd_ss((__m128){ -4.0f, 1.0f, -2.0f, -0.0f }, (__m128){ 2.0f, 4.0f, 2.0f, -0.0f }, (__m128){ 1.0f, -4.0f, 2.0f, 1.0f }), 9.0f, 1.0f, -2.0f, -0.0f));
 
 __m128d test_mm_fnmadd_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fnmadd_sd
-  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.+}}
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: [[NEG:%.+]] = fneg double %{{.+}}
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: call double @llvm.fma.f64(double %{{.*}}, double [[NEG]], double %{{.*}})
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_fnmadd_sd(a, b, c);
 }
+TEST_CONSTEXPR(match_m128d(_mm_fnmadd_sd((__m128d){ -4.0, 1.0 }, (__m128d){ 1.0, 2.0 }, (__m128d){ -8.0, 3.0 }), -4.0, 1.0));
 
 __m128 test_mm_fnmsub_ps(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fnmsub_ps
@@ -142,27 +148,29 @@ TEST_CONSTEXPR(match_m128d(_mm_fnmsub_pd((__m128d){ 0.0, -4.0 }, (__m128d){ -0.0
 
 __m128 test_mm_fnmsub_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fnmsub_ss
-  // CHECK: [[NEG:%.+]] = fneg <4 x float> %{{.+}}
-  // CHECK: [[NEG2:%.+]] = fneg <4 x float> %{{.+}}
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
-  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i64 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: [[NEG:%.+]] = fneg float %{{.+}}
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: [[NEG2:%.+]] = fneg float %{{.+}}
+  // CHECK: call float @llvm.fma.f32(float %{{.*}}, float [[NEG]], float [[NEG2]])
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_fnmsub_ss(a, b, c);
 }
+TEST_CONSTEXPR(match_m128(_mm_fnmsub_ss((__m128){ -4.0f, 1.0f, -2.0f, -0.0f }, (__m128){ 2.0f, 4.0f, 2.0f, -0.0f }, (__m128){ 1.0f, -4.0f, 2.0f, 1.0f }), 7.0f, 1.0f, -2.0f, -0.0f));
 
 __m128d test_mm_fnmsub_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fnmsub_sd
-  // CHECK: [[NEG:%.+]] = fneg <2 x double> %{{.+}}
-  // CHECK: [[NEG2:%.+]] = fneg <2 x double> %{{.+}}
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: [[NEG:%.+]] = fneg double %{{.+}}
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: [[NEG2:%.+]] = fneg double %{{.+}}
+  // CHECK: call double @llvm.fma.f64(double %{{.*}}, double [[NEG]], double [[NEG2]])
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_fnmsub_sd(a, b, c);
 }
+TEST_CONSTEXPR(match_m128d(_mm_fnmsub_sd((__m128d){ -4.0, 1.0 }, (__m128d){ 1.0, 2.0 }, (__m128d){ -8.0, 3.0 }), 12.0, 1.0));
 
 __m128 test_mm_fmaddsub_ps(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fmaddsub_ps
