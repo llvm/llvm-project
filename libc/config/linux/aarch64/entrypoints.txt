@@ -735,6 +735,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundevenf16
     libc.src.math.roundf16
+    libc.src.math.rsqrtf
     libc.src.math.rsqrtf16
     libc.src.math.scalblnf16
     libc.src.math.scalbnf16

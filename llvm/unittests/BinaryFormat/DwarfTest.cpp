@@ -254,4 +254,42 @@ TEST(DwarfTest, lname_SourceLanguageNameString) {
   EXPECT_EQ(SourceLanguageNameString(DW_LNAME_##NAME), xstr(DW_LNAME_##NAME));
 #include "llvm/BinaryFormat/Dwarf.def"
 }
+
+TEST(DWARFDebugInfo, TestLanguageDescription_Versioned) {
+  // Tests for the llvm::dwarf::LanguageDescription API that
+  // takes a name *and* a version.
+
+  // Unknown language.
+  EXPECT_EQ(
+      llvm::dwarf::LanguageDescription(static_cast<SourceLanguageName>(0)),
+      "Unknown");
+
+  EXPECT_EQ(
+      llvm::dwarf::LanguageDescription(static_cast<SourceLanguageName>(0), 0),
+      "Unknown");
+
+  // Test that specifying an invalid version falls back to a valid language name
+  // regardless.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_ObjC, 0), "Objective C");
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_Julia, 0), "Julia");
+
+  // Check some versions.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 199711),
+            "C++98");
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 201402),
+            "C++14");
+
+  // Versions round up.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 201400),
+            "C++14");
+
+  // Version 0 for C and C++ is an unversioned name.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C, 0), "C (K&R and ISO)");
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 0),
+            "ISO C++");
+
+  // Version 0 for other versioned languages may not be the unversioned name.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_Fortran, 0),
+            "FORTRAN 77");
+}
 } // end namespace

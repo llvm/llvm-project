@@ -28,8 +28,12 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -38,6 +42,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
@@ -598,6 +606,14 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
     // produce the value from the table.
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
     auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+
+    // The true branch of select handles the cttz(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.

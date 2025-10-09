@@ -222,6 +222,7 @@ Clang-Tidy Checks
    :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
+   :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
    :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,
    :doc:`fuchsia-virtual-inheritance <fuchsia/virtual-inheritance>`,
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,

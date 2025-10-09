@@ -1040,7 +1040,8 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     NewCU.addString(Die, dwarf::DW_AT_producer, Producer);
 
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
-                DIUnit->getSourceLanguage());
+                DIUnit->getSourceLanguage().getUnversionedName());
+
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
@@ -2930,10 +2931,9 @@ static dwarf::PubIndexEntryDescriptor computeIndexValue(DwarfUnit *CU,
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_enumeration_type:
     return dwarf::PubIndexEntryDescriptor(
-        dwarf::GIEK_TYPE,
-        dwarf::isCPlusPlus((dwarf::SourceLanguage)CU->getLanguage())
-            ? dwarf::GIEL_EXTERNAL
-            : dwarf::GIEL_STATIC);
+        dwarf::GIEK_TYPE, dwarf::isCPlusPlus(CU->getSourceLanguage())
+                              ? dwarf::GIEL_EXTERNAL
+                              : dwarf::GIEL_STATIC);
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_base_type:
   case dwarf::DW_TAG_subrange_type:
@@ -3926,7 +3926,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   TypeUnitsUnderConstruction.emplace_back(std::move(OwnedUnit), CTy);
 
   NewTU.addUInt(UnitDie, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
-                CU.getLanguage());
+                CU.getSourceLanguage());
 
   uint64_t Signature = makeTypeSignature(Identifier);
   NewTU.setTypeSignature(Signature);

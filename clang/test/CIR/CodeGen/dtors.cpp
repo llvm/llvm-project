@@ -171,3 +171,40 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // OGCG:   br label %[[CLEANUP_DONE]]
 // OGCG: [[CLEANUP_DONE]]:
 // OGCG:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP0]])
+
+struct C {
+  ~C();
+};
+
+struct D {
+  int n;
+  C c;
+  ~D() {}
+};
+
+// CIR: cir.func {{.*}} @_ZN1DD2Ev
+// CIR:   %[[C:.*]] = cir.get_member %{{.*}}[1] {name = "c"}
+// CIR:   cir.call @_ZN1CD1Ev(%[[C]])
+
+// LLVM: define {{.*}} void @_ZN1DD2Ev
+// LLVM:   %[[C:.*]] = getelementptr %struct.D, ptr %{{.*}}, i32 0, i32 1
+// LLVM:   call void @_ZN1CD1Ev(ptr %[[C]])
+
+// This destructor is defined after the calling function in OGCG.
+
+void test_nested_dtor() {
+  D d;
+}
+
+// CIR: cir.func{{.*}} @_Z16test_nested_dtorv()
+// CIR:   cir.call @_ZN1DD2Ev(%{{.*}})
+
+// LLVM: define {{.*}} void @_Z16test_nested_dtorv()
+// LLVM:   call void @_ZN1DD2Ev(ptr %{{.*}})
+
+// OGCG: define {{.*}} void @_Z16test_nested_dtorv()
+// OGCG:   call void @_ZN1DD2Ev(ptr {{.*}} %{{.*}})
+
+// OGCG: define {{.*}} void @_ZN1DD2Ev
+// OGCG:   %[[C:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i64 4
+// OGCG:   call void @_ZN1CD1Ev(ptr {{.*}} %[[C]])

@@ -954,6 +954,22 @@ cc_library(
 )
 
 cc_library(
+    name = "TestOpenACC",
+    srcs = glob(["lib/Dialect/OpenACC/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:OpenACCDialect",
+        "//mlir:Pass",
+        "//mlir:Support",
+    ],
+)
+
+cc_library(
     name = "TestSCF",
     srcs = glob(["lib/Dialect/SCF/*.cpp"]),
     includes = ["lib/Dialect/Test"],

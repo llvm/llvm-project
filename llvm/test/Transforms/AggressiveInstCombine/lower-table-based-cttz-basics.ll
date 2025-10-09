@@ -91,12 +91,13 @@
 
 @ctz7.table = internal unnamed_addr constant [32 x i8] c"\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 1
 
-define i32 @ctz1(i32 %x) {
+define i32 @ctz1(i32 %x) !prof !0 {
 ; CHECK-LABEL: @ctz1(
+; CHECK: !prof [[PROF_0:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -498,3 +499,7 @@ entry:
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }
+
+!0 = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}

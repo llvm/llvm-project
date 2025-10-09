@@ -1,4 +1,4 @@
-//===- orc-rt-c/orc-rt.h - Placeholder header for orc-rt ----------*- C -*-===//
+//===- ResourceManager.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,27 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Placeholder header for initial orc-rt checkin.
+// Contains the implementation of APIs in the orc-rt/ResourceManager.h header.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_C_ORC_RT_H
-#define ORC_RT_C_ORC_RT_H
+#include "orc-rt/ResourceManager.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace orc_rt {
 
-/// \addtogroup orc_rt_c_api orc-rt C APIs
-/// @{
+ResourceManager::~ResourceManager() = default;
 
-void orc_rt(void);
-
-/// @}
-///
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#endif // ORC_RT_C_ORC_RT_H
+} // namespace orc_rt

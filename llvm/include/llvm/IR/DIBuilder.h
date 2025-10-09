@@ -146,9 +146,9 @@ namespace llvm {
     /// \param SDK           The SDK name. On Darwin, this is the last component
     ///                      of the sysroot.
     LLVM_ABI DICompileUnit *
-    createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
-                      bool isOptimized, StringRef Flags, unsigned RV,
-                      StringRef SplitName = StringRef(),
+    createCompileUnit(DISourceLanguageName Lang, DIFile *File,
+                      StringRef Producer, bool isOptimized, StringRef Flags,
+                      unsigned RV, StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true,

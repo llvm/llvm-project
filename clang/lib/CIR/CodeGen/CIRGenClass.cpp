@@ -870,6 +870,109 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                             /*delegating=*/false, addr, type);
 }
 
+namespace {
+class DestroyField final : public EHScopeStack::Cleanup {
+  const FieldDecl *field;
+  CIRGenFunction::Destroyer *destroyer;
+
+public:
+  DestroyField(const FieldDecl *field, CIRGenFunction::Destroyer *destroyer)
+      : field(field), destroyer(destroyer) {}
+
+  void emit(CIRGenFunction &cgf) override {
+    // Find the address of the field.
+    Address thisValue = cgf.loadCXXThisAddress();
+    CanQualType recordTy =
+        cgf.getContext().getCanonicalTagType(field->getParent());
+    LValue thisLV = cgf.makeAddrLValue(thisValue, recordTy);
+    LValue lv = cgf.emitLValueForField(thisLV, field);
+    assert(lv.isSimple());
+
+    assert(!cir::MissingFeatures::ehCleanupFlags());
+    cgf.emitDestroy(lv.getAddress(), field->getType(), destroyer);
+  }
+
+  // This is a placeholder until EHCleanupScope is implemented.
+  size_t getSize() const override {
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    return sizeof(DestroyField);
+  }
+};
+} // namespace
+
+/// Emit all code that comes at the end of class's destructor. This is to call
+/// destructors on members and base classes in reverse order of their
+/// construction.
+///
+/// For a deleting destructor, this also handles the case where a destroying
+/// operator delete completely overrides the definition.
+void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
+                                       CXXDtorType dtorType) {
+  assert((!dd->isTrivial() || dd->hasAttr<DLLExportAttr>()) &&
+         "Should not emit dtor epilogue for non-exported trivial dtor!");
+
+  // The deleting-destructor phase just needs to call the appropriate
+  // operator delete that Sema picked up.
+  if (dtorType == Dtor_Deleting) {
+    cgm.errorNYI(dd->getSourceRange(), "deleting destructor cleanups");
+    return;
+  }
+
+  const CXXRecordDecl *classDecl = dd->getParent();
+
+  // Unions have no bases and do not call field destructors.
+  if (classDecl->isUnion())
+    return;
+
+  // The complete-destructor phase just destructs all the virtual bases.
+  if (dtorType == Dtor_Complete) {
+    assert(!cir::MissingFeatures::sanitizers());
+
+    if (classDecl->getNumVBases())
+      cgm.errorNYI(dd->getSourceRange(), "virtual base destructor cleanups");
+
+    return;
+  }
+
+  assert(dtorType == Dtor_Base);
+  assert(!cir::MissingFeatures::sanitizers());
+
+  // Destroy non-virtual bases.
+  for (const CXXBaseSpecifier &base : classDecl->bases()) {
+    // Ignore virtual bases.
+    if (base.isVirtual())
+      continue;
+
+    CXXRecordDecl *baseClassDecl = base.getType()->getAsCXXRecordDecl();
+
+    if (baseClassDecl->hasTrivialDestructor())
+      assert(!cir::MissingFeatures::sanitizers());
+    else
+      cgm.errorNYI(dd->getSourceRange(),
+                   "non-trivial base destructor cleanups");
+  }
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  // Destroy direct fields.
+  for (const FieldDecl *field : classDecl->fields()) {
+    QualType type = field->getType();
+    QualType::DestructionKind dtorKind = type.isDestructedType();
+    if (!dtorKind)
+      continue;
+
+    // Anonymous union members do not have their destructors called.
+    const RecordType *rt = type->getAsUnionType();
+    if (rt && rt->getOriginalDecl()->isAnonymousStructOrUnion())
+      continue;
+
+    CleanupKind cleanupKind = getCleanupKind(dtorKind);
+    assert(!cir::MissingFeatures::ehCleanupFlags());
+    ehStack.pushCleanup<DestroyField>(cleanupKind, field,
+                                      getDestroyer(dtorKind));
+  }
+}
+
 void CIRGenFunction::emitDelegatingCXXConstructorCall(
     const CXXConstructorDecl *ctor, const FunctionArgList &args) {
   assert(ctor->isDelegatingConstructor());

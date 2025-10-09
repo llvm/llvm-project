@@ -275,7 +275,11 @@ void SBBreakpoint::SetCondition(const char *condition) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->SetCondition(StopCondition(condition));
+    // Treat a null pointer as resetting the condition.
+    if (!condition)
+      bkpt_sp->SetCondition(StopCondition());
+    else
+      bkpt_sp->SetCondition(StopCondition(condition));
   }
 }
 
@@ -288,7 +292,10 @@ const char *SBBreakpoint::GetCondition() {
 
   std::lock_guard<std::recursive_mutex> guard(
       bkpt_sp->GetTarget().GetAPIMutex());
-  return ConstString(bkpt_sp->GetCondition().GetText()).GetCString();
+  StopCondition cond = bkpt_sp->GetCondition();
+  if (!cond)
+    return nullptr;
+  return ConstString(cond.GetText()).GetCString();
 }
 
 void SBBreakpoint::SetAutoContinue(bool auto_continue) {

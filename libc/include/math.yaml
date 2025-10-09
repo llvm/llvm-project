@@ -2349,6 +2349,12 @@ functions:
     return_type: long double
     arguments:
       - type: long double
+  - name: rsqrtf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: rsqrtf16
     standards:
       - stdc

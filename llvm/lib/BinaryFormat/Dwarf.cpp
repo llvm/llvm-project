@@ -472,6 +472,117 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName lname) {
   return "Unknown";
 }
 
+StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
+                                           uint32_t Version) {
+  switch (Name) {
+  // YYYY
+  case DW_LNAME_Ada: {
+    if (Version <= 1983)
+      return "Ada 83";
+    if (Version <= 1995)
+      return "Ada 95";
+    if (Version <= 2005)
+      return "Ada 2005";
+    if (Version <= 2012)
+      return "Ada 2012";
+  } break;
+
+  case DW_LNAME_Cobol: {
+    if (Version <= 1974)
+      return "COBOL-74";
+    if (Version <= 1985)
+      return "COBOL-85";
+  } break;
+
+  case DW_LNAME_Fortran: {
+    if (Version <= 1977)
+      return "FORTRAN 77";
+    if (Version <= 1990)
+      return "FORTRAN 90";
+    if (Version <= 1995)
+      return "Fortran 95";
+    if (Version <= 2003)
+      return "Fortran 2003";
+    if (Version <= 2008)
+      return "Fortran 2008";
+    if (Version <= 2018)
+      return "Fortran 2018";
+  } break;
+
+  // YYYYMM
+  case DW_LNAME_C: {
+    if (Version == 0)
+      break;
+    if (Version <= 198912)
+      return "C89";
+    if (Version <= 199901)
+      return "C99";
+    if (Version <= 201112)
+      return "C11";
+    if (Version <= 201710)
+      return "C17";
+  } break;
+
+  case DW_LNAME_C_plus_plus: {
+    if (Version == 0)
+      break;
+    if (Version <= 199711)
+      return "C++98";
+    if (Version <= 200310)
+      return "C++03";
+    if (Version <= 201103)
+      return "C++11";
+    if (Version <= 201402)
+      return "C++14";
+    if (Version <= 201703)
+      return "C++17";
+    if (Version <= 202002)
+      return "C++20";
+  } break;
+
+  case DW_LNAME_ObjC_plus_plus:
+  case DW_LNAME_ObjC:
+  case DW_LNAME_Move:
+  case DW_LNAME_SYCL:
+  case DW_LNAME_BLISS:
+  case DW_LNAME_Crystal:
+  case DW_LNAME_D:
+  case DW_LNAME_Dylan:
+  case DW_LNAME_Go:
+  case DW_LNAME_Haskell:
+  case DW_LNAME_HLSL:
+  case DW_LNAME_Java:
+  case DW_LNAME_Julia:
+  case DW_LNAME_Kotlin:
+  case DW_LNAME_Modula2:
+  case DW_LNAME_Modula3:
+  case DW_LNAME_OCaml:
+  case DW_LNAME_OpenCL_C:
+  case DW_LNAME_Pascal:
+  case DW_LNAME_PLI:
+  case DW_LNAME_Python:
+  case DW_LNAME_RenderScript:
+  case DW_LNAME_Rust:
+  case DW_LNAME_Swift:
+  case DW_LNAME_UPC:
+  case DW_LNAME_Zig:
+  case DW_LNAME_Assembly:
+  case DW_LNAME_C_sharp:
+  case DW_LNAME_Mojo:
+  case DW_LNAME_GLSL:
+  case DW_LNAME_GLSL_ES:
+  case DW_LNAME_OpenCL_CPP:
+  case DW_LNAME_CPP_for_OpenCL:
+  case DW_LNAME_Ruby:
+  case DW_LNAME_Hylo:
+  case DW_LNAME_Metal:
+    break;
+  }
+
+  // Fallback to un-versioned name.
+  return LanguageDescription(Name);
+}
+
 llvm::StringRef llvm::dwarf::SourceLanguageNameString(SourceLanguageName Lang) {
   switch (Lang) {
 #define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \

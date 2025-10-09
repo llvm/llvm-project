@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDenseDataFlowAnalysis.h"
-#include "TestDialect.h"
 #include "TestOps.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Analysis/DataFlow/Utils.h"
@@ -23,11 +22,14 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/TypeID.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::dataflow;
 using namespace mlir::dataflow::test;
+
+#define DEBUG_TYPE "test-next-access"
 
 namespace {
 
@@ -72,6 +74,7 @@ public:
   // means "we don't know what the next access is" rather than "there is no next
   // access". But it's unclear how to differentiate the two cases...
   void setToExitState(NextAccess *lattice) override {
+    LDBG() << "setToExitState: setting lattice to unknown state";
     propagateIfChanged(lattice, lattice->setKnownToUnknown());
   }
 
@@ -87,16 +90,23 @@ public:
 LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
                                                  const NextAccess &after,
                                                  NextAccess *before) {
+  LDBG() << "visitOperation: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  LDBG() << "  after state: " << after;
+  LDBG() << "  before state: " << *before;
+
   auto memory = dyn_cast<MemoryEffectOpInterface>(op);
   // If we can't reason about the memory effects, conservatively assume we can't
   // say anything about the next access.
   if (!memory) {
+    LDBG() << "  No memory effect interface, setting to exit state";
     setToExitState(before);
     return success();
   }
 
   SmallVector<MemoryEffects::EffectInstance> effects;
   memory.getEffects(effects);
+  LDBG() << "  Found " << effects.size() << " memory effects";
 
   // First, check if all underlying values are already known. Otherwise, avoid
   // propagating and stay in the "undefined" state to avoid incorrectly
@@ -110,6 +120,7 @@ LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
     // Effects with unspecified value are treated conservatively and we cannot
     // assume anything about the next access.
     if (!value) {
+      LDBG() << "  Effect has unspecified value, setting to exit state";
       setToExitState(before);
       return success();
     }
@@ -124,38 +135,63 @@ LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
             });
 
     // If the underlying value is not known yet, don't propagate.
-    if (!underlyingValue)
+    if (!underlyingValue) {
+      LDBG() << "  Underlying value not known for " << value
+             << ", skipping propagation";
       return success();
+    }
 
+    LDBG() << "  Found underlying value " << *underlyingValue << " for "
+           << value;
     underlyingValues.push_back(*underlyingValue);
   }
 
   // Update the state if all underlying values are known.
+  LDBG() << "  All underlying values known, updating state";
   ChangeResult result = before->meet(after);
   for (const auto &[effect, value] : llvm::zip(effects, underlyingValues)) {
     // If the underlying value is known to be unknown, set to fixpoint.
     if (!value) {
+      LDBG() << "  Underlying value is unknown, setting to exit state";
       setToExitState(before);
       return success();
     }
 
+    LDBG() << "  Setting next access for value " << value << " to operation "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     result |= before->set(value, op);
   }
+  LDBG() << "  Final result: "
+         << (result == ChangeResult::Change ? "changed" : "no change");
   propagateIfChanged(before, result);
   return success();
 }
 
 void NextAccessAnalysis::buildOperationEquivalentLatticeAnchor(Operation *op) {
+  LDBG() << "buildOperationEquivalentLatticeAnchor: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   if (isMemoryEffectFree(op)) {
+    LDBG() << "  Operation is memory effect free, unioning lattice anchors";
     unionLatticeAnchors<NextAccess>(getProgramPointBefore(op),
                                     getProgramPointAfter(op));
+  } else {
+    LDBG() << "  Operation has memory effects, not unioning lattice anchors";
   }
 }
 
 void NextAccessAnalysis::visitCallControlFlowTransfer(
     CallOpInterface call, CallControlFlowAction action, const NextAccess &after,
     NextAccess *before) {
+  LDBG() << "visitCallControlFlowTransfer: "
+         << OpWithFlags(call.getOperation(), OpPrintingFlags().skipRegions());
+  LDBG() << "  action: "
+         << (action == CallControlFlowAction::ExternalCallee ? "ExternalCallee"
+             : action == CallControlFlowAction::EnterCallee  ? "EnterCallee"
+                                                             : "ExitCallee");
+  LDBG() << "  assumeFuncReads: " << assumeFuncReads;
+
   if (action == CallControlFlowAction::ExternalCallee && assumeFuncReads) {
+    LDBG() << "  Handling external callee with assumed function reads";
     SmallVector<Value> underlyingValues;
     underlyingValues.reserve(call->getNumOperands());
     for (Value operand : call.getArgOperands()) {
@@ -165,15 +201,26 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
                 return getOrCreateFor<UnderlyingValueLattice>(
                     getProgramPointBefore(call.getOperation()), value);
               });
-      if (!underlyingValue)
+      if (!underlyingValue) {
+        LDBG() << "  Underlying value not known for operand " << operand
+               << ", returning";
         return;
+      }
+      LDBG() << "  Found underlying value " << *underlyingValue
+             << " for operand " << operand;
       underlyingValues.push_back(*underlyingValue);
     }
 
+    LDBG() << "  Setting next access for " << underlyingValues.size()
+           << " operands";
     ChangeResult result = before->meet(after);
     for (Value operand : underlyingValues) {
+      LDBG() << "  Setting next access for operand " << operand << " to call "
+             << call;
       result |= before->set(operand, call);
     }
+    LDBG() << "  Call control flow result: "
+           << (result == ChangeResult::Change ? "changed" : "no change");
     return propagateIfChanged(before, result);
   }
   auto testCallAndStore =
@@ -182,8 +229,10 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
                             testCallAndStore.getStoreBeforeCall()) ||
                            (action == CallControlFlowAction::ExitCallee &&
                             !testCallAndStore.getStoreBeforeCall()))) {
+    LDBG() << "  Handling TestCallAndStoreOp with special logic";
     (void)visitOperation(call, after, before);
   } else {
+    LDBG() << "  Using default call control flow transfer logic";
     AbstractDenseBackwardDataFlowAnalysis::visitCallControlFlowTransfer(
         call, action, after, before);
   }
@@ -192,6 +241,11 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
 void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
     RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
     RegionBranchPoint regionTo, const NextAccess &after, NextAccess *before) {
+  LDBG() << "visitRegionBranchControlFlowTransfer: "
+         << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
+  LDBG() << "  regionFrom: " << (regionFrom.isParent() ? "parent" : "region");
+  LDBG() << "  regionTo: " << (regionTo.isParent() ? "parent" : "region");
+
   auto testStoreWithARegion =
       dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
 
@@ -199,9 +253,11 @@ void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
       ((regionTo.isParent() && !testStoreWithARegion.getStoreBeforeRegion()) ||
        (regionFrom.isParent() &&
         testStoreWithARegion.getStoreBeforeRegion()))) {
+    LDBG() << "  Handling TestStoreWithARegion with special logic";
     (void)visitOperation(branch, static_cast<const NextAccess &>(after),
                          static_cast<NextAccess *>(before));
   } else {
+    LDBG() << "  Using default region branch control flow transfer logic";
     propagateIfChanged(before, before->meet(after));
   }
 }
@@ -278,6 +334,11 @@ struct TestNextAccessPass
 
   void runOnOperation() override {
     Operation *op = getOperation();
+    LDBG() << "runOnOperation: Starting test-next-access pass on "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    LDBG() << "  interprocedural: " << interprocedural;
+    LDBG() << "  assumeFuncReads: " << assumeFuncReads;
+
     SymbolTableCollection symbolTable;
 
     auto config = DataFlowConfig().setInterprocedural(interprocedural);
@@ -285,15 +346,20 @@ struct TestNextAccessPass
     loadBaselineAnalyses(solver);
     solver.load<NextAccessAnalysis>(symbolTable, assumeFuncReads);
     solver.load<UnderlyingValueAnalysis>();
+    LDBG() << "  Initializing and running dataflow solver";
     if (failed(solver.initializeAndRun(op))) {
       emitError(op->getLoc(), "dataflow solver failed");
       return signalPassFailure();
     }
+    LDBG() << "  Dataflow solver completed successfully";
+    LDBG() << "  Walking operations to set next access attributes";
     op->walk([&](Operation *op) {
       auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
       if (!tag)
         return;
 
+      LDBG() << "  Processing tagged operation: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       const NextAccess *nextAccess =
           solver.lookupState<NextAccess>(solver.getProgramPointAfter(op));
       op->setAttr(kNextAccessAttrName,

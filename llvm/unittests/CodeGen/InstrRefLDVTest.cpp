@@ -100,8 +100,8 @@ public:
     // scope.
     DIBuilder DIB(*Mod);
     OurFile = DIB.createFile("xyzzy.c", "/cave");
-    OurCU =
-        DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
+    OurCU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C99),
+                                  OurFile, "nou", false, "", 0);
     auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     OurFunc =
         DIB.createFunction(OurCU, "bees", "", OurFile, 1, OurSubT, 1,

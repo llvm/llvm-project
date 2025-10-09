@@ -15,6 +15,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::UnorderedElementsAre;
+
 TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
@@ -745,6 +747,43 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
   for (const auto &Case : Cases) {
     EXPECT_EQ(apply(Case.first), Case.second);
   }
+}
+
+TWEAK_WORKSPACE_TEST(DefineOutline);
+
+// Test that DefineOutline's use of getCorrespondingHeaderOrSource()
+// to find the source file corresponding to a header file in which the
+// tweak is invoked is working as intended.
+TEST_F(DefineOutlineWorkspaceTest, FindsCorrespondingSource) {
+  llvm::Annotations HeaderBefore(R"cpp(
+class A {
+  void bar();
+  void f^oo(){}
+};
+)cpp");
+  std::string SourceBefore(R"cpp(
+#include "a.hpp"
+void A::bar(){}
+)cpp");
+  std::string HeaderAfter = R"cpp(
+class A {
+  void bar();
+  void foo();
+};
+)cpp";
+  std::string SourceAfter = R"cpp(
+#include "a.hpp"
+void A::bar(){}
+void A::foo(){}
+)cpp";
+  Workspace.addSource("a.hpp", HeaderBefore.code());
+  Workspace.addMainFile("a.cpp", SourceBefore);
+  auto Result = apply("a.hpp", {HeaderBefore.point(), HeaderBefore.point()});
+  EXPECT_THAT(Result,
+              AllOf(withStatus("success"),
+                    editedFiles(UnorderedElementsAre(
+                        FileWithContents(testPath("a.hpp"), HeaderAfter),
+                        FileWithContents(testPath("a.cpp"), SourceAfter)))));
 }
 
 } // namespace

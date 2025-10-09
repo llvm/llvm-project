@@ -101,8 +101,8 @@ protected:
   }
   DICompileUnit *getUnit() {
     return DICompileUnit::getDistinct(
-        Context, 1, getFile(), "clang", false, "-g", 2, "",
-        DICompileUnit::FullDebug, getTuple(), getTuple(), getTuple(),
+        Context, DISourceLanguageName(1), getFile(), "clang", false, "-g", 2,
+        "", DICompileUnit::FullDebug, getTuple(), getTuple(), getTuple(),
         getTuple(), getTuple(), 0, true, false,
         DICompileUnit::DebugNameTableKind::Default, false, "/", "");
   }
@@ -2896,13 +2896,14 @@ TEST_F(DICompileUnitTest, get) {
   StringRef SysRoot = "/";
   StringRef SDK = "MacOSX.sdk";
   auto *N = DICompileUnit::getDistinct(
-      Context, SourceLanguage, File, Producer, IsOptimized, Flags,
-      RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, GlobalVariables, ImportedEntities, Macros, DWOId, true,
-      false, DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
+      Context, DISourceLanguageName(SourceLanguage), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities, Macros,
+      DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
+      SysRoot, SDK);
 
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, N->getTag());
-  EXPECT_EQ(SourceLanguage, N->getSourceLanguage());
+  EXPECT_EQ(SourceLanguage, N->getSourceLanguage().getUnversionedName());
   EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Producer, N->getProducer());
   EXPECT_EQ(IsOptimized, N->isOptimized());
@@ -2921,7 +2922,7 @@ TEST_F(DICompileUnitTest, get) {
 
   TempDICompileUnit Temp = N->clone();
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, Temp->getTag());
-  EXPECT_EQ(SourceLanguage, Temp->getSourceLanguage());
+  EXPECT_EQ(SourceLanguage, Temp->getSourceLanguage().getUnversionedName());
   EXPECT_EQ(File, Temp->getFile());
   EXPECT_EQ(Producer, Temp->getProducer());
   EXPECT_EQ(IsOptimized, Temp->isOptimized());
@@ -2959,10 +2960,10 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   StringRef SysRoot = "/";
   StringRef SDK = "MacOSX.sdk";
   auto *N = DICompileUnit::getDistinct(
-      Context, SourceLanguage, File, Producer, IsOptimized, Flags,
-      RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false,
-      DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
+      Context, DISourceLanguageName(SourceLanguage), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true,
+      false, DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
 
   auto *GlobalVariables = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());

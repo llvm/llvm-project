@@ -22,7 +22,7 @@ func.func @main() {
   %tensor = tensor.empty() : tensor<1xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "tensor.dim"(%{{.*}}, %{{.*}}) : (tensor<1xf32>, index) -> index
+  // CHECK-NEXT: tensor.dim %{{.*}}, %{{.*}} : tensor<1xf32>
   // CHECK-NEXT: ^ index is out of bounds
   // CHECK-NEXT: Location: loc({{.*}})
   %dim = tensor.dim %tensor, %c4 : tensor<1xf32>

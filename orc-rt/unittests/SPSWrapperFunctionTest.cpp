@@ -190,6 +190,17 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionPointers) {
   EXPECT_EQ(P, &X);
 }
 
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionReferenceArguments) {
+  int X = 42;
+  int *P = nullptr;
+  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
+      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
+      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); },
+      static_cast<int *const &>(&X));
+
+  EXPECT_EQ(P, &X);
+}
+
 static void
 expected_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
                                  orc_rt_WrapperFunctionReturn Return,

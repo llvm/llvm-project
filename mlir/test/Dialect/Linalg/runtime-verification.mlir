@@ -12,7 +12,9 @@ func.func @static_dims(%arg0: tensor<5xf32>, %arg1: tensor<5xf32>) -> (tensor<5x
     // CHECK: cf.assert %[[TRUE]]
     // VERBOSE0: %[[TRUE:.*]] = index.bool.constant true
     // VERBOSE0: cf.assert %[[TRUE]]
-    // VERBOSE0-SAME: ERROR: Runtime op verification failed\0A^\0ALocation: loc(
+    // VERBOSE0-SAME: ERROR: Runtime op verification failed\0A^ unexpected negative result on dimension #0
+    // VERBOSE0-SAME: Location 
+    // VERBOSE0-SAME: 19:10 
     %result = tensor.empty() : tensor<5xf32> 
     %0 = linalg.generic {
       indexing_maps = [#identity, #identity, #identity],

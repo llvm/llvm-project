@@ -28,6 +28,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestMemRefToLLVMWithTransforms
     MLIRShardTest
     MLIRNVGPUTestPasses
+    MLIROpenACCTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses
