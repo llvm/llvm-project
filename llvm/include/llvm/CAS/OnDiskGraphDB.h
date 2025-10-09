@@ -8,7 +8,8 @@
 //
 /// \file
 /// This declares OnDiskGraphDB, an ondisk CAS database with a fixed length
-/// hash.
+/// hash. This is the class that implements the database storage scheme without
+/// exposing the hashing algorithm.
 //
 //===----------------------------------------------------------------------===//
 
@@ -66,7 +67,7 @@ private:
   uint32_t Data;
 };
 
-/// Array of internal node references (supports 4B and 8B references).
+/// Array of internal node references.
 class InternalRefArrayRef {
 public:
   size_t size() const { return Size; }
@@ -217,6 +218,7 @@ private:
   uint64_t Opaque;
 };
 
+/// Iterator for ObjectID.
 class object_refs_iterator
     : public iterator_facade_base<object_refs_iterator,
                                   std::random_access_iterator_tag, ObjectID> {
@@ -294,6 +296,7 @@ public:
   /// \returns the data part of the provided object handle.
   ArrayRef<char> getObjectData(ObjectHandle Node) const;
 
+  /// \returns the object referenced by the provided object handle.
   object_refs_range getObjectRefs(ObjectHandle Node) const {
     InternalRefArrayRef Refs = getInternalRefs(Node);
     return make_range(Refs.begin(), Refs.end());
@@ -315,6 +318,13 @@ public:
   /// Hashing function type for validation.
   using HashingFuncT = function_ref<void(
       ArrayRef<ArrayRef<uint8_t>>, ArrayRef<char>, SmallVectorImpl<uint8_t> &)>;
+
+  /// Validate the OnDiskGraphDB.
+  ///
+  /// \param Deep if true, rehash all the objects to make sure no data
+  /// corruption in stored object, otherwise just validate the structure of
+  /// CAS database.
+  /// \param Hasher is the hashing function used for objects inside CAS.
   Error validate(bool Deep, HashingFuncT Hasher) const;
 
   /// How to fault-in nodes if an upstream database is used.
@@ -356,9 +366,11 @@ private:
     OnlyInUpstreamDB,
   };
 
+  // Check if object exists and if it is on upstream only.
   Expected<ObjectPresence> getObjectPresence(ObjectID Ref,
                                              bool CheckUpstream) const;
 
+  // \returns true if object can be found in database.
   bool containsObject(ObjectID Ref, bool CheckUpstream) const {
     auto Presence = getObjectPresence(Ref, CheckUpstream);
     if (!Presence) {
@@ -378,50 +390,63 @@ private:
   /// When \p load is called for a node that doesn't exist, this function tries
   /// to load it from the upstream store and copy it to the primary one.
   Expected<std::optional<ObjectHandle>> faultInFromUpstream(ObjectID PrimaryID);
+
+  /// Import the entire tree from upstream with \param UpstreamNode as root.
   Error importFullTree(ObjectID PrimaryID, ObjectHandle UpstreamNode);
+  /// Import only the \param UpstreamNode.
   Error importSingleNode(ObjectID PrimaryID, ObjectHandle UpstreamNode);
 
+  /// Found the IndexProxy for the hash.
   Expected<IndexProxy> indexHash(ArrayRef<uint8_t> Hash);
 
+  /// Get path for creating standalone data file.
+  void getStandalonePath(StringRef FileSuffix, const IndexProxy &I,
+                         SmallVectorImpl<char> &Path) const;
+  /// Create a standalone leaf file.
   Error createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
-
+  /// Create temporary file for standalone file storage.
   Expected<MappedTempFile> createTempFile(StringRef FinalPath, uint64_t Size);
 
-  OnDiskContent getContentFromHandle(ObjectHandle H) const;
-
+  /// @name Helper functions for internal data structures.
+  /// @{
   static InternalRef getInternalRef(ObjectID Ref) {
     return InternalRef::getFromRawData(Ref.getOpaqueData());
   }
+
   static ObjectID getExternalReference(InternalRef Ref) {
     return ObjectID::fromOpaqueData(Ref.getRawData());
   }
 
   static ObjectID getExternalReference(const IndexProxy &I);
 
-  void getStandalonePath(StringRef FileSuffix, const IndexProxy &I,
-                         SmallVectorImpl<char> &Path) const;
+  static InternalRef makeInternalRef(FileOffset IndexOffset);
 
   Expected<ArrayRef<uint8_t>> getDigest(InternalRef Ref) const;
+
   ArrayRef<uint8_t> getDigest(const IndexProxy &I) const;
 
-  Expected<IndexProxy> getIndexProxyFromRef(InternalRef Ref) const;
+  OnDiskContent getContentFromHandle(ObjectHandle H) const;
 
-  static InternalRef makeInternalRef(FileOffset IndexOffset);
+  Expected<IndexProxy> getIndexProxyFromRef(InternalRef Ref) const;
 
   IndexProxy
   getIndexProxyFromPointer(OnDiskTrieRawHashMap::ConstOnDiskPtr P) const;
 
   InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
+  /// @}
 
+  /// Get the atomic variable that keeps track of the standalone data storage size.
+  std::atomic<uint64_t> &standaloneStorageSize() const;
+
+  /// Increase the standalone data size.
   void recordStandaloneSizeIncrease(size_t SizeIncrease);
-
-  std::atomic<uint64_t> &getStandaloneStorageSize();
+  /// Get the standalone data size.
   uint64_t getStandaloneStorageSize() const;
 
+  // Private constructor.
   OnDiskGraphDB(StringRef RootPath, OnDiskTrieRawHashMap Index,
                 OnDiskDataAllocator DataPool,
-                std::unique_ptr<OnDiskGraphDB> UpstreamDB,
-                FaultInPolicy Policy);
+                std::unique_ptr<OnDiskGraphDB> UpstreamDB, FaultInPolicy Policy);
 
   /// Mapping from hash to object reference.
   ///
@@ -433,12 +458,16 @@ private:
   /// Data type is DataRecordHandle.
   OnDiskDataAllocator DataPool;
 
-  void *StandaloneData; // a StandaloneDataMap.
+  // a StandaloneDataMap.
+  void *StandaloneData;
 
+  // Path to the root directory.
   std::string RootPath;
 
-  /// Optional on-disk store to be used for faulting-in nodes.
+  // Optional on-disk store to be used for faulting-in nodes.
   std::unique_ptr<OnDiskGraphDB> UpstreamDB;
+
+  // The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;
 };
 

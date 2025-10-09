@@ -1,4 +1,4 @@
-//===- llvm/unittest/CAS/OnDiskGraphDBTest.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
-
-#if LLVM_ENABLE_ONDISK_CAS
 
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 using namespace llvm::unittest::cas;
 
-TEST(OnDiskGraphDBTest, Basic) {
+TEST_F(OnDiskCASTest, OnDiskGraphDBTest) {
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
   std::unique_ptr<OnDiskGraphDB> DB;
   ASSERT_THAT_ERROR(
@@ -80,7 +79,7 @@ TEST(OnDiskGraphDBTest, Basic) {
   EXPECT_EQ(DB->getStorageSize(), StorageSize);
 }
 
-TEST(OnDiskGraphDBTest, FaultInSingleNode) {
+TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInSingleNode) {
   unittest::TempDir TempUpstream("ondiskcas-upstream", /*Unique=*/true);
   std::unique_ptr<OnDiskGraphDB> UpstreamDB;
   ASSERT_THAT_ERROR(
@@ -170,7 +169,7 @@ TEST(OnDiskGraphDBTest, FaultInSingleNode) {
   }
 }
 
-TEST(OnDiskGraphDBTest, FaultInFullTree) {
+TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInFullTree) {
   unittest::TempDir TempUpstream("ondiskcas-upstream", /*Unique=*/true);
   std::unique_ptr<OnDiskGraphDB> UpstreamDB;
   ASSERT_THAT_ERROR(
@@ -252,7 +251,7 @@ TEST(OnDiskGraphDBTest, FaultInFullTree) {
   EXPECT_EQ(PrintedTree, Expected);
 }
 
-TEST(OnDiskGraphDBTest, FaultInPolicyConflict) {
+TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
   auto tryFaultInPolicyConflict = [](OnDiskGraphDB::FaultInPolicy Policy1,
                                      OnDiskGraphDB::FaultInPolicy Policy2) {
     unittest::TempDir TempUpstream("ondiskcas-upstream", /*Unique=*/true);
@@ -285,7 +284,7 @@ TEST(OnDiskGraphDBTest, FaultInPolicyConflict) {
 }
 
 #if defined(EXPENSIVE_CHECKS)
-TEST(OnDiskGraphDBTest, SpaceLimit) {
+TEST_F(OnDiskCASTest, OnDiskGraphDBSpaceLimit) {
   setMaxOnDiskCASMappingSize();
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
   std::unique_ptr<OnDiskGraphDB> DB;
@@ -309,4 +308,3 @@ TEST(OnDiskGraphDBTest, SpaceLimit) {
   EXPECT_GE(DB->getHardStorageLimitUtilization(), 99U);
 }
 #endif
-#endif // LLVM_ENABLE_ONDISK_CAS

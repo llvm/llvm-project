@@ -16,9 +16,9 @@
 
 namespace llvm::cas::ondisk {
 
-/// The prefix for all the ondisk database file. It includes a version that
-/// needs to be bumped when compatibility breaking changes are introduced.
-constexpr StringLiteral FilePrefix = "cas.v1.";
+/// The version for all the ondisk database files. It needs to be bumped when
+/// compatibility breaking changes are introduced.
+constexpr StringLiteral CASVersion = "v1";
 
 /// Retrieves an overridden maximum mapping size for CAS files, if any,
 /// speicified by LLVM_CAS_MAX_MAPPING_SIZE in the environment or set by
@@ -30,6 +30,12 @@ Expected<std::optional<uint64_t>> getOverriddenMaxMappingSize();
 /// should be set before creaing any ondisk CAS and does not affect CAS already
 /// created. Set value 0 to use default size.
 void setMaxMappingSize(uint64_t Size);
+
+/// Use small file mapping for ondisk databases created in \p Path.
+///
+/// For some file system that doesn't support sparse file, use a smaller file
+/// mapping to avoid consuming too much disk space on creation.
+bool useSmallMappingSize(const Twine &Path);
 
 /// Thread-safe alternative to \c sys::fs::lockFile. This does not support all
 /// the platforms that \c sys::fs::lockFile does, so keep it in the CAS library

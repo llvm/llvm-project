@@ -26,6 +26,10 @@
 #include <fcntl.h>
 #endif
 
+#if __has_include(<sys/mount.h>)
+#include <sys/mount.h> // statfs
+#endif
+
 using namespace llvm;
 
 static uint64_t OnDiskCASMaxMappingSize = 0;
@@ -157,4 +161,21 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   (void)CreateError; // Silence unused variable.
   return NewSize;    // Pretend it worked.
 #endif
+}
+
+bool cas::ondisk::useSmallMappingSize(const Twine &P) {
+  // Add exceptions to use small database file here.
+#if defined(__APPLE__) && __has_include(<sys/mount.h>)
+  // macOS tmpfs does not support sparse tails.
+  SmallString<128> PathStorage;
+  StringRef Path = P.toNullTerminatedStringRef(PathStorage);
+  struct statfs StatFS;
+  if (statfs(Path.data(), &StatFS) != 0)
+    return false;
+
+  if (strcmp(StatFS.f_fstypename, "tmpfs") == 0)
+    return true;
+#endif
+  // Default to use regular datbase file.
+  return false;
 }

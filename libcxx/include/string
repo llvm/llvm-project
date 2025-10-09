@@ -640,6 +640,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/default_three_way_comparator.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
@@ -2652,17 +2653,10 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator _
   __rep_ = __rep();
   __annotate_new(0);
 
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    for (; __first != __last; ++__first)
-      push_back(*__first);
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __reset_internal_buffer();
-    throw;
-  }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  auto __guard = std::__make_exception_guard([this] { __reset_internal_buffer(); });
+  for (; __first != __last; ++__first)
+    push_back(*__first);
+  __guard.__complete();
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2679,17 +2673,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __first, _Sentinel __last, size_type __sz) {
   pointer __p = __init_internal_buffer(__sz);
 
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    auto __end = __copy_non_overlapping_range(std::move(__first), std::move(__last), std::__to_address(__p));
-    traits_type::assign(*__end, value_type());
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __reset_internal_buffer();
-    throw;
-  }
-#  endif                       // _LIBCPP_HAS_EXCEPTIONS
+  auto __guard = std::__make_exception_guard([this] { __reset_internal_buffer(); });
+  auto __end   = __copy_non_overlapping_range(std::move(__first), std::move(__last), std::__to_address(__p));
+  traits_type::assign(*__end, value_type());
+  __guard.__complete();
 }
 
 template <class _CharT, class _Traits, class _Allocator>

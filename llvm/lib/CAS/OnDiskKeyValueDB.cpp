@@ -5,6 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file implements OnDiskKeyValueDB, an ondisk key value database.
+///
+/// The KeyValue database file is named `actions.<version>` inside the CAS
+/// directory. The database stores a mapping between a fixed-sized key and a
+/// fixed-sized value, where the size of key and value can be configured when
+/// opening the database.
+///
+//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "OnDiskCommon.h"
@@ -18,7 +29,7 @@ using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 
-static constexpr StringLiteral ActionCacheFile = "actions";
+static constexpr StringLiteral ActionCacheFile = "actions.";
 
 Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
                                                ArrayRef<char> Value) {
@@ -55,7 +66,7 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
     return createFileError(Path, EC);
 
   SmallString<256> CachePath(Path);
-  sys::path::append(CachePath, FilePrefix + ActionCacheFile);
+  sys::path::append(CachePath, ActionCacheFile + CASVersion);
   constexpr uint64_t MB = 1024ull * 1024ull;
   constexpr uint64_t GB = 1024ull * 1024ull * 1024ull;
 
@@ -93,7 +104,7 @@ Error OnDiskKeyValueDB::validate(CheckValueT CheckValue) const {
 
         if (Record.Data.size() != ValueSize)
           return formatError("wrong cache value size");
-        if (!isAligned(Align(8), Record.Data.size()))
+        if (!isAddrAligned(Align(8), Record.Data.data()))
           return formatError("wrong cache value alignment");
         if (CheckValue)
           return CheckValue(Offset, Record.Data);

@@ -840,8 +840,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
     if (RedPhiR)
       return false;
-    if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+    if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Cur->getRecurrenceKind())) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -861,10 +861,9 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   if (!MinMaxOp)
     return false;
 
-  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
-  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+             RedPhiR->getRecurrenceKind()) &&
          "unsupported reduction");
-  (void)RedPhiRK;
 
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all

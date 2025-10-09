@@ -185,7 +185,7 @@ Expected<ArrayRef<char>> OnDiskDataAllocator::get(FileOffset Offset,
   return ArrayRef<char>{Impl->File.getRegion().data() + Offset.get(), Size};
 }
 
-MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() const {
   return Impl->Store.getUserHeader();
 }
 

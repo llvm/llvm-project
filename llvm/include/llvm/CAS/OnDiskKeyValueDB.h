@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This declares OnDiskKeyValueDB, a key value storage database.
+/// This declares OnDiskKeyValueDB, a key value storage database of fixed size
+/// key and value.
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,7 +65,8 @@ public:
 
   /// Validate the storage with a callback \p CheckValue to check the stored
   /// value.
-  using CheckValueT = function_ref<Error(FileOffset Offset, ArrayRef<char>)>;
+  using CheckValueT =
+      function_ref<Error(FileOffset Offset, ArrayRef<char> Data)>;
   Error validate(CheckValueT CheckValue) const;
 
 private:
