@@ -9022,7 +9022,8 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
@@ -9031,9 +9032,17 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
+  // Note: v2i128 is an unsupported MVT vector type (see
+  // MachineValueType.h::getVectorVT()), use NumElements and SizeInBits to
+  // identify it.
+  bool HasLSXOnly = Subtarget.hasExtLSX() && !Subtarget.hasExtLASX();
+  bool Isv2i128 = ResTy.isVector() && ResTy.getVectorNumElements() == 2 &&
+                  ResTy.getScalarSizeInBits() == 128;
   if (ResTy != MVT::v8i16 && ResTy != MVT::v4i32 && ResTy != MVT::v2i64 &&
-      ResTy != MVT::v16i16 && ResTy != MVT::v8i32 && ResTy != MVT::v4i64 &&
-      ResTy != MVT::i128)
+      ResTy != MVT::i128 && ResTy != MVT::v16i16 && ResTy != MVT::v8i32 &&
+      ResTy != MVT::v4i64 && !Isv2i128)
+    return SDValue();
+  if (HasLSXOnly && (ResTy.is256BitVector() || Isv2i128))
     return SDValue();
 
   // Combine:
@@ -9211,7 +9220,7 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
       return Result;
     break;
   case ISD::MUL:
-    return performMULCombine(N, DAG, DCI);
+    return performMULCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
