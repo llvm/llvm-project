@@ -183,6 +183,11 @@ namespace llvm {
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
 
+    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                  AtomicOrdering Ord) const override;
+    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                   AtomicOrdering Ord) const override;
+
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate
       // sub-optimal code for PSO/TSO. (Approximately nobody uses any

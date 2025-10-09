@@ -11,6 +11,7 @@
 
 #include <__algorithm/copy.h>
 #include <__algorithm/copy_backward.h>
+#include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
@@ -701,7 +702,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v
       __alloc_(__storage_traits::select_on_container_copy_construction(__v.__alloc_)) {
   if (__v.size() > 0) {
     __vallocate(__v.size());
-    __construct_at_end(__v.begin(), __v.end(), __v.size());
+    std::copy_n(__v.__begin_, __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
   }
 }
 
@@ -710,7 +712,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
   if (__v.size() > 0) {
     __vallocate(__v.size());
-    __construct_at_end(__v.begin(), __v.end(), __v.size());
+    std::copy_n(__v.__begin_, __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
   }
 }
 
@@ -723,7 +726,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>& vector<bool, _Allocator>
         __vdeallocate();
         __vallocate(__v.__size_);
       }
-      std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.__size_), __begin_);
+      std::copy_n(__v.__begin_, __external_cap_to_internal(__v.size()), __begin_);
     }
     __size_ = __v.__size_;
   }

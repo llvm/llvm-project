@@ -23,6 +23,9 @@
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __zext128(x)                                                           \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, 2, 3)
 #define __anyext128(x)                                                         \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, -1, -1)
@@ -494,6 +497,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_hsubs_pi16(__m64 __a,
 ///    \a R7 := (\a __a14 * \a __b14) + (\a __a15 * \a __b15)
 static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_maddubs_epi16(__m128i __a,
                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_maddubs_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
 }
 
@@ -525,6 +530,10 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_maddubs_pi16(__m64 __a,
                                                             __m64 __b) {
   return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__anyext128(__a),
                                                (__v16qi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_maddubs_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__zext128(__a),
+                                               (__v16qi)__zext128(__b)));
 }
 
 /// Multiplies packed 16-bit signed integer values, truncates the 32-bit
@@ -781,6 +790,7 @@ _mm_sign_pi32(__m64 __a, __m64 __b)
 }
 
 #undef __anyext128
+#undef __zext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_CONSTEXPR

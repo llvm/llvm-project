@@ -1272,6 +1272,87 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
+static bool
+typeContainsPointer(QualType T,
+                    llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
+                    bool &IncompleteType) {
+  QualType CanonicalType = T.getCanonicalType();
+  if (CanonicalType->isPointerType())
+    return true; // base case
+
+  // Look through typedef chain to check for special types.
+  for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
+       CurrentT = TT->getDecl()->getUnderlyingType()) {
+    const IdentifierInfo *II = TT->getDecl()->getIdentifier();
+    // Special Case: Syntactically uintptr_t is not a pointer; semantically,
+    // however, very likely used as such. Therefore, classify uintptr_t as a
+    // pointer, too.
+    if (II && II->isStr("uintptr_t"))
+      return true;
+  }
+
+  // The type is an array; check the element type.
+  if (const ArrayType *AT = dyn_cast<ArrayType>(CanonicalType))
+    return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
+  // The type is a struct, class, or union.
+  if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
+    if (!RD->isCompleteDefinition()) {
+      IncompleteType = true;
+      return false;
+    }
+    if (!VisitedRD.insert(RD).second)
+      return false; // already visited
+    // Check all fields.
+    for (const FieldDecl *Field : RD->fields()) {
+      if (typeContainsPointer(Field->getType(), VisitedRD, IncompleteType))
+        return true;
+    }
+    // For C++ classes, also check base classes.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Polymorphic types require a vptr.
+      if (CXXRD->isDynamicClass())
+        return true;
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (typeContainsPointer(Base.getType(), VisitedRD, IncompleteType))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
+  assert(SanOpts.has(SanitizerKind::AllocToken) &&
+         "Only needed with -fsanitize=alloc-token");
+
+  llvm::MDBuilder MDB(getLLVMContext());
+
+  // Get unique type name.
+  PrintingPolicy Policy(CGM.getContext().getLangOpts());
+  Policy.SuppressTagKeyword = true;
+  Policy.FullyQualifiedName = true;
+  SmallString<64> TypeName;
+  llvm::raw_svector_ostream TypeNameOS(TypeName);
+  AllocType.getCanonicalType().print(TypeNameOS, Policy);
+  auto *TypeNameMD = MDB.createString(TypeNameOS.str());
+
+  // Check if QualType contains a pointer. Implements a simple DFS to
+  // recursively check if a type contains a pointer type.
+  llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
+  bool IncompleteType = false;
+  const bool ContainsPtr =
+      typeContainsPointer(AllocType, VisitedRD, IncompleteType);
+  if (!ContainsPtr && IncompleteType)
+    return;
+  auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
+  auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
+
+  // Format: !{<type-name>, <contains-pointer>}
+  auto *MDN =
+      llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
+}
+
 CodeGenFunction::ComplexPairTy CodeGenFunction::
 EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
                          bool isInc, bool isPre) {
