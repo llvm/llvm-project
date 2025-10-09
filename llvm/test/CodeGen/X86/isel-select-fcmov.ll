@@ -6,10 +6,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=X64-GISEL
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel=0 -global-isel=0 | FileCheck %s --check-prefix=X64
 
-
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-unknown"
-
 ; Test that we can generate an fcmove, and also that it passes verification.
 
 define x86_fp80 @cmove_cmp(x86_fp80 %a, x86_fp80 %b, i32 %c) {
