@@ -11,6 +11,7 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/Path.h"
 
@@ -26,6 +27,9 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
                            time_t PruneAfter) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
+
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  [[maybe_unused]] auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
   llvm::SmallString<128> TimestampFile(Path);
   llvm::sys::path::append(TimestampFile, "modules.timestamp");
@@ -115,6 +119,8 @@ public:
   }
 
   std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    [[maybe_unused]] auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     llvm::sys::fs::file_status Status;
     if (llvm::sys::fs::status(ModuleFilename, Status) != std::error_code{})
       return 0;
