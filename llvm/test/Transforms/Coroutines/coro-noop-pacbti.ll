@@ -1,7 +1,7 @@
 
 ; RUN: opt < %s -S -passes=coro-early | FileCheck %s
 
-; CHECK:      define private fastcc void @__NoopCoro_ResumeDestroy(ptr %0) #1 {
+; CHECK:      define internal fastcc void @__NoopCoro_ResumeDestroy(ptr %0) #1 {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }

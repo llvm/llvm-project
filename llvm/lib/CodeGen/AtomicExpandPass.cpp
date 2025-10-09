@@ -84,7 +84,7 @@ private:
   bool expandAtomicLoadToCmpXchg(LoadInst *LI);
   StoreInst *convertAtomicStoreToIntegerType(StoreInst *SI);
   bool tryExpandAtomicStore(StoreInst *SI);
-  void expandAtomicStore(StoreInst *SI);
+  void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
@@ -537,6 +537,9 @@ bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     LI->setAtomic(AtomicOrdering::NotAtomic);
     return true;
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
+    TLI->emitExpandAtomicLoad(LI);
+    return true;
   default:
     llvm_unreachable("Unhandled case in tryExpandAtomicLoad");
   }
@@ -546,8 +549,11 @@ bool AtomicExpandImpl::tryExpandAtomicStore(StoreInst *SI) {
   switch (TLI->shouldExpandAtomicStoreInIR(SI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
+    TLI->emitExpandAtomicStore(SI);
+    return true;
   case TargetLoweringBase::AtomicExpansionKind::Expand:
-    expandAtomicStore(SI);
+    expandAtomicStoreToXChg(SI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     SI->setAtomic(AtomicOrdering::NotAtomic);
@@ -620,7 +626,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   return NewSI;
 }
 
-void AtomicExpandImpl::expandAtomicStore(StoreInst *SI) {
+void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
   // This function is only called on atomic stores that are too large to be
   // atomic if implemented as a native store. So we replace them by an
   // atomic swap, that can be implemented for example as a ldrex/strex on ARM
@@ -741,7 +747,7 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicRMW(AI);
     return true;
   default:
@@ -1454,7 +1460,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // If the cmpxchg doesn't actually need any ordering when it fails, we can
   // jump straight past that fence instruction (if it exists).
-  Builder.CreateCondBr(ShouldStore, ReleasingStoreBB, NoStoreBB);
+  Builder.CreateCondBr(ShouldStore, ReleasingStoreBB, NoStoreBB,
+                       MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasingStoreBB);
   if (ShouldInsertFencesForAtomic && !UseUnconditionalReleaseBarrier)
@@ -1473,7 +1480,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
       StoreSuccess, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "success");
   BasicBlock *RetryBB = HasReleasedLoadBB ? ReleasedLoadBB : StartBB;
   Builder.CreateCondBr(StoreSuccess, SuccessBB,
-                       CI->isWeak() ? FailureBB : RetryBB);
+                       CI->isWeak() ? FailureBB : RetryBB,
+                       MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasedLoadBB);
   Value *SecondLoad;
@@ -1486,7 +1494,9 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
     // If the cmpxchg doesn't actually need any ordering when it fails, we can
     // jump straight past that fence instruction (if it exists).
-    Builder.CreateCondBr(ShouldStore, TryStoreBB, NoStoreBB);
+    Builder.CreateCondBr(
+        ShouldStore, TryStoreBB, NoStoreBB,
+        MDBuilder(F->getContext()).createLikelyBranchWeights());
     // Update PHI node in TryStoreBB.
     LoadedTryStore->addIncoming(SecondLoad, ReleasedLoadBB);
   } else
@@ -1695,7 +1705,7 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicCmpXchgInst(CI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand: {
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand: {
     TLI->emitExpandAtomicCmpXchg(CI);
     return true;
   }

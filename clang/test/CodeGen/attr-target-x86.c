@@ -16,8 +16,7 @@
 // CHECK: define {{.*}}@f_x86_64_v2({{.*}} [[f_x86_64_v2:#[0-9]+]]
 // CHECK: define {{.*}}@f_x86_64_v3({{.*}} [[f_x86_64_v3:#[0-9]+]]
 // CHECK: define {{.*}}@f_x86_64_v4({{.*}} [[f_x86_64_v4:#[0-9]+]]
-// CHECK: define {{.*}}@f_avx10_1_256{{.*}} [[f_avx10_1_256:#[0-9]+]]
-// CHECK: define {{.*}}@f_avx10_1_512{{.*}} [[f_avx10_1_512:#[0-9]+]]
+// CHECK: define {{.*}}@f_avx10_1{{.*}} [[f_avx10_1:#[0-9]+]]
 // CHECK: define {{.*}}@f_prefer_256_bit({{.*}} [[f_prefer_256_bit:#[0-9]+]]
 // CHECK: define {{.*}}@f_no_prefer_256_bit({{.*}} [[f_no_prefer_256_bit:#[0-9]+]]
 
@@ -34,7 +33,7 @@ __attribute__((target("fpmath=387")))
 void f_fpmath_387(void) {}
 
 // CHECK-NOT: tune-cpu
-// CHECK: [[f_no_sse2]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-aes,-amx-avx512,-avx,-avx10.1-256,-avx10.1-512,-avx10.2-256,-avx10.2-512,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-gfni,-kl,-pclmul,-sha,-sha512,-sm3,-sm4,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-widekl,-xop" "tune-cpu"="i686"
+// CHECK: [[f_no_sse2]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-aes,-amx-avx512,-avx,-avx10.1,-avx10.1-512,-avx10.2,-avx10.2-512,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-gfni,-kl,-pclmul,-sha,-sha512,-sm3,-sm4,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-widekl,-xop" "tune-cpu"="i686"
 __attribute__((target("no-sse2")))
 void f_no_sse2(void) {}
 
@@ -42,7 +41,7 @@ void f_no_sse2(void) {}
 __attribute__((target("sse4")))
 void f_sse4(void) {}
 
-// CHECK: [[f_no_sse4]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-amx-avx512,-avx,-avx10.1-256,-avx10.1-512,-avx10.2-256,-avx10.2-512,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-sha512,-sm3,-sm4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
+// CHECK: [[f_no_sse4]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-amx-avx512,-avx,-avx10.1,-avx10.1-512,-avx10.2,-avx10.2-512,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-sha512,-sm3,-sm4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
 __attribute__((target("no-sse4")))
 void f_no_sse4(void) {}
 
@@ -94,17 +93,13 @@ __attribute__((target("arch=x86-64-v3")))
 void f_x86_64_v3(void) {}
 
 // CHECK: [[f_x86_64_v4]] = {{.*}}"target-cpu"="x86-64-v4"
-// CHECK-SAME: "target-features"="+avx,+avx2,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl,+bmi,+bmi2,+cmov,+crc32,+cx16,+cx8,+evex512,+f16c,+fma,+fxsr,+lzcnt,+mmx,+movbe,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK-SAME: "target-features"="+avx,+avx2,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl,+bmi,+bmi2,+cmov,+crc32,+cx16,+cx8,+f16c,+fma,+fxsr,+lzcnt,+mmx,+movbe,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 __attribute__((target("arch=x86-64-v4")))
 void f_x86_64_v4(void) {}
 
-// CHECK: [[f_avx10_1_256]] = {{.*}}"target-cpu"="i686" "target-features"="+avx,+avx10.1-256,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,-amx-avx512,-avx10.1-512,-avx10.2-512,-evex512"
-__attribute__((target("avx10.1-256")))
-void f_avx10_1_256(void) {}
-
-// CHECK: [[f_avx10_1_512]] = {{.*}}"target-cpu"="i686" "target-features"="+avx,+avx10.1-256,+avx10.1-512,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
-__attribute__((target("avx10.1-512")))
-void f_avx10_1_512(void) {}
+// CHECK: [[f_avx10_1]] = {{.*}}"target-cpu"="i686" "target-features"="+avx,+avx10.1,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+__attribute__((target("avx10.1")))
+void f_avx10_1(void) {}
 
 // CHECK: [[f_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}+prefer-256-bit
 __attribute__((target("prefer-256-bit")))
