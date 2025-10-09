@@ -2639,7 +2639,7 @@ public:
   }
 
   /// takeAttributesAppending - Takes attributes from the given
-  /// parsed-attributes set and add them to this declarator.
+  /// ParsedAttributes set and add them to this declarator.
   ///
   /// These examples both add 3 attributes to "var":
   ///  short int var __attribute__((aligned(16),common,deprecated));
