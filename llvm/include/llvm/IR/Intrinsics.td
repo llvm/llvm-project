@@ -87,6 +87,14 @@ class NoUndef<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// ArgInfo - The specified argument has an argument name and an optional argument printing
+// function for diagnostic output.
+class ArgInfo<AttrIndex idx, string argname, string funcname = ""> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  string ArgName = argname;
+  string FunctionName = funcname;
+}
+
 // NonNull - The return value or specified argument is not null.
 class NonNull<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;

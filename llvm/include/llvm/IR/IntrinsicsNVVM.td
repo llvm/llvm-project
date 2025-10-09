@@ -2871,7 +2871,14 @@ foreach sp = [0, 1] in {
         defvar nargs = !size(args);
         defvar scale_d_imm = ArgIndex<!sub(nargs, 1)>;
         defvar scale_d_imm_range = [ImmArg<scale_d_imm>, Range<scale_d_imm, 0, 16>];
-        defvar intrinsic_properties = !listconcat(
+
+        // Check if this is the specific llvm.nvvm.tcgen05.mma.tensor intrinsic.
+        defvar is_target_intrinsic = !and(!eq(sp, 0), 
+                                          !eq(space, "tensor"), 
+                                          !eq(scale_d, 0), 
+                                          !eq(ashift, 0));
+
+        defvar base_properties = !listconcat(
           mma.common_intr_props,
           !if(!eq(scale_d, 1), scale_d_imm_range, []),
           [Range<ArgIndex<nargs>, 0, !if(!eq(scale_d, 1), 2, 4)>, // kind
@@ -2880,6 +2887,13 @@ foreach sp = [0, 1] in {
                           !if(!eq(ashift, 1), 2, 4)>              // collector_usage
           ]
         );
+
+        defvar intrinsic_properties = !if(is_target_intrinsic, 
+          !listconcat(base_properties,
+            [ArgInfo<ArgIndex<nargs>, "kind", "printTcgen05MMAKind">,
+             ArgInfo<ArgIndex<!add(nargs, 1)>, "cta_group">,
+             ArgInfo<ArgIndex<!add(nargs, 2)>, "collector", "printTcgen05CollectorUsageOp">]),
+          base_properties);
 
         def mma.record:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
