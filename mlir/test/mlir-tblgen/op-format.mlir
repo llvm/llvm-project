@@ -352,16 +352,16 @@ module attributes {test.internal = #test.internal<key = 8, value = 9>} {
 
 //-----
 
-// CHECK: module attributes {test.external = #test.external<internal = #test.internal<key = 1, value = 2>>} {
+// CHECK: module attributes {test.external = #test.external<internal = <key = 1, value = 2>>} {
 // CHECK-NEXT: }
-module attributes {test.external = #test.external<internal = #test.internal<key = 1, value = 2>>} {
+module attributes {test.external = #test.external<internal = <key = 1, value = 2>>} {
 }
 
 //-----
 
-// CHECK: module attributes {test.external_array = #test.external_array<[internals = #test.internal<key = 1, value = 2>, #test.internal<key = 8, value = 9>]>} {
+// CHECK: module attributes {test.external_array = #test.external_array<[internals = <key = 1, value = 2>, <key = 8, value = 9>]>} {
 // CHECK-NEXT: }
-module attributes {test.external_array = #test.external_array<[internals = #test.internal<key = 1, value = 2>, #test.internal<key = 8, value = 9>]>} {
+module attributes {test.external_array = #test.external_array<[internals = <key = 1, value = 2>, <key = 8, value = 9>]>} {
 }
 
 //-----

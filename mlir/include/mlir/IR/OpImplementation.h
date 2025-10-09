@@ -212,7 +212,14 @@ public:
             std::enable_if_t<std::is_convertible_v<AttrOrType, Attribute>> *
                 sfinae = nullptr>
   void printQualifiedAttrOrType(AttrOrType attrOrType) {
-    printAttribute(attrOrType);
+    Attribute attr = attrOrType;
+    Dialect &dialect = attr.getDialect();
+    StringRef dialectNamespace = dialect.getNamespace();
+    if (dialectNamespace.empty() || dialectNamespace == "builtin") {
+      printStrippedAttrOrType(attrOrType);
+      return;
+    }
+    printAttribute(attr);
   }
 
   template <typename AttrOrType,
@@ -220,7 +227,14 @@ public:
                              !std::is_convertible_v<AttrOrType, Attribute>> *
                 sfinae = nullptr>
   void printQualifiedAttrOrType(AttrOrType attrOrType) {
-    printType(attrOrType);
+    Type type = attrOrType;
+    Dialect &dialect = type.getDialect();
+    StringRef dialectNamespace = dialect.getNamespace();
+    if (dialectNamespace.empty() || dialectNamespace == "builtin") {
+      printStrippedAttrOrType(attrOrType);
+      return;
+    }
+    printType(type);
   }
 
   template <typename ElementT,

@@ -146,8 +146,23 @@ public:
 /// into this category to avoid ambiguity when nested within structured
 /// properties.
 static bool shouldPrintQualified(ParameterElement *param) {
-  StringRef cppType = param->getParam().getCppType();
-  return cppType.contains("Attr") || cppType.contains("Type");
+  const AttrOrTypeParameter &parameter = param->getParam();
+  StringRef cppType = parameter.getCppType();
+  if (!cppType.contains("Attr") && !cppType.contains("Type"))
+    return false;
+
+  if (parameter.getPrinter())
+    return false;
+
+  if (const llvm::Init *init = parameter.getDef())
+    if (const auto *defInit = dyn_cast<llvm::DefInit>(init))
+      if (defInit->getDef()->isSubClassOf("EnumAttrInfo"))
+        return false;
+
+  if (cppType.contains("mlir::Attribute") || cppType.contains("mlir::Type"))
+    return true;
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
