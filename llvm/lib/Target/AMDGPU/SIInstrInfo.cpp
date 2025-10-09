@@ -10614,7 +10614,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if ((Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
          Def->getOpcode() == AMDGPU::S_CSELECT_B64) &&
         Def->getOperand(1).isImm() && Def->getOperand(1).getImm() &&
-        !Def->getOperand(2).isImm() && !Def->getOperand(2).getImm())
+        Def->getOperand(2).isImm() && !Def->getOperand(2).getImm())
       CanOptimize = true;
 
     if (!CanOptimize)
