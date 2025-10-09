@@ -2106,6 +2106,10 @@ static void licm(VPlan &Plan) {
   // out of a loop region. Does not address legality concerns such as aliasing
   // or speculation safety.
   auto CannotHoistRecipe = [](VPRecipeBase &R) {
+    // Assumes don't alias anything or throw.
+    if (match(&R, m_Intrinsic<Intrinsic::assume>()))
+      return false;
+
     // TODO: Relax checks in the future, e.g. we could also hoist reads, if
     // their memory location is not modified in the vector loop.
     if (R.mayReadOrWriteMemory() || R.isPhi())
