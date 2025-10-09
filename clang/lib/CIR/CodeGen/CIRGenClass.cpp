@@ -891,12 +891,6 @@ public:
     assert(!cir::MissingFeatures::ehCleanupFlags());
     cgf.emitDestroy(lv.getAddress(), field->getType(), destroyer);
   }
-
-  // This is a placeholder until EHCleanupScope is implemented.
-  size_t getSize() const override {
-    assert(!cir::MissingFeatures::ehCleanupScope());
-    return sizeof(DestroyField);
-  }
 };
 } // namespace
 
