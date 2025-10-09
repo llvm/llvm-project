@@ -10611,11 +10611,15 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //
     //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
     //   imm), 0)
-    if ((Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-         Def->getOpcode() == AMDGPU::S_CSELECT_B64) &&
-        Def->getOperand(1).isImm() && Def->getOperand(1).getImm() &&
-        Def->getOperand(2).isImm() && !Def->getOperand(2).getImm())
-      CanOptimize = true;
+    if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+        Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
+      bool Op1IsNonZeroImm =
+          Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
+      bool Op2IsZeroImm =
+          Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
+      if (Op1IsNonZeroImm && Op2IsZeroImm)
+        CanOptimize = true;
+    }
 
     if (!CanOptimize)
       return false;
