@@ -15,7 +15,7 @@ class F<string name, string help>: Flag<["--"], name>, HelpText<help>;
 
 def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
-
+def grp_symbolizer : OptionGroup<"Symbolizer Options">;
 def grp_gsym : OptionGroup<"kind">,
                HelpText<"llvm-symbolizer GSYM Related Options">;
 
@@ -31,8 +31,8 @@ def color_EQ : Joined<["--"], "color=">, HelpText<"Whether to use color when sym
 defm debug_file_directory : Eq<"debug-file-directory", "Path to directory where to look for debug files">, MetaVarName<"<dir>">;
 defm debuginfod : B<"debuginfod", "Use debuginfod to find debug binaries", "Don't use debuginfod to find debug binaries">;
 defm default_arch
-    : Eq<"default-arch", "Default architecture (for multi-arch objects)">,
-      Group<grp_mach_o>;
+    : Eq<"default-arch", "Default architecture for multi-arch containers (Mach-O objects or AIX archives)">,
+      Group<grp_symbolizer>;
 defm demangle : B<"demangle", "Demangle function names", "Don't demangle function names">;
 def disable_gsym : F<"disable-gsym", "Don't consider using GSYM files for symbolication">, Group<grp_gsym>;
 def filter_markup : Flag<["--"], "filter-markup">, HelpText<"Filter symbolizer markup from stdin.">;
