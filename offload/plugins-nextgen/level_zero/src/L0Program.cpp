@@ -353,7 +353,8 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
 
           uint64_t Idx = 0;
           if (Parts[0].getAsInteger(10, Idx)) {
-            DP("Warning: ignoring auxiliary information (invalid index '%s').\n",
+            DP("Warning: ignoring auxiliary information (invalid index "
+               "'%s').\n",
                Parts[0].str().c_str());
             continue;
           }
@@ -367,7 +368,8 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
 
           uint64_t Part1Id;
           if (Parts[1].getAsInteger(10, Part1Id)) {
-            DP("Warning: ignoring auxiliary information (invalid part id '%s').\n",
+            DP("Warning: ignoring auxiliary information (invalid part id "
+               "'%s').\n",
                Parts[1].str().c_str());
             continue;
           }
