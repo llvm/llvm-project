@@ -82,6 +82,9 @@ ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
   if (!BinOrErr) {
     LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to open file " << FilePath
                       << "\n";);
+        llvm::outs() << "ObjectFileLoader: Failed to open file " << FilePath
+                      << "\n";
+    llvm::outs().flush();
     return BinOrErr.takeError();
   }
 
@@ -139,6 +142,8 @@ ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
       object::ObjectFile::createObjectFile(Bin->getMemoryBufferRef());
   if (!ObjOrErr) {
     LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to create object file\n";);
+        llvm::outs() << "ObjectFileLoader: Failed to create object file\n";
+    llvm::outs().flush();
     return ObjOrErr.takeError();
   }
   LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected object file\n";);

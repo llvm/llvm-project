@@ -176,10 +176,6 @@ public:
 
       sys::path::append(dylibPath, libdirName, dylibFileName);
       sys::path::replace_extension(dylibPath, ext);
-      llvm::errs() << "[Env] YAML path: " << yamlPath << "\n";
-      llvm::errs().flush();
-      llvm::errs() << "[Env] SO path: " << dylibPath << "\n";
-      llvm::errs().flush();
       if (!processYamlToDylib(yamlPath, dylibPath, DocNum))
         return;
     }
@@ -188,14 +184,18 @@ public:
   }
 
   void TearDown() override {
-    for (const auto &dylibFile : createdDylibs)
-      sys::fs::remove(dylibFile);
+    // for (const auto &dylibFile : createdDylibs)
+      // sys::fs::remove(dylibFile);
 
     createdDylibs.clear();
   }
 
   std::string getBaseDir() const {
     return std::string(dirPath.begin(), dirPath.end());
+  }
+
+  std::vector<std::string> getDylibPaths() const {
+    return createdDylibs;
   }
 };
 
@@ -250,21 +250,11 @@ protected:
     libs["Z"] = {libPath(baseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
     llvm::errs() << "baseDir -> " << baseDir << "\n";
     llvm::errs().flush();
-    llvm::errs() << "A -> " << libs["A"].path << "\n";
-    llvm::errs().flush();
-    llvm::errs() << "B -> " << libs["B"].path << "\n";
-    llvm::errs().flush();
-    llvm::errs() << "D -> " << libs["D"].path << "\n";
-    llvm::errs().flush();
-    llvm::errs() << "Z -> " << libs["Z"].path << "\n";
-    llvm::errs().flush();
-    llvm::errs() << "C -> " << libs["C"].path << "\n";
-    llvm::errs().flush();
-    ASSERT_TRUE(sys::fs::exists(libs["A"].path));
-    ASSERT_TRUE(sys::fs::exists(libs["B"].path));
-    ASSERT_TRUE(sys::fs::exists(libs["D"].path));
-    ASSERT_TRUE(sys::fs::exists(libs["Z"].path));
-    ASSERT_TRUE(sys::fs::exists(libs["C"].path));
+    for (const auto &P : GlobalEnv->getDylibPaths()) {
+      llvm::errs() << " lib -> " << P << "\n";
+      llvm::errs().flush();
+      ASSERT_TRUE(sys::fs::exists(P));
+    }
   }
 
   const std::vector<std::string> &sym(const std::string &key) {
