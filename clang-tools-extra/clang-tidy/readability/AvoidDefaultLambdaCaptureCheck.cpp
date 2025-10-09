@@ -14,9 +14,8 @@
 using namespace clang::tidy::readability;
 
 static std::string generateCaptureText(const clang::LambdaCapture &Capture) {
-  if (Capture.capturesThis()) {
+  if (Capture.capturesThis())
     return Capture.getCaptureKind() == clang::LCK_StarThis ? "*this" : "this";
-  }
 
   std::string Result;
   if (Capture.getCaptureKind() == clang::LCK_ByRef) {
