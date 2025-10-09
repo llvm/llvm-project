@@ -296,7 +296,7 @@ def hasAnyLocale(config, locales):
         + name_string_literals
         + """, nullptr,
       };
-      int main() {
+      int main(int, char**) {
         for (size_t i = 0; test_locale_names[i]; i++) {
           if (::setlocale(LC_ALL, test_locale_names[i]) != NULL) {
             return 0;

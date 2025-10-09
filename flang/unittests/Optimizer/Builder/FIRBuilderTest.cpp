@@ -691,3 +691,40 @@ TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress) {
   auto lbOp = llvm::dyn_cast<fir::BoxDimsOp>(origin0.getDefiningOp());
   EXPECT_EQ(lbOp.getVal(), inputBox);
 }
+
+TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress_PolymorphicScalar) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+
+  // Build a polymorphic scalar: fir.class<ptr<!fir.type<rec>>>.
+  auto recTy = fir::RecordType::get(builder.getContext(), "poly_rec");
+  auto ptrRecTy = fir::PointerType::get(recTy);
+  auto classTy = fir::ClassType::get(ptrRecTy);
+
+  // Input descriptor is an undefined fir.class value.
+  mlir::Value inputBox = fir::UndefOp::create(builder, loc, classTy);
+
+  // New base address of the same element type (reference to the record).
+  auto refRecTy = fir::ReferenceType::get(recTy);
+  mlir::Value newAddr = fir::UndefOp::create(builder, loc, refRecTy);
+
+  mlir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
+      builder, loc, inputBox, newAddr);
+
+  // Same descriptor type must be preserved.
+  EXPECT_EQ(newBox.getType(), inputBox.getType());
+
+  // Must be an embox using the new base address and carrying the original box
+  // as mold.
+  ASSERT_TRUE(llvm::isa_and_nonnull<fir::EmboxOp>(newBox.getDefiningOp()));
+  auto embox = llvm::dyn_cast<fir::EmboxOp>(newBox.getDefiningOp());
+  EXPECT_EQ(embox.getMemref(), newAddr);
+
+  // Polymorphic scalar should have no shape operand.
+  mlir::Value shape = embox.getShape();
+  EXPECT_TRUE(shape == nullptr);
+
+  // The type descriptor/mold must be the original input box.
+  mlir::Value tdesc = embox.getSourceBox();
+  EXPECT_EQ(tdesc, inputBox);
+}

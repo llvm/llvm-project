@@ -227,19 +227,17 @@ EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
   }
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfo &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm

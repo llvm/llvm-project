@@ -46,21 +46,9 @@ define i8 @iv_used_in_exit_with_math(i8 noundef %g) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i8
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP19]] to i8
 ; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 1, [[IV]]
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[S]], [[G]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[RETURN]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i8 [ 32, %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP20]], %[[VECTOR_EARLY_EXIT]] ]
-; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i8 [ 0, %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP23]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i8 [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP20]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i8 [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP23]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i8 [[RES_IV1]], [[RES_IV2]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
@@ -125,21 +113,9 @@ define i32 @iv_used_in_exit_with_loads(ptr align 4 dereferenceable(128) %src) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[INDEX]], [[TMP28]]
 ; CHECK-NEXT:    br label %[[RETURN]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[RETURN]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 32
-; CHECK-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i32 [ 32, %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VECTOR_EARLY_EXIT]] ]
-; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i32 [ 0, %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i32 [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i32 [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[RES_IV1]], [[RES_IV2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

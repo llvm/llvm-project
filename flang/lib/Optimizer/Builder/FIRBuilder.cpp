@@ -1943,7 +1943,7 @@ void fir::factory::genDimInfoFromBox(
     return;
 
   unsigned rank = fir::getBoxRank(boxType);
-  assert(rank != 0 && "must be an array of known rank");
+  assert(!boxType.isAssumedRank() && "must be an array of known rank");
   mlir::Type idxTy = builder.getIndexType();
   for (unsigned i = 0; i < rank; ++i) {
     mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
