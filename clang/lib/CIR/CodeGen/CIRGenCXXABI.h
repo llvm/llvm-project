@@ -160,6 +160,14 @@ public:
                                   bool forVirtualBase, bool delegating,
                                   Address thisAddr, QualType thisTy) = 0;
 
+  /// Emit code to force the execution of a destructor during global
+  /// teardown.  The default implementation of this uses atexit.
+  ///
+  /// \param dtor - a function taking a single pointer argument
+  /// \param addr - a pointer to pass to the destructor function.
+  virtual void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
+                                  mlir::Value addr) = 0;
+
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
@@ -232,6 +240,16 @@ public:
   virtual bool hasMostDerivedReturn(clang::GlobalDecl gd) const {
     return false;
   }
+
+  /// Returns true if the target allows calling a function through a pointer
+  /// with a different signature than the actual function (or equivalently,
+  /// bitcasting a function or function pointer to a different function type).
+  /// In principle in the most general case this could depend on the target, the
+  /// calling convention, and the actual types of the arguments and return
+  /// value. Here it just means whether the signature mismatch could *ever* be
+  /// allowed; in other words, does the target do strict checking of signatures
+  /// for all calls.
+  virtual bool canCallMismatchedFunctionType() const { return true; }
 
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *mangleContext; }

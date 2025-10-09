@@ -68,6 +68,8 @@ public:
                           CXXDtorType type, bool forVirtualBase,
                           bool delegating, Address thisAddr,
                           QualType thisTy) override;
+  void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
+                          mlir::Value addr) override;
 
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
@@ -1505,6 +1507,27 @@ void CIRGenItaniumCXXABI::emitDestructorCall(
 
   cgf.emitCXXDestructorCall(gd, callee, thisAddr.getPointer(), thisTy, vtt,
                             vttTy, nullptr);
+}
+
+void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
+                                             cir::FuncOp dtor,
+                                             mlir::Value addr) {
+  if (vd->isNoDestroy(cgm.getASTContext()))
+    return;
+
+  if (vd->getTLSKind()) {
+    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: TLS");
+    return;
+  }
+
+  // HLSL doesn't support atexit.
+  if (cgm.getLangOpts().HLSL) {
+    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: HLSL");
+    return;
+  }
+
+  // The default behavior is to use atexit. This is handled in lowering
+  // prepare. Nothing to be done for CIR here.
 }
 
 // The idea here is creating a separate block for the throw with an
