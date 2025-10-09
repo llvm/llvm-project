@@ -320,8 +320,8 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is tranferred to non-const references and check by fixing false positives
-  of function pointer.
+  positives when pointers is tranferred to non-const references 
+  and check by fixing false positives of function pointer.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
