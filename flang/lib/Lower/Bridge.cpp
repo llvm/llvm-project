@@ -643,6 +643,8 @@ public:
     return localSymbols.lookupStorage(sym);
   }
 
+  Fortran::lower::SymMap &getSymbolMap() override final { return localSymbols; }
+
   void
   overrideExprValues(const Fortran::lower::ExprToValueMap *map) override final {
     exprValueOverrides = map;
