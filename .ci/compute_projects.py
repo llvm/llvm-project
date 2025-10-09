@@ -106,7 +106,6 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
-    "mlir",  #CAROLINE
 }
 
 # These are projects that we should test if the project itself is changed but
