@@ -3097,6 +3097,11 @@ public:
   /// removed before codegen.
   void decompose();
 
+  unsigned getVFScaleFactor() const {
+    auto *PR = dyn_cast<VPPartialReductionRecipe>(ExpressionRecipes.back());
+    return PR ? PR->getVFScaleFactor() : 1;
+  }
+
   /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
     llvm_unreachable("recipe must be removed before execute");
