@@ -962,4 +962,73 @@ TEST(DenseMapCustomTest, PairPrinting) {
   EXPECT_EQ(R"({ (1, "one"), (2, "two") })", ::testing::PrintToString(Map));
 }
 
+TEST(DenseMapCustomTest, InitSize) {
+  constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+
+  {
+    DenseMap<int *, int> Map;
+    EXPECT_EQ(ElemSize * 0U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(0);
+    EXPECT_EQ(ElemSize * 0U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(1);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(2);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    DenseMap<int *, int> Map(3);
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+  {
+    int A, B;
+    DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    int A, B, C;
+    DenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+}
+
+TEST(SmallDenseMapCustomTest, InitSize) {
+  constexpr unsigned ElemSize = sizeof(std::pair<int *, int>);
+  {
+    SmallDenseMap<int *, int> Map;
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(0);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(1);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(2);
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    SmallDenseMap<int *, int> Map(3);
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+  {
+    int A, B;
+    SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}};
+    EXPECT_EQ(ElemSize * 4U, Map.getMemorySize());
+  }
+  {
+    int A, B, C;
+    SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
+    EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
+  }
+}
+
 } // namespace

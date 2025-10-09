@@ -22,6 +22,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DebugLog.h"
@@ -202,8 +203,7 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
       OpBuilder::InsertionGuard g(rewriter);
       rewriter.setInsertionPointToStart(outlinedFuncBody);
       if (Operation *cst = orig.getDefiningOp<arith::ConstantIndexOp>()) {
-        IRMapping bvm;
-        repl = rewriter.clone(*cst, bvm)->getResult(0);
+        repl = rewriter.clone(*cst)->getResult(0);
       }
     }
     orig.replaceUsesWithIf(repl, [&](OpOperand &opOperand) {
@@ -291,14 +291,6 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return arith::DivUIOp::create(builder, loc, sum, divisor);
 }
 
-/// Returns the trip count of `forOp` if its' low bound, high bound and step are
-/// constants, or optional otherwise. Trip count is computed as
-/// ceilDiv(highBound - lowBound, step).
-static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
-  return constantTripCount(forOp.getLowerBound(), forOp.getUpperBound(),
-                           forOp.getStep());
-}
-
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
 /// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
 /// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
@@ -377,7 +369,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  std::optional<int64_t> constTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> constTripCount = forOp.getStaticTripCount();
   if (constTripCount) {
     // Constant loop bounds computation.
     int64_t lbCst = getConstantIntValue(forOp.getLowerBound()).value();
@@ -391,7 +383,8 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     }
 
     int64_t tripCountEvenMultiple =
-        *constTripCount - (*constTripCount % unrollFactor);
+        constTripCount->getSExtValue() -
+        (constTripCount->getSExtValue() % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -487,15 +480,15 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 /// Unrolls this loop completely.
 LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   IRRewriter rewriter(forOp.getContext());
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (!mayBeConstantTripCount.has_value())
     return failure();
-  uint64_t tripCount = *mayBeConstantTripCount;
-  if (tripCount == 0)
+  const APInt &tripCount = *mayBeConstantTripCount;
+  if (tripCount.isZero())
     return success();
-  if (tripCount == 1)
+  if (tripCount.getSExtValue() == 1)
     return forOp.promoteIfSingleIteration(rewriter);
-  return loopUnrollByFactor(forOp, tripCount);
+  return loopUnrollByFactor(forOp, tripCount.getSExtValue());
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -535,18 +528,18 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
 
   // Currently, only constant trip count that divided by the unroll factor is
   // supported.
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount.has_value()) {
     // If the trip count is dynamic, do not unroll & jam.
     LDBG() << "failed to unroll and jam: trip count could not be determined";
     return failure();
   }
-  if (unrollJamFactor > *tripCount) {
+  if (unrollJamFactor > tripCount->getZExtValue()) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
               "count";
-    unrollJamFactor = *tripCount;
-  } else if (*tripCount % unrollJamFactor != 0) {
+    unrollJamFactor = tripCount->getZExtValue();
+  } else if (tripCount->getSExtValue() % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -678,9 +671,10 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   return success();
 }
 
-Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter, Location loc,
-                                           OpFoldResult lb, OpFoldResult ub,
-                                           OpFoldResult step) {
+static Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter,
+                                                  Location loc, OpFoldResult lb,
+                                                  OpFoldResult ub,
+                                                  OpFoldResult step) {
   Range normalizedLoopBounds;
   normalizedLoopBounds.offset = rewriter.getIndexAttr(0);
   normalizedLoopBounds.stride = rewriter.getIndexAttr(1);

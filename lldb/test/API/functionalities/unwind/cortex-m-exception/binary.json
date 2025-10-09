@@ -1,0 +1,41 @@
+{
+  "triple": "armv7m-apple",
+  "uuid": "2D157DBA-53C9-3AC7-B5A1-9D336EC831CB",
+  "type": "executable",
+  "sections": [
+    {
+      "user_id": 100,
+      "name": "TEXT",
+      "type": "code",
+      "address": 2097664,
+      "size": 598872,
+      "file_offset": 0,
+      "file_size": 598872,
+      "alignment": 2,
+      "flags": 514,
+      "read": true,
+      "write": false,
+      "execute": true
+    }
+  ],
+  "symbols": [
+    {
+      "name": "main",
+      "type": "code",
+      "size": 10,
+      "address": 2108030
+    },
+    {
+      "name": "exception_catcher",
+      "type": "code",
+      "size": 44,
+      "address": 2111760
+    },
+    {
+      "name": "exception_thrower",
+      "type": "code",
+      "size": 2652,
+      "address": 2108040
+    }
+  ]
+}

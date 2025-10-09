@@ -498,6 +498,9 @@ namespace llvm {
     /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
     SETBCR,
 
+    /// VSRQ - The ISA 3.1 (P10) Vector Shift right quadword instruction
+    VSRQ,
+
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
     // whether or not the address can be PC-Relative and add the corresponding

@@ -51,7 +51,7 @@ define <2 x i32> @xtn2s(<2 x i64> %A) nounwind #0 {
 define <16 x i8> @xtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-LABEL: define <16 x i8> @xtn2_16b(
 ; CHECK-SAME: <8 x i8> [[RET:%.*]], <8 x i16> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i8>
@@ -69,7 +69,7 @@ define <16 x i8> @xtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 define <8 x i16> @xtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-LABEL: define <8 x i16> @xtn2_8h(
 ; CHECK-SAME: <4 x i16> [[RET:%.*]], <4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
@@ -87,7 +87,7 @@ define <8 x i16> @xtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 define <4 x i32> @xtn2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @xtn2_4s(
 ; CHECK-SAME: <2 x i32> [[RET:%.*]], <2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
@@ -150,7 +150,7 @@ define <2 x i32> @sqxtn2s(<2 x i64> %A) nounwind #0 {
 define <16 x i8> @sqxtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-LABEL: define <16 x i8> @sqxtn2_16b(
 ; CHECK-SAME: <8 x i8> [[RET:%.*]], <8 x i16> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
@@ -169,7 +169,7 @@ define <16 x i8> @sqxtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 define <8 x i16> @sqxtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-LABEL: define <8 x i16> @sqxtn2_8h(
 ; CHECK-SAME: <4 x i16> [[RET:%.*]], <4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
@@ -188,7 +188,7 @@ define <8 x i16> @sqxtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 define <4 x i32> @sqxtn2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @sqxtn2_4s(
 ; CHECK-SAME: <2 x i32> [[RET:%.*]], <2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
@@ -256,7 +256,7 @@ define <2 x i32> @uqxtn2s(<2 x i64> %A) nounwind #0 {
 define <16 x i8> @uqxtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-LABEL: define <16 x i8> @uqxtn2_16b(
 ; CHECK-SAME: <8 x i8> [[RET:%.*]], <8 x i16> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
@@ -275,7 +275,7 @@ define <16 x i8> @uqxtn2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 define <8 x i16> @uqxtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-LABEL: define <8 x i16> @uqxtn2_8h(
 ; CHECK-SAME: <4 x i16> [[RET:%.*]], <4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
@@ -294,7 +294,7 @@ define <8 x i16> @uqxtn2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 define <4 x i32> @uqxtn2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @uqxtn2_4s(
 ; CHECK-SAME: <2 x i32> [[RET:%.*]], <2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
@@ -362,7 +362,7 @@ define <2 x i32> @sqxtun2s(<2 x i64> %A) nounwind #0 {
 define <16 x i8> @sqxtun2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 ; CHECK-LABEL: define <16 x i8> @sqxtun2_16b(
 ; CHECK-SAME: <8 x i8> [[RET:%.*]], <8 x i16> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <8 x i16> [[TMP1]], zeroinitializer
@@ -381,7 +381,7 @@ define <16 x i8> @sqxtun2_16b(<8 x i8> %ret, <8 x i16> %A) nounwind #0 {
 define <8 x i16> @sqxtun2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 ; CHECK-LABEL: define <8 x i16> @sqxtun2_8h(
 ; CHECK-SAME: <4 x i16> [[RET:%.*]], <4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[TMP1]], zeroinitializer
@@ -400,7 +400,7 @@ define <8 x i16> @sqxtun2_8h(<4 x i16> %ret, <4 x i32> %A) nounwind #0 {
 define <4 x i32> @sqxtun2_4s(<2 x i32> %ret, <2 x i64> %A) nounwind #0 {
 ; CHECK-LABEL: define <4 x i32> @sqxtun2_4s(
 ; CHECK-SAME: <2 x i32> [[RET:%.*]], <2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <2 x i64> [[TMP1]], zeroinitializer
