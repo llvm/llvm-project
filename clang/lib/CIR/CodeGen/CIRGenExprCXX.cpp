@@ -722,3 +722,43 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   // Emit the call to delete.
   emitNewDeleteCall(*this, deleteFD, deleteFTy, deleteArgs);
 }
+
+mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
+                                            const CXXDynamicCastExpr *dce) {
+  mlir::Location loc = getLoc(dce->getSourceRange());
+
+  cgm.emitExplicitCastExprType(dce, this);
+  QualType destTy = dce->getTypeAsWritten();
+  QualType srcTy = dce->getSubExpr()->getType();
+
+  // C++ [expr.dynamic.cast]p7:
+  //   If T is "pointer to cv void," then the result is a pointer to the most
+  //   derived object pointed to by v.
+  bool isDynCastToVoid = destTy->isVoidPointerType();
+  bool isRefCast = destTy->isReferenceType();
+
+  QualType srcRecordTy;
+  QualType destRecordTy;
+  if (isDynCastToVoid) {
+    srcRecordTy = srcTy->getPointeeType();
+    // No destRecordTy.
+  } else if (const PointerType *destPTy = destTy->getAs<PointerType>()) {
+    srcRecordTy = srcTy->castAs<PointerType>()->getPointeeType();
+    destRecordTy = destPTy->getPointeeType();
+  } else {
+    srcRecordTy = srcTy;
+    destRecordTy = destTy->castAs<ReferenceType>()->getPointeeType();
+  }
+
+  assert(srcRecordTy->isRecordType() && "source type must be a record type!");
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  if (dce->isAlwaysNull()) {
+    cgm.errorNYI(dce->getSourceRange(), "emitDynamicCastToNull");
+    return {};
+  }
+
+  auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
+  return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
+                                         destCirTy, isRefCast, thisAddr);
+}

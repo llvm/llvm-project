@@ -79,9 +79,12 @@ struct MissingFeatures {
   static bool opFuncExtraAttrs() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }
+  static bool opFuncNoUnwind() { return false; }
   static bool opFuncOperandBundles() { return false; }
   static bool opFuncParameterAttributes() { return false; }
+  static bool opFuncReadOnly() { return false; }
   static bool opFuncSection() { return false; }
+  static bool opFuncWillReturn() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
   static bool setFunctionAttributes() { return false; }
 
