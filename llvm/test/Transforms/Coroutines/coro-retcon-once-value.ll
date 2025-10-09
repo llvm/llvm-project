@@ -29,7 +29,7 @@ neg.cont:
   br label %cleanup
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -72,7 +72,7 @@ neg.cont:
 cleanup:
   %new.val = add i32 %val, 123
   %tok = call token (...) @llvm.coro.end.results(ptr null, i32 %new.val, ptr @deallocate)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
   unreachable
 }
 
@@ -96,7 +96,7 @@ entry:
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare token @llvm.coro.end.results(...)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 

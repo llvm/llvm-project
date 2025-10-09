@@ -1073,3 +1073,31 @@ TEST(ProtocolTypesTest, CompletionsResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }
+
+TEST(ProtocolTypesTest, InvalidatedEventBody) {
+  InvalidatedEventBody body;
+  body.areas = {InvalidatedEventBody::eAreaStacks,
+                InvalidatedEventBody::eAreaThreads};
+  body.stackFrameId = 1;
+  StringRef json = R"({
+  "areas": [
+    "stacks",
+    "threads"
+  ],
+  "stackFrameId": 1
+})";
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, MemoryEventBody) {
+  MemoryEventBody body;
+  body.memoryReference = 12345;
+  body.offset = 0;
+  body.count = 4;
+  StringRef json = R"({
+  "count": 4,
+  "memoryReference": "0x3039",
+  "offset": 0
+})";
+  EXPECT_EQ(json, pp(body));
+}

@@ -1,4 +1,4 @@
-//===--- UseNoexceptCheck.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ namespace clang::tidy::modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-noexcept.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-noexcept.html
 class UseNoexceptCheck : public ClangTidyCheck {
 public:
   UseNoexceptCheck(StringRef Name, ClangTidyContext *Context);

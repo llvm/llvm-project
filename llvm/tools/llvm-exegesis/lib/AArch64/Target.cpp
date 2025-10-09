@@ -119,6 +119,10 @@ public:
   ExegesisAArch64Target()
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
 
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
+
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override {
@@ -181,6 +185,56 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 };
+
+Error ExegesisAArch64Target::randomizeTargetMCOperand(
+    const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
+    const BitVector &ForbiddenRegs) const {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  const auto OperandType = Op.getExplicitOperandInfo().OperandType;
+  // NOTE: To resolve "Not all operands were initialized by snippet generator"
+  // Requires OperandType to be defined for such opcode's operands in AArch64
+  // tablegen files. And omit introduced OperandType(s).
+
+  // Hacky Fix: Defaulting all OPERAND_UNKNOWN to immediate value 0 works with a
+  // limitation that it introduces illegal instruction error for system
+  // instructions. System instructions will need to be omitted with OperandType
+  // or opcode specific values to avoid generating invalid encodings or
+  // unreliable benchmark results for these system-level instructions.
+  //  Implement opcode-specific immediate value handling for system instrs:
+  //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
+  //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
+  //   DAIFSet)
+  //   - SYSLxt/SYSxt: Use valid system instruction encodings with proper
+  //   CRn/CRm/op values
+  //   - UDF: Use valid undefined instruction immediate ranges (0-65535)
+
+  switch (OperandType) {
+  // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
+  // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
+  case llvm::AArch64::OPERAND_SHIFT_MSL: {
+    // There are two valid encodings:
+    //   - Type 7: imm at [15:8], [47:40], shift = 264 (0x108) → msl #8
+    //   - Type 8: imm at [23:16], [55:48], shift = 272 (0x110) → msl #16
+    //     Corresponds AArch64_AM::encodeAdvSIMDModImmType7()
+    // But, v2s_msl and v4s_msl instructions accept either form,
+    // Thus, Arbitrarily chosing 264 (msl #8) for simplicity.
+    AssignedValue = MCOperand::createImm(264);
+    return Error::success();
+  }
+  case llvm::AArch64::OPERAND_IMPLICIT_IMM_0:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case MCOI::OperandType::OPERAND_PCREL:
+    AssignedValue = MCOperand::createImm(8);
+    return Error::success();
+  default:
+    break;
+  }
+
+  return make_error<Failure>(
+      Twine("Unimplemented operand type: MCOI::OperandType:")
+          .concat(Twine(static_cast<int>(OperandType))));
+}
 
 } // namespace
 
