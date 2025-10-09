@@ -1,4 +1,4 @@
-"""Test the SBCommandInterpreter APIs."""
+"""tESt the SBCommandInterpreter APIs."""
 
 import json
 import lldb
@@ -184,7 +184,7 @@ class CommandInterpreterAPICase(TestBase):
                 "commandName": "dwim-print",
                 "commandArguments": "-- a",
                 "output": "",
-                "error": "note: Using default language. Ran expression as 'Objective C++'.\n"
+                "error": "note: Falling back to default language. Ran expression as 'Objective C++'.\n"
                 "error: <user expression 0>:1:1: use of undeclared identifier 'a'\n    1 | a\n      | ^\n",
             },
         )
