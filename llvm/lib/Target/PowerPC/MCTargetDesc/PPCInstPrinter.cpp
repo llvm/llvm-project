@@ -430,15 +430,15 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
     printOperand(MI, OpNo, STI, O);
 }
 
-void PPCInstPrinter::printS34ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
+template <uint64_t N>
+void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   if (MI->getOperand(OpNo).isImm()) {
-    long long Value = MI->getOperand(OpNo).getImm();
-    assert(isInt<34>(Value) && "Invalid s34imm argument!");
-    O << (long long)Value;
-  }
-  else
+    int64_t Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<N>(Value) && "Invalid imm argument!");
+    O << (int64_t)Value;
+  } else
     printOperand(MI, OpNo, STI, O);
 }
 
@@ -532,7 +532,7 @@ void PPCInstPrinter::printMemRegImmHash(const MCInst *MI, unsigned OpNo,
 void PPCInstPrinter::printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  printS34ImmOperand(MI, OpNo, STI, O);
+  printSImmOperand<34>(MI, OpNo, STI, O);
   O << '(';
   printImmZeroOperand(MI, OpNo + 1, STI, O);
   O << ')';
@@ -541,7 +541,7 @@ void PPCInstPrinter::printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo,
 void PPCInstPrinter::printMemRegImm34(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  printS34ImmOperand(MI, OpNo, STI, O);
+  printSImmOperand<34>(MI, OpNo, STI, O);
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
