@@ -222,11 +222,19 @@ struct ReproducerStream {
 using ReproducerStreamFactory =
     std::function<std::unique_ptr<ReproducerStream>(std::string &error)>;
 
+ReproducerStreamFactory makeReproducerStreamFactory(StringRef outputFile);
+
 std::string
 makeReproducer(StringRef anchorName,
                const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
                Operation *op, StringRef outputFile, bool disableThreads = false,
                bool verifyPasses = false);
+
+std::string
+makeReproducer(StringRef anchorName,
+               const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+               Operation *op, const ReproducerStreamFactory &streamFactory,
+               bool disableThreads = false, bool verifyPasses = false);
 
 /// The main pass manager and pipeline builder.
 class PassManager : public OpPassManager {
@@ -281,6 +289,15 @@ public:
 
   /// Add the provided instrumentation to the pass manager.
   void addInstrumentation(std::unique_ptr<PassInstrumentation> pi);
+
+  /// Enable or disable the printing of pass manager reproducer.
+  void enableGeneratePassManagerReproducer(StringRef outputFile) {
+    forceGenerateReproducer = makeReproducerStreamFactory(outputFile);
+  }
+
+  void enableGeneratePassManagerReproducer(ReproducerStreamFactory factory) {
+    forceGenerateReproducer = std::move(factory);
+  }
 
   //===--------------------------------------------------------------------===//
   // IR Printing
@@ -491,6 +508,9 @@ private:
       DenseMapInfo<llvm::hash_code>::getTombstoneKey();
   llvm::hash_code pipelineInitializationKey =
       DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+
+  /// A flag that indicates if the pass manager reproducer should be generated.
+  ReproducerStreamFactory forceGenerateReproducer;
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
