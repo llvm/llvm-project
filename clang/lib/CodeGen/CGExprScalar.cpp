@@ -2101,7 +2101,7 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
   // Emit array bounds constraints for vector element access.
-  CGF.EmitArrayBoundsConstraints(E, Idx);
+  CGF.EmitArrayBoundsConstraints(E, Idx, /*Accessed=*/true);
 
   return Builder.CreateExtractElement(Base, Idx, "vecext");
 }

@@ -69,8 +69,9 @@ int test_vla(int n, int i) {
 extern int extern_array[100];
 int *test_one_past_end(void) {
   // CHECK-NOT: call void @llvm.assume
-  // Taking address of one-past-the-end is allowed by C standard.
-  // We should NOT assume anything about this access.
+  // Taking address of one-past-the-end is legal per C standard.
+  // Used in iterators (e.g., arr + size, std::end(arr)).
+  // No assumes are generated for address-only operations.
   return &extern_array[100];  // Legal: one past the end.
 }
 

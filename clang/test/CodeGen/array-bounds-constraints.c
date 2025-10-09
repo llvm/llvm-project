@@ -9,9 +9,12 @@
 // NO-FLAG-LABEL: define {{.*}} @test_simple_array
 void init_array(int *arr);
 int test_simple_array(int i) {
-  int arr[10];  // C arrays are 0-based: valid indices are [0, 9]
-  init_array(arr);  // Initialize to avoid UB from uninitialized read.
-  // CHECK: %{{.*}} = icmp ult i32 %i, 10
+  int arr[10];
+  init_array(arr);
+  // Single-dimension array subscript: Accessed defaults to false to support
+  // C++ iterators that use &arr[size]. This generates index < 11 (not < 10)
+  // to allow one-past-the-end address formation.
+  // CHECK: %{{.*}} = icmp ult i32 %i, 11
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   // NO-FLAG-NOT: call void @llvm.assume
   return arr[i];
@@ -21,9 +24,11 @@ int test_simple_array(int i) {
 int test_multidimensional_array(int i, int j) {
   int arr[5][8];  // Valid indices: i in [0, 4], j in [0, 7]
   init_array(arr[0]);  // Initialize to avoid UB from uninitialized read.
+  // Multidimensional: inner subscript (i) uses Accessed=true (strict < 5)
+  // outer subscript (j) may allow one-past-the-end
   // CHECK: %{{.*}} = icmp ult i32 %i, 5
   // CHECK: call void @llvm.assume(i1 %{{.*}})
-  // CHECK: %{{.*}} = icmp ult i32 %j, 8
+  // CHECK: %{{.*}} = icmp ult i32 %j, 9
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   return arr[i][j];
 }
@@ -32,7 +37,8 @@ int test_multidimensional_array(int i, int j) {
 int test_unsigned_index(unsigned int i) {
   int arr[10];
   init_array(arr);  // Initialize to avoid UB from uninitialized read.
-  // CHECK: %{{.*}} = icmp ult i32 %i, 10
+  // Accessed=false, allows one-past-the-end
+  // CHECK: %{{.*}} = icmp ult i32 %i, 11
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   return arr[i];
 }
@@ -40,7 +46,8 @@ int test_unsigned_index(unsigned int i) {
 // CHECK-LABEL: define {{.*}} @test_store_undef
 void test_store_undef(int i, int value) {
   int arr[10];
-  // CHECK: %{{.*}} = icmp ult i32 %i, 10
+  // Accessed=false, allows one-past-the-end
+  // CHECK: %{{.*}} = icmp ult i32 %i, 11
   // CHECK: call void @llvm.assume(i1 %{{.*}})
   arr[i] = value;
   init_array(arr);  // Avoid optimization of the above statement.
