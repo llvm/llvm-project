@@ -229,8 +229,8 @@ static bool dontUseFastISelFor(const Function &Fn) {
   });
 }
 
-static bool shouldRegisterPGOPasses(const TargetMachine &TM,
-                                    CodeGenOptLevel OptLevel) {
+static bool maintainPGOProfile(const TargetMachine &TM,
+                               CodeGenOptLevel OptLevel) {
   if (OptLevel != CodeGenOptLevel::None)
     return true;
   if (TM.getPGOOption()) {
@@ -403,8 +403,7 @@ SelectionDAGISel::~SelectionDAGISel() { delete CurDAG; }
 
 void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   CodeGenOptLevel OptLevel = Selector->OptLevel;
-  bool RegisterPGOPasses =
-      shouldRegisterPGOPasses(Selector->TM, Selector->OptLevel);
+  bool RegisterPGOPasses = maintainPGOProfile(Selector->TM, Selector->OptLevel);
   if (OptLevel != CodeGenOptLevel::None)
       AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<GCModuleInfo>();
@@ -474,7 +473,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   (void)MatchFilterFuncName;
 #endif
 
-  bool RegisterPGOPasses = shouldRegisterPGOPasses(TM, OptLevel);
+  bool RegisterPGOPasses = maintainPGOProfile(TM, OptLevel);
   TII = MF->getSubtarget().getInstrInfo();
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
@@ -529,7 +528,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   (void)MatchFilterFuncName;
 #endif
 
-  bool RegisterPGOPasses = shouldRegisterPGOPasses(TM, OptLevel);
+  bool RegisterPGOPasses = maintainPGOProfile(TM, OptLevel);
   TII = MF->getSubtarget().getInstrInfo();
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
