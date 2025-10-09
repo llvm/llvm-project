@@ -1730,9 +1730,8 @@ inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression()) {
+  if (S.Current->isBottomFrame())
     return false;
-  }
   S.Stk.push<Pointer>(S.Current->getParamPointer(I));
   return true;
 }
@@ -3341,6 +3340,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     return true;
   }
 
+  return false;
+}
+
+inline bool InvalidStore(InterpState &S, CodePtr OpPC, const Type *T) {
+  if (S.getLangOpts().CPlusPlus) {
+    QualType VolatileType = QualType(T, 0).withVolatile();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_volatile_type)
+        << AK_Assign << VolatileType;
+  } else {
+    S.FFDiag(S.Current->getSource(OpPC));
+  }
   return false;
 }
 

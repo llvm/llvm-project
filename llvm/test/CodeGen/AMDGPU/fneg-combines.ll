@@ -5015,7 +5015,7 @@ define amdgpu_kernel void @v_fneg_fp_round_fneg_f64_to_f32(ptr addrspace(1) %out
   %a.gep = getelementptr inbounds double, ptr addrspace(1) %a.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %a = load volatile double, ptr addrspace(1) %a.gep
-  %fneg.a = fsub double -0.000000e+00, %a
+  %fneg.a = fsub nsz double -0.000000e+00, %a
   %fpround = fptrunc double %fneg.a to float
   %fneg = fneg float %fpround
   store float %fneg, ptr addrspace(1) %out.gep
