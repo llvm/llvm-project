@@ -517,8 +517,8 @@ public:
   /// If interleave count has been specified by metadata it will be returned.
   /// Otherwise, the interleave count is computed and returned. VF and LoopCost
   /// are the selected vectorization factor and the cost of the selected VF.
-  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF, unsigned UserIC,
-                                 InstructionCost LoopCost, bool &IntBeneficial);
+  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
+                                 InstructionCost LoopCost);
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.

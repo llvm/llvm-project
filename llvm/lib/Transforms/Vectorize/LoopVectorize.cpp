@@ -4501,9 +4501,9 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
   }
 }
 
-unsigned LoopVectorizationPlanner::selectInterleaveCount(
-    VPlan &Plan, ElementCount VF, unsigned UserIC, InstructionCost LoopCost,
-    bool &IntBeneficial) {
+unsigned
+LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
+                                                InstructionCost LoopCost) {
   // -- The interleave heuristics --
   // We interleave the loop in order to expose ILP and reduce the loop overhead.
   // There are many micro-architectural considerations that we can't predict
@@ -4518,26 +4518,25 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  // We used the distance for the interleave count. This should not be overriden
-  // by a user-specified IC.
-  if (!Legal->isSafeForAnyVectorWidth())
-    return 1;
-
   if (!CM.isScalarEpilogueAllowed())
-    return std::max(1U, UserIC);
+    return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
              IsaPred<VPEVLBasedIVPHIRecipe>)) {
     LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
                          "Unroll factor forced to be 1.\n");
-    return std::max(1U, UserIC);
+    return 1;
   }
+
+  // We used the distance for the interleave count.
+  if (!Legal->isSafeForAnyVectorWidth())
+    return 1;
 
   // We don't attempt to perform interleaving for loops with uncountable early
   // exits because the VPInstruction::AnyOf code cannot currently handle
   // multiple parts.
   if (Plan.hasEarlyExit())
-    return std::max(1U, UserIC);
+    return 1;
 
   const bool HasReductions =
       any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
@@ -4554,7 +4553,7 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
 
     // Loop body is free and there is no need for interleaving.
     if (LoopCost == 0)
-      return std::max(1U, UserIC);
+      return 1;
   }
 
   VPRegisterUsage R =
@@ -4691,8 +4690,7 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
   // benefit from interleaving.
   if (VF.isVector() && HasReductions) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving because of reductions.\n");
-    IntBeneficial = IC > 1;
-    return UserIC > 0 ? UserIC : IC;
+    return IC;
   }
 
   // For any scalar loop that either requires runtime checks or predication we
@@ -4775,7 +4773,7 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
                });
     if (HasSelectCmpReductions) {
       LLVM_DEBUG(dbgs() << "LV: Not interleaving select-cmp reductions.\n");
-      return std::max(1U, UserIC);
+      return 1;
     }
 
     // If we have a scalar reduction (vector reductions are already dealt with
@@ -4794,7 +4792,7 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
       if (HasOrderedReductions) {
         LLVM_DEBUG(
             dbgs() << "LV: Not interleaving scalar ordered reductions.\n");
-        return std::max(1U, UserIC);
+        return 1;
       }
 
       unsigned F = MaxNestedScalarReductionIC;
@@ -4807,9 +4805,7 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
         std::max(StoresIC, LoadsIC) > SmallIC) {
       LLVM_DEBUG(
           dbgs() << "LV: Interleaving to saturate store or load ports.\n");
-      IC = std::max(StoresIC, LoadsIC);
-      IntBeneficial = IC > 1;
-      return UserIC > 0 ? UserIC : IC;
+      return std::max(StoresIC, LoadsIC);
     }
 
     // If there are scalar reductions and TTI has enabled aggressive
@@ -4818,27 +4814,22 @@ unsigned LoopVectorizationPlanner::selectInterleaveCount(
       LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
       // Interleave no less than SmallIC but not as aggressive as the normal IC
       // to satisfy the rare situation when resources are too limited.
-      IC = std::max(IC / 2, SmallIC);
-      IntBeneficial = IC > 1;
-      return UserIC > 0 ? UserIC : IC;
+      return std::max(IC / 2, SmallIC);
     }
 
     LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce branch cost.\n");
-    IC = std::max(SmallIC, UserIC);
-    IntBeneficial = IC > 1;
-    return UserIC > 0 ? UserIC : IC;
+    return SmallIC;
   }
 
   // Interleave if this is a large loop (small loops are already dealt with by
   // this point) that could benefit from interleaving.
   if (AggressivelyInterleaveReductions) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
-    IntBeneficial = IC > 1;
-    return UserIC > 0 ? UserIC : IC;
+    return IC;
   }
 
   LLVM_DEBUG(dbgs() << "LV: Not Interleaving.\n");
-  return std::max(1U, UserIC);
+  return 1;
 }
 
 bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
@@ -9851,7 +9842,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
-  unsigned UserIC = Hints.getInterleave();
+  unsigned UserIC = LVL.isSafeForAnyVectorWidth() ? Hints.getInterleave() : 1;
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
@@ -9862,16 +9853,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LVP.emitInvalidCostRemarks(ORE);
 
   GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(), CM.CostKind);
-  bool IntBeneficial = false;
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
-    IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, UserIC,
-                                   VF.Cost, IntBeneficial);
+    IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);
 
+    unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
-    if (VF.Width.isVector() || IC > 1) {
-      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, IC);
+    if (VF.Width.isVector() || SelectedIC > 1) {
+      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
 
       // Bail out early if either the SCEV or memory runtime checks are known to
       // fail. In that case, the vector loop would never execute.
@@ -9917,7 +9907,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VectorizeLoop = false;
   }
 
-  if (IC == 1 && UserIC > 1) {
+  if (UserIC == 1 && Hints.getInterleave() > 1) {
     LLVM_DEBUG(dbgs() << "LV: Ignoring user-specified interleave count.\n");
     IntDiagMsg = {"InterleavingUnsafe",
                   "Ignoring user-specified interleave count due to possibly "
@@ -9931,7 +9921,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IntDiagMsg = {"InterleavingAvoided",
                   "Ignoring UserIC, because interleaving was avoided up front"};
     InterleaveLoop = false;
-  } else if (!IntBeneficial && UserIC <= 1) {
+  } else if (IC == 1 && UserIC <= 1) {
     // Tell the user interleaving is not beneficial.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
     IntDiagMsg = {
@@ -9943,7 +9933,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       IntDiagMsg.second +=
           " and is explicitly disabled or interleave count is set to 1";
     }
-  } else if (IntBeneficial && UserIC == 1) {
+  } else if (IC > 1 && UserIC == 1) {
     // Tell the user interleaving is beneficial, but it explicitly disabled.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is beneficial but is explicitly "
                          "disabled.\n");
@@ -9965,6 +9955,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         "the order of histogram operations"};
     InterleaveLoop = false;
   }
+
+  // Override IC if user provided an interleave count.
+  IC = UserIC > 0 ? UserIC : IC;
 
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
