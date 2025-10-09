@@ -278,6 +278,11 @@ jobs:
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
+    - name: Dump logs
+      if: failure()
+      run: |
+        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
+
   upload-release-binaries:
     name: "Upload Release Binaries"
     needs:
