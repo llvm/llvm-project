@@ -29,8 +29,7 @@ export uint TestGetDimensions() {
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 0, 0), ptr %[[HANDLE_PTR]]
 // CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
-// DXIL-NEXT: %[[FOURVAL:.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.getdimensions.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], i32 poison)
-// DXIL-NEXT: %[[DIM:.*]] = extractvalue { i32, i32, i32, i32 } %[[FOURVAL]], 0
+// DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.buffer.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]])
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
@@ -38,10 +37,9 @@ export uint TestGetDimensions() {
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr %[[HANDLE_PTR]]
 // CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
-// DXIL-NEXT: %[[FOURVAL:.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.getdimensions.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 poison)
-// DXIL-NEXT: %[[DIM:.*]] = extractvalue { i32, i32, i32, i32 } %[[FOURVAL]], 0
+// DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.buffer.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]])
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
-// DXIL: declare { i32, i32, i32, i32 } @llvm.dx.resource.getdimensions.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0), i32)
-// DXIL: declare { i32, i32, i32, i32 } @llvm.dx.resource.getdimensions.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0), i32)
+// DXIL: declare i32 @llvm.dx.resource.getdimensions.buffer.tdx.RawBuffer_i8_0_0t(target("dx.RawBuffer", i8, 0, 0))
+// DXIL: declare i32 @llvm.dx.resource.getdimensions.buffer.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0))
