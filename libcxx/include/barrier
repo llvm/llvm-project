@@ -97,15 +97,14 @@ using __barrier_phase_t _LIBCPP_NODEBUG = uint8_t;
 
 class __barrier_algorithm_base;
 
-[[__gnu__::__returns_nonnull__, __gnu__::__malloc__]] _LIBCPP_AVAILABILITY_SYNC
-    _LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base*
-    __construct_barrier_algorithm_base(ptrdiff_t& __expected);
+[[__gnu__::__returns_nonnull__, __gnu__::__malloc__]]
+_LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base* __construct_barrier_algorithm_base(ptrdiff_t& __expected);
 
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI bool
+_LIBCPP_EXPORTED_FROM_ABI bool
 __arrive_barrier_algorithm_base([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE __barrier_algorithm_base* __barrier,
                                 __barrier_phase_t __old_phase) noexcept;
 
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __destroy_barrier_algorithm_base(
+_LIBCPP_EXPORTED_FROM_ABI void __destroy_barrier_algorithm_base(
     [[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE __barrier_algorithm_base* __barrier) noexcept;
 
 template <class _CompletionF>
@@ -121,14 +120,13 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return numeric_limits<ptrdiff_t>::max(); }
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
-  __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
+  _LIBCPP_HIDE_FROM_ABI __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
       : __expected_(__expected),
         __base_(std::__construct_barrier_algorithm_base(this->__expected_), &__destroy_barrier_algorithm_base),
         __expected_adjustment_(0),
         __completion_(std::move(__completion)),
         __phase_(0) {}
-  [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= __expected_, "update is greater than the expected count for the current barrier phase");
 
@@ -143,11 +141,11 @@ public:
       }
     return __old_phase;
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __old_phase) const {
+  _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __old_phase) const {
     auto const __test_fn = [this, __old_phase]() -> bool { return __phase_.load(memory_order_acquire) != __old_phase; };
     std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() {
+  _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() {
     __expected_adjustment_.fetch_sub(1, memory_order_relaxed);
     (void)arrive(1);
   }
@@ -162,7 +160,6 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return __barrier_base<_CompletionF>::max(); }
 
-  _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -177,15 +174,13 @@ public:
   barrier(barrier const&)            = delete;
   barrier& operator=(barrier const&) = delete;
 
-  [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update > 0, "barrier:arrive must be called with a value greater than 0");
     return __b_.arrive(__update);
   }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __phase) const {
-    __b_.wait(std::move(__phase));
-  }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_wait() { wait(arrive()); }
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() { __b_.arrive_and_drop(); }
+  _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __phase) const { __b_.wait(std::move(__phase)); }
+  _LIBCPP_HIDE_FROM_ABI void arrive_and_wait() { wait(arrive()); }
+  _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() { __b_.arrive_and_drop(); }
 };
 
 _LIBCPP_END_NAMESPACE_STD

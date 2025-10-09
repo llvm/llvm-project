@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-self-move
 
 // jthread& operator=(jthread&&) noexcept;

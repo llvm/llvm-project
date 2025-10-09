@@ -34,8 +34,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
-
 class _LIBCPP_HIDDEN __dir_stream;
 class directory_iterator {
 public:
@@ -127,19 +125,15 @@ inline _LIBCPP_HIDE_FROM_ABI directory_iterator begin(directory_iterator __iter)
 
 inline _LIBCPP_HIDE_FROM_ABI directory_iterator end(directory_iterator) noexcept { return directory_iterator(); }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #  if _LIBCPP_STD_VER >= 20
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_view<std::filesystem::directory_iterator> = true;
+inline constexpr bool std::ranges::enable_view<std::filesystem::directory_iterator> = true;
 
 #  endif // _LIBCPP_STD_VER >= 20
 
