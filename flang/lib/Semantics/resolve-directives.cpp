@@ -1703,6 +1703,12 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     name->symbol = cb;
     return cb;
   }
+  if (auto *cb{GetContext().scope.FindSymbol(name->source)}) {
+    if (auto *sym{&cb->GetUltimate()}; sym && sym->has<CommonBlockDetails>()) {
+      name->symbol = sym;
+      return sym;
+    }
+  }
   return nullptr;
 }
 
