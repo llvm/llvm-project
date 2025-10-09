@@ -5042,7 +5042,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 
   unsigned Opc = N->getOpcode();
   bool IsDiv = (ISD::SDIV == Opc) || (ISD::UDIV == Opc);
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+  ConstantSDNode *N1C = isConstOrConstSplat(N1, false, true);
 
   // X / undef -> undef
   // X % undef -> undef
