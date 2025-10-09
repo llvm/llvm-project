@@ -1496,6 +1496,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_macros_optimization",
         ":__support_macros_sanitizer",
     ],
 )
