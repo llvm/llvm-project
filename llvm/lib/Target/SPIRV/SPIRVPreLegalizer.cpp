@@ -839,6 +839,7 @@ static uint32_t convertFloatToSPIRVWord(float F) {
 
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
+  const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -849,7 +850,7 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration)) {
         buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
-                                MI.getOperand(2).getMetadata());
+                                MI.getOperand(2).getMetadata(), ST);
       } else if (isSpvIntrinsic(MI,
                                 Intrinsic::spv_assign_fpmaxerror_decoration)) {
         ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(

@@ -18,8 +18,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include "common_constants.h"
 #include "log_range_reduction.h"
+#include "src/__support/math/common_constants.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -29,6 +29,8 @@ using Float128 = typename fputil::DyadicFloat<128>;
 using LIBC_NAMESPACE::operator""_u128;
 
 namespace {
+
+using namespace common_constants_internal;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // A simple upper bound for the error of e_x * log(2) - log(r).

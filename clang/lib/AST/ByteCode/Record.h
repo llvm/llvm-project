@@ -76,6 +76,10 @@ public:
     return nullptr;
   }
 
+  /// Returns true for anonymous unions and records
+  /// with no destructor or for those with a trivial destructor.
+  bool hasTrivialDtor() const;
+
   using const_field_iter = FieldList::const_iterator;
   llvm::iterator_range<const_field_iter> fields() const {
     return llvm::make_range(Fields.begin(), Fields.end());

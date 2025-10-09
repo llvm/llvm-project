@@ -495,7 +495,7 @@ Expr<SomeComplex> PromoteMixedComplexReal(
 // N.B. When a "typeless" BOZ literal constant appears as one (not both!) of
 // the operands to a dyadic operation where one is permitted, it assumes the
 // type and kind of the other operand.
-template <template <typename> class OPR, bool CAN_BE_UNSIGNED>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -510,13 +510,8 @@ std::optional<Expr<SomeType>> NumericOperation(
                 std::move(rx), std::move(ry)));
           },
           [&](Expr<SomeUnsigned> &&ix, Expr<SomeUnsigned> &&iy) {
-            if constexpr (CAN_BE_UNSIGNED) {
-              return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
-                  std::move(ix), std::move(iy)));
-            } else {
-              messages.Say("Operands must not be UNSIGNED"_err_en_US);
-              return NoExpr();
-            }
+            return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
+                std::move(ix), std::move(iy)));
           },
           // Mixed REAL/INTEGER operations
           [](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
@@ -575,34 +570,31 @@ std::optional<Expr<SomeType>> NumericOperation(
           },
           // Operations with one typeless operand
           [&](BOZLiteralConstant &&bx, Expr<SomeInteger> &&iy) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+            return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](BOZLiteralConstant &&bx, Expr<SomeUnsigned> &&iy) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+            return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](BOZLiteralConstant &&bx, Expr<SomeReal> &&ry) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+            return NumericOperation<OPR>(messages,
                 AsGenericExpr(ConvertTo(ry, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](Expr<SomeInteger> &&ix, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
-                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
-                defaultRealKind);
+            return NumericOperation<OPR>(messages, std::move(x),
+                AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
           },
           [&](Expr<SomeUnsigned> &&ix, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
-                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
-                defaultRealKind);
+            return NumericOperation<OPR>(messages, std::move(x),
+                AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
           },
           [&](Expr<SomeReal> &&rx, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
-                std::move(x), AsGenericExpr(ConvertTo(rx, std::move(by))),
-                defaultRealKind);
+            return NumericOperation<OPR>(messages, std::move(x),
+                AsGenericExpr(ConvertTo(rx, std::move(by))), defaultRealKind);
           },
           // Error cases
           [&](Expr<SomeUnsigned> &&, auto &&) {
@@ -621,7 +613,7 @@ std::optional<Expr<SomeType>> NumericOperation(
       std::move(x.u), std::move(y.u));
 }
 
-template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
+template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -1217,6 +1209,15 @@ parser::Message *AttachDeclaration(
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
         unhosted->name(), GetUsedModule(*use).name());
+  } else if (const auto *common{
+                 unhosted->detailsIf<semantics::CommonBlockDetails>()}) {
+    parser::CharBlock at{unhosted->name()};
+    if (at.empty()) { // blank COMMON, with or without //
+      at = common->sourceLocation();
+    }
+    if (!at.empty()) {
+      message.Attach(at, "Declaration of /%s/"_en_US, unhosted->name());
+    }
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
@@ -1956,6 +1957,33 @@ private:
 bool IsVarSubexpressionOf(
     const Expr<SomeType> &sub, const Expr<SomeType> &super) {
   return VariableFinder{sub}(super);
+}
+
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
+  if (scope.IsDerivedType()) {
+    for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
+      const Symbol &symbol{*iter->second};
+      if (symbol.test(Symbol::Flag::ParentComp)) {
+        if (const semantics::DeclTypeSpec *type{symbol.GetType()}) {
+          if (const semantics::DerivedTypeSpec *derived{type->AsDerived()}) {
+            const semantics::Scope *parent{derived->scope()};
+            if (!parent) {
+              parent = derived->typeSymbol().scope();
+            }
+            if (parent) {
+              if (auto parentDepth{CountDerivedTypeAncestors(*parent)}) {
+                return 1 + *parentDepth;
+              }
+            }
+          }
+        }
+        return std::nullopt; // error recovery
+      }
+    }
+    return 0;
+  } else {
+    return std::nullopt; // error recovery
+  }
 }
 
 } // namespace Fortran::evaluate

@@ -13,7 +13,15 @@ from lit.llvm import llvm_config
 config.name = "Clang Tools"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+# We prefer the lit internal shell which provides a better user experience on
+# failures and is faster unless the user explicitly disables it with
+# LIT_USE_INTERNAL_SHELL=0 env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
+config.test_format = lit.formats.ShTest(not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -46,7 +54,8 @@ llvm_config.clang_setup()
 
 if config.clang_tidy_staticanalyzer:
     config.available_features.add("static-analyzer")
-
+if config.clang_tidy_custom_check:
+    config.available_features.add("custom-check")
 python_exec = shlex.quote(config.python_executable)
 check_clang_tidy = os.path.join(
     config.test_source_root, "clang-tidy", "check_clang_tidy.py"

@@ -822,7 +822,7 @@ define void @va1_caller() nounwind {
 ; LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    addi sp, sp, 16
 ; LP64E-WITHFP-NEXT:    ret
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -1326,7 +1326,7 @@ define void @va2_caller() nounwind {
 ; LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    addi sp, sp, 16
 ; LP64E-WITHFP-NEXT:    ret
- %1 = call i64 (ptr, ...) @va2(ptr undef, double 1.000000e+00)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, double 1.000000e+00)
  ret void
 }
 
