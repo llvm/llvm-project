@@ -699,6 +699,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::FPTrunc:
     case Instruction::FPExt:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::AddrSpaceCast:
     case Instruction::BitCast:
