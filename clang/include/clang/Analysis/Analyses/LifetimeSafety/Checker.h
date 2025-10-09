@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides the entry point for lifetime checking, which detects
-// use-after-free errors by checking if live origins hold loans that have
-// expired.
+// This file defines and enforces the lifetime safety policy. It detects
+// use-after-free errors by examining loan expiration points and checking if
+// any live origins hold the expired loans.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_CHECKER_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_CHECKER_H
 

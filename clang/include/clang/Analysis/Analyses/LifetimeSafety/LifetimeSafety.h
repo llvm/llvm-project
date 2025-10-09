@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the entry point for a dataflow-based static analysis
-// that checks for C++ lifetime violations.
+// This file defines the main entry point and orchestrator for the C++ Lifetime
+// Safety Analysis. It coordinates the entire analysis pipeline: fact
+// generation, loan propagation, live origins analysis, and enforcement of
+// lifetime safety policy.
 //
 // The analysis is based on the concepts of "origins" and "loans" to track
 // pointer lifetimes and detect issues like use-after-free and dangling

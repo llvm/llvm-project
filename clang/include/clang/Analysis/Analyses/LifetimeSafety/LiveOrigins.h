@@ -8,10 +8,11 @@
 //
 // This file defines the LiveOriginAnalysis, a backward dataflow analysis that
 // determines which origins are "live" at each program point. An origin is
-// "live" at a program point if there's a potential future use of the pointer it
-// represents. Liveness is "generated" by a read of origin's loan set (e.g., a
-// `UseFact`) and is "killed" (i.e., it stops being live) when its loan set is
-// overwritten (e.g. a OriginFlow killing the destination origin).
+// "live" at a program point if there's a potential future use of a pointer it
+// is associated with. Liveness is "generated" by a use of an origin (e.g., a
+// `UseFact` from a read of a pointer) and is "killed" (i.e., it stops being
+// live) when the origin is replaced by flowing a different origin into it
+// (e.g., an OriginFlow from an assignment that kills the destination).
 //
 // This information is used for detecting use-after-free errors, as it allows us
 // to check if a live origin holds a loan to an object that has already expired.
@@ -42,8 +43,8 @@ struct LivenessInfo {
   /// multiple uses along different paths, this will point to the use appearing
   /// earlier in the translation unit.
   /// This is 'null' when the origin is not live.
-
   const UseFact *CausingUseFact;
+
   /// The kind of liveness of the origin.
   /// `Must`: The origin is live on all control-flow paths from the current
   /// point to the function's exit (i.e. the current point is dominated by a set
@@ -79,7 +80,7 @@ public:
   ~LiveOriginsAnalysis();
 
   /// Returns the set of origins that are live at a specific program point,
-  /// along with the confidence level of their liveness.
+  /// along with the the details of the liveness.
   LivenessMap getLiveOriginsAt(ProgramPoint P) const;
 
   // Dump liveness values on all test points in the program.
