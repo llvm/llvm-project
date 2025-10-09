@@ -12089,9 +12089,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!SrcLen || !RetLen || (SrcLen % RetLen) != 0) return false;
 
     unsigned Lanes = SrcLen / RetLen;
-    unsigned Lane  = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
-    unsigned Base  = Lane * RetLen;
-    uint64_t Mask  = MaskImm.getZExtValue();
+    unsigned Lane = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
+    unsigned Base = Lane * RetLen;
+    uint64_t Mask = MaskImm.getZExtValue();
 
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(RetLen);
