@@ -1151,7 +1151,7 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
 ///
 class OuterProductOpLowering : public OpRewritePattern<vector::OuterProductOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {

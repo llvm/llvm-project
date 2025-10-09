@@ -21,12 +21,19 @@ def isOSOpenBSD : RuntimeLibcallPredicate<"TT.isOSOpenBSD()">;
 def isNotOSOpenBSD : RuntimeLibcallPredicate<"!TT.isOSOpenBSD()">;
 def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
 def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
+def isNotOSLinux : RuntimeLibcallPredicate<[{!TT.isOSLinux()}]>;
 def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
 def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment()}]>;
+
+def isNotOSLinuxAndNotOSOpenBSD : RuntimeLibcallPredicate<
+  [{!TT.isOSLinux() && !TT.isOSOpenBSD()}]>;
+
+def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
+  [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -290,6 +297,7 @@ def MEMMOVE : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 def BZERO : RuntimeLibcall;
+def STRLEN : RuntimeLibcall;
 
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
@@ -439,6 +447,7 @@ def AEABI_MEMCLR8 : RuntimeLibcall;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
+def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall;
 
 // XCore calls
 def MEMCPY_ALIGN_4 : RuntimeLibcall;
@@ -470,6 +479,16 @@ def OBJC_UNRETAINEDPOINTER : RuntimeLibcall;
 def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall;
 def OBJC_SYNC_ENTER : RuntimeLibcall;
 def OBJC_SYNC_EXIT : RuntimeLibcall;
+
+//--------------------------------------------------------------------
+// Global variable references
+//--------------------------------------------------------------------
+//
+// TODO: These are not libcalls and probably should be distinguished
+// in some way from callable functions.
+// --------------------------------------------------------------------
+
+def STACK_CHECK_GUARD : RuntimeLibcall;
 
 //--------------------------------------------------------------------
 // Define implementation default libcalls
@@ -1103,6 +1122,21 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
   def __powf128_finite : RuntimeLibcallImpl<POW_FINITE_F128>;
 }
 
+//--------------------------------------------------------------------
+// Global variable references
+//--------------------------------------------------------------------
+
+def __stack_chk_guard : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
+// Name used on OpenBSD
+def __guard_local : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
+// Name used with Windows MSVC
+def __security_cookie : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
+// Name used on AIX
+def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
+
 //===----------------------------------------------------------------------===//
 // Common Libcall Sets
 //===----------------------------------------------------------------------===//
@@ -1159,7 +1193,8 @@ defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
 defvar SecurityCheckCookieIfWinMSVC =
-    LibcallImpls<(add __security_check_cookie), isWindowsMSVCEnvironment>;
+    LibcallImpls<(add __security_check_cookie, __security_cookie),
+                 isWindowsMSVCOrItaniumEnvironment>;
 
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
@@ -1205,10 +1240,13 @@ defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwi
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
+defvar has__stack_chk_guard =
+    LibcallImpls<(add __stack_chk_guard), isNotOSOpenBSD>;
 defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
+defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 
-defvar DefaultStackProtector = (add has__stack_chk_fail,
-                                    has__stack_smash_handler);
+defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
+    has__stack_smash_handler, has___guard_local);
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1357,7 +1395,9 @@ def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
                                 arm64ec___stack_chk_fail,
-                                LibcallImpls<(add __security_check_cookie_arm64ec),
+                                __stack_chk_guard,
+                                LibcallImpls<(add __security_check_cookie_arm64ec,
+                                                  __security_cookie),
                                               isWindowsMSVCEnvironment>,
                                 ExceptionModelCallsArm64EC)>;
 
@@ -1576,13 +1616,6 @@ def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 
-// In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
-// they have a __gnu_ prefix (which is the default).
-def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
-                                        isTargetAEABIAndAAPCS_ABI> {
-  let CallingConv = ARM_AAPCS;
-}
-
 // The half <-> float conversion functions are always soft-float on
 // non-watchos platforms, but are needed for some targets which use a
 // hard-float calling convention by default.
@@ -1590,6 +1623,27 @@ def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
   [{TT.isWatchABI() ? DefaultCC :
     (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
 >;
+
+def ARMLibgccHalfConvertCalls :
+  LibcallImpls<(add __truncsfhf2, __extendhfsf2),
+    RuntimeLibcallPredicate<[{!TT.isTargetAEABI() && TT.isOSBinFormatMachO()}]>> {
+  let CallingConv = ARMHalfConvertLibcallCallingConv;
+}
+
+// FIXME: These conditions are probably bugged. We're using the
+// default libgcc call when the other cases are replaced.
+def ARMDoubleToHalfCalls :
+  LibcallImpls<(add __truncdfhf2),
+    RuntimeLibcallPredicate<[{!TT.isTargetAEABI()}]>> {
+  let CallingConv = ARMHalfConvertLibcallCallingConv;
+}
+
+// In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
+// they have a __gnu_ prefix (which is the default).
+def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
+                                        isTargetAEABIAndAAPCS_ABI> {
+  let CallingConv = ARM_AAPCS;
+}
 
 def GNUEABIHalfConvertCalls :
   LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
@@ -1717,7 +1771,9 @@ def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      (add WinDefaultLibcallImpls,
+      (add (sub WinDefaultLibcallImpls, ARMLibgccHalfConvertCalls,
+                                        GNUEABIHalfConvertCalls,
+                                        ARMDoubleToHalfCalls),
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
            LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1731,8 +1787,10 @@ def ARMSystemLibrary
 
            AEABICalls,
            AEABI45MemCalls,
+           ARMLibgccHalfConvertCalls,
            EABIHalfConvertCalls,
            GNUEABIHalfConvertCalls,
+           ARMDoubleToHalfCalls,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
@@ -1837,6 +1895,8 @@ def __hexagon_fast2_sqrtdf2 : RuntimeLibcallImpl<FAST_SQRT_F64>;
 
 def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
     : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
+
+def hexagon_memcpy_forward_vp4cp4n2 : RuntimeLibcallImpl<HEXAGON_VOLATILE_MEMCPY>;
 }
 
 def isHexagon : RuntimeLibcallPredicate<"TT.getArch() == Triple::hexagon">;
@@ -1848,7 +1908,7 @@ def HexagonSystemLibrary
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
     __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-    exp10f, exp10, exp10l_f128, __stack_chk_fail)>;
+    exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -1859,7 +1919,7 @@ def isLanai : RuntimeLibcallPredicate<"TT.getArch() == Triple::lanai">;
 // Use fast calling convention for library functions.
 def LanaiSystemLibrary
     : SystemRuntimeLibrary<isLanai, (add DefaultRuntimeLibcallImpls,
-                                         __stack_chk_fail)> {
+                                        __stack_chk_fail, __stack_chk_guard)> {
   let DefaultLibcallCallingConv = FASTCC;
 }
 
@@ -2157,7 +2217,8 @@ def MSP430SystemLibrary
       __mspabi_slll,
       // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
 
-      __stack_chk_fail
+      __stack_chk_fail,
+      __stack_chk_guard
   )
 >;
 
@@ -2212,6 +2273,7 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
@@ -2219,6 +2281,7 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strlen : RuntimeLibcallImpl<STRLEN>;
 }
 
 defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);
@@ -2251,7 +2314,11 @@ def PPCSystemLibrary
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           DefaultStackProtector)>;
+           has__stack_chk_fail,
+           has__stack_smash_handler,
+           has___guard_local,
+           AvailableIf<__ssp_canary_word, isAIX>,
+           AvailableIf<__stack_chk_guard, isNotAIX>)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -2334,7 +2401,10 @@ def SPARCSystemLibrary
        LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       DefaultStackProtector)
+       has__stack_chk_fail,
+       has__stack_smash_handler,
+       has___guard_local,
+       AvailableIf<__stack_chk_guard, isNotOSLinuxAndNotOSOpenBSD>)
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2544,7 +2614,7 @@ def WasmSystemLibrary
            exp10f, exp10,
            _Unwind_CallPersonality,
            emscripten_return_address,
-           __stack_chk_fail)>;
+           __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // Legacy Default Runtime Libcalls

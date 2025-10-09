@@ -292,7 +292,7 @@ void ProfOStream::patch(ArrayRef<PatchItem> P) {
     for (const auto &K : P) {
       for (int I = 0, E = K.D.size(); I != E; I++) {
         uint64_t Bytes =
-            endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+            endian::byte_swap<uint64_t>(K.D[I], llvm::endianness::little);
         Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                      (const char *)&Bytes, sizeof(uint64_t));
       }
@@ -1607,7 +1607,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   const char *EntryName =
       (Level == ProgramLevel ? "functions" : "edge counters");
   if (Level == ProgramLevel) {
-    OS << "Profile overlap infomation for base_profile: " << *BaseFilename
+    OS << "Profile overlap information for base_profile: " << *BaseFilename
        << " and test_profile: " << *TestFilename << "\nProgram level:\n";
   } else {
     OS << "Function level:\n"

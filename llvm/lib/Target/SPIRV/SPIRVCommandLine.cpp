@@ -147,7 +147,13 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_float_controls2",
          SPIRV::Extension::Extension::SPV_KHR_float_controls2},
         {"SPV_INTEL_tensor_float32_conversion",
-         SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion}};
+         SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion},
+        {"SPV_KHR_bfloat16", SPIRV::Extension::Extension::SPV_KHR_bfloat16},
+        {"SPV_EXT_relaxed_printf_string_address_space",
+         SPIRV::Extension::Extension::
+             SPV_EXT_relaxed_printf_string_address_space},
+        {"SPV_INTEL_predicated_io",
+         SPIRV::Extension::Extension::SPV_INTEL_predicated_io}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
@@ -228,7 +234,7 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
         SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
         ExtensionEnum);
 
-    if (std::count(AllowedEnv.begin(), AllowedEnv.end(), CurrentEnvironment))
+    if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
       R.insert(ExtensionEnum);
   }
 

@@ -406,15 +406,6 @@ public:
           }
         }
       }
-      void VisitDependentTemplateSpecializationType(
-          const DependentTemplateSpecializationType *DTST) {
-        if (Outer.Resolver) {
-          for (const NamedDecl *ND :
-               Outer.Resolver->resolveTemplateSpecializationType(DTST)) {
-            Outer.add(ND, Flags);
-          }
-        }
-      }
       void VisitTypedefType(const TypedefType *TT) {
         if (shouldSkipTypedef(TT->getDecl()))
           return;
@@ -455,11 +446,13 @@ public:
         // class template specializations have a (specialized) CXXRecordDecl.
         else if (const CXXRecordDecl *RD = TST->getAsCXXRecordDecl())
           Outer.add(RD, Flags); // add(Decl) will despecialize if needed.
-        else {
+        else if (auto *TD = TST->getTemplateName().getAsTemplateDecl())
           // fallback: the (un-specialized) declaration from primary template.
-          if (auto *TD = TST->getTemplateName().getAsTemplateDecl())
-            Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
-        }
+          Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
+        else if (Outer.Resolver)
+          for (const NamedDecl *ND :
+               Outer.Resolver->resolveTemplateSpecializationType(TST))
+            Outer.add(ND, Flags);
       }
       void
       VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *STTPT) {
@@ -898,15 +891,6 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
           L.getQualifierLoc(), L.getNameLoc(), /*IsDecl=*/false,
           explicitReferenceTargets(DynTypedNode::create(L.getType()),
                                    DeclRelation::Alias, Resolver)});
-    }
-
-    void VisitDependentTemplateSpecializationTypeLoc(
-        DependentTemplateSpecializationTypeLoc L) {
-      Refs.push_back(
-          ReferenceLoc{L.getQualifierLoc(), L.getTemplateNameLoc(),
-                       /*IsDecl=*/false,
-                       explicitReferenceTargets(
-                           DynTypedNode::create(L.getType()), {}, Resolver)});
     }
 
     void VisitDependentNameTypeLoc(DependentNameTypeLoc L) {

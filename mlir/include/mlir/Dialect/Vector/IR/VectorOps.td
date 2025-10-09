@@ -24,6 +24,7 @@ include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/IndexingMapOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/MemOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -675,7 +676,7 @@ def Vector_ExtractOp :
   }];
 
   let arguments = (ins
-    AnyVectorOfAnyRank:$vector,
+    AnyVectorOfAnyRank:$source,
     Variadic<Index>:$dynamic_position,
     DenseI64ArrayAttr:$static_position
   );
@@ -692,7 +693,7 @@ def Vector_ExtractOp :
 
   let extraClassDeclaration = extraPoisonClassDeclaration # [{
     VectorType getSourceVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getSource().getType());
     }
 
     /// Return a vector with all the static and dynamic position indices.
@@ -709,12 +710,17 @@ def Vector_ExtractOp :
     bool hasDynamicPosition() {
       return !getDynamicPosition().empty();
     }
+
+    /// Wrapper for getSource, which replaced getVector.
+    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
+      return getSource();
+    }
   }];
 
   let assemblyFormat = [{
-    $vector ``
+    $source ``
     custom<DynamicIndexList>($dynamic_position, $static_position)
-    attr-dict `:` type($result) `from` type($vector)
+    attr-dict `:` type($result) `from` type($source)
   }];
 
   let hasCanonicalizer = 1;
@@ -800,6 +806,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
   let results = (outs Variadic<AnyType>:$elements);
   let assemblyFormat = "$source attr-dict `:` type($source)";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
@@ -972,10 +979,6 @@ def Vector_ScalableInsertOp :
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
     }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
-    }
   }];
 }
 
@@ -1027,9 +1030,9 @@ def Vector_ScalableExtractOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
+    /// Wrapper for getSource, which replaced getVector.
+    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
+      return getSource();
     }
   }];
 }
@@ -1084,10 +1087,6 @@ def Vector_InsertStridedSliceOp :
       return llvm::any_of(getStrides(), [](Attribute attr) {
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
-    }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
     }
   }];
 
@@ -1186,7 +1185,7 @@ def Vector_ExtractStridedSliceOp :
   Vector_Op<"extract_strided_slice", [Pure,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins AnyVectorOfNonZeroRank:$vector, I64ArrayAttr:$offsets,
+    Arguments<(ins AnyVectorOfNonZeroRank:$source, I64ArrayAttr:$offsets,
                I64ArrayAttr:$sizes, I64ArrayAttr:$strides)>,
     Results<(outs AnyVectorOfNonZeroRank)> {
   let summary = "extract_strided_slice operation";
@@ -1221,7 +1220,7 @@ def Vector_ExtractStridedSliceOp :
   ];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getSource().getType());
     }
     void getOffsets(SmallVectorImpl<int64_t> &results);
     bool hasNonUnitStrides() {
@@ -1229,11 +1228,15 @@ def Vector_ExtractStridedSliceOp :
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
     }
+    /// Wrapper for getSource, which replaced getVector.
+    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
+      return getSource();
+    }
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type(results)";
 }
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
@@ -1245,6 +1248,7 @@ def Vector_TransferReadOp :
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
@@ -1492,6 +1496,7 @@ def Vector_TransferWriteOp :
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
   ]>,
@@ -1648,6 +1653,7 @@ def Vector_TransferWriteOp :
 
 def Vector_LoadOp : Vector_Op<"load", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
   ]> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{
@@ -1712,17 +1718,15 @@ def Vector_LoadOp : Vector_Op<"load", [
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "VectorType":$resultType,
@@ -1766,6 +1770,7 @@ def Vector_LoadOp : Vector_Op<"load", [
 
 def Vector_StoreOp : Vector_Op<"store", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
   ]> {
   let summary = "writes an n-D vector to an n-D slice of memory";
   let description = [{
@@ -1828,9 +1833,8 @@ def Vector_StoreOp : Vector_Op<"store", [
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
 
   let arguments = (ins
@@ -1839,8 +1843,7 @@ def Vector_StoreOp : Vector_Op<"store", [
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
@@ -1872,13 +1875,12 @@ def Vector_StoreOp : Vector_Op<"store", [
 }
 
 def Vector_MaskedLoadOp :
-  Vector_Op<"maskedload">,
+  Vector_Op<"maskedload", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -1917,9 +1919,8 @@ def Vector_MaskedLoadOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1966,13 +1967,12 @@ def Vector_MaskedLoadOp :
 }
 
 def Vector_MaskedStoreOp :
-  Vector_Op<"maskedstore">,
+  Vector_Op<"maskedstore", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -2010,9 +2010,8 @@ def Vector_MaskedStoreOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2048,13 +2047,15 @@ def Vector_MaskedStoreOp :
 def Vector_GatherOp :
   Vector_Op<"gather", [
     DeclareOpInterfaceMethods<MaskableOpInterface>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
   ]>,
     Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
-               Variadic<Index>:$indices,
-               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
+               Variadic<Index>:$offsets,
+               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
@@ -2074,11 +2075,11 @@ def Vector_GatherOp :
 
     ```mlir
     func.func @gather_3D_to_2D(
-        %base: memref<?x10x?xf32>, %i0: index, %i1: index, %i2: index,
-        %index_vec: vector<2x3xi32>, %mask: vector<2x3xi1>,
+        %base: memref<?x10x?xf32>, %ofs_0: index, %ofs_1: index, %ofs_2: index,
+        %indices: vector<2x3xi32>, %mask: vector<2x3xi1>,
         %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
-            %result = vector.gather %base[%i0, %i1, %i2]
-                                   [%index_vec], %mask, %fall_thru : [...]
+            %result = vector.gather %base[%ofs_0, %ofs_1, %ofs_2]
+                                   [%indices], %mask, %fall_thru : [...]
             return %result : vector<2x3xf32>
     }
     ```
@@ -2086,7 +2087,7 @@ def Vector_GatherOp :
     The indexing semantics are then,
 
     ```
-    result[i,j] := if mask[i,j] then base[i0, i1, i2 + index_vec[i,j]]
+    result[i,j] := if mask[i,j] then base[i0, i1, i2 + indices[i,j]]
                    else pass_thru[i,j]
     ```
     The index into `base` only varies in the innermost ((k-1)-th) dimension.
@@ -2095,6 +2096,15 @@ def Vector_GatherOp :
     given base, the behavior is undefined. If a mask bit is not set, the value
     comes from the pass-through vector regardless of the index, and the index is
     allowed to be out-of-bounds.
+
+    The gather operation can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a gather.
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    gather operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Examples:
 
@@ -2111,28 +2121,43 @@ def Vector_GatherOp :
 
   let extraClassDeclaration = [{
     ShapedType getBaseType() { return getBase().getType(); }
-    VectorType getIndexVectorType() { return getIndexVec().getType(); }
+    VectorType getIndexVectorType() { return getIndices().getType(); }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getPassThruVectorType() { return getPassThru().getType(); }
     VectorType getVectorType() { return getResult().getType(); }
   }];
 
   let assemblyFormat =
-    "$base `[` $indices `]` `[` $index_vec `]` `,` "
+    "$base `[` $offsets `]` `[` $indices `]` `,` "
     "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
-    "type($index_vec)  `,` type($mask) `,` type($pass_thru) "
+    "type($indices)  `,` type($mask) `,` type($pass_thru) "
     "`into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, index_vec, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ScatterOp :
-  Vector_Op<"scatter">,
+  Vector_Op<"scatter", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
-               Variadic<Index>:$indices,
-               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
+               Variadic<Index>:$offsets,
+               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2166,6 +2191,11 @@ def Vector_ScatterOp :
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    scatter operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
+
     Examples:
 
     ```mlir
@@ -2179,25 +2209,39 @@ def Vector_ScatterOp :
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() { return getBase().getType(); }
-    VectorType getIndexVectorType() { return getIndexVec().getType(); }
+    VectorType getIndexVectorType() { return getIndices().getType(); }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
   let assemblyFormat =
-      "$base `[` $indices `]` `[` $index_vec `]` `,` "
+      "$base `[` $offsets `]` `[` $indices `]` `,` "
       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-      "type($index_vec)  `,` type($mask) `,` type($valueToStore)";
+      "type($indices)  `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">: $alignment), [{
+      return build($_builder, $_state, base, indices, index_vec, mask, valueToStore,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ExpandLoadOp :
-  Vector_Op<"expandload">,
+  Vector_Op<"expandload", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
@@ -2229,6 +2273,11 @@ def Vector_ExpandLoadOp :
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
+
     Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
@@ -2259,14 +2308,28 @@ def Vector_ExpandLoadOp :
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_CompressStoreOp :
-  Vector_Op<"compressstore">,
+  Vector_Op<"compressstore", [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
@@ -2297,6 +2360,11 @@ def Vector_CompressStoreOp :
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
+
     Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
@@ -2325,6 +2393,17 @@ def Vector_CompressStoreOp :
       "type($base) `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, base, indices, valueToStore, mask,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ShapeCastOp :
@@ -2947,6 +3026,7 @@ def Vector_ScanOp :
 
 def Vector_StepOp : Vector_Op<"step", [
     Pure,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]> {
   let summary = "A linear sequence of values from 0 to N";

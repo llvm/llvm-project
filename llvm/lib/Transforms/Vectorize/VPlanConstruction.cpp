@@ -193,6 +193,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
     }
 
     if (auto *SI = dyn_cast<SwitchInst>(Inst)) {
+      // Don't emit recipes for unconditional switch instructions.
+      if (SI->getNumCases() == 0)
+        continue;
       SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
@@ -451,6 +454,30 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        LatchDL);
 }
 
+/// Creates extracts for values in \p Plan defined in a loop region and used
+/// outside a loop region.
+static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
+  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
+    if (EB->getSinglePredecessor() != MiddleVPBB)
+      continue;
+
+    for (VPRecipeBase &R : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
+      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
+        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
+        if (!Inc)
+          continue;
+        assert(ExitIRI->getNumOperands() == 1 &&
+               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+               "exit values from early exits must be fixed when branch to "
+               "early-exit is added");
+        ExitIRI->extractLastLaneOfFirstOperand(B);
+      }
+    }
+  }
+}
+
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
                                PredicatedScalarEvolution &PSE, Loop *TheLoop) {
   VPDominatorTree VPDT;
@@ -500,6 +527,8 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   // check.
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
+
+  createExtractsForLiveOuts(Plan, MiddleVPBB);
 }
 
 std::unique_ptr<VPlan>
@@ -512,8 +541,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       bool HasUncountableEarlyExit,
-                                       VFRange &Range) {
+                                       bool HasUncountableEarlyExit) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
@@ -533,8 +561,7 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
-                                   Range);
+                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
         HandledUncountableEarlyExit = true;
       } else {
         for (VPRecipeBase &R : EB->phis())
@@ -607,30 +634,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-void VPlanTransforms::createExtractsForLiveOuts(VPlan &Plan) {
-  for (VPBasicBlock *EB : Plan.getExitBlocks()) {
-    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-    VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-
-    if (EB->getSinglePredecessor() != Plan.getMiddleBlock())
-      continue;
-
-    for (VPRecipeBase &R : EB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
-        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
-        if (!Inc || !Inc->getParent()->getParent())
-          continue;
-        assert(ExitIRI->getNumOperands() == 1 &&
-               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
-               "exit values from early exits must be fixed when branch to "
-               "early-exit is added");
-        ExitIRI->extractLastLaneOfFirstOperand(B);
-      }
-    }
-  }
-}
-
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
 // including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};
@@ -667,6 +670,126 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
   }
+}
+
+void VPlanTransforms::addMinimumIterationCheck(
+    VPlan &Plan, ElementCount VF, unsigned UF,
+    ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+    bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
+    const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE) {
+  // Generate code to check if the loop's trip count is less than VF * UF, or
+  // equal to it in case a scalar epilogue is required; this implies that the
+  // vector trip count is zero. This check also covers the case where adding one
+  // to the backedge-taken count overflowed leading to an incorrect trip count
+  // of zero. In this case we will also jump to the scalar loop.
+  CmpInst::Predicate CmpPred =
+      RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  // If tail is to be folded, vector loop takes care of all iterations.
+  VPValue *TripCountVPV = Plan.getTripCount();
+  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, SE);
+  Type *TripCountTy = TripCount->getType();
+  auto GetMinTripCount = [&]() -> const SCEV * {
+    // Compute max(MinProfitableTripCount, UF * VF) and return it.
+    const SCEV *VFxUF =
+        SE.getElementCount(TripCountTy, (VF * UF), SCEV::FlagNUW);
+    if (UF * VF.getKnownMinValue() >=
+        MinProfitableTripCount.getKnownMinValue()) {
+      // TODO: SCEV should be able to simplify test.
+      return VFxUF;
+    }
+    const SCEV *MinProfitableTripCountSCEV =
+        SE.getElementCount(TripCountTy, MinProfitableTripCount, SCEV::FlagNUW);
+    return SE.getUMaxExpr(MinProfitableTripCountSCEV, VFxUF);
+  };
+
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  VPBuilder Builder(EntryVPBB);
+  VPValue *TripCountCheck = Plan.getFalse();
+  const SCEV *Step = GetMinTripCount();
+  if (TailFolded) {
+    if (CheckNeededWithTailFolding) {
+      // vscale is not necessarily a power-of-2, which means we cannot guarantee
+      // an overflow to zero when updating induction variables and so an
+      // additional overflow check is required before entering the vector loop.
+
+      // Get the maximum unsigned value for the type.
+      VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
+          TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
+      VPValue *DistanceToMax = Builder.createNaryOp(
+          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
+          DebugLoc::getUnknown());
+
+      // Don't execute the vector loop if (UMax - n) < (VF * UF).
+      // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
+      // minProfitableTripCount).
+      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
+                                          Builder.createExpandSCEV(Step), DL);
+    } else {
+      // TripCountCheck = false, folding tail implies positive vector trip
+      // count.
+    }
+  } else {
+    // TODO: Emit unconditional branch to vector preheader instead of
+    // conditional branch with known condition.
+    TripCount = SE.applyLoopGuards(TripCount, OrigLoop);
+    // Check if the trip count is < the step.
+    if (SE.isKnownPredicate(CmpPred, TripCount, Step)) {
+      // TODO: Ensure step is at most the trip count when determining max VF and
+      // UF, w/o tail folding.
+      TripCountCheck = Plan.getTrue();
+    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(CmpPred),
+                                    TripCount, Step)) {
+      // Generate the minimum iteration check only if we cannot prove the
+      // check is known to be true, or known to be false.
+      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step);
+      TripCountCheck = Builder.createICmp(
+          CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
+    } // else step known to be < trip count, use TripCountCheck preset to false.
+  }
+  VPInstruction *Term =
+      Builder.createNaryOp(VPInstruction::BranchOnCond, {TripCountCheck}, DL);
+  if (MinItersBypassWeights) {
+    MDBuilder MDB(Plan.getContext());
+    MDNode *BranchWeights = MDB.createBranchWeights(
+        ArrayRef(MinItersBypassWeights, 2), /*IsExpected=*/false);
+    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  }
+}
+
+void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
+    VPlan &Plan, Value *TripCount, Value *VectorTripCount,
+    bool RequiresScalarEpilogue, ElementCount EpilogueVF, unsigned EpilogueUF,
+    unsigned MainLoopStep, unsigned EpilogueLoopStep, ScalarEvolution &SE) {
+  // Add the minimum iteration check for the epilogue vector loop.
+  VPValue *TC = Plan.getOrAddLiveIn(TripCount);
+  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
+  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
+      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
+  VPValue *Count = Builder.createNaryOp(
+      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
+      DebugLoc::getUnknown(), "n.vec.remaining");
+
+  // Generate code to check if the loop's trip count is less than VF * UF of
+  // the vector epilogue loop.
+  auto P = RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  auto *CheckMinIters = Builder.createICmp(
+      P, Count, VFxUF, DebugLoc::getUnknown(), "min.epilog.iters.check");
+  VPInstruction *Branch =
+      Builder.createNaryOp(VPInstruction::BranchOnCond, CheckMinIters);
+
+  // We assume the remaining `Count` is equally distributed in
+  // [0, MainLoopStep)
+  // So the probability for `Count < EpilogueLoopStep` should be
+  // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+  // TODO: Improve the estimate by taking the estimated trip count into
+  // consideration.
+  unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+  const uint32_t Weights[] = {EstimatedSkipCount,
+                              MainLoopStep - EstimatedSkipCount};
+  MDBuilder MDB(Plan.getContext());
+  MDNode *BranchWeights =
+      MDB.createBranchWeights(Weights, /*IsExpected=*/false);
+  Branch->addMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
@@ -717,8 +840,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
     if (RedPhiR)
       return false;
-    if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+    if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Cur->getRecurrenceKind())) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -738,10 +861,9 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   if (!MinMaxOp)
     return false;
 
-  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
-  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+             RedPhiR->getRecurrenceKind()) &&
          "unsupported reduction");
-  (void)RedPhiRK;
 
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all

@@ -597,9 +597,9 @@ struct BinaryOpc_match {
   unsigned Opcode;
   LHS_P LHS;
   RHS_P RHS;
-  std::optional<SDNodeFlags> Flags;
+  SDNodeFlags Flags;
   BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R,
-                  std::optional<SDNodeFlags> Flgs = std::nullopt)
+                  SDNodeFlags Flgs = SDNodeFlags())
       : Opcode(Opc), LHS(L), RHS(R), Flags(Flgs) {}
 
   template <typename MatchContext>
@@ -613,10 +613,7 @@ struct BinaryOpc_match {
              RHS.match(Ctx, N->getOperand(EO.FirstIndex)))))
         return false;
 
-      if (!Flags.has_value())
-        return true;
-
-      return (*Flags & N->getFlags()) == *Flags;
+      return (Flags & N->getFlags()) == Flags;
     }
 
     return false;
@@ -1074,6 +1071,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctlz(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
 }
 
 // === Constants ===

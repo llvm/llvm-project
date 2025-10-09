@@ -519,7 +519,9 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
+
+  llvm::Triple Triple(Prefix);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Triple, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -652,6 +654,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::VerifyDebugInfoJobClass:
   case Action::BinaryAnalyzeJobClass:
   case Action::BinaryTranslatorJobClass:
+  case Action::ObjcopyJobClass:
     llvm_unreachable("Invalid tool kind.");
 
   case Action::CompileJobClass:
@@ -1620,7 +1623,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::CFICastStrict | SanitizerKind::FloatDivideByZero |
       SanitizerKind::KCFI | SanitizerKind::UnsignedIntegerOverflow |
       SanitizerKind::UnsignedShiftBase | SanitizerKind::ImplicitConversion |
-      SanitizerKind::Nullability | SanitizerKind::LocalBounds;
+      SanitizerKind::Nullability | SanitizerKind::LocalBounds |
+      SanitizerKind::AllocToken;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm ||

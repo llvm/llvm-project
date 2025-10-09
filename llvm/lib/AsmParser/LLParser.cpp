@@ -1258,6 +1258,9 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       GV->setPartition(Lex.getStrVal());
       if (parseToken(lltok::StringConstant, "expected partition string"))
         return true;
+    } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
+      if (parseGlobalObjectMetadataAttachment(*GI.get()))
+        return true;
     } else {
       return tokError("unknown alias or ifunc property!");
     }
@@ -2312,6 +2315,15 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
 #undef CC_VLS_CASE
     }
     return false;
+  case lltok::kw_cheriot_compartmentcallcc:
+    CC = CallingConv::CHERIoT_CompartmentCall;
+    break;
+  case lltok::kw_cheriot_compartmentcalleecc:
+    CC = CallingConv::CHERIoT_CompartmentCallee;
+    break;
+  case lltok::kw_cheriot_librarycallcc:
+    CC = CallingConv::CHERIoT_LibraryCall;
+    break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -5849,11 +5861,11 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   Result = DICompileUnit::getDistinct(
-      Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
-      runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      rangesBaseAddress.Val, sysroot.Val, sdk.Val);
+      Context, DISourceLanguageName(language.Val), file.Val, producer.Val,
+      isOptimized.Val, flags.Val, runtimeVersion.Val, splitDebugFilename.Val,
+      emissionKind.Val, enums.Val, retainedTypes.Val, globals.Val, imports.Val,
+      macros.Val, dwoId.Val, splitDebugInlining.Val, debugInfoForProfiling.Val,
+      nameTableKind.Val, rangesBaseAddress.Val, sysroot.Val, sdk.Val);
   return false;
 }
 

@@ -9,6 +9,7 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
@@ -45,7 +46,7 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
   DATAFLOW_DEBUG({
     if (inserted) {
       LDBG() << "Creating dependency between " << debugName << " of " << anchor
-             << "\nand " << debugName << " on " << dependent;
+             << "\nand " << debugName << " on " << *dependent;
     }
   });
 }
@@ -62,11 +63,12 @@ void ProgramPoint::print(raw_ostream &os) const {
     return;
   }
   if (!isBlockStart()) {
-    os << "<after operation>:";
-    return getPrevOp()->print(os, OpPrintingFlags().skipRegions());
+    os << "<after operation>:"
+       << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
+    return;
   }
-  os << "<before operation>:";
-  return getNextOp()->print(os, OpPrintingFlags().skipRegions());
+  os << "<before operation>:"
+     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
 }
 
 //===----------------------------------------------------------------------===//
@@ -108,6 +110,12 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   isRunning = true;
   auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
 
+  bool isInterprocedural = config.isInterprocedural();
+  auto restoreInterprocedural = llvm::make_scope_exit(
+      [&]() { config.setInterprocedural(isInterprocedural); });
+  if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
+    config.setInterprocedural(false);
+
   // Initialize equivalent lattice anchors.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
     analysis.initializeEquivalentLatticeAnchor(top);
@@ -128,7 +136,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     worklist.pop();
 
     DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
-                          << "' on: " << point);
+                          << "' on: " << *point);
     if (failed(analysis->visit(point)))
       return failure();
   }

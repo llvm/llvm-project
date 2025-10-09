@@ -67,7 +67,6 @@ static void populateTransformInterpreterSubmodule(nb::module_ &m) {
         // root. This is awkward, but we don't have access to PyMlirContext
         // object here otherwise.
         nb::object obj = nb::cast(payloadRoot);
-        obj.attr("context").attr("_clear_live_operations_inside")(payloadRoot);
 
         MlirLogicalResult result = mlirTransformApplyNamedSequence(
             payloadRoot, transformRoot, transformModule, options.options);

@@ -123,7 +123,7 @@ def DirectiveTypeValid : TestFormat_Op<[{
 
 // CHECK-NOT: error
 def LiteralValid : TestFormat_Op<[{
-  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `*` ` ` `` `->` `\n` `abc$._`
+  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `-` `*` ` ` `` `->` `\n` `abc$._`
   attr-dict
 }]>;
 

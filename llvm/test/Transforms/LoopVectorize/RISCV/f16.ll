@@ -26,7 +26,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-LABEL: define void @fadd(
 ; ZVFHMIN-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZVFHMIN-NEXT:  [[ENTRY:.*:]]
-; ZVFHMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; ZVFHMIN-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFHMIN:       [[VECTOR_BODY]]:
@@ -42,23 +42,10 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
 ; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[INDEX]]
 ; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
-; ZVFHMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; ZVFHMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ZVFHMIN-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; ZVFHMIN-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ZVFHMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
-; ZVFHMIN:       [[SCALAR_PH]]:
-; ZVFHMIN-NEXT:    br label %[[LOOP:.*]]
-; ZVFHMIN:       [[LOOP]]:
-; ZVFHMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; ZVFHMIN-NEXT:    [[A_GEP:%.*]] = getelementptr half, ptr [[A]], i64 [[I]]
-; ZVFHMIN-NEXT:    [[B_GEP:%.*]] = getelementptr half, ptr [[B]], i64 [[I]]
-; ZVFHMIN-NEXT:    [[X:%.*]] = load half, ptr [[A_GEP]], align 2
-; ZVFHMIN-NEXT:    [[Y:%.*]] = load half, ptr [[B_GEP]], align 2
-; ZVFHMIN-NEXT:    [[Z:%.*]] = fadd half [[X]], [[Y]]
-; ZVFHMIN-NEXT:    store half [[Z]], ptr [[A_GEP]], align 2
-; ZVFHMIN-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; ZVFHMIN-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; ZVFHMIN-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; ZVFHMIN:       [[EXIT]]:
 ; ZVFHMIN-NEXT:    ret void
 ;

@@ -24,7 +24,6 @@
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -1648,7 +1647,6 @@ void MipsConstantIslands::prescanForConstants() {
           MI.removeOperand(1);
           MI.removeOperand(1);
           MI.addOperand(MachineOperand::CreateCPI(index, 0));
-          MI.addOperand(MachineOperand::CreateImm(4));
         }
         break;
       }

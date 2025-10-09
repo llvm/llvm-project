@@ -1653,6 +1653,17 @@ void Sema::FilterLookupForScope(LookupResult &R, DeclContext *Ctx, Scope *S,
   F.done();
 }
 
+static bool isImplicitInstantiation(NamedDecl *D) {
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    return VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+    return RD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+
+  return false;
+}
+
 bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   // [module.interface]p7:
   // A declaration is attached to a module as follows:
@@ -1667,6 +1678,14 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
     makeMergedDefinitionVisible(New);
     return false;
   }
+
+  // Although we have questions for the module ownership of implicit
+  // instantiations, it should be sure that we shouldn't diagnose the
+  // redeclaration of incorrect module ownership for different implicit
+  // instantiations in different modules. We will diagnose the redeclaration of
+  // incorrect module ownership for the template itself.
+  if (isImplicitInstantiation(New) || isImplicitInstantiation(Old))
+    return false;
 
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
@@ -3858,6 +3877,23 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     RequiresAdjustment = true;
   }
 
+  // If the declaration is marked with cfi_unchecked_callee but the definition
+  // isn't, the definition is also cfi_unchecked_callee.
+  if (auto *FPT1 = OldType->getAs<FunctionProtoType>()) {
+    if (auto *FPT2 = NewType->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI1 = FPT1->getExtProtoInfo();
+      FunctionProtoType::ExtProtoInfo EPI2 = FPT2->getExtProtoInfo();
+
+      if (EPI1.CFIUncheckedCallee && !EPI2.CFIUncheckedCallee) {
+        EPI2.CFIUncheckedCallee = true;
+        NewQType = Context.getFunctionType(FPT2->getReturnType(),
+                                           FPT2->getParamTypes(), EPI2);
+        NewType = cast<FunctionType>(NewQType);
+        New->setType(NewQType);
+      }
+    }
+  }
+
   // Merge regparm attribute.
   if (OldTypeInfo.getHasRegParm() != NewTypeInfo.getHasRegParm() ||
       OldTypeInfo.getRegParm() != NewTypeInfo.getRegParm()) {
@@ -5291,15 +5327,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     //   UNION_TYPE;   <- where UNION_TYPE is a typedef union.
     if ((Tag && Tag->getDeclName()) ||
         DS.getTypeSpecType() == DeclSpec::TST_typename) {
-      RecordDecl *Record = nullptr;
-      if (Tag)
-        Record = dyn_cast<RecordDecl>(Tag);
-      else if (const RecordType *RT =
-                   DS.getRepAsType().get()->getAsStructureType())
-        Record = RT->getOriginalDecl()->getDefinitionOrSelf();
-      else if (const RecordType *UT = DS.getRepAsType().get()->getAsUnionType())
-        Record = UT->getOriginalDecl()->getDefinitionOrSelf();
-
+      RecordDecl *Record = Tag ? dyn_cast<RecordDecl>(Tag)
+                               : DS.getRepAsType().get()->getAsRecordDecl();
       if (Record && getLangOpts().MicrosoftExt) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
             << Record->isUnion() << DS.getSourceRange();
@@ -6380,12 +6409,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       NextTL =
           TL.castAs<DependentNameTypeLoc>().getQualifierLoc().getAsTypeLoc();
       break;
-    case TypeLoc::DependentTemplateSpecialization: {
-      auto TST = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-      TemplateKeywordLoc = TST.getTemplateKeywordLoc();
-      NextTL = TST.getQualifierLoc().getAsTypeLoc();
-      break;
-    }
     default:
       break;
     }
@@ -6771,7 +6794,9 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(Oversized, 10);
+    Diag(Loc, diag::err_array_too_large) << toString(
+        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
+        /*UpperCase=*/false, /*InsertSeparators=*/true);
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;
@@ -8389,7 +8414,7 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
 /// Return the location of the capture if the given lambda captures the given
 /// variable \p VD, or an invalid source location otherwise.
 static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
-                                         const VarDecl *VD) {
+                                         const ValueDecl *VD) {
   for (const Capture &Capture : LSI->Captures) {
     if (Capture.isVariableCapture() && Capture.getVariable() == VD)
       return Capture.getLocation();
@@ -8486,7 +8511,9 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+        // Handle both VarDecl and BindingDecl in lambda contexts
+        if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+          const auto *VD = cast<ValueDecl>(ShadowedDecl);
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
           if (RD->getLambdaCaptureDefault() == LCD_None) {
             // Try to avoid warnings for lambdas with an explicit capture
@@ -8515,18 +8542,27 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
-      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
-          VD && VD->hasLocalStorage()) {
-        // A variable can't shadow a local variable in an enclosing scope, if
-        // they are separated by a non-capturing declaration context.
-        for (DeclContext *ParentDC = NewDC;
-             ParentDC && !ParentDC->Equals(OldDC);
-             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
-          // Only block literals, captured statements, and lambda expressions
-          // can capture; other scopes don't.
-          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
-              !isLambdaCallOperator(ParentDC)) {
-            return;
+      // Apply scoping logic to both VarDecl and BindingDecl with local storage
+      if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+        bool HasLocalStorage = false;
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl))
+          HasLocalStorage = VD->hasLocalStorage();
+        else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl))
+          HasLocalStorage =
+              cast<VarDecl>(BD->getDecomposedDecl())->hasLocalStorage();
+
+        if (HasLocalStorage) {
+          // A variable can't shadow a local variable or binding in an enclosing
+          // scope, if they are separated by a non-capturing declaration
+          // context.
+          for (DeclContext *ParentDC = NewDC;
+               ParentDC && !ParentDC->Equals(OldDC);
+               ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
+            // Only block literals, captured statements, and lambda expressions
+            // can capture; other scopes don't.
+            if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
+                !isLambdaCallOperator(ParentDC))
+              return;
           }
         }
       }
@@ -8573,7 +8609,8 @@ void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
     const NamedDecl *ShadowedDecl = Shadow.ShadowedDecl;
     // Try to avoid the warning when the shadowed decl isn't captured.
     const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+    if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+      const auto *VD = cast<ValueDecl>(ShadowedDecl);
       SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
       Diag(Shadow.VD->getLocation(),
            CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
@@ -9816,8 +9853,7 @@ static void checkIsValidOpenCLKernelParameter(
 
   // At this point we already handled everything except of a RecordType.
   assert(PT->isRecordType() && "Unexpected type.");
-  const RecordDecl *PD =
-      PT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+  const auto *PD = PT->castAsRecordDecl();
   VisitStack.push_back(PD);
   assert(VisitStack.back() && "First decl null?");
 
@@ -9845,9 +9881,7 @@ static void checkIsValidOpenCLKernelParameter(
              "Unexpected type.");
       const Type *FieldRecTy = FieldTy->getPointeeOrArrayElementType();
 
-      RD = FieldRecTy->castAs<RecordType>()
-               ->getOriginalDecl()
-               ->getDefinitionOrSelf();
+      RD = FieldRecTy->castAsRecordDecl();
     } else {
       RD = cast<RecordDecl>(Next);
     }
@@ -11006,17 +11040,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         Diag(NewFD->getLocation(), diag::err_config_scalar_return)
             << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
-    }
-
-    // Variadic functions, other than a *declaration* of printf, are not allowed
-    // in device-side CUDA code, unless someone passed
-    // -fcuda-allow-variadic-functions.
-    if (!getLangOpts().CUDAAllowVariadicFunctions && NewFD->isVariadic() &&
-        (NewFD->hasAttr<CUDADeviceAttr>() ||
-         NewFD->hasAttr<CUDAGlobalAttr>()) &&
-        !(II && II->isStr("printf") && NewFD->isExternC() &&
-          !D.isFunctionDefinition())) {
-      Diag(NewFD->getLocation(), diag::err_variadic_device_fn);
     }
   }
 
@@ -13375,8 +13398,7 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD =
-        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *RD = QT->castAsRecordDecl();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -13442,8 +13464,7 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD =
-        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *RD = QT->castAsRecordDecl();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -13508,8 +13529,7 @@ struct DiagNonTrivalCUnionCopyVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD =
-        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *RD = QT->castAsRecordDecl();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -14406,9 +14426,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
-    // Provide a specific diagnostic for uninitialized variable
-    // definitions with incomplete array type.
-    if (Type->isIncompleteArrayType()) {
+    // Provide a specific diagnostic for uninitialized variable definitions
+    // with incomplete array type, unless it is a global unbounded HLSL resource
+    // array.
+    if (Type->isIncompleteArrayType() &&
+        !(getLangOpts().HLSL && Var->hasGlobalStorage() &&
+          Type->isHLSLResourceRecordArray())) {
       if (Var->isConstexpr())
         Diag(Var->getLocation(), diag::err_constexpr_var_requires_const_init)
             << Var;
@@ -14480,11 +14503,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     //   version of one of these types, or an array of one of the preceding
     //   types and is declared without an initializer.
     if (getLangOpts().CPlusPlus && Var->hasLocalStorage()) {
-      if (const RecordType *Record
-            = Context.getBaseElementType(Type)->getAs<RecordType>()) {
-        CXXRecordDecl *CXXRecord =
-            cast<CXXRecordDecl>(Record->getOriginalDecl())
-                ->getDefinitionOrSelf();
+      if (const auto *CXXRecord =
+              Context.getBaseElementType(Type)->getAsCXXRecordDecl()) {
         // Mark the function (if we're in one) for further checking even if the
         // looser rules of C++11 do not require such checks, so that we can
         // diagnose incompatibilities with C++98.
@@ -14947,8 +14967,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // Require the destructor.
   if (!type->isDependentType())
-    if (const RecordType *recordType = baseType->getAs<RecordType>())
-      FinalizeVarWithDestructor(var, recordType);
+    if (auto *RD = baseType->getAsCXXRecordDecl())
+      FinalizeVarWithDestructor(var, RD);
 
   // If this variable must be emitted, add it as an initializer for the current
   // module.
@@ -15490,6 +15510,14 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         D.setInvalidType(true);
       }
     }
+  }
+
+  // Incomplete resource arrays are not allowed as function parameters in HLSL
+  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType() &&
+      parmDeclType->isHLSLResourceRecordArray()) {
+    Diag(D.getIdentifierLoc(),
+         diag::err_hlsl_incomplete_resource_array_in_function_param);
+    D.setInvalidType(true);
   }
 
   // Temporarily put parameter variables in the translation unit, not
@@ -18066,7 +18094,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
           }
         }
       } else if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
-                 RD && RD->isInjectedClassName()) {
+                 TUK == TagUseKind::Reference && RD &&
+                 RD->isInjectedClassName()) {
         // If lookup found the injected class name, the previous declaration is
         // the class being injected into.
         PrevDecl = cast<TagDecl>(RD->getDeclContext());
@@ -18558,8 +18587,14 @@ CreateNewDecl:
   if (PrevDecl)
     CheckRedeclarationInModule(New, PrevDecl);
 
-  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
-    New->startDefinition();
+  if (TUK == TagUseKind::Definition) {
+    if (!SkipBody || !SkipBody->ShouldSkip) {
+      New->startDefinition();
+    } else {
+      New->setCompleteDefinition();
+      New->demoteThisDefinitionToDeclaration();
+    }
+  }
 
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
@@ -18863,8 +18898,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 
@@ -19119,17 +19153,16 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   if (!InvalidDecl && getLangOpts().CPlusPlus) {
     if (Record->isUnion()) {
-      if (const RecordType *RT = EltTy->getAs<RecordType>()) {
-        CXXRecordDecl *RDecl = cast<CXXRecordDecl>(RT->getOriginalDecl());
-        if (RDecl->getDefinition()) {
-          // C++ [class.union]p1: An object of a class with a non-trivial
-          // constructor, a non-trivial copy constructor, a non-trivial
-          // destructor, or a non-trivial copy assignment operator
-          // cannot be a member of a union, nor can an array of such
-          // objects.
-          if (CheckNontrivialField(NewFD))
-            NewFD->setInvalidDecl();
-        }
+      if (const auto *RD = EltTy->getAsCXXRecordDecl();
+          RD && (RD->isBeingDefined() || RD->isCompleteDefinition())) {
+
+        // C++ [class.union]p1: An object of a class with a non-trivial
+        // constructor, a non-trivial copy constructor, a non-trivial
+        // destructor, or a non-trivial copy assignment operator
+        // cannot be a member of a union, nor can an array of such
+        // objects.
+        if (CheckNontrivialField(NewFD))
+          NewFD->setInvalidDecl();
       }
 
       // C++ [class.union]p1: If a union contains a member of reference type,
@@ -19185,55 +19218,51 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
     return false;
 
   QualType EltTy = Context.getBaseElementType(FD->getType());
-  if (const RecordType *RT = EltTy->getAs<RecordType>()) {
-    CXXRecordDecl *RDecl =
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
-    if (RDecl->getDefinition()) {
-      // We check for copy constructors before constructors
-      // because otherwise we'll never get complaints about
-      // copy constructors.
+  if (const auto *RDecl = EltTy->getAsCXXRecordDecl();
+      RDecl && (RDecl->isBeingDefined() || RDecl->isCompleteDefinition())) {
+    // We check for copy constructors before constructors
+    // because otherwise we'll never get complaints about
+    // copy constructors.
 
-      CXXSpecialMemberKind member = CXXSpecialMemberKind::Invalid;
-      // We're required to check for any non-trivial constructors. Since the
-      // implicit default constructor is suppressed if there are any
-      // user-declared constructors, we just need to check that there is a
-      // trivial default constructor and a trivial copy constructor. (We don't
-      // worry about move constructors here, since this is a C++98 check.)
-      if (RDecl->hasNonTrivialCopyConstructor())
-        member = CXXSpecialMemberKind::CopyConstructor;
-      else if (!RDecl->hasTrivialDefaultConstructor())
-        member = CXXSpecialMemberKind::DefaultConstructor;
-      else if (RDecl->hasNonTrivialCopyAssignment())
-        member = CXXSpecialMemberKind::CopyAssignment;
-      else if (RDecl->hasNonTrivialDestructor())
-        member = CXXSpecialMemberKind::Destructor;
+    CXXSpecialMemberKind member = CXXSpecialMemberKind::Invalid;
+    // We're required to check for any non-trivial constructors. Since the
+    // implicit default constructor is suppressed if there are any
+    // user-declared constructors, we just need to check that there is a
+    // trivial default constructor and a trivial copy constructor. (We don't
+    // worry about move constructors here, since this is a C++98 check.)
+    if (RDecl->hasNonTrivialCopyConstructor())
+      member = CXXSpecialMemberKind::CopyConstructor;
+    else if (!RDecl->hasTrivialDefaultConstructor())
+      member = CXXSpecialMemberKind::DefaultConstructor;
+    else if (RDecl->hasNonTrivialCopyAssignment())
+      member = CXXSpecialMemberKind::CopyAssignment;
+    else if (RDecl->hasNonTrivialDestructor())
+      member = CXXSpecialMemberKind::Destructor;
 
-      if (member != CXXSpecialMemberKind::Invalid) {
-        if (!getLangOpts().CPlusPlus11 &&
-            getLangOpts().ObjCAutoRefCount && RDecl->hasObjectMember()) {
-          // Objective-C++ ARC: it is an error to have a non-trivial field of
-          // a union. However, system headers in Objective-C programs
-          // occasionally have Objective-C lifetime objects within unions,
-          // and rather than cause the program to fail, we make those
-          // members unavailable.
-          SourceLocation Loc = FD->getLocation();
-          if (getSourceManager().isInSystemHeader(Loc)) {
-            if (!FD->hasAttr<UnavailableAttr>())
-              FD->addAttr(UnavailableAttr::CreateImplicit(Context, "",
-                            UnavailableAttr::IR_ARCFieldWithOwnership, Loc));
-            return false;
-          }
+    if (member != CXXSpecialMemberKind::Invalid) {
+      if (!getLangOpts().CPlusPlus11 && getLangOpts().ObjCAutoRefCount &&
+          RDecl->hasObjectMember()) {
+        // Objective-C++ ARC: it is an error to have a non-trivial field of
+        // a union. However, system headers in Objective-C programs
+        // occasionally have Objective-C lifetime objects within unions,
+        // and rather than cause the program to fail, we make those
+        // members unavailable.
+        SourceLocation Loc = FD->getLocation();
+        if (getSourceManager().isInSystemHeader(Loc)) {
+          if (!FD->hasAttr<UnavailableAttr>())
+            FD->addAttr(UnavailableAttr::CreateImplicit(
+                Context, "", UnavailableAttr::IR_ARCFieldWithOwnership, Loc));
+          return false;
         }
-
-        Diag(
-            FD->getLocation(),
-            getLangOpts().CPlusPlus11
-                ? diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member
-                : diag::err_illegal_union_or_anon_struct_member)
-            << FD->getParent()->isUnion() << FD->getDeclName() << member;
-        DiagnoseNontrivial(RDecl, member);
-        return !getLangOpts().CPlusPlus11;
       }
+
+      Diag(FD->getLocation(),
+           getLangOpts().CPlusPlus11
+               ? diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member
+               : diag::err_illegal_union_or_anon_struct_member)
+          << FD->getParent()->isUnion() << FD->getDeclName() << member;
+      DiagnoseNontrivial(RDecl, member);
+      return !getLangOpts().CPlusPlus11;
     }
   }
 
@@ -19509,11 +19538,9 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
       return PointeeType.getDesugaredType(Context)->isFunctionType();
     }
     // If a member is a struct entirely of function pointers, that counts too.
-    if (const RecordType *RT = FieldType->getAs<RecordType>()) {
-      const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (Record->isStruct() && EntirelyFunctionPointers(Record))
-        return true;
-    }
+    if (const auto *Record = FieldType->getAsRecordDecl();
+        Record && Record->isStruct() && EntirelyFunctionPointers(Record))
+      return true;
     return false;
   };
 
@@ -19667,10 +19694,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       FD->setInvalidDecl();
       EnclosingDecl->setInvalidDecl();
       continue;
-    } else if (const RecordType *FDTTy = FDTy->getAs<RecordType>()) {
-      if (Record && FDTTy->getOriginalDecl()
-                        ->getDefinitionOrSelf()
-                        ->hasFlexibleArrayMember()) {
+    } else if (const auto *RD = FDTy->getAsRecordDecl()) {
+      if (Record && RD->hasFlexibleArrayMember()) {
         // A type which contains a flexible array member is considered to be a
         // flexible array member.
         Record->setHasFlexibleArrayMember(true);
@@ -19696,7 +19721,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // Ivars can not have abstract class types
         FD->setInvalidDecl();
       }
-      const RecordDecl *RD = FDTTy->getOriginalDecl()->getDefinitionOrSelf();
       if (Record && RD->hasObjectMember())
         Record->setHasObjectMember(true);
       if (Record && RD->hasVolatileMember())
@@ -19730,10 +19754,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         Record->setHasObjectMember(true);
       else if (Context.getAsArrayType(FD->getType())) {
         QualType BaseType = Context.getBaseElementType(FD->getType());
-        if (BaseType->isRecordType() && BaseType->castAs<RecordType>()
-                                            ->getOriginalDecl()
-                                            ->getDefinitionOrSelf()
-                                            ->hasObjectMember())
+        if (const auto *RD = BaseType->getAsRecordDecl();
+            RD && RD->hasObjectMember())
           Record->setHasObjectMember(true);
         else if (BaseType->isObjCObjectPointerType() ||
                  BaseType.isObjCGCStrong())
@@ -19765,10 +19787,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
           Record->setHasNonTrivialToPrimitiveDestructCUnion(true);
       }
 
-      if (const auto *RT = FT->getAs<RecordType>()) {
-        if (RT->getOriginalDecl()
-                ->getDefinitionOrSelf()
-                ->getArgPassingRestrictions() ==
+      if (const auto *RD = FT->getAsRecordDecl()) {
+        if (RD->getArgPassingRestrictions() ==
             RecordArgPassingKind::CanNeverPassInRegs)
           Record->setArgPassingRestrictions(
               RecordArgPassingKind::CanNeverPassInRegs);
@@ -19779,6 +19799,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                  Q && Q.isAddressDiscriminated()) {
         Record->setArgPassingRestrictions(
             RecordArgPassingKind::CanNeverPassInRegs);
+        Record->setNonTrivialToPrimitiveCopy(true);
       }
     }
 

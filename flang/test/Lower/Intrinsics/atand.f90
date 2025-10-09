@@ -63,4 +63,4 @@ end function
 ! CHECK-LABEL: @_QPtest_real16_yx
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f128
 ! CHECK: %[[factor:.*]] = arith.constant 57.295779513082320876798154814105{{.*}} : f128
-! CHECK: %{{.*}} = arith.mulf %[[atan]], %[[factor]] fastmath<contract> : f128
+! CHECK: %{{.*}} = arith.mulf %[[atan2]], %[[factor]] fastmath<contract> : f128

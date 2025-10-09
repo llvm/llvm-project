@@ -42,7 +42,7 @@ static OmptEventReporter *EventReporter;
 #define OMPT_BUFFER_REQUEST_SIZE 256
 
 #ifdef OPENMP_LIBOMPTEST_BUILD_STANDALONE
-std::map<std::string, TestSuite> TestRegistrar::Tests;
+std::vector<std::pair<std::string, TestSuite>> TestRegistrar::Tests;
 #endif
 
 static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
@@ -390,7 +390,7 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   register_ompt_callback(ompt_callback_parallel_begin);
   register_ompt_callback(ompt_callback_parallel_end);
   register_ompt_callback(ompt_callback_work);
-  // register_ompt_callback(ompt_callback_dispatch);
+  register_ompt_callback(ompt_callback_dispatch);
   register_ompt_callback(ompt_callback_task_create);
   // register_ompt_callback(ompt_callback_dependences);
   // register_ompt_callback(ompt_callback_task_dependence);

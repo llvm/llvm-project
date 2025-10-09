@@ -23,7 +23,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
@@ -40,6 +40,7 @@
 #include <optional>
 
 namespace clang {
+  class AllocSizeAttr;
   class APValue;
   class ASTContext;
   class BlockDecl;
@@ -633,8 +634,8 @@ public:
 
     EvalStatus() = default;
 
-    // hasSideEffects - Return true if the evaluated expression has
-    // side effects.
+    /// Return true if the evaluated expression has
+    /// side effects.
     bool hasSideEffects() const {
       return HasSideEffects;
     }
@@ -645,8 +646,8 @@ public:
     /// Val - This is the value the expression can be folded to.
     APValue Val;
 
-    // isGlobalLValue - Return true if the evaluated lvalue expression
-    // is global.
+    /// Return true if the evaluated lvalue expression
+    /// is global.
     bool isGlobalLValue() const;
   };
 
@@ -714,9 +715,7 @@ public:
   /// EvaluateKnownConstInt - Call EvaluateAsRValue and return the folded
   /// integer. This must be called on an expression that constant folds to an
   /// integer.
-  llvm::APSInt EvaluateKnownConstInt(
-      const ASTContext &Ctx,
-      SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr) const;
+  llvm::APSInt EvaluateKnownConstInt(const ASTContext &Ctx) const;
 
   llvm::APSInt EvaluateKnownConstIntCheckOverflow(
       const ASTContext &Ctx,
@@ -1037,7 +1036,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::detail::ConstantLog2<alignof(Expr)>::value,
+                  llvm::ConstantLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
@@ -3261,6 +3260,15 @@ public:
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
 
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Evaluates the total size in bytes allocated by calling a function
+  /// decorated with alloc_size. Returns std::nullopt if the the result cannot
+  /// be evaluated.
+  std::optional<llvm::APInt>
+  evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
+
   bool isCallToStdMove() const;
 
   static bool classof(const Stmt *T) {
@@ -5103,9 +5111,9 @@ public:
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(),
+                  llvm::APInt(N->getBitWidth(),
                               EExpr->Data->BinaryData->getCodeUnit(CurOffset),
-                              N->getType()->isSignedIntegerType()));
+                              /*Signed=*/true));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
       return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);
@@ -6898,6 +6906,21 @@ public:
            getOp() == AO__atomic_compare_exchange_n ||
            getOp() == AO__scoped_atomic_compare_exchange ||
            getOp() == AO__scoped_atomic_compare_exchange_n;
+  }
+
+  bool hasVal1Operand() const {
+    switch (getOp()) {
+    case AO__atomic_load_n:
+    case AO__scoped_atomic_load_n:
+    case AO__c11_atomic_load:
+    case AO__opencl_atomic_load:
+    case AO__hip_atomic_load:
+    case AO__atomic_test_and_set:
+    case AO__atomic_clear:
+      return false;
+    default:
+      return true;
+    }
   }
 
   bool isOpenCL() const {
