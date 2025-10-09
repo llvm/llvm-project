@@ -24,6 +24,8 @@
     br label %common.ret
   }
 ...
+# Following code has a load from constant pool. Accessing constant pool must not
+# be considered as a stack access and hence, shrink wrapping must happen.
 ---
 name:            shrink_wrap_load_from_const_pool
 tracksRegLiveness: true
