@@ -455,4 +455,3 @@ def testEnableStatistics():
         pm.enable_statistics()
         # CHECK: Pass statistics report
         pm.run(module)
-  
