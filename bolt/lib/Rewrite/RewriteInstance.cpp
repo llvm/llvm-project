@@ -917,9 +917,6 @@ void RewriteInstance::discoverFileObjects() {
     bool IsData = false;
     uint64_t LastAddr = 0;
     for (const auto &SymInfo : SortedSymbols) {
-      if (LastAddr == SymInfo.Address) // don't repeat markers
-        continue;
-
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
 
       // Treat ST_Function as code.
@@ -929,8 +926,14 @@ void RewriteInstance::discoverFileObjects() {
         if (IsData) {
           Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
           consumeError(NameOrError.takeError());
-          BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
-                     << " lacks code marker\n";
+          if (LastAddr == SymInfo.Address) {
+            BC->errs() << "BOLT-WARNING: ignoring data marker conflicting with "
+                          "function symbol "
+                       << *NameOrError << '\n';
+          } else {
+            BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                       << " lacks code marker\n";
+          }
         }
         MarkerType = MarkerSymType::CODE;
       }
@@ -3518,6 +3521,17 @@ void RewriteInstance::disassembleFunctions() {
                    << Function << ". Skipping.\n";
         Function.setSimple(false);
         continue;
+      }
+    }
+
+    // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
+    // function.
+    if (Function.containedNegateRAState()) {
+      if (!opts::UpdateBranchProtection) {
+        BC->errs()
+            << "BOLT-ERROR: --update-branch-protection is set to false, but "
+            << Function.getPrintName() << " contains .cfi-negate-ra-state\n";
+        exit(1);
       }
     }
 

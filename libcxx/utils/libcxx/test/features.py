@@ -782,27 +782,6 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
-    Feature(
-        name="_target-has-llvm-11",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-12 || target={{.+}}-apple-macosx{{(11.[0-9]|12.[0-2])(.[0-9]+)?}}",
-            cfg.available_features,
-        ),
-    ),
-    Feature(
-        name="_target-has-llvm-10",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-11",
-            cfg.available_features,
-        ),
-    ),
-    Feature(
-        name="_target-has-llvm-9",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-10 || target={{.+}}-apple-macosx{{10.15(.[0-9]+)?}}",
-            cfg.available_features,
-        ),
-    ),
 ]
 
 # Define features for back-deployment testing.
@@ -842,7 +821,7 @@ DEFAULT_FEATURES += [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"):
+for version in ("12", "13", "14", "15", "16", "17", "18", "19", "20"):
     DEFAULT_FEATURES.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),
@@ -854,22 +833,6 @@ for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
     )
 
 DEFAULT_FEATURES += [
-    # Tests that require std::filesystem support in the built library
-    Feature(
-        name="availability-filesystem-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-9)",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require the C++20 synchronization library (P1135R6 implemented by https://llvm.org/D68480) in the built library
-    Feature(
-        name="availability-synchronization_library-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-11)",
-            cfg.available_features,
-        ),
-    ),
     # Tests that require https://wg21.link/P0482 support in the built library
     Feature(
         name="availability-char8_t_support-missing",
