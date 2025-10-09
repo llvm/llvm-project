@@ -3018,8 +3018,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   ArgNo = 0;
   if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
-    llvm::FunctionType *FunctionType = FunctionType =
-        getTypes().GetFunctionType(FI);
+    llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
     for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(),
                                             E = FI.arg_end();
          I != E; ++I, ++ArgNo) {

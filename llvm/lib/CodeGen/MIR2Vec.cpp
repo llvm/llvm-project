@@ -49,14 +49,8 @@ cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
 //===----------------------------------------------------------------------===//
 
 MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeEntries,
-                             const TargetInstrInfo *TII)
-    : TII(*TII) {
-  // Fixme: Use static factory methods for creating vocabularies instead of
-  // public constructors
-  // Early return for invalid inputs - creates empty/invalid vocabulary
-  if (!TII || OpcodeEntries.empty())
-    return;
-
+                             const TargetInstrInfo &TII)
+    : TII(TII) {
   buildCanonicalOpcodeMapping();
 
   unsigned CanonicalOpcodeCount = UniqueBaseOpcodeNames.size();
@@ -65,6 +59,15 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeEntries,
   Layout.OperandBase = CanonicalOpcodeCount;
   generateStorage(OpcodeEntries);
   Layout.TotalEntries = Storage.size();
+}
+
+Expected<MIRVocabulary> MIRVocabulary::create(VocabMap &&Entries,
+                                              const TargetInstrInfo &TII) {
+  if (Entries.empty())
+    return createStringError(errc::invalid_argument,
+                             "Empty vocabulary entries provided");
+
+  return MIRVocabulary(std::move(Entries), TII);
 }
 
 std::string MIRVocabulary::extractBaseOpcodeName(StringRef InstrName) {
@@ -107,13 +110,11 @@ unsigned MIRVocabulary::getCanonicalIndexForBaseName(StringRef BaseName) const {
 }
 
 unsigned MIRVocabulary::getCanonicalOpcodeIndex(unsigned Opcode) const {
-  assert(isValid() && "MIR2Vec Vocabulary is invalid");
   auto BaseOpcode = extractBaseOpcodeName(TII.getName(Opcode));
   return getCanonicalIndexForBaseName(BaseOpcode);
 }
 
 std::string MIRVocabulary::getStringKey(unsigned Pos) const {
-  assert(isValid() && "MIR2Vec Vocabulary is invalid");
   assert(Pos < Layout.TotalEntries && "Position out of bounds in vocabulary");
 
   // For now, all entries are opcodes since we only have one section
@@ -232,16 +233,11 @@ Error MIR2VecVocabLegacyAnalysis::readVocabulary() {
   return Error::success();
 }
 
-void MIR2VecVocabLegacyAnalysis::emitError(Error Err, LLVMContext &Ctx) {
-  Ctx.emitError(toString(std::move(Err)));
-}
-
-mir2vec::MIRVocabulary
+Expected<mir2vec::MIRVocabulary>
 MIR2VecVocabLegacyAnalysis::getMIR2VecVocabulary(const Module &M) {
   if (StrVocabMap.empty()) {
     if (Error Err = readVocabulary()) {
-      emitError(std::move(Err), M.getContext());
-      return mir2vec::MIRVocabulary(std::move(StrVocabMap), nullptr);
+      return std::move(Err);
     }
   }
 
@@ -255,15 +251,13 @@ MIR2VecVocabLegacyAnalysis::getMIR2VecVocabulary(const Module &M) {
 
     if (auto *MF = MMI.getMachineFunction(F)) {
       const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-      return mir2vec::MIRVocabulary(std::move(StrVocabMap), TII);
+      return mir2vec::MIRVocabulary::create(std::move(StrVocabMap), *TII);
     }
   }
 
-  // No machine functions available - return invalid vocabulary
-  emitError(make_error<StringError>("No machine functions found in module",
-                                    inconvertibleErrorCode()),
-            M.getContext());
-  return mir2vec::MIRVocabulary(std::move(StrVocabMap), nullptr);
+  // No machine functions available - return error
+  return createStringError(errc::invalid_argument,
+                           "No machine functions found in module");
 }
 
 //===----------------------------------------------------------------------===//
@@ -284,13 +278,15 @@ bool MIR2VecVocabPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
 
 bool MIR2VecVocabPrinterLegacyPass::doFinalization(Module &M) {
   auto &Analysis = getAnalysis<MIR2VecVocabLegacyAnalysis>();
-  auto MIR2VecVocab = Analysis.getMIR2VecVocabulary(M);
+  auto MIR2VecVocabOrErr = Analysis.getMIR2VecVocabulary(M);
 
-  if (!MIR2VecVocab.isValid()) {
-    OS << "MIR2Vec Vocabulary Printer: Invalid vocabulary\n";
+  if (!MIR2VecVocabOrErr) {
+    OS << "MIR2Vec Vocabulary Printer: Failed to get vocabulary - "
+       << toString(MIR2VecVocabOrErr.takeError()) << "\n";
     return false;
   }
 
+  auto &MIR2VecVocab = *MIR2VecVocabOrErr;
   unsigned Pos = 0;
   for (const auto &Entry : MIR2VecVocab) {
     OS << "Key: " << MIR2VecVocab.getStringKey(Pos++) << ": ";

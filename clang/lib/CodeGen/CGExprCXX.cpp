@@ -1371,8 +1371,16 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
 
   for (auto *Decl : Ctx.getTranslationUnitDecl()->lookup(Name))
     if (auto *FD = dyn_cast<FunctionDecl>(Decl))
-      if (Ctx.hasSameType(FD->getType(), QualType(Type, 0)))
-        return EmitNewDeleteCall(*this, FD, Type, Args);
+      if (Ctx.hasSameType(FD->getType(), QualType(Type, 0))) {
+        RValue RV = EmitNewDeleteCall(*this, FD, Type, Args);
+        if (auto *CB = dyn_cast_if_present<llvm::CallBase>(RV.getScalarVal())) {
+          if (SanOpts.has(SanitizerKind::AllocToken)) {
+            // Set !alloc_token metadata.
+            EmitAllocToken(CB, TheCall);
+          }
+        }
+        return RV;
+      }
   llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
