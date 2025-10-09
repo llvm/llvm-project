@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ZIRCON_TEMPORARYOBJECTSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ZIRCON_TEMPORARYOBJECTSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TEMPORARYOBJECTSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TEMPORARYOBJECTSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/OptionsUtils.h"
 
-namespace clang::tidy::zircon {
+namespace clang::tidy::fuchsia {
 
 /// Construction of specific temporary objects in the Zircon kernel is
 /// discouraged.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/zircon/temporary-objects.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/temporary-objects.html
 class TemporaryObjectsCheck : public ClangTidyCheck {
 public:
   TemporaryObjectsCheck(StringRef Name, ClangTidyContext *Context)
@@ -35,6 +35,6 @@ private:
   std::vector<StringRef> Names;
 };
 
-} // namespace clang::tidy::zircon
+} // namespace clang::tidy::fuchsia
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ZIRCON_TEMPORARYOBJECTSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_TEMPORARYOBJECTSCHECK_H

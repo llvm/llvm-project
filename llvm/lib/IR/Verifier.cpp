@@ -5414,8 +5414,10 @@ void Verifier::visitCapturesMetadata(Instruction &I, const MDNode *Captures) {
 
 void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!alloc_token should only exist on calls", &I);
-  Check(MD->getNumOperands() == 1, "!alloc_token must have 1 operand", MD);
+  Check(MD->getNumOperands() == 2, "!alloc_token must have 2 operands", MD);
   Check(isa<MDString>(MD->getOperand(0)), "expected string", MD);
+  Check(mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(1)),
+        "expected integer constant", MD);
 }
 
 /// verifyInstruction - Verify that an instruction is well formed.
