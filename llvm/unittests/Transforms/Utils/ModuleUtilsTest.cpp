@@ -69,6 +69,23 @@ TEST(ModuleUtils, AppendToUsedList2) {
   EXPECT_EQ(1, getListSize(*M, "llvm.used"));
 }
 
+TEST(ModuleUtils, AppendToUsedList3) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+          @x = addrspace(1) global [2 x i32] zeroinitializer, align 4
+          @y = addrspace(2) global [2 x i32] zeroinitializer, align 4
+          @llvm.compiler.used = appending global [1 x ptr addrspace (3)] [ptr addrspace(3) addrspacecast (ptr addrspace (1) @x to ptr addrspace(3))]
+      )");
+  GlobalVariable *X = M->getNamedGlobal("x");
+  GlobalVariable *Y = M->getNamedGlobal("y");
+  EXPECT_EQ(1, getListSize(*M, "llvm.compiler.used"));
+  appendToCompilerUsed(*M, X);
+  EXPECT_EQ(1, getListSize(*M, "llvm.compiler.used"));
+  appendToCompilerUsed(*M, Y);
+  EXPECT_EQ(2, getListSize(*M, "llvm.compiler.used"));
+}
+
 using AppendFnType = decltype(&appendToGlobalCtors);
 using TransformFnType = decltype(&transformGlobalCtors);
 using ParamType = std::tuple<StringRef, AppendFnType, TransformFnType>;
