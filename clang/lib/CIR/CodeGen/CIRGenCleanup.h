@@ -40,7 +40,6 @@ protected:
   class CatchBitFields {
     friend class EHCatchScope;
     unsigned : NumCommonBits;
-
     unsigned numHandlers : 32 - NumCommonBits;
   };
 

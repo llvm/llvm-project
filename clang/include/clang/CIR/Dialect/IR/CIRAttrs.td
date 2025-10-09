@@ -859,7 +859,7 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
-// CatAllAttr & CatchUnwindAttr
+// CatchAllAttr & CatchUnwindAttr
 //===----------------------------------------------------------------------===//
 
 // Represents the unwind region where unwind continues or
