@@ -1458,8 +1458,7 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
 }
 
 /// Match low part of 128-bit multiplication.
-static bool foldMul128Low(Instruction &I, const DataLayout &DL,
-                          DominatorTree &DT) {
+static bool foldMul128Low(Instruction &I) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))
     return false;
@@ -1530,8 +1529,7 @@ static bool foldMul128Low(Instruction &I, const DataLayout &DL,
 }
 
 /// Match high part of 128-bit multiplication.
-static bool foldMul128High(Instruction &I, const DataLayout &DL,
-                           DominatorTree &DT) {
+static bool foldMul128High(Instruction &I) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))
     return false;
@@ -1649,8 +1647,7 @@ static bool foldMul128High(Instruction &I, const DataLayout &DL,
 ///   %u1_hi = lshr i64 %u1, 32
 ///   %u2 = add nuw i64 %u0_hi, %t3
 ///   %hw64 = add nuw i64 %u2, %u1_hi
-static bool foldMul128HighVariant(Instruction &I, const DataLayout &DL,
-                                  DominatorTree &DT) {
+static bool foldMul128HighVariant(Instruction &I) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))
     return false;
@@ -1739,9 +1736,9 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
-      MadeChange |= foldMul128Low(I, DL, DT);
-      MadeChange |= foldMul128High(I, DL, DT);
-      MadeChange |= foldMul128HighVariant(I, DL, DT);
+      MadeChange |= foldMul128Low(I);
+      MadeChange |= foldMul128High(I);
+      MadeChange |= foldMul128HighVariant(I);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
