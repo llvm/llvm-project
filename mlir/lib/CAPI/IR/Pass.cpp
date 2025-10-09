@@ -90,8 +90,6 @@ void mlirPassManagerEnableStatistics(MlirPassManager passManager,
   case MLIR_PASS_DISPLAY_MODE_PIPELINE:
     mode = PassDisplayMode::Pipeline;
     break;
-  default:
-    llvm_unreachable("unknown pass display mode");
   }
   unwrap(passManager)->enableStatistics(mode);
 }
