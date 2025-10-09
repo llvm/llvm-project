@@ -14,8 +14,8 @@
 using namespace llvm;
 
 SystemZConstantPoolValue::SystemZConstantPoolValue(
-  const GlobalValue *GV, SystemZCP::SystemZCPModifier Modifier)
-  : MachineConstantPoolValue(GV->getType()), GV(GV), Modifier(Modifier) {}
+    const GlobalValue *GV, SystemZCP::SystemZCPModifier Modifier)
+    : MachineConstantPoolValue(GV->getType()), GV(GV), Modifier(Modifier) {}
 
 SystemZConstantPoolValue *
 SystemZConstantPoolValue::Create(const GlobalValue *GV,
