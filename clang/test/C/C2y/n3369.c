@@ -100,11 +100,11 @@ void test_funcs() {
   int i5[5];
   char c35[3][5];
   test_func_fix_fix(5, &c35, &i3, NULL);
-  test_func_fix_fix(5, &c35, &i5, NULL); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
+  test_func_fix_fix(5, &c35, &i5, NULL); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
   test_func_fix_var(5, &c35, &i3, NULL);
-  test_func_fix_var(5, &c35, &i5, NULL); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
+  test_func_fix_var(5, &c35, &i5, NULL); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
   test_func_fix_uns(5, &c35, &i3, NULL);
-  test_func_fix_uns(5, &c35, &i5, NULL); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
+  test_func_fix_uns(5, &c35, &i5, NULL); // expected-error {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[3]'}}
 }
 
 void test_multidimensional_arrays() {

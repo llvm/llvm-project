@@ -406,16 +406,6 @@ def X86VAlign  : SDNode<"X86ISD::VALIGN", SDTShuff3OpI>;
 
 def X86VShld   : SDNode<"X86ISD::VSHLD", SDTShuff3OpI>;
 def X86VShrd   : SDNode<"X86ISD::VSHRD", SDTShuff3OpI>;
-def X86VShldv  : SDNode<"X86ISD::VSHLDV",
-                        SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                             SDTCisSameAs<0,1>,
-                                             SDTCisSameAs<0,2>,
-                                             SDTCisSameAs<0,3>]>>;
-def X86VShrdv  : SDNode<"X86ISD::VSHRDV",
-                        SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                             SDTCisSameAs<0,1>,
-                                             SDTCisSameAs<0,2>,
-                                             SDTCisSameAs<0,3>]>>;
 
 def X86Conflict : SDNode<"X86ISD::CONFLICT", SDTIntUnaryOp>;
 

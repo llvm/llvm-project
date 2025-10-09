@@ -115,6 +115,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -382,6 +383,25 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
     return AliasResult::MayAlias;
 
   // Otherwise return a definitive result.
+  return AliasResult::NoAlias;
+}
+
+AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
+                                          const Module *M) {
+  if (!shouldUseTBAA())
+    return AliasResult::MayAlias;
+
+  const auto *N = Loc.AATags.TBAA;
+  if (!N)
+    return AliasResult::MayAlias;
+
+  // There cannot be any alias with errno if TBAA proves the given memory
+  // location does not alias errno.
+  const auto *ErrnoTBAAMD = M->getNamedMetadata("llvm.errno.tbaa");
+  if (!ErrnoTBAAMD || any_of(ErrnoTBAAMD->operands(), [&](const auto *Node) {
+        return Aliases(N, Node);
+      }))
+    return AliasResult::MayAlias;
   return AliasResult::NoAlias;
 }
 
