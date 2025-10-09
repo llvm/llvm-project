@@ -675,6 +675,45 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
   CC = getRISCVCCFromICmp(Pred);
 }
 
+/// Select the RISC-V Zalasr opcode for the G_LOAD or G_STORE operation
+/// \p GenericOpc, appropriate for the GPR register bank and of memory access
+/// size \p OpSize.
+static unsigned selectZalasrLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (OpSize) {
+  default:
+    llvm_unreachable("Unexpected memory size");
+  case 8:
+    return IsStore ? RISCV::SB_RL : RISCV::LB_AQ;
+  case 16:
+    return IsStore ? RISCV::SH_RL : RISCV::LH_AQ;
+  case 32:
+    return IsStore ? RISCV::SW_RL : RISCV::LW_AQ;
+  case 64:
+    return IsStore ? RISCV::SD_RL : RISCV::LD_AQ;
+  }
+}
+
+/// Select the RISC-V regimm opcode for the G_LOAD or G_STORE operation
+/// \p GenericOpc, appropriate for the GPR register bank and of memory access
+/// size \p OpSize. \returns \p GenericOpc if the combination is unsupported.
+static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (OpSize) {
+  case 8:
+    // Prefer unsigned due to no c.lb in Zcb.
+    return IsStore ? RISCV::SB : RISCV::LBU;
+  case 16:
+    return IsStore ? RISCV::SH : RISCV::LH;
+  case 32:
+    return IsStore ? RISCV::SW : RISCV::LW;
+  case 64:
+    return IsStore ? RISCV::SD : RISCV::LD;
+  }
+
+  return GenericOpc;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineIRBuilder MIB(MI);
 
@@ -733,6 +772,62 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     if (!materializeImm(DstReg, Imm, MIB))
       return false;
 
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT: {
+    bool IsSigned = Opc != TargetOpcode::G_ZEXT;
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI->getType(SrcReg);
+    unsigned SrcSize = SrcTy.getSizeInBits();
+
+    if (SrcTy.isVector())
+      return false; // Should be handled by imported patterns.
+
+    assert((*RBI.getRegBank(DstReg, *MRI, TRI)).getID() ==
+               RISCV::GPRBRegBankID &&
+           "Unexpected ext regbank");
+
+    // Use addiw SrcReg, 0 (sext.w) for i32.
+    if (IsSigned && SrcSize == 32) {
+      MI.setDesc(TII.get(RISCV::ADDIW));
+      MI.addOperand(MachineOperand::CreateImm(0));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Use add.uw SrcReg, X0 (zext.w) for i32 with Zba.
+    if (!IsSigned && SrcSize == 32 && STI.hasStdExtZba()) {
+      MI.setDesc(TII.get(RISCV::ADD_UW));
+      MI.addOperand(MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Use sext.h/zext.h for i16 with Zbb.
+    if (SrcSize == 16 && STI.hasStdExtZbb()) {
+      MI.setDesc(TII.get(IsSigned       ? RISCV::SEXT_H
+                         : STI.isRV64() ? RISCV::ZEXT_H_RV64
+                                        : RISCV::ZEXT_H_RV32));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Use pack(w) SrcReg, X0 for i16 zext with Zbkb.
+    if (!IsSigned && SrcSize == 16 && STI.hasStdExtZbkb()) {
+      MI.setDesc(TII.get(STI.is64Bit() ? RISCV::PACKW : RISCV::PACK));
+      MI.addOperand(MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    // Fall back to shift pair.
+    auto ShiftLeft =
+        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {SrcReg})
+            .addImm(STI.getXLen() - SrcSize);
+    constrainSelectedInstRegOperands(*ShiftLeft, TII, TRI, RBI);
+    auto ShiftRight = MIB.buildInstr(IsSigned ? RISCV::SRAI : RISCV::SRLI,
+                                     {DstReg}, {ShiftLeft})
+                          .addImm(STI.getXLen() - SrcSize);
+    constrainSelectedInstRegOperands(*ShiftRight, TII, TRI, RBI);
     MI.eraseFromParent();
     return true;
   }
@@ -836,6 +931,59 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    GLoadStore &LdSt = cast<GLoadStore>(MI);
+    const Register ValReg = LdSt.getReg(0);
+    const Register PtrReg = LdSt.getPointerReg();
+    LLT PtrTy = MRI->getType(PtrReg);
+
+    const RegisterBank &RB = *RBI.getRegBank(ValReg, *MRI, TRI);
+    if (RB.getID() != RISCV::GPRBRegBankID)
+      return false;
+
+#ifndef NDEBUG
+    const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, *MRI, TRI);
+    // Check that the pointer register is valid.
+    assert(PtrRB.getID() == RISCV::GPRBRegBankID &&
+           "Load/Store pointer operand isn't a GPR");
+    assert(PtrTy.isPointer() && "Load/Store pointer operand isn't a pointer");
+#endif
+
+    // Can only handle AddressSpace 0.
+    if (PtrTy.getAddressSpace() != 0)
+      return false;
+
+    unsigned MemSize = LdSt.getMemSizeInBits().getValue();
+    AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
+
+    if (isStrongerThanMonotonic(Order)) {
+      MI.setDesc(TII.get(selectZalasrLoadStoreOp(Opc, MemSize)));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+
+    const unsigned NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
+    if (NewOpc == MI.getOpcode())
+      return false;
+
+    // Check if we can fold anything into the addressing mode.
+    auto AddrModeFns = selectAddrRegImm(MI.getOperand(1));
+    if (!AddrModeFns)
+      return false;
+
+    // Folded something. Create a new instruction and return it.
+    auto NewInst = MIB.buildInstr(NewOpc, {}, {}, MI.getFlags());
+    if (isa<GStore>(MI))
+      NewInst.addUse(ValReg);
+    else
+      NewInst.addDef(ValReg);
+    NewInst.cloneMemRefs(MI);
+    for (auto &Fn : *AddrModeFns)
+      Fn(NewInst);
+    MI.eraseFromParent();
+
+    return constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI);
+  }
   default:
     return false;
   }

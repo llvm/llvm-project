@@ -143,8 +143,9 @@ class ModuleDependencyCollector : public DependencyCollector {
   std::error_code copyToRoot(StringRef Src, StringRef Dst = {});
 
 public:
-  ModuleDependencyCollector(std::string DestDir)
-      : DestDir(std::move(DestDir)) {}
+  ModuleDependencyCollector(std::string DestDir,
+                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
+      : DestDir(std::move(DestDir)), Canonicalizer(std::move(VFS)) {}
   ~ModuleDependencyCollector() override { writeFileMap(); }
 
   StringRef getDest() { return DestDir; }

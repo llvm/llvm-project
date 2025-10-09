@@ -1163,13 +1163,16 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     //   - it has at least one trivial eligible constructor and a trivial,
     //     non-deleted destructor.
     const CXXDestructorDecl *Dtor = RD->getDestructor();
-    if (UnqualT->isAggregateType())
-      if (Dtor && !Dtor->isUserProvided())
-        return true;
-    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted()))
-      if (RD->hasTrivialDefaultConstructor() ||
-          RD->hasTrivialCopyConstructor() || RD->hasTrivialMoveConstructor())
-        return true;
+    if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
+      return true;
+    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())) {
+      for (CXXConstructorDecl *Ctr : RD->ctors()) {
+        if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
+          continue;
+        if (Ctr->isTrivial())
+          return true;
+      }
+    }
     return false;
   }
   case UTT_IsIntangibleType:
@@ -1827,10 +1830,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
-  case BTT_LtSynthesisesFromSpaceship:
-  case BTT_LeSynthesisesFromSpaceship:
-  case BTT_GtSynthesisesFromSpaceship:
-  case BTT_GeSynthesisesFromSpaceship: {
+  case BTT_LtSynthesizesFromSpaceship:
+  case BTT_LeSynthesizesFromSpaceship:
+  case BTT_GtSynthesizesFromSpaceship:
+  case BTT_GeSynthesizesFromSpaceship: {
     EnterExpressionEvaluationContext UnevaluatedContext(
         Self, Sema::ExpressionEvaluationContext::Unevaluated);
     Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
@@ -1849,13 +1852,13 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     auto OpKind = [&] {
       switch (BTT) {
-      case BTT_LtSynthesisesFromSpaceship:
+      case BTT_LtSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_LT;
-      case BTT_LeSynthesisesFromSpaceship:
+      case BTT_LeSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_LE;
-      case BTT_GtSynthesisesFromSpaceship:
+      case BTT_GtSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_GT;
-      case BTT_GeSynthesisesFromSpaceship:
+      case BTT_GeSynthesizesFromSpaceship:
         return BinaryOperatorKind::BO_GE;
       default:
         llvm_unreachable("Trying to Synthesize non-comparison operator?");
@@ -2014,6 +2017,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_aggregate", TypeTrait::UTT_IsAggregate)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Case("is_final", TypeTrait::UTT_IsFinal)
+      .Case("is_abstract", TypeTrait::UTT_IsAbstract)
       .Default(std::nullopt);
 }
 
@@ -2774,6 +2778,75 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
     DiagnoseNonAggregateReason(SemaRef, Loc, D);
 }
 
+static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
+                                      const CXXRecordDecl *D) {
+  // If this type has any abstract base classes, their respective virtual
+  // functions must have been overridden.
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.getType()->castAsCXXRecordDecl()->isAbstract()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::OverridesAllPureVirtual
+          << B.getType() << B.getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
+                                      QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::Abstract;
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isUnionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::UnionType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (SemaRef.Context.getAsArrayType(T)) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::ArrayType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isFunctionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isPointerType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PointerType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (!T->isStructureOrClassType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (D->hasDefinition())
+    DiagnoseNonAbstractReason(SemaRef, Loc, D);
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2818,6 +2891,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
       DiagnoseIsFinalReason(*this, E->getBeginLoc(), QT); // unsatisfied
     break;
   }
+  case UTT_IsAbstract:
+    DiagnoseNonAbstractReason(*this, E->getBeginLoc(), Args[0]);
+    break;
   default:
     break;
   }

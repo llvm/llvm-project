@@ -204,7 +204,7 @@ end program
 ! CHECK:           %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (i32) -> index
 ! CHECK:           %[[VAL_40:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_37]] : (index) -> i32
-! CHECK:           %[[VAL_42:.*]]:2 = fir.do_loop %[[VAL_43:.*]] = %[[VAL_37]] to %[[VAL_39]] step %[[VAL_40]] iter_args(%[[VAL_44:.*]] = %[[VAL_41]]) -> (index, i32) {
+! CHECK:           %[[VAL_42:.*]] = fir.do_loop %[[VAL_43:.*]] = %[[VAL_37]] to %[[VAL_39]] step %[[VAL_40]] iter_args(%[[VAL_44:.*]] = %[[VAL_41]]) -> (i32) {
 ! CHECK:             fir.store %[[VAL_44]] to %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_45:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_46:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -212,13 +212,12 @@ end program
 ! CHECK:             %[[VAL_48:.*]] = fir.convert %[[VAL_47]] : (i32) -> i64
 ! CHECK:             %[[VAL_49:.*]] = hlfir.designate %[[VAL_46]] (%[[VAL_48]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, i64) -> !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_45]] to %[[VAL_49]] : i32, !fir.ref<i32>
-! CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_43]], %[[VAL_40]] overflow<nsw> : index
 ! CHECK:             %[[VAL_51:.*]] = fir.convert %[[VAL_40]] : (index) -> i32
 ! CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_51]] overflow<nsw> : i32
-! CHECK:             fir.result %[[VAL_50]], %[[VAL_53]] : index, i32
+! CHECK:             fir.result %[[VAL_53]] : i32
 ! CHECK:           }
-! CHECK:           fir.store %[[VAL_54:.*]]#1 to %[[VAL_3]]#0 : !fir.ref<i32>
+! CHECK:           fir.store %[[VAL_54:.*]] to %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_57:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_58:.*]] = arith.constant 10 : i32

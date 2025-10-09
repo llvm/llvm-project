@@ -4157,33 +4157,32 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  do {
-    if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
-      if (!SU) {
-        CandPolicy NoPolicy;
-        TopCand.reset(NoPolicy);
-        pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
-        assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand);
-        SU = TopCand.SU;
-      }
-      IsTopNode = true;
-    } else if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
-      if (!SU) {
-        CandPolicy NoPolicy;
-        BotCand.reset(NoPolicy);
-        pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
-        assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand);
-        SU = BotCand.SU;
-      }
-      IsTopNode = false;
-    } else {
-      SU = pickNodeBidirectional(IsTopNode);
+  if (RegionPolicy.OnlyTopDown) {
+    SU = Top.pickOnlyChoice();
+    if (!SU) {
+      CandPolicy NoPolicy;
+      TopCand.reset(NoPolicy);
+      pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
+      assert(TopCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(TopCand);
+      SU = TopCand.SU;
     }
-  } while (SU->isScheduled);
+    IsTopNode = true;
+  } else if (RegionPolicy.OnlyBottomUp) {
+    SU = Bot.pickOnlyChoice();
+    if (!SU) {
+      CandPolicy NoPolicy;
+      BotCand.reset(NoPolicy);
+      pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
+      assert(BotCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(BotCand);
+      SU = BotCand.SU;
+    }
+    IsTopNode = false;
+  } else {
+    SU = pickNodeBidirectional(IsTopNode);
+  }
+  assert(!SU->isScheduled && "SUnit scheduled twice.");
 
   // If IsTopNode, then SU is in Top.Available and must be removed. Otherwise,
   // if isTopReady(), then SU is in either Top.Available or Top.Pending.
@@ -4524,43 +4523,42 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  do {
-    if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
-      if (SU) {
-        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
-      } else {
-        CandPolicy NoPolicy;
-        BotCand.reset(NoPolicy);
-        // Set the bottom-up policy based on the state of the current bottom
-        // zone and the instructions outside the zone, including the top zone.
-        setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
-        pickNodeFromQueue(Bot, BotCand);
-        assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand, /*IsPostRA=*/true);
-        SU = BotCand.SU;
-      }
-      IsTopNode = false;
-    } else if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
-      if (SU) {
-        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
-      } else {
-        CandPolicy NoPolicy;
-        TopCand.reset(NoPolicy);
-        // Set the top-down policy based on the state of the current top zone
-        // and the instructions outside the zone, including the bottom zone.
-        setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
-        pickNodeFromQueue(Top, TopCand);
-        assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand, /*IsPostRA=*/true);
-        SU = TopCand.SU;
-      }
-      IsTopNode = true;
+  if (RegionPolicy.OnlyBottomUp) {
+    SU = Bot.pickOnlyChoice();
+    if (SU) {
+      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
     } else {
-      SU = pickNodeBidirectional(IsTopNode);
+      CandPolicy NoPolicy;
+      BotCand.reset(NoPolicy);
+      // Set the bottom-up policy based on the state of the current bottom
+      // zone and the instructions outside the zone, including the top zone.
+      setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
+      pickNodeFromQueue(Bot, BotCand);
+      assert(BotCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(BotCand, /*IsPostRA=*/true);
+      SU = BotCand.SU;
     }
-  } while (SU->isScheduled);
+    IsTopNode = false;
+  } else if (RegionPolicy.OnlyTopDown) {
+    SU = Top.pickOnlyChoice();
+    if (SU) {
+      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+    } else {
+      CandPolicy NoPolicy;
+      TopCand.reset(NoPolicy);
+      // Set the top-down policy based on the state of the current top zone
+      // and the instructions outside the zone, including the bottom zone.
+      setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
+      pickNodeFromQueue(Top, TopCand);
+      assert(TopCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(TopCand, /*IsPostRA=*/true);
+      SU = TopCand.SU;
+    }
+    IsTopNode = true;
+  } else {
+    SU = pickNodeBidirectional(IsTopNode);
+  }
+  assert(!SU->isScheduled && "SUnit scheduled twice.");
 
   if (SU->isTopReady())
     Top.removeReady(SU);

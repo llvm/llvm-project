@@ -9,9 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "TemporaryObjectsCheck.h"
-
-using namespace clang::ast_matchers;
+#include "../fuchsia/TemporaryObjectsCheck.h"
 
 namespace clang::tidy {
 namespace zircon {
@@ -20,14 +18,14 @@ namespace zircon {
 class ZirconModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<TemporaryObjectsCheck>(
+    CheckFactories.registerCheck<fuchsia::TemporaryObjectsCheck>(
         "zircon-temporary-objects");
   }
 };
 
 // Register the ZirconTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ZirconModule>
-    X("zircon-module", "Adds Zircon kernel checks.");
+    X("zircon-module", "Adds Zircon kernel checks (deprecated in LLVM 24).");
 } // namespace zircon
 
 // This anchor is used to force the linker to link in the generated object file

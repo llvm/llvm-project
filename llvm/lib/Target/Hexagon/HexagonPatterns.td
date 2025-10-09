@@ -1611,8 +1611,11 @@ def DfMpy: OutPatFrag<(ops node:$Rs, node:$Rt),
     $Rt, $Rs),
   $Rs, $Rt)>;
 
-let Predicates = [HasV67,UseUnsafeMath], AddedComplexity = 50 in {
-  def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
+def fmul_afn : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b), [{
+  return N->getFlags().hasApproximateFuncs();
+}]>;
+let Predicates = [HasV67], AddedComplexity = 50 in {
+  def : Pat<(fmul_afn F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
 }
 let Predicates = [HasV67] in {
   def: OpR_RR_pat<F2_dfmin,     pf2<fminimumnum>, f64, F64>;

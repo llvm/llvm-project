@@ -1399,8 +1399,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
   ctx.arg.dtltoDistributorArgs =
       args::getStrings(args, OPT_thinlto_distributor_arg);
-  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler_eq);
-  ctx.arg.dtltoCompilerArgs = args::getStrings(args, OPT_thinlto_compiler_arg);
+  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
+  ctx.arg.dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =

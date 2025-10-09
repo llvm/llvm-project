@@ -79,7 +79,7 @@ static cl::opt<int>
     FPImmCost(DEBUG_TYPE "-fpimm-cost", cl::Hidden,
               cl::desc("Give the maximum number of instructions that we will "
                        "use for creating a floating-point immediate value"),
-              cl::init(2));
+              cl::init(3));
 
 static cl::opt<bool>
     ReassocShlAddiAdd("reassoc-shl-addi-add", cl::Hidden,
@@ -434,7 +434,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (!Subtarget.useCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
@@ -533,7 +533,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
                         ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
                         ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
-                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP},
+                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP, ISD::FMODF},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -4562,6 +4562,14 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     SlideUp = V.isUndef() || sd_match(V, m_ExtractElt(m_Value(EVec), m_Zero()));
     if (!SlideUp)
       break;
+  }
+
+  // Do not slideup if the element type of EVec is different.
+  if (SlideUp) {
+    MVT EVecEltVT = EVec.getSimpleValueType().getVectorElementType();
+    MVT ContainerEltVT = ContainerVT.getVectorElementType();
+    if (EVecEltVT != ContainerEltVT)
+      SlideUp = false;
   }
 
   if (SlideUp) {
@@ -15713,8 +15721,7 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // Emit a negate of the setcc.
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                     N0.getOperand(0));
+  return DAG.getNegative(N0.getOperand(0), DL, VT);
 }
 
 static SDValue performADDCombine(SDNode *N,
@@ -16203,7 +16210,6 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   using namespace SDPatternMatch;
-
   SDValue Base, Inserted;
   APInt CMask;
   if (!sd_match(N, m_Xor(m_Value(Base),
@@ -16214,7 +16220,6 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   if (N->getValueType(0) != MVT::i32)
     return SDValue();
-
   unsigned Width, ShAmt;
   if (!CMask.isShiftedMask(ShAmt, Width))
     return SDValue();
@@ -16235,10 +16240,96 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
+static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue X;
+  APInt MaskImm;
+  if (!sd_match(N, m_Or(m_OneUse(m_Value(X)), m_ConstInt(MaskImm))))
+    return SDValue();
+
+  unsigned ShAmt, Width;
+  if (!MaskImm.isShiftedMask(ShAmt, Width) || MaskImm.isSignedIntN(12))
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  // If Zbs is enabled and it is a single bit set we can use BSETI which
+  // can be compressed to C_BSETI when Xqcibm in enabled.
+  if (Width == 1 && Subtarget.hasStdExtZbs())
+    return SDValue();
+
+  // If C1 is a shifted mask (but can't be formed as an ORI),
+  // use a bitfield insert of -1.
+  // Transform (or x, C1)
+  //        -> (qc.insbi x, -1, width, shift)
+  SDLoc DL(N);
+
+  SDValue Ops[] = {X, DAG.getSignedConstant(-1, DL, MVT::i32),
+                   DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
+// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
+// being inserted only sets known zero bits.
+static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget) {
+  // Supported only in Xqcibm for now.
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue Inserted;
+  APInt MaskImm, OrImm;
+  if (!sd_match(
+          N, m_SpecificVT(MVT::i32, m_Or(m_OneUse(m_And(m_Value(Inserted),
+                                                        m_ConstInt(MaskImm))),
+                                         m_ConstInt(OrImm)))))
+    return SDValue();
+
+  // Compute the Known Zero for the AND as this allows us to catch more general
+  // cases than just looking for AND with imm.
+  KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
+
+  // The bits being inserted must only set those bits that are known to be
+  // zero.
+  if (!OrImm.isSubsetOf(Known.Zero)) {
+    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
+    // currently handle this case.
+    return SDValue();
+  }
+
+  unsigned ShAmt, Width;
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!Known.Zero.isShiftedMask(ShAmt, Width))
+    return SDValue();
+
+  // QC_INSB(I) dst, src, #width, #shamt.
+  SDLoc DL(N);
+
+  SDValue ImmNode =
+      DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, DL, MVT::i32);
+
+  SDValue Ops[] = {Inserted, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
 
+  if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineOrAndToBitfieldInsert(N, DAG, Subtarget))
+    return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
@@ -16406,43 +16497,60 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   SDValue X = N->getOperand(0);
 
   if (Subtarget.hasShlAdd(3)) {
-    for (uint64_t Divisor : {3, 5, 9}) {
-      if (MulAmt % Divisor != 0)
-        continue;
-      uint64_t MulAmt2 = MulAmt / Divisor;
-      // 3/5/9 * 2^N ->  shl (shXadd X, X), N
-      if (isPowerOf2_64(MulAmt2)) {
-        SDLoc DL(N);
-        SDValue X = N->getOperand(0);
-        // Put the shift first if we can fold a zext into the
-        // shift forming a slli.uw.
-        if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
-            X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
-          SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
-                                    DAG.getConstant(Log2_64(MulAmt2), DL, VT));
-          return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                             DAG.getConstant(Log2_64(Divisor - 1), DL, VT),
-                             Shl);
-        }
-        // Otherwise, put rhe shl second so that it can fold with following
-        // instructions (e.g. sext or add).
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-        return DAG.getNode(ISD::SHL, DL, VT, Mul359,
-                           DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+    int Shift;
+    if (int ShXAmount = isShifted359(MulAmt, Shift)) {
+      // 3/5/9 * 2^N -> shl (shXadd X, X), N
+      SDLoc DL(N);
+      SDValue X = N->getOperand(0);
+      // Put the shift first if we can fold a zext into the shift forming
+      // a slli.uw.
+      if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
+          X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
+        SDValue Shl =
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
+                           DAG.getConstant(ShXAmount, DL, VT), Shl);
       }
+      // Otherwise, put the shl second so that it can fold with following
+      // instructions (e.g. sext or add).
+      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                                   DAG.getConstant(ShXAmount, DL, VT), X);
+      return DAG.getNode(ISD::SHL, DL, VT, Mul359,
+                         DAG.getConstant(Shift, DL, VT));
+    }
 
-      // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-      if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
-        SDLoc DL(N);
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
-                           Mul359);
-      }
+    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
+    int ShX;
+    int ShY;
+    switch (MulAmt) {
+    case 3 * 5:
+      ShY = 1;
+      ShX = 2;
+      break;
+    case 3 * 9:
+      ShY = 1;
+      ShX = 3;
+      break;
+    case 5 * 5:
+      ShX = ShY = 2;
+      break;
+    case 5 * 9:
+      ShY = 2;
+      ShX = 3;
+      break;
+    case 9 * 9:
+      ShX = ShY = 3;
+      break;
+    default:
+      ShX = ShY = 0;
+      break;
+    }
+    if (ShX) {
+      SDLoc DL(N);
+      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                                   DAG.getConstant(ShY, DL, VT), X);
+      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                         DAG.getConstant(ShX, DL, VT), Mul359);
     }
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
@@ -16465,18 +16573,14 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // variants we could implement.  e.g.
     //   (2^(1,2,3) * 3,5,9 + 1) << C2
     //   2^(C1>3) * 3,5,9 +/- 1
-    for (uint64_t Divisor : {3, 5, 9}) {
-      uint64_t C = MulAmt - 1;
-      if (C <= Divisor)
-        continue;
-      unsigned TZ = llvm::countr_zero(C);
-      if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
+    if (int ShXAmount = isShifted359(MulAmt - 1, Shift)) {
+      assert(Shift != 0 && "MulAmt=4,6,10 handled before");
+      if (Shift <= 3) {
         SDLoc DL(N);
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                                     DAG.getConstant(ShXAmount, DL, VT), X);
         return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getConstant(TZ, DL, VT), X);
+                           DAG.getConstant(Shift, DL, VT), X);
       }
     }
 
@@ -16484,7 +16588,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
       unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
       if (ScaleShift >= 1 && ScaleShift < 4) {
-        unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
+        unsigned ShiftAmt = llvm::countr_zero((MulAmt - 1) & (MulAmt - 2));
         SDLoc DL(N);
         SDValue Shift1 =
             DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
@@ -16497,7 +16601,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
     for (uint64_t Offset : {3, 5, 9}) {
       if (isPowerOf2_64(MulAmt + Offset)) {
-        unsigned ShAmt = Log2_64(MulAmt + Offset);
+        unsigned ShAmt = llvm::countr_zero(MulAmt + Offset);
         if (ShAmt >= VT.getSizeInBits())
           continue;
         SDLoc DL(N);
@@ -16516,21 +16620,16 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       uint64_t MulAmt2 = MulAmt / Divisor;
       // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
       // of 25 which happen to be quite common.
-      for (uint64_t Divisor2 : {3, 5, 9}) {
-        if (MulAmt2 % Divisor2 != 0)
-          continue;
-        uint64_t MulAmt3 = MulAmt2 / Divisor2;
-        if (isPowerOf2_64(MulAmt3)) {
-          SDLoc DL(N);
-          SDValue Mul359A =
-              DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                          DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-          SDValue Mul359B = DAG.getNode(
-              RISCVISD::SHL_ADD, DL, VT, Mul359A,
-              DAG.getConstant(Log2_64(Divisor2 - 1), DL, VT), Mul359A);
-          return DAG.getNode(ISD::SHL, DL, VT, Mul359B,
-                             DAG.getConstant(Log2_64(MulAmt3), DL, VT));
-        }
+      if (int ShBAmount = isShifted359(MulAmt2, Shift)) {
+        SDLoc DL(N);
+        SDValue Mul359A =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        SDValue Mul359B =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359A,
+                        DAG.getConstant(ShBAmount, DL, VT), Mul359A);
+        return DAG.getNode(ISD::SHL, DL, VT, Mul359B,
+                           DAG.getConstant(Shift, DL, VT));
       }
     }
   }
@@ -16796,7 +16895,7 @@ static SDValue performSETCCCombine(SDNode *N,
     // addi or xori after shifting.
     uint64_t N1Int = cast<ConstantSDNode>(N1)->getZExtValue();
     uint64_t AndRHSInt = AndRHSC.getZExtValue();
-    if (OpVT == MVT::i64 && AndRHSInt <= 0xffffffff &&
+    if (OpVT == MVT::i64 && isUInt<32>(AndRHSInt) &&
         isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
       unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
       int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;
@@ -16874,7 +16973,7 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // Fold (sext_inreg (setcc), i1) -> (sub 0, (setcc))
   if (Opc == ISD::SETCC && SrcVT == MVT::i1 && DCI.isAfterLegalizeDAG())
-    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
+    return DAG.getNegative(Src, DL, VT);
 
   // Fold (sext_inreg (xor (setcc), -1), i1) -> (add (setcc), -1)
   if (Opc == ISD::XOR && SrcVT == MVT::i1 &&
@@ -22190,6 +22289,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // - They are debug instructions. Otherwise,
   // - They do not have side-effects, do not access memory and their inputs do
   //   not depend on the results of the select pseudo-instructions.
+  // - They don't adjust stack.
   // The TrueV/FalseV operands of the selects cannot depend on the result of
   // previous selects in the sequence.
   // These conditions could be further relaxed. See the X86 target for a
@@ -22218,6 +22318,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   SelectDests.insert(MI.getOperand(0).getReg());
 
   MachineInstr *LastSelectPseudo = &MI;
+  const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
+
   for (auto E = BB->end(), SequenceMBBI = MachineBasicBlock::iterator(MI);
        SequenceMBBI != E; ++SequenceMBBI) {
     if (SequenceMBBI->isDebugInstr())
@@ -22237,7 +22339,9 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
     }
     if (SequenceMBBI->hasUnmodeledSideEffects() ||
         SequenceMBBI->mayLoadOrStore() ||
-        SequenceMBBI->usesCustomInsertionHook())
+        SequenceMBBI->usesCustomInsertionHook() ||
+        TII.isFrameInstr(*SequenceMBBI) ||
+        SequenceMBBI->isStackAligningInlineAsm())
       break;
     if (llvm::any_of(SequenceMBBI->operands(), [&](MachineOperand &MO) {
           return MO.isReg() && MO.isUse() && SelectDests.count(MO.getReg());
@@ -22245,7 +22349,6 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
       break;
   }
 
-  const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction::iterator I = ++BB->getIterator();
@@ -24935,8 +25038,17 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
     // Mark RVV intrinsic as supported.
-    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID()))
+    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID())) {
+      // GISel doesn't support tuple types yet.
+      if (Inst.getType()->isRISCVVectorTupleTy())
+        return true;
+
+      for (unsigned i = 0; i < II->arg_size(); ++i)
+        if (II->getArgOperand(i)->getType()->isRISCVVectorTupleTy())
+          return true;
+
       return false;
+    }
   }
 
   if (Inst.getType()->isScalableTy())

@@ -985,18 +985,21 @@ double test_mm256_cvtsd_f64(__m256d __a) {
   // CHECK: extractelement <4 x double> %{{.*}}, i32 0
   return _mm256_cvtsd_f64(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtsd_f64((__m256d){8.0, 7.0, 6.0, 5.0}) == 8.0);
 
 int test_mm256_cvtsi256_si32(__m256i __a) {
   // CHECK-LABEL: test_mm256_cvtsi256_si32
   // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
   return _mm256_cvtsi256_si32(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtsi256_si32((__m256i)(__v8si){8, 7, 6, 5, 4, 3, 2, 1}) == 8);
 
 float test_mm256_cvtss_f32(__m256 __a) {
   // CHECK-LABEL: test_mm256_cvtss_f32
   // CHECK: extractelement <8 x float> %{{.*}}, i32 0
   return _mm256_cvtss_f32(__a);
 }
+TEST_CONSTEXPR(_mm256_cvtss_f32((__m256){8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f}) == 8.0f);
 
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvttpd_epi32
@@ -1036,6 +1039,7 @@ int test_mm256_extract_epi8(__m256i A) {
   // CHECK: zext i8 %{{.*}} to i32
   return _mm256_extract_epi8(A, 31);
 }
+TEST_CONSTEXPR(_mm256_extract_epi8(((__m256i)(__v32qs){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 45) == 13);
 
 int test_mm256_extract_epi16(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi16
@@ -1043,12 +1047,14 @@ int test_mm256_extract_epi16(__m256i A) {
   // CHECK: zext i16 %{{.*}} to i32
   return _mm256_extract_epi16(A, 15);
 }
+TEST_CONSTEXPR(_mm256_extract_epi16(((__m256i)(__v16hi){0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}), 50) == 4);
 
 int test_mm256_extract_epi32(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi32
   // CHECK: extractelement <8 x i32> %{{.*}}, {{i32|i64}} 7
   return _mm256_extract_epi32(A, 7);
 }
+TEST_CONSTEXPR(_mm256_extract_epi32(((__m256i)(__v8si){0, 5, 10, 15, 20, 25, 30, 35}), 18) == 10);
 
 #if __x86_64__
 long long test_mm256_extract_epi64(__m256i A) {
@@ -1056,6 +1062,7 @@ long long test_mm256_extract_epi64(__m256i A) {
   // X64: extractelement <4 x i64> %{{.*}}, {{i32|i64}} 3
   return _mm256_extract_epi64(A, 3);
 }
+TEST_CONSTEXPR(_mm256_extract_epi64(((__m256i)(__v4di){5, 15, 25, 35}), 14) == 25);
 #endif
 
 __m128d test_mm256_extractf128_pd(__m256d A) {
@@ -1117,18 +1124,21 @@ __m256i test_mm256_insert_epi8(__m256i x, char b) {
   // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, {{i32|i64}} 14
   return _mm256_insert_epi8(x, b, 14);
 }
+TEST_CONSTEXPR(match_v32qi(_mm256_insert_epi8(((__m256i)(__v32qs){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 77, 47), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 77, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31));
 
 __m256i test_mm256_insert_epi16(__m256i x, int b) {
   // CHECK-LABEL: test_mm256_insert_epi16
   // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, {{i32|i64}} 4
   return _mm256_insert_epi16(x, b, 4);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_insert_epi16(((__m256i)(__v16hi){0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}), 909, 62), 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 909, 30));
 
 __m256i test_mm256_insert_epi32(__m256i x, int b) {
   // CHECK-LABEL: test_mm256_insert_epi32
   // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, {{i32|i64}} 5
   return _mm256_insert_epi32(x, b, 5);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_insert_epi32(((__m256i)(__v8si){ 0, 5, 10, 15, 20, 25, 30, 35}), 4321, 18), 0, 5, 4321, 15, 20, 25, 30, 35));
 
 #if __x86_64__
 __m256i test_mm256_insert_epi64(__m256i x, long long b) {
@@ -1136,6 +1146,7 @@ __m256i test_mm256_insert_epi64(__m256i x, long long b) {
   // X64: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 2
   return _mm256_insert_epi64(x, b, 2);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_insert_epi64(((__m256i)(__v4di){5, 15, 25, 35}), -123456789LL, 10), 5, 15, -123456789LL, 35));
 #endif
 
 __m256d test_mm256_insertf128_pd(__m256d A, __m128d B) {

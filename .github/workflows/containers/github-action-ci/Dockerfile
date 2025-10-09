@@ -1,8 +1,8 @@
-FROM docker.io/library/ubuntu:24.04 as base
+FROM docker.io/library/ubuntu:24.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
 
-FROM base as stage1-toolchain
-ENV LLVM_VERSION=21.1.0
+FROM base AS stage1-toolchain
+ENV LLVM_VERSION=21.1.1
 
 RUN apt-get update && \
     apt-get install -y \
@@ -37,7 +37,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
-FROM base as ci-container
+FROM base AS ci-container
 
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
@@ -62,6 +62,7 @@ RUN apt-get update && \
     # Having a symlink from python to python3 enables code sharing between
     # the Linux and Windows pipelines.
     python3-pip \
+    python3-venv \
     file \
     tzdata \
     python-is-python3 && \
@@ -97,7 +98,7 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER gha
 WORKDIR /home/gha
 
-FROM ci-container as ci-container-agent
+FROM ci-container AS ci-container-agent
 
 ENV GITHUB_RUNNER_VERSION=2.328.0
 

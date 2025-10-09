@@ -633,8 +633,8 @@ void CodeViewDebug::beginModule(Module *M) {
     Node = *CUs->operands().begin();
   }
   const auto *CU = cast<DICompileUnit>(Node);
-
-  CurrentSourceLanguage = MapDWLangToCVLang(CU->getSourceLanguage());
+  CurrentSourceLanguage =
+      MapDWLangToCVLang(CU->getSourceLanguage().getUnversionedName());
   if (!M->getCodeViewFlag() ||
       CU->getEmissionKind() == DICompileUnit::NoDebug) {
     Asm = nullptr;

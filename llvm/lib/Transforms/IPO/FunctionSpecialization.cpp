@@ -28,10 +28,13 @@ using namespace llvm;
 
 STATISTIC(NumSpecsCreated, "Number of specializations created");
 
+namespace llvm {
+
 static cl::opt<bool> ForceSpecialization(
-    "force-specialization", cl::init(false), cl::Hidden, cl::desc(
-    "Force function specialization for every call site with a constant "
-    "argument"));
+    "force-specialization", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Force function specialization for every call site with a constant "
+        "argument"));
 
 static cl::opt<unsigned> MaxClones(
     "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
@@ -90,6 +93,8 @@ static cl::opt<bool> SpecializeLiteralConstant(
         "argument"));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB,
                                             BasicBlock *Succ) const {

@@ -544,14 +544,9 @@ struct CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
 ///
 ///  if (isa<Type>(myVal)) { ... }
 ///  if (isa<Type0, Type1, Type2>(myVal)) { ... }
-template <typename To, typename From>
+template <typename... To, typename From>
 [[nodiscard]] inline bool isa(const From &Val) {
-  return CastInfo<To, const From>::isPossible(Val);
-}
-
-template <typename First, typename Second, typename... Rest, typename From>
-[[nodiscard]] inline bool isa(const From &Val) {
-  return isa<First>(Val) || isa<Second, Rest...>(Val);
+  return (CastInfo<To, const From>::isPossible(Val) || ...);
 }
 
 /// cast<X> - Return the argument parameter cast to the specified type.  This

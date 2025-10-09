@@ -77,4 +77,7 @@ extern "C" void stepper() {
   assert(unw_step(&cursor) <= 0);
 }
 
-int main() { bad_unwind_info(); }
+int main(int, char **) {
+  bad_unwind_info();
+  return 0;
+}

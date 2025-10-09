@@ -7,15 +7,15 @@
 ; PR19059
 
 define i32 @isint_return(double %d) nounwind {
-; CHECK64-LABEL: isint_return:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    cvttpd2dq %xmm0, %xmm1
-; CHECK64-NEXT:    cvtdq2pd %xmm1, %xmm1
-; CHECK64-NEXT:    cmpeqsd %xmm0, %xmm1
-; CHECK64-NEXT:    movq %xmm1, %rax
-; CHECK64-NEXT:    andl $1, %eax
-; CHECK64-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK64-NEXT:    retq
+; X64-LABEL: isint_return:
+; X64:       # %bb.0:
+; X64-NEXT:    cvttpd2dq %xmm0, %xmm1
+; X64-NEXT:    cvtdq2pd %xmm1, %xmm1
+; X64-NEXT:    cmpeqsd %xmm0, %xmm1
+; X64-NEXT:    movq %xmm1, %rax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
 ;
 ; CHECK32-LABEL: isint_return:
 ; CHECK32:       # %bb.0:
@@ -50,14 +50,14 @@ define i32 @isint_return(double %d) nounwind {
 }
 
 define i32 @isint_float_return(float %f) nounwind {
-; CHECK64-LABEL: isint_float_return:
-; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    cvttps2dq %xmm0, %xmm1
-; CHECK64-NEXT:    cvtdq2ps %xmm1, %xmm1
-; CHECK64-NEXT:    cmpeqss %xmm0, %xmm1
-; CHECK64-NEXT:    movd %xmm1, %eax
-; CHECK64-NEXT:    andl $1, %eax
-; CHECK64-NEXT:    retq
+; X64-LABEL: isint_float_return:
+; X64:       # %bb.0:
+; X64-NEXT:    cvttps2dq %xmm0, %xmm1
+; X64-NEXT:    cvtdq2ps %xmm1, %xmm1
+; X64-NEXT:    cmpeqss %xmm0, %xmm1
+; X64-NEXT:    movd %xmm1, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    retq
 ;
 ; CHECK32-LABEL: isint_float_return:
 ; CHECK32:       # %bb.0:

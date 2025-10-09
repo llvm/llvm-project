@@ -261,3 +261,87 @@ llvm.func @llvm.store(%a: !llvm.ptr<1>, %val: i32) {
   llvm.store %val, %a {cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>} : i32, !llvm.ptr<1>
   llvm.return
 }
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @_Z30intel_sub_group_block_read_us8PU3AS1t
+// CHECK: llvm.func @blockload_as1(%[[ARG0:.*]]: !llvm.ptr<1>)
+llvm.func @blockload_as1(%ptr: !llvm.ptr<1>) -> vector<8xi16> {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z30intel_sub_group_block_read_us8PU3AS1t(%[[ARG0]])
+  // CHECK-SAME: {function_type = !llvm.func<vector<8xi16> (ptr<1>)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:  no_unwind, sym_name = "_Z30intel_sub_group_block_read_us8PU3AS1t",
+  // CHECK-SAME:  visibility_ = 0 : i64, will_return, xevm.DecorationCacheControl =
+  // CHECK-SAME:    [6442 : i32, 0 : i32, 1 : i32, 0 : i32],
+  // CHECK-SAME:    [6442 : i32, 1 : i32, 1 : i32, 0 : i32]
+  %loaded_a = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>) -> vector<8xi16>
+  llvm.return %loaded_a : vector<8xi16>
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @_Z31intel_sub_group_block_read_uc16PU3AS3h(!llvm.ptr<3>)
+// CHECK: llvm.func @blockload_as3(%[[ARG0:.*]]: !llvm.ptr<3>)
+llvm.func @blockload_as3(%ptr: !llvm.ptr<3>) -> vector<16xi8> {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z31intel_sub_group_block_read_uc16PU3AS3h(%[[ARG0]])
+  // CHECK-SAME: {function_type = !llvm.func<vector<16xi8> (ptr<3>)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:   no_unwind, sym_name = "_Z31intel_sub_group_block_read_uc16PU3AS3h", visibility_ = 0 : i64,
+  // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
+  // CHECK-SAME:    [6442 : i32, 0 : i32, 1 : i32, 0 : i32],
+  // CHECK-SAME:    [6442 : i32, 1 : i32, 1 : i32, 0 : i32]
+  %loaded_a = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<3>) -> vector<16xi8>
+  llvm.return %loaded_a : vector<16xi8>
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @_Z29intel_sub_group_block_read_ucPU3AS3h(!llvm.ptr<3>)
+// CHECK: llvm.func @blockload_scalar(%[[ARG0:.*]]: !llvm.ptr<3>)
+llvm.func @blockload_scalar(%ptr: !llvm.ptr<3>) -> i8 {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z29intel_sub_group_block_read_ucPU3AS3h(%[[ARG0]])
+  // CHECK-SAME: {function_type = !llvm.func<i8 (ptr<3>)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:   no_unwind, sym_name = "_Z29intel_sub_group_block_read_ucPU3AS3h", visibility_ = 0 : i64,
+  // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
+  // CHECK-SAME:    [6442 : i32, 0 : i32, 1 : i32, 0 : i32],
+  // CHECK-SAME:    [6442 : i32, 1 : i32, 1 : i32, 0 : i32]
+  %loaded_a = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<3>) -> i8
+  llvm.return %loaded_a : i8
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @_Z31intel_sub_group_block_write_ui8PU3AS1jDv8_j
+// CHECK: llvm.func @blockstore_as1(%[[ARG0:.*]]: !llvm.ptr<1>, %[[ARG1:.*]]: vector<8xi32>) {
+llvm.func @blockstore_as1(%ptr: !llvm.ptr<1>, %data: vector<8xi32>) {
+  // CHECK: llvm.call spir_funccc @_Z31intel_sub_group_block_write_ui8PU3AS1jDv8_j(%[[ARG0]], %[[ARG1]])
+  // CHECK-SAME: {function_type = !llvm.func<void (ptr<1>, vector<8xi32>)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:   no_unwind, sym_name = "_Z31intel_sub_group_block_write_ui8PU3AS1jDv8_j", visibility_ = 0 : i64,
+  // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
+  // CHECK-SAME:    [6443 : i32, 0 : i32, 2 : i32, 0 : i32],
+  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32, 0 : i32]
+  xevm.blockstore %ptr, %data <{cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>}> : (!llvm.ptr<1>, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @_Z31intel_sub_group_block_write_ul2PU3AS3mDv2_m
+// CHECK: llvm.func @blockstore_as3(%[[ARG0:.*]]: !llvm.ptr<3>, %[[ARG1:.*]]: vector<2xi64>) {
+llvm.func @blockstore_as3(%ptr: !llvm.ptr<3>, %data: vector<2xi64>) {
+  // CHECK: llvm.call spir_funccc @_Z31intel_sub_group_block_write_ul2PU3AS3mDv2_m(%[[ARG0]], %[[ARG1]])
+  // CHECK-SAME: {function_type = !llvm.func<void (ptr<3>, vector<2xi64>)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:   no_unwind, sym_name = "_Z31intel_sub_group_block_write_ul2PU3AS3mDv2_m", visibility_ = 0 : i64,
+  // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
+  // CHECK-SAME:    [6443 : i32, 0 : i32, 2 : i32, 0 : i32],
+  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32, 0 : i32]
+  xevm.blockstore %ptr, %data <{cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>}> : (!llvm.ptr<3>, vector<2xi64>)
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @_Z30intel_sub_group_block_write_ulPU3AS3mm
+// CHECK: llvm.func @blockstore_scalar(%[[ARG0:.*]]: !llvm.ptr<3>, %[[ARG1:.*]]: i64) {
+llvm.func @blockstore_scalar(%ptr: !llvm.ptr<3>, %data: i64) {
+  // CHECK: llvm.call spir_funccc @_Z30intel_sub_group_block_write_ulPU3AS3mm(%[[ARG0]], %[[ARG1]])
+  // CHECK-SAME: {function_type = !llvm.func<void (ptr<3>, i64)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:   no_unwind, sym_name = "_Z30intel_sub_group_block_write_ulPU3AS3mm", visibility_ = 0 : i64,
+  // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
+  // CHECK-SAME:    [6443 : i32, 0 : i32, 2 : i32, 0 : i32],
+  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32, 0 : i32]
+  xevm.blockstore %ptr, %data <{cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>}> : (!llvm.ptr<3>, i64)
+  llvm.return
+}

@@ -2155,13 +2155,11 @@ are listed below.
 
 .. option:: -f[no-]sanitize=check1,check2,...
 
-   Turn on runtime checks for various forms of undefined or suspicious
-   behavior.
+   Turn on runtime checks or mitigations for various forms of undefined or
+   suspicious behavior. These are disabled by default.
 
-   This option controls whether Clang adds runtime checks for various
-   forms of undefined or suspicious behavior, and is disabled by
-   default. If a check fails, a diagnostic message is produced at
-   runtime explaining the problem. The main checks are:
+   The following options enable runtime checks for various forms of undefined
+   or suspicious behavior:
 
    -  .. _opt_fsanitize_address:
 
@@ -2194,6 +2192,14 @@ are listed below.
       protection against stack-based memory corruption errors.
    -  ``-fsanitize=realtime``: :doc:`RealtimeSanitizer`,
       a real-time safety checker.
+
+   The following options enable runtime mitigations for various forms of
+   undefined or suspicious behavior:
+
+   -  ``-fsanitize=alloc-token``: Enables :doc:`allocation tokens <AllocToken>`
+      for allocator-level heap organization strategies, such as for security
+      hardening. It passes type-derived token IDs to a compatible memory
+      allocator. Requires linking against a token-aware allocator.
 
    There are more fine-grained checks available: see
    the :ref:`list <ubsan-checks>` of specific kinds of

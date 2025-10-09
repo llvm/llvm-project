@@ -1,8 +1,8 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.5-vulkan-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-library %s -o - -filetype=obj | spirv-val %}
 
-; This test depends on NonUniform resource analysis
-; https://github.com/llvm/llvm-project/issues/155701
+; This test depends on llvm.svp.resource.nonuniformindex support (not yet implemented)
+; https://github.com/llvm/llvm-project/issues/160231
 ; XFAIL: *
 
 @.str.b0 = private unnamed_addr constant [3 x i8] c"B0\00", align 1

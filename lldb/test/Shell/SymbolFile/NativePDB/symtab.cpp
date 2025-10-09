@@ -1,4 +1,4 @@
-// REQUIRES: x86
+// REQUIRES: lld, x86
 
 // Test symtab reading
 // RUN: %build --compiler=clang-cl --arch=64 --nodefaultlib -o %t.exe -- %s

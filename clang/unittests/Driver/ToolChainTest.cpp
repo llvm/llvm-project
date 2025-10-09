@@ -442,7 +442,7 @@ TEST(ToolChainTest, ParsedClangName) {
 TEST(ToolChainTest, GetTargetAndMode) {
   llvm::InitializeAllTargets();
   std::string IgnoredError;
-  if (!llvm::TargetRegistry::lookupTarget("x86_64", IgnoredError))
+  if (!llvm::TargetRegistry::lookupTarget(llvm::Triple("x86_64"), IgnoredError))
     GTEST_SKIP();
 
   ParsedClangName Res = ToolChain::getTargetAndModeFromProgramName("clang");

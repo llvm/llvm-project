@@ -32,10 +32,10 @@ static_assert(&typeid(int) < &typeid(long)); // both-error {{not an integral con
 static_assert(&typeid(int) > &typeid(long)); // both-error {{not an integral constant expression}} \
                                              // both-note {{comparison between pointers to unrelated objects '&typeid(int)' and '&typeid(long)' has unspecified value}}
 
- struct Base {
-   virtual void func() ;
- };
- struct Derived : Base {};
+struct Base {
+ virtual void func() ;
+};
+struct Derived : Base {};
 
 constexpr bool test() {
   Derived derived;
@@ -51,4 +51,11 @@ int dontcrash() {
       typeid(int)
   );
   return pti.__flags == 0 ? 1 : 0;
+}
+
+namespace TypeidPtrInEvaluationResult {
+  struct C {};
+  C c = C();
+  consteval const std::type_info *ftype_info() { return &typeid(c); }
+  const std::type_info *T1 = ftype_info();
 }

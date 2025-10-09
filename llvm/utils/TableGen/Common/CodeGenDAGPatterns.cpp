@@ -246,16 +246,14 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   return true;
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
   T.writeToStream(OS);
   return OS;
 }
-raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm
 
 LLVM_DUMP_METHOD
 void TypeSetByHwMode::dump() const { dbgs() << *this << '\n'; }
@@ -335,6 +333,8 @@ bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
   using WildPartT = std::pair<MVT, std::function<bool(MVT)>>;
   static const WildPartT WildParts[] = {
       {MVT::iPTR, [](MVT T) { return T.isScalarInteger() || T == MVT::iPTR; }},
+      {MVT::cPTR,
+       [](MVT T) { return T.isCheriCapability() || T == MVT::cPTR; }},
   };
 
   bool Changed = false;
@@ -816,6 +816,10 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
   if (Out.count(MVT::pAny)) {
     Out.erase(MVT::pAny);
     Out.insert(MVT::iPTR);
+    for (MVT T : MVT::cheri_capability_valuetypes()) {
+      if (Legal.count(T))
+        Out.insert(MVT::cPTR);
+    }
   } else if (Out.count(MVT::iAny)) {
     Out.erase(MVT::iAny);
     for (MVT T : MVT::integer_valuetypes())
@@ -1647,9 +1651,11 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
   case SDTCisVT:
     // Operand must be a particular type.
     return NodeToApply.UpdateNodeType(ResNo, VVT, TP);
-  case SDTCisPtrTy:
-    // Operand must be same as target pointer type.
-    return NodeToApply.UpdateNodeType(ResNo, MVT::iPTR, TP);
+  case SDTCisPtrTy: {
+    // Operand must be a legal pointer (iPTR, or possibly cPTR) type.
+    const TypeSetByHwMode &PtrTys = TP.getDAGPatterns().getLegalPtrTypes();
+    return NodeToApply.UpdateNodeType(ResNo, PtrTys, TP);
+  }
   case SDTCisInt:
     // Require it to be one of the legal integer VTs.
     return TI.EnforceInteger(NodeToApply.getExtType(ResNo));
@@ -3293,6 +3299,7 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
                                        PatternRewriterFn PatternRewriter)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
+      LegalPtrVTS(ComputeLegalPtrTypes()),
       PatternRewriter(std::move(PatternRewriter)) {
   ParseNodeInfo();
   ParseNodeTransforms();
@@ -3326,6 +3333,36 @@ const Record *CodeGenDAGPatterns::getSDNodeNamed(StringRef Name) const {
   if (!N || !N->isSubClassOf("SDNode"))
     PrintFatalError("Error getting SDNode '" + Name + "'!");
   return N;
+}
+
+// Compute the subset of iPTR and cPTR legal for each mode, coalescing into the
+// default mode where possible to avoid predicate explosion.
+TypeSetByHwMode CodeGenDAGPatterns::ComputeLegalPtrTypes() const {
+  auto LegalPtrsForSet = [](const MachineValueTypeSet &In) {
+    MachineValueTypeSet Out;
+    Out.insert(MVT::iPTR);
+    for (MVT T : MVT::cheri_capability_valuetypes()) {
+      if (In.count(T)) {
+        Out.insert(MVT::cPTR);
+        break;
+      }
+    }
+    return Out;
+  };
+
+  const TypeSetByHwMode &LegalTypes = getLegalTypes();
+  MachineValueTypeSet LegalPtrsDefault =
+      LegalPtrsForSet(LegalTypes.get(DefaultMode));
+
+  TypeSetByHwMode LegalPtrTypes;
+  for (const auto &I : LegalTypes) {
+    MachineValueTypeSet S = LegalPtrsForSet(I.second);
+    if (I.first != DefaultMode && S == LegalPtrsDefault)
+      continue;
+    LegalPtrTypes.getOrCreate(I.first).insert(S);
+  }
+
+  return LegalPtrTypes;
 }
 
 // Parse all of the SDNode definitions for the target, populating SDNodes.
