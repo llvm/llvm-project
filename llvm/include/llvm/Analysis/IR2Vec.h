@@ -569,6 +569,13 @@ public:
 
   /// Computes and returns the embedding for the current function.
   LLVM_ABI Embedding getFunctionVector() const { return computeEmbeddings(); }
+
+  /// Invalidate embeddings if cached. The embeddings may not be relevant
+  /// anymore when the IR changes due to transformations. In such cases, the
+  /// cached embeddings should be invalidated to ensure
+  /// correctness/recomputation. This is a no-op for SymbolicEmbedder but
+  /// removes all the cached entries in FlowAwareEmbedder.
+  virtual void invalidateEmbeddings() { return; }
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.
@@ -596,6 +603,7 @@ private:
 public:
   FlowAwareEmbedder(const Function &F, const Vocabulary &Vocab)
       : Embedder(F, Vocab) {}
+  void invalidateEmbeddings() override { InstVecMap.clear(); }
 };
 
 } // namespace ir2vec

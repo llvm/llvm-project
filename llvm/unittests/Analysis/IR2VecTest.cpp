@@ -409,6 +409,10 @@ TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
   EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec2));
   EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec3));
   EXPECT_TRUE(FuncVec2.approximatelyEquals(FuncVec3));
+
+  Emb->invalidateEmbeddings();
+  const auto &FuncVec4 = Emb->getFunctionVector();
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec4));
 }
 
 TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_FlowAware) {
@@ -426,6 +430,10 @@ TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_FlowAware) {
   EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec2));
   EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec3));
   EXPECT_TRUE(FuncVec2.approximatelyEquals(FuncVec3));
+
+  Emb->invalidateEmbeddings();
+  const auto &FuncVec4 = Emb->getFunctionVector();
+  EXPECT_TRUE(FuncVec1.approximatelyEquals(FuncVec4));
 }
 
 static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;

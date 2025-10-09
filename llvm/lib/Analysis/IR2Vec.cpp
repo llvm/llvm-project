@@ -165,7 +165,7 @@ std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
 }
 
 Embedding Embedder::computeEmbeddings() const {
-  Embedding FuncVector(Dimension, 0);
+  Embedding FuncVector(Dimension, 0.0);
 
   if (F.isDeclaration())
     return FuncVector;
@@ -178,7 +178,9 @@ Embedding Embedder::computeEmbeddings() const {
 
 Embedding Embedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
-  for (const Instruction &I : BB.instructionsWithoutDebug())
+
+  // We consider only the non-debug and non-pseudo instructions
+  for (const auto &I : BB.instructionsWithoutDebug())
     BBVector += computeEmbeddings(I);
   return BBVector;
 }
