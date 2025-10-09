@@ -212,6 +212,15 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
             if (NormalizeResults && D->normalize(&SE))
               OS << "normalized - ";
             D->dump(OS);
+
+            unsigned SameSDLevels = D->getSameSDLevels();
+            if (SameSDLevels > 0) {
+              OS.indent(2) << "da analyze - assuming " << SameSDLevels
+                           << " loop level(s) fused: ";
+              D->dumpImp(OS, true);
+              OS << "\n";
+            }
+
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
               if (D->isSplitable(Level)) {
                 OS << "  da analyze - split level = " << Level;
@@ -689,11 +698,6 @@ void Dependence::dump(raw_ostream &OS) const {
     else if (isInput())
       OS << "input";
     dumpImp(OS);
-    unsigned SameSDLevels = getSameSDLevels();
-    if (SameSDLevels > 0) {
-      OS << "! / assuming " << SameSDLevels << " loop level(s) fused: ";
-      dumpImp(OS, true);
-    }
   }
   OS << "!\n";
 
