@@ -6,7 +6,7 @@ import threading
 import socket
 import traceback
 from lldbsuite.support import seven
-from typing import Optional
+from typing import Optional, List, Tuple
 
 
 def checksum(message):
@@ -89,7 +89,7 @@ class MockGDBServerResponder:
     """
 
     registerCount: int = 40
-    packetLog: Optional[list[str]] = None
+    packetLog: Optional[List[str]] = None
 
     class RESPONSE_DISCONNECT:
         pass
@@ -311,7 +311,7 @@ class MockGDBServerResponder:
 
     def qXferRead(
         self, obj: str, annex: str, offset: int, length: int
-    ) -> tuple[str | None, bool]:
+    ) -> Tuple[Optional[str], bool]:
         return None, False
 
     def _qXferResponse(self, data, has_more):
