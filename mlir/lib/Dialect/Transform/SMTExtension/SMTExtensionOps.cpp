@@ -44,50 +44,67 @@ transform::smt::ConstrainParamsOp::apply(transform::TransformRewriter &rewriter,
 
 LogicalResult transform::smt::ConstrainParamsOp::verify() {
   auto yieldTerminator =
-      llvm::dyn_cast_if_present<mlir::smt::YieldOp>(getRegion().front().back());
+      dyn_cast<mlir::smt::YieldOp>(getRegion().front().back());
   if (!yieldTerminator)
     return emitOpError() << "expected '"
                          << mlir::smt::YieldOp::getOperationName()
                          << "' as terminator";
 
+  auto checkTypes = [](size_t idx, Type smtType, StringRef smtDesc,
+                       Type paramType, StringRef paramDesc,
+                       auto *atOp) -> InFlightDiagnostic {
+    if (!isa<mlir::smt::BoolType, mlir::smt::IntType, mlir::smt::BitVectorType>(
+            smtType))
+      return atOp->emitOpError() << "the type of " << smtDesc << " #" << idx
+                                 << " is expected to be either a !smt.bool, a "
+                                    "!smt.int, or a !smt.bv";
+
+    assert(isa<TransformParamTypeInterface>(paramType) &&
+           "ODS specifies params' type should implement param interface");
+    if (isa<transform::AnyParamType>(paramType))
+      return {}; // No further checks can be done.
+
+    // NB: This cast must succeed as long as the only implementors of
+    //     TransformParamTypeInterface are AnyParamType and ParamType.
+    Type typeWrappedByParam = cast<ParamType>(paramType).getType();
+
+    if (isa<mlir::smt::IntType>(smtType)) {
+      if (!isa<IntegerType>(typeWrappedByParam))
+        return atOp->emitOpError()
+               << "the type of " << smtDesc << " #" << idx
+               << " is !smt.int though the corresponding " << paramDesc
+               << " type (" << paramType << ") is not wrapping an integer type";
+    } else if (isa<mlir::smt::BoolType>(smtType)) {
+      auto wrappedIntType = dyn_cast<IntegerType>(typeWrappedByParam);
+      if (!wrappedIntType || wrappedIntType.getWidth() != 1)
+        return atOp->emitOpError()
+               << "the type of " << smtDesc << " #" << idx
+               << " is !smt.bool though the corresponding " << paramDesc
+               << " type (" << paramType << ") is not wrapping i1";
+    } else if (auto bvSmtType = dyn_cast<mlir::smt::BitVectorType>(smtType)) {
+      auto wrappedIntType = dyn_cast<IntegerType>(typeWrappedByParam);
+      if (!wrappedIntType || wrappedIntType.getWidth() != bvSmtType.getWidth())
+        return atOp->emitOpError()
+               << "the type of " << smtDesc << " #" << idx << " is " << smtType
+               << " though the corresponding " << paramDesc << " type ("
+               << paramType
+               << ") is not wrapping an integer type of the same bitwidth";
+    }
+
+    return {};
+  };
+
   if (getOperands().size() != getBody().getNumArguments())
     return emitOpError(
         "must have the same number of block arguments as operands");
 
-  for (auto [i, operandType, blockArgType] :
-       llvm::zip_equal(llvm::seq<unsigned>(0, getBody().getNumArguments()),
-                       getOperandTypes(), getBody().getArgumentTypes())) {
-    if (isa<transform::AnyParamType>(operandType))
-      continue; // No type checking as operand is of !transform.any_param type.
-    auto paramOperandType = dyn_cast<transform::ParamType>(operandType);
-    if (!paramOperandType)
-      return emitOpError() << "operand type #" << i
-                           << " is not a !transform.param";
-    Type wrappedOperandType = paramOperandType.getType();
-
-    if (isa<mlir::smt::IntType>(blockArgType)) {
-      if (!isa<IntegerType>(paramOperandType.getType()))
-        return emitOpError()
-               << "the type of block arg #" << i
-               << " is !smt.int though the corresponding operand type ("
-               << operandType << ") is not wrapping an integer type";
-    } else if (isa<mlir::smt::BoolType>(blockArgType)) {
-      auto intOperandType = dyn_cast<IntegerType>(wrappedOperandType);
-      if (!intOperandType || intOperandType.getWidth() != 1)
-        return emitOpError()
-               << "the type of block arg #" << i
-               << " is !smt.bool though the corresponding operand type ("
-               << operandType << ") is not wrapping i1 (i.e. bool)";
-    } else if (auto bvBlockArgType =
-                   dyn_cast<mlir::smt::BitVectorType>(blockArgType)) {
-      auto intOperandType = dyn_cast<IntegerType>(wrappedOperandType);
-      if (!intOperandType ||
-          intOperandType.getWidth() != bvBlockArgType.getWidth())
-        return emitOpError()
-               << "the type of block arg #" << i << " is " << blockArgType
-               << " though the corresponding operand type (" << operandType
-               << ") is not wrapping an integer type of the same bitwidth";
-    }
+  for (auto [idx, operandType, blockArgType] :
+       llvm::enumerate(getOperandTypes(), getBody().getArgumentTypes())) {
+    InFlightDiagnostic typeCheckResult =
+        checkTypes(idx, blockArgType, "block arg", operandType, "operand",
+                   /*atOp=*/this);
+    if (LogicalResult(typeCheckResult).failed())
+      return typeCheckResult;
   }
 
   for (auto &op : getBody().getOps()) {
@@ -96,52 +113,19 @@ LogicalResult transform::smt::ConstrainParamsOp::verify() {
           "ops contained in region should belong to SMT-dialect");
   }
 
-  if (getOperands().size() != getBody().getNumArguments())
-    return emitOpError(
-        "must have the same number of block arguments as operands");
-
   if (yieldTerminator->getNumOperands() != getNumResults())
     return yieldTerminator.emitOpError()
            << "expected terminator to have as many operands as the parent op "
               "has results";
 
-  for (auto [i, termOperandType, resultType] : llvm::zip_equal(
-           llvm::seq<unsigned>(0, yieldTerminator->getNumOperands()),
+  for (auto [idx, termOperandType, resultType] : llvm::enumerate(
            yieldTerminator->getOperands().getType(), getResultTypes())) {
-    if (isa<transform::AnyParamType>(resultType))
-      continue; // No type checking as result is of !transform.any_param type.
-    auto paramResultType = dyn_cast<transform::ParamType>(resultType);
-    if (!paramResultType)
-      return emitOpError() << "result type #" << i
-                           << " is not a !transform.param";
-    Type wrappedResultType = paramResultType.getType();
-
-    if (isa<mlir::smt::IntType>(termOperandType)) {
-      if (!isa<IntegerType>(wrappedResultType))
-        return yieldTerminator.emitOpError()
-               << "the type of terminator operand #" << i
-               << " is !smt.int though the corresponding result type ("
-               << resultType
-               << ") of the parent op is not wrapping an integer type";
-    } else if (isa<mlir::smt::BoolType>(termOperandType)) {
-      auto intResultType = dyn_cast<IntegerType>(wrappedResultType);
-      if (!intResultType || intResultType.getWidth() != 1)
-        return yieldTerminator.emitOpError()
-               << "the type of terminator operand #" << i
-               << " is !smt.bool though the corresponding result type ("
-               << resultType
-               << ") of the parent op is not wrapping i1 (i.e. bool)";
-    } else if (auto bvOperandType =
-                   dyn_cast<mlir::smt::BitVectorType>(termOperandType)) {
-      auto intResultType = dyn_cast<IntegerType>(wrappedResultType);
-      if (!intResultType ||
-          intResultType.getWidth() != bvOperandType.getWidth())
-        return yieldTerminator.emitOpError()
-               << "the type of terminator operand #" << i << " is "
-               << termOperandType << " though the corresponding result type ("
-               << resultType
-               << ") is not wrapping an integer type of the same bitwidth";
-    }
+    InFlightDiagnostic typeCheckResult =
+        checkTypes(idx, termOperandType, "terminator operand",
+                   cast<transform::ParamType>(resultType), "result",
+                   /*atOp=*/&yieldTerminator);
+    if (LogicalResult(typeCheckResult).failed())
+      return typeCheckResult;
   }
 
   return success();
