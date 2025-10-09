@@ -107,8 +107,6 @@ EXCLUDE_WINDOWS = {
     "libunwind",
     "flang-rt",
     "mlir",  #CAROLINE
-    "polly", #CAROLINE
-    "lld",   #CAROLINE
 }
 
 # These are projects that we should test if the project itself is changed but
