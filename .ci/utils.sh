@@ -56,6 +56,7 @@ function start-group {
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-if [[ "$GITHUB_ACTIONS" != "" ]]; then
+# The ARM64 builders run on AWS and don't have access to the GCS cache.
+if [[ "$GITHUB_ACTIONS" != "" ]] && [[ "$RUNNER_ARCH" != "ARM64" ]]; then
   python .ci/cache_lit_timing_files.py download
 fi
