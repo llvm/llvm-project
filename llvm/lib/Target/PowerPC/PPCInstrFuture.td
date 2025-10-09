@@ -308,9 +308,12 @@ let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
                                  "$RT, $L, $RA, $RB", []>;
-  def MTLPL : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
-                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>,
-              Requires<[IsPPC64]>;
+  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
+                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
+                            "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
+  }
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {
