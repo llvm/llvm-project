@@ -844,7 +844,6 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
             rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
 
       SmallVector<Value> newConstOps;
-      Value mulOffset;
       for (auto offsets : *sgOffsets) {
         // Multiply offset with stride, broadcast it and add to baseConstVec
         Value mulOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
