@@ -998,11 +998,7 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                                           ScalarEvolution *SE) {
   BasicBlock *Header = TheLoop->getHeader();
   Function &F = *Header->getParent();
-  FastMathFlags FMF;
-  FMF.setNoNaNs(
-      F.getFnAttribute("no-nans-fp-math").getValueAsBool());
-  FMF.setNoSignedZeros(
-      F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
+  FastMathFlags FMF = F.getFMFFromFnAttribute();
 
   if (AddReductionVar(Phi, RecurKind::Add, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
