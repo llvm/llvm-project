@@ -835,7 +835,7 @@ public:
   /// \endcode
   ///
   void addAttributes(const ParsedAttributesView &AL) {
-    Attrs.addAll(AL.begin(), AL.end());
+    Attrs.addAllPrepend(AL.begin(), AL.end());
   }
 
   bool hasAttributes() const { return !Attrs.empty(); }
@@ -843,8 +843,8 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  void takeAttributesFrom(ParsedAttributes &attrs) {
-    Attrs.takeAllFrom(attrs);
+  void takeAttributesFromPrepend(ParsedAttributes &attrs) {
+    Attrs.takeAllFromPrepend(attrs);
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
@@ -2327,7 +2327,7 @@ public:
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
                    SourceLocation EndLoc) {
     DeclTypeInfo.push_back(TI);
-    DeclTypeInfo.back().getAttrs().addAll(attrs.begin(), attrs.end());
+    DeclTypeInfo.back().getAttrs().addAllPrepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
@@ -2638,7 +2638,7 @@ public:
     return InventedTemplateParameterList;
   }
 
-  /// takeAttributes - Takes attributes from the given parsed-attributes
+  /// takeAttributesPrepend - Takes attributes from the given parsed-attributes
   /// set and add them to this declarator.
   ///
   /// These examples both add 3 attributes to "var":
@@ -2647,8 +2647,8 @@ public:
   ///                                 __attribute__((common,deprecated));
   ///
   /// Also extends the range of the declarator.
-  void takeAttributes(ParsedAttributes &attrs) {
-    Attrs.takeAllFrom(attrs);
+  void takeAttributesPrepend(ParsedAttributes &attrs) {
+    Attrs.takeAllFromPrepend(attrs);
 
     if (attrs.Range.getEnd().isValid())
       SetRangeEnd(attrs.Range.getEnd());

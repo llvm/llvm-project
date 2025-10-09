@@ -43,7 +43,7 @@ void Parser::MaybeSkipAttributes(tok::ObjCKeywordKind Kind) {
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
                               ParsedAttributes &DeclSpecAttrs) {
-  DeclAttrs.takeAllFrom(DeclSpecAttrs);
+  DeclAttrs.takeAllFromPrepend(DeclSpecAttrs);
 
   SourceLocation AtLoc = ConsumeToken(); // the "@"
 
@@ -1065,7 +1065,7 @@ void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
 
 /// Take all the decl attributes out of the given list and add
 /// them to the given attribute set.
-static void takeDeclAttributes(ParsedAttributesView &attrs,
+static void takeDeclAttributesAppend(ParsedAttributesView &attrs,
                                ParsedAttributesView &from) {
   for (auto &AL : llvm::reverse(from)) {
     if (!AL.isUsedAsTypeAttr()) {
@@ -1088,10 +1088,10 @@ static void takeDeclAttributes(ParsedAttributes &attrs,
   attrs.getPool().takeAllFrom(D.getDeclSpec().getAttributePool());
 
   // Now actually move the attributes over.
-  takeDeclAttributes(attrs, D.getMutableDeclSpec().getAttributes());
-  takeDeclAttributes(attrs, D.getAttributes());
+  takeDeclAttributesAppend(attrs, D.getMutableDeclSpec().getAttributes());
+  takeDeclAttributesAppend(attrs, D.getAttributes());
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i)
-    takeDeclAttributes(attrs, D.getTypeObject(i).getAttrs());
+    takeDeclAttributesAppend(attrs, D.getTypeObject(i).getAttrs());
 }
 
 ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
