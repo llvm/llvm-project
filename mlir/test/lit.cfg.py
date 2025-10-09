@@ -339,6 +339,14 @@ if config.enable_bindings_python:
         [
             os.path.join(config.mlir_obj_root, "python_packages", "mlir_core"),
             os.path.join(config.mlir_obj_root, "python_packages", "mlir_test"),
+            os.path.join(
+                config.mlir_obj_root,
+                "test",
+                "Examples",
+                "standalone",
+                "python_packages",
+                "standalone",
+            ),
         ],
         append_path=True,
     )
@@ -347,6 +355,7 @@ if config.enable_assertions:
     config.available_features.add("asserts")
 else:
     config.available_features.add("noasserts")
+
 
 def have_host_jit_feature_support(feature_name):
     mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)
