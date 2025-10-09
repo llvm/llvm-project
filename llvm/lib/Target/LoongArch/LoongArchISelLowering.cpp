@@ -6761,15 +6761,15 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
 
   if (ResTy != MVT::v8i16 && ResTy != MVT::v4i32 && ResTy != MVT::v2i64 &&
-      ResTy != MVT::v16i16 && ResTy != MVT::v8i32 &&
-      ResTy != MVT::v4i64) // && ResTy != MVT::v2i128)
+      ResTy != MVT::v16i16 && ResTy != MVT::v8i32 && ResTy != MVT::v4i64 &&
+      ResTy != MVT::i128)
     return SDValue();
 
   // Combine:
   //   ti,tii,...,tx = extract_vector_elt t0, {0,2,4,.../1,3,5,...}
   //   tj,tjj,...,ty = extract_vector_elt t1, {0,2,4,.../1,3,5,...}
-  //   tm = BUILD_VECTOR ti,tii,...,tx
-  //   tn = BUILD_VECTOR tj,tjj,...,ty
+  //   tm = BUILD_VECTOR ti,tii,...,tx (Only when ResTy != MVT::i128)
+  //   tn = BUILD_VECTOR tj,tjj,...,ty (Only when ResTy != MVT::i128)
   //   ta = {sign/zero}_extend tm
   //   tb = {sign/zero}_extend tn
   //   tr = mul ta, tb
@@ -6791,24 +6791,36 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   if (ExtType < 0)
     return SDValue();
 
-  SDValue BV0 = N0.getOperand(0);
-  SDValue BV1 = N1.getOperand(0);
-  if (BV0.getOpcode() != ISD::BUILD_VECTOR ||
-      BV1.getOpcode() != ISD::BUILD_VECTOR)
+  SDValue Src0 = N0.getOperand(0);
+  SDValue Src1 = N1.getOperand(0);
+  bool IsScalar = (ResTy == MVT::i128);
+  if (IsScalar && (Src0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+                   Src1.getOpcode() != ISD::EXTRACT_VECTOR_ELT))
+    return SDValue();
+  if (!IsScalar && (Src0.getOpcode() != ISD::BUILD_VECTOR ||
+                    Src1.getOpcode() != ISD::BUILD_VECTOR))
     return SDValue();
 
-  unsigned ResBits = ResTy.getScalarType().getSizeInBits();
-  unsigned BV0Bits = BV0.getValueType().getScalarType().getSizeInBits();
-  unsigned BV1Bits = BV1.getValueType().getScalarType().getSizeInBits();
-  if (BV0Bits != BV1Bits || ResBits != BV0Bits * 2)
+  unsigned ResBits = ResTy.getScalarSizeInBits();
+  unsigned Src0Bits = Src0.getValueType().getScalarSizeInBits();
+  unsigned Src1Bits = Src1.getValueType().getScalarSizeInBits();
+  if (Src0Bits != Src1Bits || ResBits != Src0Bits * 2)
     return SDValue();
+
+  // Collect all EXTRACT_VECTOR_ELT.
+  SmallVector<std::pair<SDValue, SDValue>> Elems;
+  if (IsScalar) {
+    Elems.emplace_back(Src0, Src1);
+  } else {
+    for (unsigned i = 0; i < Src0.getNumOperands(); ++i)
+      Elems.emplace_back(Src0.getOperand(i), Src1.getOperand(i));
+  }
 
   unsigned Index;
   SDValue OrigN0, OrigN1;
-  for (unsigned i = 0; i < BV0.getNumOperands(); ++i) {
-    SDValue Op0 = BV0.getOperand(i);
-    SDValue Op1 = BV1.getOperand(i);
-    // Each element of BUILD_VECTOR must be EXTRACT_VECTOR_ELT.
+  bool First = true;
+  for (auto &[Op0, Op1] : Elems) {
+    // Each element must be EXTRACT_VECTOR_ELT.
     if (Op0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
         Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return SDValue();
@@ -6820,17 +6832,17 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
     auto *IdxC = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
     if (!IdxC)
       return SDValue();
-    unsigned CurIdx = IdxC->getZExtValue();
 
-    if (i == 0) {
+    unsigned CurIdx = IdxC->getZExtValue();
+    if (First) {
       if (CurIdx != 0 && CurIdx != 1)
         return SDValue();
       OrigN0 = Op0.getOperand(0);
       OrigN1 = Op1.getOperand(0);
+      First = false;
     } else {
-      if (CurIdx != Index + 2)
-        return SDValue();
-      if (Op0.getOperand(0) != OrigN0 || Op1.getOperand(0) != OrigN1)
+      if (CurIdx != Index + 2 || Op0.getOperand(0) != OrigN0 ||
+          Op1.getOperand(0) != OrigN1)
         return SDValue();
     }
     Index = CurIdx;
@@ -6839,7 +6851,7 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   if (OrigN0.getValueType() != OrigN1.getValueType())
     return SDValue();
   if (OrigN0.getValueType().getVectorNumElements() !=
-      ResTy.getVectorNumElements() * 2)
+      (IsScalar ? 1 : ResTy.getVectorNumElements()) * 2)
     return SDValue();
 
   SDValue Result;
