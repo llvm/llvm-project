@@ -40,11 +40,13 @@ Using Clang as a Compiler
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
+   AllocToken
    BoundsSafety
    BoundsSafetyAdoptionGuide
    BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
+   PointerAuthentication
    SafeStack
    ShadowCallStack
    StructureProtection
@@ -101,7 +103,6 @@ Using Clang Tools
    ClangLinkerWrapper
    ClangNVLinkWrapper
    ClangOffloadBundler
-   ClangOffloadPackager
    ClangRepl
    ClangSYCLLinker
 

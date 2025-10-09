@@ -35,12 +35,13 @@ extern cl::opt<bool> ReuseFrameIndexVals;
 
 using namespace llvm;
 
-ThumbRegisterInfo::ThumbRegisterInfo() = default;
+ThumbRegisterInfo::ThumbRegisterInfo(const ARMSubtarget &STI)
+    : IsThumb1Only(STI.isThumb1Only()) {}
 
 const TargetRegisterClass *
 ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                               const MachineFunction &MF) const {
-  if (!MF.getSubtarget<ARMSubtarget>().isThumb1Only())
+  if (!IsThumb1Only)
     return ARMBaseRegisterInfo::getLargestLegalSuperClass(RC, MF);
 
   if (ARM::tGPRRegClass.hasSubClassEq(RC))
@@ -49,10 +50,9 @@ ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-ThumbRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
-  if (!MF.getSubtarget<ARMSubtarget>().isThumb1Only())
-    return ARMBaseRegisterInfo::getPointerRegClass(MF, Kind);
+ThumbRegisterInfo::getPointerRegClass(unsigned Kind) const {
+  if (!IsThumb1Only)
+    return ARMBaseRegisterInfo::getPointerRegClass(Kind);
   return &ARM::tGPRRegClass;
 }
 

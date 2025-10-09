@@ -1377,58 +1377,6 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
 }
 
 namespace {
-/// The parameters to pass to a usual operator delete.
-struct UsualDeleteParams {
-  TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
-  bool DestroyingDelete = false;
-  bool Size = false;
-  AlignedAllocationMode Alignment = AlignedAllocationMode::No;
-};
-}
-
-static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
-  UsualDeleteParams Params;
-
-  const FunctionProtoType *FPT = FD->getType()->castAs<FunctionProtoType>();
-  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
-
-  if (FD->isTypeAwareOperatorNewOrDelete()) {
-    Params.TypeAwareDelete = TypeAwareAllocationMode::Yes;
-    assert(AI != AE);
-    ++AI;
-  }
-
-  // The first argument after the type-identity parameter (if any) is
-  // always a void* (or C* for a destroying operator delete for class
-  // type C).
-  ++AI;
-
-  // The next parameter may be a std::destroying_delete_t.
-  if (FD->isDestroyingOperatorDelete()) {
-    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
-    Params.DestroyingDelete = true;
-    assert(AI != AE);
-    ++AI;
-  }
-
-  // Figure out what other parameters we should be implicitly passing.
-  if (AI != AE && (*AI)->isIntegerType()) {
-    Params.Size = true;
-    ++AI;
-  } else
-    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
-
-  if (AI != AE && (*AI)->isAlignValT()) {
-    Params.Alignment = AlignedAllocationMode::Yes;
-    ++AI;
-  } else
-    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
-
-  assert(AI == AE && "unexpected usual deallocation function parameter");
-  return Params;
-}
-
-namespace {
   /// A cleanup to call the given 'operator delete' function upon abnormal
   /// exit from a new expression. Templated on a traits type that deals with
   /// ensuring that the arguments dominate the cleanup if necessary.
@@ -1505,7 +1453,7 @@ namespace {
       } else {
         // For a non-placement new-expression, 'operator delete' can take a
         // size and/or an alignment if it has the right parameters.
-        Params = getUsualDeleteParams(OperatorDelete);
+        Params = OperatorDelete->getUsualDeleteParams();
       }
 
       assert(!Params.DestroyingDelete &&
@@ -1707,11 +1655,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     RValue RV =
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
-    // Set !heapallocsite metadata on the call to operator new.
-    if (getDebugInfo())
-      if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal()))
-        getDebugInfo()->addHeapAllocSiteMetadata(newCall, allocType,
-                                                 E->getExprLoc());
+    if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal())) {
+      if (auto *CGDI = getDebugInfo()) {
+        // Set !heapallocsite metadata on the call to operator new.
+        CGDI->addHeapAllocSiteMetadata(newCall, allocType, E->getExprLoc());
+      }
+      if (SanOpts.has(SanitizerKind::AllocToken)) {
+        // Set !alloc_token metadata.
+        EmitAllocToken(newCall, allocType);
+      }
+    }
 
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce
@@ -1838,7 +1791,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   const auto *DeleteFTy = DeleteFD->getType()->castAs<FunctionProtoType>();
   CallArgList DeleteArgs;
 
-  auto Params = getUsualDeleteParams(DeleteFD);
+  auto Params = DeleteFD->getUsualDeleteParams();
   auto ParamTypeIt = DeleteFTy->param_type_begin();
 
   std::optional<llvm::AllocaInst *> TagAlloca;
@@ -2290,8 +2243,7 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   bool IsExact = !IsDynamicCastToVoid &&
                  CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
-                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
-                 !getLangOpts().PointerAuthCalls;
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
 
   std::optional<CGCXXABI::ExactDynamicCastInfo> ExactCastInfo;
   if (IsExact) {

@@ -192,9 +192,17 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
+static inline StringRef mapScopeToSPIRV(StringRef AMDGCNScope) {
+  if (AMDGCNScope == "agent")
+    return "device";
+  if (AMDGCNScope == "wavefront")
+    return "subgroup";
+  return AMDGCNScope;
+}
+
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
-// \p Order takes a C++11 comptabile memory-ordering specifier and converts
+// \p Order takes a C++11 compatible memory-ordering specifier and converts
 // it into LLVM's memory ordering specifier using atomic C ABI, and writes
 // to \p AO. \p Scope takes a const char * and converts it into AMDGCN
 // specific SyncScopeID and writes it to \p SSID.
@@ -227,6 +235,8 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   // Some of the atomic builtins take the scope as a string name.
   StringRef scp;
   if (llvm::getConstantStringInfo(Scope, scp)) {
+    if (getTarget().getTriple().isSPIRV())
+      scp = mapScopeToSPIRV(scp);
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
     return;
   }
@@ -238,13 +248,19 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     SSID = llvm::SyncScope::System;
     break;
   case 1: // __MEMORY_SCOPE_DEVICE
-    SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+    if (getTarget().getTriple().isSPIRV())
+      SSID = getLLVMContext().getOrInsertSyncScopeID("device");
+    else
+      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
     break;
   case 2: // __MEMORY_SCOPE_WRKGRP
     SSID = getLLVMContext().getOrInsertSyncScopeID("workgroup");
     break;
   case 3: // __MEMORY_SCOPE_WVFRNT
-    SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
+    if (getTarget().getTriple().isSPIRV())
+      SSID = getLLVMContext().getOrInsertSyncScopeID("subgroup");
+    else
+      SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
     break;
   case 4: // __MEMORY_SCOPE_SINGLE
     SSID = llvm::SyncScope::SingleThread;
@@ -295,11 +311,69 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
+static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  default:
+    llvm_unreachable("Unknown BuiltinID for wave reduction");
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u64:
+    return Intrinsic::amdgcn_wave_reduce_add;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u64:
+    return Intrinsic::amdgcn_wave_reduce_sub;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i64:
+    return Intrinsic::amdgcn_wave_reduce_min;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u64:
+    return Intrinsic::amdgcn_wave_reduce_umin;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i64:
+    return Intrinsic::amdgcn_wave_reduce_max;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u64:
+    return Intrinsic::amdgcn_wave_reduce_umax;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b64:
+    return Intrinsic::amdgcn_wave_reduce_and;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b64:
+    return Intrinsic::amdgcn_wave_reduce_or;
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b64:
+    return Intrinsic::amdgcn_wave_reduce_xor;
+  }
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b64:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b64: {
+    Intrinsic::ID IID = getIntrinsicIDforWaveReduction(BuiltinID);
+    llvm::Value *Value = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Strategy = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F = CGM.getIntrinsic(IID, {Value->getType()});
+    return Builder.CreateCall(F, {Value, Strategy});
+  }
   case AMDGPU::BI__builtin_amdgcn_div_scale:
   case AMDGPU::BI__builtin_amdgcn_div_scalef: {
     // Translate from the intrinsics's struct return to the builtin's out
@@ -504,6 +578,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, { ResultType });
     return Builder.CreateCall(F, { Src });
   }
+  case AMDGPU::BI__builtin_amdgcn_inverse_ballot_w32:
+  case AMDGPU::BI__builtin_amdgcn_inverse_ballot_w64: {
+    llvm::Value *Src = EmitScalarExpr(E->getArg(0));
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_inverse_ballot, {Src->getType()});
+    return Builder.CreateCall(F, {Src});
+  }
   case AMDGPU::BI__builtin_amdgcn_tanhf:
   case AMDGPU::BI__builtin_amdgcn_tanhh:
   case AMDGPU::BI__builtin_amdgcn_tanh_bf16:
@@ -668,10 +749,74 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, Val});
   }
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+      IID = Intrinsic::amdgcn_cluster_load_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+      IID = Intrinsic::amdgcn_cluster_load_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
+      IID = Intrinsic::amdgcn_cluster_load_b128;
+      break;
+    }
+    SmallVector<Value *, 3> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    llvm::Function *F = CGM.getIntrinsic(IID, {ConvertType(E->getType())});
+    return Builder.CreateCall(F, {Args});
+  }
   case AMDGPU::BI__builtin_amdgcn_load_to_lds: {
     // Should this have asan instrumentation?
     return emitBuiltinWithOneOverloadedType<5>(*this, E,
                                                Intrinsic::amdgcn_load_to_lds);
+  }
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_load_32x4B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_store_32x4B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_load_16x8B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_store_16x8B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_load_8x16B;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
+      IID = Intrinsic::amdgcn_cooperative_atomic_store_8x16B;
+      break;
+    }
+
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    SmallVector<Value *, 5> Args;
+    // last argument is a MD string
+    const unsigned ScopeArg = E->getNumArgs() - 1;
+    for (unsigned i = 0; i != ScopeArg; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    StringRef Arg = cast<StringLiteral>(E->getArg(ScopeArg)->IgnoreParenCasts())
+                        ->getString();
+    llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
+    Args.push_back(llvm::MetadataAsValue::get(Ctx, MD));
+    // Intrinsic is typed based on the pointer AS. Pointer is always the first
+    // argument.
+    llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
+    return Builder.CreateCall(F, {Args});
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
@@ -1381,7 +1526,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       //
       // The global/flat cases need to use agent scope to consistently produce
       // the native instruction instead of a cmpxchg expansion.
-      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      if (getTarget().getTriple().isSPIRV())
+        SSID = getLLVMContext().getOrInsertSyncScopeID("device");
+      else
+        SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
       AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
