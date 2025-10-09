@@ -43,7 +43,7 @@ constexpr const char *ext = ".dll";
 constexpr const char *ext = ".so";
 #endif
 
-static bool EnvReady = true;
+bool EnvReady = false;
 
 Triple getTargetTriple() {
   auto JTMB = JITTargetMachineBuilder::detectHost();
@@ -176,11 +176,15 @@ public:
 
       sys::path::append(dylibPath, libdirName, dylibFileName);
       sys::path::replace_extension(dylibPath, ext);
-      llvm::outs() << "Yaml file Path -> " << yamlPath << "\n";
-      llvm::outs() << "SO Path -> " << dylibPath << "\n";
+      llvm::errs() << "[Env] YAML path: " << yamlPath << "\n";
+      llvm::errs().flush();
+      llvm::errs() << "[Env] SO path: " << dylibPath << "\n";
+      llvm::errs().flush();
       if (!processYamlToDylib(yamlPath, dylibPath, DocNum))
         return;
     }
+
+    EnvReady = true;
   }
 
   void TearDown() override {
@@ -244,6 +248,18 @@ protected:
     libs["C"] = {libPath(baseDir, "C/libC"), {platformSymbolName("sayC")}};
     libs["D"] = {libPath(baseDir, "D/libD"), {platformSymbolName("sayD")}};
     libs["Z"] = {libPath(baseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
+    llvm::errs() << "baseDir -> " << baseDir << "\n";
+    llvm::errs().flush();
+    llvm::errs() << "A -> " << libs["A"].path << "\n";
+    llvm::errs().flush();
+    llvm::errs() << "B -> " << libs["B"].path << "\n";
+    llvm::errs().flush();
+    llvm::errs() << "D -> " << libs["D"].path << "\n";
+    llvm::errs().flush();
+    llvm::errs() << "Z -> " << libs["Z"].path << "\n";
+    llvm::errs().flush();
+    llvm::errs() << "C -> " << libs["C"].path << "\n";
+    llvm::errs().flush();
     ASSERT_TRUE(sys::fs::exists(libs["A"].path));
     ASSERT_TRUE(sys::fs::exists(libs["B"].path));
     ASSERT_TRUE(sys::fs::exists(libs["D"].path));
