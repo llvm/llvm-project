@@ -48,6 +48,11 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void function_pointer_basic() {
+  void (*const fp)() = nullptr;
+  fp();
+}
+
 void takeNonConstRef(int *&r);
 
 void ignoreNonConstRefOps() {
