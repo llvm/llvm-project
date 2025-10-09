@@ -2285,18 +2285,30 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_rsqrtf",
+    hdrs = ["src/__support/math/rsqrtf.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_rsqrtf16",
     hdrs = ["src/__support/math/rsqrtf16.h"],
     deps = [
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
-        ":__support_fputil_manipulation_functions",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
-        ":__support_macros_properties_types",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
     ],
 )
 
@@ -3329,14 +3341,6 @@ libc_math_function(
     name = "acoshf",
     additional_deps = [
         ":__support_math_acoshf",
-    ],
-)
-
-libc_math_function(
-    name = "rsqrtf16",
-    additional_deps = [
-        ":__support_math_rsqrtf16",
-        ":errno",
     ],
 )
 
@@ -4571,6 +4575,20 @@ libc_math_function(name = "roundevenl")
 libc_math_function(name = "roundevenf128")
 
 libc_math_function(name = "roundevenf16")
+
+libc_math_function(
+    name = "rsqrtf",
+    additional_deps = [
+        ":__support_math_rsqrtf",
+    ],
+)
+
+libc_math_function(
+    name = "rsqrtf16",
+    additional_deps = [
+        ":__support_math_rsqrtf16",
+    ],
+)
 
 libc_math_function(name = "scalbln")
 

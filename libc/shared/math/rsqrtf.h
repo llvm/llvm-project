@@ -1,4 +1,4 @@
-//===-- Shared rsqrtf16 function --------------------------------*- C++ -*-===//
+//===-- Shared rsqrtf function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,24 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SHARED_MATH_RSQRTF16_H
-#define LLVM_LIBC_SHARED_MATH_RSQRTF16_H
-
-#include "include/llvm-libc-macros/float16-macros.h"
-
-#ifdef LIBC_TYPES_HAS_FLOAT16
+#ifndef LLVM_LIBC_SHARED_MATH_RSQRTF_H
+#define LLVM_LIBC_SHARED_MATH_RSQRTF_H
 
 #include "shared/libc_common.h"
-#include "src/__support/math/rsqrtf16.h"
+#include "src/__support/math/rsqrtf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
 
-using math::rsqrtf16;
+using math::rsqrtf;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT16
-
-#endif // LLVM_LIBC_SHARED_MATH_RSQRTF16_H
+#endif // LLVM_LIBC_SHARED_MATH_RSQRTF_H
