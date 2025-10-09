@@ -748,8 +748,6 @@ exit:
 ; be preserved. That means we need to make sure ZA state is saved in case
 ; agnostic_za_call() throws, and we need to restore ZA after unwinding to the
 ; catch block.
-;
-; FIXME: This is not yet implemented with -aarch64-new-sme-abi.
 
 define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: try_catch_agnostic_za_invoke:
@@ -861,8 +859,6 @@ exit:
 ; ...which is the same as the above, but without the noexcept_agnostic_za_call().
 ; It just shows the ZA must be saved even with no later callees to ensure ZA
 ; state is preserved on normal return from the function.
-;
-; FIXME: This is not yet implemented with -aarch64-new-sme-abi.
 
 define void @try_catch_agnostic_za_invoke_normal_return() "aarch64_za_state_agnostic" personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: try_catch_agnostic_za_invoke_normal_return:
