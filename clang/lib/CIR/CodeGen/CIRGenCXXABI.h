@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENCXXABI_H
 
 #include "CIRGenCall.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
@@ -154,6 +155,8 @@ public:
 
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
+
+  virtual CatchTypeInfo getCatchAllTypeInfo();
 
   /// Emit constructor variants required by this ABI.
   virtual void emitCXXConstructors(const clang::CXXConstructorDecl *d) = 0;

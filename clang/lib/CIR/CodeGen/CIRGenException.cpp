@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -63,4 +64,155 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
 
   // Deactivate the cleanup block.
   assert(!cir::MissingFeatures::ehCleanupScope());
+}
+
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
+  mlir::Location loc = getLoc(s.getSourceRange());
+
+  // Create a scope to hold try local storage for catch params.
+  mlir::OpBuilder::InsertPoint scopeIP;
+  cir::ScopeOp::create(builder, loc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         scopeIP = builder.saveInsertionPoint();
+                       });
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.restoreInsertionPoint(scopeIP);
+  mlir::LogicalResult result = emitCXXTryStmtUnderScope(s);
+  cir::YieldOp::create(builder, loc);
+  return result;
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
+  const llvm::Triple &t = getTarget().getTriple();
+  // If we encounter a try statement on in an OpenMP target region offloaded to
+  // a GPU, we treat it as a basic block.
+  const bool isTargetDevice =
+      (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
+  if (isTargetDevice) {
+    cgm.errorNYI(
+        "emitCXXTryStmtUnderScope: OpenMP target region offloaded to GPU");
+    return mlir::success();
+  }
+
+  unsigned numHandlers = s.getNumHandlers();
+  mlir::Location tryLoc = getLoc(s.getBeginLoc());
+  mlir::OpBuilder::InsertPoint beginInsertTryBody;
+
+  // Create the scope to represent only the C/C++ `try {}` part. However,
+  // don't populate right away. Reserve some space to store the exception
+  // info but don't emit the bulk right away, for now only make sure the
+  // scope returns the exception information.
+  auto tryOp = cir::TryOp::create(
+      builder, tryLoc,
+      /*tryBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        beginInsertTryBody = builder.saveInsertionPoint();
+      },
+      /*catchBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc,
+          mlir::OperationState &result) {
+        mlir::OpBuilder::InsertionGuard guard(b);
+
+        bool hasCatchAll = false;
+        for (unsigned i = 0; i != numHandlers; ++i) {
+          hasCatchAll |= s.getHandler(i)->getExceptionDecl() == nullptr;
+          if (hasCatchAll)
+            break;
+        }
+
+        // We create an extra region for an unwind catch handler in case the
+        // catch-all handler doesn't exists
+        unsigned numRegionsToCreate =
+            hasCatchAll ? numHandlers : numHandlers + 1;
+
+        for (unsigned i = 0; i != numRegionsToCreate; ++i)
+          builder.createBlock(result.addRegion());
+      });
+
+  // Finally emit the body for try/catch.
+  {
+    mlir::Location loc = tryOp.getLoc();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(beginInsertTryBody);
+    CIRGenFunction::LexicalScope tryScope{*this, loc,
+                                          builder.getInsertionBlock()};
+
+    tryScope.setAsTry(tryOp);
+
+    // Attach the basic blocks for the catch regions.
+    enterCXXTryStmt(s, tryOp);
+
+    // Emit the body for the `try {}` part.
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      CIRGenFunction::LexicalScope tryBodyScope{*this, loc,
+                                                builder.getInsertionBlock()};
+      if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+    }
+
+    // Emit catch clauses.
+    exitCXXTryStmt(s);
+  }
+
+  return mlir::success();
+}
+
+void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
+                                     bool isFnTryBlock) {
+
+  unsigned numHandlers = s.getNumHandlers();
+  EHCatchScope *catchScope = ehStack.pushCatch(numHandlers);
+  for (unsigned i = 0; i != numHandlers; ++i) {
+    const CXXCatchStmt *catchStmt = s.getHandler(i);
+    if (catchStmt->getExceptionDecl()) {
+      cgm.errorNYI("enterCXXTryStmt: CatchStmt with ExceptionDecl");
+      return;
+    }
+
+    mlir::Block *handler = &tryOp.getCatchRegions()[i].getBlocks().front();
+
+    // No exception decl indicates '...', a catch-all.
+    catchScope->setHandler(i, cgm.getCXXABI().getCatchAllTypeInfo(), handler);
+
+    // Under async exceptions, catch(...) need to catch HW exception too
+    // Mark scope with SehTryBegin as a SEH __try scope
+    if (getLangOpts().EHAsynch) {
+      cgm.errorNYI("enterCXXTryStmt: EHAsynch");
+      return;
+    }
+  }
+}
+
+void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
+  unsigned numHandlers = s.getNumHandlers();
+  EHCatchScope &catchScope = cast<EHCatchScope>(*ehStack.begin());
+  assert(catchScope.getNumHandlers() == numHandlers);
+  cir::TryOp tryOp = curLexScope->getTry();
+
+  // If the catch was not required, bail out now.
+  if (!catchScope.hasEHBranches()) {
+    catchScope.clearHandlerBlocks();
+    ehStack.popCatch();
+
+    // Drop all basic block from all catch regions.
+    SmallVector<mlir::Block *> eraseBlocks;
+    for (mlir::Region &region : tryOp.getCatchRegions()) {
+      if (region.empty())
+        continue;
+
+      for (mlir::Block &b : region.getBlocks())
+        eraseBlocks.push_back(&b);
+    }
+
+    for (mlir::Block *b : eraseBlocks)
+      b->erase();
+
+    tryOp.setCatchTypesAttr({});
+    return;
+  }
+
+  cgm.errorNYI("exitCXXTryStmt: Required catch");
 }
