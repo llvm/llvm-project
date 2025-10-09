@@ -307,9 +307,20 @@ struct MIFSyncMemoryOpConversion
 /// A must be lowered as a box
 static fir::CallOp genCollectiveSubroutine(fir::FirOpBuilder &builder,
                                            mlir::Location loc, mlir::Value A,
-                                           mlir::Value rootImage,
-                                           mlir::Value stat, mlir::Value errmsg,
+                                           mlir::Value image, mlir::Value stat,
+                                           mlir::Value errmsg,
                                            std::string coName) {
+  mlir::Value rootImage;
+  mlir::Type i32Ty = builder.getI32Type();
+  if (!image)
+    rootImage = fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
+  else {
+    rootImage = builder.createTemporary(loc, i32Ty);
+    if (image.getType() != i32Ty)
+      image = fir::ConvertOp::create(builder, loc, i32Ty, image);
+    fir::StoreOp::create(builder, loc, image, rootImage);
+  }
+
   mlir::Type errmsgTy = getPRIFErrmsgType(builder);
   mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
   mlir::FunctionType ftype =
@@ -340,16 +351,9 @@ struct MIFCoBroadcastOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Type i32Ty = builder.getI32Type();
-    mlir::Value sourceImage = builder.createTemporary(loc, i32Ty);
-    mlir::Value cst = op.getSourceImage();
-    if (op.getSourceImage().getType() != i32Ty)
-      cst = fir::ConvertOp::create(builder, loc, i32Ty, op.getSourceImage());
-    fir::StoreOp::create(builder, loc, cst, sourceImage);
-
     fir::CallOp callOp = genCollectiveSubroutine(
-        builder, loc, op.getA(), sourceImage, op.getStat(), op.getErrmsg(),
-        getPRIFProcName("co_broadcast"));
+        builder, loc, op.getA(), op.getSourceImage(), op.getStat(),
+        op.getErrmsg(), getPRIFProcName("co_broadcast"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -366,30 +370,17 @@ struct MIFCoMaxOpConversion : public mlir::OpRewritePattern<mif::CoMaxOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Value resultImage;
-    mlir::Type i32Ty = builder.getI32Type();
-    if (!op.getResultImage())
-      resultImage =
-          fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
-    else {
-      resultImage = builder.createTemporary(loc, i32Ty);
-      mlir::Value cst = op.getResultImage();
-      if (op.getResultImage().getType() != i32Ty)
-        cst = fir::ConvertOp::create(builder, loc, i32Ty, op.getResultImage());
-      fir::StoreOp::create(builder, loc, cst, resultImage);
-    }
-
     fir::CallOp callOp;
     mlir::Type argTy =
         fir::unwrapSequenceType(fir::unwrapPassByRefType(op.getA().getType()));
     if (mlir::isa<fir::CharacterType>(argTy))
-      callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
-                                       op.getStat(), op.getErrmsg(),
-                                       getPRIFProcName("co_max_character"));
+      callOp = genCollectiveSubroutine(
+          builder, loc, op.getA(), op.getResultImage(), op.getStat(),
+          op.getErrmsg(), getPRIFProcName("co_max_character"));
     else
-      callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
-                                       op.getStat(), op.getErrmsg(),
-                                       getPRIFProcName("co_max"));
+      callOp = genCollectiveSubroutine(
+          builder, loc, op.getA(), op.getResultImage(), op.getStat(),
+          op.getErrmsg(), getPRIFProcName("co_max"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -406,30 +397,17 @@ struct MIFCoMinOpConversion : public mlir::OpRewritePattern<mif::CoMinOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Value resultImage;
-    mlir::Type i32Ty = builder.getI32Type();
-    if (!op.getResultImage())
-      resultImage =
-          fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
-    else {
-      resultImage = builder.createTemporary(loc, i32Ty);
-      mlir::Value cst = op.getResultImage();
-      if (op.getResultImage().getType() != i32Ty)
-        cst = fir::ConvertOp::create(builder, loc, i32Ty, op.getResultImage());
-      fir::StoreOp::create(builder, loc, cst, resultImage);
-    }
-
     fir::CallOp callOp;
     mlir::Type argTy =
         fir::unwrapSequenceType(fir::unwrapPassByRefType(op.getA().getType()));
     if (mlir::isa<fir::CharacterType>(argTy))
-      callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
-                                       op.getStat(), op.getErrmsg(),
-                                       getPRIFProcName("co_min_character"));
+      callOp = genCollectiveSubroutine(
+          builder, loc, op.getA(), op.getResultImage(), op.getStat(),
+          op.getErrmsg(), getPRIFProcName("co_min_character"));
     else
-      callOp = genCollectiveSubroutine(builder, loc, op.getA(), resultImage,
-                                       op.getStat(), op.getErrmsg(),
-                                       getPRIFProcName("co_min"));
+      callOp = genCollectiveSubroutine(
+          builder, loc, op.getA(), op.getResultImage(), op.getStat(),
+          op.getErrmsg(), getPRIFProcName("co_min"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -446,22 +424,9 @@ struct MIFCoSumOpConversion : public mlir::OpRewritePattern<mif::CoSumOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Value resultImage;
-    mlir::Type i32Ty = builder.getI32Type();
-    if (!op.getResultImage())
-      resultImage =
-          fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
-    else {
-      resultImage = builder.createTemporary(loc, i32Ty);
-      mlir::Value cst = op.getResultImage();
-      if (op.getResultImage().getType() != i32Ty)
-        cst = fir::ConvertOp::create(builder, loc, i32Ty, op.getResultImage());
-      fir::StoreOp::create(builder, loc, cst, resultImage);
-    }
-
     fir::CallOp callOp = genCollectiveSubroutine(
-        builder, loc, op.getA(), resultImage, op.getStat(), op.getErrmsg(),
-        getPRIFProcName("co_sum"));
+        builder, loc, op.getA(), op.getResultImage(), op.getStat(),
+        op.getErrmsg(), getPRIFProcName("co_sum"));
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }

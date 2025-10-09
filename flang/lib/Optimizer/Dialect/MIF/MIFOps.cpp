@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
@@ -80,6 +81,25 @@ llvm::LogicalResult mif::SyncImagesOp::verify() {
     } else if (!fir::isa_integer(boxTy.getElementType()))
       return emitOpError(
           "`image_set` must be a boxed scalar integer expression.");
+  }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// CoBroadcastOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult mif::CoBroadcastOp::verify() {
+  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(getA().getType());
+
+  if (fir::isPolymorphicType(boxTy))
+    return emitOpError("`A` cannot be polymorphic.");
+  else if (auto recTy =
+               mlir::dyn_cast<fir::RecordType>(boxTy.getElementType())) {
+    for (auto component : recTy.getTypeList()) {
+      if (fir::isPolymorphicType(component.second))
+        TODO(getLoc(), "`A` with polymorphic subobject component.");
+    }
   }
   return mlir::success();
 }

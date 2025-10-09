@@ -141,7 +141,7 @@ def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments,
     adopt the behavior of the Fortran statement `SYNC IMAGES(*)`.
   }];
 
-  let arguments = (ins Optional<AnyRefOrBoxType>:$image_set,
+  let arguments = (ins Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$image_set,
                        Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
   let hasVerifier = 1;
@@ -186,6 +186,7 @@ def mif_CoBroadcastOp : mif_Op<"co_broadcast", [AttrSizedOperandSegments,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
+  let hasVerifier = 1;
   let assemblyFormat = [{
     $a `source` $source_image
     (`stat`  $stat^ )?
