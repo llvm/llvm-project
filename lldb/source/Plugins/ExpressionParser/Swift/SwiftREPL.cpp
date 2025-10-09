@@ -173,6 +173,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
       eFunctionNameTypeAuto, // Name type
       eLanguageTypeUnknown,  // Language
       0,                     // offset
+      false,                 // offset_is_insn_count
       eLazyBoolYes,          // skip_prologue,
       true,                  // internal
       false);                // request_hardware
