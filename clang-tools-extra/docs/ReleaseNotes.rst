@@ -236,7 +236,7 @@ New checks
 - New :doc:`modernize-use-constexr
   <clang-tidy/checks/modernize/use-constexpr>` check.
 
-  Finds functions and variables that can be declared 'constexpr'.
+  Finds functions and variables that can be declared ``constexpr``.
 
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.

@@ -69,5 +69,4 @@ Options
 
   The string to use with C++23 to specify a function-local variable as 
   ``static constexpr``, for example, a macro. Default is `static constexpr`
-  (concatenating `static` with the `ConstexprString` option).
-
+  (concatenating `static` with the :option:`ConstexprString`).
