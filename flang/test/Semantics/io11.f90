@@ -809,3 +809,24 @@ module m29
     end
   end interface
 end
+
+module m30
+    type base
+        character(5), allocatable :: data
+    end type
+    interface write(formatted)
+        subroutine formattedRead (dtv, unit, iotype, v_list, iostat, iomsg)
+        import base
+            !ERROR: Dummy argument 'dtv' of a defined input/output procedure must be a scalar
+            class (base), intent(in) :: dtv(10)
+            integer, intent(in) :: unit
+            !ERROR: Dummy argument 'iotype' of a defined input/output procedure must be a scalar
+            character(*), intent(in) :: iotype(2)
+            integer, intent(in) :: v_list(:)
+            !ERROR: Dummy argument 'iostat' of a defined input/output procedure must be a scalar
+            integer, intent(out) :: iostat(*)
+            !ERROR: Dummy argument 'iomsg' of a defined input/output procedure must be a scalar
+            character(*), intent(inout) :: iomsg(:)
+        end subroutine
+    end interface
+end module
