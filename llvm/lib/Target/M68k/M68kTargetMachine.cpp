@@ -46,35 +46,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
 
 namespace {
 
-std::string computeDataLayout(const Triple &TT, StringRef CPU,
-                              const TargetOptions &Options) {
-  std::string Ret = "";
-  // M68k is Big Endian
-  Ret += "E";
-
-  // FIXME how to wire it with the used object format?
-  Ret += "-m:e";
-
-  // M68k pointers are always 32 bit wide even for 16-bit CPUs.
-  // The ABI only specifies 16-bit alignment.
-  // On at least the 68020+ with a 32-bit bus, there is a performance benefit
-  // to having 32-bit alignment.
-  Ret += "-p:32:16:32";
-
-  // Bytes do not require special alignment, words are word aligned and
-  // long words are word aligned at minimum.
-  Ret += "-i8:8:8-i16:16:16-i32:16:32";
-
-  // FIXME no floats at the moment
-
-  // The registers can hold 8, 16, 32 bits
-  Ret += "-n8:16:32";
-
-  Ret += "-a:0:16-S16";
-
-  return Ret;
-}
-
 Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                     std::optional<Reloc::Model> RM) {
   // If not defined we default to static
@@ -101,8 +72,8 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options), TT, CPU,
-                               FS, Options, getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
                                ::getEffectiveCodeModel(CM, JIT), OL),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {

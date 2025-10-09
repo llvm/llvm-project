@@ -531,7 +531,7 @@ protected:
   /// add_internal - Creates a new tree that includes the specified
   ///  data and the data from the original tree.  If the original tree
   ///  already contained the data item, the original tree is returned.
-  TreeTy* add_internal(value_type_ref V, TreeTy* T) {
+  TreeTy *add_internal(value_type_ref V, TreeTy *T) {
     if (isEmpty(T))
       return createNode(T, V, T);
     assert(!T->isMutable());
@@ -539,19 +539,34 @@ protected:
     key_type_ref K = ImutInfo::KeyOfValue(V);
     key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
 
-    if (ImutInfo::isEqual(K,KCurrent))
+    if (ImutInfo::isEqual(K, KCurrent)) {
+      // If both key and value are same, return the original tree.
+      if (ImutInfo::isDataEqual(ImutInfo::DataOfValue(V),
+                                ImutInfo::DataOfValue(getValue(T))))
+        return T;
+      // Otherwise create a new node with the new value.
       return createNode(getLeft(T), V, getRight(T));
-    else if (ImutInfo::isLess(K,KCurrent))
-      return balanceTree(add_internal(V, getLeft(T)), getValue(T), getRight(T));
+    }
+
+    TreeTy *NewL = getLeft(T);
+    TreeTy *NewR = getRight(T);
+    if (ImutInfo::isLess(K, KCurrent))
+      NewL = add_internal(V, NewL);
     else
-      return balanceTree(getLeft(T), getValue(T), add_internal(V, getRight(T)));
+      NewR = add_internal(V, NewR);
+
+    // If no changes were made, return the original tree. Otherwise, balance the
+    // tree and return the new root.
+    return NewL == getLeft(T) && NewR == getRight(T)
+               ? T
+               : balanceTree(NewL, getValue(T), NewR);
   }
 
   /// remove_internal - Creates a new tree that includes all the data
   ///  from the original tree except the specified data.  If the
   ///  specified data did not exist in the original tree, the original
   ///  tree is returned.
-  TreeTy* remove_internal(key_type_ref K, TreeTy* T) {
+  TreeTy *remove_internal(key_type_ref K, TreeTy *T) {
     if (isEmpty(T))
       return T;
 
@@ -559,15 +574,21 @@ protected:
 
     key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
 
-    if (ImutInfo::isEqual(K,KCurrent)) {
+    if (ImutInfo::isEqual(K, KCurrent))
       return combineTrees(getLeft(T), getRight(T));
-    } else if (ImutInfo::isLess(K,KCurrent)) {
-      return balanceTree(remove_internal(K, getLeft(T)),
-                                            getValue(T), getRight(T));
-    } else {
-      return balanceTree(getLeft(T), getValue(T),
-                         remove_internal(K, getRight(T)));
-    }
+
+    TreeTy *NewL = getLeft(T);
+    TreeTy *NewR = getRight(T);
+    if (ImutInfo::isLess(K, KCurrent))
+      NewL = remove_internal(K, NewL);
+    else
+      NewR = remove_internal(K, NewR);
+
+    // If no changes were made, return the original tree. Otherwise, balance the
+    // tree and return the new root.
+    return NewL == getLeft(T) && NewR == getRight(T)
+               ? T
+               : balanceTree(NewL, getValue(T), NewR);
   }
 
   TreeTy* combineTrees(TreeTy* L, TreeTy* R) {

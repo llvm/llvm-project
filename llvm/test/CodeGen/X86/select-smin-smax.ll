@@ -50,31 +50,18 @@ define i8 @test_i8_smax(i8 %a) nounwind {
 define i8 @test_i8_smin(i8 %a) nounwind {
 ; X64-LABEL: test_i8_smin:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %dil, %dil
-; X64-NEXT:    cmovsl %edi, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarb $7, %al
+; X64-NEXT:    andb %dil, %al
 ; X64-NEXT:    retq
 ;
-; X86-BMI-LABEL: test_i8_smin:
-; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
-; X86-BMI-NEXT:    testb %cl, %cl
-; X86-BMI-NEXT:    cmovsl %ecx, %eax
-; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
-; X86-BMI-NEXT:    retl
-;
-; X86-NOBMI-LABEL: test_i8_smin:
-; X86-NOBMI:       # %bb.0:
-; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    testb %al, %al
-; X86-NOBMI-NEXT:    js .LBB1_2
-; X86-NOBMI-NEXT:  # %bb.1:
-; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB1_2:
-; X86-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NOBMI-NEXT:    retl
+; X86-LABEL: test_i8_smin:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarb $7, %al
+; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    retl
   %r = call i8 @llvm.smin.i8(i8 %a, i8 0)
   ret i8 %r
 }
@@ -114,31 +101,20 @@ define i16 @test_i16_smax(i16 %a) nounwind {
 define i16 @test_i16_smin(i16 %a) nounwind {
 ; X64-LABEL: test_i16_smin:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testw %di, %di
-; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    movswl %di, %eax
+; X64-NEXT:    sarl $15, %eax
+; X64-NEXT:    andl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
-; X86-BMI-LABEL: test_i16_smin:
-; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
-; X86-BMI-NEXT:    testw %cx, %cx
-; X86-BMI-NEXT:    cmovsl %ecx, %eax
-; X86-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-BMI-NEXT:    retl
-;
-; X86-NOBMI-LABEL: test_i16_smin:
-; X86-NOBMI:       # %bb.0:
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    testw %ax, %ax
-; X86-NOBMI-NEXT:    js .LBB3_2
-; X86-NOBMI-NEXT:  # %bb.1:
-; X86-NOBMI-NEXT:    xorl %eax, %eax
-; X86-NOBMI-NEXT:  .LBB3_2:
-; X86-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NOBMI-NEXT:    retl
+; X86-LABEL: test_i16_smin:
+; X86:       # %bb.0:
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $15, %eax
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
   %r = call i16 @llvm.smin.i16(i16 %a, i16 0)
   ret i16 %r
 }

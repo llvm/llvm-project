@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-hard-clauses %s -o - | FileCheck %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-hard-clauses %s -o - | FileCheck %s -check-prefix=GFX11
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-insert-hard-clauses %s -o - | FileCheck %s -check-prefix=GFX12
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-insert-hard-clauses %s -o - -debugify-and-strip-all-safe | FileCheck %s -check-prefix=GFX12
 
 ---
 name: nop1
