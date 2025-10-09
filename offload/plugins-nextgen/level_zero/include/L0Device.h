@@ -288,7 +288,7 @@ public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
              const std::string_view zeId, int32_t ComputeIndex)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, {}),
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
         l0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
         ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
