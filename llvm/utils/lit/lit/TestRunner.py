@@ -13,14 +13,9 @@ import shutil
 import tempfile
 import threading
 import typing
+import traceback
 from typing import Optional, Tuple
-
-import io
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
@@ -41,6 +36,16 @@ class ScriptFatal(Exception):
     A script had a fatal error such that there's no point in retrying.  The
     message has not been emitted on stdout or stderr but is instead included in
     this exception.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class TestUpdaterException(Exception):
+    """
+    There was an error not during test execution, but while invoking a function
+    in test_updaters on a failing RUN line.
     """
 
     def __init__(self, message):
@@ -87,10 +92,12 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env):
+    def __init__(self, cwd, env, umask=-1, ulimit={}):
         self.cwd = cwd
         self.env = dict(env)
+        self.umask = umask
         self.dirStack = []
+        self.ulimit = ulimit
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -197,11 +204,18 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeout
     """
     # Use the helper even when no timeout is required to make
-    # other code simpler (i.e. avoid bunch of ``!= None`` checks)
+    # other code simpler (i.e. avoid bunch of ``is not None`` checks)
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
-    finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    try:
+        finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    except InternalShellError:
+        e = sys.exc_info()[1]
+        finalExitCode = 127
+        results.append(
+            ShellCommandResult(e.command, "", e.message, finalExitCode, False)
+        )
     timeoutHelper.cancel()
     timeoutInfo = None
     if timeoutHelper.timeoutReached():
@@ -307,6 +321,10 @@ def updateEnv(env, args):
         if arg == "-u":
             unset_next_env_var = True
             continue
+        # Support for the -i flag which clears the environment
+        if arg == "-i":
+            env.env = {}
+            continue
         if unset_next_env_var:
             unset_next_env_var = False
             if arg in env.env:
@@ -356,7 +374,7 @@ def executeBuiltinPopd(cmd, shenv):
 def executeBuiltinExport(cmd, shenv):
     """executeBuiltinExport - Set an environment variable."""
     if len(cmd.args) != 2:
-        raise InternalShellError("'export' supports only one argument")
+        raise InternalShellError(cmd, "'export' supports only one argument")
     updateEnv(shenv, cmd.args)
     return ShellCommandResult(cmd, "", "", 0, False)
 
@@ -406,8 +424,7 @@ def executeBuiltinEcho(cmd, shenv):
             return arg
 
         arg = lit.util.to_bytes(arg)
-        codec = "string_escape" if sys.version_info < (3, 0) else "unicode_escape"
-        return arg.decode(codec)
+        return arg.decode("unicode_escape")
 
     if args:
         for arg in args[:-1]:
@@ -499,7 +516,9 @@ def executeBuiltinRm(cmd, cmd_shenv):
         if force and not os.path.exists(path):
             continue
         try:
-            if os.path.isdir(path):
+            if os.path.islink(path):
+                os.remove(path)
+            elif os.path.isdir(path):
                 if not recursive:
                     stderr.write("Error: %s is a directory\n" % path)
                     exitCode = 1
@@ -563,6 +582,41 @@ def executeBuiltinRm(cmd, cmd_shenv):
             stderr.write("Error: 'rm' command failed, %s" % str(err))
             exitCode = 1
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+
+
+def executeBuiltinUmask(cmd, shenv):
+    """executeBuiltinUmask - Change the current umask."""
+    if os.name != "posix":
+        raise InternalShellError(cmd, "'umask' not supported on this system")
+    if len(cmd.args) != 2:
+        raise InternalShellError(cmd, "'umask' supports only one argument")
+    try:
+        # Update the umask in the parent environment.
+        shenv.umask = int(cmd.args[1], 8)
+    except ValueError as err:
+        raise InternalShellError(cmd, "Error: 'umask': %s" % str(err))
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+
+def executeBuiltinUlimit(cmd, shenv):
+    """executeBuiltinUlimit - Change the current limits."""
+    if os.name != "posix":
+        raise InternalShellError(cmd, "'ulimit' not supported on this system")
+    if len(cmd.args) != 3:
+        raise InternalShellError(cmd, "'ulimit' requires two arguments")
+    try:
+        new_limit = int(cmd.args[2])
+    except ValueError as err:
+        raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
+    if cmd.args[1] == "-v":
+        shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
+    elif cmd.args[1] == "-n":
+        shenv.ulimit["RLIMIT_NOFILE"] = new_limit
+    else:
+        raise InternalShellError(
+            cmd, "'ulimit' does not support option: %s" % cmd.args[1]
+        )
+    return ShellCommandResult(cmd, "", "", 0, False)
 
 
 def executeBuiltinColon(cmd, cmd_shenv):
@@ -668,6 +722,30 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
+def _expandLateSubstitutions(cmd, arguments, cwd):
+    for i, arg in enumerate(arguments):
+        if not isinstance(arg, str):
+            continue
+
+        def _replaceReadFile(match):
+            filePath = match.group(1)
+            if not os.path.isabs(filePath):
+                filePath = os.path.join(cwd, filePath)
+            try:
+                with open(filePath) as fileHandle:
+                    return fileHandle.read()
+            except FileNotFoundError:
+                raise InternalShellError(
+                    cmd,
+                    "File specified in readfile substitution does not exist: %s"
+                    % filePath,
+                )
+
+        arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
+
+    return arguments
+
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
@@ -719,6 +797,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
         "rm": executeBuiltinRm,
+        "ulimit": executeBuiltinUlimit,
+        "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
     # To avoid deadlock, we use a single stderr stream for piped
@@ -740,10 +820,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
                 #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
                 if cmd_shenv is shenv:
-                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
+                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    raise InternalShellError(j, "Error: 'env' requires a" " subcommand")
+                    # Return the environment variables if no argument is provided.
+                    env_str = "\n".join(
+                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
+                    )
+                    results.append(
+                        ShellCommandResult(
+                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                        )
+                    )
+                    return 0
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1
@@ -767,6 +856,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # echo-appending to a file.
         # FIXME: Standardize on the builtin echo implementation. We can use a
         # temporary file to sidestep blocking pipe write issues.
+
+        # Ensure args[0] is hashable.
+        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+
+        # Expand all late substitutions.
+        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
+
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
             # env calling an in-process builtin is useless, so we take the safe
@@ -844,20 +940,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if os.path.isfile(exe_in_cwd):
                 executable = exe_in_cwd
         if not executable:
-            executable = lit.util.which(args[0], cmd_shenv.env["PATH"])
+            # Use the path from cmd_shenv by default, but if the environment variable
+            # is unset (like if the user is using env -i), use the standard path.
+            path = (
+                cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
+            )
+            executable = lit.util.which(args[0], shenv.env["PATH"])
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
-            # In Python 2.x, basestring is the base class for all string (including unicode)
-            # In Python 3.x, basestring no longer exist and str is always unicode
-            try:
-                str_type = basestring
-            except NameError:
-                str_type = str
             for i, arg in enumerate(args):
-                if isinstance(arg, str_type) and kDevNull in arg:
+                if isinstance(arg, str) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
@@ -871,7 +966,27 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if kIsWindows:
             args = quote_windows_command(args)
 
+        # Handle any resource limits. We do this by launching the command with
+        # a wrapper that sets the necessary limits. We use a wrapper rather than
+        # setting the limits in process as we cannot reraise the limits back to
+        # their defaults without elevated permissions.
+        if cmd_shenv.ulimit:
+            executable = sys.executable
+            args.insert(0, sys.executable)
+            args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
+            for limit in cmd_shenv.ulimit:
+                cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
+                    cmd_shenv.ulimit[limit]
+                )
+
         try:
+            # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
+            # os.umask as the umask argument in subprocess.Popen is not
+            # available before Python 3.9. Once LLVM requires at least Python
+            # 3.9, this code should be updated to use umask argument.
+            old_umask = -1
+            if cmd_shenv.umask != -1:
+                old_umask = os.umask(cmd_shenv.umask)
             procs.append(
                 subprocess.Popen(
                     args,
@@ -886,6 +1001,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     errors="replace",
                 )
             )
+            if old_umask != -1:
+                os.umask(old_umask)
             proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
@@ -1005,6 +1122,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     return exitCode
 
 
+def findColor(line, curr_color):
+    start = line.rfind("\33[")
+    if start == -1:
+        return curr_color
+    end = line.find("m", start + 2)
+    if end == -1:
+        return curr_color
+    match = line[start : end + 1]
+    # "\33[0m" means "reset all formatting". Sometimes the 0 is skipped.
+    if match == "\33[m" or match == "\33[0m":
+        return None
+    return match
+
+
 def formatOutput(title, data, limit=None):
     if not data.strip():
         return ""
@@ -1015,8 +1146,18 @@ def formatOutput(title, data, limit=None):
         msg = ""
     ndashes = 30
     # fmt: off
-    out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
-    out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
+    out = f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    curr_color = None
+    for line in data.splitlines():
+        if curr_color:
+            out += "\33[0m"
+        out += "# | "
+        if curr_color:
+            out += curr_color
+        out += line + "\n"
+        curr_color = findColor(line, curr_color)
+    if curr_color:
+        out += "\33[0m"  # prevent unterminated formatting from leaking
     out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
     # fmt: on
     return out
@@ -1069,15 +1210,10 @@ def executeScriptInternal(
 
     results = []
     timeoutInfo = None
-    try:
-        shenv = ShellEnvironment(cwd, test.config.environment)
-        exitCode, timeoutInfo = executeShCmd(
-            cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
-        )
-    except InternalShellError:
-        e = sys.exc_info()[1]
-        exitCode = 127
-        results.append(ShellCommandResult(e.command, "", e.message, exitCode, False))
+    shenv = ShellEnvironment(cwd, test.config.environment)
+    exitCode, timeoutInfo = executeShCmd(
+        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+    )
 
     out = err = ""
     for i, result in enumerate(results):
@@ -1154,6 +1290,28 @@ def executeScriptInternal(
                 str(result.timeoutReached),
             )
 
+        if (
+            litConfig.update_tests
+            and result.exitCode != 0
+            and not timeoutInfo
+            # In theory tests marked XFAIL can fail in the form of XPASS, but the
+            # test updaters are not expected to be able to fix that, so always skip for XFAIL
+            and not test.isExpectedToFail()
+        ):
+            for test_updater in litConfig.test_updaters:
+                try:
+                    update_output = test_updater(result, test, commands)
+                except Exception as e:
+                    output = out
+                    output += err
+                    output += "Exception occurred in test updater:\n"
+                    output += traceback.format_exc()
+                    raise TestUpdaterException(output)
+                if update_output:
+                    for line in update_output.splitlines():
+                        out += f"# {line}\n"
+                    break
+
     return out, err, exitCode, timeoutInfo
 
 
@@ -1169,7 +1327,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
         mode += "b"  # Avoid CRLFs when writing bash scripts.
-    elif sys.version_info > (3, 0):
+    else:
         open_kwargs["encoding"] = "utf-8"
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
@@ -1195,7 +1353,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # the shell's execution trace for the 'set' commands by
                 # redirecting their stderr to /dev/null.
                 if command:
-                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                    msg = f"{shlex.quote(command.lstrip())} \\# '{dbg}'"
                 else:
                     msg = f"'{dbg}' has no command after substitutions"
                 commands[i] = (
@@ -1222,8 +1380,18 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                     commands[i] += f" && {{ {command}; }}"
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
+
+        # Manually export any DYLD_* variables used by dyld on macOS because
+        # otherwise they are lost when the shell executable is run, before the
+        # lit test is executed.
+        env_str = "\n".join(
+            "export {}={};".format(k, shlex.quote(v))
+            for k, v in test.config.environment.items()
+            if k.startswith("DYLD_")
+        )
+        f.write(bytes(env_str, "utf-8") if mode == "wb" else env_str)
         f.write(b"set -x;" if mode == "wb" else "set -x;")
-        if sys.version_info > (3, 0) and mode == "wb":
+        if mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
             f.write("{ " + "; } &&\n{ ".join(commands) + "; }")
@@ -1348,10 +1516,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions = []
     substitutions.extend(test.config.substitutions)
     tmpName = tmpBase + ".tmp"
-    baseName = os.path.basename(tmpBase)
+    tmpBaseName = os.path.basename(tmpBase)
+    sourceBaseName = os.path.basename(sourcepath)
 
     substitutions.append(("%{pathsep}", os.pathsep))
-    substitutions.append(("%basename_t", baseName))
+    substitutions.append(("%basename_t", tmpBaseName))
+
+    substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{t:stem}", tmpBaseName))
 
     substitutions.extend(
         [
@@ -1369,8 +1541,10 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         return s
 
     path_substitutions = [
-        ("s", sourcepath), ("S", sourcedir), ("p", sourcedir),
-        ("t", tmpName), ("T", tmpDir)
+        ("s", sourcepath),
+        ("S", sourcedir),
+        ("p", sourcedir),
+        ("t", tmpName),
     ]
     for path_substitution in path_substitutions:
         letter = path_substitution[0]
@@ -1587,7 +1761,6 @@ class SubstDirective(ExpandableScriptDirective):
         assert (
             not self.needs_continuation()
         ), "expected directive continuations to be parsed before applying"
-        value_repl = self.value.replace("\\", "\\\\")
         existing = [i for i, subst in enumerate(substitutions) if self.name in subst[0]]
         existing_res = "".join(
             "\nExisting pattern: " + substitutions[i][0] for i in existing
@@ -1600,7 +1773,7 @@ class SubstDirective(ExpandableScriptDirective):
                     f"{self.get_location()}"
                     f"{existing_res}"
                 )
-            substitutions.insert(0, (self.name, value_repl))
+            substitutions.insert(0, (self.name, self.value))
             return
         if len(existing) > 1:
             raise ValueError(
@@ -1622,7 +1795,7 @@ class SubstDirective(ExpandableScriptDirective):
                 f"Expected pattern: {self.name}"
                 f"{existing_res}"
             )
-        substitutions[existing[0]] = (self.name, value_repl)
+        substitutions[existing[0]] = (self.name, self.value)
 
 
 def applySubstitutions(script, substitutions, conditions={}, recursion_limit=None):
@@ -1738,8 +1911,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
         # Apply substitutions
         ln = substituteIfElse(escapePercents(ln))
         for a, b in substitutions:
-            if kIsWindows:
-                b = b.replace("\\", "\\\\")
+            b = b.replace("\\", "\\\\")
             # re.compile() has a built-in LRU cache with 512 entries. In some
             # test suites lit ends up thrashing that cache, which made e.g.
             # check-llvm run 50% slower.  Use an explicit, unbounded cache
@@ -1748,6 +1920,14 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             # since thrashing has such bad consequences, not bounding the cache
             # seems reasonable.
             ln = _caching_re_compile(a).sub(str(b), escapePercents(ln))
+
+        # TODO(boomanaiden154): Remove when we branch LLVM 22 so people on the
+        # release branch will have sufficient time to migrate.
+        if bool(_caching_re_compile("%T").search(ln)):
+            raise ValueError(
+                "%T is no longer supported. Please create directories with names "
+                "based on %t."
+            )
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
@@ -2125,6 +2305,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     assert parsed["DEFINE:"] == script
     assert parsed["REDEFINE:"] == script
     test.xfails += parsed["XFAIL:"] or []
+    if test.exclude_xfail and test.isExpectedToFail():
+        return lit.Test.Result(Test.EXCLUDED, "excluding XFAIL tests")
     test.requires += parsed["REQUIRES:"] or []
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:
@@ -2242,8 +2424,26 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     if err:
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
-    return lit.Test.Result(status, output)
+    return lit.Test.Result(
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
+    )
 
+
+def _expandLateSubstitutionsExternal(commandLine):
+    filePaths = []
+
+    def _replaceReadFile(match):
+        filePath = match.group(1)
+        filePaths.append(filePath)
+        return "$(cat %s)" % shlex.quote(filePath)
+
+    commandLine = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, commandLine)
+    # Add test commands before the command to check if the file exists as
+    # cat inside a subshell will never return a non-zero exit code outside
+    # of the subshell.
+    for filePath in filePaths:
+        commandLine = "%s && test -e %s" % (commandLine, filePath)
+    return commandLine
 
 def executeShTest(
     test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
@@ -2274,5 +2474,9 @@ def executeShTest(
         conditions,
         recursion_limit=test.config.recursiveExpansionLimit,
     )
+
+    if useExternalSh:
+        for index, command in enumerate(script):
+            script[index] = _expandLateSubstitutionsExternal(command)
 
     return _runShTest(test, litConfig, useExternalSh, script, tmpBase)

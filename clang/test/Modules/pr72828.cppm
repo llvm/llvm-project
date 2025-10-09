@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -triple %itanium_abi_triple \
 // RUN:     %s -emit-module-interface -o %t/m.pcm
 // RUN: %clang_cc1 -std=c++23 -triple %itanium_abi_triple \
-// RUN:     -S -emit-llvm -disable-llvm-passes %t/m.pcm \
+// RUN:     -emit-llvm -disable-llvm-passes %t/m.pcm \
 // RUN:     -o - | FileCheck %s
 
 export module m;
@@ -17,7 +17,7 @@ struct s {
 
 void f() {
 	auto [x] = s();
-	[x] {};
+	(void) [x] {};
 }
 
 // Check that we can generate the LLVM IR expectedly.

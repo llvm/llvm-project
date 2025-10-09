@@ -1,4 +1,4 @@
-//===- FuncToEmitC.cpp - Func to EmitC Pass ---------------------*- C++ -*-===//
+//===- FuncToEmitCPass.cpp - Func to EmitC Pass -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,11 @@ void ConvertFuncToEmitC::runOnOperation() {
   target.addIllegalOp<func::CallOp, func::FuncOp, func::ReturnOp>();
 
   RewritePatternSet patterns(&getContext());
-  populateFuncToEmitCPatterns(patterns);
+
+  TypeConverter typeConverter;
+  typeConverter.addConversion([](Type type) { return type; });
+
+  populateFuncToEmitCPatterns(typeConverter, patterns);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

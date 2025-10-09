@@ -11,7 +11,6 @@
 
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Timer.h"
 
 namespace opts {
 extern llvm::cl::opt<bool> TimeOpts;
@@ -55,7 +54,7 @@ public:
         HasNonDominatedPred = true;
       });
       if (HasDominatedPred && HasNonDominatedPred)
-        Result.insert(Candidates.begin(), Candidates.end());
+        Result.insert_range(Candidates);
       if ((*this->getStateAt(ProgramPoint::getLastPointAt(BB)))[DomIdx] &&
           BB.succ_begin() == BB.succ_end())
         Result.insert(ProgramPoint::getLastPointAt(BB));

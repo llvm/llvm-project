@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple arm-unknown -mattr=+vfp2,+v4t -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE
-; RUN: llc -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -global-isel-abort=0 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=BIG
+; RUN: llc -mtriple armeb-unknown -mattr=+vfp2,+v4t -global-isel -global-isel-abort=0 -enable-arm-gisel-bigendian -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=BIG
 
 define void @test_void_return() {
 ; CHECK-LABEL: name: test_void_return
@@ -561,7 +561,7 @@ define void @test_load_store_struct(ptr %addr) {
 ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[VAL1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32) from %ir.addr)
 ; CHECK-DAG: [[OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFFSET]](s32)
+; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR1]], [[OFFSET]](s32)
 ; CHECK-DAG: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[ADDR2]](p0) :: (load (s32) from %ir.addr + 4)
 ; CHECK-DAG: G_STORE [[VAL1]](s32), [[ADDR1]](p0) :: (store (s32) into %ir.addr)
 ; CHECK-DAG: [[ADDR3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]

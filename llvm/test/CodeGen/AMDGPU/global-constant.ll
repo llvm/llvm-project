@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn--amdpal -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-PAL %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-MESA %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
-; RUN: llc -mtriple=r600-- -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=R600 %s
+; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefixes=GCN,GCN-PAL %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GCN-MESA %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=GCN,GCN-DEFAULT %s
+; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=R600 %s
 
 @private1 = private unnamed_addr addrspace(4) constant [4 x float] [float 0.0, float 1.0, float 2.0, float 3.0]
 @private2 = private unnamed_addr addrspace(4) constant [4 x float] [float 4.0, float 5.0, float 6.0, float 7.0]
@@ -49,8 +49,8 @@ define amdgpu_kernel void @private_test(i32 %index, ptr addrspace(1) %out) {
 
 ; R600-LABEL: available_externally_test
 
-; GCN-PAL:    s_mov_b32 s3, available_externally@abs32@hi
-; GCN-PAL:    s_mov_b32 s2, available_externally@abs32@lo
+; GCN-PAL:    s_mov_b32 s1, available_externally@abs32@hi
+; GCN-PAL:    s_mov_b32 s0, available_externally@abs32@lo
 define amdgpu_kernel void @available_externally_test(ptr addrspace(1) %out) {
   %ptr = getelementptr [256 x i32], ptr addrspace(4) @available_externally, i32 0, i32 1
   %val = load i32, ptr addrspace(4) %ptr

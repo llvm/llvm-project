@@ -42,3 +42,7 @@ endif()
 foreach(link ${LLD_SYMLINKS_TO_CREATE})
   add_lld_symlink(${link} lld)
 endforeach()
+
+if(LLVM_TOOL_LLVM_DRIVER_BUILD)
+  set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_HIDDEN_TOOL_ALIASES_lld ld)
+endif()

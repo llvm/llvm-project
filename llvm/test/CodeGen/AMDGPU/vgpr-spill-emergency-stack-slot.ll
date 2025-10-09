@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=fiji < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; This ends up using all 255 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -25,7 +25,7 @@
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s[[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
 ; GCN: buffer_load_dword v{{[0-9]+}}, off, s[[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 ; GCN: NumVgprs: 256
-; GCN: ScratchSize: 768
+; GCN: ScratchSize: 640
 
 define amdgpu_vs void @main(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, ptr addrspace(4) inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:
@@ -220,7 +220,7 @@ bb157:                                            ; preds = %bb24
   %tmp159 = bitcast float %tmp107 to i32
   %tmp160 = add i32 %tmp23, %tmp159
   %tmp161 = bitcast i32 %tmp160 to float
-  %tmp162 = insertelement <128 x float> undef, float %tmp103, i32 0
+  %tmp162 = insertelement <128 x float> poison, float %tmp103, i32 0
   %tmp163 = insertelement <128 x float> %tmp162, float %tmp102, i32 1
   %tmp164 = insertelement <128 x float> %tmp163, float %tmp101, i32 2
   %tmp165 = insertelement <128 x float> %tmp164, float %tmp99, i32 3

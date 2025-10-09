@@ -13,6 +13,7 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::SourceMgr;
 
 //===----------------------------------------------------------------------===//
 // FormatToken
@@ -26,14 +27,14 @@ SMLoc FormatToken::getLoc() const {
 // FormatLexer
 //===----------------------------------------------------------------------===//
 
-FormatLexer::FormatLexer(llvm::SourceMgr &mgr, SMLoc loc)
+FormatLexer::FormatLexer(SourceMgr &mgr, SMLoc loc)
     : mgr(mgr), loc(loc),
       curBuffer(mgr.getMemoryBuffer(mgr.getMainFileID())->getBuffer()),
       curPtr(curBuffer.begin()) {}
 
 FormatToken FormatLexer::emitError(SMLoc loc, const Twine &msg) {
-  mgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
-  llvm::SrcMgr.PrintMessage(this->loc, llvm::SourceMgr::DK_Note,
+  mgr.PrintMessage(loc, SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(this->loc, SourceMgr::DK_Note,
                             "in custom assembly format for this operation");
   return formToken(FormatToken::error, loc.getPointer());
 }
@@ -44,10 +45,10 @@ FormatToken FormatLexer::emitError(const char *loc, const Twine &msg) {
 
 FormatToken FormatLexer::emitErrorAndNote(SMLoc loc, const Twine &msg,
                                           const Twine &note) {
-  mgr.PrintMessage(loc, llvm::SourceMgr::DK_Error, msg);
-  llvm::SrcMgr.PrintMessage(this->loc, llvm::SourceMgr::DK_Note,
+  mgr.PrintMessage(loc, SourceMgr::DK_Error, msg);
+  llvm::SrcMgr.PrintMessage(this->loc, SourceMgr::DK_Note,
                             "in custom assembly format for this operation");
-  mgr.PrintMessage(loc, llvm::SourceMgr::DK_Note, note);
+  mgr.PrintMessage(loc, SourceMgr::DK_Note, note);
   return formToken(FormatToken::error, loc.getPointer());
 }
 
@@ -222,6 +223,7 @@ FailureOr<std::vector<FormatElement *>> FormatParser::parse() {
 
 //===----------------------------------------------------------------------===//
 // Element Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<FormatElement *> FormatParser::parseElement(Context ctx) {
   if (curToken.is(FormatToken::literal))
@@ -308,6 +310,10 @@ FailureOr<FormatElement *> FormatParser::parseDirective(Context ctx) {
 
   if (tok.is(FormatToken::kw_custom))
     return parseCustomDirective(loc, ctx);
+  if (tok.is(FormatToken::kw_ref))
+    return parseRefDirective(loc, ctx);
+  if (tok.is(FormatToken::kw_qualified))
+    return parseQualifiedDirective(loc, ctx);
   return parseDirectiveImpl(loc, tok.getKind(), ctx);
 }
 
@@ -394,8 +400,10 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
                                                               Context ctx) {
-  if (ctx != TopLevelContext)
-    return emitError(loc, "'custom' is only valid as a top-level directive");
+  if (ctx != TopLevelContext && ctx != StructDirectiveContext) {
+    return emitError(loc, "`custom` can only be used at the top-level context "
+                          "or within a `struct` directive");
+  }
 
   FailureOr<FormatToken> nameTok;
   if (failed(parseToken(FormatToken::less,
@@ -428,6 +436,38 @@ FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
   if (failed(verifyCustomDirectiveArguments(loc, arguments)))
     return failure();
   return create<CustomDirective>(nameTok->getSpelling(), std::move(arguments));
+}
+
+FailureOr<FormatElement *> FormatParser::parseRefDirective(SMLoc loc,
+                                                           Context context) {
+  if (context != CustomDirectiveContext)
+    return emitError(loc, "'ref' is only valid within a `custom` directive");
+
+  FailureOr<FormatElement *> arg;
+  if (failed(parseToken(FormatToken::l_paren,
+                        "expected '(' before argument list")) ||
+      failed(arg = parseElement(RefDirectiveContext)) ||
+      failed(
+          parseToken(FormatToken::r_paren, "expected ')' after argument list")))
+    return failure();
+
+  return create<RefDirective>(*arg);
+}
+
+FailureOr<FormatElement *> FormatParser::parseQualifiedDirective(SMLoc loc,
+                                                                 Context ctx) {
+  if (failed(parseToken(FormatToken::l_paren,
+                        "expected '(' before argument list")))
+    return failure();
+  FailureOr<FormatElement *> var = parseElement(ctx);
+  if (failed(var))
+    return var;
+  if (failed(markQualified(loc, *var)))
+    return failure();
+  if (failed(
+          parseToken(FormatToken::r_paren, "expected ')' after argument list")))
+    return failure();
+  return var;
 }
 
 //===----------------------------------------------------------------------===//
@@ -478,7 +518,7 @@ bool mlir::tblgen::isValidLiteral(StringRef value,
   // If there is only one character, this must either be punctuation or a
   // single character bare identifier.
   if (value.size() == 1) {
-    StringRef bare = "_:,=<>()[]{}?+*";
+    StringRef bare = "_:,=<>()[]{}?+-*";
     if (isalpha(front) || bare.contains(front))
       return true;
     if (emitError)

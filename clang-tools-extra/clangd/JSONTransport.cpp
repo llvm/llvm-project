@@ -107,8 +107,7 @@ public:
         return error(std::make_error_code(std::errc::operation_canceled),
                      "Got signal, shutting down");
       if (ferror(In))
-        return llvm::errorCodeToError(
-            std::error_code(errno, std::system_category()));
+        return llvm::errorCodeToError(llvm::errnoAsErrorCode());
       if (readRawMessage(JSON)) {
         ThreadCrashReporter ScopedReporter([&JSON]() {
           auto &OS = llvm::errs();

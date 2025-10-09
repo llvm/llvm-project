@@ -21,17 +21,19 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/LambdaCapture.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
@@ -42,23 +44,33 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <cstdint>
 #include <optional>
 using namespace clang;
 using namespace clang::CodeGen;
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
-  return TI.isAlignRequired() ? TI.Align : 0;
+  if (TI.isAlignRequired())
+    return TI.Align;
+
+  // MaxFieldAlignmentAttr is the attribute added to types
+  // declared after #pragma pack(n).
+  if (auto *Decl = Ty->getAsRecordDecl())
+    if (Decl->hasAttr<MaxFieldAlignmentAttr>())
+      return TI.Align;
+
+  return 0;
 }
 
 static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
@@ -67,6 +79,35 @@ static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
 
 static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
+}
+
+/// Returns true if \ref VD is a a holding variable (aka a
+/// VarDecl retrieved using \ref BindingDecl::getHoldingVar).
+static bool IsDecomposedVarDecl(VarDecl const *VD) {
+  auto const *Init = VD->getInit();
+  if (!Init)
+    return false;
+
+  auto const *RefExpr =
+      llvm::dyn_cast_or_null<DeclRefExpr>(Init->IgnoreUnlessSpelledInSource());
+  if (!RefExpr)
+    return false;
+
+  return llvm::dyn_cast_or_null<DecompositionDecl>(RefExpr->getDecl());
+}
+
+/// Returns true if \ref VD is a compiler-generated variable
+/// and should be treated as artificial for the purposes
+/// of debug-info generation.
+static bool IsArtificial(VarDecl const *VD) {
+  // Tuple-like bindings are marked as implicit despite
+  // being spelled out in source. Don't treat them as artificial
+  // variables.
+  if (IsDecomposedVarDecl(VD))
+    return false;
+
+  return VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
+                              cast<Decl>(VD->getDeclContext())->isImplicit());
 }
 
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
@@ -79,6 +120,100 @@ CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
 CGDebugInfo::~CGDebugInfo() {
   assert(LexicalBlockStack.empty() &&
          "Region stack mismatch, stack not empty!");
+}
+
+void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
+                                            uint64_t Group, uint8_t Rank) {
+  if (!I->getDebugLoc() || Group == 0 || !I->getDebugLoc()->getLine())
+    return;
+
+  // Saturate the 3-bit rank.
+  Rank = std::min<uint8_t>(Rank, 7);
+
+  const llvm::DebugLoc &DL = I->getDebugLoc();
+
+  // Each instruction can only be attributed to one source atom (a limitation of
+  // the implementation). If this instruction is already part of a source atom,
+  // pick the group in which it has highest precedence (lowest rank).
+  if (DL->getAtomGroup() && DL->getAtomRank() && DL->getAtomRank() < Rank) {
+    Group = DL->getAtomGroup();
+    Rank = DL->getAtomRank();
+  }
+
+  // Update the function-local watermark so we don't reuse this number for
+  // another atom.
+  KeyInstructionsInfo.HighestEmittedAtom =
+      std::max(Group, KeyInstructionsInfo.HighestEmittedAtom);
+
+  // Apply the new DILocation to the instruction.
+  llvm::DILocation *NewDL = llvm::DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), Group, Rank);
+  I->setDebugLoc(NewDL);
+}
+
+void CGDebugInfo::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                             llvm::Value *Backup) {
+  addInstToSpecificSourceAtom(KeyInstruction, Backup,
+                              KeyInstructionsInfo.CurrentAtom);
+}
+
+void CGDebugInfo::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                              llvm::Value *Backup,
+                                              uint64_t Group) {
+  if (!Group || !CGM.getCodeGenOpts().DebugKeyInstructions)
+    return;
+
+  llvm::DISubprogram *SP = KeyInstruction->getFunction()->getSubprogram();
+  if (!SP || !SP->getKeyInstructionsEnabled())
+    return;
+
+  addInstSourceAtomMetadata(KeyInstruction, Group, /*Rank=*/1);
+
+  llvm::Instruction *BackupI =
+      llvm::dyn_cast_or_null<llvm::Instruction>(Backup);
+  if (!BackupI)
+    return;
+
+  // Add the backup instruction to the group.
+  addInstSourceAtomMetadata(BackupI, Group, /*Rank=*/2);
+
+  // Look through chains of casts too, as they're probably going to evaporate.
+  // FIXME: And other nops like zero length geps?
+  // FIXME: Should use Cast->isNoopCast()?
+  uint8_t Rank = 3;
+  while (auto *Cast = dyn_cast<llvm::CastInst>(BackupI)) {
+    BackupI = dyn_cast<llvm::Instruction>(Cast->getOperand(0));
+    if (!BackupI)
+      break;
+    addInstSourceAtomMetadata(BackupI, Group, Rank++);
+  }
+}
+
+void CGDebugInfo::completeFunction() {
+  // Reset the atom group number tracker as the numbers are function-local.
+  KeyInstructionsInfo.NextAtom = 1;
+  KeyInstructionsInfo.HighestEmittedAtom = 0;
+  KeyInstructionsInfo.CurrentAtom = 0;
+}
+
+ApplyAtomGroup::ApplyAtomGroup(CGDebugInfo *DI) : DI(DI) {
+  if (!DI)
+    return;
+  OriginalAtom = DI->KeyInstructionsInfo.CurrentAtom;
+  DI->KeyInstructionsInfo.CurrentAtom = DI->KeyInstructionsInfo.NextAtom++;
+}
+
+ApplyAtomGroup::~ApplyAtomGroup() {
+  if (!DI)
+    return;
+
+  // We may not have used the group number at all.
+  DI->KeyInstructionsInfo.NextAtom =
+      std::min(DI->KeyInstructionsInfo.HighestEmittedAtom + 1,
+               DI->KeyInstructionsInfo.NextAtom);
+
+  DI->KeyInstructionsInfo.CurrentAtom = OriginalAtom;
 }
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
@@ -136,8 +271,15 @@ ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF, llvm::DebugLoc Loc)
     return;
   }
   OriginalLocation = CGF.Builder.getCurrentDebugLocation();
-  if (Loc)
+  if (Loc) {
+    // Key Instructions: drop the atom group and rank to avoid accidentally
+    // propagating it around.
+    if (Loc->getAtomGroup())
+      Loc = llvm::DILocation::get(Loc->getContext(), Loc.getLine(),
+                                  Loc->getColumn(), Loc->getScope(),
+                                  Loc->getInlinedAt(), Loc.isImplicitCode());
     CGF.Builder.SetCurrentDebugLocation(std::move(Loc));
+  }
 }
 
 ApplyDebugLocation::~ApplyDebugLocation() {
@@ -225,7 +367,7 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
 
   if (const auto *RDecl = dyn_cast<RecordDecl>(Context))
     if (!RDecl->isDependentType())
-      return getOrCreateType(CGM.getContext().getTypeDeclType(RDecl),
+      return getOrCreateType(CGM.getContext().getCanonicalTagType(RDecl),
                              TheCU->getFile());
   return Default;
 }
@@ -247,8 +389,9 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
     PP.SplitTemplateClosers = true;
   }
 
-  PP.SuppressInlineNamespace = false;
-  PP.PrintCanonicalTypes = true;
+  PP.SuppressInlineNamespace =
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
+  PP.PrintAsCanonical = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
@@ -369,6 +512,8 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
   case clang::CodeGenOptions::DSH_SHA256:
     llvm::toHex(llvm::SHA256::hash(Data), /*LowerCase=*/true, Checksum);
     return llvm::DIFile::CSK_SHA256;
+  case clang::CodeGenOptions::DSH_NONE:
+    return std::nullopt;
   }
   llvm_unreachable("Unhandled DebugSrcHashKind enum");
 }
@@ -499,16 +644,7 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
-  if (!CGM.getCodeGenOpts().DebugCompilationDir.empty())
-    return CGM.getCodeGenOpts().DebugCompilationDir;
-
-  if (!CWDName.empty())
-    return CWDName;
-  llvm::ErrorOr<std::string> CWD =
-      CGM.getFileSystem()->getCurrentWorkingDirectory();
-  if (!CWD)
-    return StringRef();
-  return CWDName = internString(*CWD);
+  return CGM.getCodeGenOpts().DebugCompilationDir;
 }
 
 void CGDebugInfo::CreateCompileUnit() {
@@ -583,8 +719,6 @@ void CGDebugInfo::CreateCompileUnit() {
   } else if (LO.OpenCL && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
                            CGM.getCodeGenOpts().DwarfVersion >= 5)) {
     LangTag = llvm::dwarf::DW_LANG_OpenCL;
-  } else if (LO.RenderScript) {
-    LangTag = llvm::dwarf::DW_LANG_GOOGLE_RenderScript;
   } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
       LangTag = llvm::dwarf::DW_LANG_C11;
   } else if (LO.C99) {
@@ -653,8 +787,10 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
-      LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
-      LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
+      llvm::DISourceLanguageName(LangTag), CUFile,
+      CGOpts.EmitVersionIdentMetadata ? Producer : "",
+      CGOpts.OptimizationLevel != 0 || CGOpts.PrepareForLTO ||
+          CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers, CGOpts.SplitDwarfFile, EmissionKind,
       DwoId, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
       NameTableKind, CGOpts.DebugRangesBaseAddress, remapDIPath(Sysroot), SDK);
@@ -698,8 +834,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     auto *ISATy = DBuilder.createPointerType(ClassTy, Size);
 
     ObjTy = DBuilder.createStructType(TheCU, "objc_object", TheCU->getFile(), 0,
-                                      0, 0, llvm::DINode::FlagZero, nullptr,
-                                      llvm::DINodeArray());
+                                      (uint64_t)0, 0, llvm::DINode::FlagZero,
+                                      nullptr, llvm::DINodeArray());
 
     DBuilder.replaceArrays(
         ObjTy, DBuilder.getOrCreateArray(&*DBuilder.createMemberType(
@@ -734,10 +870,21 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id: \
     return getOrCreateStructPtrType("opencl_" #ExtType, Id##Ty);
 #include "clang/Basic/OpenCLExtensionTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    return getOrCreateStructPtrType(#Name, SingletonId);
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
     {
+      if (BT->getKind() == BuiltinType::MFloat8) {
+        Encoding = llvm::dwarf::DW_ATE_unsigned_char;
+        BTName = BT->getName(CGM.getLangOpts());
+        // Bit size and offset of the type.
+        uint64_t Size = CGM.getContext().getTypeSize(BT);
+        return DBuilder.createBasicType(BTName, Size, Encoding);
+      }
       ASTContext::BuiltinVectorTypeInfo Info =
           // For svcount_t, only the lower 2 bytes are relevant.
           BT->getKind() == BuiltinType::SveCount
@@ -802,6 +949,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 
       bool Fractional = false;
       unsigned LMUL;
+      unsigned NFIELDS = Info.NumVectors;
       unsigned FixedSize = ElementCount * SEW;
       if (Info.ElementType == CGM.getContext().BoolTy) {
         // Mask type only occupies one vector register.
@@ -814,7 +962,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
         LMUL = FixedSize / 64;
       }
 
-      // Element count = (VLENB / SEW) x LMUL
+      // Element count = (VLENB / SEW) x LMUL x NFIELDS
       SmallVector<uint64_t, 12> Expr(
           // The DW_OP_bregx operation has two operands: a register which is
           // specified by an unsigned LEB128 number, followed by a signed LEB128
@@ -829,6 +977,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
         Expr.push_back(llvm::dwarf::DW_OP_div);
       else
         Expr.push_back(llvm::dwarf::DW_OP_mul);
+      // NFIELDS multiplier
+      if (NFIELDS > 1)
+        Expr.append({llvm::dwarf::DW_OP_constu, NFIELDS, llvm::dwarf::DW_OP_mul});
       // Element max index = count - 1
       Expr.append({llvm::dwarf::DW_OP_constu, 1, llvm::dwarf::DW_OP_minus});
 
@@ -856,7 +1007,22 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name, \
+                                     TheCU, TheCU->getFile(), 0);              \
+    return SingletonId;                                                        \
+  }
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
+    return SingletonId;                                                        \
+  }
+#include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -996,8 +1162,23 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
   // additional ones.
   llvm::dwarf::Tag Tag = getNextQualifier(Qc);
   if (!Tag) {
-    assert(Qc.empty() && "Unknown type qualifier for debug info");
-    return getOrCreateType(QualType(T, 0), Unit);
+    if (Qc.getPointerAuth()) {
+      unsigned Key = Qc.getPointerAuth().getKey();
+      bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
+      unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
+      bool IsaPointer = Qc.getPointerAuth().isIsaPointer();
+      bool AuthenticatesNullValues =
+          Qc.getPointerAuth().authenticatesNullValues();
+      Qc.removePointerAuth();
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      llvm::DIType *FromTy = getOrCreateType(QualType(T, 0), Unit);
+      return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
+                                                 ExtraDiscr, IsaPointer,
+                                                 AuthenticatesNullValues);
+    } else {
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      return getOrCreateType(QualType(T, 0), Unit);
+    }
   }
 
   auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);
@@ -1052,7 +1233,7 @@ llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
 
 /// \return whether a C++ mangling exists for the type defined by TD.
 static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
-  switch (TheCU->getSourceLanguage()) {
+  switch (TheCU->getSourceLanguage().getUnversionedName()) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
@@ -1106,7 +1287,7 @@ static bool needsTypeIdentifier(const TagDecl *TD, CodeGenModule &CGM,
 static SmallString<256> getTypeIdentifier(const TagType *Ty, CodeGenModule &CGM,
                                           llvm::DICompileUnit *TheCU) {
   SmallString<256> Identifier;
-  const TagDecl *TD = Ty->getDecl();
+  const TagDecl *TD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   if (!needsTypeIdentifier(TD, CGM, TheCU))
     return Identifier;
@@ -1142,8 +1323,8 @@ static llvm::dwarf::Tag getTagForRecord(const RecordDecl *RD) {
 llvm::DICompositeType *
 CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
                                       llvm::DIScope *Ctx) {
-  const RecordDecl *RD = Ty->getDecl();
-  if (llvm::DIType *T = getTypeOrNull(CGM.getContext().getRecordType(RD)))
+  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  if (llvm::DIType *T = getTypeOrNull(QualType(Ty, 0)))
     return cast<llvm::DICompositeType>(T);
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
   const unsigned Line =
@@ -1197,8 +1378,12 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
       CGM.getTarget().getDWARFAddressSpace(
           CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
+  const BTFTagAttributedType *BTFAttrTy;
+  if (auto *Atomic = PointeeTy->getAs<AtomicType>())
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
+  else
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
   SmallVector<llvm::Metadata *, 4> Annots;
-  auto *BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
   while (BTFAttrTy) {
     StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
     if (!Tag.empty()) {
@@ -1313,6 +1498,44 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   return DBuilder.createPointerType(EltTy, Size);
 }
 
+static llvm::SmallVector<TemplateArgument>
+GetTemplateArgs(const TemplateDecl *TD, const TemplateSpecializationType *Ty) {
+  assert(Ty->isTypeAlias());
+  // TemplateSpecializationType doesn't know if its template args are
+  // being substituted into a parameter pack. We can find out if that's
+  // the case now by inspecting the TypeAliasTemplateDecl template
+  // parameters. Insert Ty's template args into SpecArgs, bundling args
+  // passed to a parameter pack into a TemplateArgument::Pack. It also
+  // doesn't know the value of any defaulted args, so collect those now
+  // too.
+  SmallVector<TemplateArgument> SpecArgs;
+  ArrayRef SubstArgs = Ty->template_arguments();
+  for (const NamedDecl *Param : TD->getTemplateParameters()->asArray()) {
+    // If Param is a parameter pack, pack the remaining arguments.
+    if (Param->isParameterPack()) {
+      SpecArgs.push_back(TemplateArgument(SubstArgs));
+      break;
+    }
+
+    // Skip defaulted args.
+    // FIXME: Ideally, we wouldn't do this. We can read the default values
+    // for each parameter. However, defaulted arguments which are dependent
+    // values or dependent types can't (easily?) be resolved here.
+    if (SubstArgs.empty()) {
+      // If SubstArgs is now empty (we're taking from it each iteration) and
+      // this template parameter isn't a pack, then that should mean we're
+      // using default values for the remaining template parameters (after
+      // which there may be an empty pack too which we will ignore).
+      break;
+    }
+
+    // Take the next argument.
+    SpecArgs.push_back(SubstArgs.front());
+    SubstArgs = SubstArgs.drop_front();
+  }
+  return SpecArgs;
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
                                       llvm::DIFile *Unit) {
   assert(Ty->isTypeAlias());
@@ -1332,19 +1555,33 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   auto PP = getPrintingPolicy();
   Ty->getTemplateName().print(OS, PP, TemplateName::Qualified::None);
 
-  // Disable PrintCanonicalTypes here because we want
-  // the DW_AT_name to benefit from the TypePrinter's ability
-  // to skip defaulted template arguments.
-  //
-  // FIXME: Once -gsimple-template-names is enabled by default
-  // and we attach template parameters to alias template DIEs
-  // we don't need to worry about customizing the PrintingPolicy
-  // here anymore.
-  PP.PrintCanonicalTypes = false;
+  SourceLocation Loc = AliasDecl->getLocation();
+
+  if (CGM.getCodeGenOpts().DebugTemplateAlias) {
+    auto ArgVector = ::GetTemplateArgs(TD, Ty);
+    TemplateArgs Args = {TD->getTemplateParameters(), ArgVector};
+
+    // FIXME: Respect DebugTemplateNameKind::Mangled, e.g. by using GetName.
+    // Note we can't use GetName without additional work: TypeAliasTemplateDecl
+    // doesn't have instantiation information, so
+    // TypeAliasTemplateDecl::getNameForDiagnostic wouldn't have access to the
+    // template args.
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    TD->getNameForDiagnostic(OS, PP, /*Qualified=*/false);
+    if (CGM.getCodeGenOpts().getDebugSimpleTemplateNames() !=
+            llvm::codegenoptions::DebugTemplateNamesKind::Simple ||
+        !HasReconstitutableArgs(Args.Args))
+      printTemplateArgumentList(OS, Args.Args, PP);
+
+    llvm::DIDerivedType *AliasTy = DBuilder.createTemplateAlias(
+        Src, Name, getOrCreateFile(Loc), getLineNumber(Loc),
+        getDeclContextDescriptor(AliasDecl), CollectTemplateParams(Args, Unit));
+    return AliasTy;
+  }
+
   printTemplateArgumentList(OS, Ty->template_arguments(), PP,
                             TD->getTemplateParameters());
-
-  SourceLocation Loc = AliasDecl->getLocation();
   return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(Loc),
                                 getLineNumber(Loc),
                                 getDeclContextDescriptor(AliasDecl));
@@ -1434,14 +1671,12 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_IntelOclBicc;
   case CC_SpirFunction:
     return llvm::dwarf::DW_CC_LLVM_SpirFunction;
-  case CC_OpenCLKernel:
-  case CC_AMDGPUKernelCall:
-    return llvm::dwarf::DW_CC_LLVM_OpenCLKernel;
+  case CC_DeviceKernel:
+    return llvm::dwarf::DW_CC_LLVM_DeviceKernel;
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:
-    // [FIXME: swiftasynccc] Update to SwiftAsync once LLVM support lands.
-    return llvm::dwarf::DW_CC_LLVM_Swift;
+    return llvm::dwarf::DW_CC_LLVM_SwiftTail;
   case CC_PreserveMost:
     return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
@@ -1452,6 +1687,23 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   case CC_PreserveNone:
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
+  case CC_RISCVVectorCall:
+    return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;
+#define CC_VLS_CASE(ABI_VLEN) case CC_RISCVVLSCall_##ABI_VLEN:
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    return llvm::dwarf::DW_CC_LLVM_RISCVVLSCall;
   }
   return 0;
 }
@@ -1580,8 +1832,7 @@ llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
 
   assert(PreviousBitfield->isBitField());
 
-  ASTContext &Context = CGM.getContext();
-  if (!PreviousBitfield->isZeroLengthBitField(Context))
+  if (!PreviousBitfield->isZeroLengthBitField())
     return nullptr;
 
   QualType Ty = PreviousBitfield->getType();
@@ -1630,46 +1881,85 @@ llvm::DIType *CGDebugInfo::createFieldType(
                                    offsetInBits, flags, debugType, Annotations);
 }
 
+llvm::DISubprogram *
+CGDebugInfo::createInlinedSubprogram(StringRef FuncName,
+                                     llvm::DIFile *FileScope) {
+  // We are caching the subprogram because we don't want to duplicate
+  // subprograms with the same message. Note that `SPFlagDefinition` prevents
+  // subprograms from being uniqued.
+  llvm::DISubprogram *&SP = InlinedSubprogramMap[FuncName];
+
+  if (!SP) {
+    llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
+    SP = DBuilder.createFunction(
+        /*Scope=*/FileScope, /*Name=*/FuncName, /*LinkageName=*/StringRef(),
+        /*File=*/FileScope, /*LineNo=*/0, /*Ty=*/DIFnTy,
+        /*ScopeLine=*/0,
+        /*Flags=*/llvm::DINode::FlagArtificial,
+        /*SPFlags=*/llvm::DISubprogram::SPFlagDefinition,
+        /*TParams=*/nullptr, /*Decl=*/nullptr, /*ThrownTypes=*/nullptr,
+        /*Annotations=*/nullptr, /*TargetFuncName=*/StringRef(),
+        /*UseKeyInstructions=*/CGM.getCodeGenOpts().DebugKeyInstructions);
+  }
+
+  return SP;
+}
+
+llvm::StringRef
+CGDebugInfo::GetLambdaCaptureName(const LambdaCapture &Capture) {
+  if (Capture.capturesThis())
+    return CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
+
+  assert(Capture.capturesVariable());
+
+  const ValueDecl *CaptureDecl = Capture.getCapturedVar();
+  assert(CaptureDecl && "Expected valid decl for captured variable.");
+
+  return CaptureDecl->getName();
+}
+
 void CGDebugInfo::CollectRecordLambdaFields(
     const CXXRecordDecl *CXXDecl, SmallVectorImpl<llvm::Metadata *> &elements,
     llvm::DIType *RecordTy) {
   // For C++11 Lambdas a Field will be the same as a Capture, but the Capture
   // has the name and the location of the variable so we should iterate over
   // both concurrently.
-  const ASTRecordLayout &layout = CGM.getContext().getASTRecordLayout(CXXDecl);
   RecordDecl::field_iterator Field = CXXDecl->field_begin();
   unsigned fieldno = 0;
   for (CXXRecordDecl::capture_const_iterator I = CXXDecl->captures_begin(),
                                              E = CXXDecl->captures_end();
        I != E; ++I, ++Field, ++fieldno) {
-    const LambdaCapture &C = *I;
-    if (C.capturesVariable()) {
-      SourceLocation Loc = C.getLocation();
-      assert(!Field->isBitField() && "lambdas don't have bitfield members!");
-      ValueDecl *V = C.getCapturedVar();
-      StringRef VName = V->getName();
-      llvm::DIFile *VUnit = getOrCreateFile(Loc);
-      auto Align = getDeclAlignIfRequired(V, CGM.getContext());
-      llvm::DIType *FieldType = createFieldType(
-          VName, Field->getType(), Loc, Field->getAccess(),
-          layout.getFieldOffset(fieldno), Align, VUnit, RecordTy, CXXDecl);
-      elements.push_back(FieldType);
-    } else if (C.capturesThis()) {
+    const LambdaCapture &Capture = *I;
+    const uint64_t FieldOffset =
+        CGM.getContext().getASTRecordLayout(CXXDecl).getFieldOffset(fieldno);
+
+    assert(!Field->isBitField() && "lambdas don't have bitfield members!");
+
+    SourceLocation Loc;
+    uint32_t Align = 0;
+
+    if (Capture.capturesThis()) {
       // TODO: Need to handle 'this' in some way by probably renaming the
       // this of the lambda class and having a field member of 'this' or
       // by using AT_object_pointer for the function and having that be
       // used as 'this' for semantic references.
-      FieldDecl *f = *Field;
-      llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
-      QualType type = f->getType();
-      StringRef ThisName =
-          CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
-      llvm::DIType *fieldType = createFieldType(
-          ThisName, type, f->getLocation(), f->getAccess(),
-          layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
+      Loc = Field->getLocation();
+    } else if (Capture.capturesVariable()) {
+      Loc = Capture.getLocation();
 
-      elements.push_back(fieldType);
+      const ValueDecl *CaptureDecl = Capture.getCapturedVar();
+      assert(CaptureDecl && "Expected valid decl for captured variable.");
+
+      Align = getDeclAlignIfRequired(CaptureDecl, CGM.getContext());
+    } else {
+      continue;
     }
+
+    llvm::DIFile *VUnit = getOrCreateFile(Loc);
+
+    elements.push_back(createFieldType(
+        GetLambdaCaptureName(Capture), Field->getType(), Loc,
+        Field->getAccess(), FieldOffset, Align, VUnit, RecordTy, CXXDecl));
   }
 }
 
@@ -1742,11 +2032,13 @@ void CGDebugInfo::CollectRecordNestedType(
     const TypeDecl *TD, SmallVectorImpl<llvm::Metadata *> &elements) {
   QualType Ty = CGM.getContext().getTypeDeclType(TD);
   // Injected class names are not considered nested records.
+  // FIXME: Is this supposed to be testing for injected class name declarations
+  // instead?
   if (isa<InjectedClassNameType>(Ty))
     return;
   SourceLocation Loc = TD->getLocation();
-  llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc));
-  elements.push_back(nestedType);
+  if (llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc)))
+    elements.push_back(nestedType);
 }
 
 void CGDebugInfo::CollectRecordFields(
@@ -1818,11 +2110,25 @@ CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
   if (Method->isStatic())
     return cast_or_null<llvm::DISubroutineType>(
         getOrCreateType(QualType(Func, 0), Unit));
-  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit);
+
+  QualType ThisType;
+  if (!Method->hasCXXExplicitFunctionObjectParameter())
+    ThisType = Method->getThisType();
+
+  return getOrCreateInstanceMethodType(ThisType, Func, Unit);
 }
 
-llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
-    QualType ThisPtr, const FunctionProtoType *Func, llvm::DIFile *Unit) {
+llvm::DISubroutineType *CGDebugInfo::getOrCreateMethodTypeForDestructor(
+    const CXXMethodDecl *Method, llvm::DIFile *Unit, QualType FNType) {
+  const FunctionProtoType *Func = FNType->getAs<FunctionProtoType>();
+  // skip the first param since it is also this
+  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit, true);
+}
+
+llvm::DISubroutineType *
+CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
+                                           const FunctionProtoType *Func,
+                                           llvm::DIFile *Unit, bool SkipFirst) {
   FunctionProtoType::ExtProtoInfo EPI = Func->getExtProtoInfo();
   Qualifiers &Qc = EPI.TypeQuals;
   Qc.removeConst();
@@ -1849,33 +2155,28 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   // First element is always return type. For 'void' functions it is NULL.
   Elts.push_back(Args[0]);
 
-  // "this" pointer is always first argument.
-  const CXXRecordDecl *RD = ThisPtr->getPointeeCXXRecordDecl();
-  if (isa<ClassTemplateSpecializationDecl>(RD)) {
-    // Create pointer type directly in this case.
-    const PointerType *ThisPtrTy = cast<PointerType>(ThisPtr);
-    uint64_t Size = CGM.getContext().getTypeSize(ThisPtrTy);
-    auto Align = getTypeAlignIfRequired(ThisPtrTy, CGM.getContext());
-    llvm::DIType *PointeeType =
-        getOrCreateType(ThisPtrTy->getPointeeType(), Unit);
-    llvm::DIType *ThisPtrType =
-        DBuilder.createPointerType(PointeeType, Size, Align);
-    TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-    // TODO: This and the artificial type below are misleading, the
-    // types aren't artificial the argument is, but the current
-    // metadata doesn't represent that.
-    ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
-    Elts.push_back(ThisPtrType);
-  } else {
+  const bool HasExplicitObjectParameter = ThisPtr.isNull();
+
+  // "this" pointer is always first argument. For explicit "this"
+  // parameters, it will already be in Args[1].
+  if (!HasExplicitObjectParameter) {
     llvm::DIType *ThisPtrType = getOrCreateType(ThisPtr, Unit);
     TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-    ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
+    ThisPtrType =
+        DBuilder.createObjectPointerType(ThisPtrType, /*Implicit=*/true);
     Elts.push_back(ThisPtrType);
   }
 
   // Copy rest of the arguments.
-  for (unsigned i = 1, e = Args.size(); i != e; ++i)
+  for (unsigned i = (SkipFirst ? 2 : 1), e = Args.size(); i < e; ++i)
     Elts.push_back(Args[i]);
+
+  // Attach FlagObjectPointer to the explicit "this" parameter.
+  if (HasExplicitObjectParameter) {
+    assert(Elts.size() >= 2 && Args.size() >= 2 &&
+           "Expected at least return type and object parameter.");
+    Elts[1] = DBuilder.createObjectPointerType(Args[1], /*Implicit=*/false);
+  }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
@@ -1893,24 +2194,47 @@ static bool isFunctionLocalClass(const CXXRecordDecl *RD) {
   return false;
 }
 
+llvm::StringRef
+CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
+  assert(Method);
+
+  const bool IsCtorOrDtor =
+      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+
+  if (IsCtorOrDtor && !CGM.getCodeGenOpts().DebugStructorDeclLinkageNames)
+    return {};
+
+  // In some ABIs (particularly Itanium) a single ctor/dtor
+  // corresponds to multiple functions. Attach a "unified"
+  // linkage name for those (which is the convention GCC uses).
+  // Otherwise, attach no linkage name.
+  if (IsCtorOrDtor && !CGM.getTarget().getCXXABI().hasConstructorVariants())
+    return {};
+
+  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Ctor, CXXCtorType::Ctor_Unified));
+
+  if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Dtor, CXXDtorType::Dtor_Unified));
+
+  return CGM.getMangledName(Method);
+}
+
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
-  bool IsCtorOrDtor =
-      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+  assert(Method);
 
   StringRef MethodName = getFunctionName(Method);
   llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit);
 
-  // Since a single ctor/dtor corresponds to multiple functions, it doesn't
-  // make sense to give a single ctor/dtor a linkage name.
   StringRef MethodLinkageName;
   // FIXME: 'isFunctionLocalClass' seems like an arbitrary/unintentional
   // property to use here. It may've been intended to model "is non-external
   // type" but misses cases of non-function-local but non-external classes such
   // as those in anonymous namespaces as well as the reverse - external types
   // that are function local, such as those in (non-local) inline functions.
-  if (!IsCtorOrDtor && !isFunctionLocalClass(Method->getParent()))
-    MethodLinkageName = CGM.getMangledName(Method);
+  if (!isFunctionLocalClass(Method->getParent()))
+    MethodLinkageName = GetMethodLinkageName(Method);
 
   // Get the location for the method.
   llvm::DIFile *MethodDefUnit = nullptr;
@@ -1991,7 +2315,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     Flags |= llvm::DINode::FlagRValueReference;
   if (!Method->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   // In this debug mode, emit type info for a class when its constructor type
@@ -2004,7 +2328,8 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DISubprogram *SP = DBuilder.createMethod(
       RecordTy, MethodName, MethodLinkageName, MethodDefUnit, MethodLine,
       MethodTy, VIndex, ThisAdjustment, ContainingType, Flags, SPFlags,
-      TParamsArray.get());
+      TParamsArray.get(), /*ThrownTypes*/ nullptr,
+      CGM.getCodeGenOpts().DebugKeyInstructions);
 
   SPCache[Method->getCanonicalDecl()].reset(SP);
 
@@ -2073,7 +2398,9 @@ void CGDebugInfo::CollectCXXBasesAux(
   const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
   for (const auto &BI : Bases) {
     const auto *Base =
-        cast<CXXRecordDecl>(BI.getType()->castAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(
+            BI.getType()->castAsCanonical<RecordType>()->getOriginalDecl())
+            ->getDefinition();
     if (!SeenTypes.insert(Base).second)
       continue;
     auto *BaseTy = getOrCreateType(BI.getType(), Unit);
@@ -2217,7 +2544,7 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
       TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
           OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr, OS.str(), defaultParameter));
+          TheCU, Name, nullptr, QualName, defaultParameter));
       break;
     }
     case TemplateArgument::Pack:
@@ -2338,6 +2665,68 @@ llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
 StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
   // Copy the gdb compatible name on the side and use its reference.
   return internString("_vptr$", RD->getNameAsString());
+}
+
+// Emit symbol for the debugger that points to the vtable address for
+// the given class. The symbol is named as '_vtable$'.
+// The debugger does not need to know any details about the contents of the
+// vtable as it can work this out using its knowledge of the ABI and the
+// existing information in the DWARF. The type is assumed to be 'void *'.
+void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
+                                   const CXXRecordDecl *RD) {
+  if (!CGM.getTarget().getCXXABI().isItaniumFamily())
+    return;
+  if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  // On COFF platform, we shouldn't emit a reference to an external entity (i.e.
+  // VTable) into debug info, which is constructed within a discardable section.
+  // If that entity ends up implicitly dllimported from another DLL, the linker
+  // may produce a runtime pseudo-relocation for it (BFD-ld only. LLD prohibits
+  // to emit such relocation). If the debug section is stripped, the runtime
+  // pseudo-relocation points to memory space outside of the module, causing an
+  // access violation.
+  if (CGM.getTarget().getTriple().isOSBinFormatCOFF() &&
+      VTable->isDeclarationForLinker())
+    return;
+
+  ASTContext &Context = CGM.getContext();
+  StringRef SymbolName = "_vtable$";
+  SourceLocation Loc;
+  QualType VoidPtr = Context.getPointerType(Context.VoidTy);
+
+  // We deal with two different contexts:
+  // - The type for the variable, which is part of the class that has the
+  //   vtable, is placed in the context of the DICompositeType metadata.
+  // - The DIGlobalVariable for the vtable is put in the DICompileUnitScope.
+
+  // The created non-member should be mark as 'artificial'. It will be
+  // placed inside the scope of the C++ class/structure.
+  llvm::DIScope *DContext = getContextDescriptor(RD, TheCU);
+  auto *Ctxt = cast<llvm::DICompositeType>(DContext);
+  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIType *VTy = getOrCreateType(VoidPtr, Unit);
+  llvm::DINode::DIFlags Flags = getAccessFlag(AccessSpecifier::AS_private, RD) |
+                                llvm::DINode::FlagArtificial;
+  auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
+                 ? llvm::dwarf::DW_TAG_variable
+                 : llvm::dwarf::DW_TAG_member;
+  llvm::DIDerivedType *DT = DBuilder.createStaticMemberType(
+      Ctxt, SymbolName, Unit, /*LineNumber=*/0, VTy, Flags,
+      /*Val=*/nullptr, Tag);
+
+  // Use the same vtable pointer to global alignment for the symbol.
+  unsigned PAlign = CGM.getVtableGlobalVarAlignment();
+
+  // The global variable is in the CU scope, and links back to the type it's
+  // "within" via the declaration field.
+  llvm::DIGlobalVariableExpression *GVE =
+      DBuilder.createGlobalVariableExpression(
+          TheCU, SymbolName, VTable->getName(), Unit, /*LineNo=*/0,
+          getOrCreateType(VoidPtr, Unit), VTable->hasLocalLinkage(),
+          /*isDefined=*/true, nullptr, DT, /*TemplateParameters=*/nullptr,
+          PAlign);
+  VTable->addDebugInfo(GVE);
 }
 
 StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
@@ -2480,7 +2869,7 @@ void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
     return;
   llvm::MDNode *node;
   if (AllocatedTy->isVoidType())
-    node = llvm::MDNode::get(CGM.getLLVMContext(), std::nullopt);
+    node = llvm::MDNode::get(CGM.getLLVMContext(), {});
   else
     node = getOrCreateType(AllocatedTy, getOrCreateFile(Loc));
 
@@ -2490,12 +2879,12 @@ void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
 void CGDebugInfo::completeType(const EnumDecl *ED) {
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
-  QualType Ty = CGM.getContext().getEnumType(ED);
+  CanQualType Ty = CGM.getContext().getCanonicalTagType(ED);
   void *TyPtr = Ty.getAsOpaquePtr();
   auto I = TypeCache.find(TyPtr);
   if (I == TypeCache.end() || !cast<llvm::DIType>(I->second)->isForwardDecl())
     return;
-  llvm::DIType *Res = CreateTypeDefinition(Ty->castAs<EnumType>());
+  llvm::DIType *Res = CreateTypeDefinition(dyn_cast<EnumType>(Ty));
   assert(!Res->isForwardDecl());
   TypeCache[TyPtr].reset(Res);
 }
@@ -2539,7 +2928,7 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
       if (!Explicit && CXXDecl->getEnclosingNamespaceContext())
         return false;
       // This is a template, check the origin of the first member.
-      if (CXXDecl->field_begin() == CXXDecl->field_end())
+      if (CXXDecl->fields().empty())
         return TemplateKind == TSK_ExplicitInstantiationDeclaration;
       if (!CXXDecl->field_begin()->isFromASTFile())
         return false;
@@ -2565,7 +2954,7 @@ void CGDebugInfo::completeClassData(const RecordDecl *RD) {
 void CGDebugInfo::completeClass(const RecordDecl *RD) {
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
-  QualType Ty = CGM.getContext().getRecordType(RD);
+  CanQualType Ty = CGM.getContext().getCanonicalTagType(RD);
   void *TyPtr = Ty.getAsOpaquePtr();
   auto I = TypeCache.find(TyPtr);
   if (I != TypeCache.end() && !cast<llvm::DIType>(I->second)->isForwardDecl())
@@ -2574,7 +2963,7 @@ void CGDebugInfo::completeClass(const RecordDecl *RD) {
   // We want the canonical definition of the structure to not
   // be the typedef. Since that would lead to circular typedef
   // metadata.
-  auto [Res, PrefRes] = CreateTypeDefinition(Ty->castAs<RecordType>());
+  auto [Res, PrefRes] = CreateTypeDefinition(dyn_cast<RecordType>(Ty));
   assert(!Res->isForwardDecl());
   TypeCache[TyPtr].reset(Res);
 }
@@ -2653,7 +3042,7 @@ static bool shouldOmitDefinition(llvm::codegenoptions::DebugInfoKind DebugKind,
   // without any dllimport methods can be used in one DLL and constructed in
   // another, but it is the current behavior of LimitedDebugInfo.
   if (CXXDecl->hasDefinition() && CXXDecl->isDynamicClass() &&
-      !isClassOrMethodDLLImport(CXXDecl))
+      !isClassOrMethodDLLImport(CXXDecl) && !CXXDecl->hasAttr<MSNoVTableAttr>())
     return true;
 
   TemplateSpecializationKind Spec = TSK_Undeclared;
@@ -2678,14 +3067,14 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
   if (shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD, CGM.getLangOpts()))
     return;
 
-  QualType Ty = CGM.getContext().getRecordType(RD);
+  CanQualType Ty = CGM.getContext().getCanonicalTagType(RD);
   llvm::DIType *T = getTypeOrNull(Ty);
   if (T && T->isForwardDecl())
     completeClassData(RD);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getDecl();
+  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
   llvm::DIType *T = cast_or_null<llvm::DIType>(getTypeOrNull(QualType(Ty, 0)));
   if (T || shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD,
                                 CGM.getLangOpts())) {
@@ -2713,7 +3102,7 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
 
 std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getDecl();
+  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
@@ -2735,7 +3124,7 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
 
   // Push the struct on region stack.
   LexicalBlockStack.emplace_back(&*FwdDecl);
-  RegionMap[Ty->getDecl()].reset(FwdDecl);
+  RegionMap[RD].reset(FwdDecl);
 
   // Convert all the elements.
   SmallVector<llvm::Metadata *, 16> EltTys;
@@ -2753,11 +3142,11 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
 
   // Collect data fields (including static variables and any initializers).
   CollectRecordFields(RD, DefUnit, EltTys, FwdDecl);
-  if (CXXDecl)
+  if (CXXDecl && !CGM.getCodeGenOpts().DebugOmitUnreferencedMethods)
     CollectCXXMemberFunctions(CXXDecl, DefUnit, EltTys, FwdDecl);
 
   LexicalBlockStack.pop_back();
-  RegionMap.erase(Ty->getDecl());
+  RegionMap.erase(RD);
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
   DBuilder.replaceArrays(FwdDecl, Elements);
@@ -2766,7 +3155,7 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
     FwdDecl =
         llvm::MDNode::replaceWithPermanent(llvm::TempDICompositeType(FwdDecl));
 
-  RegionMap[Ty->getDecl()].reset(FwdDecl);
+  RegionMap[RD].reset(FwdDecl);
 
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB)
     if (auto *PrefDI = GetPreferredNameType(CXXDecl, DefUnit))
@@ -2823,20 +3212,21 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCInterfaceType *Ty,
   if (!ID)
     return nullptr;
 
+  auto RuntimeLang = static_cast<llvm::dwarf::SourceLanguage>(
+      TheCU->getSourceLanguage().getUnversionedName());
+
   // Return a forward declaration if this type was imported from a clang module,
   // and this is not the compile unit with the implementation of the type (which
   // may contain hidden ivars).
   if (DebugTypeExtRefs && ID->isFromASTFile() && ID->getDefinition() &&
       !ID->getImplementation())
-    return DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
-                                      ID->getName(),
-                                      getDeclContextDescriptor(ID), Unit, 0);
+    return DBuilder.createForwardDecl(
+        llvm::dwarf::DW_TAG_structure_type, ID->getName(),
+        getDeclContextDescriptor(ID), Unit, 0, RuntimeLang);
 
   // Get overall information about the record type for the debug info.
   llvm::DIFile *DefUnit = getOrCreateFile(ID->getLocation());
   unsigned Line = getLineNumber(ID->getLocation());
-  auto RuntimeLang =
-      static_cast<llvm::dwarf::SourceLanguage>(TheCU->getSourceLanguage());
 
   // If this is just a forward declaration return a special forward-declaration
   // debug type since we won't be able to lay out the entire type.
@@ -2904,6 +3294,9 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     std::string Remapped = remapDIPath(Path);
     StringRef Relative(Remapped);
     StringRef CompDir = TheCU->getDirectory();
+    if (CompDir.empty())
+      return Remapped;
+
     if (Relative.consume_front(CompDir))
       Relative.consume_front(llvm::sys::path::get_separator());
 
@@ -2956,7 +3349,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   ObjCInterfaceDecl *ID = Ty->getDecl();
   llvm::DIFile *DefUnit = getOrCreateFile(ID->getLocation());
   unsigned Line = getLineNumber(ID->getLocation());
-  unsigned RuntimeLang = TheCU->getSourceLanguage();
+
+  unsigned RuntimeLang = TheCU->getSourceLanguage().getUnversionedName();
 
   // Bit size, align and offset of the type.
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
@@ -3059,9 +3453,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     if (!FType->isIncompleteArrayType()) {
 
       // Bit size, align and offset of the type.
-      FieldSize = Field->isBitField()
-                      ? Field->getBitWidthValue(CGM.getContext())
-                      : CGM.getContext().getTypeSize(FType);
+      FieldSize = Field->isBitField() ? Field->getBitWidthValue()
+                                      : CGM.getContext().getTypeSize(FType);
       FieldAlign = getTypeAlignIfRequired(FType, CGM.getContext());
     }
 
@@ -3130,7 +3523,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
                                       llvm::DIFile *Unit) {
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isPackedVectorBoolType(CGM.getContext())) {
     // Boolean ext_vector_type(N) are special because their real element type
     // (bits of bit size) is not their Clang element type (_Bool of size byte).
     // For now, we pretend the boolean vector were actually a vector of bytes
@@ -3239,7 +3632,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     //   };
     int64_t Count = -1; // Count == -1 is an unbounded array.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
-      Count = CAT->getSize().getZExtValue();
+      Count = CAT->getZExtSize();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
       if (Expr *Size = VAT->getSizeExpr()) {
         Expr::EvalResult Result;
@@ -3313,7 +3706,9 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
     }
   }
 
-  llvm::DIType *ClassType = getOrCreateType(QualType(Ty->getClass(), 0), U);
+  CanQualType T =
+      CGM.getContext().getCanonicalTagType(Ty->getMostRecentCXXRecordDecl());
+  llvm::DIType *ClassType = getOrCreateType(T, U);
   if (Ty->isMemberDataPointerType())
     return DBuilder.createMemberPointerType(
         getOrCreateType(Ty->getPointeeType(), U), ClassType, Size, /*Align=*/0,
@@ -3337,17 +3732,32 @@ llvm::DIType *CGDebugInfo::CreateType(const PipeType *Ty, llvm::DIFile *U) {
   return getOrCreateType(Ty->getElementType(), U);
 }
 
-llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
-  const EnumDecl *ED = Ty->getDecl();
+llvm::DIType *CGDebugInfo::CreateType(const HLSLAttributedResourceType *Ty,
+                                      llvm::DIFile *U) {
+  return getOrCreateType(Ty->getWrappedType(), U);
+}
+
+llvm::DIType *CGDebugInfo::CreateType(const HLSLInlineSpirvType *Ty,
+                                      llvm::DIFile *U) {
+  // Debug information unneeded.
+  return nullptr;
+}
+
+static auto getEnumInfo(CodeGenModule &CGM, llvm::DICompileUnit *TheCU,
+                        const EnumType *Ty) {
+  const EnumDecl *ED = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   uint64_t Size = 0;
   uint32_t Align = 0;
-  if (!ED->getTypeForDecl()->isIncompleteType()) {
-    Size = CGM.getContext().getTypeSize(ED->getTypeForDecl());
+  if (ED->isComplete()) {
+    Size = CGM.getContext().getTypeSize(QualType(Ty, 0));
     Align = getDeclAlignIfRequired(ED, CGM.getContext());
   }
+  return std::make_tuple(ED, Size, Align, getTypeIdentifier(Ty, CGM, TheCU));
+}
 
-  SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
+  auto [ED, Size, Align, Identifier] = getEnumInfo(CGM, TheCU, Ty);
 
   bool isImportedFromModule =
       DebugTypeExtRefs && ED->isFromASTFile() && ED->getDefinition();
@@ -3382,22 +3792,19 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
 }
 
 llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
-  const EnumDecl *ED = Ty->getDecl();
-  uint64_t Size = 0;
-  uint32_t Align = 0;
-  if (!ED->getTypeForDecl()->isIncompleteType()) {
-    Size = CGM.getContext().getTypeSize(ED->getTypeForDecl());
-    Align = getDeclAlignIfRequired(ED, CGM.getContext());
-  }
-
-  SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+  auto [ED, Size, Align, Identifier] = getEnumInfo(CGM, TheCU, Ty);
 
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
+  assert(ED && "An enumeration definition is required");
   for (const auto *Enum : ED->enumerators()) {
     Enumerators.push_back(
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));
   }
+
+  std::optional<EnumExtensibilityAttr::Kind> EnumKind;
+  if (auto *Attr = ED->getAttr<EnumExtensibilityAttr>())
+    EnumKind = Attr->getExtensibility();
 
   // Return a CompositeType for the enum itself.
   llvm::DINodeArray EltArray = DBuilder.getOrCreateArray(Enumerators);
@@ -3408,7 +3815,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
       EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
-      /*RunTimeLang=*/0, Identifier, ED->isScoped());
+      /*RunTimeLang=*/0, Identifier, ED->isScoped(), EnumKind);
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -3426,6 +3833,28 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
+llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                                       StringRef FuncName) {
+  llvm::DISubprogram *SP =
+      createInlinedSubprogram(FuncName, Location->getFile());
+  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
+                               /*Scope=*/SP, /*InlinedAt=*/Location);
+}
+
+llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
+    llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
+  // Create a debug location from `TrapLocation` that adds an artificial inline
+  // frame.
+  SmallString<64> FuncName(ClangTrapPrefix);
+
+  FuncName += "$";
+  FuncName += Category;
+  FuncName += "$";
+  FuncName += FailureMsg;
+
+  return CreateSyntheticInlineAt(TrapLocation, FuncName);
+}
+
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
   Qualifiers Quals;
   do {
@@ -3438,6 +3867,11 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     switch (T->getTypeClass()) {
     default:
       return C.getQualifiedType(T.getTypePtr(), Quals);
+    case Type::Enum:
+    case Type::Record:
+    case Type::InjectedClassName:
+      return C.getQualifiedType(T->getCanonicalTypeUnqualified().getTypePtr(),
+                                Quals);
     case Type::TemplateSpecialization: {
       const auto *Spec = cast<TemplateSpecializationType>(T);
       if (Spec->isTypeAlias())
@@ -3463,11 +3897,11 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::BTFTagAttributed:
       T = cast<BTFTagAttributedType>(T)->getWrappedType();
       break;
-    case Type::Elaborated:
-      T = cast<ElaboratedType>(T)->getNamedType();
+    case Type::CountAttributed:
+      T = cast<CountAttributedType>(T)->desugar();
       break;
     case Type::Using:
-      T = cast<UsingType>(T)->getUnderlyingType();
+      T = cast<UsingType>(T)->desugar();
       break;
     case Type::Paren:
       T = cast<ParenType>(T)->getInnerType();
@@ -3526,7 +3960,8 @@ void CGDebugInfo::completeUnusedClass(const CXXRecordDecl &D) {
   completeClassData(&D);
   // In case this type has no member function definitions being emitted, ensure
   // it is retained
-  RetainedTypes.push_back(CGM.getContext().getRecordType(&D).getAsOpaquePtr());
+  RetainedTypes.push_back(
+      CGM.getContext().getCanonicalTagType(&D).getAsOpaquePtr());
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {
@@ -3637,6 +4072,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::ConstantArray:
   case Type::VariableArray:
   case Type::IncompleteArray:
+  case Type::ArrayParameter:
     return CreateType(cast<ArrayType>(Ty), Unit);
 
   case Type::LValueReference:
@@ -3657,14 +4093,19 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
-
+  case Type::HLSLAttributedResource:
+    return CreateType(cast<HLSLAttributedResourceType>(Ty), Unit);
+  case Type::HLSLInlineSpirv:
+    return CreateType(cast<HLSLInlineSpirvType>(Ty), Unit);
+  case Type::PredefinedSugar:
+    return getOrCreateType(cast<PredefinedSugarType>(Ty)->desugar(), Unit);
+  case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
   case Type::Adjusted:
   case Type::Decayed:
   case Type::DeducedTemplateSpecialization:
-  case Type::Elaborated:
   case Type::Using:
   case Type::Paren:
   case Type::MacroQualified:
@@ -3707,7 +4148,7 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
 
 // TODO: Currently used for context chains when limiting debug info.
 llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getDecl();
+  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
   StringRef RDName = getClassName(RD);
@@ -3724,7 +4165,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   // If we ended up creating the type during the context chain construction,
   // just return that.
   auto *T = cast_or_null<llvm::DICompositeType>(
-      getTypeOrNull(CGM.getContext().getRecordType(RD)));
+      getTypeOrNull(CGM.getContext().getCanonicalTagType(RD)));
   if (T && (!T->isForwardDecl() || !RD->getDefinition()))
     return T;
 
@@ -3794,7 +4235,14 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     break;
   }
 
-  RegionMap[Ty->getDecl()].reset(RealDecl);
+  if (auto *CTSD =
+          dyn_cast<ClassTemplateSpecializationDecl>(Ty->getOriginalDecl())) {
+    CXXRecordDecl *TemplateDecl =
+        CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    RegionMap[TemplateDecl].reset(RealDecl);
+  } else {
+    RegionMap[RD].reset(RealDecl);
+  }
   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
@@ -3818,8 +4266,8 @@ void CGDebugInfo::CollectContainingType(const CXXRecordDecl *RD,
       else
         break;
     }
-    ContainingType = getOrCreateType(QualType(PBase->getTypeForDecl(), 0),
-                                     getOrCreateFile(RD->getLocation()));
+    CanQualType T = CGM.getContext().getCanonicalTagType(PBase);
+    ContainingType = getOrCreateType(T, getOrCreateFile(RD->getLocation()));
   } else if (RD->isDynamicClass())
     ContainingType = RealDecl;
 
@@ -3964,7 +4412,7 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
       FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
   if (!FD->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   if (Stub) {
@@ -3973,7 +4421,9 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
     return DBuilder.createFunction(
         DContext, Name, LinkageName, Unit, Line,
         getOrCreateFunctionType(GD.getDecl(), FnType, Unit), 0, Flags, SPFlags,
-        TParamsArray.get(), getFunctionDeclaration(FD));
+        TParamsArray.get(), getFunctionDeclaration(FD), /*ThrownTypes*/ nullptr,
+        /*Annotations*/ nullptr, /*TargetFuncName*/ "",
+        CGM.getCodeGenOpts().DebugKeyInstructions);
   }
 
   llvm::DISubprogram *SP = DBuilder.createTempFunctionFwdDecl(
@@ -4023,9 +4473,10 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
   // we would otherwise do to get a type for a pointee. (forward declarations in
   // limited debug info, full definitions (if the type definition is available)
   // in unlimited debug info)
-  if (const auto *TD = dyn_cast<TypeDecl>(D))
-    return getOrCreateType(CGM.getContext().getTypeDeclType(TD),
-                           getOrCreateFile(TD->getLocation()));
+  if (const auto *TD = dyn_cast<TypeDecl>(D)) {
+    QualType Ty = CGM.getContext().getTypeDeclType(TD);
+    return getOrCreateType(Ty, getOrCreateFile(TD->getLocation()));
+  }
   auto I = DeclCache.find(D->getCanonicalDecl());
 
   if (I != DeclCache.end()) {
@@ -4138,8 +4589,13 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
              !CGM.getCodeGenOpts().EmitCodeView))
     // Create fake but valid subroutine type. Otherwise -verify would fail, and
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
-    return DBuilder.createSubroutineType(
-        DBuilder.getOrCreateTypeArray(std::nullopt));
+    return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray({}));
+
+  if (const auto *Method = dyn_cast<CXXDestructorDecl>(D)) {
+    // Read method type from 'FnType' because 'D.getType()' does not cover
+    // implicit arguments for destructors.
+    return getOrCreateMethodTypeForDestructor(Method, F, FnType);
+  }
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);
@@ -4233,6 +4689,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   llvm::DIFile *Unit = getOrCreateFile(Loc);
   llvm::DIScope *FDContext = Unit;
   llvm::DINodeArray TParamsArray;
+  bool KeyInstructions = CGM.getCodeGenOpts().DebugKeyInstructions;
   if (!HasDecl) {
     // Use llvm function name.
     LinkageName = Fn->getName();
@@ -4249,6 +4706,9 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     }
     collectFunctionDeclProps(GD, Unit, Name, LinkageName, FDContext,
                              TParamsArray, Flags);
+    // Disable KIs if this is a coroutine.
+    KeyInstructions =
+        KeyInstructions && !isa_and_present<CoroutineBodyStmt>(FD->getBody());
   } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D)) {
     Name = getObjCMethodName(OMD);
     Flags |= llvm::DINode::FlagPrototyped;
@@ -4265,8 +4725,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
     Flags |= llvm::DINode::FlagPrototyped;
   }
-  if (Name.starts_with("\01"))
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   assert((!D || !isa<VarDecl>(D) ||
           GD.getDynamicInitKind() != DynamicInitKind::NoStub) &&
@@ -4284,7 +4743,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
   if (Fn->hasLocalLinkage())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
@@ -4311,8 +4770,9 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, DIFnType, ScopeLine,
       FlagsForDef, SPFlagsForDef, TParamsArray.get(), Decl, nullptr,
-      Annotations);
+      Annotations, "", KeyInstructions);
   Fn->setSubprogram(SP);
+
   // We might get here with a VarDecl in the case we're generating
   // code for the initialization of globals. Do not record these decls
   // as they will overwrite the actual VarDecl Decl in the cache.
@@ -4355,8 +4815,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   } else {
     llvm_unreachable("not a function or ObjC method");
   }
-  if (!Name.empty() && Name[0] == '\01')
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   if (D->isImplicit()) {
     Flags |= llvm::DINode::FlagArtificial;
@@ -4367,18 +4826,21 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = 0;
   llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagZero;
-  if (CGM.getLangOpts().Optimize)
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
+  // Key Instructions: Don't set flag on declarations.
+  assert(~SPFlags & llvm::DISubprogram::SPFlagDefinition);
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, STy, ScopeLine, Flags,
-      SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations);
+      SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations,
+      /*TargetFunctionName*/ "", /*UseKeyInstructions*/ false);
 
   // Preserve btf_decl_tag attributes for parameters of extern functions
   // for BPF target. The parameters created in this loop are attached as
-  // DISubprogram's retainedNodes in the subsequent finalizeSubprogram call.
+  // DISubprogram's retainedNodes in the DIBuilder::finalize() call.
   if (IsDeclForCallSite && CGM.getTarget().getTriple().isBPF()) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
       llvm::DITypeRefArray ParamTypes = STy->getTypeArray();
@@ -4395,8 +4857,6 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
-
-  DBuilder.finalizeSubprogram(SP);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
@@ -4404,7 +4864,7 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           const FunctionDecl *CalleeDecl) {
   if (!CallOrInvoke)
     return;
-  auto *Func = CallOrInvoke->getCalledFunction();
+  auto *Func = dyn_cast<llvm::Function>(CallOrInvoke->getCalledOperand());
   if (!Func)
     return;
   if (Func->getSubprogram())
@@ -4607,11 +5067,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   if (VD->hasAttr<NoDebugAttr>())
     return nullptr;
 
-  bool Unwritten =
-      VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
-                           cast<Decl>(VD->getDeclContext())->isImplicit());
+  const bool VarIsArtificial = IsArtificial(VD);
+
   llvm::DIFile *Unit = nullptr;
-  if (!Unwritten)
+  if (!VarIsArtificial)
     Unit = getOrCreateFile(VD->getLocation());
   llvm::DIType *Ty;
   uint64_t XOffset = 0;
@@ -4628,13 +5087,13 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // Get location information.
   unsigned Line = 0;
   unsigned Column = 0;
-  if (!Unwritten) {
+  if (!VarIsArtificial) {
     Line = getLineNumber(VD->getLocation());
     Column = getColumnNumber(VD->getLocation());
   }
   SmallVector<uint64_t, 13> Expr;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (VD->isImplicit())
+  if (VarIsArtificial)
     Flags |= llvm::DINode::FlagArtificial;
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
@@ -4647,6 +5106,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
     if (IPD->getParameterKind() == ImplicitParamKind::CXXThis ||
         IPD->getParameterKind() == ImplicitParamKind::ObjCSelf)
+      Flags |= llvm::DINode::FlagObjectPointer;
+  } else if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+    if (PVD->isExplicitObjectParameter())
       Flags |= llvm::DINode::FlagObjectPointer;
   }
 
@@ -4676,7 +5138,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       // GDB has trouble finding local variables in anonymous unions, so we emit
       // artificial local variables for each of the members.
@@ -4696,7 +5158,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
         // Use VarDecl's Tag, Scope and Line number.
         auto FieldAlign = getDeclAlignIfRequired(Field, CGM.getContext());
         auto *D = DBuilder.createAutoVariable(
-            Scope, FieldName, Unit, Line, FieldTy, CGM.getLangOpts().Optimize,
+            Scope, FieldName, Unit, Line, FieldTy,
+            CGM.getCodeGenOpts().OptimizationLevel != 0,
             Flags | llvm::DINode::FlagArtificial, FieldAlign);
 
         // Insert an llvm.dbg.declare into the current block.
@@ -4722,9 +5185,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   llvm::DILocalVariable *D = nullptr;
   if (ArgNo) {
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
-    D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
-                                         CGM.getLangOpts().Optimize, Flags,
-                                         Annotations);
+    D = DBuilder.createParameterVariable(
+        Scope, Name, *ArgNo, Unit, Line, Ty,
+        CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, Annotations);
   } else {
     // For normal local variable, we will try to find out whether 'VD' is the
     // copy parameter of coroutine.
@@ -4765,8 +5228,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
     D = RemapCoroArgToLocalVar();
     // Or we will create a new DIVariable for this Decl if D dose not exists.
     if (!D)
-      D = DBuilder.createAutoVariable(Scope, Name, Unit, Line, Ty,
-                                      CGM.getLangOpts().Optimize, Flags, Align);
+      D = DBuilder.createAutoVariable(
+          Scope, Name, Unit, Line, Ty,
+          CGM.getCodeGenOpts().OptimizationLevel != 0, Flags, Align);
   }
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
@@ -4775,40 +5239,6 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                          Builder.GetInsertBlock());
 
   return D;
-}
-
-llvm::DIType *CGDebugInfo::CreateBindingDeclType(const BindingDecl *BD) {
-  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
-
-  // If the declaration is bound to a bitfield struct field, its type may have a
-  // size that is different from its deduced declaration type's.
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
-    if (const FieldDecl *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      if (FD->isBitField()) {
-        ASTContext &Context = CGM.getContext();
-        const CGRecordLayout &RL =
-            CGM.getTypes().getCGRecordLayout(FD->getParent());
-        const CGBitFieldInfo &Info = RL.getBitFieldInfo(FD);
-
-        // Find an integer type with the same bitwidth as the bitfield size. If
-        // no suitable type is present in the target, give up on producing debug
-        // information as it would be wrong. It is certainly possible to produce
-        // correct debug info, but the logic isn't currently implemented.
-        uint64_t BitfieldSizeInBits = Info.Size;
-        QualType IntTy =
-            Context.getIntTypeForBitwidth(BitfieldSizeInBits, Info.IsSigned);
-        if (IntTy.isNull())
-          return nullptr;
-        Qualifiers Quals = BD->getType().getQualifiers();
-        QualType FinalTy = Context.getQualifiedType(IntTy, Quals);
-        llvm::DIType *Ty = getOrCreateType(FinalTy, Unit);
-        assert(Ty);
-        return Ty;
-      }
-    }
-  }
-
-  return getOrCreateType(BD->getType(), Unit);
 }
 
 llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
@@ -4825,7 +5255,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   if (isa<DeclRefExpr>(BD->getBinding()))
     return nullptr;
 
-  llvm::DIType *Ty = CreateBindingDeclType(BD);
+  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
+  llvm::DIType *Ty = getOrCreateType(BD->getType(), Unit);
 
   // If there is no debug info for this type then do not emit debug info
   // for this variable.
@@ -4851,10 +5282,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   unsigned Column = getColumnNumber(BD->getLocation());
   StringRef Name = BD->getName();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
   // Create the descriptor for the variable.
   llvm::DILocalVariable *D = DBuilder.createAutoVariable(
-      Scope, Name, Unit, Line, Ty, CGM.getLangOpts().Optimize,
+      Scope, Name, Unit, Line, Ty, CGM.getCodeGenOpts().OptimizationLevel != 0,
       llvm::DINode::FlagZero, Align);
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
@@ -4865,13 +5295,29 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
       const ASTRecordLayout &layout =
           CGM.getContext().getASTRecordLayout(parent);
       const uint64_t fieldOffset = layout.getFieldOffset(fieldIndex);
-
-      if (fieldOffset != 0) {
-        // Currently if the field offset is not a multiple of byte, the produced
-        // location would not be accurate. Therefore give up.
-        if (fieldOffset % CGM.getContext().getCharWidth() != 0)
-          return nullptr;
-
+      if (FD->isBitField()) {
+        const CGRecordLayout &RL =
+            CGM.getTypes().getCGRecordLayout(FD->getParent());
+        const CGBitFieldInfo &Info = RL.getBitFieldInfo(FD);
+        // Use DW_OP_plus_uconst to adjust to the start of the bitfield
+        // storage.
+        if (!Info.StorageOffset.isZero()) {
+          Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
+          Expr.push_back(Info.StorageOffset.getQuantity());
+        }
+        // Use LLVM_extract_bits to extract the appropriate bits from this
+        // bitfield.
+        Expr.push_back(Info.IsSigned
+                           ? llvm::dwarf::DW_OP_LLVM_extract_bits_sext
+                           : llvm::dwarf::DW_OP_LLVM_extract_bits_zext);
+        Expr.push_back(Info.Offset);
+        // If we have an oversized bitfield then the value won't be more than
+        // the size of the type.
+        const uint64_t TypeSize = CGM.getContext().getTypeSize(BD->getType());
+        Expr.push_back(std::min((uint64_t)Info.Size, TypeSize));
+      } else if (fieldOffset != 0) {
+        assert(fieldOffset % CGM.getContext().getCharWidth() == 0 &&
+               "Unexpected non-bitfield with non-byte-aligned offset");
         Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
         Expr.push_back(
             CGM.getContext().toCharUnitsFromBits(fieldOffset).getQuantity());
@@ -4908,10 +5354,9 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
 
   if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-    for (auto *B : DD->bindings()) {
+    for (BindingDecl *B : DD->flat_bindings())
       EmitDeclare(B, Storage, std::nullopt, Builder,
                   VD->getType()->isReferenceType());
-    }
     // Don't emit an llvm.dbg.declare for the composite storage as it doesn't
     // correspond to a user variable.
     return nullptr;
@@ -4937,14 +5382,16 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
   StringRef Name = D->getName();
 
   // Create the descriptor for the label.
-  auto *L =
-      DBuilder.createLabel(Scope, Name, Unit, Line, CGM.getLangOpts().Optimize);
+  auto *L = DBuilder.createLabel(Scope, Name, Unit, Line, Column,
+                                 /*IsArtificial=*/false,
+                                 /*CoroSuspendIdx=*/std::nullopt,
+                                 CGM.getCodeGenOpts().OptimizationLevel != 0);
 
   // Insert an llvm.dbg.label into the current block.
   DBuilder.insertLabel(L,
                        llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
                                              Scope, CurInlinedAt),
-                       Builder.GetInsertBlock());
+                       Builder.GetInsertBlock()->end());
 }
 
 llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
@@ -4952,7 +5399,7 @@ llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
   llvm::DIType *CachedTy = getTypeOrNull(QualTy);
   if (CachedTy)
     Ty = CachedTy;
-  return DBuilder.createObjectPointerType(Ty);
+  return DBuilder.createObjectPointerType(Ty, /*Implicit=*/true);
 }
 
 void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
@@ -5022,7 +5469,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
                                   LexicalBlockStack.back(), CurInlinedAt);
   auto *Expr = DBuilder.createExpression(addr);
   if (InsertPoint)
-    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint);
+    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint->getIterator());
   else
     DBuilder.insertDeclare(Storage, D, Expr, DL, Builder.GetInsertBlock());
 }
@@ -5151,7 +5598,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
               cast_or_null<CXXMethodDecl>(blockDecl->getNonClosureContext()))
         type = Method->getThisType();
       else if (auto *RDecl = dyn_cast<CXXRecordDecl>(blockDecl->getParent()))
-        type = QualType(RDecl->getTypeForDecl(), 0);
+        type = CGM.getContext().getCanonicalTagType(RDecl);
       else
         llvm_unreachable("unexpected block declcontext");
 
@@ -5201,7 +5648,8 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
   // Create the descriptor for the parameter.
   auto *debugVar = DBuilder.createParameterVariable(
-      scope, Name, ArgNo, tunit, line, type, CGM.getLangOpts().Optimize, flags);
+      scope, Name, ArgNo, tunit, line, type,
+      CGM.getCodeGenOpts().OptimizationLevel != 0, flags);
 
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Alloca, debugVar, DBuilder.createExpression(),
@@ -5240,8 +5688,9 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
-        GVE = CollectAnonRecordDecls(RT->getDecl(), Unit, LineNo, LinkageName,
-                                     Var, DContext);
+        GVE =
+            CollectAnonRecordDecls(RT->getOriginalDecl()->getDefinitionOrSelf(),
+                                   Unit, LineNo, LinkageName, Var, DContext);
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -5260,7 +5709,7 @@ static bool ReferencesAnonymousEntity(RecordType *RT) {
   // But so long as it's not one of those, it doesn't matter if some sub-type
   // of the record (a template parameter) can't be reconstituted - because the
   // un-reconstitutable type itself will carry its own name.
-  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
   if (!RD)
     return false;
   if (!RD->getIdentifier())
@@ -5319,15 +5768,15 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
     }
     return true;
   }
-  bool TraverseEnumType(EnumType *ET) {
+  bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
+    if (const auto *ED = dyn_cast<EnumDecl>(ET->getOriginalDecl())) {
       if (!ED->getIdentifier()) {
         Reconstitutable = false;
         return false;
       }
-      if (!ED->isExternallyVisible()) {
+      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
         Reconstitutable = false;
         return false;
       }
@@ -5340,7 +5789,7 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
     Reconstitutable &= !FT->getNoReturnAttr();
     return Reconstitutable;
   }
-  bool VisitRecordType(RecordType *RT) {
+  bool VisitRecordType(RecordType *RT, bool = false) {
     if (ReferencesAnonymousEntity(RT)) {
       Reconstitutable = false;
       return false;
@@ -5355,6 +5804,54 @@ static bool IsReconstitutableType(QualType QT) {
   ReconstitutableType T;
   T.TraverseType(QT);
   return T.Reconstitutable;
+}
+
+bool CGDebugInfo::HasReconstitutableArgs(
+    ArrayRef<TemplateArgument> Args) const {
+  return llvm::all_of(Args, [&](const TemplateArgument &TA) {
+    switch (TA.getKind()) {
+    case TemplateArgument::Template:
+      // Easy to reconstitute - the value of the parameter in the debug
+      // info is the string name of the template. The template name
+      // itself won't benefit from any name rebuilding, but that's a
+      // representational limitation - maybe DWARF could be
+      // changed/improved to use some more structural representation.
+      return true;
+    case TemplateArgument::Declaration:
+      // Reference and pointer non-type template parameters point to
+      // variables, functions, etc and their value is, at best (for
+      // variables) represented as an address - not a reference to the
+      // DWARF describing the variable/function/etc. This makes it hard,
+      // possibly impossible to rebuild the original name - looking up
+      // the address in the executable file's symbol table would be
+      // needed.
+      return false;
+    case TemplateArgument::NullPtr:
+      // These could be rebuilt, but figured they're close enough to the
+      // declaration case, and not worth rebuilding.
+      return false;
+    case TemplateArgument::Pack:
+      // A pack is invalid if any of the elements of the pack are
+      // invalid.
+      return HasReconstitutableArgs(TA.getPackAsArray());
+    case TemplateArgument::Integral:
+      // Larger integers get encoded as DWARF blocks which are a bit
+      // harder to parse back into a large integer, etc - so punting on
+      // this for now. Re-parsing the integers back into APInt is
+      // probably feasible some day.
+      return TA.getAsIntegral().getBitWidth() <= 64 &&
+             IsReconstitutableType(TA.getIntegralType());
+    case TemplateArgument::StructuralValue:
+      return false;
+    case TemplateArgument::Type:
+      return IsReconstitutableType(TA.getAsType());
+    case TemplateArgument::Expression:
+      return IsReconstitutableType(TA.getAsExpr()->getType());
+    default:
+      llvm_unreachable("Other, unresolved, template arguments should "
+                       "not be seen here");
+    }
+  });
 }
 
 std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
@@ -5383,49 +5880,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
   } else if (auto *VD = dyn_cast<VarDecl>(ND)) {
     Args = GetTemplateArgs(VD);
   }
-  std::function<bool(ArrayRef<TemplateArgument>)> HasReconstitutableArgs =
-      [&](ArrayRef<TemplateArgument> Args) {
-        return llvm::all_of(Args, [&](const TemplateArgument &TA) {
-          switch (TA.getKind()) {
-          case TemplateArgument::Template:
-            // Easy to reconstitute - the value of the parameter in the debug
-            // info is the string name of the template. (so the template name
-            // itself won't benefit from any name rebuilding, but that's a
-            // representational limitation - maybe DWARF could be
-            // changed/improved to use some more structural representation)
-            return true;
-          case TemplateArgument::Declaration:
-            // Reference and pointer non-type template parameters point to
-            // variables, functions, etc and their value is, at best (for
-            // variables) represented as an address - not a reference to the
-            // DWARF describing the variable/function/etc. This makes it hard,
-            // possibly impossible to rebuild the original name - looking up the
-            // address in the executable file's symbol table would be needed.
-            return false;
-          case TemplateArgument::NullPtr:
-            // These could be rebuilt, but figured they're close enough to the
-            // declaration case, and not worth rebuilding.
-            return false;
-          case TemplateArgument::Pack:
-            // A pack is invalid if any of the elements of the pack are invalid.
-            return HasReconstitutableArgs(TA.getPackAsArray());
-          case TemplateArgument::Integral:
-            // Larger integers get encoded as DWARF blocks which are a bit
-            // harder to parse back into a large integer, etc - so punting on
-            // this for now. Re-parsing the integers back into APInt is probably
-            // feasible some day.
-            return TA.getAsIntegral().getBitWidth() <= 64 &&
-                   IsReconstitutableType(TA.getIntegralType());
-          case TemplateArgument::StructuralValue:
-            return false;
-          case TemplateArgument::Type:
-            return IsReconstitutableType(TA.getAsType());
-          default:
-            llvm_unreachable("Other, unresolved, template arguments should "
-                             "not be seen here");
-          }
-        });
-      };
+
   // A conversion operator presents complications/ambiguity if there's a
   // conversion to class template that is itself a template, eg:
   // template<typename T>
@@ -5475,7 +5930,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
       std::string CanonicalOriginalName;
       llvm::raw_string_ostream OriginalOS(CanonicalOriginalName);
       ND->getNameForDiagnostic(OriginalOS, PP, Qualified);
-      assert(EncodedOriginalNameOS.str() == OriginalOS.str());
+      assert(EncodedOriginalName == CanonicalOriginalName);
 #endif
     }
   }
@@ -5517,7 +5972,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   // variable for each member of the anonymous union so that it's possible
   // to find the name of any field in the union.
   if (T->isUnionType() && DeclName.empty()) {
-    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
+    const auto *RD = T->castAsRecordDecl();
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     GVE = CollectAnonRecordDecls(RD, Unit, LineNo, LinkageName, Var, DContext);
@@ -5564,8 +6019,6 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
 
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
-    assert(isa<EnumType>(ED->getTypeForDecl()) && "Enum without EnumType?");
-
     if (CGM.getCodeGenOpts().EmitCodeView) {
       // If CodeView, emit enums as global variables, unless they are defined
       // inside a class. We do this because MSVC doesn't emit S_CONSTANTs for
@@ -5577,10 +6030,9 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       // If not CodeView, emit DW_TAG_enumeration_type if necessary. For
       // example: for "enum { ZERO };", a DW_TAG_enumeration_type is created the
       // first time `ZERO` is referenced in a function.
-      llvm::DIType *EDTy =
-          getOrCreateType(QualType(ED->getTypeForDecl(), 0), Unit);
-      assert (EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
-      (void)EDTy;
+      CanQualType T = CGM.getContext().getCanonicalTagType(ED);
+      [[maybe_unused]] llvm::DIType *EDTy = getOrCreateType(T, Unit);
+      assert(EDTy->getTag() == llvm::dwarf::DW_TAG_enumeration_type);
       return;
     }
   }
@@ -5599,7 +6051,7 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
     // FIXME: This is probably unnecessary, since Ty should reference RD
     // through its scope.
     RetainedTypes.push_back(
-        CGM.getContext().getRecordType(RD).getAsOpaquePtr());
+        CGM.getContext().getCanonicalTagType(RD).getAsOpaquePtr());
 
     return;
   }
@@ -5641,6 +6093,47 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
           DContext, Name, StringRef(), Unit, getLineNumber(D->getLocation()),
           Ty, false, false, nullptr, nullptr, nullptr, Align);
   Var->addDebugInfo(GVE);
+}
+
+void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
+                                     llvm::Instruction *Value, QualType Ty) {
+  // Only when -g2 or above is specified, debug info for variables will be
+  // generated.
+  if (CGM.getCodeGenOpts().getDebugInfo() <=
+      llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  llvm::DILocation *DIL = Value->getDebugLoc().get();
+  if (!DIL)
+    return;
+
+  llvm::DIFile *Unit = DIL->getFile();
+  llvm::DIType *Type = getOrCreateType(Ty, Unit);
+
+  // Check if Value is already a declared variable and has debug info, in this
+  // case we have nothing to do. Clang emits a declared variable as alloca, and
+  // it is loaded upon use, so we identify such pattern here.
+  if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
+    llvm::Value *Var = Load->getPointerOperand();
+    // There can be implicit type cast applied on a variable if it is an opaque
+    // ptr, in this case its debug info may not match the actual type of object
+    // being used as in the next instruction, so we will need to emit a pseudo
+    // variable for type-casted value.
+    auto DeclareTypeMatches = [&](llvm::DbgVariableRecord *DbgDeclare) {
+      return DbgDeclare->getVariable()->getType() == Type;
+    };
+    if (any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
+      return;
+  }
+
+  llvm::DILocalVariable *D =
+      DBuilder.createAutoVariable(LexicalBlockStack.back(), "", nullptr, 0,
+                                  Type, false, llvm::DINode::FlagArtificial);
+
+  if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
+    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
+                                     *InsertPoint);
+  }
 }
 
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
@@ -5928,7 +6421,7 @@ llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {
 llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   // Call site-related attributes are only useful in optimized programs, and
   // when there's a possibility of debugging backtraces.
-  if (!CGM.getLangOpts().Optimize ||
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0 ||
       DebugKind == llvm::codegenoptions::NoDebugInfo ||
       DebugKind == llvm::codegenoptions::LocTrackingOnly)
     return llvm::DINode::FlagZero;
@@ -5974,4 +6467,100 @@ CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
     return DBuilder.createConstantValueExpression(ValIntOpt.value());
 
   return nullptr;
+}
+
+CodeGenFunction::LexicalScope::LexicalScope(CodeGenFunction &CGF,
+                                            SourceRange Range)
+    : RunCleanupsScope(CGF), Range(Range), ParentScope(CGF.CurLexicalScope) {
+  CGF.CurLexicalScope = this;
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
+}
+
+CodeGenFunction::LexicalScope::~LexicalScope() {
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockEnd(CGF.Builder, Range.getEnd());
+
+  // If we should perform a cleanup, force them now.  Note that
+  // this ends the cleanup scope before rescoping any labels.
+  if (PerformCleanup) {
+    ApplyDebugLocation DL(CGF, Range.getEnd());
+    ForceCleanup();
+  }
+}
+
+static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
+  std::string Label;
+  switch (Handler) {
+#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
+  case Enum:                                                                   \
+    Label = "__ubsan_check_" #Name;                                            \
+    break;
+
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  };
+
+  // Label doesn't require sanitization
+  return Label;
+}
+
+static std::string
+SanitizerOrdinalToCheckLabel(SanitizerKind::SanitizerOrdinal Ordinal) {
+  std::string Label;
+  switch (Ordinal) {
+#define SANITIZER(NAME, ID)                                                    \
+  case SanitizerKind::SO_##ID:                                                 \
+    Label = "__ubsan_check_" NAME;                                             \
+    break;
+#include "clang/Basic/Sanitizers.def"
+  default:
+    llvm_unreachable("unexpected sanitizer kind");
+  }
+
+  // Sanitize label (convert hyphens to underscores; also futureproof against
+  // non-alpha)
+  for (unsigned int i = 0; i < Label.length(); i++)
+    if (!std::isalpha(Label[i]))
+      Label[i] = '_';
+
+  return Label;
+}
+
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler) {
+  llvm::DILocation *CheckDebugLoc = Builder.getCurrentDebugLocation();
+  auto *DI = getDebugInfo();
+  if (!DI || !CheckDebugLoc)
+    return CheckDebugLoc;
+  const auto &AnnotateDebugInfo =
+      CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo;
+  if (AnnotateDebugInfo.empty())
+    return CheckDebugLoc;
+
+  std::string Label;
+  if (Ordinals.size() == 1)
+    Label = SanitizerOrdinalToCheckLabel(Ordinals[0]);
+  else
+    Label = SanitizerHandlerToCheckLabel(Handler);
+
+  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); }))
+    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
+
+  return CheckDebugLoc;
+}
+
+SanitizerDebugLocation::SanitizerDebugLocation(
+    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler)
+    : CGF(CGF),
+      Apply(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)) {
+  assert(!CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = true;
+}
+
+SanitizerDebugLocation::~SanitizerDebugLocation() {
+  assert(CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = false;
 }

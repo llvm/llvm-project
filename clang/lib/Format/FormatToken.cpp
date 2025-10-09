@@ -15,7 +15,6 @@
 #include "FormatToken.h"
 #include "ContinuationIndenter.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
 #include <climits>
 
 namespace clang {
@@ -34,45 +33,35 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-// FIXME: This is copy&pasted from Sema. Put it in a common place and remove
-// duplication.
-bool FormatToken::isSimpleTypeSpecifier() const {
-  switch (Tok.getKind()) {
-  case tok::kw_short:
-  case tok::kw_long:
-  case tok::kw___int64:
-  case tok::kw___int128:
-  case tok::kw_signed:
-  case tok::kw_unsigned:
-  case tok::kw_void:
-  case tok::kw_char:
-  case tok::kw_int:
-  case tok::kw_half:
-  case tok::kw_float:
-  case tok::kw_double:
-  case tok::kw___bf16:
-  case tok::kw__Float16:
-  case tok::kw___float128:
-  case tok::kw___ibm128:
-  case tok::kw_wchar_t:
-  case tok::kw_bool:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-  case tok::annot_typename:
-  case tok::kw_char8_t:
-  case tok::kw_char16_t:
-  case tok::kw_char32_t:
-  case tok::kw_typeof:
-  case tok::kw_decltype:
-  case tok::kw__Atomic:
-    return true;
-  default:
-    return false;
-  }
+static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
+    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
+    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
+    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+};
+
+bool FormatToken::isQtProperty() const {
+  assert(llvm::is_sorted(QtPropertyKeywords));
+  return std::binary_search(QtPropertyKeywords.begin(),
+                            QtPropertyKeywords.end(), TokenText);
 }
 
-bool FormatToken::isTypeOrIdentifier() const {
-  return isSimpleTypeSpecifier() || Tok.isOneOf(tok::kw_auto, tok::identifier);
+// Sorted common C++ non-keyword types.
+static constexpr std::array<StringRef, 14> CppNonKeywordTypes = {
+    "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
+    "intptr_t", "ptrdiff_t", "size_t",  "time_t",    "uint16_t",
+    "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
+};
+
+bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
+  if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
+    return true;
+  assert(llvm::is_sorted(CppNonKeywordTypes));
+  return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
+         llvm::binary_search(CppNonKeywordTypes, TokenText);
+}
+
+bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
+  return isTypeName(LangOpts) || isOneOf(tok::kw_auto, tok::identifier);
 }
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
@@ -119,7 +108,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
       State.NextToken->Previous->getPreviousNonComment();
-  if (!LBrace || !LBrace->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
+  if (!LBrace || LBrace->isNoneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
       LBrace->is(BK_Block) || LBrace->is(TT_DictLiteral) ||
       LBrace->Next->is(TT_DesignatedInitializerPeriod)) {
     return 0;
@@ -137,7 +126,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // bin-packed. Add a severe penalty to this so that column layouts are
   // preferred if possible.
   if (!Format)
-    return 10000;
+    return 10'000;
 
   // Format the entire list.
   unsigned Penalty = 0;
@@ -188,7 +177,7 @@ static unsigned CodePointsBetween(const FormatToken *Begin,
 void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // FIXME: At some point we might want to do this for other lists, too.
   if (!Token->MatchingParen ||
-      !Token->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
+      Token->isNoneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
     return;
   }
 
@@ -196,7 +185,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
-      Commas.size() < 19) {
+      (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
 
@@ -342,6 +331,25 @@ CommaSeparatedList::getColumnFormat(unsigned RemainingCharacters) const {
     }
   }
   return BestFormat;
+}
+
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
+  if (Current.is(TT_CtorInitializerComma) &&
+      Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
+    return true;
+  }
+  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
+  if (Current.is(TT_QtProperty))
+    return true;
+  return Previous.is(tok::comma) && !Current.isTrailingComment() &&
+         ((Previous.isNot(TT_CtorInitializerComma) ||
+           Style.BreakConstructorInitializers !=
+               FormatStyle::BCIS_BeforeComma) &&
+          (Previous.isNot(TT_InheritanceComma) ||
+           Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
 }
 
 } // namespace format

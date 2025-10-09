@@ -48,7 +48,7 @@ define i32 @bitcasted_inselt_wide_source_zero_elt(i64 %x) {
 ;
 ; BE-LABEL: @bitcasted_inselt_wide_source_zero_elt(
 ; BE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
-; BE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; BE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; BE-NEXT:    ret i32 [[R]]
 ;
   %i = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
@@ -64,7 +64,7 @@ define i16 @bitcasted_inselt_wide_source_modulo_elt(i64 %x) {
 ;
 ; BE-LABEL: @bitcasted_inselt_wide_source_modulo_elt(
 ; BE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 48
-; BE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i16
+; BE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP1]] to i16
 ; BE-NEXT:    ret i16 [[R]]
 ;
   %i = insertelement <2 x i64> poison, i64 %x, i32 1
@@ -76,7 +76,7 @@ define i16 @bitcasted_inselt_wide_source_modulo_elt(i64 %x) {
 define i32 @bitcasted_inselt_wide_source_not_modulo_elt(i64 %x) {
 ; LE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
 ; LE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
-; LE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; LE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; LE-NEXT:    ret i32 [[R]]
 ;
 ; BE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
@@ -166,7 +166,7 @@ define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
 define float @bitcasted_inselt_to_FP(i64 %x) {
 ; LE-LABEL: @bitcasted_inselt_to_FP(
 ; LE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
-; LE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; LE-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; LE-NEXT:    [[R:%.*]] = bitcast i32 [[TMP2]] to float
 ; LE-NEXT:    ret float [[R]]
 ;
@@ -218,7 +218,7 @@ define i32 @bitcasted_inselt_from_FP(double %x) {
 ; LE-LABEL: @bitcasted_inselt_from_FP(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
 ; LE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 32
-; LE-NEXT:    [[R:%.*]] = trunc i64 [[TMP2]] to i32
+; LE-NEXT:    [[R:%.*]] = trunc nuw i64 [[TMP2]] to i32
 ; LE-NEXT:    ret i32 [[R]]
 ;
 ; BE-LABEL: @bitcasted_inselt_from_FP(

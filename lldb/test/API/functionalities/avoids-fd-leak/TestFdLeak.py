@@ -26,7 +26,7 @@ class AvoidsFdLeakTestCase(TestBase):
     @skipIfTargetAndroid()  # Android have some other file descriptors open by the shell
     @skipIfDarwinEmbedded  # <rdar://problem/33888742>  # debugserver on ios has an extra fd open on launch
     def test_fd_leak_log(self):
-        self.do_test(["log enable -f '/dev/null' lldb commands"])
+        self.do_test(["log enable -f '{}' lldb commands".format(os.devnull)])
 
     def do_test(self, commands):
         self.build()

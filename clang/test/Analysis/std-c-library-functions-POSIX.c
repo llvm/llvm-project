@@ -23,10 +23,22 @@
 // CHECK: Loaded summary for: FILE *popen(const char *command, const char *type)
 // CHECK: Loaded summary for: int fclose(FILE *stream)
 // CHECK: Loaded summary for: int pclose(FILE *stream)
+// CHECK: Loaded summary for: int getc(FILE *)
+// CHECK: Loaded summary for: int fgetc(FILE *)
+// CHECK: Loaded summary for: int putc(int c, FILE *stream)
+// CHECK: Loaded summary for: int fputc(int c, FILE *stream)
+// CHECK: Loaded summary for: char *fgets(char *restrict s, int n, FILE *restrict stream)
+// CHECK: Loaded summary for: int fputs(const char *restrict s, FILE *restrict stream)
 // CHECK: Loaded summary for: int fseek(FILE *stream, long offset, int whence)
-// CHECK: Loaded summary for: int fseeko(FILE *stream, off_t offset, int whence)
-// CHECK: Loaded summary for: off_t ftello(FILE *stream)
+// CHECK: Loaded summary for: int fgetpos(FILE *restrict stream, fpos_t *restrict pos)
+// CHECK: Loaded summary for: int fsetpos(FILE *stream, const fpos_t *pos)
+// CHECK: Loaded summary for: int fflush(FILE *stream)
+// CHECK: Loaded summary for: long ftell(FILE *stream)
 // CHECK: Loaded summary for: int fileno(FILE *stream)
+// CHECK: Loaded summary for: void rewind(FILE *stream)
+// CHECK: Loaded summary for: void clearerr(FILE *stream)
+// CHECK: Loaded summary for: int feof(FILE *stream)
+// CHECK: Loaded summary for: int ferror(FILE *stream)
 // CHECK: Loaded summary for: long a64l(const char *str64)
 // CHECK: Loaded summary for: char *l64a(long value)
 // CHECK: Loaded summary for: int open(const char *path, int oflag, ...)
@@ -224,4 +236,15 @@ void test_readlinkat_bufsize_zero(int fd, char *Buf, size_t Bufsize) {
     clang_analyzer_eval(Bufsize == 0); // expected-warning{{FALSE}}
   else
     clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_setsockopt_bufptr_null(int x) {
+  char buf[10] = {0};
+
+  setsockopt(1, 2, 3, 0, 0);
+  setsockopt(1, 2, 3, buf, 10);
+  if (x)
+    setsockopt(1, 2, 3, buf, 11); // expected-warning{{The 4th argument to 'setsockopt' is a buffer with size 10 but should be a buffer with size equal to or greater than the value of the 5th argument (which is 11)}}
+  else
+    setsockopt(1, 2, 3, 0, 10);  // expected-warning{{The 4th argument to 'setsockopt' is NULL but should not be NULL}}
 }

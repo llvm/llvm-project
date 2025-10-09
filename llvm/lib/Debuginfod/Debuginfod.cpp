@@ -188,6 +188,11 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
+
+  /// Must be called exactly once after the writes have been completed
+  /// but before the StreamedHTTPResponseHandler object is destroyed.
+  Error commit();
+
   virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;
@@ -207,6 +212,12 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
     FileStream = std::move(*FileStreamOrError);
   }
   *FileStream->OS << BodyChunk;
+  return Error::success();
+}
+
+Error StreamedHTTPResponseHandler::commit() {
+  if (FileStream)
+    return FileStream->commit();
   return Error::success();
 }
 
@@ -234,8 +245,7 @@ static SmallVector<std::string, 0> getHeaders() {
   uint64_t LineNumber = 0;
   for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
     LineNumber++;
-    if (!Line.empty() && Line.back() == '\r')
-      Line = Line.drop_back();
+    Line.consume_back("\r");
     if (!isHeader(Line)) {
       if (!all_of(Line, llvm::isSpace))
         WithColor::warning()
@@ -298,6 +308,8 @@ Expected<std::string> getCachedOrDownloadArtifact(
       Error Err = Client.perform(Request, Handler);
       if (Err)
         return std::move(Err);
+      if ((Err = Handler.commit()))
+        return std::move(Err);
 
       unsigned Code = Client.responseCode();
       if (Code && Code != 200)
@@ -348,7 +360,8 @@ DebuginfodLogEntry DebuginfodLog::pop() {
 }
 
 DebuginfodCollection::DebuginfodCollection(ArrayRef<StringRef> PathsRef,
-                                           DebuginfodLog &Log, ThreadPool &Pool,
+                                           DebuginfodLog &Log,
+                                           ThreadPoolInterface &Pool,
                                            double MinInterval)
     : Log(Log), Pool(Pool), MinInterval(MinInterval) {
   for (StringRef Path : PathsRef)
@@ -414,7 +427,7 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
   sys::fs::recursive_directory_iterator I(Twine(Path), EC), E;
   std::mutex IteratorMutex;
   ThreadPoolTaskGroup IteratorGroup(Pool);
-  for (unsigned WorkerIndex = 0; WorkerIndex < Pool.getThreadCount();
+  for (unsigned WorkerIndex = 0; WorkerIndex < Pool.getMaxConcurrency();
        WorkerIndex++) {
     IteratorGroup.async([&, this]() -> void {
       std::string FilePath;

@@ -21,7 +21,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def fir_Dialect : Dialect {
+def FIROpsDialect : Dialect {
   let name = "fir";
   let cppNamespace = "::fir";
   let useDefaultTypePrinterParser = 0;
@@ -30,10 +30,45 @@ def fir_Dialect : Dialect {
   let dependentDialects = [
     // Arith dialect provides FastMathFlagsAttr
     // supported by some FIR operations.
-    "arith::ArithDialect",
+    "mlir::arith::ArithDialect",
     // TBAA Tag types
-    "LLVM::LLVMDialect"
+    "mlir::LLVM::LLVMDialect"
   ];
+  let extraClassDeclaration = [{
+  private:
+    // Register the builtin Attributes.
+    void registerAttributes();
+    // Register the builtin Types.
+    void registerTypes();
+    // Register external interfaces on operations of
+    // this dialect.
+    void registerOpExternalInterfaces();
+  public:
+    mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
+    void printType(mlir::Type ty, mlir::DialectAsmPrinter &p) const override;
+ 
+    mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
+                                   mlir::Type type) const override;
+    void printAttribute(mlir::Attribute attr,
+                        mlir::DialectAsmPrinter &p) const override;
+
+    // Return string name of fir.runtime attribute.
+    static constexpr llvm::StringRef getFirRuntimeAttrName() {
+      return "fir.runtime";
+    }
+    // Return string name of fir.memory attributes.
+    // It is attached to fir.call operations to convey
+    // llvm.memory attributes to LLVM IR.
+    // Its value is intended to be mlir::LLVM::MemoryEffectsAttr.
+    // TODO: we should probably make it an inherent attribute
+    // of fir.call, though, it is supposed to be a short-lived
+    // attribute that appears right before CodeGen and only
+    // meaningful for LLVM, so it is unclear if embedding
+    // it into fir.call makes sense.
+    static constexpr llvm::StringRef getFirCallMemoryAttrName() {
+      return "fir.llvm_memory";
+    }
+  }];
 }
 
 #endif // FORTRAN_DIALECT_FIR_DIALECT

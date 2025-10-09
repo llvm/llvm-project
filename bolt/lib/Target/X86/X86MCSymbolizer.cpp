@@ -134,7 +134,13 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   // a PC-relative 8-byte fixup, which is what we need to cover this. The
   // only way to do this is to use the symbol name _GLOBAL_OFFSET_TABLE_.
   if (Relocation::isX86GOTPC64(Relocation->Type)) {
-    auto [Sym, Addend] = handleGOTPC64(*Relocation, InstAddress);
+    auto PairOrErr = handleGOTPC64(*Relocation, InstAddress);
+    if (auto E = PairOrErr.takeError()) {
+      Function.setSimple(false);
+      BC.logBOLTErrorsAndQuitOnFatal(std::move(E));
+      return false;
+    }
+    auto [Sym, Addend] = *PairOrErr;
     addOperand(Sym, Addend);
     return true;
   }
@@ -158,14 +164,16 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   return true;
 }
 
-std::pair<MCSymbol *, uint64_t>
+Expected<std::pair<MCSymbol *, uint64_t>>
 X86MCSymbolizer::handleGOTPC64(const Relocation &R, uint64_t InstrAddr) {
   BinaryContext &BC = Function.getBinaryContext();
   const BinaryData *GOTSymBD = BC.getGOTSymbol();
   if (!GOTSymBD || !GOTSymBD->getAddress()) {
-    errs() << "BOLT-ERROR: R_X86_GOTPC64 relocation is present but we did "
-              "not detect a valid  _GLOBAL_OFFSET_TABLE_ in symbol table\n";
-    exit(1);
+    // This error is pretty serious but we can't kill the disassembler
+    // because of it, so don't make it fatal. Log it and warn the user.
+    return createNonFatalBOLTError(
+        "R_X86_GOTPC64 relocation is present but we did not detect "
+        "a valid  _GLOBAL_OFFSET_TABLE_ in symbol table\n");
   }
   // R_X86_GOTPC64 are not relative to the Reloc nor end of instruction,
   // but the start of the MOVABSQ instruction. So the Target Address is

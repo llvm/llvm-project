@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H
 
-#include "common_constants.h"
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/UInt128.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/math/common_constants.h"
+#include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Struct to store -log*(r) for 4 range reduction steps.
 struct LogRR {
@@ -35,9 +36,9 @@ struct LogRR {
 LIBC_INLINE fputil::DyadicFloat<128>
 log_range_reduction(double m_x, const LogRR &log_table,
                     fputil::DyadicFloat<128> &sum) {
+  using namespace common_constants_internal;
   using Float128 = typename fputil::DyadicFloat<128>;
   using MType = typename Float128::MantissaType;
-  using Sign = fputil::Sign;
 
   int64_t v = static_cast<int64_t>(m_x * 0x1.0p60); // ulp = 2^-60
 
@@ -88,6 +89,6 @@ log_range_reduction(double m_x, const LogRR &log_table,
                                      static_cast<uint64_t>(vv4 >> 64)}));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H

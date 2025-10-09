@@ -13,7 +13,6 @@ import json
 
 class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_terminated_event(self):
         """
         Terminated Event
@@ -36,25 +35,33 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
         # Set breakpoints
         functions = ["foo"]
-        breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+
+        # This breakpoint will be resolved only when the libfoo module is loaded
+        breakpoint_ids = self.set_function_breakpoints(
+            functions, wait_for_resolve=False
+        )
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         main_bp_line = line_number("main.cpp", "// main breakpoint 1")
-        breakpoint_ids.append(self.set_source_breakpoints("main.cpp", [main_bp_line]))
+        breakpoint_ids.append(
+            self.set_source_breakpoints(
+                "main.cpp", [main_bp_line], wait_for_resolve=False
+            )
+        )
 
         self.continue_to_breakpoints(breakpoint_ids)
         self.continue_to_exit()
 
-        statistics = self.dap_server.wait_for_terminated()["statistics"]
-        self.assertTrue(statistics["totalDebugInfoByteSize"] > 0)
-        self.assertTrue(statistics["totalDebugInfoEnabled"] > 0)
-        self.assertTrue(statistics["totalModuleCountHasDebugInfo"] > 0)
+        statistics = self.dap_server.wait_for_terminated()["body"]["$__lldb_statistics"]
+        self.assertGreater(statistics["totalDebugInfoByteSize"], 0)
+        self.assertGreater(statistics["totalDebugInfoEnabled"], 0)
+        self.assertGreater(statistics["totalModuleCountHasDebugInfo"], 0)
 
         self.assertIsNotNone(statistics["memory"])
         self.assertNotIn("modules", statistics.keys())
 
         # lldb-dap debugs one target at a time
         target = json.loads(statistics["targets"])[0]
-        self.assertTrue(target["totalBreakpointResolveTime"] > 0)
+        self.assertGreater(target["totalBreakpointResolveTime"], 0)
 
         breakpoints = target["breakpoints"]
         self.assertIn(

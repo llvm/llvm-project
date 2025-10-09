@@ -17,7 +17,7 @@ end subroutine
 subroutine test2()
   call test2internal()
   contains
-  ! CHECK-LABEL: func @_QMparentFtest2Ptest2internal()
+  ! CHECK-LABEL: func private @_QMparentFtest2Ptest2internal()
   subroutine test2internal()
     ! CHECK: fir.address_of(@_QMparentEi) : !fir.ref<i32>
     print *, i
@@ -31,7 +31,7 @@ subroutine test3()
   use parent
   call test3internal()
   contains
-  ! CHECK-LABEL: func @_QFtest3Ptest3internal()
+  ! CHECK-LABEL: func private @_QFtest3Ptest3internal()
   subroutine test3internal()
     ! CHECK: fir.address_of(@_QMparentEi) : !fir.ref<i32>
     print *, i

@@ -22,9 +22,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "llvm/ADT/StringExtras.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -85,8 +83,7 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     if (I.isVirtual()) continue;
 
     // Skip base classes with trivial destructors.
-    const auto *Base =
-        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+    const auto *Base = I.getType()->castAsCXXRecordDecl();
     if (Base->hasTrivialDestructor()) continue;
 
     // If we've already found a base class with a non-trivial
@@ -263,26 +260,27 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(Ty, VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc = CGF.Builder.CreateAlignedLoad(
       Ty, VFuncPtr, llvm::Align(CGF.PointerAlignInBytes));
-  CGCallee Callee(GD, VFunc);
+
+  CGPointerAuthInfo PointerAuth;
+  if (auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+    GlobalDecl OrigMD =
+        CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    PointerAuth = CGF.EmitPointerAuthInfo(Schema, VFuncPtr, OrigMD, QualType());
+  }
+
+  CGCallee Callee(GD, VFunc, PointerAuth);
   return Callee;
 }
 
 /// BuildAppleKextVirtualCall - This routine is to support gcc's kext ABI making
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
-CGCallee
-CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                           NestedNameSpecifier *Qual,
-                                           llvm::Type *Ty) {
-  assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
-         "BuildAppleKextVirtualCall - bad Qual kind");
-
-  const Type *QTy = Qual->getAsType();
-  QualType T = QualType(QTy, 0);
-  const RecordType *RT = T->getAs<RecordType>();
-  assert(RT && "BuildAppleKextVirtualCall - Qual type must be record");
-  const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
-
+CGCallee CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
+                                                    NestedNameSpecifier Qual,
+                                                    llvm::Type *Ty) {
+  const CXXRecordDecl *RD = Qual.getAsRecordDecl();
+  assert(RD && "BuildAppleKextVirtualCall - Qual must be record");
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD))
     return BuildAppleKextVirtualDestructorCall(DD, Dtor_Complete, RD);
 

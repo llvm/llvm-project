@@ -37,17 +37,17 @@ def IRDL_Dialect : Dialect {
     ```mlir
     irdl.dialect @cmath {
       irdl.type @complex {
-        %0 = irdl.is_type : f32
-        %1 = irdl.is_type : f64
+        %0 = irdl.is f32
+        %1 = irdl.is f64
         %2 = irdl.any_of(%0, %1)
         irdl.parameters(%2)
       }
 
       irdl.operation @mul {
-        %0 = irdl.is_type : f32
-        %1 = irdl.is_type : f64
+        %0 = irdl.is f32
+        %1 = irdl.is f64
         %2 = irdl.any_of(%0, %1)
-        %3 = irdl.parametric_type : "cmath.complex"<%2>
+        %3 = irdl.parametric @cmath::@complex<%2>
         irdl.operands(%3, %3)
         irdl.results(%3)
       }

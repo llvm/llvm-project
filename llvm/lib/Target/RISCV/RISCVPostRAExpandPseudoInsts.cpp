@@ -12,10 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -31,9 +29,7 @@ public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {
-    initializeRISCVPostRAExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -46,6 +42,7 @@ private:
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
 };
 
 char RISCVPostRAExpandPseudo::ID = 0;
@@ -77,6 +74,8 @@ bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoMovImm:
     return expandMovImm(MBB, MBBI);
+  case RISCV::PseudoMovAddr:
+    return expandMovAddr(MBB, MBBI);
   default:
     return false;
   }
@@ -87,10 +86,6 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
   DebugLoc DL = MBBI->getDebugLoc();
 
   int64_t Val = MBBI->getOperand(1).getImm();
-
-  RISCVMatInt::InstSeq Seq =
-      RISCVMatInt::generateInstSeq(Val, MBB.getParent()->getSubtarget());
-  assert(!Seq.empty());
 
   Register DstReg = MBBI->getOperand(0).getReg();
   bool DstIsDead = MBBI->getOperand(0).isDead();
@@ -103,9 +98,29 @@ bool RISCVPostRAExpandPseudo::expandMovImm(MachineBasicBlock &MBB,
   return true;
 }
 
+bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI) {
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  Register DstReg = MBBI->getOperand(0).getReg();
+  bool DstIsDead = MBBI->getOperand(0).isDead();
+  bool Renamable = MBBI->getOperand(0).isRenamable();
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::LUI))
+      .addReg(DstReg, RegState::Define | getRenamableRegState(Renamable))
+      .add(MBBI->getOperand(1));
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI))
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead) |
+                          getRenamableRegState(Renamable))
+      .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable))
+      .add(MBBI->getOperand(2));
+  MBBI->eraseFromParent();
+  return true;
+}
+
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-expand-pseudolisimm32",
+INITIALIZE_PASS(RISCVPostRAExpandPseudo, "riscv-post-ra-expand-pseudo",
                 RISCV_POST_RA_EXPAND_PSEUDO_NAME, false, false)
 namespace llvm {
 

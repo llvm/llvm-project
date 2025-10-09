@@ -50,52 +50,69 @@ struct CommandInfo {
   unsigned NumArgs : 4;
 
   /// True if this command is a inline command (of any kind).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsInlineCommand : 1;
 
   /// True if this command is a block command (of any kind).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsBlockCommand : 1;
 
   /// True if this command is introducing a brief documentation
   /// paragraph (\or an alias).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsBriefCommand : 1;
 
   /// True if this command is \\returns or an alias.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsReturnsCommand : 1;
 
   /// True if this command is introducing documentation for a function
   /// parameter (\\param or an alias).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsParamCommand : 1;
 
   /// True if this command is introducing documentation for
   /// a template parameter (\\tparam or an alias).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsTParamCommand : 1;
 
   /// True if this command is \\throws or an alias.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsThrowsCommand : 1;
 
   /// True if this command is \\deprecated or an alias.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDeprecatedCommand : 1;
 
   /// True if this is a \\headerfile-like command.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsHeaderfileCommand : 1;
+
+  /// True if this is a \\par command.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsParCommand : 1;
 
   /// True if we don't want to warn about this command being passed an empty
   /// paragraph.  Meaningful only for block commands.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsEmptyParagraphAllowed : 1;
 
   /// True if this command is a verbatim-like block command.
   ///
   /// A verbatim-like block command eats every character (except line starting
   /// decorations) until matching end command is seen or comment end is hit.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVerbatimBlockCommand : 1;
 
   /// True if this command is an end command for a verbatim-like block.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVerbatimBlockEndCommand : 1;
 
   /// True if this command is a verbatim line command.
   ///
   /// A verbatim-like line command eats everything until a newline is seen or
   /// comment end is hit.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVerbatimLineCommand : 1;
 
   /// True if this command contains a declaration for the entity being
@@ -105,20 +122,25 @@ struct CommandInfo {
   /// \code
   ///   \fn void f(int a);
   /// \endcode
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsDeclarationCommand : 1;
 
   /// True if verbatim-like line command is a function declaration.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFunctionDeclarationCommand : 1;
 
   /// True if block command is further describing a container API; such
   /// as \@coclass, \@classdesign, etc.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRecordLikeDetailCommand : 1;
 
   /// True if block command is a container API; such as \@interface.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsRecordLikeDeclarationCommand : 1;
 
   /// True if this command is unknown.  This \c CommandInfo object was
   /// created during parsing.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnknownCommand : 1;
 };
 

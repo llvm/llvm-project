@@ -13,10 +13,12 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -68,47 +70,49 @@ class FileSystem;
 /// ---
 class SpecialCaseList {
 public:
+  static constexpr std::pair<unsigned, unsigned> NotFound = {0, 0};
   /// Parses the special case list entries from files. On failure, returns
   /// 0 and writes an error message to string.
-  static std::unique_ptr<SpecialCaseList>
+  LLVM_ABI static std::unique_ptr<SpecialCaseList>
   create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS,
          std::string &Error);
   /// Parses the special case list from a memory buffer. On failure, returns
   /// 0 and writes an error message to string.
-  static std::unique_ptr<SpecialCaseList> create(const MemoryBuffer *MB,
-                                                 std::string &Error);
+  LLVM_ABI static std::unique_ptr<SpecialCaseList>
+  create(const MemoryBuffer *MB, std::string &Error);
   /// Parses the special case list entries from files. On failure, reports a
   /// fatal error.
-  static std::unique_ptr<SpecialCaseList>
+  LLVM_ABI static std::unique_ptr<SpecialCaseList>
   createOrDie(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS);
 
-  ~SpecialCaseList();
+  LLVM_ABI ~SpecialCaseList();
 
   /// Returns true, if special case list contains a line
   /// \code
   ///   @Prefix:<E>=@Category
   /// \endcode
   /// where @Query satisfies the glob <E> in a given @Section.
-  bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
-                 StringRef Category = StringRef()) const;
+  LLVM_ABI bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
+                          StringRef Category = StringRef()) const;
 
-  /// Returns the line number corresponding to the special case list entry if
-  /// the special case list contains a line
+  /// Returns the file index and the line number <FileIdx, LineNo> corresponding
+  /// to the special case list entry if the special case list contains a line
   /// \code
   ///   @Prefix:<E>=@Category
   /// \endcode
   /// where @Query satisfies the glob <E> in a given @Section.
-  /// Returns zero if there is no exclusion entry corresponding to this
+  /// Returns (zero, zero) if there is no exclusion entry corresponding to this
   /// expression.
-  unsigned inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
-                          StringRef Category = StringRef()) const;
+  LLVM_ABI std::pair<unsigned, unsigned>
+  inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
+                 StringRef Category = StringRef()) const;
 
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
-  bool createInternal(const std::vector<std::string> &Paths,
-                      vfs::FileSystem &VFS, std::string &Error);
-  bool createInternal(const MemoryBuffer *MB, std::string &Error);
+  LLVM_ABI bool createInternal(const std::vector<std::string> &Paths,
+                               vfs::FileSystem &VFS, std::string &Error);
+  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
   SpecialCaseList() = default;
   SpecialCaseList(SpecialCaseList const &) = delete;
@@ -117,40 +121,83 @@ protected:
   /// Represents a set of globs and their line numbers
   class Matcher {
   public:
-    Error insert(StringRef Pattern, unsigned LineNumber, bool UseRegex);
-    // Returns the line number in the source file that this query matches to.
-    // Returns zero if no match is found.
-    unsigned match(StringRef Query) const;
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber,
+                          bool UseRegex);
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
-  private:
-    StringMap<std::pair<GlobPattern, unsigned>> Globs;
-    std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
+    LLVM_ABI bool matchAny(StringRef Query) const {
+      bool R = false;
+      match(Query, [&](StringRef, unsigned) { R = true; });
+      return R;
+    }
+
+    struct Glob {
+      Glob(StringRef Name, unsigned LineNo) : Name(Name), LineNo(LineNo) {}
+      std::string Name;
+      unsigned LineNo;
+      GlobPattern Pattern;
+      // neither copyable nor movable because GlobPattern contains
+      // Glob::StringRef that points to Glob::Name.
+      Glob(Glob &&) = delete;
+      Glob() = default;
+    };
+
+    struct Reg {
+      Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
+          : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
+      std::string Name;
+      unsigned LineNo;
+      Regex Rg;
+      Reg(Reg &&) = delete;
+      Reg() = default;
+    };
+
+    std::vector<std::unique_ptr<Matcher::Glob>> Globs;
+    std::vector<std::unique_ptr<Reg>> RegExes;
+    bool RemoveDotSlash = false;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
   struct Section {
-    Section(std::unique_ptr<Matcher> M) : SectionMatcher(std::move(M)){};
-    Section() : Section(std::make_unique<Matcher>()) {}
+    Section(StringRef Str, unsigned FileIdx)
+        : SectionStr(Str), FileIdx(FileIdx) {};
 
-    std::unique_ptr<Matcher> SectionMatcher;
+    Section(Section &&) = default;
+
+    Matcher SectionMatcher;
     SectionEntries Entries;
+    std::string SectionStr;
+    unsigned FileIdx;
+
+    // Helper method to search by Prefix, Query, and Category. Returns
+    // 1-based line number on which rule is defined, or 0 if there is no match.
+    LLVM_ABI unsigned getLastMatch(StringRef Prefix, StringRef Query,
+                                   StringRef Category) const;
+
+    // Helper method to search by Prefix, Query, and Category. Returns
+    // matching rule, or empty string if there is no match.
+    LLVM_ABI StringRef getLongestMatch(StringRef Prefix, StringRef Query,
+                                       StringRef Category) const;
+
+  private:
+    LLVM_ABI const SpecialCaseList::Matcher *
+    findMatcher(StringRef Prefix, StringRef Category) const;
   };
 
-  StringMap<Section> Sections;
+  std::vector<Section> Sections;
 
-  Expected<Section *> addSection(StringRef SectionStr, unsigned LineNo,
-                                 bool UseGlobs = true);
+  LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
+                                          unsigned FileIdx, unsigned LineNo,
+                                          bool UseGlobs = true);
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
-  bool parse(const MemoryBuffer *MB, std::string &Error);
-
-  // Helper method for derived classes to search by Prefix, Query, and Category
-  // once they have already resolved a section entry.
-  unsigned inSectionBlame(const SectionEntries &Entries, StringRef Prefix,
-                          StringRef Query, StringRef Category) const;
+  LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
+                      std::string &Error);
 };
 
-}  // namespace llvm
+} // namespace llvm
 
 #endif // LLVM_SUPPORT_SPECIALCASELIST_H

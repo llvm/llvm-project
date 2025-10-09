@@ -92,8 +92,7 @@ void InstrumentationRuntimeASanLibsanitizers::Activate() {
 
   Breakpoint *breakpoint = ReportRetriever::SetupBreakpoint(
       GetRuntimeModuleSP(), process_sp,
-      ConstString("_Z22raise_sanitizers_error23sanitizer_error_context"));
-
+      ConstString("sanitizers_address_on_report"));
   if (!breakpoint)
     return;
 

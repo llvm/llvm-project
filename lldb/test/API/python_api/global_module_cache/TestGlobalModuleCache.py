@@ -12,6 +12,7 @@ import shutil
 from pathlib import Path
 import time
 
+
 class GlobalModuleCacheTestCase(TestBase):
     # NO_DEBUG_INFO_TESTCASE = True
 
@@ -44,7 +45,7 @@ class GlobalModuleCacheTestCase(TestBase):
     # On Arm and AArch64 Linux, this test attempts to pop a thread plan when
     # we only have the base plan remaining. Skip it until we can figure out
     # the bug this is exposing (https://github.com/llvm/llvm-project/issues/76057).
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_OneTargetOneDebugger(self):
         self.do_test(True, True)
 
@@ -52,13 +53,13 @@ class GlobalModuleCacheTestCase(TestBase):
     # This test tests for the desired behavior as an expected fail.
     @skipIfWindows
     @expectedFailureAll
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
     @skipIfWindows
     @expectedFailureAll
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_OneTargetTwoDebuggers(self):
         self.do_test(True, False)
 
@@ -110,8 +111,11 @@ class GlobalModuleCacheTestCase(TestBase):
         else:
             if one_target:
                 new_debugger = lldb.SBDebugger().Create()
+                new_debugger.SetSelectedPlatform(lldb.selected_platform)
+                new_debugger.SetAsync(False)
                 self.old_debugger = self.dbg
                 self.dbg = new_debugger
+
                 def cleanupDebugger(self):
                     lldb.SBDebugger.Destroy(self.dbg)
                     self.dbg = self.old_debugger
@@ -143,7 +147,7 @@ class GlobalModuleCacheTestCase(TestBase):
         fail_msg = ""
         if error != "":
             fail_msg = "Error before MPD: " + error
-            
+
         if error_after_mpd != "":
             fail_msg = fail_msg + "\nError after MPD: " + error_after_mpd
         if fail_msg != "":
@@ -172,11 +176,13 @@ class GlobalModuleCacheTestCase(TestBase):
                 found_a_dot_out += 1
             if "main.o" in line:
                 found_main_dot_o += 1
-        
+
         if num_a_dot_out != found_a_dot_out:
             return f"Got {found_a_dot_out} number of a.out's, expected {num_a_dot_out}"
-            
+
         if found_main_dot_o > 0 and num_main_dot_o != found_main_dot_o:
-            return f"Got {found_main_dot_o} number of main.o's, expected {num_main_dot_o}"
+            return (
+                f"Got {found_main_dot_o} number of main.o's, expected {num_main_dot_o}"
+            )
 
         return ""

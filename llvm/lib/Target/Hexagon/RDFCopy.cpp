@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/CodeGen/RDFRegisters.h"
@@ -109,7 +108,7 @@ bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
   for (NodeAddr<InstrNode*> IA : BA.Addr->members(DFG)) {
     if (DFG.IsCode<NodeAttrs::Stmt>(IA)) {
       NodeAddr<StmtNode*> SA = IA;
-      EqualityMap EM(std::less<RegisterRef>(DFG.getPRI()));
+      EqualityMap EM(RegisterRefLess(DFG.getPRI()));
       if (interpretAsCopy(SA.Addr->getCode(), EM))
         recordCopy(SA, EM);
     }
@@ -134,8 +133,8 @@ bool CopyPropagation::run() {
     for (NodeId I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
-      if (CopyMap.count(I)) {
-        for (auto J : CopyMap.at(I))
+      if (auto It = CopyMap.find(I); It != CopyMap.end()) {
+        for (auto J : It->second)
           dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
                  << Print<RegisterRef>(J.second, DFG);
       }

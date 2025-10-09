@@ -7,7 +7,7 @@
 #define _IFUNC_ARG_HWCAP (1ULL << 62)
 #endif
 #ifndef AT_HWCAP
-#define AT_HWCAP 16
+#define AT_HWCAP 16 // Linux value
 #endif
 #ifndef HWCAP_CPUID
 #define HWCAP_CPUID (1 << 11)
@@ -95,7 +95,7 @@
 #endif
 
 #ifndef AT_HWCAP2
-#define AT_HWCAP2 26
+#define AT_HWCAP2 26 // Linux value
 #endif
 #ifndef HWCAP2_DCPODP
 #define HWCAP2_DCPODP (1 << 0)
@@ -178,6 +178,31 @@
 #ifndef HWCAP2_SVE_EBF16
 #define HWCAP2_SVE_EBF16 (1ULL << 33)
 #endif
+#ifndef HWCAP2_SME2
+#define HWCAP2_SME2 (1UL << 37)
+#endif
 #ifndef HWCAP2_MOPS
 #define HWCAP2_MOPS (1ULL << 43)
+#endif
+#ifndef HWCAP2_LRCPC3
+#define HWCAP2_LRCPC3 (1UL << 46)
+#endif
+#ifndef HWCAP2_CSSC
+#define HWCAP2_CSSC (1UL << 34)
+#endif
+
+#ifndef AT_HWCAP3
+#ifdef __linux__
+#define AT_HWCAP3 29 // Linux value
+#else
+#define AT_HWCAP3 38 // BSD value
+#endif
+#endif
+
+#ifndef AT_HWCAP4
+#ifdef __linux__
+#define AT_HWCAP4 30 // Linux value
+#else
+#define AT_HWCAP4 39 // BSD value
+#endif
 #endif

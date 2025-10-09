@@ -12,12 +12,17 @@
 #include "platform.h"
 #include "tests/scudo_unit_test.h"
 
+extern "C" void __hwasan_init() __attribute__((weak));
+
 #if SCUDO_LINUX
 namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
-    GTEST_SKIP();
+    TEST_SKIP("Memory tagging is not unsupported");
+  // Skip when running with HWASan.
+  if (&__hwasan_init != 0)
+    TEST_SKIP("Incompatible with HWASan");
 
   EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");
   EXPECT_DEATH(untagPointer((uptr)0), "not supported");
@@ -43,7 +48,7 @@ class MemtagTest : public Test {
 protected:
   void SetUp() override {
     if (!archSupportsMemoryTagging() || !systemDetectsMemoryTagFaultsTestOnly())
-      GTEST_SKIP() << "Memory tagging is not supported";
+      TEST_SKIP("Memory tagging is not supported");
 
     BufferSize = getPageSizeCached();
     ASSERT_FALSE(MemMap.isAllocated());
@@ -58,7 +63,7 @@ protected:
   void TearDown() override {
     if (Buffer) {
       ASSERT_TRUE(MemMap.isAllocated());
-      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+      MemMap.unmap();
     }
   }
 

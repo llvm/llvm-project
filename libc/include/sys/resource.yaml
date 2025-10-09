@@ -1,0 +1,23 @@
+header: sys/resource.h
+header_template: resource.h.def
+macros: []
+types:
+  - type_name: struct_rlimit
+  - type_name: rlim_t
+enums: []
+objects: []
+functions:
+  - name: getrlimit
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct rlimit *
+  - name: setrlimit
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: const struct rlimit *

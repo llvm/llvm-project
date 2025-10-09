@@ -1,6 +1,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Config/config.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
@@ -65,8 +66,6 @@ struct CompilerInstance {
     Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
     ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
     Plugin->registerPassBuilderCallbacks(PB);
-    ASSERT_THAT_ERROR(PB.parsePassPipeline(MPM, "dynamic-inline-advisor"),
-                      Succeeded());
   }
 
   // connect the FooOnlyInlineAdvisor to our compiler instance
@@ -86,33 +85,10 @@ struct CompilerInstance {
                                   ThinOrFullLTOPhase::None));
   }
 
-  ~CompilerInstance() {
-    // Reset the static variable that tracks if the plugin has been registered.
-    // This is needed to allow the test to run multiple times.
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
-  }
-
   std::string output;
   std::unique_ptr<Module> outputM;
 
-  // run with the default inliner
-  auto run_default(StringRef IR) {
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
-    outputM = parseAssemblyString(IR, Error, Ctx);
-    MPM.run(*outputM, MAM);
-    ASSERT_TRUE(outputM);
-    output.clear();
-    raw_string_ostream o_stream{output};
-    outputM->print(o_stream, nullptr);
-    ASSERT_TRUE(true);
-  }
-
-  // run with the dnamic inliner
-  auto run_dynamic(StringRef IR) {
-    // note typically the constructor for the DynamicInlineAdvisorAnalysis
-    // will automatically set this to true, we controll it here only to
-    // altenate between the default and dynamic inliner in our test
-    PluginInlineAdvisorAnalysis::HasBeenRegistered = true;
+  auto run(StringRef IR) {
     outputM = parseAssemblyString(IR, Error, Ctx);
     MPM.run(*outputM, MAM);
     ASSERT_TRUE(outputM);
@@ -273,14 +249,16 @@ TEST(PluginInlineAdvisorTest, PluginLoad) {
   // Skip the test if plugins are disabled.
   GTEST_SKIP();
 #endif
-  CompilerInstance CI{};
-  CI.setupPlugin();
+  CompilerInstance DefaultCI{};
+
+  CompilerInstance PluginCI{};
+  PluginCI.setupPlugin();
 
   for (StringRef IR : TestIRS) {
-    CI.run_default(IR);
-    std::string default_output = CI.output;
-    CI.run_dynamic(IR);
-    std::string dynamic_output = CI.output;
+    DefaultCI.run(IR);
+    std::string default_output = DefaultCI.output;
+    PluginCI.run(IR);
+    std::string dynamic_output = PluginCI.output;
     ASSERT_EQ(default_output, dynamic_output);
   }
 }
@@ -293,7 +271,7 @@ TEST(PluginInlineAdvisorTest, CustomAdvisor) {
   CI.setupFooOnly();
 
   for (StringRef IR : TestIRS) {
-    CI.run_dynamic(IR);
+    CI.run(IR);
     CallGraph CGraph = CallGraph(*CI.outputM);
     for (auto &node : CGraph) {
       for (auto &edge : *node.second) {

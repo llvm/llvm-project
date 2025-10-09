@@ -29,7 +29,7 @@ struct TSDRegistrySharedT {
   using ThisT = TSDRegistrySharedT<Allocator, TSDsArraySize, DefaultTSDCount>;
 
   struct ScopedTSD {
-    ScopedTSD(ThisT &TSDRegistry) {
+    ALWAYS_INLINE ScopedTSD(ThisT &TSDRegistry) {
       CurrentTSD = TSDRegistry.getTSDAndLock();
       DCHECK_NE(CurrentTSD, nullptr);
     }
@@ -127,7 +127,7 @@ struct TSDRegistrySharedT {
       // analyzer.
       TSDs[I].assertLocked(/*BypassCheck=*/true);
       Str->append("  Shared TSD[%zu]:\n", I);
-      TSDs[I].getCache().getStats(Str);
+      TSDs[I].getSizeClassAllocator().getStats(Str);
       TSDs[I].unlock();
     }
   }

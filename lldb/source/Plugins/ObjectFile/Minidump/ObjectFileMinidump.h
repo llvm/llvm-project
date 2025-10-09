@@ -21,6 +21,7 @@
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_OBJECTFILEMINIDUMP_H
 
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/ArchSpec.h"
 
 class ObjectFileMinidump : public lldb_private::PluginInterface {
@@ -55,8 +56,7 @@ public:
 
   // Saves dump in Minidump file format
   static bool SaveCore(const lldb::ProcessSP &process_sp,
-                       const lldb_private::FileSpec &outfile,
-                       lldb::SaveCoreStyle &core_style,
+                       lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
 private:

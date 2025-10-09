@@ -1,6 +1,8 @@
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "Views/SummaryView.h"
 #include "X86TestBase.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/IncrementalSourceMgr.h"
 #include "llvm/MCA/InstrBuilder.h"
@@ -8,6 +10,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <unordered_map>
 
 using namespace llvm;
@@ -33,7 +36,7 @@ TEST_F(X86TestBase, TestResumablePipeline) {
   P->addEventListener(SV.get());
 
   auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100);
 
   const SmallVector<mca::Instrument *> Instruments;
   // Tile size = 7
@@ -124,8 +127,12 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
   // Default InstrumentManager
   auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
 
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100);
   IB.setInstRecycleCallback(GetRecycledInst);
+
+  // Setup a generic IPP that does not do anything (as it is not target
+  // specific) for testing purposes.
+  auto IPP = std::make_unique<InstrPostProcess>(*STI, *MCII);
 
   const SmallVector<mca::Instrument *> Instruments;
   // Tile size = 7
@@ -144,8 +151,10 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
                                        });
         ASSERT_FALSE(bool(RemainingE));
         ASSERT_TRUE(RecycledInst);
+        IPP->postProcessInstruction(*RecycledInst, MCIs[i]);
         ISM.addRecycledInst(RecycledInst);
       } else {
+        IPP->postProcessInstruction(*InstOrErr.get(), MCIs[i]);
         ISM.addInst(std::move(InstOrErr.get()));
       }
     }
@@ -184,4 +193,74 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
     ASSERT_TRUE(V && BV);
     ASSERT_EQ(*BV, *V) << "Value of '" << F << "' does not match";
   }
+}
+
+// Test that we do not depend upon the MCInst address for variant description
+// construction. This test creates two instructions that will use variant
+// description as they are both zeroing idioms, but write to different
+// registers. If the key used to access the variant instruction description is
+// the same between the descriptions (like the MCInst pointer), we will run into
+// an assertion failure due to the different writes.
+TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
+  mca::Context MCA(*MRI, *STI);
+
+  mca::IncrementalSourceMgr ISM;
+  // Empty CustomBehaviour.
+  auto CB = std::make_unique<mca::CustomBehaviour>(*STI, ISM, *MCII);
+
+  auto PO = getDefaultPipelineOptions();
+  auto P = MCA.createDefaultPipeline(PO, ISM, *CB);
+  ASSERT_TRUE(P);
+
+  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, 100);
+
+  const SmallVector<mca::Instrument *> Instruments;
+
+  MCInst InstructionToAdd;
+  InstructionToAdd = MCInstBuilder(X86::XOR64rr)
+                         .addReg(X86::RAX)
+                         .addReg(X86::RAX)
+                         .addReg(X86::RAX);
+  Expected<std::unique_ptr<mca::Instruction>> Instruction1OrErr =
+      IB.createInstruction(InstructionToAdd, Instruments);
+  ASSERT_TRUE(static_cast<bool>(Instruction1OrErr));
+  ISM.addInst(std::move(Instruction1OrErr.get()));
+
+  InstructionToAdd = MCInstBuilder(X86::XORPSrr)
+                         .addReg(X86::XMM0)
+                         .addReg(X86::XMM0)
+                         .addReg(X86::XMM0);
+  Expected<std::unique_ptr<mca::Instruction>> Instruction2OrErr =
+      IB.createInstruction(InstructionToAdd, Instruments);
+  ASSERT_TRUE(static_cast<bool>(Instruction2OrErr));
+  ISM.addInst(std::move(Instruction2OrErr.get()));
+
+  ISM.endOfStream();
+  Expected<unsigned> Cycles = P->run();
+  ASSERT_TRUE(static_cast<bool>(Cycles));
+}
+
+// Test customization of instruction latency with instruments
+TEST_F(X86TestBase, TestInstructionCustomization) {
+  const unsigned ExplicitLatency = 100;
+  SmallVector<MCInst> MCIs;
+  MCInst InstructionToAdd = MCInstBuilder(X86::XOR64rr)
+                                .addReg(X86::RAX)
+                                .addReg(X86::RBX)
+                                .addReg(X86::RCX);
+  MCIs.push_back(InstructionToAdd);
+  SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
+  auto LatStr = std::to_string(ExplicitLatency);
+  InstrDescs.push_back(std::make_pair(StringRef("LATENCY"), StringRef(LatStr)));
+
+  // Run the baseline.
+  json::Object BaselineResult;
+  auto E = runBaselineMCA(BaselineResult, MCIs, {}, nullptr, InstrDescs);
+  ASSERT_FALSE(bool(E)) << "Failed to run baseline";
+  auto *BaselineObj = BaselineResult.getObject("SummaryView");
+  auto V = BaselineObj->getInteger("TotalCycles");
+  ASSERT_TRUE(V);
+  // Additional 3 cycles for Dispatch, Executed and Retired states
+  ASSERT_EQ(unsigned(*V), ExplicitLatency + 3) << "Total cycles do not match";
 }

@@ -30,7 +30,7 @@
 # CHECK-INSTR: f7ff fffe     bl
 # We decode the operand with index 2, because bl generates two leading implicit
 # predicate operands that we have to skip in order to decode the call_target operand
-# jitlink-check: decode_operand(call_site, 2) = call_target_thumb - (call_site + 4)
+# jitlink-check: decode_operand(call_site, 2) = call_target_thumb - next_pc(call_site)
 	.globl	call_site
 	.type	call_site,%function
 	.p2align	1

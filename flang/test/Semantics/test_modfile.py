@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
                 sys.exit(1)
             with open(mod, "r", encoding="utf-8", errors="strict") as f:
                 for line in f:
-                    if "!mod$" in line:
+                    if "!mod$" in line or "!need$" in line:
                         continue
                     actual += line
 

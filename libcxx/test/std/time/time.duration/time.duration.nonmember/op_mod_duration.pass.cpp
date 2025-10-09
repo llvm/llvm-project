@@ -18,6 +18,7 @@
 #include <chrono>
 #include <cassert>
 #include <ratio>
+#include "../../rep.h"
 
 #include "test_macros.h"
 
@@ -60,7 +61,17 @@ int main(int, char**)
     constexpr std::chrono::duration<int, std::ratio<1, 15> > r = s1 % s2;
     static_assert(r.count() == 24, "");
     }
-#endif
+    {
+      std::chrono::duration<int> d(5);
+      RepConstConvertibleLWG3050 x;
 
-  return 0;
+      {
+        auto r = d % x;
+        assert(r.count() == 1);
+        ASSERT_SAME_TYPE(std::chrono::duration<long>, decltype(r));
+      }
+    }
+#endif // TEST_STD_VER >= 11
+
+    return 0;
 }

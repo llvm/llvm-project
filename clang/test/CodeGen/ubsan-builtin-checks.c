@@ -23,6 +23,9 @@ void check_ctz(int n) {
 
   // CHECK: call void @__ubsan_handle_invalid_builtin
   __builtin_ctzll(n);
+
+  // CHECK: call void @__ubsan_handle_invalid_builtin
+  __builtin_ctzg((unsigned int)n);
 }
 
 // CHECK: define{{.*}} void @check_clz
@@ -44,4 +47,24 @@ void check_clz(int n) {
 
   // CHECK: call void @__ubsan_handle_invalid_builtin
   __builtin_clzll(n);
+
+  // CHECK: call void @__ubsan_handle_invalid_builtin
+  __builtin_clzg((unsigned int)n);
+}
+
+// CHECK: define{{.*}} void @check_assume
+void check_assume(int n) {
+  // CHECK: [[TOBOOL:%.*]] = icmp ne i32 [[N:%.*]], 0
+  // CHECK-NEXT: br i1 [[TOBOOL]]
+  //
+  // Handler block:
+  // CHECK: call void @__ubsan_handle_invalid_builtin
+  // CHECK-NEXT: unreachable
+  //
+  // Continuation block:
+  // CHECK: call void @llvm.assume(i1 [[TOBOOL]])
+  __builtin_assume(n);
+
+  // CHECK: call void @__ubsan_handle_invalid_builtin
+  __attribute__((assume(n)));
 }

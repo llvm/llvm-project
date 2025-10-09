@@ -17,6 +17,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 
+#include "lldb/Utility/RangeMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,6 +36,9 @@ namespace minidump {
 
 // Describes a range of memory captured in the Minidump
 struct Range {
+  // Default constructor required for range data vector
+  // but unusued.
+  Range() = default;
   lldb::addr_t start; // virtual address of the beginning of the range
   // range_ref - absolute pointer to the first byte of the range and size
   llvm::ArrayRef<uint8_t> range_ref;
@@ -45,7 +49,20 @@ struct Range {
   friend bool operator==(const Range &lhs, const Range &rhs) {
     return lhs.start == rhs.start && lhs.range_ref == rhs.range_ref;
   }
+
+  friend bool operator<(const Range &lhs, const Range &rhs) {
+    if (lhs.start == rhs.start)
+      return lhs.range_ref.size() < rhs.range_ref.size();
+    return lhs.start < rhs.start;
+  }
 };
+
+using MemoryRangeVector =
+    lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, minidump::Range>;
+using FallibleMemory64Iterator =
+    llvm::object::MinidumpFile::FallibleMemory64Iterator;
+using ExceptionStreamsIterator =
+    llvm::object::MinidumpFile::ExceptionStreamsIterator;
 
 class MinidumpParser {
 public:
@@ -55,6 +72,7 @@ public:
   llvm::ArrayRef<uint8_t> GetData();
 
   llvm::ArrayRef<uint8_t> GetStream(StreamType stream_type);
+  std::optional<llvm::ArrayRef<uint8_t>> GetRawStream(StreamType stream_type);
 
   UUID GetModuleUUID(const minidump::Module *module);
 
@@ -82,15 +100,19 @@ public:
   // have the same name, it keeps the copy with the lowest load address.
   std::vector<const minidump::Module *> GetFilteredModuleList();
 
-  const llvm::minidump::ExceptionStream *GetExceptionStream();
+  llvm::iterator_range<ExceptionStreamsIterator> GetExceptionStreams();
 
   std::optional<Range> FindMemoryRange(lldb::addr_t addr);
 
-  llvm::ArrayRef<uint8_t> GetMemory(lldb::addr_t addr, size_t size);
+  llvm::Expected<llvm::ArrayRef<uint8_t>> GetMemory(lldb::addr_t addr,
+                                                    size_t size);
 
   /// Returns a list of memory regions and a flag indicating whether the list is
   /// complete (includes all regions mapped into the process memory).
   std::pair<MemoryRegionInfos, bool> BuildMemoryRegions();
+
+  llvm::iterator_range<FallibleMemory64Iterator>
+  GetMemory64Iterator(llvm::Error &err);
 
   static llvm::StringRef GetStreamTypeAsString(StreamType stream_type);
 
@@ -102,10 +124,11 @@ public:
 private:
   MinidumpParser(lldb::DataBufferSP data_sp,
                  std::unique_ptr<llvm::object::MinidumpFile> file);
-
+  void PopulateMemoryRanges();
   lldb::DataBufferSP m_data_sp;
   std::unique_ptr<llvm::object::MinidumpFile> m_file;
   ArchSpec m_arch;
+  MemoryRangeVector m_memory_ranges;
 };
 
 } // end namespace minidump

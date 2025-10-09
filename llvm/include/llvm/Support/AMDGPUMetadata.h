@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_AMDGPUMETADATA_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 #include <system_error>
@@ -47,7 +48,7 @@ constexpr uint32_t VersionMinorV5 = 2;
 /// HSA metadata major version for code object V6.
 constexpr uint32_t VersionMajorV6 = 1;
 /// HSA metadata minor version for code object V6.
-constexpr uint32_t VersionMinorV6 = 3;
+constexpr uint32_t VersionMinorV6 = 2;
 
 /// Old HSA metadata beginning assembler directive for V2. This is only used for
 /// diagnostics now.
@@ -447,10 +448,10 @@ struct Metadata final {
 };
 
 /// Converts \p String to \p HSAMetadata.
-std::error_code fromString(StringRef String, Metadata &HSAMetadata);
+LLVM_ABI std::error_code fromString(StringRef String, Metadata &HSAMetadata);
 
 /// Converts \p HSAMetadata to \p String.
-std::error_code toString(Metadata HSAMetadata, std::string &String);
+LLVM_ABI std::error_code toString(Metadata HSAMetadata, std::string &String);
 
 //===----------------------------------------------------------------------===//
 // HSA metadata for v3 code object.

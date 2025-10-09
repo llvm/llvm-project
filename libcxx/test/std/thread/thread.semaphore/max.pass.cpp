@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <semaphore>
 
+#include <cstddef>
 #include <semaphore>
-#include <thread>
-
-#include "test_macros.h"
 
 int main(int, char**)
 {

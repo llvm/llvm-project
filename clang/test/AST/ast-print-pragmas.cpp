@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -ast-print %s -o - | FileCheck %s
-// RUN: %clang_cc1 -DMS_EXT -fsyntax-only -fms-extensions %s -triple x86_64-pc-win32 -ast-print | FileCheck %s --check-prefix=MS-EXT
+// RUN: %clang_cc1 -DMS_EXT -fms-extensions %s -triple x86_64-pc-win32 -ast-print | FileCheck %s --check-prefix=MS-EXT
 
 // CHECK: #pragma clang loop vectorize_width(4)
 // CHECK-NEXT: #pragma clang loop interleave_count(8){{$}}

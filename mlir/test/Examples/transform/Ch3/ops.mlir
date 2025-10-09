@@ -1,4 +1,4 @@
-// RUN: transform-opt-ch3 %s --test-transform-dialect-interpreter \
+// RUN: transform-opt-ch3 %s --transform-interpreter \
 // RUN:   --allow-unregistered-dialect --split-input-file | FileCheck %s
 
 // ****************************** IMPORTANT NOTE ******************************
@@ -18,29 +18,52 @@ func.func @test1() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %call = transform.structured.match ops{["func.call"]} in %arg0 : (!transform.any_op) -> !transform.op<"func.call">
-  // CHECK: transform.my.change_call_target %{{.*}}, "updated" : !transform.op<"func.call">
-  transform.my.change_call_target %call, "updated" : !transform.op<"func.call">
-  transform.yield
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg0 : (!transform.any_op) -> !transform.op<"func.call">
+    // CHECK: transform.my.change_call_target %{{.*}}, "updated" : !transform.op<"func.call">
+    transform.my.change_call_target %call, "updated" : !transform.op<"func.call">
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @orig()
+func.func private @updated()
+
+// CHECK-LABEL: func @test2
+func.func @test2() {
+  // CHECK: call @updated
+  call @orig() : () -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg0 : (!transform.any_op) -> !transform.my.call_op_interface
+    // CHECK: transform.my.change_call_target %{{.*}}, "updated" : !transform.my.call_op_interface
+    transform.my.change_call_target %call, "updated" : !transform.my.call_op_interface
+    transform.yield
+  }
 }
 
 // -----
 
 func.func private @orig()
 
-// CHECK-LABEL: func @test2
-func.func @test2() {
+// CHECK-LABEL: func @test3
+func.func @test3() {
   // CHECK: "my.mm4"
   call @orig() : () -> ()
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  %call = transform.structured.match ops{["func.call"]} in %arg0 : (!transform.any_op) -> !transform.my.call_op_interface
-  // CHECK: transform.my.call_to_op %{{.*}} : (!transform.my.call_op_interface) -> !transform.any_op
-  transform.my.call_to_op %call : (!transform.my.call_op_interface) -> !transform.any_op
-  transform.yield
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg0 : (!transform.any_op) -> !transform.my.call_op_interface
+    // CHECK: transform.my.call_to_op %{{.*}} : (!transform.my.call_op_interface) -> !transform.any_op
+    transform.my.call_to_op %call : (!transform.my.call_op_interface) -> !transform.any_op
+    transform.yield
+  }
 }

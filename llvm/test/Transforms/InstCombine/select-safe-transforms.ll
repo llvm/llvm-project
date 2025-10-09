@@ -85,11 +85,11 @@ define <2 x i1> @xor_and2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 define <2 x i1> @xor_and3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_and3(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 icmp ne (ptr inttoptr (i64 1234 to ptr), ptr @glb), i1 true>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 xor (i1 ptrtoint (ptr @glb to i1), i1 true), i1 true>
 ; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
-  %sel = select <2 x i1> %c, <2 x i1> %comp, <2 x i1> <i1 icmp eq (ptr @glb, ptr inttoptr (i64 1234 to ptr)), i1 false>
+  %sel = select <2 x i1> %c, <2 x i1> %comp, <2 x i1> <i1 ptrtoint (ptr @glb to i1), i1 false>
   %res = xor <2 x i1> %sel, <i1 true, i1 true>
   ret <2 x i1> %res
 }
@@ -122,11 +122,11 @@ define <2 x i1> @xor_or2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 define <2 x i1> @xor_or3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_or3(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 icmp ne (ptr inttoptr (i64 1234 to ptr), ptr @glb), i1 true>, <2 x i1> [[COMP]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 xor (i1 ptrtoint (ptr @glb to i1), i1 true), i1 true>, <2 x i1> [[COMP]]
 ; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
-  %sel = select <2 x i1> %c, <2 x i1> <i1 icmp eq (ptr @glb, ptr inttoptr (i64 1234 to ptr)), i1 false>, <2 x i1> %comp
+  %sel = select <2 x i1> %c, <2 x i1> <i1 ptrtoint (ptr @glb to i1), i1 false>, <2 x i1> %comp
   %res = xor <2 x i1> %sel, <i1 true, i1 true>
   ret <2 x i1> %res
 }
@@ -194,7 +194,7 @@ define i1 @andn_or_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
 define i1 @andn_or_cmp_2_partial_logical(i16 %a, i16 %b, i1 %y) {
 ; CHECK-LABEL: @andn_or_cmp_2_partial_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y:%.*]], [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sge i16 %a, %b
@@ -223,9 +223,9 @@ define i1 @andn_or_cmp_2_partial_logical_commute(i16 %a, i16 %b) {
 
 define <2 x i1> @not_logical_or(i1 %b, <2 x i32> %a) {
 ; CHECK-LABEL: @not_logical_or(
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
-; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp slt <2 x i32> [[A]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[IMPLIED]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], splat (i32 3)
+; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp slt <2 x i32> [[A]], splat (i32 -1)
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[IMPLIED]]
 ; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[COND]], <2 x i1> [[OR]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
@@ -240,9 +240,9 @@ define <2 x i1> @not_logical_or(i1 %b, <2 x i32> %a) {
 
 define <2 x i1> @not_logical_or2(i1 %b, <2 x i32> %a) {
 ; CHECK-LABEL: @not_logical_or2(
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
-; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp slt <2 x i32> [[A]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[IMPLIED]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], splat (i32 3)
+; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp slt <2 x i32> [[A]], splat (i32 -1)
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[IMPLIED]]
 ; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[COND]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
@@ -735,7 +735,7 @@ define i1 @orn_and_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
 define i1 @orn_and_cmp_2_partial_logical(i16 %a, i16 %b, i1 %y) {
 ; CHECK-LABEL: @orn_and_cmp_2_partial_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X_INV]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y:%.*]], [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %x = icmp sge i16 %a, %b
@@ -764,10 +764,10 @@ define i1 @orn_and_cmp_2_partial_logical_commute(i16 %a, i16 %b) {
 
 define <2 x i1> @not_logical_and(i1 %b, <2 x i32> %a) {
 ; CHECK-LABEL: @not_logical_and(
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
-; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A]], <i32 1, i32 1>
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], splat (i32 3)
+; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A]], splat (i32 1)
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[B:%.*]], <2 x i1> [[COND]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[IMPLIED]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[IMPLIED]], <2 x i1> splat (i1 true), <2 x i1> [[AND]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %cond = icmp ult <2 x i32> %a, <i32 3, i32 3>
@@ -781,10 +781,10 @@ define <2 x i1> @not_logical_and(i1 %b, <2 x i32> %a) {
 
 define <2 x i1> @not_logical_and2(i1 %b, <2 x i32> %a) {
 ; CHECK-LABEL: @not_logical_and2(
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
-; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A]], <i32 1, i32 1>
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], splat (i32 3)
+; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A]], splat (i32 1)
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[B:%.*]], <2 x i1> [[COND]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[AND]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[IMPLIED]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[AND]], <2 x i1> splat (i1 true), <2 x i1> [[IMPLIED]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %cond = icmp ult <2 x i32> %a, <i32 3, i32 3>

@@ -1,4 +1,4 @@
-//===--- EasilySwappableParametersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +82,7 @@ static constexpr bool DefaultModelImplicitConversions = true;
 /// used together.
 static constexpr bool DefaultSuppressParametersUsedTogether = true;
 
-/// The default value for the NamePrefixSuffixSilenceDissimilarityTreshold
+/// The default value for the NamePrefixSuffixSilenceDissimilarityThreshold
 /// check option.
 static constexpr std::size_t
     DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
@@ -577,7 +577,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
                               ImplicitConversionModellingMode ImplicitMode);
 
 static inline bool isUselessSugar(const Type *T) {
-  return isa<AttributedType, DecayedType, ElaboratedType, ParenType>(T);
+  return isa<AttributedType, DecayedType, ParenType>(T);
 }
 
 namespace {
@@ -967,7 +967,8 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   // Get out the qualifiers of the original type. This will always be
   // re-applied to the WorkType to ensure it is the same qualification as the
   // original From was.
-  auto QualifiersToApply = From.split().Quals.getAsOpaqueValue();
+  auto FastQualifiersToApply = static_cast<unsigned>(
+      From.split().Quals.getAsOpaqueValue() & Qualifiers::FastMask);
 
   // LValue->RValue is irrelevant for the check, because it is a thing to be
   // done at a call site, and will be performed if need be performed.
@@ -993,16 +994,16 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
     // "const double -> double".
     LLVM_DEBUG(llvm::dbgs()
                << "--- approximateStdConv. Conversion between numerics.\n");
-    WorkType = QualType{ToBuiltin, QualifiersToApply};
+    WorkType = QualType{ToBuiltin, FastQualifiersToApply};
   }
 
-  const auto *FromEnum = WorkType->getAs<EnumType>();
+  const auto *FromEnum = WorkType->getAsCanonical<EnumType>();
   const auto *ToEnum = To->getAs<EnumType>();
   if (FromEnum && ToNumeric && FromEnum->isUnscopedEnumerationType()) {
     // Unscoped enumerations (or enumerations in C) convert to numerics.
     LLVM_DEBUG(llvm::dbgs()
                << "--- approximateStdConv. Unscoped enum to numeric.\n");
-    WorkType = QualType{ToBuiltin, QualifiersToApply};
+    WorkType = QualType{ToBuiltin, FastQualifiersToApply};
   } else if (FromNumeric && ToEnum && ToEnum->isUnscopedEnumerationType()) {
     // Numeric types convert to enumerations only in C.
     if (Ctx.getLangOpts().CPlusPlus) {
@@ -1013,7 +1014,7 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
 
     LLVM_DEBUG(llvm::dbgs()
                << "--- approximateStdConv. Numeric to unscoped enum.\n");
-    WorkType = QualType{ToEnum, QualifiersToApply};
+    WorkType = QualType{ToEnum, FastQualifiersToApply};
   }
 
   // Check for pointer conversions.
@@ -1022,14 +1023,14 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   if (FromPtr && ToPtr) {
     if (ToPtr->isVoidPointerType()) {
       LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. To void pointer.\n");
-      WorkType = QualType{ToPtr, QualifiersToApply};
+      WorkType = QualType{ToPtr, FastQualifiersToApply};
     }
 
     const auto *FromRecordPtr = FromPtr->getPointeeCXXRecordDecl();
     const auto *ToRecordPtr = ToPtr->getPointeeCXXRecordDecl();
     if (isDerivedToBase(FromRecordPtr, ToRecordPtr)) {
       LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Derived* to Base*\n");
-      WorkType = QualType{ToPtr, QualifiersToApply};
+      WorkType = QualType{ToPtr, FastQualifiersToApply};
     }
   }
 
@@ -1039,7 +1040,9 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   const auto *ToRecord = To->getAsCXXRecordDecl();
   if (isDerivedToBase(FromRecord, ToRecord)) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Derived To Base.\n");
-    WorkType = QualType{ToRecord->getTypeForDecl(), QualifiersToApply};
+    WorkType = QualType{
+        ToRecord->getASTContext().getCanonicalTagType(ToRecord)->getTypePtr(),
+        FastQualifiersToApply};
   }
 
   if (Ctx.getLangOpts().CPlusPlus17 && FromPtr && ToPtr) {
@@ -1054,7 +1057,7 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
         !ToFunctionPtr->hasNoexceptExceptionSpec()) {
       LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. noexcept function "
                                  "pointer to non-noexcept.\n");
-      WorkType = QualType{ToPtr, QualifiersToApply};
+      WorkType = QualType{ToPtr, FastQualifiersToApply};
     }
   }
 
@@ -1071,9 +1074,9 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
     WorkType = To;
   }
 
-  if (WorkType == To) {
+  if (Ctx.hasSameType(WorkType, To)) {
     LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Reached 'To' type.\n");
-    return {WorkType};
+    return {Ctx.getCommonSugaredType(WorkType, To)};
   }
 
   LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Did not reach 'To'.\n");
@@ -1218,7 +1221,7 @@ tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
 
   if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
-    QualType RecordType{RD->getTypeForDecl(), 0};
+    CanQualType RecordType = RD->getASTContext().getCanonicalTagType(RD);
 
     ConversionSequence Result{RecordType, ToType};
     // The conversion from the operator call's return type to ToType was
@@ -1269,7 +1272,7 @@ tryConvertingConstructors(const TheCheck &Check, QualType FromType,
 
   if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
-    QualType RecordType{RD->getTypeForDecl(), 0};
+    CanQualType RecordType = RD->getASTContext().getCanonicalTagType(RD);
 
     ConversionSequence Result{FromType, RecordType};
     Result.AfterFirstStandard = SelectedConversion->Seq.AfterFirstStandard;
@@ -1432,7 +1435,7 @@ static MixableParameterRange modelMixingRange(
     StringRef PrevParamName = FD->getParamDecl(I - 1)->getName();
     if (!ParamName.empty() && !PrevParamName.empty() &&
         filter::prefixSuffixCoverUnderThreshold(
-            Check.NamePrefixSuffixSilenceDissimilarityTreshold, PrevParamName,
+            Check.NamePrefixSuffixSilenceDissimilarityThreshold, PrevParamName,
             ParamName)) {
       LLVM_DEBUG(llvm::dbgs() << "Parameter '" << ParamName
                               << "' follows a pattern with previous parameter '"
@@ -1496,11 +1499,13 @@ static MixableParameterRange modelMixingRange(
 
 } // namespace model
 
+namespace {
 /// Matches DeclRefExprs and their ignorable wrappers to ParmVarDecls.
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Stmt>, paramRefExpr) {
   return expr(ignoringParenImpCasts(ignoringElidableConstructorCall(
       declRefExpr(to(parmVarDecl().bind("param"))))));
 }
+} // namespace
 
 namespace filter {
 
@@ -1570,11 +1575,15 @@ template <typename T, std::size_t N = SmallDataStructureSize>
 using ParamToSmallSetMap =
     llvm::DenseMap<const ParmVarDecl *, llvm::SmallSet<T, N>>;
 
+template <typename T, std::size_t N = SmallDataStructureSize>
+using ParamToSmallPtrSetMap =
+    llvm::DenseMap<const ParmVarDecl *, llvm::SmallPtrSet<T, N>>;
+
 /// Returns whether the sets mapped to the two elements in the map have at
 /// least one element in common.
 template <typename MapTy, typename ElemTy>
-bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
-                                     const ElemTy &E2) {
+static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
+                                            const ElemTy &E2) {
   auto E1Iterator = Map.find(E1);
   auto E2Iterator = Map.find(E2);
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
@@ -1694,7 +1703,7 @@ public:
 /// Implements the heuristic that marks two parameters related if the same
 /// member is accessed (referred to) inside the current function's body.
 class AccessedSameMemberOf {
-  ParamToSmallSetMap<const Decl *> AccessedMembers;
+  ParamToSmallPtrSetMap<const Decl *> AccessedMembers;
 
 public:
   void setup(const FunctionDecl *FD) {
@@ -1881,6 +1890,8 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
 
 } // namespace filter
 
+namespace {
+
 /// Matches functions that have at least the specified amount of parameters.
 AST_MATCHER_P(FunctionDecl, parameterCountGE, unsigned, N) {
   return Node.getNumParams() >= N;
@@ -1902,6 +1913,8 @@ AST_MATCHER(FunctionDecl, isOverloadedUnaryOrBinaryOperator) {
     return Node.getNumParams() <= 2;
   }
 }
+
+} // namespace
 
 /// Returns the DefaultMinimumLength if the Value of requested minimum length
 /// is less than 2. Minimum lengths of 0 or 1 are not accepted.
@@ -2095,8 +2108,8 @@ EasilySwappableParametersCheck::EasilySwappableParametersCheck(
       SuppressParametersUsedTogether(
           Options.get("SuppressParametersUsedTogether",
                       DefaultSuppressParametersUsedTogether)),
-      NamePrefixSuffixSilenceDissimilarityTreshold(
-          Options.get("NamePrefixSuffixSilenceDissimilarityTreshold",
+      NamePrefixSuffixSilenceDissimilarityThreshold(
+          Options.get("NamePrefixSuffixSilenceDissimilarityThreshold",
                       DefaultNamePrefixSuffixSilenceDissimilarityTreshold)) {}
 
 void EasilySwappableParametersCheck::storeOptions(
@@ -2110,8 +2123,8 @@ void EasilySwappableParametersCheck::storeOptions(
   Options.store(Opts, "ModelImplicitConversions", ModelImplicitConversions);
   Options.store(Opts, "SuppressParametersUsedTogether",
                 SuppressParametersUsedTogether);
-  Options.store(Opts, "NamePrefixSuffixSilenceDissimilarityTreshold",
-                NamePrefixSuffixSilenceDissimilarityTreshold);
+  Options.store(Opts, "NamePrefixSuffixSilenceDissimilarityThreshold",
+                NamePrefixSuffixSilenceDissimilarityThreshold);
 }
 
 void EasilySwappableParametersCheck::registerMatchers(MatchFinder *Finder) {

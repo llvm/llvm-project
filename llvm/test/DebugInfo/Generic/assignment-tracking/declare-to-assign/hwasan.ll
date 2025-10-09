@@ -1,6 +1,6 @@
 ; RUN: opt %s -S -passes=declare-to-assign -o - | FileCheck %s
 
-; CHECK: call void @llvm.dbg.declare
+; CHECK: #dbg_assign
 
 define dso_local void @f() sanitize_hwaddress !dbg !9 {
 entry:

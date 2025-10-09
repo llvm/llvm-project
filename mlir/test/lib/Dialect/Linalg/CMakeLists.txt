@@ -5,12 +5,13 @@ add_mlir_library(MLIRLinalgTestPasses
   TestLinalgDropUnitDims.cpp
   TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
+  TestLinalgRankReduceContractionOps.cpp
   TestLinalgTransforms.cpp
   TestPadFusion.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRLinalgTestPasses PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
   MLIRArithTransforms

@@ -6,3 +6,5 @@ bool mlir::TestEffects::Effect::classof(
     const mlir::SideEffects::Effect *effect) {
   return isa<mlir::TestEffects::Concrete>(effect);
 }
+
+#include "TestOpInterfaces.cpp.inc"

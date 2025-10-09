@@ -43,8 +43,8 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
   // calling this.
   if (GetType() == eTypeInvalid) {
     // No value has been read into this object...
-    error.SetErrorStringWithFormat(
-        "invalid register value type for register %s", reg_info.name);
+    error = Status::FromErrorStringWithFormatv(
+        "invalid register value type for register {0}", reg_info.name);
     return 0;
   }
 
@@ -53,7 +53,7 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
   // Extract the register data into a data extractor
   DataExtractor reg_data;
   if (!GetData(reg_data)) {
-    error.SetErrorString("invalid register value to copy into");
+    error = Status::FromErrorString("invalid register value to copy into");
     return 0;
   }
 
@@ -65,7 +65,7 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
                                    dst_len,         // dst length
                                    dst_byte_order); // dst byte order
   if (bytes_copied == 0)
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "failed to copy data for register write of %s", reg_info.name);
 
   return bytes_copied;
@@ -94,7 +94,7 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo &reg_info,
   const uint32_t dst_len = reg_info.byte_size;
 
   if (src_len > dst_len) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%u bytes is too big to store in register %s (%u bytes)", src_len,
         reg_info.name, dst_len);
     return 0;
@@ -159,19 +159,19 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
   Status error;
 
   if (src.GetByteSize() == 0) {
-    error.SetErrorString("empty data.");
+    error = Status::FromErrorString("empty data.");
     return error;
   }
 
   if (reg_info.byte_size == 0) {
-    error.SetErrorString("invalid register info.");
+    error = Status::FromErrorString("invalid register info.");
     return error;
   }
 
   uint32_t src_len = src.GetByteSize() - src_offset;
 
   if (!partial_data_ok && (src_len < reg_info.byte_size)) {
-    error.SetErrorString("not enough data.");
+    error = Status::FromErrorString("not enough data.");
     return error;
   }
 
@@ -199,7 +199,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
     else if (reg_info.byte_size <= 16) {
       uint64_t data1 = src.GetU64(&src_offset);
       uint64_t data2 = src.GetU64(&src_offset);
-      if (src.GetByteSize() == eByteOrderBig) {
+      if (src.GetByteOrder() == eByteOrderBig) {
         int128.x[0] = data1;
         int128.x[1] = data2;
       } else {
@@ -229,7 +229,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
             buffer.bytes.size(), // dst length
             buffer.byte_order) == 0) // dst byte order
     {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "failed to copy data for register write of %s", reg_info.name);
       return error;
     }
@@ -237,7 +237,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
   }
 
   if (m_type == eTypeInvalid)
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "invalid register value type for register %s", reg_info.name);
   return error;
 }
@@ -314,13 +314,13 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
                                          llvm::StringRef value_str) {
   Status error;
   if (reg_info == nullptr) {
-    error.SetErrorString("Invalid register info argument.");
+    error = Status::FromErrorString("Invalid register info argument.");
     return error;
   }
 
   m_type = eTypeInvalid;
   if (value_str.empty()) {
-    error.SetErrorString("Invalid c-string value string.");
+    error = Status::FromErrorString("Invalid c-string value string.");
     return error;
   }
   const uint32_t byte_size = reg_info->byte_size;
@@ -332,23 +332,23 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
   long double ldbl_val;
   switch (reg_info->encoding) {
   case eEncodingInvalid:
-    error.SetErrorString("Invalid encoding.");
+    error = Status::FromErrorString("Invalid encoding.");
     break;
 
   case eEncodingUint:
     if (byte_size > sizeof(uint64_t)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "unsupported unsigned integer byte size: %u", byte_size);
       break;
     }
     if (value_str.getAsInteger(0, uval64)) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "'{0}' is not a valid unsigned integer string value", value_str);
       break;
     }
 
     if (!UInt64ValueIsValidForByteSize(uval64, byte_size)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "value 0x%" PRIx64
           " is too large to fit in a %u byte unsigned integer value",
           uval64, byte_size);
@@ -356,7 +356,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     }
 
     if (!SetUInt(uval64, reg_info->byte_size)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "unsupported unsigned integer byte size: %u", byte_size);
       break;
     }
@@ -364,19 +364,19 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
 
   case eEncodingSint:
     if (byte_size > sizeof(long long)) {
-      error.SetErrorStringWithFormat("unsupported signed integer byte size: %u",
-                                     byte_size);
+      error = Status::FromErrorStringWithFormat(
+          "unsupported signed integer byte size: %u", byte_size);
       break;
     }
 
     if (value_str.getAsInteger(0, ival64)) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "'{0}' is not a valid signed integer string value", value_str);
       break;
     }
 
     if (!SInt64ValueIsValidForByteSize(ival64, byte_size)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "value 0x%" PRIx64
           " is too large to fit in a %u byte signed integer value",
           ival64, byte_size);
@@ -384,8 +384,8 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     }
 
     if (!SetUInt(ival64, reg_info->byte_size)) {
-      error.SetErrorStringWithFormat("unsupported signed integer byte size: %u",
-                                     byte_size);
+      error = Status::FromErrorStringWithFormat(
+          "unsupported signed integer byte size: %u", byte_size);
       break;
     }
     break;
@@ -394,38 +394,39 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     std::string value_string = std::string(value_str);
     if (byte_size == sizeof(float)) {
       if (::sscanf(value_string.c_str(), "%f", &flt_val) != 1) {
-        error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_string.c_str());
+        error = Status::FromErrorStringWithFormat(
+            "'%s' is not a valid float string value", value_string.c_str());
         break;
       }
       m_scalar = flt_val;
       m_type = eTypeFloat;
     } else if (byte_size == sizeof(double)) {
       if (::sscanf(value_string.c_str(), "%lf", &dbl_val) != 1) {
-        error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_string.c_str());
+        error = Status::FromErrorStringWithFormat(
+            "'%s' is not a valid float string value", value_string.c_str());
         break;
       }
       m_scalar = dbl_val;
       m_type = eTypeDouble;
     } else if (byte_size == sizeof(long double)) {
       if (::sscanf(value_string.c_str(), "%Lf", &ldbl_val) != 1) {
-        error.SetErrorStringWithFormat("'%s' is not a valid float string value",
-                                       value_string.c_str());
+        error = Status::FromErrorStringWithFormat(
+            "'%s' is not a valid float string value", value_string.c_str());
         break;
       }
       m_scalar = ldbl_val;
       m_type = eTypeLongDouble;
     } else {
-      error.SetErrorStringWithFormat("unsupported float byte size: %u",
-                                     byte_size);
+      error = Status::FromErrorStringWithFormat(
+          "unsupported float byte size: %u", byte_size);
       return error;
     }
     break;
   }
   case eEncodingVector:
     if (!ParseVectorEncoding(reg_info, value_str, byte_size, this))
-      error.SetErrorString("unrecognized vector encoding string value.");
+      error =
+          Status::FromErrorString("unrecognized vector encoding string value.");
     break;
   }
 

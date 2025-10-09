@@ -1,8 +1,8 @@
-// RUN: %clangxx_asan -std=c++1z -faligned-allocation -fsanitize-recover=address -O0 %s -o %t
+// RUN: %clangxx_asan -fno-sized-deallocation -fsanitize-recover=address -O0 %s -o %t
 // RUN: %env_asan_opts=new_delete_type_mismatch=1:halt_on_error=false:detect_leaks=false %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=new_delete_type_mismatch=0                                        %run %t
 
-// RUN: %clangxx_asan -std=c++1z -faligned-allocation -fsized-deallocation -fsanitize-recover=address -O0 %s -o %t
+// RUN: %clangxx_asan -fsized-deallocation -fsanitize-recover=address -O0 %s -o %t
 // RUN: %env_asan_opts=new_delete_type_mismatch=1:halt_on_error=false:detect_leaks=false %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=new_delete_type_mismatch=0                                        %run %t
 

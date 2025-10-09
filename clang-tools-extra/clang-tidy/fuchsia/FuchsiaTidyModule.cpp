@@ -1,4 +1,4 @@
-//===--- FuchsiaTidyModule.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,6 +52,6 @@ static ClangTidyModuleRegistry::Add<FuchsiaModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the FuchsiaModule.
-volatile int FuchsiaModuleAnchorSource = 0;
+volatile int FuchsiaModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <optional>
+#include <variant>
 
 namespace clang {
 namespace tooling {
@@ -142,6 +143,8 @@ private:
   CachedFileContents *Contents;
 };
 
+using CachedRealPath = llvm::ErrorOr<std::string>;
+
 /// This class is a shared cache, that caches the 'stat' and 'open' calls to the
 /// underlying real file system, and the scanned preprocessor directives of
 /// files.
@@ -154,9 +157,11 @@ public:
     /// The mutex that needs to be locked before mutation of any member.
     mutable std::mutex CacheLock;
 
-    /// Map from filenames to cached entries.
-    llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator>
-        EntriesByFilename;
+    /// Map from filenames to cached entries and real paths.
+    llvm::StringMap<
+        std::pair<const CachedFileSystemEntry *, const CachedRealPath *>,
+        llvm::BumpPtrAllocator>
+        CacheByFilename;
 
     /// Map from unique IDs to cached entries.
     llvm::DenseMap<llvm::sys::fs::UniqueID, const CachedFileSystemEntry *>
@@ -167,6 +172,9 @@ public:
 
     /// The backing storage for cached contents.
     llvm::SpecificBumpPtrAllocator<CachedFileContents> ContentsStorage;
+
+    /// The backing storage for cached real paths.
+    llvm::SpecificBumpPtrAllocator<CachedRealPath> RealPathStorage;
 
     /// Returns entry associated with the filename or nullptr if none is found.
     const CachedFileSystemEntry *findEntryByFilename(StringRef Filename) const;
@@ -194,6 +202,17 @@ public:
     const CachedFileSystemEntry &
     getOrInsertEntryForFilename(StringRef Filename,
                                 const CachedFileSystemEntry &Entry);
+
+    /// Returns the real path associated with the filename or nullptr if none is
+    /// found.
+    const CachedRealPath *findRealPathByFilename(StringRef Filename) const;
+
+    /// Returns the real path associated with the filename if there is some.
+    /// Otherwise, constructs new one with the given one, associates it with the
+    /// filename and returns the result.
+    const CachedRealPath &
+    getOrEmplaceRealPathForFilename(StringRef Filename,
+                                    llvm::ErrorOr<StringRef> RealPath);
   };
 
   DependencyScanningFilesystemSharedCache();
@@ -201,6 +220,35 @@ public:
   /// Returns shard for the given key.
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
+
+  struct OutOfDateEntry {
+    // A null terminated string that contains a path.
+    const char *Path = nullptr;
+
+    struct NegativelyCachedInfo {};
+    struct SizeChangedInfo {
+      uint64_t CachedSize = 0;
+      uint64_t ActualSize = 0;
+    };
+
+    std::variant<NegativelyCachedInfo, SizeChangedInfo> Info;
+
+    OutOfDateEntry(const char *Path)
+        : Path(Path), Info(NegativelyCachedInfo{}) {}
+
+    OutOfDateEntry(const char *Path, uint64_t CachedSize, uint64_t ActualSize)
+        : Path(Path), Info(SizeChangedInfo{CachedSize, ActualSize}) {}
+  };
+
+  /// Visits all cached entries and re-stat an entry using UnderlyingFS to check
+  /// if the cache contains out-of-date entries. An entry can be out-of-date for
+  /// two reasons:
+  ///  1. The entry contains a stat error, indicating the file did not exist
+  ///     in the cache, but the file exists on the UnderlyingFS.
+  ///  2. The entry is associated with a file whose size is different from the
+  ///     size of the file on the same path on the UnderlyingFS.
+  std::vector<OutOfDateEntry>
+  getOutOfDateEntries(llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
@@ -210,14 +258,17 @@ private:
 /// This class is a local cache, that caches the 'stat' and 'open' calls to the
 /// underlying real file system.
 class DependencyScanningFilesystemLocalCache {
-  llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator> Cache;
+  llvm::StringMap<
+      std::pair<const CachedFileSystemEntry *, const CachedRealPath *>,
+      llvm::BumpPtrAllocator>
+      Cache;
 
 public:
   /// Returns entry associated with the filename or nullptr if none is found.
   const CachedFileSystemEntry *findEntryByFilename(StringRef Filename) const {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
     auto It = Cache.find(Filename);
-    return It == Cache.end() ? nullptr : It->getValue();
+    return It == Cache.end() ? nullptr : It->getValue().first;
   }
 
   /// Associates the given entry with the filename and returns the given entry
@@ -226,9 +277,40 @@ public:
   insertEntryForFilename(StringRef Filename,
                          const CachedFileSystemEntry &Entry) {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-    const auto *InsertedEntry = Cache.insert({Filename, &Entry}).first->second;
-    assert(InsertedEntry == &Entry && "entry already present");
-    return *InsertedEntry;
+    auto [It, Inserted] = Cache.insert({Filename, {&Entry, nullptr}});
+    auto &[CachedEntry, CachedRealPath] = It->getValue();
+    if (!Inserted) {
+      // The file is already present in the local cache. If we got here, it only
+      // contains the real path. Let's make sure the entry is populated too.
+      assert((!CachedEntry && CachedRealPath) && "entry already present");
+      CachedEntry = &Entry;
+    }
+    return *CachedEntry;
+  }
+
+  /// Returns real path associated with the filename or nullptr if none is
+  /// found.
+  const CachedRealPath *findRealPathByFilename(StringRef Filename) const {
+    assert(llvm::sys::path::is_absolute_gnu(Filename));
+    auto It = Cache.find(Filename);
+    return It == Cache.end() ? nullptr : It->getValue().second;
+  }
+
+  /// Associates the given real path with the filename and returns the given
+  /// entry pointer (for convenience).
+  const CachedRealPath &
+  insertRealPathForFilename(StringRef Filename,
+                            const CachedRealPath &RealPath) {
+    assert(llvm::sys::path::is_absolute_gnu(Filename));
+    auto [It, Inserted] = Cache.insert({Filename, {nullptr, &RealPath}});
+    auto &[CachedEntry, CachedRealPath] = It->getValue();
+    if (!Inserted) {
+      // The file is already present in the local cache. If we got here, it only
+      // contains the entry. Let's make sure the real path is populated too.
+      assert((!CachedRealPath && CachedEntry) && "real path already present");
+      CachedRealPath = &RealPath;
+    }
+    return *CachedRealPath;
   }
 };
 
@@ -241,6 +323,8 @@ class EntryRef {
 
   /// The underlying cached entry.
   const CachedFileSystemEntry &Entry;
+
+  friend class DependencyScanningWorkerFilesystem;
 
 public:
   EntryRef(StringRef Name, const CachedFileSystemEntry &Entry)
@@ -294,20 +378,44 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
 
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) override;
+
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+
+  /// Make it so that no paths bypass this VFS.
+  void resetBypassedPathPrefix() { BypassedPathPrefix.reset(); }
+  /// Set the prefix for paths that should bypass this VFS and go straight to
+  /// the underlying VFS.
+  void setBypassedPathPrefix(StringRef Prefix) { BypassedPathPrefix = Prefix; }
 
   /// Returns entry for the given filename.
   ///
   /// Attempts to use the local and shared caches first, then falls back to
   /// using the underlying filesystem.
-  llvm::ErrorOr<EntryRef>
-  getOrCreateFileSystemEntry(StringRef Filename,
-                             bool DisableDirectivesScanning = false);
+  llvm::ErrorOr<EntryRef> getOrCreateFileSystemEntry(StringRef Filename);
+
+  /// Ensure the directive tokens are populated for this file entry.
+  ///
+  /// Returns true if the directive tokens are populated for this file entry,
+  /// false if not (i.e. this entry is not a file or its scan fails).
+  bool ensureDirectiveTokensArePopulated(EntryRef Entry);
+
+  /// \returns The scanned preprocessor directive tokens of the file that are
+  /// used to speed up preprocessing, if available.
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  getDirectiveTokens(const Twine &Path) {
+    if (llvm::ErrorOr<EntryRef> Entry = getOrCreateFileSystemEntry(Path.str()))
+      if (ensureDirectiveTokensArePopulated(*Entry))
+        return Entry->getDirectiveTokens();
+    return std::nullopt;
+  }
+
+  /// Check whether \p Path exists. By default checks cached result of \c
+  /// status(), and falls back on FS if unable to do so.
+  bool exists(const Twine &Path) override;
 
 private:
-  /// Check whether the file should be scanned for preprocessor directives.
-  bool shouldScanForDirectives(StringRef Filename);
-
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
   /// shared cache indexed by unique ID, or creates new entry from scratch.
@@ -316,11 +424,6 @@ private:
   llvm::ErrorOr<const CachedFileSystemEntry &>
   computeAndStoreResult(StringRef OriginalFilename,
                         StringRef FilenameForLookup);
-
-  /// Scan for preprocessor directives for the given entry if necessary and
-  /// returns a wrapper object with reference semantics.
-  EntryRef scanForDirectivesIfNecessary(const CachedFileSystemEntry &Entry,
-                                        StringRef Filename, bool Disable);
 
   /// Represents a filesystem entry that has been stat-ed (and potentially read)
   /// and that's about to be inserted into the cache as `CachedFileSystemEntry`.
@@ -393,17 +496,28 @@ private:
     getUnderlyingFS().print(OS, Type, IndentLevel + 1);
   }
 
+  /// Whether this path should bypass this VFS and go straight to the underlying
+  /// VFS.
+  bool shouldBypass(StringRef Path) const;
+
   /// The global cache shared between worker threads.
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
 
+  /// Prefix of paths that should go straight to the underlying VFS.
+  std::optional<std::string> BypassedPathPrefix;
+
   /// The working directory to use for making relative paths absolute before
   /// using them for cache lookups.
   llvm::ErrorOr<std::string> WorkingDirForCacheLookup;
 
   void updateWorkingDirForCacheLookup();
+
+  llvm::ErrorOr<StringRef>
+  tryGetFilenameForLookup(StringRef OriginalFilename,
+                          llvm::SmallVectorImpl<char> &PathBuf) const;
 };
 
 } // end namespace dependencies

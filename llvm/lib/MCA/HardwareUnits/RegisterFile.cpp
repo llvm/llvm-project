@@ -24,6 +24,11 @@ namespace mca {
 
 const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
 
+static std::function<bool(MCPhysReg)>
+isNonArtificial(const MCRegisterInfo &MRI) {
+  return [&MRI](MCPhysReg R) { return !MRI.isArtificial(R); };
+}
+
 WriteRef::WriteRef(unsigned SourceIndex, WriteState *WS)
     : IID(SourceIndex), WriteBackCycle(), WriteResID(), RegisterID(),
       Write(WS) {}
@@ -282,7 +287,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   MCPhysReg ZeroRegisterID =
       WS.clearsSuperRegisters() ? RegID : WS.getRegisterID();
   ZeroRegisters.setBitVal(ZeroRegisterID, IsWriteZero);
-  for (MCPhysReg I : MRI.subregs(ZeroRegisterID))
+  for (MCPhysReg I :
+       make_filter_range(MRI.subregs(ZeroRegisterID), isNonArtificial(MRI)))
     ZeroRegisters.setBitVal(I, IsWriteZero);
 
   // If this move has been eliminated, then method tryEliminateMoveOrSwap should
@@ -304,7 +310,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
     // Update the mapping for register RegID including its sub-registers.
     RegisterMappings[RegID].first = Write;
     RegisterMappings[RegID].second.AliasRegID = 0U;
-    for (MCPhysReg I : MRI.subregs(RegID)) {
+    for (MCPhysReg I :
+         make_filter_range(MRI.subregs(RegID), isNonArtificial(MRI))) {
       RegisterMappings[I].first = Write;
       RegisterMappings[I].second.AliasRegID = 0U;
     }
@@ -472,7 +479,8 @@ bool RegisterFile::tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
       AliasedReg = RMAlias.AliasRegID;
 
     RegisterMappings[AliasReg].second.AliasRegID = AliasedReg;
-    for (MCPhysReg I : MRI.subregs(AliasReg))
+    for (MCPhysReg I :
+         make_filter_range(MRI.subregs(AliasReg), isNonArtificial(MRI)))
       RegisterMappings[I].second.AliasRegID = AliasedReg;
 
     if (ZeroRegisters[RS.getRegisterID()]) {
@@ -550,7 +558,7 @@ void RegisterFile::collectWrites(
     sort(Writes, [](const WriteRef &Lhs, const WriteRef &Rhs) {
       return Lhs.getWriteState() < Rhs.getWriteState();
     });
-    auto It = std::unique(Writes.begin(), Writes.end());
+    auto It = llvm::unique(Writes);
     Writes.resize(std::distance(Writes.begin(), It));
   }
 

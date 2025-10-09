@@ -10,6 +10,7 @@
 #define BOLT_PASSES_FRAMEANALYSIS_H
 
 #include "bolt/Passes/StackPointerTracking.h"
+#include <tuple>
 
 namespace llvm {
 namespace bolt {
@@ -53,9 +54,7 @@ struct ArgInStackAccess {
   uint8_t Size;
 
   bool operator<(const ArgInStackAccess &RHS) const {
-    if (StackOffset != RHS.StackOffset)
-      return StackOffset < RHS.StackOffset;
-    return Size < RHS.Size;
+    return std::tie(StackOffset, Size) < std::tie(RHS.StackOffset, RHS.Size);
   }
 };
 
@@ -169,10 +168,6 @@ class FrameAnalysis {
   std::unordered_map<const BinaryFunction *,
                      std::unique_ptr<StackPointerTracking>>
       SPTMap;
-
-  /// A vector that stores ids of the allocators that are used in SPT
-  /// computation
-  std::vector<MCPlusBuilder::AllocatorIdTy> SPTAllocatorsId;
 
 public:
   explicit FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG);

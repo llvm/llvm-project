@@ -14,6 +14,8 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_MACHO_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -23,15 +25,39 @@ namespace jitlink {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer);
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer,
+                               std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// jit-link the given ObjBuffer, which must be a MachO object file.
 ///
 /// Uses conservative defaults for GOT and stub handling based on the target
 /// platform.
-void link_MachO(std::unique_ptr<LinkGraph> G,
-                std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_MachO(std::unique_ptr<LinkGraph> G,
+                         std::unique_ptr<JITLinkContext> Ctx);
+
+/// Get a pointer to the standard MachO data section (creates an empty
+/// section with RW- permissions and standard lifetime if one does not
+/// already exist).
+inline Section &getMachODefaultRWDataSection(LinkGraph &G) {
+  if (auto *DataSec = G.findSectionByName(orc::MachODataDataSectionName))
+    return *DataSec;
+  return G.createSection(orc::MachODataDataSectionName,
+                         orc::MemProt::Read | orc::MemProt::Write);
+}
+
+/// Get a pointer to the standard MachO text section (creates an empty
+/// section with R-X permissions and standard lifetime if one does not
+/// already exist).
+inline Section &getMachODefaultTextSection(LinkGraph &G) {
+  if (auto *TextSec = G.findSectionByName(orc::MachOTextTextSectionName))
+    return *TextSec;
+  return G.createSection(orc::MachOTextTextSectionName,
+                         orc::MemProt::Read | orc::MemProt::Exec);
+}
+
+/// Gets or creates a MachO header for the current LinkGraph.
+LLVM_ABI Expected<Symbol &> getOrCreateLocalMachOHeader(LinkGraph &G);
 
 } // end namespace jitlink
 } // end namespace llvm

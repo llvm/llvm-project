@@ -177,11 +177,11 @@ double varargs_vec_19c(int fixed, ...) {
 
 double test_19c(__char19 *in) {
 // CHECK: test_19c
-// CHECK: call arm_aapcscc double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef {{%.*}})
+// CHECK: call arm_aapcscc double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr dead_on_return noundef {{%.*}})
 // APCS-GNU: test_19c
-// APCS-GNU: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef {{%.*}})
+// APCS-GNU: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr dead_on_return noundef {{%.*}})
 // ANDROID: test_19c
-// ANDROID: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr noundef {{%.*}})
+// ANDROID: call double (i32, ...) @varargs_vec_19c(i32 noundef 19, ptr dead_on_return noundef {{%.*}})
   return varargs_vec_19c(19, *in);
 }
 
@@ -194,7 +194,7 @@ double varargs_vec_3s(int fixed, ...) {
 // APCS-GNU: [[VAR:%.*]] = alloca <3 x i16>, align 8
 // APCS-GNU: [[AP:%.*]] = load ptr,
 // APCS-GNU: [[AP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[AP]], i32 8
-// APCS-GNU: [[VEC:%.*]] = load <3 x i16>, ptr [[AP]], align 4
+// APCS-GNU: [[VEC:%.*]] = load <4 x i16>, ptr [[AP]], align 4
 // ANDROID: varargs_vec_3s
 // ANDROID: alloca <3 x i16>, align 8
 // ANDROID: [[AP_ALIGN:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr {{%.*}}, i32 -8)

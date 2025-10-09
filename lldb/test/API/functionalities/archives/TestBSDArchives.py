@@ -21,11 +21,6 @@ class BSDArchivesTestCase(TestBase):
         # Find the line number in a(int) to break at.
         self.line = line_number("a.c", "// Set file and line breakpoint inside a().")
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows",
-    )
-    @expectedFailureAll(remote=True)
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()
@@ -85,13 +80,15 @@ class BSDArchivesTestCase(TestBase):
         api_error = var_list.GetError().GetCString()
 
         for s in error_strings:
-            self.assertTrue(
-                s in command_error,
+            self.assertIn(
+                s,
+                command_error,
                 'Make sure "%s" exists in the command error "%s"' % (s, command_error),
             )
         for s in error_strings:
-            self.assertTrue(
-                s in api_error,
+            self.assertIn(
+                s,
+                api_error,
                 'Make sure "%s" exists in the API error "%s"' % (s, api_error),
             )
 
@@ -124,10 +121,6 @@ class BSDArchivesTestCase(TestBase):
 
     @skipIfRemote
     @skipIf(compiler="clang", compiler_version=["<", "12.0"])
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows",
-    )
     def test_archive_specifications(self):
         """
         Create archives and make sure the information we get when retrieving

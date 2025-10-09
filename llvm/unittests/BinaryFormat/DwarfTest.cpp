@@ -204,4 +204,92 @@ TEST(DwarfTest, format_provider) {
   EXPECT_EQ("DW_OP_lit0", formatv("{0}", DW_OP_lit0).str());
   EXPECT_EQ("DW_OP_unknown_ff", formatv("{0}", DW_OP_hi_user).str());
 }
+
+TEST(DwarfTest, lname) {
+  auto roundtrip = [](llvm::dwarf::SourceLanguage sl) {
+    auto name_version = toDW_LNAME(sl);
+    // Ignore ones without a defined mapping.
+    if (sl == DW_LANG_Mips_Assembler || sl == DW_LANG_GOOGLE_RenderScript ||
+        !name_version.has_value())
+      return sl;
+    return dwarf::toDW_LANG(name_version->first, name_version->second)
+        .value_or(sl);
+  };
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  EXPECT_EQ(roundtrip(DW_LANG_##NAME), DW_LANG_##NAME);
+#include "llvm/BinaryFormat/Dwarf.def"
+}
+
+TEST(DwarfTest, lname_getSourceLanguageName) {
+  // Some basics.
+  EXPECT_EQ(getSourceLanguageName("DW_LNAME_Ada"), DW_LNAME_Ada);
+  EXPECT_EQ(getSourceLanguageName("DW_LNAME_Metal"), DW_LNAME_Metal);
+
+  // Test invalid input.
+  EXPECT_EQ(getSourceLanguageName(""), 0U);
+  EXPECT_EQ(getSourceLanguageName("blah"), 0U);
+  EXPECT_EQ(getSourceLanguageName("DW_LNAME__something_unlikely"), 0U);
+  EXPECT_EQ(getSourceLanguageName("DW_LANG_C"), 0U);
+
+  // Test that we cover all DW_LNAME_ names.
+#define xstr(X) #X
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  EXPECT_EQ(getSourceLanguageName(xstr(DW_LNAME_##NAME)), DW_LNAME_##NAME);
+#include "llvm/BinaryFormat/Dwarf.def"
+}
+
+TEST(DwarfTest, lname_SourceLanguageNameString) {
+  // Some basics.
+  EXPECT_EQ(SourceLanguageNameString(DW_LNAME_C_plus_plus),
+            "DW_LNAME_C_plus_plus");
+  EXPECT_EQ(SourceLanguageNameString(DW_LNAME_CPP_for_OpenCL),
+            "DW_LNAME_CPP_for_OpenCL");
+
+  // Test invalid input.
+  EXPECT_EQ(SourceLanguageNameString(static_cast<SourceLanguageName>(0)), "");
+
+  // Test that we cover all DW_LNAME_ names.
+#define xstr(X) #X
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  EXPECT_EQ(SourceLanguageNameString(DW_LNAME_##NAME), xstr(DW_LNAME_##NAME));
+#include "llvm/BinaryFormat/Dwarf.def"
+}
+
+TEST(DWARFDebugInfo, TestLanguageDescription_Versioned) {
+  // Tests for the llvm::dwarf::LanguageDescription API that
+  // takes a name *and* a version.
+
+  // Unknown language.
+  EXPECT_EQ(
+      llvm::dwarf::LanguageDescription(static_cast<SourceLanguageName>(0)),
+      "Unknown");
+
+  EXPECT_EQ(
+      llvm::dwarf::LanguageDescription(static_cast<SourceLanguageName>(0), 0),
+      "Unknown");
+
+  // Test that specifying an invalid version falls back to a valid language name
+  // regardless.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_ObjC, 0), "Objective C");
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_Julia, 0), "Julia");
+
+  // Check some versions.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 199711),
+            "C++98");
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 201402),
+            "C++14");
+
+  // Versions round up.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 201400),
+            "C++14");
+
+  // Version 0 for C and C++ is an unversioned name.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C, 0), "C (K&R and ISO)");
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_C_plus_plus, 0),
+            "ISO C++");
+
+  // Version 0 for other versioned languages may not be the unversioned name.
+  EXPECT_EQ(llvm::dwarf::LanguageDescription(DW_LNAME_Fortran, 0),
+            "FORTRAN 77");
+}
 } // end namespace

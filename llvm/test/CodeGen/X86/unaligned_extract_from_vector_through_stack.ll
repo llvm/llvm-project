@@ -17,4 +17,22 @@ entry:
   ret i32 %b
 }
 
+define i32 @foo2(i32 %arg1) #1 {
+; CHECK-LABEL: foo2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    andl $31, %edi
+; CHECK-NEXT:    movzwl -72(%rsp,%rdi,2), %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+entry:
+  %a = extractelement <32 x i16> zeroinitializer, i32 %arg1
+  %b = zext i16 %a to i32
+  ret i32 %b
+}
+
 attributes #0 = { "no-realign-stack" "target-cpu"="skylake-avx512" }
+attributes #1 = { "no-realign-stack" "target-cpu"="skylake" }

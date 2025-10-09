@@ -17,6 +17,6 @@
 #include <forward_list>
 
 void f() {
-    std::forward_list<int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::forward_list<int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

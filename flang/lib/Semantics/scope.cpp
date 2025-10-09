@@ -47,7 +47,7 @@ std::string EquivalenceObject::AsFortran() const {
   if (substringStart) {
     ss << '(' << *substringStart << ":)";
   }
-  return ss.str();
+  return buf;
 }
 
 Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
@@ -56,7 +56,7 @@ Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
 
 template <typename T>
 static std::vector<common::Reference<T>> GetSortedSymbols(
-    std::map<SourceName, MutableSymbolRef> symbols) {
+    const std::map<SourceName, MutableSymbolRef> &symbols) {
   std::vector<common::Reference<T>> result;
   result.reserve(symbols.size());
   for (auto &pair : symbols) {
@@ -143,12 +143,13 @@ void Scope::add_crayPointer(const SourceName &name, Symbol &pointer) {
   crayPointers_.emplace(name, pointer);
 }
 
-Symbol &Scope::MakeCommonBlock(const SourceName &name) {
+Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
   const auto it{commonBlocks_.find(name)};
   if (it != commonBlocks_.end()) {
     return *it->second;
   } else {
-    Symbol &symbol{MakeSymbol(name, Attrs{}, CommonBlockDetails{})};
+    Symbol &symbol{MakeSymbol(
+        name, Attrs{}, CommonBlockDetails{name.empty() ? location : name})};
     commonBlocks_.emplace(name, symbol);
     return symbol;
   }
@@ -215,6 +216,7 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
     } else {
       switch (dyType->category()) {
       case TypeCategory::Integer:
+      case TypeCategory::Unsigned:
       case TypeCategory::Real:
       case TypeCategory::Complex:
         return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});

@@ -10,13 +10,13 @@ define i32 @func(i32 %dummy, ...) {
 ;
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:    [[VARARGS:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.va_start(ptr [[VARARGS]])
+; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VARARGS]])
 ; CHECK-NEXT:    [[V0:%.*]] = va_arg ptr [[VARARGS]], i32
 ; CHECK-NEXT:    [[V1:%.*]] = va_arg ptr [[VARARGS]], i32
 ; CHECK-NEXT:    [[V0_NEG:%.*]] = sub i32 0, [[V0]]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[V0_NEG]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[V1]]
-; CHECK-NEXT:    call void @llvm.va_end(ptr [[VARARGS]])
+; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VARARGS]])
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %varargs = alloca ptr, align 8

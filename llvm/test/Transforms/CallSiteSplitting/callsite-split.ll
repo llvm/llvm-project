@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes='function(callsite-splitting),cgscc(inline),function(instcombine,jump-threading)' -S | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-linaro-linux-gnueabi"
+target triple = "aarch64"
 
 %struct.bitmap = type { i32, ptr }
 
@@ -72,7 +72,7 @@ declare void @dummy1(ptr, ptr, ptr, ptr, ptr, ptr)
 ;CHECK: call void @dummy4()
 ;CHECK-LABEL: NextCond.split:
 ;CHECK: call void @dummy3()
-;CheCK-LABEL: CallSiteBB:
+;CHECK-LABEL: CallSiteBB:
 ;CHECK: call void @foo(i1 %tobool1)
 define void @caller2(i1 %c, ptr %a_elt, ptr %b_elt, ptr %c_elt) {
 entry:

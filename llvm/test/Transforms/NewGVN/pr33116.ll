@@ -3,17 +3,17 @@
 
 @a = external global i32
 
-define void @b() {
+define void @b(i1 %arg) {
 ; CHECK-LABEL: @b(
 ; CHECK-NEXT:    br i1 false, label [[C:%.*]], label [[WHILE_D:%.*]]
 ; CHECK:       while.d:
 ; CHECK-NEXT:    br label [[F:%.*]]
 ; CHECK:       f:
-; CHECK-NEXT:    br i1 undef, label [[IF_E:%.*]], label [[C]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_E:%.*]], label [[C]]
 ; CHECK:       c:
-; CHECK-NEXT:    br i1 undef, label [[IF_G:%.*]], label [[IF_E]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_G:%.*]], label [[IF_E]]
 ; CHECK:       if.g:
-; CHECK-NEXT:    store i32 undef, ptr @a
+; CHECK-NEXT:    store i32 undef, ptr @a, align 4
 ; CHECK-NEXT:    br label [[WHILE_D]]
 ; CHECK:       if.e:
 ; CHECK-NEXT:    br label [[F]]
@@ -24,10 +24,10 @@ while.d:                                          ; preds = %if.g, %0
   br label %f
 
 f:                                                ; preds = %if.e, %while.d
-  br i1 undef, label %if.e, label %c
+  br i1 %arg, label %if.e, label %c
 
 c:                                                ; preds = %f, %0
-  br i1 undef, label %if.g, label %if.e
+  br i1 %arg, label %if.g, label %if.e
 
 if.g:                                             ; preds = %c
   store i32 undef, ptr @a

@@ -1,4 +1,4 @@
-;RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen < %s -S | FileCheck %s
+;RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' -polly-import-jscop-postfix=transformed < %s -S | FileCheck %s
 
 ;int A[100];
 ;
@@ -40,4 +40,4 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; CHECK: %polly.access.A = getelementptr i32, ptr addrspace(5) %A, i64 0
-; CHECK: %tmp2_p_scalar_ = load i32, ptr addrspace(5) %polly.access.A, align 4, !alias.scope !0, !noalias !3
+; CHECK: %tmp2_p_scalar_ = load i32, ptr addrspace(5) %polly.access.A, align 4, !alias.scope !2, !noalias !5

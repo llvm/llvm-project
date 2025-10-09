@@ -26,8 +26,8 @@ def sub_test_rewrite : TextSubstitution<
 // CHECK-SAME: Q! %q1.
 // CHECK-SAME: PLACEHOLDER! %0.OBJCCLASS!
 // CHECK-SAME: %objcclass5. OBJCINSTANCE!
-// CHECK-SAME: %objcinstance4.  DONE!",
-def test_rewrite: Error<"%sub{sub_test_rewrite}5,4,3,2,1,0 DONE!">;
+// CHECK-SAME: %objcinstance4.  DONE",
+def test_rewrite: Error<"%sub{sub_test_rewrite}5,4,3,2,1,0 DONE">;
 
 def test_sub_basic : Error<"%sub{yes_no}0">;
 // CHECK: test_sub_basic

@@ -261,13 +261,14 @@ InstrumentationRuntimeMainThreadChecker::GetBacktracesFromExtendedStopInfo(
 
   StructuredData::ObjectSP thread_id_obj =
       info->GetObjectForDotSeparatedPath("tid");
-  tid_t tid = thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
+  lldb::tid_t tid =
+      thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
 
   // We gather symbolication addresses above, so no need for HistoryThread to
   // try to infer the call addresses.
-  bool pcs_are_call_addresses = true;
-  ThreadSP new_thread_sp = std::make_shared<HistoryThread>(
-      *process_sp, tid, PCs, pcs_are_call_addresses);
+  auto pc_type = HistoryPCType::Calls;
+  ThreadSP new_thread_sp =
+      std::make_shared<HistoryThread>(*process_sp, tid, PCs, pc_type);
 
   // Save this in the Process' ExtendedThreadList so a strong pointer retains
   // the object

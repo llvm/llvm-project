@@ -168,7 +168,7 @@ define i32 @TestVectorsEqualFP(ptr noalias %Vec0, ptr noalias %Vec1, float %Tole
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[VEC1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ole float [[TMP4]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND5:%.*]] = zext i1 [[CMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[COND5]]
@@ -225,7 +225,7 @@ define i32 @TestVectorsEqualFP_alt(ptr noalias %Vec0, ptr noalias %Vec1, float %
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[VEC0:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[VEC1:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast ole float [[TMP3]], [[TOLERANCE:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
@@ -280,11 +280,11 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], splat (double 0x3EB0C6F7A0B5ED8D)
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i1> [[TMP8]], [[SHIFT]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT2]]
 ; CHECK-NEXT:    [[OR_COND1_NOT:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
@@ -324,4 +324,80 @@ if.end:
 cleanup:
   %retval.0 = phi i1 [ false, %if.then ], [ true, %if.end ]
   ret i1 %retval.0
+}
+
+define i8 @masked_min_reduction(ptr %data, ptr %mask) {
+; CHECK-LABEL: @masked_min_reduction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DATA:%.*]] = getelementptr i8, ptr [[DATA1:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DATA]], i64 32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DATA]], i64 64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DATA]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[DATA]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <32 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <32 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <32 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[MASK:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP7]], i64 32
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP7]], i64 64
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP7]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <32 x i8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <32 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <32 x i8>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <32 x i8>, ptr [[TMP22]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD9]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD10]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP8]], <32 x i8> [[WIDE_LOAD]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP13:%.*]] = select <32 x i1> [[TMP9]], <32 x i8> [[WIDE_LOAD4]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP14:%.*]] = select <32 x i1> [[TMP10]], <32 x i8> [[WIDE_LOAD5]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[TMP11]], <32 x i8> [[WIDE_LOAD6]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP16]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI]], <32 x i8> [[TMP12]])
+; CHECK-NEXT:    [[TMP17]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI1]], <32 x i8> [[TMP13]])
+; CHECK-NEXT:    [[TMP18]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI2]], <32 x i8> [[TMP14]])
+; CHECK-NEXT:    [[TMP19]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI3]], <32 x i8> [[TMP15]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP20]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[TMP16]], <32 x i8> [[TMP17]])
+; CHECK-NEXT:    [[RDX_MINMAX11:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[RDX_MINMAX]], <32 x i8> [[TMP18]])
+; CHECK-NEXT:    [[RDX_MINMAX12:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[RDX_MINMAX11]], <32 x i8> [[TMP19]])
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call i8 @llvm.vector.reduce.umin.v32i8(<32 x i8> [[RDX_MINMAX12]])
+; CHECK-NEXT:    ret i8 [[TMP21]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %acc = phi i8 [ 255, %entry ], [ %acc_next, %loop ]
+
+  %ptr_i = getelementptr i8, ptr %data, i64 %i
+  %val = load i8, ptr %ptr_i, align 1
+
+  %mask_ptr = getelementptr i8, ptr %mask, i64 %i
+  %m = load i8, ptr %mask_ptr, align 1
+  %cond = icmp eq i8 %m, 0
+
+  ; Use select to implement masking
+  %masked_val = select i1 %cond, i8 %val, i8 255
+
+  ; min reduction
+  %acc_next = call i8 @llvm.umin.i8(i8 %acc, i8 %masked_val)
+
+  %next = add i64 %i, 1
+  %cmp = icmp ult i64 %next, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i8 %acc_next
 }

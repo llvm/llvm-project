@@ -1,4 +1,5 @@
-; RUN: opt -march=hexagon -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -p hexagon-loop-idiom -S < %s | FileCheck %s
 ; CHECK-LABEL: define void @fred
 
 ; Check that this test does not crash.

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=HSAMD %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=HSAMD %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
 ; CHECK: SGPRBlocks: 0
@@ -24,10 +24,10 @@ entry:
 attributes #1 = {"amdgpu-flat-work-group-size"="64,128"}
 
 ; CHECK-LABEL: {{^}}min_128_max_128:
-; CHECK: SGPRBlocks: 0
-; CHECK: VGPRBlocks: 0
-; CHECK: NumSGPRsForWavesPerEU: 1
-; CHECK: NumVGPRsForWavesPerEU: 1
+; CHECK: SGPRBlocks: 8
+; CHECK: VGPRBlocks: 7
+; CHECK: NumSGPRsForWavesPerEU: 65
+; CHECK: NumVGPRsForWavesPerEU: 29
 define amdgpu_kernel void @min_128_max_128() #2 {
 entry:
   ret void
@@ -35,9 +35,9 @@ entry:
 attributes #2 = {"amdgpu-flat-work-group-size"="128,128"}
 
 ; CHECK-LABEL: {{^}}min_1024_max_1024
-; CHECK: SGPRBlocks: 0
+; CHECK: SGPRBlocks: 8
 ; CHECK: VGPRBlocks: 10
-; CHECK: NumSGPRsForWavesPerEU: 2{{$}}
+; CHECK: NumSGPRsForWavesPerEU: 65
 ; CHECK: NumVGPRsForWavesPerEU: 43
 @var = addrspace(1) global float 0.0
 define amdgpu_kernel void @min_1024_max_1024() #3 {
@@ -130,7 +130,7 @@ define amdgpu_kernel void @min_1024_max_1024() #3 {
 attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 ; HSAMD: amdhsa.kernels
 ; HSAMD:  .max_flat_workgroup_size: 64

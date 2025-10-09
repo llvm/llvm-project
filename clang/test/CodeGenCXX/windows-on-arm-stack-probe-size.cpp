@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple thumbv7--windows-msvc -S -emit-llvm -o - -x c++ %s | FileCheck %s
-// RUN: %clang_cc1 -triple thumbv7--windows-itanium -fno-use-cxa-atexit -S -emit-llvm -o - -x c++ %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv7--windows-msvc -emit-llvm -o - -x c++ %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv7--windows-itanium -fno-use-cxa-atexit -emit-llvm -o - -x c++ %s | FileCheck %s
 
 class C {
 public:

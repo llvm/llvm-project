@@ -1,0 +1,78 @@
+; RUN: rm -rf %t 
+; RUN: split-file %s %t
+; RUN: mkdir -p %t/System/Library/Frameworks 
+; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
+
+; RUN: not clang-installapi -target x86_64h-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 3 -compatibility_version 2 \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=ARCHITECTURE %s
+; ARCHITECTURE: error: architectures do not match: 'x86_64h' (provided) vs 'x86_64' (found)
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name Simple -dynamiclib \
+; RUN: -current_version 3 -compatibility_version 2 \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=INSTALL_NAME %s
+; INSTALL_NAME: error: install_name does not match: 'Simple' (provided) vs '/System/Library/Frameworks/Simple.framework/Versions/A/Simple' (found)
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 3 -compatibility_version 2 \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=CURRENT_VERSION %s
+; CURRENT_VERSION: error: current_version does not match: '3' (provided) vs '1.2.3' (found)
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3  -compatibility_version 2 \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=COMPATIBILITY_VERSION %s
+; COMPATIBILITY_VERSION: error: compatibility_version does not match: '2' (provided) vs '1' (found)
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3  -compatibility_version 1 -fapplication-extension \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=APPEXTSAFE %s
+; APPEXTSAFE: error: the ApplicationExtensionSafe flag does not match: 'true' (provided) vs 'false' (found)
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3  -compatibility_version 1 -not_for_dyld_shared_cache \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=SHARED_CACHE %s
+; SHARED_CACHE: error: the NotForDyldSharedCache flag does not match: 'true' (provided) vs 'false' (found)
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3  -compatibility_version 1 \
+; RUN: -allowable_client Foo -allowable_client Bar \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=ALLOWABLE %s
+; ALLOWABLE: error: allowable client missing from binary file: '{{Foo|Bar}} [ x86_64 ]'
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3  -compatibility_version 1 -reexport_library %t/Foo.tbd \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=REEXPORT %s
+; REEXPORT: error: re-exported library missing from binary file: 'Foo [ x86_64 ]'
+
+; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3  -compatibility_version 1 -umbrella Bogus \
+; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=UMBRELLA %s
+; UMBRELLA: error: parent umbrella missing from binary file: 'Bogus'
+
+;--- Foo.tbd
+{
+  "main_library": {
+    "install_names": [
+      {
+        "name": "Foo"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.0",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

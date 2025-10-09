@@ -19,7 +19,7 @@
 ;; }
 
 define i16 @vecreduce_smin_v2i16(i32 %n, ptr %v) {
-; CHECK-LABEL: define i16 @vecreduce_smin_v2i16(
+; CHECK-LABEL: define range(i16 -32768, 1) i16 @vecreduce_smin_v2i16(
 ; CHECK:    @llvm.smin.v2i16
 
 entry:
@@ -65,7 +65,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 define i16 @vecreduce_smax_v2i16(i32 %n, ptr %v) {
-; CHECK-LABEL: define i16 @vecreduce_smax_v2i16(
+; CHECK-LABEL: define range(i16 0, -32768) i16 @vecreduce_smax_v2i16(
 ; CHECK:  @llvm.smax.v2i16
 
 entry:

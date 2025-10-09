@@ -27,6 +27,10 @@ Re-run with /DEBUG:GHASH
 RUN: lld-link a.obj b.obj -entry:main -debug:ghash -out:t.exe -pdb:t.pdb -nodefaultlib -summary -verbose
 RUN: llvm-pdbutil dump -symbols -types -ids -globals %t/t.pdb | FileCheck %s
 
+Re-run with pdb from outputpath
+RUN: mkdir -p libs
+RUN: cp a.obj libs/a.obj && cp b.obj libs/b.obj
+RUN: lld-link libs/a.obj libs/b.obj -entry:main -debug:ghash -out:t.exe -pdb:t.pdb -nodefaultlib -summary 2>&1 | FileCheck %s -check-prefix FAILURE-MISSING-PDBFILE
 
 CHECK-LABEL: Types (TPI Stream)
 CHECK: ============================================================
@@ -102,17 +106,18 @@ CHECK-LABEL:   Mod 0002 | `* Linker *`:
 
 SUMMARY:                                     Summary
 SUMMARY-NEXT: --------------------------------------------------------------------------------
-SUMMARY-NEXT:               2 Input OBJ files (expanded from all cmd-line inputs)
-SUMMARY-NEXT:               1 PDB type server dependencies
-SUMMARY-NEXT:               0 Precomp OBJ dependencies
-SUMMARY-NEXT:              25 Input type records
-SUMMARY-NEXT:             868 Input type records bytes
-SUMMARY-NEXT:               9 Merged TPI records
-SUMMARY-NEXT:              16 Merged IPI records
-SUMMARY-NEXT:               3 Output PDB strings
-SUMMARY-NEXT:               4 Global symbol records
-SUMMARY-NEXT:              14 Module symbol records
-SUMMARY-NEXT:               2 Public symbol records
+SUMMARY-NEXT:                    2 Input OBJ files (expanded from all cmd-line inputs)
+SUMMARY-NEXT: Size of all consumed OBJ files (non-lazy), in bytes
+SUMMARY-NEXT:                    1 PDB type server dependencies
+SUMMARY-NEXT:                    0 Precomp OBJ dependencies
+SUMMARY-NEXT:                   25 Input debug type records
+SUMMARY-NEXT:                  868 Size of all input debug type records, in bytes
+SUMMARY-NEXT:                    9 Merged TPI records
+SUMMARY-NEXT:                   16 Merged IPI records
+SUMMARY-NEXT:                    3 Output PDB strings
+SUMMARY-NEXT:                    4 Global symbol records
+SUMMARY-NEXT:                   14 Module symbol records
+SUMMARY-NEXT:                    2 Public symbol records
 
 SUMMARY:      Top 10 types responsible for the most TPI input:
 SUMMARY-NEXT:        index     total bytes   count     size
@@ -125,3 +130,6 @@ SUMMARY-NEXT:        index     total bytes   count     size
 SUMMARY-NEXT:       0x1006:            256 =     1 *    256
 SUMMARY: Run llvm-pdbutil to print details about a particular record:
 SUMMARY-NEXT: llvm-pdbutil dump -ids -id-index 0x1006 t.pdb
+
+FAILURE-MISSING-PDBFILE-NOT: Cannot use debug info for '{{.*}}.obj'
+FAILURE-MISSING-PDBFILE-NOT: failed to load reference '{{.*}}.pdb': no such file or directory

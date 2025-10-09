@@ -36,6 +36,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -240,11 +241,37 @@ uint32_t File::GetPermissions(Status &error) const {
   }
   struct stat file_stats;
   if (::fstat(fd, &file_stats) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return 0;
   }
   error.Clear();
   return file_stats.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+}
+
+NativeFile::NativeFile() = default;
+
+NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
+    : m_stream(fh), m_own_stream(transfer_ownership) {
+#ifdef _WIN32
+  // In order to properly display non ASCII characters in Windows, we need to
+  // use Windows APIs to print to the console. This is only required if the
+  // stream outputs to a console.
+  int fd = _fileno(fh);
+  is_windows_console =
+      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
+#endif
+}
+
+NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
+    : m_descriptor(fd), m_own_descriptor(transfer_ownership),
+      m_options(options) {
+#ifdef _WIN32
+  // In order to properly display non ASCII characters in Windows, we need to
+  // use Windows APIs to print to the console. This is only required if the
+  // file outputs to a console.
+  is_windows_console =
+      ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
+#endif
 }
 
 bool NativeFile::IsValid() const {
@@ -274,7 +301,11 @@ int NativeFile::GetDescriptor() const {
 }
 
 IOObject::WaitableHandle NativeFile::GetWaitableHandle() {
+#ifdef _WIN32
+  return (HANDLE)_get_osfhandle(GetDescriptor());
+#else
   return GetDescriptor();
+#endif
 }
 
 FILE *NativeFile::GetStream() {
@@ -320,7 +351,7 @@ Status NativeFile::Close() {
   if (StreamIsValidUnlocked()) {
     if (m_own_stream) {
       if (::fclose(m_stream) == EOF)
-        error.SetErrorToErrno();
+        error = Status::FromErrno();
     } else {
       File::OpenOptions rw =
           m_options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
@@ -328,14 +359,14 @@ Status NativeFile::Close() {
 
       if (rw == eOpenOptionWriteOnly || rw == eOpenOptionReadWrite) {
         if (::fflush(m_stream) == EOF)
-          error.SetErrorToErrno();
+          error = Status::FromErrno();
       }
     }
   }
 
   if (DescriptorIsValidUnlocked() && m_own_descriptor) {
     if (::close(m_descriptor) != 0)
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
   }
 
   m_stream = kInvalidStream;
@@ -354,28 +385,28 @@ Status NativeFile::GetFileSpec(FileSpec &file_spec) const {
   if (IsValid()) {
     char path[PATH_MAX];
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
     else
       file_spec.SetFile(path, FileSpec::Style::native);
   } else {
-    error.SetErrorString("invalid file handle");
+    error = Status::FromErrorString("invalid file handle");
   }
 #elif defined(__linux__)
   char proc[64];
   char path[PATH_MAX];
   if (::snprintf(proc, sizeof(proc), "/proc/self/fd/%d", GetDescriptor()) < 0)
-    error.SetErrorString("cannot resolve file descriptor");
+    error = Status::FromErrorString("cannot resolve file descriptor");
   else {
     ssize_t len;
     if ((len = ::readlink(proc, path, sizeof(path) - 1)) == -1)
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
     else {
       path[len] = '\0';
       file_spec.SetFile(path, FileSpec::Style::native);
     }
   }
 #else
-  error.SetErrorString(
+  error = Status::FromErrorString(
       "NativeFile::GetFileSpec is not supported on this platform");
 #endif
 
@@ -391,7 +422,7 @@ off_t NativeFile::SeekFromStart(off_t offset, Status *error_ptr) {
 
     if (error_ptr) {
       if (result == -1)
-        error_ptr->SetErrorToErrno();
+        *error_ptr = Status::FromErrno();
       else
         error_ptr->Clear();
     }
@@ -403,7 +434,7 @@ off_t NativeFile::SeekFromStart(off_t offset, Status *error_ptr) {
 
     if (error_ptr) {
       if (result == -1)
-        error_ptr->SetErrorToErrno();
+        *error_ptr = Status::FromErrno();
       else
         error_ptr->Clear();
     }
@@ -411,7 +442,7 @@ off_t NativeFile::SeekFromStart(off_t offset, Status *error_ptr) {
   }
 
   if (error_ptr)
-    error_ptr->SetErrorString("invalid file handle");
+    *error_ptr = Status::FromErrorString("invalid file handle");
   return result;
 }
 
@@ -422,7 +453,7 @@ off_t NativeFile::SeekFromCurrent(off_t offset, Status *error_ptr) {
 
     if (error_ptr) {
       if (result == -1)
-        error_ptr->SetErrorToErrno();
+        *error_ptr = Status::FromErrno();
       else
         error_ptr->Clear();
     }
@@ -434,7 +465,7 @@ off_t NativeFile::SeekFromCurrent(off_t offset, Status *error_ptr) {
 
     if (error_ptr) {
       if (result == -1)
-        error_ptr->SetErrorToErrno();
+        *error_ptr = Status::FromErrno();
       else
         error_ptr->Clear();
     }
@@ -442,7 +473,7 @@ off_t NativeFile::SeekFromCurrent(off_t offset, Status *error_ptr) {
   }
 
   if (error_ptr)
-    error_ptr->SetErrorString("invalid file handle");
+    *error_ptr = Status::FromErrorString("invalid file handle");
   return result;
 }
 
@@ -453,7 +484,7 @@ off_t NativeFile::SeekFromEnd(off_t offset, Status *error_ptr) {
 
     if (error_ptr) {
       if (result == -1)
-        error_ptr->SetErrorToErrno();
+        *error_ptr = Status::FromErrno();
       else
         error_ptr->Clear();
     }
@@ -465,14 +496,14 @@ off_t NativeFile::SeekFromEnd(off_t offset, Status *error_ptr) {
 
     if (error_ptr) {
       if (result == -1)
-        error_ptr->SetErrorToErrno();
+        *error_ptr = Status::FromErrno();
       else
         error_ptr->Clear();
     }
   }
 
   if (error_ptr)
-    error_ptr->SetErrorString("invalid file handle");
+    *error_ptr = Status::FromErrorString("invalid file handle");
   return result;
 }
 
@@ -480,14 +511,14 @@ Status NativeFile::Flush() {
   Status error;
   if (ValueGuard stream_guard = StreamIsValid()) {
     if (llvm::sys::RetryAfterSignal(EOF, ::fflush, m_stream) == EOF)
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
     return error;
   }
 
   {
     ValueGuard descriptor_guard = DescriptorIsValid();
     if (!descriptor_guard)
-      error.SetErrorString("invalid file handle");
+      error = Status::FromErrorString("invalid file handle");
   }
   return error;
 }
@@ -498,13 +529,13 @@ Status NativeFile::Sync() {
 #ifdef _WIN32
     int err = FlushFileBuffers((HANDLE)_get_osfhandle(m_descriptor));
     if (err == 0)
-      error.SetErrorToGenericError();
+      error = Status::FromErrorString("unknown error");
 #else
     if (llvm::sys::RetryAfterSignal(-1, ::fsync, m_descriptor) == -1)
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
 #endif
   } else {
-    error.SetErrorString("invalid file handle");
+    error = Status::FromErrorString("invalid file handle");
   }
   return error;
 }
@@ -553,7 +584,7 @@ Status NativeFile::Read(void *buf, size_t &num_bytes) {
     bytes_read =
         llvm::sys::RetryAfterSignal(-1, ::read, m_descriptor, buf, num_bytes);
     if (bytes_read == -1) {
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
       num_bytes = 0;
     } else
       num_bytes = bytes_read;
@@ -565,9 +596,9 @@ Status NativeFile::Read(void *buf, size_t &num_bytes) {
 
     if (bytes_read == 0) {
       if (::feof(m_stream))
-        error.SetErrorString("feof");
+        error = Status::FromErrorString("feof");
       else if (::ferror(m_stream))
-        error.SetErrorString("ferror");
+        error = Status::FromErrorString("ferror");
       num_bytes = 0;
     } else
       num_bytes = bytes_read;
@@ -575,7 +606,7 @@ Status NativeFile::Read(void *buf, size_t &num_bytes) {
   }
 
   num_bytes = 0;
-  error.SetErrorString("invalid file handle");
+  error = Status::FromErrorString("invalid file handle");
   return error;
 }
 
@@ -617,7 +648,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
     bytes_written =
         llvm::sys::RetryAfterSignal(-1, ::write, m_descriptor, buf, num_bytes);
     if (bytes_written == -1) {
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
       num_bytes = 0;
     } else
       num_bytes = bytes_written;
@@ -625,13 +656,20 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   }
 
   if (ValueGuard stream_guard = StreamIsValid()) {
+#ifdef _WIN32
+    if (is_windows_console) {
+      llvm::raw_fd_ostream(_fileno(m_stream), false)
+          .write((const char *)buf, num_bytes);
+      return error;
+    }
+#endif
     bytes_written = ::fwrite(buf, 1, num_bytes, m_stream);
 
     if (bytes_written == 0) {
       if (::feof(m_stream))
-        error.SetErrorString("feof");
+        error = Status::FromErrorString("feof");
       else if (::ferror(m_stream))
-        error.SetErrorString("ferror");
+        error = Status::FromErrorString("ferror");
       num_bytes = 0;
     } else
       num_bytes = bytes_written;
@@ -639,7 +677,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   }
 
   num_bytes = 0;
-  error.SetErrorString("invalid file handle");
+  error = Status::FromErrorString("invalid file handle");
   return error;
 }
 
@@ -683,14 +721,14 @@ Status NativeFile::Read(void *buf, size_t &num_bytes, off_t &offset) {
         llvm::sys::RetryAfterSignal(-1, ::pread, fd, buf, num_bytes, offset);
     if (bytes_read < 0) {
       num_bytes = 0;
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
     } else {
       offset += bytes_read;
       num_bytes = bytes_read;
     }
   } else {
     num_bytes = 0;
-    error.SetErrorString("invalid file handle");
+    error = Status::FromErrorString("invalid file handle");
   }
 #else
   std::lock_guard<std::mutex> guard(offset_access_mutex);
@@ -743,7 +781,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes, off_t &offset) {
         llvm::sys::RetryAfterSignal(-1, ::pwrite, m_descriptor, buf, num_bytes, offset);
     if (bytes_written < 0) {
       num_bytes = 0;
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
     } else {
       offset += bytes_written;
       num_bytes = bytes_written;
@@ -762,7 +800,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes, off_t &offset) {
 #endif
   } else {
     num_bytes = 0;
-    error.SetErrorString("invalid file handle");
+    error = Status::FromErrorString("invalid file handle");
   }
   return error;
 }

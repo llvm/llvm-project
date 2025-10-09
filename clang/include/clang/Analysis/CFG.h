@@ -122,7 +122,8 @@ public:
     return (Kind) x;
   }
 
-  void dumpToStream(llvm::raw_ostream &OS) const;
+  void dumpToStream(llvm::raw_ostream &OS,
+                    bool TerminateWithNewLine = true) const;
 
   void dump() const {
     dumpToStream(llvm::errs());
@@ -695,6 +696,11 @@ class CFGBlock {
     void dump() const {
       dumpToStream(llvm::errs());
     }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const {
+      ID.AddPointer(Parent);
+      ID.AddInteger(Index);
+    }
   };
 
   template <bool IsReverse, bool IsConst> class ElementRefIterator {
@@ -879,6 +885,7 @@ private:
   ///
   /// Optimization Note: This bit could be profitably folded with Terminator's
   /// storage if the memory usage of CFGBlock becomes an issue.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoReturnElement : 1;
 
   /// The parent CFG that owns this CFGBlock.
@@ -1007,7 +1014,9 @@ public:
 
   class FilterOptions {
   public:
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreNullPredecessors : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreDefaultsWithCoveredEnums : 1;
 
     FilterOptions()
@@ -1187,6 +1196,8 @@ public:
   }
 };
 
+using ConstCFGElementRef = CFGBlock::ConstCFGElementRef;
+
 /// CFGCallback defines methods that should be called when a logical
 /// operator error is found when building the CFG.
 class CFGCallback {
@@ -1240,6 +1251,7 @@ public:
     bool MarkElidedCXXConstructors = false;
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
+    bool AssumeReachableDefaultInSwitchStatements = false;
 
     BuildOptions() = default;
 
@@ -1383,10 +1395,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   template <typename Callback> void VisitBlockStmts(Callback &O) const {
-    for (const_iterator I = begin(), E = end(); I != E; ++I)
-      for (CFGBlock::const_iterator BI = (*I)->begin(), BE = (*I)->end();
-           BI != BE; ++BI) {
-        if (std::optional<CFGStmt> stmt = BI->getAs<CFGStmt>())
+    for (CFGBlock *BB : *this)
+      for (const CFGElement &Elem : *BB) {
+        if (std::optional<CFGStmt> stmt = Elem.getAs<CFGStmt>())
           O(const_cast<Stmt *>(stmt->getStmt()));
       }
   }

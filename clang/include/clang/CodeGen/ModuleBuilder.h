@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
   class Constant;
@@ -26,6 +27,9 @@ namespace llvm {
   class FileSystem;
   }
 }
+
+// Prefix of the name of the artificial inline frame.
+inline constexpr llvm::StringRef ClangTrapPrefix = "__clang_trap_msg";
 
 namespace clang {
   class CodeGenOptions;
@@ -47,6 +51,12 @@ namespace CodeGen {
 /// This is not really an abstract interface.
 class CodeGenerator : public ASTConsumer {
   virtual void anchor();
+
+protected:
+  /// True if we've finished generating IR. This prevents us from generating
+  /// additional LLVM IR after emitting output in HandleTranslationUnit. This
+  /// can happen when Clang plugins trigger additional AST deserialization.
+  bool IRGenFinished = false;
 
 public:
   /// Return an opaque reference to the CodeGenModule object, which can

@@ -14,7 +14,7 @@
 
 [[clang::objc_runtime_name("name")]] @protocol Bar;
 
-[[clang::objc_protocol_requires_explicit_implementation]] 
+[[clang::objc_protocol_requires_explicit_implementation]]
 @protocol Baz
 @end
 

@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 
 // RUN: %clang %s -O2 -S -o - -target wasm32-unknown-unknown \
-// RUN: -msimd128 -mrelaxed-simd -Wcast-qual -Werror | FileCheck %s
+// RUN: -msimd128 -mrelaxed-simd -mfp16 -Wcast-qual -Werror | FileCheck %s
 
 #include <wasm_simd128.h>
 
@@ -1384,4 +1384,140 @@ v128_t test_i16x8_relaxed_dot_i8x16_i7x16(v128_t a, v128_t b) {
 // CHECK: i32x4.relaxed_dot_i8x16_i7x16_add_s{{$}}
 v128_t test_i32x4_relaxed_dot_i8x16_i7x16_add(v128_t a, v128_t b, v128_t c) {
   return wasm_i32x4_relaxed_dot_i8x16_i7x16_add(a, b, c);
+}
+
+// CHECK-LABEL: test_f16x8_splat:
+// CHECK: f16x8.splat{{$}}
+v128_t test_f16x8_splat(float a) { return wasm_f16x8_splat(a); }
+
+// CHECK-LABEL: test_f16x8_extract_lane:
+// CHECK: f16x8.extract_lane 7{{$}}
+int16_t test_f16x8_extract_lane(v128_t a) {
+  return wasm_f16x8_extract_lane(a, 7);
+}
+
+// CHECK-LABEL: test_f16x8_replace_lane:
+// CHECK: f16x8.replace_lane 7{{$}}
+v128_t test_f16x8_replace_lane(v128_t a, float b) {
+  return wasm_f16x8_replace_lane(a, 7, b);
+}
+
+// CHECK-LABEL: test_f16x8_abs:
+// CHECK: f16x8.abs{{$}}
+v128_t test_f16x8_abs(v128_t a) { return wasm_f16x8_abs(a); }
+
+// CHECK-LABEL: test_f16x8_neg:
+// CHECK: f16x8.neg{{$}}
+v128_t test_f16x8_neg(v128_t a) { return wasm_f16x8_neg(a); }
+
+// CHECK-LABEL: test_f16x8_sqrt:
+// CHECK: f16x8.sqrt{{$}}
+v128_t test_f16x8_sqrt(v128_t a) { return wasm_f16x8_sqrt(a); }
+
+// CHECK-LABEL: test_f16x8_ceil:
+// CHECK: f16x8.ceil{{$}}
+v128_t test_f16x8_ceil(v128_t a) { return wasm_f16x8_ceil(a); }
+
+// CHECK-LABEL: test_f16x8_floor:
+// CHECK: f16x8.floor{{$}}
+v128_t test_f16x8_floor(v128_t a) { return wasm_f16x8_floor(a); }
+
+// CHECK-LABEL: test_f16x8_trunc:
+// CHECK: f16x8.trunc{{$}}
+v128_t test_f16x8_trunc(v128_t a) { return wasm_f16x8_trunc(a); }
+
+// CHECK-LABEL: test_f16x8_nearest:
+// CHECK: f16x8.nearest{{$}}
+v128_t test_f16x8_nearest(v128_t a) { return wasm_f16x8_nearest(a); }
+
+// CHECK-LABEL: test_f16x8_add:
+// CHECK: f16x8.add{{$}}
+v128_t test_f16x8_add(v128_t a, v128_t b) { return wasm_f16x8_add(a, b); }
+
+// CHECK-LABEL: test_f16x8_sub:
+// CHECK: f16x8.sub{{$}}
+v128_t test_f16x8_sub(v128_t a, v128_t b) { return wasm_f16x8_sub(a, b); }
+
+// CHECK-LABEL: test_f16x8_mul:
+// CHECK: f16x8.mul{{$}}
+v128_t test_f16x8_mul(v128_t a, v128_t b) { return wasm_f16x8_mul(a, b); }
+
+// CHECK-LABEL: test_f16x8_div:
+// CHECK: f16x8.div{{$}}
+v128_t test_f16x8_div(v128_t a, v128_t b) { return wasm_f16x8_div(a, b); }
+
+// CHECK-LABEL: test_f16x8_min:
+// CHECK: f16x8.min{{$}}
+v128_t test_f16x8_min(v128_t a, v128_t b) { return wasm_f16x8_min(a, b); }
+
+// CHECK-LABEL: test_f16x8_max:
+// CHECK: f16x8.max{{$}}
+v128_t test_f16x8_max(v128_t a, v128_t b) { return wasm_f16x8_max(a, b); }
+
+// CHECK-LABEL: test_f16x8_pmin:
+// CHECK: f16x8.pmin{{$}}
+v128_t test_f16x8_pmin(v128_t a, v128_t b) { return wasm_f16x8_pmin(a, b); }
+
+// CHECK-LABEL: test_f16x8_pmax:
+// CHECK: f16x8.pmax{{$}}
+v128_t test_f16x8_pmax(v128_t a, v128_t b) { return wasm_f16x8_pmax(a, b); }
+
+// CHECK-LABEL: test_f16x8_eq:
+// CHECK: f16x8.eq{{$}}
+v128_t test_f16x8_eq(v128_t a, v128_t b) { return wasm_f16x8_eq(a, b); }
+
+// CHECK-LABEL: test_f16x8_ne:
+// CHECK: f16x8.ne{{$}}
+v128_t test_f16x8_ne(v128_t a, v128_t b) { return wasm_f16x8_ne(a, b); }
+
+// CHECK-LABEL: test_f16x8_lt:
+// CHECK: f16x8.lt{{$}}
+v128_t test_f16x8_lt(v128_t a, v128_t b) { return wasm_f16x8_lt(a, b); }
+
+// CHECK-LABEL: test_f16x8_gt:
+// CHECK: f16x8.gt{{$}}
+v128_t test_f16x8_gt(v128_t a, v128_t b) { return wasm_f16x8_gt(a, b); }
+
+// CHECK-LABEL: test_f16x8_le:
+// CHECK: f16x8.le{{$}}
+v128_t test_f16x8_le(v128_t a, v128_t b) { return wasm_f16x8_le(a, b); }
+
+// CHECK-LABEL: test_f16x8_ge:
+// CHECK: f16x8.ge{{$}}
+v128_t test_f16x8_ge(v128_t a, v128_t b) { return wasm_f16x8_ge(a, b); }
+
+// CHECK-LABEL: test_i16x8_trunc_sat_f16x8:
+// CHECK: i16x8.trunc_sat_f16x8_s{{$}}
+v128_t test_i16x8_trunc_sat_f16x8(v128_t a) {
+  return wasm_i16x8_trunc_sat_f16x8(a);
+}
+
+// CHECK-LABEL: test_u16x8_trunc_sat_f16x8:
+// CHECK: i16x8.trunc_sat_f16x8_u{{$}}
+v128_t test_u16x8_trunc_sat_f16x8(v128_t a) {
+  return wasm_u16x8_trunc_sat_f16x8(a);
+}
+
+// CHECK-LABEL: test_f16x8_convert_i16x8:
+// CHECK: f16x8.convert_i16x8_s{{$}}
+v128_t test_f16x8_convert_i16x8(v128_t a) {
+  return wasm_f16x8_convert_i16x8(a);
+}
+
+// CHECK-LABEL: test_f16x8_convert_u16x8:
+// CHECK: f16x8.convert_i16x8_u{{$}}
+v128_t test_f16x8_convert_u16x8(v128_t a) {
+  return wasm_f16x8_convert_u16x8(a);
+}
+
+// CHECK-LABEL: test_f16x8_relaxed_madd:
+// CHECK: f16x8.relaxed_madd{{$}}
+v128_t test_f16x8_relaxed_madd(v128_t a, v128_t b, v128_t c) {
+  return wasm_f16x8_relaxed_madd(a, b, c);
+}
+
+// CHECK-LABEL: test_f16x8_relaxed_nmadd:
+// CHECK: f16x8.relaxed_nmadd{{$}}
+v128_t test_f16x8_relaxed_nmadd(v128_t a, v128_t b, v128_t c) {
+  return wasm_f16x8_relaxed_nmadd(a, b, c);
 }

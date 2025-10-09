@@ -120,6 +120,11 @@ public:
     RM_Disabled,
   };
 
+  enum ExceptionsMode {
+    EM_Enabled,
+    EM_Disabled,
+  };
+
   struct BitCodeLibraryInfo {
     std::string Path;
     bool ShouldInternalize;
@@ -140,6 +145,8 @@ private:
   const llvm::opt::Arg *const CachedRTTIArg;
 
   const RTTIMode CachedRTTIMode;
+
+  const ExceptionsMode CachedExceptionsMode;
 
   /// The list of toolchain specific path prefixes to search for libraries.
   path_list LibraryPaths;
@@ -172,7 +179,6 @@ private:
   Tool *getLinkerWrapper() const;
 
   mutable bool SanitizerArgsChecked = false;
-  mutable std::unique_ptr<XRayArgs> XRayArguments;
 
   /// The effective clang triple for the current Job.
   mutable llvm::Triple EffectiveTriple;
@@ -196,10 +202,6 @@ protected:
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
 
-  /// Executes the given \p Executable and returns the stdout.
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  executeToolChainProgram(StringRef Executable) const;
-
   void setTripleEnvironment(llvm::Triple::EnvironmentType Env);
 
   virtual Tool *buildAssembler() const;
@@ -209,8 +211,8 @@ protected:
 
   virtual std::string buildCompilerRTBasename(const llvm::opt::ArgList &Args,
                                               StringRef Component,
-                                              FileType Type,
-                                              bool AddArch) const;
+                                              FileType Type, bool AddArch,
+                                              bool IsFortran = false) const;
 
   /// Find the target-specific subdirectory for the current target triple under
   /// \p BaseDir, doing fallback triple searches as necessary.
@@ -219,9 +221,9 @@ protected:
 
   /// \name Utilities for implementing subclasses.
   ///@{
-  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
-                               llvm::opt::ArgStringList &CC1Args,
-                               const Twine &Path);
+  static void addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
+                                        llvm::opt::ArgStringList &CC1Args,
+                                        const Twine &Path);
   static void addExternCSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
@@ -229,6 +231,9 @@ protected:
       addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
+  static void addSystemFrameworkIncludes(const llvm::opt::ArgList &DriverArgs,
+                                         llvm::opt::ArgStringList &CC1Args,
+                                         ArrayRef<StringRef> Paths);
   static void addSystemIncludes(const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 ArrayRef<StringRef> Paths);
@@ -238,6 +243,9 @@ protected:
   ///@}
 
 public:
+  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
+                               llvm::opt::ArgStringList &CC1Args,
+                               const Twine &Path);
   virtual ~ToolChain();
 
   // Accessors
@@ -310,13 +318,16 @@ public:
 
   SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
 
-  const XRayArgs& getXRayArgs() const;
+  const XRayArgs getXRayArgs(const llvm::opt::ArgList &) const;
 
   // Returns the Arg * that explicitly turned on/off rtti, or nullptr.
   const llvm::opt::Arg *getRTTIArg() const { return CachedRTTIArg; }
 
   // Returns the RTTIMode for the toolchain with the current arguments.
   RTTIMode getRTTIMode() const { return CachedRTTIMode; }
+
+  // Returns the ExceptionsMode for the toolchain with the current arguments.
+  ExceptionsMode getExceptionsMode() const { return CachedExceptionsMode; }
 
   /// Return any implicit target and/or mode flag for an invocation of
   /// the compiler driver as `ProgName`.
@@ -499,21 +510,42 @@ public:
 
   virtual std::string getCompilerRT(const llvm::opt::ArgList &Args,
                                     StringRef Component,
-                                    FileType Type = ToolChain::FT_Static) const;
+                                    FileType Type = ToolChain::FT_Static,
+                                    bool IsFortran = false) const;
 
-  const char *
-  getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
-                         FileType Type = ToolChain::FT_Static) const;
+  /// Adds Fortran runtime libraries to \p CmdArgs.
+  virtual void addFortranRuntimeLibs(const llvm::opt::ArgList &Args,
+                                     llvm::opt::ArgStringList &CmdArgs) const;
+
+  /// Adds the path for the Fortran runtime libraries to \p CmdArgs.
+  virtual void
+  addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const;
+
+  /// Add the path for libflang_rt.runtime.a
+  void addFlangRTLibPath(const llvm::opt::ArgList &Args,
+                         llvm::opt::ArgStringList &CmdArgs) const;
+
+  const char *getCompilerRTArgString(const llvm::opt::ArgList &Args,
+                                     StringRef Component,
+                                     FileType Type = ToolChain::FT_Static,
+                                     bool IsFortran = false) const;
 
   std::string getCompilerRTBasename(const llvm::opt::ArgList &Args,
                                     StringRef Component,
                                     FileType Type = ToolChain::FT_Static) const;
+
+  // Returns Triple without the OSs version.
+  llvm::Triple getTripleWithoutOSVersion() const;
 
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 
   // Returns target specific standard library path if it exists.
   std::optional<std::string> getStdlibPath() const;
+
+  // Returns target specific standard library include path if it exists.
+  std::optional<std::string> getStdlibIncludePath() const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch> or <ResourceDir>/lib/<triple>.
   // This is used by runtimes (such as OpenMP) to find arch-specific libraries.
@@ -570,7 +602,7 @@ public:
 
   // Return the DWARF version to emit, in the absence of arguments
   // to the contrary.
-  virtual unsigned GetDefaultDwarfVersion() const;
+  virtual unsigned GetDefaultDwarfVersion() const { return 5; }
 
   // Some toolchains may have different restrictions on the DWARF version and
   // may need to adjust it. E.g. NVPTX may need to enforce DWARF2 even when host
@@ -628,7 +660,7 @@ public:
 
   /// ComputeEffectiveClangTriple - Return the Clang triple to use for this
   /// target, which may take into account the command line arguments. For
-  /// example, on Darwin the -mmacosx-version-min= command line argument (which
+  /// example, on Darwin the -mmacos-version-min= command line argument (which
   /// sets the deployment target) determines the version in the triple passed to
   /// Clang.
   virtual std::string ComputeEffectiveClangTriple(
@@ -672,6 +704,13 @@ public:
 
   /// Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
+
+  // Get the list of extra macro defines requested by the multilib
+  // configuration.
+  virtual SmallVector<std::string>
+  getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
+    return {};
+  };
 
   // GetRuntimeLibType - Determine the runtime library type to use with the
   // given compilation arguments.
@@ -749,6 +788,10 @@ public:
   virtual void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) const;
 
+  /// Add arguments to use system-specific SYCL includes.
+  virtual void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args) const;
+
   /// Add arguments to use MCU GCC toolchain includes.
   virtual void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const;
@@ -759,7 +802,8 @@ public:
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args) const;
+  getDeviceLibs(const llvm::opt::ArgList &Args,
+                const Action::OffloadKind DeviceOffloadingKind) const;
 
   /// Add the system specific linker arguments to use
   /// for the given HIP runtime library type.
@@ -797,7 +841,7 @@ public:
         return llvm::Triple("nvptx-nvidia-cuda");
       if (TT.getArch() == llvm::Triple::nvptx64)
         return llvm::Triple("nvptx64-nvidia-cuda");
-      if (TT.getArch() == llvm::Triple::amdgcn)
+      if (TT.isAMDGCN())
         return llvm::Triple("amdgcn-amd-amdhsa");
     }
     return TT;

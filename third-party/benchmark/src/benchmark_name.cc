@@ -51,8 +51,9 @@ std::string join(char delimiter, const Ts&... ts) {
 }
 }  // namespace
 
+BENCHMARK_EXPORT
 std::string BenchmarkName::str() const {
-  return join('/', function_name, args, min_time, iterations, repetitions,
-              time_type, threads);
+  return join('/', function_name, args, min_time, min_warmup_time, iterations,
+              repetitions, time_type, threads);
 }
 }  // namespace benchmark

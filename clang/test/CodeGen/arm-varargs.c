@@ -150,7 +150,7 @@ underaligned_int_struct underaligned_int_struct_test(void) {
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 4
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[CUR]], i32 4, i1 false)
-// CHECK: [[COERCE:%[a-z0-9._]+]] = getelementptr inbounds %struct.underaligned_int_struct, ptr [[RETVAL]], i32 0, i32 0
+// CHECK: [[COERCE:%[a-z0-9._]+]] = getelementptr inbounds nuw %struct.underaligned_int_struct, ptr [[RETVAL]], i32 0, i32 0
 // CHECK: [[RESULT:%[a-z0-9._]+]] = load i32, ptr [[COERCE]]
 // CHECK: ret i32 [[RESULT]]
 }
@@ -210,7 +210,7 @@ underaligned_int_struct_member underaligned_int_struct_member_test(void) {
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 4
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[CUR]], i32 4, i1 false)
-// CHECK: [[COERCE:%[a-z0-9._]+]] = getelementptr inbounds %struct.underaligned_int_struct_member, ptr [[RETVAL]], i32 0, i32 0
+// CHECK: [[COERCE:%[a-z0-9._]+]] = getelementptr inbounds nuw %struct.underaligned_int_struct_member, ptr [[RETVAL]], i32 0, i32 0
 // CHECK: [[RESULT:%[a-z0-9._]+]] = load i32, ptr [[COERCE]]
 // CHECK: ret i32 [[RESULT]]
 }
@@ -264,5 +264,5 @@ void check_start(int n, ...) {
   va_list the_list;
   va_start(the_list, n);
 // CHECK: [[THE_LIST:%[a-z0-9._]+]] = alloca %struct.__va_list
-// CHECK: call void @llvm.va_start(ptr [[THE_LIST]])
+// CHECK: call void @llvm.va_start.p0(ptr [[THE_LIST]])
 }

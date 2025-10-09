@@ -10,34 +10,44 @@
 #ifndef _LIBCPP___CHRONO_OSTREAM_H
 #define _LIBCPP___CHRONO_OSTREAM_H
 
-#include <__chrono/calendar.h>
-#include <__chrono/day.h>
-#include <__chrono/duration.h>
-#include <__chrono/file_clock.h>
-#include <__chrono/hh_mm_ss.h>
-#include <__chrono/month.h>
-#include <__chrono/month_weekday.h>
-#include <__chrono/monthday.h>
-#include <__chrono/statically_widen.h>
-#include <__chrono/system_clock.h>
-#include <__chrono/weekday.h>
-#include <__chrono/year.h>
-#include <__chrono/year_month.h>
-#include <__chrono/year_month_day.h>
-#include <__chrono/year_month_weekday.h>
-#include <__concepts/same_as.h>
 #include <__config>
-#include <__format/format_functions.h>
-#include <ostream>
-#include <ratio>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#if _LIBCPP_HAS_LOCALIZATION
+
+#  include <__chrono/calendar.h>
+#  include <__chrono/day.h>
+#  include <__chrono/duration.h>
+#  include <__chrono/file_clock.h>
+#  include <__chrono/gps_clock.h>
+#  include <__chrono/hh_mm_ss.h>
+#  include <__chrono/local_info.h>
+#  include <__chrono/month.h>
+#  include <__chrono/month_weekday.h>
+#  include <__chrono/monthday.h>
+#  include <__chrono/statically_widen.h>
+#  include <__chrono/sys_info.h>
+#  include <__chrono/system_clock.h>
+#  include <__chrono/tai_clock.h>
+#  include <__chrono/utc_clock.h>
+#  include <__chrono/weekday.h>
+#  include <__chrono/year.h>
+#  include <__chrono/year_month.h>
+#  include <__chrono/year_month_day.h>
+#  include <__chrono/year_month_weekday.h>
+#  include <__chrono/zoned_time.h>
+#  include <__concepts/same_as.h>
+#  include <__format/format_functions.h>
+#  include <__fwd/ostream.h>
+#  include <ratio>
+#  include <sstream>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 20
 
 namespace chrono {
 
@@ -53,6 +63,30 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_days& __dp) {
   return __os << year_month_day{__dp};
 }
+
+#    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+#      if _LIBCPP_HAS_EXPERIMENTAL_TZDB
+
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const utc_time<_Duration>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const tai_time<_Duration>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const gps_time<_Duration>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+#      endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
+#    endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 
 template <class _CharT, class _Traits, class _Duration>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -79,11 +113,11 @@ _LIBCPP_HIDE_FROM_ABI auto __units_suffix() {
   else if constexpr (same_as<typename _Period::type, nano>)
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "ns");
   else if constexpr (same_as<typename _Period::type, micro>)
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+#    if _LIBCPP_HAS_UNICODE
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "\u00b5s");
-#  else
+#    else
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "us");
-#  endif
+#    endif
   else if constexpr (same_as<typename _Period::type, milli>)
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "ms");
   else if constexpr (same_as<typename _Period::type, centi>)
@@ -262,10 +296,59 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
 
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_info& __info) {
+  // __info.abbrev is always std::basic_string<char>.
+  // Since these strings typically are short the conversion should be cheap.
+  std::basic_string<_CharT> __abbrev{__info.abbrev.begin(), __info.abbrev.end()};
+  return __os << std::format(
+             _LIBCPP_STATICALLY_WIDEN(_CharT, "[{:%F %T}, {:%F %T}) {:%T} {:%Q%q} \"{}\""),
+             __info.begin,
+             __info.end,
+             hh_mm_ss{__info.offset},
+             __info.save,
+             __abbrev);
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
+  auto __result = [&]() -> basic_string<_CharT> {
+    switch (__info.result) {
+    case local_info::unique:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "unique");
+    case local_info::nonexistent:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "non-existent");
+    case local_info::ambiguous:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "ambiguous");
+
+    default:
+      return std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "unspecified result ({})"), __info.result);
+    };
+  };
+
+  return __os << std::format(
+             _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
+}
+
+#      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+template <class _CharT, class _Traits, class _Duration, class _TimeZonePtr>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _TimeZonePtr>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
+}
+#      endif
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
+
 } // namespace chrono
 
-#endif // if _LIBCPP_STD_VER >= 20
+#  endif // if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___CHRONO_OSTREAM_H

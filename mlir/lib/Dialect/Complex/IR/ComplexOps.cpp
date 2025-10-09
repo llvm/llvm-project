@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
@@ -363,6 +362,32 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
     return {};
 
   // complex.mul(a, complex.constant<1.0, 0.0>) -> a
+  if (real == APFloat(real.getSemantics(), 1))
+    return getLhs();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
+  auto rhs = adaptor.getRhs();
+  if (!rhs)
+    return {};
+
+  ArrayAttr arrayAttr = dyn_cast<ArrayAttr>(rhs);
+  if (!arrayAttr || arrayAttr.size() != 2)
+    return {};
+
+  APFloat real = cast<FloatAttr>(arrayAttr[0]).getValue();
+  APFloat imag = cast<FloatAttr>(arrayAttr[1]).getValue();
+
+  if (!imag.isZero())
+    return {};
+
+  // complex.div(a, complex.constant<1.0, 0.0>) -> a
   if (real == APFloat(real.getSemantics(), 1))
     return getLhs();
 

@@ -12,6 +12,7 @@ static_library("ItaniumABI") {
     "//lldb/source/Plugins/TypeSystem/Clang",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
+    "//lldb/source/ValueObject",
   ]
 
   # Reaches into Plugins/LanguageRuntime/CPlusPlus.

@@ -10,13 +10,17 @@
 #define MLIR_DIALECT_MEMREF_TRANSFORMOPS_MEMREFTRANSFORMOPS_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
 namespace memref {
 class AllocOp;
 } // namespace memref
+namespace transform {
+class OperationType;
+} // namespace transform
 } // namespace mlir
 
 #define GET_OP_CLASSES

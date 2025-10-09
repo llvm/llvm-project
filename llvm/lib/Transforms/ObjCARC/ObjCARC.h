@@ -22,6 +22,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
+#include "ARCRuntimeEntryPoints.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -99,12 +100,14 @@ static inline MDString *getRVInstMarker(Module &M) {
 /// going to be removed from the IR before WinEHPrepare.
 CallInst *createCallInstWithColors(
     FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
-    Instruction *InsertBefore,
+    BasicBlock::iterator InsertBefore,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors);
 
 class BundledRetainClaimRVs {
 public:
-  BundledRetainClaimRVs(bool ContractPass) : ContractPass(ContractPass) {}
+  BundledRetainClaimRVs(ARCRuntimeEntryPoints &EP, bool ContractPass,
+                        bool UseClaimRV)
+      : EP(EP), ContractPass(ContractPass), UseClaimRV(UseClaimRV) {}
   ~BundledRetainClaimRVs();
 
   /// Insert a retainRV/claimRV call to the normal destination blocks of invokes
@@ -113,11 +116,12 @@ public:
   std::pair<bool, bool> insertAfterInvokes(Function &F, DominatorTree *DT);
 
   /// Insert a retainRV/claimRV call.
-  CallInst *insertRVCall(Instruction *InsertPt, CallBase *AnnotatedCall);
+  CallInst *insertRVCall(BasicBlock::iterator InsertPt,
+                         CallBase *AnnotatedCall);
 
   /// Insert a retainRV/claimRV call with colors.
   CallInst *insertRVCallWithColors(
-      Instruction *InsertPt, CallBase *AnnotatedCall,
+      BasicBlock::iterator InsertPt, CallBase *AnnotatedCall,
       const DenseMap<BasicBlock *, ColorVector> &BlockColors);
 
   /// See if an instruction is a bundled retainRV/claimRV call.
@@ -140,7 +144,8 @@ public:
           }
 
       auto *NewCall = CallBase::removeOperandBundle(
-          It->second, LLVMContext::OB_clang_arc_attachedcall, It->second);
+          It->second, LLVMContext::OB_clang_arc_attachedcall,
+          It->second->getIterator());
       NewCall->copyMetadata(*It->second);
       It->second->replaceAllUsesWith(NewCall);
       It->second->eraseFromParent();
@@ -153,7 +158,9 @@ private:
   /// A map of inserted retainRV/claimRV calls to annotated calls/invokes.
   DenseMap<CallInst *, CallBase *> RVCalls;
 
+  ARCRuntimeEntryPoints &EP;
   bool ContractPass;
+  bool UseClaimRV;
 };
 
 } // end namespace objcarc

@@ -56,7 +56,11 @@ my $my_debugger = $ENV{'DEBUGGER'};
 if (!$my_debugger) {
     if ($use_lldb) {
         my $path = dirname(Cwd::abs_path($0));
-        $my_debugger = "/usr/bin/env python3 $path/llgdb.py";
+        my $python_exec_path = $ENV{'PYTHON_EXEC_PATH'};
+        if (!$python_exec_path) {
+          $python_exec_path = 'python3';
+        }
+        $my_debugger = "LLDB_PYTHON_PATH=$ENV{'LLDB_PYTHON_PATH'} /usr/bin/xcrun $python_exec_path $path/llgdb.py";
     } else {
         $my_debugger = "gdb";
     }
@@ -66,12 +70,18 @@ if (!$my_debugger) {
 my $debugger_options = "-q -batch -n -x";
 
 # run debugger and capture output.
+print("Running debugger\n");
 system("$my_debugger $debugger_options $debugger_script_file $executable_file > $output_file 2>&1");
-
+if ($?) {
+    print("Debugger output was:\n");
+    system("cat", "$output_file");
+    exit 1;
+}
 # validate output.
+print("Running FileCheck\n");
 system("FileCheck", "-input-file", "$output_file", "$testcase_file");
-if ($?>>8 == 1) {
-    print "Debugger output was:\n";
+if ($?) {
+    print("Debugger output was:\n");
     system("cat", "$output_file");
     exit 1;
 }

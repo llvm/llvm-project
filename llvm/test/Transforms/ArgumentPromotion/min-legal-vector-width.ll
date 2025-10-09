@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 ; CHECK-LABEL: define i32 @foo() #0 {
-; CHECK-NEXT:      %.val = load <32 x half>, ptr undef, align 4
+; CHECK-NEXT:      %.val = load <32 x half>, ptr poison, align 4
 ; CHECK-NEXT:      call void @bar(<32 x half> %.val)
 ; CHECK-NEXT:      ret i32 0
 ; CHECK-NEXT:    }
@@ -13,7 +13,7 @@
 ; CHECK:    attributes #0 = { uwtable "min-legal-vector-width"="512" }
 
 define i32 @foo() #0 {
-  call void @bar(ptr undef)
+  call void @bar(ptr poison)
   ret i32 0
 }
 

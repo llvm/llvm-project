@@ -16,6 +16,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
@@ -71,6 +72,7 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatInstruction, 'i', "instruction"},
     {eFormatVoid, 'v', "void"},
     {eFormatUnicode8, 'u', "unicode8"},
+    {eFormatFloat128, '\0', "float128"},
 };
 
 static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
@@ -91,7 +93,7 @@ static bool GetFormatFromFormatChar(char format_char, Format &format) {
 }
 
 static bool GetFormatFromFormatName(llvm::StringRef format_name,
-                                    bool partial_match_ok, Format &format) {
+                                    Format &format) {
   uint32_t i;
   for (i = 0; i < g_num_format_infos; ++i) {
     if (format_name.equals_insensitive(g_format_infos[i].format_name)) {
@@ -100,13 +102,11 @@ static bool GetFormatFromFormatName(llvm::StringRef format_name,
     }
   }
 
-  if (partial_match_ok) {
-    for (i = 0; i < g_num_format_infos; ++i) {
-      if (llvm::StringRef(g_format_infos[i].format_name)
-              .starts_with_insensitive(format_name)) {
-        format = g_format_infos[i].format;
-        return true;
-      }
+  for (i = 0; i < g_num_format_infos; ++i) {
+    if (llvm::StringRef(g_format_infos[i].format_name)
+            .starts_with_insensitive(format_name)) {
+      format = g_format_infos[i].format;
+      return true;
     }
   }
   format = eFormatInvalid;
@@ -124,7 +124,6 @@ void FormatManager::Changed() {
 }
 
 bool FormatManager::GetFormatFromCString(const char *format_cstr,
-                                         bool partial_match_ok,
                                          lldb::Format &format) {
   bool success = false;
   if (format_cstr && format_cstr[0]) {
@@ -134,7 +133,7 @@ bool FormatManager::GetFormatFromCString(const char *format_cstr,
         return true;
     }
 
-    success = GetFormatFromFormatName(format_cstr, partial_match_ok, format);
+    success = GetFormatFromFormatName(format_cstr, format);
   }
   if (!success)
     format = eFormatInvalid;
@@ -176,56 +175,68 @@ void FormatManager::DisableAllCategories() {
 void FormatManager::GetPossibleMatches(
     ValueObject &valobj, CompilerType compiler_type,
     lldb::DynamicValueType use_dynamic, FormattersMatchVector &entries,
-    FormattersMatchCandidate::Flags current_flags, bool root_level) {
+    FormattersMatchCandidate::Flags current_flags, bool root_level,
+    uint32_t ptr_stripped_depth) {
   compiler_type = compiler_type.GetTypeForFormatters();
   ConstString type_name(compiler_type.GetTypeName());
+  // A ValueObject that couldn't be made correctly won't necessarily have a
+  // target.  We aren't going to find a formatter in this case anyway, so we
+  // should just exit.
+  TargetSP target_sp = valobj.GetTargetSP();
+  if (!target_sp)
+    return;
   ScriptInterpreter *script_interpreter =
-      valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter();
+      target_sp->GetDebugger().GetScriptInterpreter();
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
     entries.push_back({bitfieldname, script_interpreter,
-                       TypeImpl(compiler_type), current_flags});
+                       TypeImpl(compiler_type), current_flags,
+                       ptr_stripped_depth});
   }
 
   if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
     entries.push_back({type_name, script_interpreter, TypeImpl(compiler_type),
-                       current_flags});
+                       current_flags, ptr_stripped_depth});
 
     ConstString display_type_name(compiler_type.GetTypeName());
     if (display_type_name != type_name)
       entries.push_back({display_type_name, script_interpreter,
-                         TypeImpl(compiler_type), current_flags});
+                         TypeImpl(compiler_type), current_flags,
+                         ptr_stripped_depth});
   }
 
   for (bool is_rvalue_ref = true, j = true;
        j && compiler_type.IsReferenceType(nullptr, &is_rvalue_ref); j = false) {
     CompilerType non_ref_type = compiler_type.GetNonReferenceType();
     GetPossibleMatches(valobj, non_ref_type, use_dynamic, entries,
-                       current_flags.WithStrippedReference());
+                       current_flags.WithStrippedReference(), root_level,
+                       ptr_stripped_depth);
     if (non_ref_type.IsTypedefType()) {
       CompilerType deffed_referenced_type = non_ref_type.GetTypedefedType();
       deffed_referenced_type =
           is_rvalue_ref ? deffed_referenced_type.GetRValueReferenceType()
                         : deffed_referenced_type.GetLValueReferenceType();
       // this is not exactly the usual meaning of stripping typedefs
-      GetPossibleMatches(
-          valobj, deffed_referenced_type,
-          use_dynamic, entries, current_flags.WithStrippedTypedef());
+      GetPossibleMatches(valobj, deffed_referenced_type, use_dynamic, entries,
+                         current_flags.WithStrippedTypedef(), root_level,
+                         ptr_stripped_depth);
     }
   }
 
   if (compiler_type.IsPointerType()) {
     CompilerType non_ptr_type = compiler_type.GetPointeeType();
     GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
-                       current_flags.WithStrippedPointer());
+                       current_flags.WithStrippedPointer(), root_level,
+                       ptr_stripped_depth + 1);
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
           non_ptr_type.GetTypedefedType().GetPointerType();
       // this is not exactly the usual meaning of stripping typedefs
       GetPossibleMatches(valobj, deffed_pointed_type, use_dynamic, entries,
-                         current_flags.WithStrippedTypedef());
+                         current_flags.WithStrippedTypedef(), root_level,
+                         ptr_stripped_depth + 1);
     }
   }
 
@@ -242,9 +253,9 @@ void FormatManager::GetPossibleMatches(
       CompilerType deffed_array_type =
           element_type.GetTypedefedType().GetArrayType(array_size);
       // this is not exactly the usual meaning of stripping typedefs
-      GetPossibleMatches(
-          valobj, deffed_array_type,
-          use_dynamic, entries, current_flags.WithStrippedTypedef());
+      GetPossibleMatches(valobj, deffed_array_type, use_dynamic, entries,
+                         current_flags.WithStrippedTypedef(), root_level,
+                         ptr_stripped_depth);
     }
   }
 
@@ -262,7 +273,8 @@ void FormatManager::GetPossibleMatches(
   if (compiler_type.IsTypedefType()) {
     CompilerType deffed_type = compiler_type.GetTypedefedType();
     GetPossibleMatches(valobj, deffed_type, use_dynamic, entries,
-                       current_flags.WithStrippedTypedef());
+                       current_flags.WithStrippedTypedef(), root_level,
+                       ptr_stripped_depth);
   }
 
   if (root_level) {
@@ -277,7 +289,8 @@ void FormatManager::GetPossibleMatches(
       if (unqual_compiler_ast_type.GetOpaqueQualType() !=
           compiler_type.GetOpaqueQualType())
         GetPossibleMatches(valobj, unqual_compiler_ast_type, use_dynamic,
-                           entries, current_flags);
+                           entries, current_flags, root_level,
+                           ptr_stripped_depth);
     } while (false);
 
     // if all else fails, go to static type
@@ -286,7 +299,7 @@ void FormatManager::GetPossibleMatches(
       if (static_value_sp)
         GetPossibleMatches(*static_value_sp.get(),
                            static_value_sp->GetCompilerType(), use_dynamic,
-                           entries, current_flags, true);
+                           entries, current_flags, true, ptr_stripped_depth);
     }
   }
 }
@@ -410,9 +423,8 @@ FormatManager::GetCategory(ConstString category_name, bool can_create) {
   if (!can_create)
     return lldb::TypeCategoryImplSP();
 
-  m_categories_map.Add(
-      category_name,
-      lldb::TypeCategoryImplSP(new TypeCategoryImpl(this, category_name)));
+  m_categories_map.Add(category_name,
+                       std::make_shared<TypeCategoryImpl>(this, category_name));
   return GetCategory(category_name);
 }
 
@@ -445,17 +457,25 @@ lldb::Format FormatManager::GetSingleItemFormat(lldb::Format vector_format) {
 }
 
 bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
+  TargetSP target_sp = valobj.GetTargetSP();
   // if settings say no oneline whatsoever
-  if (valobj.GetTargetSP().get() &&
-      !valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries())
+  if (target_sp && !target_sp->GetDebugger().GetAutoOneLineSummaries())
     return false; // then don't oneline
 
   // if this object has a summary, then ask the summary
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
+  const size_t max_num_children =
+      (target_sp ? *target_sp : Target::GetGlobalProperties())
+          .GetMaximumNumberOfChildrenToDisplay();
+  auto num_children = valobj.GetNumChildren(max_num_children);
+  if (!num_children) {
+    llvm::consumeError(num_children.takeError());
+    return true;
+  }
   // no children, no party
-  if (valobj.GetNumChildren() == 0)
+  if (*num_children == 0)
     return false;
 
   // ask the type if it has any opinion about this eLazyBoolCalculate == no
@@ -474,7 +494,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
   size_t total_children_name_len = 0;
 
-  for (size_t idx = 0; idx < valobj.GetNumChildren(); idx++) {
+  for (size_t idx = 0; idx < *num_children; idx++) {
     bool is_synth_val = false;
     ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
     // something is wrong here - bail out
@@ -526,7 +546,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
     }
 
     // if this child has children..
-    if (child_sp->GetNumChildren()) {
+    if (child_sp->HasChildren()) {
       // ...and no summary...
       // (if it had a summary and the summary wanted children, we would have
       // bailed out anyway

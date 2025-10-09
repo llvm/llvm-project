@@ -13,6 +13,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
@@ -252,9 +253,8 @@ public:
 
     OS << "\nOverall number of entries = " << OverallNumberOfEntries;
     OS << "\nOverall number of non empty buckets = " << NumberOfNonEmptyBuckets;
-    for (auto &BucketSize : BucketSizesMap)
-      OS << "\n Number of buckets with size " << BucketSize.first << ": "
-         << BucketSize.second;
+    for (auto [Size, Count] : BucketSizesMap)
+      OS << "\n Number of buckets with size " << Size << ": " << Count;
 
     std::stringstream stream;
     stream << std::fixed << std::setprecision(2)

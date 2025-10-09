@@ -1,17 +1,18 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV:      %[[#Int:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG:  %[[#MemScope_Device:]] = OpConstant %[[#Int]] 1
-; CHECK-SPIRV-DAG:  %[[#MemSemEqual_SeqCst:]] = OpConstant %[[#Int]] 16
-; CHECK-SPIRV-DAG:  %[[#MemSemUnequal_Acquire:]] = OpConstant %[[#Int]] 2
-; CHECK-SPIRV-DAG:  %[[#Constant_456:]] = OpConstant %[[#Int]] 456
-; CHECK-SPIRV-DAG:  %[[#Constant_128:]] = OpConstant %[[#Int]] 128
+; CHECK-SPIRV-DAG:  %[[#Int:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG:  %[[#MemScope_CrossDevice:]] = OpConstantNull %[[#Int]]
+; CHECK-SPIRV-DAG:  %[[#MemSemEqual_SeqCst:]] = OpConstant %[[#Int]] 16{{$}}
+; CHECK-SPIRV-DAG:  %[[#MemSemUnequal_Acquire:]] = OpConstant %[[#Int]] 2{{$}}
+; CHECK-SPIRV-DAG:  %[[#Constant_456:]] = OpConstant %[[#Int]] 456{{$}}
+; CHECK-SPIRV-DAG:  %[[#Constant_128:]] = OpConstant %[[#Int]] 128{{$}}
 ; CHECK-SPIRV-DAG:  %[[#Bool:]] = OpTypeBool
 ; CHECK-SPIRV-DAG:  %[[#Struct:]] = OpTypeStruct %[[#Int]] %[[#Bool]]
 ; CHECK-SPIRV-DAG:  %[[#UndefStruct:]] = OpUndef %[[#Struct]]
 
 ; CHECK-SPIRV:      %[[#Value:]] = OpLoad %[[#Int]] %[[#Value_ptr:]]
-; CHECK-SPIRV:      %[[#Res:]] = OpAtomicCompareExchange %[[#Int]] %[[#Pointer:]] %[[#MemScope_Device]]
+; CHECK-SPIRV:      %[[#Res:]] = OpAtomicCompareExchange %[[#Int]] %[[#Pointer:]] %[[#MemScope_CrossDevice]]
 ; CHECK-SPIRV-SAME: %[[#MemSemEqual_SeqCst]] %[[#MemSemUnequal_Acquire]] %[[#Value]] %[[#Comparator:]]
 ; CHECK-SPIRV:      %[[#Success:]] = OpIEqual %[[#]] %[[#Res]] %[[#Comparator]]
 ; CHECK-SPIRV:      %[[#Composite_0:]] = OpCompositeInsert %[[#Struct]] %[[#Res]] %[[#UndefStruct]] 0
@@ -34,7 +35,7 @@ cmpxchg.continue:                                 ; preds = %cmpxchg.store_expec
   ret void
 }
 
-; CHECK-SPIRV:      %[[#Res_1:]] = OpAtomicCompareExchange %[[#Int]] %[[#Ptr:]] %[[#MemScope_Device]]
+; CHECK-SPIRV:      %[[#Res_1:]] = OpAtomicCompareExchange %[[#Int]] %[[#Ptr:]] %[[#MemScope_CrossDevice]]
 ; CHECK-SPIRV-SAME: %[[#MemSemEqual_SeqCst]] %[[#MemSemUnequal_Acquire]] %[[#Constant_456]] %[[#Constant_128]]
 ; CHECK-SPIRV:      %[[#Success_1:]] = OpIEqual %[[#]] %[[#Res_1]] %[[#Constant_128]]
 ; CHECK-SPIRV:      %[[#Composite:]] = OpCompositeInsert %[[#Struct]] %[[#Res_1]] %[[#UndefStruct]] 0

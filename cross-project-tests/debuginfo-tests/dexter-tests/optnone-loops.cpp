@@ -5,9 +5,9 @@
 // UNSUPPORTED: system-windows
 // UNSUPPORTED: system-darwin
 
-// RUN: %clang -std=gnu++11 -O2 -g %s -o %t
+// RUN: %clang++ -std=gnu++11 -O2 -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t --debugger 'lldb' -- %s
+// RUN:     --binary %t %dexter_lldb_args -- %s
 
 // A simple loop of assignments.
 // With optimization level > 0 the compiler reorders basic blocks

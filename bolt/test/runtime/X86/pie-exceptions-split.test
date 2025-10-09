@@ -1,0 +1,27 @@
+REQUIRES: system-linux,bolt-runtime
+
+RUN: %clangxx %cxxflags -pie -fPIC %p/Inputs/pie-exceptions-failed-split.s \
+RUN:   -Wl,-q -o %t
+RUN: llvm-bolt %t -o %t.instr --instrument --instrumentation-file=%t.fdata
+
+## Record profile with invocation that does not throw exceptions.
+RUN: %t.instr
+
+RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp \
+RUN:   --split-functions --split-eh --print-after-lowering \
+RUN:   --print-only=_Z10throw_testiPPc 2>&1 | FileCheck %s
+
+## Check that a landing pad is split from its thrower and does not require a
+## trampoline LP.
+CHECK: Binary Function "_Z10throw_testiPPc"
+CHECK: IsSplit :
+CHECK-SAME: 1
+CHECK: callq {{.*}} # handler: [[LPAD:.*]];
+CHECK-NOT: Landing Pad{{$}}
+CHECK: HOT-COLD SPLIT POINT
+CHECK: {{^}}[[LPAD]]
+CHECK-NEXT: Landing Pad
+
+## Verify the output still executes correctly when the exception path is being
+## taken.
+RUN: %t.bolt arg1 arg2 arg3

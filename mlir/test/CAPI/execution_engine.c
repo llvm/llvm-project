@@ -55,7 +55,11 @@ void testSimpleExecution(void) {
       ctx, mlirStringRefCreateFromCString(
                // clang-format off
 "module {                                                                    \n"
+#ifdef __s390__
+"  func.func @add(%arg0 : i32) -> (i32 {llvm.signext}) attributes { llvm.emit_c_interface } {     \n"
+#else
 "  func.func @add(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {     \n"
+#endif
 "    %res = arith.addi %arg0, %arg0 : i32                                        \n"
 "    return %res : i32                                                           \n"
 "  }                                                                             \n"
@@ -99,8 +103,10 @@ void testOmpCreation(void) {
 "    %1 = arith.constant 1 : i32                                                \n"
 "    %2 = arith.constant 2 : i32                                                \n"
 "    omp.parallel {                                                             \n"
-"      omp.wsloop for (%3) : i32 = (%0) to (%2) step (%1) {                     \n"
-"        omp.yield                                                              \n"
+"      omp.wsloop {                                                             \n"
+"        omp.loop_nest (%3) : i32 = (%0) to (%2) step (%1) {                    \n"
+"          omp.yield                                                            \n"
+"        }                                                                      \n"
 "      }                                                                        \n"
 "      omp.terminator                                                           \n"
 "    }                                                                          \n"

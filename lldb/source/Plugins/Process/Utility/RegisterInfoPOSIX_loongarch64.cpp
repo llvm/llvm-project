@@ -19,10 +19,19 @@
 #define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoPOSIX_loongarch64::GPR))
 #define FCC_OFFSET(idx) ((idx)*1 + 32 * 8 + sizeof(RegisterInfoPOSIX_loongarch64::GPR))
 #define FCSR_OFFSET (8 * 1 + 32 * 8 + sizeof(RegisterInfoPOSIX_loongarch64::GPR))
+#define LSX_OFFSET(idx)                                                        \
+  ((idx) * 16 + sizeof(RegisterInfoPOSIX_loongarch64::GPR) +                   \
+   sizeof(RegisterInfoPOSIX_loongarch64::FPR))
+#define LASX_OFFSET(idx)                                                       \
+  ((idx) * 32 + sizeof(RegisterInfoPOSIX_loongarch64::GPR) +                   \
+   sizeof(RegisterInfoPOSIX_loongarch64::FPR) +                                \
+   sizeof(RegisterInfoPOSIX_loongarch64::LSX))
 
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterInfoPOSIX_loongarch64::GPR) +                                \
-   sizeof(RegisterInfoPOSIX_loongarch64::FPR))
+   sizeof(RegisterInfoPOSIX_loongarch64::FPR) +                                \
+   sizeof(RegisterInfoPOSIX_loongarch64::LSX) +                                \
+   sizeof(RegisterInfoPOSIX_loongarch64::LASX))
 
 #define DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
 #include "RegisterInfos_loongarch64.h"
@@ -56,7 +65,9 @@ uint32_t RegisterInfoPOSIX_loongarch64::GetRegisterInfoCount(
 enum {
   k_num_gpr_registers = gpr_last_loongarch - gpr_first_loongarch + 1,
   k_num_fpr_registers = fpr_last_loongarch - fpr_first_loongarch + 1,
-  k_num_register_sets = 2
+  k_num_lsx_registers = lsx_last_loongarch - lsx_first_loongarch + 1,
+  k_num_lasx_registers = lasx_last_loongarch - lasx_first_loongarch + 1,
+  k_num_register_sets = 4
 };
 
 // LoongArch64 general purpose registers.
@@ -105,13 +116,55 @@ static_assert(((sizeof g_fpr_regnums_loongarch64 /
                1) == k_num_fpr_registers,
               "g_fpr_regnums_loongarch64 has wrong number of register infos");
 
+// LoongArch64 lsx vector registers.
+static const uint32_t g_lsx_regnums_loongarch64[] = {
+    lsx_vr0_loongarch,  lsx_vr1_loongarch,  lsx_vr2_loongarch,
+    lsx_vr3_loongarch,  lsx_vr4_loongarch,  lsx_vr5_loongarch,
+    lsx_vr6_loongarch,  lsx_vr7_loongarch,  lsx_vr8_loongarch,
+    lsx_vr9_loongarch,  lsx_vr10_loongarch, lsx_vr11_loongarch,
+    lsx_vr12_loongarch, lsx_vr13_loongarch, lsx_vr14_loongarch,
+    lsx_vr15_loongarch, lsx_vr16_loongarch, lsx_vr17_loongarch,
+    lsx_vr18_loongarch, lsx_vr19_loongarch, lsx_vr20_loongarch,
+    lsx_vr21_loongarch, lsx_vr22_loongarch, lsx_vr23_loongarch,
+    lsx_vr24_loongarch, lsx_vr25_loongarch, lsx_vr26_loongarch,
+    lsx_vr27_loongarch, lsx_vr28_loongarch, lsx_vr29_loongarch,
+    lsx_vr30_loongarch, lsx_vr31_loongarch, LLDB_INVALID_REGNUM};
+
+static_assert(((sizeof g_lsx_regnums_loongarch64 /
+                sizeof g_lsx_regnums_loongarch64[0]) -
+               1) == k_num_lsx_registers,
+              "g_lsx_regnums_loongarch64 has wrong number of register infos");
+
+// LoongArch64 lasx vector registers.
+static const uint32_t g_lasx_regnums_loongarch64[] = {
+    lasx_xr0_loongarch,  lasx_xr1_loongarch,  lasx_xr2_loongarch,
+    lasx_xr3_loongarch,  lasx_xr4_loongarch,  lasx_xr5_loongarch,
+    lasx_xr6_loongarch,  lasx_xr7_loongarch,  lasx_xr8_loongarch,
+    lasx_xr9_loongarch,  lasx_xr10_loongarch, lasx_xr11_loongarch,
+    lasx_xr12_loongarch, lasx_xr13_loongarch, lasx_xr14_loongarch,
+    lasx_xr15_loongarch, lasx_xr16_loongarch, lasx_xr17_loongarch,
+    lasx_xr18_loongarch, lasx_xr19_loongarch, lasx_xr20_loongarch,
+    lasx_xr21_loongarch, lasx_xr22_loongarch, lasx_xr23_loongarch,
+    lasx_xr24_loongarch, lasx_xr25_loongarch, lasx_xr26_loongarch,
+    lasx_xr27_loongarch, lasx_xr28_loongarch, lasx_xr29_loongarch,
+    lasx_xr30_loongarch, lasx_xr31_loongarch, LLDB_INVALID_REGNUM};
+
+static_assert(((sizeof g_lasx_regnums_loongarch64 /
+                sizeof g_lasx_regnums_loongarch64[0]) -
+               1) == k_num_lasx_registers,
+              "g_lasx_regnums_loongarch64 has wrong number of register infos");
+
 // Register sets for LoongArch64.
 static const lldb_private::RegisterSet
     g_reg_sets_loongarch64[k_num_register_sets] = {
         {"General Purpose Registers", "gpr", k_num_gpr_registers,
          g_gpr_regnums_loongarch64},
         {"Floating Point Registers", "fpr", k_num_fpr_registers,
-         g_fpr_regnums_loongarch64}};
+         g_fpr_regnums_loongarch64},
+        {"LSX Vector Registers", "lsx", k_num_lsx_registers,
+         g_lsx_regnums_loongarch64},
+        {"LASX Vector Registers", "lasx", k_num_lasx_registers,
+         g_lasx_regnums_loongarch64}};
 
 RegisterInfoPOSIX_loongarch64::RegisterInfoPOSIX_loongarch64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags flags)
@@ -147,6 +200,10 @@ size_t RegisterInfoPOSIX_loongarch64::GetRegisterSetFromRegisterIndex(
     return GPRegSet;
   if (reg_index >= fpr_first_loongarch && reg_index <= fpr_last_loongarch)
     return FPRegSet;
+  if (reg_index >= lsx_first_loongarch && reg_index <= lsx_last_loongarch)
+    return LSXRegSet;
+  if (reg_index >= lasx_first_loongarch && reg_index <= lasx_last_loongarch)
+    return LASXRegSet;
   return LLDB_INVALID_REGNUM;
 }
 

@@ -1,12 +1,12 @@
-; RUN: llc -march=mips -mcpu=mips32r2                         -asm-show-inst \
+; RUN: llc -mtriple=mips -mcpu=mips32r2                         -asm-show-inst \
 ; RUN: < %s | FileCheck %s --check-prefix=MIPS32R2
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=+fp64            -asm-show-inst \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=+fp64            -asm-show-inst \
 ; RUN: < %s | FileCheck %s --check-prefix=MIPS32FP64
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips       -asm-show-inst \
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips       -asm-show-inst \
 ; RUN: < %s | FileCheck %s --check-prefix=MM
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips,+fp64 -asm-show-inst \
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips,+fp64 -asm-show-inst \
 ; RUN: < %s | FileCheck %s --check-prefix=MMFP64
-; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips       -asm-show-inst \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips       -asm-show-inst \
 ; RUN: < %s | FileCheck %s --check-prefix=MMR6
 
 define double @mthc1(i64 %a) {

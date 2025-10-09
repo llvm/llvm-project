@@ -14,7 +14,7 @@ _MM_ALIGN16 char c;
 // checking that clang emits PACKSSDW instead of PACKSSWB.
 
 // CHECK: define{{.*}} i64 @test_mm_cvtps_pi16
-// CHECK: call x86_mmx @llvm.x86.mmx.packssdw
+// CHECK: call <8 x i16> @llvm.x86.sse2.packssdw.128
 
 __m64 test_mm_cvtps_pi16(__m128 a) {
   return _mm_cvtps_pi16(a);

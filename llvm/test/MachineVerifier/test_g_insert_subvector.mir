@@ -1,0 +1,67 @@
+# RUN: not --crash llc -o - -run-pass=none -verify-machineinstrs -mtriple=arm64 %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            g_splat_vector
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: generic instruction must use register operands
+    ; CHECK: G_INSERT_SUBVECTOR first source must be a register
+    %3:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR 1, %2, 0
+
+    ; CHECK: generic instruction must use register operands
+    ; CHECK: G_INSERT_SUBVECTOR second source must be a register
+    %4:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %1, 1, 0
+
+    ; CHECK: G_INSERT_SUBVECTOR index must be an immediate
+    %5:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %1, %2, %0
+
+    ; CHECK: Destination type must be a vector
+    %6:_(s32) = G_INSERT_SUBVECTOR %1, %2, 0
+
+    ; CHECK: Type mismatch in generic instruction
+    %7:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %0, %2, 0
+
+    ; CHECK: Second source must be a vector
+    %8:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %1, %0, 0
+
+    ; CHECK: Type mismatch in generic instruction
+    %9:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %2, %1, 0
+
+    %10:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
+
+    ; CHECK: Element type of vectors must be the same
+    %11:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %1, %10, 0
+
+    %12:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Index must be a multiple of the second source vector's minimum vector length
+    %13:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR %12, %1, 3
+
+    ; CHECK: Index must be a multiple of the second source vector's minimum vector length
+    %14:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR %12, %1, 1
+
+    %15:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Second source must be smaller than destination vector
+    %16:_(<vscale x 2 x s32>) = G_INSERT_SUBVECTOR %1, %15, 0
+
+    ; CHECK: Subvector type and index must not cause insert to overrun the vector being inserted into
+    %17:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR %12, %1, 4
+
+    %18:_(<vscale x 3 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Subvector type and index must not cause insert to overrun the vector being inserted into
+    %19:_(<vscale x 3 x s32>) = G_INSERT_SUBVECTOR %18, %1, 2
+
+    %20:_(<2 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Vector types must both be fixed or both be scalable
+    %21:_(<vscale x 1 x s32>) = G_INSERT_SUBVECTOR %12, %20, 2
+...

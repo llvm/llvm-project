@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-stringview-nullptr -std=c++17 %t
+// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-stringview-nullptr -std=c++17 %t
 
 namespace std {
 
@@ -27,7 +27,7 @@ public:
 
   constexpr basic_string_view(const basic_string_view &) {}
 
-  constexpr basic_string_view &operator=(const basic_string_view &) {}
+  constexpr basic_string_view &operator=(const basic_string_view &) { return *this; }
 };
 
 template <typename CharT>

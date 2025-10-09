@@ -1,13 +1,21 @@
 add_llvm_component_library(LLVMProfileData
+  DataAccessProf.cpp
   GCOV.cpp
+  IndexedMemProfData.cpp
   InstrProf.cpp
   InstrProfCorrelator.cpp
   InstrProfReader.cpp
   InstrProfWriter.cpp
   ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
+  MemProfCommon.cpp
+  MemProfReader.cpp
+  MemProfRadixTree.cpp
+  MemProfSummary.cpp
+  MemProfSummaryBuilder.cpp
+  PGOCtxProfReader.cpp
+  PGOCtxProfWriter.cpp
   ProfileSummaryBuilder.cpp
-  RawMemProfReader.cpp
   SampleProf.cpp
   SampleProfReader.cpp
   SampleProfWriter.cpp
@@ -20,12 +28,14 @@ add_llvm_component_library(LLVMProfileData
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitstreamReader
   Core
   Object
   Support
   Demangle
   Symbolize
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   TargetParser
   )
 

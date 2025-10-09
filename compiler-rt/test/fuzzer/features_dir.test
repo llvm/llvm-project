@@ -1,5 +1,5 @@
 # Tests -features_dir=F
-# REQUIRES: linux
+# REQUIRES: linux, shell
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 RUN: rm -rf %t-C %t-F
 RUN: mkdir %t-C %t-F

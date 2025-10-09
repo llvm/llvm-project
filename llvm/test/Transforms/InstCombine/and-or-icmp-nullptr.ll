@@ -592,6 +592,19 @@ define i1 @sgt_and_min_logical(ptr %x, ptr %y)  {
   ret i1 %r
 }
 
+define i1 @sgt_and_min_logical_samesign(ptr %x, ptr %y)  {
+; CHECK-LABEL: @sgt_and_min_logical_samesign(
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[X:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[Y:%.*]], null
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sgt ptr %x, %y
+  %cmpeq = icmp samesign eq ptr %x, null
+  %r = select i1 %cmp, i1 %cmpeq, i1 false
+  ret i1 %r
+}
+
 define i1 @sle_or_not_min(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sle_or_not_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne ptr [[X:%.*]], null

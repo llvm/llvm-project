@@ -1,34 +1,24 @@
-// RUN: %clang_cc1 -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck %s
-// RUN: %clang_cc1 -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare | FileCheck -check-prefix=BARE %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck --check-prefix=PREINLINE --implicit-check-not="__cyg_profile_func_enter" %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare | FileCheck --check-prefix=BARE --implicit-check-not="__cyg_profile_func_enter" %s
 
 @interface ObjCClass
 @end
 
 @implementation ObjCClass
 
-// CHECK: @"\01+[ObjCClass initialize]"
-// CHECK: call void @__cyg_profile_func_enter
-// CHECK: call void @__cyg_profile_func_exit
-// BARE: @"\01+[ObjCClass initialize]"
-// BARE: call void @__cyg_profile_func_enter
+// PREINLINE: define {{.*}}@"\01+[ObjCClass initialize]"{{\(.*\)}} #[[#ATTR:]]
+// BARE: define {{.*}}@"\01+[ObjCClass initialize]"{{\(.*\)}} #[[#ATTR:]]
 + (void)initialize {
 }
 
-// CHECK: @"\01+[ObjCClass load]"
-// CHECK-NOT: call void @__cyg_profile_func_enter
-// BARE: @"\01+[ObjCClass load]"
-// BARE-NOT: call void @__cyg_profile_func_enter
 + (void)load __attribute__((no_instrument_function)) {
 }
 
-// CHECK: @"\01-[ObjCClass dealloc]"
-// CHECK-NOT: call void @__cyg_profile_func_enter
-// BARE: @"\01-[ObjCClass dealloc]"
-// BARE-NOT: call void @__cyg_profile_func_enter
 - (void)dealloc __attribute__((no_instrument_function)) {
 }
 
-// CHECK: declare void @__cyg_profile_func_enter(ptr, ptr)
-// CHECK: declare void @__cyg_profile_func_exit(ptr, ptr)
-// BARE: declare void @__cyg_profile_func_enter_bare
+// PREINLINE: attributes #[[#ATTR]] =
+// PREINLINE-SAME: "instrument-function-entry"="__cyg_profile_func_enter"
+// BARE: attributes #[[#ATTR]] =
+// BARE-SAME: "instrument-function-entry-inlined"="__cyg_profile_func_enter_bare"
 @end

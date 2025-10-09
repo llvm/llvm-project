@@ -1,5 +1,5 @@
-; RUN: llc -O1 -march=mips64 -mcpu=octeon < %s | FileCheck %s -check-prefix=OCTEON
-; RUN: llc -O1 -march=mips64 -mcpu=mips64 < %s | FileCheck %s -check-prefix=MIPS64
+; RUN: llc -O1 -mtriple=mips64 -mcpu=octeon < %s | FileCheck %s -check-prefix=OCTEON
+; RUN: llc -O1 -mtriple=mips64 -mcpu=mips64 < %s | FileCheck %s -check-prefix=MIPS64
 
 define i8 @cnt8(i8 %x) nounwind readnone {
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %x)

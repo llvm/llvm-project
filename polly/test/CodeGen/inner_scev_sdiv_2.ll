@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ;
 ; The SCEV expression in this test case refers to a sequence of sdiv
 ; instructions, which are part of different bbs in the SCoP. When code
@@ -34,7 +34,7 @@ for.cond.60.preheader:                            ; preds = %for.body.51, %for.c
   ret void
 
 for.body.51:                                      ; preds = %for.body.51, %for.body.51.lr.ph
-  %indvars.iv86 = phi i64 [ %2, %for.body.51.lr.ph ], [ undef, %for.body.51 ]
+  %indvars.iv86 = phi i64 [ %2, %for.body.51.lr.ph ], [ poison, %for.body.51 ]
   %arrayidx53 = getelementptr inbounds float, ptr %0, i64 %indvars.iv86
   %3 = load float, ptr %arrayidx53, align 4
   %mul56 = fmul float %3, undef

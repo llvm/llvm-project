@@ -8,10 +8,10 @@ public:
 // HOST: @[[X:.+]] = internal global i32 0, align 4
 // HOST: @y = hidden global i32 0
 // HOST: @z = global i32 0
-// HOST-NOT: @.omp_offloading.entry.c
-// HOST-NOT: @.omp_offloading.entry.x
-// HOST-NOT: @.omp_offloading.entry.y
-// HOST: @.omp_offloading.entry.z
+// HOST-NOT: @.offloading.entry.c
+// HOST-NOT: @.offloading.entry.x
+// HOST-NOT: @.offloading.entry.y
+// HOST: @.offloading.entry.z
   C() : x(0) {}
 
   int x;

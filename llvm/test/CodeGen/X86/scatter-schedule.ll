@@ -10,8 +10,8 @@ define void @test(i64 %x272, <16 x ptr> %x335, <16 x i32> %x270) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    kxnorw %k0, %k0, %k2
-; CHECK-NEXT:    vpscatterqd %ymm2, (,%zmm0) {%k2}
+; CHECK-NEXT:    vpscatterqd %ymm2, (,%zmm0) {%k1}
+; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
 ; CHECK-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
 ; CHECK-NEXT:    vzeroupper

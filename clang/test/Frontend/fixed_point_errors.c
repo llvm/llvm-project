@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -ffixed-point %s
+// RUN: %clang_cc1 -verify -ffixed-point %s -fexperimental-new-constant-interpreter
 
 /* We do not yet support long long. No recommended bit widths are given for this
  * size. */

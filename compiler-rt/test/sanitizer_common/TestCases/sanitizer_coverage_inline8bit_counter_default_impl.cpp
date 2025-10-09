@@ -3,7 +3,9 @@
 
 // REQUIRES: has_sancovcc,stable-runtime,linux,x86_64-target-arch
 
-// RUN: %clangxx -O0 %s -fsanitize-coverage=inline-8bit-counters,pc-table -o %t
+/// In glibc 2.39+, fprintf has a nonnull attribute. Disable nonnull-attribute,
+/// which would increase counters for ubsan.
+// RUN: %clangxx -O0 %s -fsanitize-coverage=inline-8bit-counters,pc-table -fno-sanitize=nonnull-attribute -o %t
 // RUN: rm -f %t-counters %t-pcs
 // RUN: env %tool_options="cov_8bit_counters_out=%t-counters cov_pcs_out=%t-pcs verbosity=1" %run %t 2>&1 | FileCheck %s
 

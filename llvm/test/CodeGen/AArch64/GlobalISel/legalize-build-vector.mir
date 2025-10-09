@@ -121,10 +121,11 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY $h1
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY1]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[COPY]](s16), [[COPY1]](s16), [[DEF]](s16), [[DEF]](s16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[BUILD_VECTOR]](<4 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[ANYEXT]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[UV]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(s16) = COPY $h0
     %1:_(s16) = COPY $h1
@@ -140,9 +141,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v2s8
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
-    ; CHECK-NEXT: %3:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: $d0 = COPY %3(<2 x s32>)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(s8) = G_IMPLICIT_DEF
     %1:_(s8) = G_IMPLICIT_DEF
@@ -157,12 +157,14 @@ name:            widen_v4s8
 body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v4s8
-    ; CHECK: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[COPY]](s16), [[COPY1]](s16), [[COPY2]](s16), [[DEF]](s16)
-    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF2]](s8), [[DEF3]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<8 x s16>) = G_ANYEXT [[BUILD_VECTOR]](<8 x s8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[ANYEXT]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[UV]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(s8) = G_IMPLICIT_DEF
     %1:_(s8) = G_IMPLICIT_DEF

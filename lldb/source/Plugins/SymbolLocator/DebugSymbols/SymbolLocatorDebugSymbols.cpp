@@ -46,6 +46,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <memory>
 #include <optional>
 #include <pwd.h>
 
@@ -188,7 +189,7 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
             exe_spec.GetFileSpec() = module_spec.GetFileSpec();
             exe_spec.GetUUID() = module_spec.GetUUID();
             ModuleSP module_sp;
-            module_sp.reset(new Module(exe_spec));
+            module_sp = std::make_shared<Module>(exe_spec);
             if (module_sp && module_sp->GetObjectFile() &&
                 module_sp->MatchesModuleSpec(exe_spec)) {
               success = true;
@@ -630,7 +631,7 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
             exe_spec.GetFileSpec() = module_spec.GetFileSpec();
             exe_spec.GetUUID() = module_spec.GetUUID();
             ModuleSP module_sp;
-            module_sp.reset(new Module(exe_spec));
+            module_sp = std::make_shared<Module>(exe_spec);
             if (module_sp && module_sp->GetObjectFile() &&
                 module_sp->MatchesModuleSpec(exe_spec)) {
               success = true;
@@ -812,7 +813,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         std::string errorstr = command;
         errorstr += ":\n";
         errorstr += str;
-        error.SetErrorString(errorstr);
+        error = Status(errorstr);
       }
     }
 
@@ -1066,11 +1067,21 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   command << lookup_arg;
 
   // Log and report progress.
-  Log *log = GetLog(LLDBLog::Host);
-  LLDB_LOG(log, "Calling {0} with {1} to find dSYM: {2}", dsymForUUID_exe_path,
-           lookup_arg, command.GetString());
+  std::string lookup_desc;
+  if (uuid_ptr && file_spec_ptr)
+    lookup_desc =
+        llvm::formatv("{0} ({1})", file_spec_ptr->GetFilename().GetString(),
+                      uuid_ptr->GetAsString());
+  else if (uuid_ptr)
+    lookup_desc = uuid_ptr->GetAsString();
+  else if (file_spec_ptr)
+    lookup_desc = file_spec_ptr->GetFilename().GetString();
 
-  Progress progress("Downloading symbol file", lookup_arg);
+  Log *log = GetLog(LLDBLog::Host);
+  LLDB_LOG(log, "Calling {0} for {1} to find dSYM: {2}", dsymForUUID_exe_path,
+           lookup_desc, command.GetString());
+
+  Progress progress("Downloading symbol file for", lookup_desc);
 
   // Invoke dsymForUUID.
   int exit_status = -1;

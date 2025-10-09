@@ -1,0 +1,20 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-cgdata" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+driver_executable("llvm-cgdata") {
+  deps = [
+    ":Opts",
+    "//llvm/lib/CGData",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/IR",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "llvm-cgdata.cpp" ]
+}

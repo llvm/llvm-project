@@ -186,6 +186,146 @@ Benchmark                               Time             CPU      Time Old      
 This is a mix of the previous two modes, two (potentially different) benchmark binaries are run, and a different filter is applied to each one.
 As you can note, the values in `Time` and `CPU` columns are calculated as `(new - old) / |old|`.
 
+### Note: Interpreting the output
+
+Performance measurements are an art, and performance comparisons are doubly so.
+Results are often noisy and don't necessarily have large absolute differences to
+them, so just by visual inspection, it is not at all apparent if two
+measurements are actually showing a performance change or not. It is even more
+confusing with multiple benchmark repetitions.
+
+Thankfully, what we can do, is use statistical tests on the results to determine
+whether the performance has statistically-significantly changed. `compare.py`
+uses [Mann–Whitney U
+test](https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test), with a null
+hypothesis being that there's no difference in performance.
+ 
+**The below output is a summary of a benchmark comparison with statistics
+provided for a multi-threaded process.**
+```
+Benchmark                                               Time        CPU    Time Old      Time New       CPU Old       CPU New
+-----------------------------------------------------------------------------------------------------------------------------
+benchmark/threads:1/process_time/real_time_pvalue     0.0000     0.0000    U Test, Repetitions: 27 vs 27
+benchmark/threads:1/process_time/real_time_mean      -0.1442    -0.1442          90            77            90            77
+benchmark/threads:1/process_time/real_time_median    -0.1444    -0.1444          90            77            90            77
+benchmark/threads:1/process_time/real_time_stddev    +0.3974    +0.3933           0             0             0             0
+benchmark/threads:1/process_time/real_time_cv        +0.6329    +0.6280           0             0             0             0
+OVERALL_GEOMEAN                                      -0.1442    -0.1442           0             0             0             0
+```
+--------------------------------------------
+Here's a breakdown of each row:
+
+**benchmark/threads:1/process_time/real_time_pvalue**: This shows the _p-value_ for
+the statistical test comparing the performance of the process running with one
+thread. A value of 0.0000 suggests a statistically significant difference in
+performance. The comparison was conducted using the U Test (Mann-Whitney
+U Test) with 27 repetitions for each case.
+
+**benchmark/threads:1/process_time/real_time_mean**: This shows the relative
+difference in mean execution time between two different cases. The negative
+value (-0.1442) implies that the new process is faster by about 14.42%. The old
+time was 90 units, while the new time is 77 units.
+
+**benchmark/threads:1/process_time/real_time_median**: Similarly, this shows the
+relative difference in the median execution time. Again, the new process is
+faster by 14.44%.
+
+**benchmark/threads:1/process_time/real_time_stddev**: This is the relative
+difference in the standard deviation of the execution time, which is a measure
+of how much variation or dispersion there is from the mean. A positive value
+(+0.3974) implies there is more variance in the execution time in the new
+process.
+
+**benchmark/threads:1/process_time/real_time_cv**: CV stands for Coefficient of
+Variation. It is the ratio of the standard deviation to the mean. It provides a
+standardized measure of dispersion. An increase (+0.6329) indicates more
+relative variability in the new process.
+
+**OVERALL_GEOMEAN**: Geomean stands for geometric mean, a type of average that is
+less influenced by outliers. The negative value indicates a general improvement
+in the new process. However, given the values are all zero for the old and new
+times, this seems to be a mistake or placeholder in the output.
+
+-----------------------------------------
+
+
+
+Let's first try to see what the different columns represent in the above
+`compare.py` benchmarking output:
+
+  1. **Benchmark:** The name of the function being benchmarked, along with the
+     size of the input (after the slash).
+
+  2. **Time:** The average time per operation, across all iterations.
+
+  3. **CPU:** The average CPU time per operation, across all iterations.
+
+  4. **Iterations:** The number of iterations the benchmark was run to get a
+     stable estimate.
+
+  5. **Time Old and Time New:** These represent the average time it takes for a
+     function to run in two different scenarios or versions. For example, you
+     might be comparing how fast a function runs before and after you make some
+     changes to it.
+
+  6. **CPU Old and CPU New:** These show the average amount of CPU time that the
+     function uses in two different scenarios or versions. This is similar to
+     Time Old and Time New, but focuses on CPU usage instead of overall time.
+
+In the comparison section, the relative differences in both time and CPU time
+are displayed for each input size.
+
+
+A statistically-significant difference is determined by a **p-value**, which is
+a measure of the probability that the observed difference could have occurred
+just by random chance. A smaller p-value indicates stronger evidence against the
+null hypothesis. 
+
+**Therefore:**
+  1. If the p-value is less than the chosen significance level (alpha), we
+     reject the null hypothesis and conclude the benchmarks are significantly
+     different.
+  2. If the p-value is greater than or equal to alpha, we fail to reject the
+     null hypothesis and treat the two benchmarks as similar.
+
+
+
+The result of said the statistical test is additionally communicated through color coding:
+```diff
++ Green:
+```
+  The benchmarks are _**statistically different**_. This could mean the
+  performance has either **significantly improved** or **significantly
+  deteriorated**. You should look at the actual performance numbers to see which
+  is the case.
+```diff
+- Red:
+```
+  The benchmarks are _**statistically similar**_. This means the performance
+  **hasn't significantly changed**.
+
+In statistical terms, **'green'** means we reject the null hypothesis that
+there's no difference in performance, and **'red'** means we fail to reject the
+null hypothesis. This might seem counter-intuitive if you're expecting 'green'
+to mean 'improved performance' and 'red' to mean 'worsened performance'. 
+```bash
+  But remember, in this context:
+
+    'Success' means 'successfully finding a difference'.
+    'Failure' means 'failing to find a difference'.
+```
+
+
+Also, please note that **even if** we determine that there **is** a
+statistically-significant difference between the two measurements, it does not
+_necessarily_ mean that the actual benchmarks that were measured **are**
+different, or vice versa, even if we determine that there is **no**
+statistically-significant difference between the two measurements, it does not
+necessarily mean that the actual benchmarks that were measured **are not**
+different.
+
+
+
 ### U test
 
 If there is a sufficient repetition count of the benchmarks, the tool can do

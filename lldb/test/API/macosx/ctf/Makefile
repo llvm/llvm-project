@@ -4,7 +4,7 @@ MAKE_DSYM := YES
 ifeq "$(COMPRESS_CTF)" "YES"
 	COMPRESS := -c
 else
-	 COMPRESS :=
+	COMPRESS :=
 endif
 
 all: a.out a.ctf
@@ -17,15 +17,19 @@ a.ctf: a.out.dSYM
 		-o a.ctf \
 		a.out.dSYM/Contents/Resources/DWARF/a.out
 	$(OBJCOPY) \
-		-R __DWARF,__debug_line \
-		-R __DWARF,__debug_aranges \
-		-R __DWARF,__debug_info \
-		-R __DWARF,__debug_abbrev \
-		-R __DWARF,__debug_str \
 		-R __DWARF,__apple_names \
 		-R __DWARF,__apple_namespac \
-		-R __DWARF,__apple_types \
 		-R __DWARF,__apple_objc \
+		-R __DWARF,__apple_types \
+		-R __DWARF,__debug_abbrev \
+		-R __DWARF,__debug_addr \
+		-R __DWARF,__debug_aranges \
+		-R __DWARF,__debug_info \
+		-R __DWARF,__debug_line \
+		-R __DWARF,__debug_line_str \
+		-R __DWARF,__debug_names \
+		-R __DWARF,__debug_str \
+		-R __DWARF,__debug_str_offs \
 		a.ctf a.ctf
 	rm -rf a.out.dSYM
 	rm -rf test.o

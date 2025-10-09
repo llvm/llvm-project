@@ -152,7 +152,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
 /// Calculate the allocation size of a given alloca. Returns empty range
 // in case of confution.
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
   unsigned PointerSize = DL.getPointerTypeSizeInBits(AI.getType());
   // Fallback to empty range for alloca size.
@@ -268,7 +268,7 @@ class StackSafetyLocalAnalysis {
 
 public:
   StackSafetyLocalAnalysis(Function &F, ScalarEvolution &SE)
-      : F(F), DL(F.getParent()->getDataLayout()), SE(SE),
+      : F(F), DL(F.getDataLayout()), SE(SE),
         PointerSize(DL.getPointerSizeInBits()),
         UnknownRange(PointerSize, true) {}
 
@@ -528,7 +528,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // dso_preemptable aliases or aliases with interposable linkage.
         const GlobalValue *Callee =
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
-        if (!Callee) {
+        if (!Callee || isa<GlobalIFunc>(Callee)) {
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
           break;
         }
@@ -672,8 +672,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::updateOneNode(
                       << (UpdateToFullSet ? ", full-set" : "") << "] " << &FS
                       << "\n");
     // Callers of this function may need updating.
-    for (auto &CallerID : Callers[Callee])
-      WorkList.insert(CallerID);
+    WorkList.insert_range(Callers[Callee]);
 
     ++FS.UpdateCount;
   }
@@ -690,7 +689,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
         Callees.push_back(CS.first.Callee);
 
     llvm::sort(Callees);
-    Callees.erase(std::unique(Callees.begin(), Callees.end()), Callees.end());
+    Callees.erase(llvm::unique(Callees), Callees.end());
 
     for (auto &Callee : Callees)
       Callers[Callee].push_back(F.first);
@@ -852,7 +851,7 @@ GVToSSI createGlobalStackSafetyInfo(
     }
 
   uint32_t PointerSize =
-      Copy.begin()->first->getParent()->getDataLayout().getPointerSizeInBits();
+      Copy.begin()->first->getDataLayout().getPointerSizeInBits();
   StackSafetyDataFlowAnalysis<GlobalValue> SSDFA(PointerSize, std::move(Copy));
 
   for (const auto &F : SSDFA.run()) {
@@ -1049,9 +1048,7 @@ PreservedAnalyses StackSafetyPrinterPass::run(Function &F,
 
 char StackSafetyInfoWrapperPass::ID = 0;
 
-StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {
-  initializeStackSafetyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {}
 
 void StackSafetyInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
@@ -1092,10 +1089,7 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
 StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
-    : ModulePass(ID) {
-  initializeStackSafetyGlobalInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 StackSafetyGlobalInfoWrapperPass::~StackSafetyGlobalInfoWrapperPass() = default;
 

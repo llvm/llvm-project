@@ -11,7 +11,6 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -19,6 +18,8 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -49,8 +50,8 @@ public:
       return;
     }
 
-    auto ts = block_pointer_type.GetTypeSystem();
-    auto clang_ast_context = ts.dyn_cast_or_null<TypeSystemClang>();
+    auto clang_ast_context =
+        block_pointer_type.GetTypeSystem<TypeSystemClang>();
     if (!clang_ast_context)
       return;
 
@@ -74,17 +75,17 @@ public:
 
   ~BlockPointerSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetNumChildren(omit_empty_base_classes, nullptr);
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     if (!m_block_struct_type.IsValid()) {
       return lldb::ValueObjectSP();
     }
 
-    if (idx >= CalculateNumChildren()) {
+    if (idx >= CalculateNumChildrenIgnoringErrors()) {
       return lldb::ValueObjectSP();
     }
 
@@ -105,13 +106,16 @@ public:
     bool child_is_deref_of_parent = false;
     uint64_t language_flags = 0;
 
-    const CompilerType child_type =
-        m_block_struct_type.GetChildCompilerTypeAtIndex(
-            &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-            ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-            child_bitfield_bit_size, child_bitfield_bit_offset,
-            child_is_base_class, child_is_deref_of_parent, value_object,
-            language_flags);
+    auto child_type_or_err = m_block_struct_type.GetChildCompilerTypeAtIndex(
+        &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+        ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+        child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
+        child_is_deref_of_parent, value_object, language_flags);
+    if (!child_type_or_err)
+      return ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(),
+          Status::FromError(child_type_or_err.takeError()));
+    CompilerType child_type = *child_type_or_err;
 
     ValueObjectSP struct_pointer_sp =
         m_backend.Cast(m_block_struct_type.GetPointerType());
@@ -136,14 +140,14 @@ public:
 
   // return true if this object is now safe to use forever without ever
   // updating again; the typical (and tested) answer here is 'false'
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
-  // maybe return false if the block pointer is, say, null
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_block_struct_type.IsValid())
-      return UINT32_MAX;
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
 
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetIndexOfChildWithName(name.AsCString(),
@@ -169,8 +173,17 @@ bool lldb_private::formatters::BlockPointerSummaryProvider(
 
   static const ConstString s_FuncPtr_name("__FuncPtr");
 
-  lldb::ValueObjectSP child_sp = synthetic_children->GetChildAtIndex(
-      synthetic_children->GetIndexOfChildWithName(s_FuncPtr_name));
+  auto index_or_err =
+      synthetic_children->GetIndexOfChildWithName(s_FuncPtr_name);
+
+  if (!index_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),
+                   "{0}");
+    return false;
+  }
+
+  lldb::ValueObjectSP child_sp =
+      synthetic_children->GetChildAtIndex(*index_or_err);
 
   if (!child_sp) {
     return false;

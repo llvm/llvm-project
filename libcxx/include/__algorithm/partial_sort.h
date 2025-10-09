@@ -18,8 +18,8 @@
 #include <__config>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
-#include <__type_traits/is_copy_assignable.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator __part
   for (; __i != __last; ++__i) {
     if (__comp(*__i, *__first)) {
       _IterOps<_AlgPolicy>::iter_swap(__i, __first);
-      std::__sift_down<_AlgPolicy>(__first, __comp, __len, __first);
+      std::__sift_down<_AlgPolicy, false>(__first, __comp, __len, 0);
     }
   }
   std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);

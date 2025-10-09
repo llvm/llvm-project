@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
-// RUN: not %clang_cc1 -fsyntax-only -ast-dump %s -std=c++17 | FileCheck %s
+// RUN: not %clang_cc1 -ast-dump %s -std=c++17 | FileCheck %s
 
 void test() {
   while(!!!) // expected-error {{expected expression}}

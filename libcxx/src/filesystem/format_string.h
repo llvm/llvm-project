@@ -34,20 +34,19 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 0) string vformat_string(const ch
 
   va_list apcopy;
   va_copy(apcopy, ap);
-  int ret = ::vsnprintf(buf.data(), buf.size(), msg, apcopy);
+  int size = ::vsnprintf(buf.data(), buf.size(), msg, apcopy);
   va_end(apcopy);
 
   string result;
-  if (static_cast<size_t>(ret) < buf.size()) {
-    result.assign(buf.data(), static_cast<size_t>(ret));
+  if (static_cast<size_t>(size) < buf.size()) {
+    result.assign(buf.data(), static_cast<size_t>(size));
   } else {
     // we did not provide a long enough buffer on our first attempt. The
     // return value is the number of bytes (excluding the null byte) that are
     // needed for formatting.
-    size_t size_with_null = static_cast<size_t>(ret) + 1;
-    result.__resize_default_init(size_with_null - 1);
-    ret = ::vsnprintf(&result[0], size_with_null, msg, ap);
-    _LIBCPP_ASSERT_INTERNAL(static_cast<size_t>(ret) == (size_with_null - 1), "TODO");
+    result.resize_and_overwrite(size, [&](char* res, size_t n) { return ::vsnprintf(res, n, msg, ap); });
+    _LIBCPP_ASSERT_INTERNAL(static_cast<size_t>(size) == result.size(),
+                            "vsnprintf did not result in the same number of characters as the first attempt?");
   }
   return result;
 }
@@ -56,21 +55,21 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) string format_string(const cha
   string ret;
   va_list ap;
   va_start(ap, msg);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     ret = detail::vformat_string(msg, ap);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     va_end(ap);
     throw;
   }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   va_end(ap);
   return ret;
 }
 
-} // end namespace detail
+} // namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

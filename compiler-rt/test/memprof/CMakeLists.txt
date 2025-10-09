@@ -11,12 +11,9 @@ macro(get_bits_for_arch arch bits)
   endif()
 endmacro()
 
-set(MEMPROF_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
-if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND MEMPROF_TEST_DEPS memprof)
-  if(COMPILER_RT_HAS_LLD AND TARGET lld)
-    list(APPEND MEMPROF_TEST_DEPS lld)
-  endif()
+set(MEMPROF_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} memprof)
+if(NOT COMPILER_RT_STANDALONE_BUILD AND COMPILER_RT_HAS_LLD AND TARGET lld)
+  list(APPEND MEMPROF_TEST_DEPS lld)
 endif()
 set(MEMPROF_DYNAMIC_TEST_DEPS ${MEMPROF_TEST_DEPS})
 
@@ -46,15 +43,23 @@ foreach(arch ${MEMPROF_TEST_ARCH})
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 endforeach()
 
+# Add unit tests.
+foreach(arch ${MEMPROF_TEST_ARCH})
+  string(TOUPPER ${arch} ARCH_UPPER_CASE)
+  set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME}/lit.site.cfg.py)
+  list(APPEND MEMPROF_TEST_DEPS MemProfUnitTests)
+  list(APPEND MEMPROF_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
+endforeach()
+
 add_lit_testsuite(check-memprof "Running the MemProfiler tests"
   ${MEMPROF_TESTSUITES}
   DEPENDS ${MEMPROF_TEST_DEPS})
-set_target_properties(check-memprof PROPERTIES FOLDER "Compiler-RT Misc")
 
 add_lit_testsuite(check-memprof-dynamic
 	"Running the MemProfiler tests with dynamic runtime"
   ${MEMPROF_DYNAMIC_TESTSUITES}
   ${exclude_from_check_all.g}
   DEPENDS ${MEMPROF_DYNAMIC_TEST_DEPS})
-set_target_properties(check-memprof-dynamic
-  PROPERTIES FOLDER "Compiler-RT Misc")

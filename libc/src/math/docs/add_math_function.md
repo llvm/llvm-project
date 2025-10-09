@@ -18,7 +18,7 @@ together with its specifications:
 ```
 - Add function specs to the file:
 ```
-  libc/spec/stdc.td
+  libc/include/math.yaml
 ```
 
 ## Implementation
@@ -129,11 +129,11 @@ implementation (which is very often glibc).
 
 - Add a performance test to:
 ```
-  libc/test/src/math/differential_testing/<func>_perf.cpp
+  libc/test/src/math/performance_testing/<func>_perf.cpp
 ```
 - Add the corresponding entry point to:
 ```
-  libc/test/src/math/differential_testing/CMakeLists.txt
+  libc/test/src/math/performance_testing/CMakeLists.txt
 ```
 
 ## Build and Run
@@ -177,26 +177,27 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test
+  $ ninja libc.test.src.math.<func>_test.__unit__
   $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
 - Build and Run exhaustive test (might take hours to run):
 ```
-  $ ninja libc.test.src.math.exhaustive.<func>_test
-  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
+  $ ninja libc.test.src.math.exhaustive.<func>_test.__unit__
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test.__unit__
 ```
 
 - Build and Run performance test:
 ```
-  $ ninja libc.test.src.math.differential_testing.<func>_perf
-  $ projects/libc/test/src/math/differential_testing/libc.test.src.math.differential_testing.<func>_perf
+  $ ninja libc.test.src.math.performance_testing.<func>_perf
+  $ projects/libc/test/src/math/performance_testing/libc.test.src.math.performance_testing.<func>_perf
   $ cat <func>_perf.log
 ```
 
 ## Code reviews
 
-We follow the code review process of LLVM with Phabricator:
+We use GitHub's inbuilt pull request system for code review:
 ```
-  https://llvm.org/docs/Phabricator.html
+  https://docs.github.com/articles/about-collaborative-development-models
+  https://docs.github.com/articles/about-pull-requests
 ```

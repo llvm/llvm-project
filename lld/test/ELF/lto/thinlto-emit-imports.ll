@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86, non-root-user
 ;; Test a few properties not tested by thinlto-index-only.ll
 
 ; RUN: opt -module-summary %s -o %t1.o
@@ -10,7 +10,7 @@
 ; RUN: touch %t3.o.imports
 ; RUN: chmod 400 %t3.o.imports
 ; RUN: not ld.lld --plugin-opt=thinlto-index-only --plugin-opt=thinlto-emit-imports-files -shared %t1.o %t2.o %t3.o -o /dev/null 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
-; ERR: cannot open {{.*}}3.o.imports: [[MSG]]
+; ERR: 'cannot open {{.*}}3.o.imports': [[MSG]]
 
 ; RUN: rm -f %t1.o.imports %t2.o.imports rm -f %t3.o.imports
 ; RUN: ld.lld --plugin-opt=thinlto-emit-imports-files -shared %t1.o %t2.o %t3.o -o %t4

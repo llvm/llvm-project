@@ -32,7 +32,6 @@ void WindowsManifestError::log(raw_ostream &OS) const { OS << Msg; }
 
 class WindowsManifestMerger::WindowsManifestMergerImpl {
 public:
-  ~WindowsManifestMergerImpl();
   Error merge(MemoryBufferRef Manifest);
   std::unique_ptr<MemoryBuffer> getMergedManifest();
 
@@ -40,14 +39,13 @@ private:
   static void errorCallback(void *Ctx, const char *Format, ...);
   Error getParseError();
 #if LLVM_ENABLE_LIBXML2
-  xmlDocPtr CombinedDoc = nullptr;
-  std::vector<xmlDocPtr> MergedDocs;
-
-  bool Merged = false;
   struct XmlDeleter {
     void operator()(xmlChar *Ptr) { xmlFree(Ptr); }
     void operator()(xmlDoc *Ptr) { xmlFreeDoc(Ptr); }
   };
+  xmlDocPtr CombinedDoc = nullptr;
+  std::vector<std::unique_ptr<xmlDoc, XmlDeleter>> MergedDocs;
+  bool Merged = false;
   int BufferSize = 0;
   std::unique_ptr<xmlChar, XmlDeleter> Buffer;
 #endif
@@ -612,11 +610,6 @@ static void checkAndStripPrefixes(xmlNodePtr Node,
   }
 }
 
-WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
-  for (auto &Doc : MergedDocs)
-    xmlFreeDoc(Doc);
-}
-
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
     MemoryBufferRef Manifest) {
   if (Merged)
@@ -627,17 +620,17 @@ Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
         "attempted to merge empty manifest");
   xmlSetGenericErrorFunc((void *)this,
                          WindowsManifestMergerImpl::errorCallback);
-  xmlDocPtr ManifestXML = xmlReadMemory(
+  std::unique_ptr<xmlDoc, XmlDeleter> ManifestXML(xmlReadMemory(
       Manifest.getBufferStart(), Manifest.getBufferSize(), "manifest.xml",
-      nullptr, XML_PARSE_NOBLANKS | XML_PARSE_NODICT);
+      nullptr, XML_PARSE_NOBLANKS | XML_PARSE_NODICT));
   xmlSetGenericErrorFunc(nullptr, nullptr);
   if (auto E = getParseError())
     return E;
-  xmlNodePtr AdditionalRoot = xmlDocGetRootElement(ManifestXML);
+  xmlNodePtr AdditionalRoot = xmlDocGetRootElement(ManifestXML.get());
   stripComments(AdditionalRoot);
   setAttributeNamespaces(AdditionalRoot);
   if (CombinedDoc == nullptr) {
-    CombinedDoc = ManifestXML;
+    CombinedDoc = ManifestXML.get();
   } else {
     xmlNodePtr CombinedRoot = xmlDocGetRootElement(CombinedDoc);
     if (!xmlStringsEqual(CombinedRoot->name, AdditionalRoot->name) ||
@@ -649,7 +642,7 @@ Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
       return E;
     }
   }
-  MergedDocs.push_back(ManifestXML);
+  MergedDocs.push_back(std::move(ManifestXML));
   return Error::success();
 }
 
@@ -669,7 +662,6 @@ WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
     xmlDocSetRootElement(OutputDoc.get(), CombinedRoot);
     assert(nullptr == xmlDocGetRootElement(CombinedDoc));
 
-    xmlKeepBlanksDefault(0);
     xmlChar *Buff = nullptr;
     xmlDocDumpFormatMemoryEnc(OutputDoc.get(), &Buff, &BufferSize, "UTF-8", 1);
     Buffer.reset(Buff);
@@ -683,9 +675,6 @@ WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
 bool windows_manifest::isAvailable() { return true; }
 
 #else
-
-WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
-}
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
     MemoryBufferRef Manifest) {

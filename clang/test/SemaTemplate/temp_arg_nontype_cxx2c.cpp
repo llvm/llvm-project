@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wconversion -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++2c -Wconversion -verify %s
 
 struct Test {
     int a = 0;
@@ -101,4 +101,36 @@ void bar() {
     foo<{1}>();
 }
 
+}
+
+namespace GH84052 {
+
+template <class... T>
+concept C = sizeof(T...[1]) == 1; // #C
+
+struct A {};
+
+template <class T, C<T> auto = A{}> struct Set {}; // #Set
+
+template <class T> void foo() {
+  Set<T> unrelated;
+}
+
+Set<bool> sb;
+Set<float> sf;
+// expected-error@-1 {{constraints not satisfied for class template 'Set'}}
+// expected-note@#Set {{because 'C<decltype(GH84052::A{}), float>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+
+} // namespace GH84052
+
+namespace error_on_type_instantiation {
+  int f(int) = delete;
+  // expected-note@-1 {{candidate function has been explicitly deleted}}
+  template<class T, decltype(f(T()))> struct X {};
+  // expected-error@-1 {{call to deleted function 'f'}}
+  template<class T> void g() { X<T, 0> x; }
+  // expected-note@-1 {{while substituting prior template arguments into non-type template parameter [with T = int]}}
+  template void g<int>();
+  // expected-note@-1 {{in instantiation of function template specialization}}
 }

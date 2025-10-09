@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_80 \
 // RUN:            -fcuda-is-device -target-feature +ptx71 \
 // RUN:            -DPTX=71 -DSM=80 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefixes=CHECK_PTX70_SM80,CHECK_PTX60_SM70,CHECK_PTX63_SM72,CHECK_PTX61_SM70,CHECK_PTX63_SM75,CHECK_PTX71_SM80 %s
 // Verify that all builtins have correct constraints.
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown \

@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -108,10 +109,12 @@ enum Kind {
   kw_fast,
   kw_nuw,
   kw_nsw,
+  kw_nusw,
   kw_exact,
   kw_disjoint,
   kw_inbounds,
   kw_nneg,
+  kw_samesign,
   kw_inrange,
   kw_addrspace,
   kw_section,
@@ -145,6 +148,7 @@ enum Kind {
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
   kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x1,
   kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
@@ -177,9 +181,15 @@ enum Kind {
   kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
+  kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
+  kw_riscv_vector_cc,
+  kw_riscv_vls_cc,
+  kw_cheriot_compartmentcallcc,
+  kw_cheriot_compartmentcalleecc,
+  kw_cheriot_librarycallcc,
 
   // Attributes:
   kw_attributes,
@@ -196,11 +206,19 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_errnomem,
 
-  // Legacy memory attributes:
+  // Legacy attributes:
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+  kw_nocapture,
+
+  // Captures attribute:
+  kw_address,
+  kw_address_is_null,
+  kw_provenance,
+  kw_read_provenance,
 
   // nofpclass attribute:
   kw_all,
@@ -262,8 +280,12 @@ enum Kind {
   kw_umin,
   kw_fmax,
   kw_fmin,
+  kw_fmaximum,
+  kw_fminimum,
   kw_uinc_wrap,
   kw_udec_wrap,
+  kw_usub_cond,
+  kw_usub_sat,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -300,6 +322,7 @@ enum Kind {
   kw_fptoui,
   kw_fptosi,
   kw_inttoptr,
+  kw_ptrtoaddr,
   kw_ptrtoint,
   kw_bitcast,
   kw_addrspacecast,
@@ -343,6 +366,7 @@ enum Kind {
   kw_blockaddress,
   kw_dso_local_equivalent,
   kw_no_cfi,
+  kw_ptrauth,
 
   kw_freeze,
 
@@ -368,6 +392,9 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importType,
+  kw_definition,
+  kw_declaration,
   kw_function,
   kw_insts,
   kw_funcFlags,
@@ -474,11 +501,14 @@ enum Kind {
   DwarfCC,          // DW_CC_foo
   EmissionKind,     // lineTablesOnly
   NameTableKind,    // GNU
+  FixedPointKind,   // Fixed point
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo
   DISPFlag,         // DISPFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
+  DbgRecordType,    // dbg_foo
+  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

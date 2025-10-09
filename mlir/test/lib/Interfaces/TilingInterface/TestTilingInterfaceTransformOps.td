@@ -11,7 +11,7 @@
 
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -46,6 +46,30 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
     (`use_forall` $use_forall^)? attr-dict 
     `:` functional-type(operands, results)
+  }];
+}
+
+def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
+       [AttrSizedOperandSegments,
+        DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Fuses the consumer of the operation pointed to by the target handle
+    using the options provided as attributes.
+  }];
+
+  let arguments = (ins 
+      Variadic<TransformHandleTypeInterface>:$targets,
+      Variadic<TransformHandleTypeInterface>:$loops,
+      DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
+  let results = (outs TransformHandleTypeInterface:$consumer,
+                      TransformHandleTypeInterface:$fused_consumer);
+
+  let assemblyFormat = [{
+    $targets `in` `(` $loops `)`
+    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -98,6 +122,53 @@ def TestFuseUsingForallOp : Op<Transform_Dialect, "test.fuse_using_forall",
   let assemblyFormat = [{
     $root_op ($tile_sizes^)? (`interchange` $interchange^)?
     (`mapping` `=` $mapping^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def TestTileAndFuseOuterParallelPartialReductionOp : Op<
+    Transform_Dialect, "test.tile_and_fuse_outer_parallel_partial_reduction",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Test operation to tile an operation using partial reduction with
+    outer parallel strategy, and to fuse its producers.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$reduction_dims,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+                   OptionalAttr<DeviceMappingArrayAttr>:$mapping);
+
+  let results = (outs TransformHandleTypeInterface:$tiled_ops,
+                 Variadic<TransformHandleTypeInterface>:$loops);
+  let assemblyFormat = [{
+    $root_op (`reduction_dims` `=` $reduction_dims^)?
+    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def TestTileUsingCustomLoopOp : Op<
+    Transform_Dialect, "test.tile_using_custom_loop",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Test Transform op to tile an operation using custom loops.
+
+    The test just folds all the loops and into a single loop and then
+    delinearizes the indices.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
+  let results  = (outs TransformHandleTypeInterface:$tiled_ops,
+                  Variadic<TransformHandleTypeInterface>:$loops);
+  
+  let assemblyFormat = [{
+    $root_op `tile_sizes` `=` $tile_sizes
     attr-dict `:` functional-type(operands, results)
   }];
 }

@@ -58,7 +58,7 @@ program openacc_update_validity
   !ERROR: At most one IF clause can appear on the UPDATE directive
   !$acc update device(aa) if(.true.) if(ifCondition)
 
-  !ERROR: At most one IF_PRESENT clause can appear on the UPDATE directive
+  ! OK
   !$acc update device(bb) if_present if_present
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the UPDATE directive

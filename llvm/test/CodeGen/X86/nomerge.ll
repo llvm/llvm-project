@@ -62,4 +62,96 @@ if.end:
 
 declare dso_local void @bar()
 
+define void @nomerge_trap(i32 %i) {
+; CHECK-LABEL: nomerge_trap:
+; CHECK:      # %bb.0: # %entry
+; CHECK:      # %bb.1: # %entry
+; CHECK:      # %bb.2: # %if.then
+; CHECK-NEXT: ud2
+; CHECK-NEXT: LBB{{.*}}: # %if.then2
+; CHECK-NEXT: ud2
+; CHECK-NEXT: .LBB{{.*}}: # %if.end3
+; CHECK-NEXT: ud2
+entry:
+  switch i32 %i, label %if.end3 [
+    i32 5, label %if.then
+    i32 7, label %if.then2
+  ]
+
+if.then:
+  tail call void @llvm.trap() #0
+  unreachable
+
+if.then2:
+  tail call void @llvm.trap() #0
+  unreachable
+
+if.end3:
+  tail call void @llvm.trap() #0
+  unreachable
+}
+
+declare dso_local void @llvm.trap()
+
+define void @nomerge_debugtrap(i32 %i) {
+; CHECK-LABEL: nomerge_debugtrap:
+; CHECK:      # %bb.0: # %entry
+; CHECK:      # %bb.1: # %entry
+; CHECK:      # %bb.2: # %if.then
+; CHECK-NEXT: int3
+; CHECK-NEXT: LBB{{.*}}: # %if.then2
+; CHECK-NEXT: int3
+; CHECK-NEXT: .LBB{{.*}}: # %if.end3
+; CHECK-NEXT: int3
+entry:
+  switch i32 %i, label %if.end3 [
+    i32 5, label %if.then
+    i32 7, label %if.then2
+  ]
+
+if.then:
+  tail call void @llvm.debugtrap() #0
+  unreachable
+
+if.then2:
+  tail call void @llvm.debugtrap() #0
+  unreachable
+
+if.end3:
+  tail call void @llvm.debugtrap() #0
+  unreachable
+}
+
+define void @nomerge_named_debugtrap(i32 %i) {
+; CHECK-LABEL: nomerge_named_debugtrap:
+; CHECK:      # %bb.0: # %entry
+; CHECK:      # %bb.1: # %entry
+; CHECK:      # %bb.2: # %if.then
+; CHECK-NEXT: callq trap_func@PLT
+; CHECK-NEXT: LBB{{.*}}: # %if.then2
+; CHECK-NEXT: callq trap_func@PLT
+; CHECK-NEXT: .LBB{{.*}}: # %if.end3
+; CHECK-NEXT: callq trap_func@PLT
+entry:
+  switch i32 %i, label %if.end3 [
+    i32 5, label %if.then
+    i32 7, label %if.then2
+  ]
+
+if.then:
+  tail call void @llvm.debugtrap() #1
+  unreachable
+
+if.then2:
+  tail call void @llvm.debugtrap() #1
+  unreachable
+
+if.end3:
+  tail call void @llvm.debugtrap() #1
+  unreachable
+}
+
+declare dso_local void @llvm.debugtrap()
+
 attributes #0 = { nomerge }
+attributes #1 = { nomerge "trap-func-name"="trap_func" }

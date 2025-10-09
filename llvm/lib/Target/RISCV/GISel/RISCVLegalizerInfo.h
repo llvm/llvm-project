@@ -13,7 +13,9 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVMACHINELEGALIZER_H
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINELEGALIZER_H
 
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
@@ -36,10 +38,20 @@ public:
                          MachineInstr &MI) const override;
 
 private:
+  bool shouldBeInConstantPool(const APInt &APImm, bool ShouldOptForSize) const;
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
 
+  bool legalizeBRJT(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeVScale(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeExt(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeSplatVector(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeExtractSubvector(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeInsertSubvector(MachineInstr &MI, LegalizerHelper &Helper,
+                               MachineIRBuilder &MIB) const;
+  bool legalizeLoadStore(MachineInstr &MI, LegalizerHelper &Helper,
+                         MachineIRBuilder &MIB) const;
 };
 } // end namespace llvm
 #endif

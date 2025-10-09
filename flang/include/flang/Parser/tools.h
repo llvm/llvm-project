@@ -40,6 +40,7 @@ const Name &GetFirstName(const ProcedureDesignator &);
 const Name &GetFirstName(const Call &);
 const Name &GetFirstName(const FunctionReference &);
 const Name &GetFirstName(const Variable &);
+const Name &GetFirstName(const EntityDecl &);
 
 // When a parse tree node is an instance of a specific type wrapped in
 // layers of packaging, return a pointer to that object.
@@ -248,6 +249,9 @@ template <typename A> std::optional<CharBlock> GetLastSource(const A &x) {
 template <typename A> std::optional<CharBlock> GetLastSource(A &x) {
   return GetSourceHelper<false>::GetSource(const_cast<const A &>(x));
 }
+
+// Checks whether the assignment statement has a single variable on the RHS.
+bool CheckForSingleVariableOnRHS(const AssignmentStmt &);
 
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_

@@ -6,14 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_WINT_T_H__
-#define __LLVM_LIBC_TYPES_WINT_T_H__
+#ifndef LLVM_LIBC_TYPES_WINT_T_H
+#define LLVM_LIBC_TYPES_WINT_T_H
 
-// Since __need_wint_t is defined, we get the definition of wint_t from the
-// standalone C header stddef.h. Also, because __need_wint_t is defined,
-// including stddef.h will pull only the type wint_t and nothing else.
-#define __need_wint_t
-#include <stddef.h>
-#undef __need_wint_t
+typedef __WINT_TYPE__ wint_t;
 
-#endif // __LLVM_LIBC_TYPES_WINT_T_H__
+#endif // LLVM_LIBC_TYPES_WINT_T_H

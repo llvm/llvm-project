@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -verify -Wformat %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -fdiagnostics-parseable-fixits -Wformat %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -verify -Wformat-pedantic %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -fdiagnostics-parseable-fixits -Wformat-pedantic %s 2>&1 | FileCheck %s
 
 extern "C" int printf(const char * restrict, ...);
 

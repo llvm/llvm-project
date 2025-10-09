@@ -7,18 +7,20 @@
 ; RUN:  llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908 < %s  | FileCheck --check-prefixes=GFX9CHECK,GFX9GLISEL %s
 ; RUN:  llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck --check-prefixes=GFX10CHECK,GFX10SELDAG %s
 ; RUN:  llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1031 < %s | FileCheck --check-prefixes=GFX10CHECK,GFX10GLISEL %s
-; RUN:  llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11SELDAG %s
-; RUN:  llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11GLISEL %s
+; RUN:  llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11SELDAG,GFX11SELDAG-TRUE16 %s
+; RUN:  llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11SELDAG,GFX11SELDAG-FAKE16 %s
+; RUN:  llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11GLISEL,GFX11GLISEL-TRUE16 %s
+; RUN:  llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11GLISEL,GFX11GLISEL-FAKE16 %s
 
 define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX7SELDAG-LABEL: sgpr_isnan_f16:
 ; GFX7SELDAG:       ; %bb.0:
-; GFX7SELDAG-NEXT:    s_load_dword s4, s[0:1], 0xb
-; GFX7SELDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GFX7SELDAG-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GFX7SELDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7SELDAG-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7SELDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX7SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7SELDAG-NEXT:    s_and_b32 s4, s4, 0x7fff
+; GFX7SELDAG-NEXT:    s_and_b32 s4, s6, 0x7fff
 ; GFX7SELDAG-NEXT:    s_cmpk_gt_i32 s4, 0x7c00
 ; GFX7SELDAG-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
@@ -27,12 +29,11 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ;
 ; GFX7GLISEL-LABEL: sgpr_isnan_f16:
 ; GFX7GLISEL:       ; %bb.0:
-; GFX7GLISEL-NEXT:    s_load_dword s3, s[0:1], 0xb
-; GFX7GLISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GFX7GLISEL-NEXT:    s_load_dword s3, s[4:5], 0xb
+; GFX7GLISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7GLISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX7GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    s_and_b32 s3, s3, 0x7fff
-; GFX7GLISEL-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX7GLISEL-NEXT:    s_cmpk_gt_u32 s3, 0x7c00
 ; GFX7GLISEL-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX7GLISEL-NEXT:    s_bfe_i32 s3, s3, 0x10000
@@ -43,8 +44,8 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ;
 ; GFX8CHECK-LABEL: sgpr_isnan_f16:
 ; GFX8CHECK:       ; %bb.0:
-; GFX8CHECK-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; GFX8CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX8CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX8CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8CHECK-NEXT:    v_cmp_class_f16_e64 s[2:3], s2, 3
 ; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, s0
@@ -55,20 +56,20 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ;
 ; GFX9CHECK-LABEL: sgpr_isnan_f16:
 ; GFX9CHECK:       ; %bb.0:
-; GFX9CHECK-NEXT:    s_load_dword s4, s[0:1], 0x2c
-; GFX9CHECK-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX9CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_cmp_class_f16_e64 s[0:1], s4, 3
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[0:1]
-; GFX9CHECK-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9CHECK-NEXT:    v_cmp_class_f16_e64 s[2:3], s2, 3
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[2:3]
+; GFX9CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9CHECK-NEXT:    s_endpgm
 ;
 ; GFX10CHECK-LABEL: sgpr_isnan_f16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_clause 0x1
-; GFX10CHECK-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; GFX10CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX10CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10CHECK-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
@@ -79,15 +80,13 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX11CHECK-LABEL: sgpr_isnan_f16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_clause 0x1
-; GFX11CHECK-NEXT:    s_load_b32 s2, s[0:1], 0x2c
-; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x2c
+; GFX11CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s2
 ; GFX11CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11CHECK-NEXT:    s_nop 0
-; GFX11CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
   %sext = sext i1 %result to i32
@@ -210,12 +209,33 @@ define i1 @snan_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: snan_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 1
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: snan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 1
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: snan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 1
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: snan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 1
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: snan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 1
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 1)  ; 0x001
   ret i1 %1
 }
@@ -262,12 +282,33 @@ define i1 @qnan_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: qnan_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 2
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: qnan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 2
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: qnan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 2
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: qnan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 2
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: qnan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 2
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 2)  ; 0x002
   ret i1 %1
 }
@@ -314,12 +355,33 @@ define i1 @posinf_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: posinf_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x200
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: posinf_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x200
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: posinf_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x200
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: posinf_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x200
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: posinf_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x200
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 512)  ; 0x200
   ret i1 %1
 }
@@ -364,12 +426,33 @@ define i1 @neginf_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: neginf_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 4
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: neginf_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 4
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: neginf_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 4
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: neginf_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 4
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: neginf_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 4
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 4)  ; 0x004
   ret i1 %1
 }
@@ -397,7 +480,7 @@ define i1 @posnormal_f16(half %x) nounwind {
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], v0, v2
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v1
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v1
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -428,12 +511,33 @@ define i1 @posnormal_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: posnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x100
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: posnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x100
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: posnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x100
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: posnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x100
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: posnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x100
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 256)  ; 0x100
   ret i1 %1
 }
@@ -461,7 +565,7 @@ define i1 @negnormal_f16(half %x) nounwind {
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_cmp_ne_u32_e64 s[4:5], v0, v2
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v1
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v1
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -490,12 +594,33 @@ define i1 @negnormal_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: negnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 8
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: negnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 8
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: negnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 8
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: negnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 8
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: negnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 8
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 8)  ; 0x008
   ret i1 %1
 }
@@ -515,7 +640,7 @@ define i1 @possubnormal_f16(half %x) nounwind {
 ; GFX7GLISEL-LABEL: possubnormal_f16:
 ; GFX7GLISEL:       ; %bb.0:
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -545,12 +670,33 @@ define i1 @possubnormal_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: possubnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x80
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: possubnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x80
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: possubnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x80
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: possubnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x80
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: possubnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x80
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 128)  ; 0x080
   ret i1 %1
 }
@@ -577,7 +723,7 @@ define i1 @negsubnormal_f16(half %x) nounwind {
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v0, v2
-; GFX7GLISEL-NEXT:    v_subrev_i32_e64 v0, s[4:5], 1, v1
+; GFX7GLISEL-NEXT:    v_add_i32_e64 v0, s[4:5], -1, v1
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
@@ -606,12 +752,33 @@ define i1 @negsubnormal_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: negsubnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 16
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: negsubnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 16
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: negsubnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 16
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: negsubnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 16
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: negsubnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 16
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 16)  ; 0x010
   ret i1 %1
 }
@@ -654,12 +821,33 @@ define i1 @poszero_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: poszero_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 64
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: poszero_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 64
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: poszero_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 64
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: poszero_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 64
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: poszero_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 64
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 64)  ; 0x040
   ret i1 %1
 }
@@ -704,12 +892,33 @@ define i1 @negzero_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: negzero_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 32
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: negzero_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 32
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: negzero_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 32
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: negzero_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 32
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: negzero_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 32
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 32)  ; 0x020
   ret i1 %1
 }
@@ -756,12 +965,33 @@ define i1 @posfinite_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: posfinite_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1c0
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: posfinite_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1c0
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: posfinite_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1c0
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: posfinite_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1c0
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: posfinite_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1c0
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 448)  ; 0x1c0
   ret i1 %1
 }
@@ -814,12 +1044,33 @@ define i1 @negfinite_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: negfinite_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 56
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: negfinite_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 56
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: negfinite_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 56
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: negfinite_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 56
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: negfinite_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 56
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 56)  ; 0x038
   ret i1 %1
 }
@@ -866,12 +1117,33 @@ define i1 @isnan_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isnan_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isnan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isnan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
   ret i1 %1
 }
@@ -920,12 +1192,33 @@ define i1 @not_isnan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_isnan_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3fc
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_isnan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3fc
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_isnan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3fc
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_isnan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3fc
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_isnan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3fc
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = call i1 @llvm.is.fpclass.f16(half %x, i32 1020)  ; ~nan
   ret i1 %class
 }
@@ -959,47 +1252,106 @@ define <2 x i1> @isnan_v2f16(<2 x half> %x) nounwind {
 ; GFX7GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX7GLISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8CHECK-LABEL: isnan_v2f16:
-; GFX8CHECK:       ; %bb.0:
-; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX8CHECK-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 3
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GFX8CHECK-NEXT:    v_cmp_class_f16_e64 s[4:5], v1, 3
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
-; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX8SELDAG-LABEL: isnan_v2f16:
+; GFX8SELDAG:       ; %bb.0:
+; GFX8SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX8SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v1, v1
+; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v0, v0
+; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9CHECK-LABEL: isnan_v2f16:
-; GFX9CHECK:       ; %bb.0:
-; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_mov_b32_e32 v1, 3
-; GFX9CHECK-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 3
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
-; GFX9CHECK-NEXT:    v_cmp_class_f16_sdwa s[4:5], v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
-; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, v2
-; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX8GLISEL-LABEL: isnan_v2f16:
+; GFX8GLISEL:       ; %bb.0:
+; GFX8GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8GLISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX8GLISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 3
+; GFX8GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX8GLISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v1, 3
+; GFX8GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GFX8GLISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10CHECK-LABEL: isnan_v2f16:
-; GFX10CHECK:       ; %bb.0:
-; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v1, 3
-; GFX10CHECK-NEXT:    v_cmp_class_f16_e64 s4, v0, 3
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
-; GFX10CHECK-NEXT:    v_cmp_class_f16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, v2
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
-; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX9SELDAG-LABEL: isnan_v2f16:
+; GFX9SELDAG:       ; %bb.0:
+; GFX9SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9SELDAG-NEXT:    v_cmp_u_f16_sdwa s[4:5], v0, v0 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v0, v0
+; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isnan_v2f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v1, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX9GLISEL-LABEL: isnan_v2f16:
+; GFX9GLISEL:       ; %bb.0:
+; GFX9GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9GLISEL-NEXT:    v_mov_b32_e32 v1, 3
+; GFX9GLISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 3
+; GFX9GLISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
+; GFX9GLISEL-NEXT:    v_cmp_class_f16_sdwa s[4:5], v0, v1 src0_sel:WORD_1 src1_sel:DWORD
+; GFX9GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GFX9GLISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10SELDAG-LABEL: isnan_v2f16:
+; GFX10SELDAG:       ; %bb.0:
+; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10SELDAG-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v0
+; GFX10SELDAG-NEXT:    v_cmp_u_f16_sdwa s4, v0, v0 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10GLISEL-LABEL: isnan_v2f16:
+; GFX10GLISEL:       ; %bb.0:
+; GFX10GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10GLISEL-NEXT:    v_mov_b32_e32 v1, 3
+; GFX10GLISEL-NEXT:    v_cmp_class_f16_e64 s4, v0, 3
+; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
+; GFX10GLISEL-NEXT:    v_cmp_class_f16_sdwa s4, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10GLISEL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
+; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-TRUE16-LABEL: isnan_v2f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isnan_v2f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v0
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1, v1
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnan_v2f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnan_v2f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v1, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> %x, i32 3)  ; nan
   ret <2 x i1> %1
 }
@@ -1119,31 +1471,55 @@ define <3 x i1> @isnan_v3f16(<3 x half> %x) nounwind {
 ; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
 ; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11SELDAG-LABEL: isnan_v3f16:
-; GFX11SELDAG:       ; %bb.0:
-; GFX11SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11SELDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11SELDAG-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v0
-; GFX11SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11SELDAG-NEXT:    v_cmp_u_f16_e32 vcc_lo, v2, v2
-; GFX11SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
-; GFX11SELDAG-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1, v1
-; GFX11SELDAG-NEXT:    v_mov_b32_e32 v1, v3
-; GFX11SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; GFX11SELDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isnan_v3f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.l, v1.l
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, v3
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11GLISEL-LABEL: isnan_v3f16:
-; GFX11GLISEL:       ; %bb.0:
-; GFX11GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11GLISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11GLISEL-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
-; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11GLISEL-NEXT:    v_cmp_class_f16_e64 s0, v2, 3
-; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
-; GFX11GLISEL-NEXT:    v_cmp_class_f16_e64 s0, v1, 3
-; GFX11GLISEL-NEXT:    v_mov_b32_e32 v1, v3
-; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
-; GFX11GLISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-FAKE16-LABEL: isnan_v3f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v0
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v2, v2
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1, v1
+; GFX11SELDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, v3
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnan_v3f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnan_v3f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v2, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v1, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, v3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call <3 x i1> @llvm.is.fpclass.v3f16(<3 x half> %x, i32 3)  ; nan
   ret <3 x i1> %1
 }
@@ -1196,16 +1572,17 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX8SELDAG-LABEL: isnan_v4f16:
 ; GFX8SELDAG:       ; %bb.0:
 ; GFX8SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8SELDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 3
 ; GFX8SELDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GFX8SELDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v1, 3
-; GFX8SELDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
-; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
-; GFX8SELDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v3, 3
-; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
-; GFX8SELDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v4, 3
-; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[4:5]
+; GFX8SELDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX8SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v3, v3
+; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
+; GFX8SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v2, v2
+; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX8SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v0, v0
+; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v1, v1
+; GFX8SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX8SELDAG-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX8SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8GLISEL-LABEL: isnan_v4f16:
@@ -1227,16 +1604,14 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX9SELDAG-LABEL: isnan_v4f16:
 ; GFX9SELDAG:       ; %bb.0:
 ; GFX9SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9SELDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 3
-; GFX9SELDAG-NEXT:    v_mov_b32_e32 v3, 3
-; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s[4:5]
-; GFX9SELDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v1, 3
-; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
-; GFX9SELDAG-NEXT:    v_cmp_class_f16_sdwa s[4:5], v0, v3 src0_sel:WORD_1 src1_sel:DWORD
+; GFX9SELDAG-NEXT:    v_cmp_u_f16_sdwa s[4:5], v0, v0 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v0, v0
 ; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
-; GFX9SELDAG-NEXT:    v_cmp_class_f16_sdwa s[4:5], v1, v3 src0_sel:WORD_1 src1_sel:DWORD
+; GFX9SELDAG-NEXT:    v_cmp_u_f16_sdwa s[4:5], v1, v1 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9SELDAG-NEXT:    v_cmp_u_f16_e32 vcc, v1, v1
 ; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[4:5]
-; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, v5
+; GFX9SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1259,17 +1634,15 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX10SELDAG-LABEL: isnan_v4f16:
 ; GFX10SELDAG:       ; %bb.0:
 ; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v2, 3
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s5, v0, 3
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_sdwa s4, v1, v2 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s5
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_sdwa s5, v0, v2 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10SELDAG-NEXT:    v_cmp_u_f16_sdwa s4, v0, v0 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10SELDAG-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v0
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s4
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10SELDAG-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1, v1
+; GFX10SELDAG-NEXT:    v_cmp_u_f16_sdwa s4, v1, v1 src0_sel:WORD_1 src1_sel:WORD_1
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, v4
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, v4
-; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s5
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s5, v1, 3
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, v5
-; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s5
 ; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10GLISEL-LABEL: isnan_v4f16:
@@ -1288,20 +1661,64 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isnan_v4f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11CHECK-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v1, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v3, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v4, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isnan_v4f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.l, v1.l
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.h, v1.h
+; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, v4
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isnan_v4f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v0
+; GFX11SELDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX11SELDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1, v1
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v4, v4
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v3, v3
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnan_v4f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.h, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnan_v4f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11GLISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v1, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v3, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v4, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call <4 x i1> @llvm.is.fpclass.v4f16(<4 x half> %x, i32 3)  ; nan
   ret <4 x i1> %1
 }
@@ -1351,12 +1768,33 @@ define i1 @isnan_f16_strictfp(half %x) strictfp nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isnan_f16_strictfp:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isnan_f16_strictfp:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isnan_f16_strictfp:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnan_f16_strictfp:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnan_f16_strictfp:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3) strictfp ; nan
   ret i1 %1
 }
@@ -1405,12 +1843,33 @@ define i1 @isinf_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isinf_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isinf_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x204
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isinf_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isinf_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x204
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isinf_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 516)  ; 0x204 = "inf"
   ret i1 %1
 }
@@ -1459,12 +1918,33 @@ define i1 @isfinite_f16(half %x) nounwind {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isfinite_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1f8
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isfinite_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1f8
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isfinite_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1f8
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isfinite_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1f8
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isfinite_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1f8
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 504)  ; 0x1f8 = "finite"
   ret i1 %1
 }
@@ -1511,12 +1991,33 @@ define i1 @issubnormal_or_zero_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: issubnormal_or_zero_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0xf0
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: issubnormal_or_zero_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0xf0
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: issubnormal_or_zero_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0xf0
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: issubnormal_or_zero_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0xf0
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: issubnormal_or_zero_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0xf0
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 240)  ; 0xf0 = "subnormal|zero"
   ret i1 %class
@@ -1538,7 +2039,7 @@ define i1 @not_issubnormal_or_zero_f16(half %x) {
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x7c00
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_cmp_ge_u32_e64 s[4:5], v1, v2
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
@@ -1570,12 +2071,33 @@ define i1 @not_issubnormal_or_zero_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_issubnormal_or_zero_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x30f
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_issubnormal_or_zero_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x30f
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_issubnormal_or_zero_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x30f
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_issubnormal_or_zero_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x30f
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_issubnormal_or_zero_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x30f
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
     %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
   ret i1 %class
@@ -1598,7 +2120,7 @@ define i1 @isnormal_f16(half %x) {
 ; GFX7GLISEL:       ; %bb.0:
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -1628,12 +2150,33 @@ define i1 @isnormal_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x108
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x108
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x108
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x108
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x108
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 264)  ; 0x108 = "normal"
   ret i1 %class
 }
@@ -1690,12 +2233,33 @@ define i1 @not_isnormal_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_isnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x2f7
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_isnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x2f7
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_isnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x2f7
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_isnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x2f7
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_isnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x2f7
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 759)  ; ~0x108 = "~normal"
   ret i1 %class
 }
@@ -1731,7 +2295,7 @@ define i1 @not_is_plus_normal_f16(half %x) {
 ; GFX7GLISEL-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
 ; GFX7GLISEL-NEXT:    v_cmp_gt_u32_e32 vcc, v3, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[6:7], s[6:7], vcc
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v1
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v1
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -1763,12 +2327,33 @@ define i1 @not_is_plus_normal_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_is_plus_normal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x2ff
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_is_plus_normal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x2ff
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_is_plus_normal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x2ff
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_is_plus_normal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x2ff
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_is_plus_normal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x2ff
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 767)  ; ~0x100 = ~"+normal"
   ret i1 %class
 }
@@ -1804,7 +2389,7 @@ define i1 @not_is_neg_normal_f16(half %x) {
 ; GFX7GLISEL-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
 ; GFX7GLISEL-NEXT:    v_cmp_gt_u32_e32 vcc, v3, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[6:7], s[6:7], vcc
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v1
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v1
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -1836,12 +2421,33 @@ define i1 @not_is_neg_normal_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_is_neg_normal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3f7
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_is_neg_normal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3f7
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_is_neg_normal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3f7
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_is_neg_normal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3f7
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_is_neg_normal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3f7
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 1015)  ; ~0x008 = ~"-normal"
   ret i1 %class
 }
@@ -1862,7 +2468,7 @@ define i1 @issubnormal_f16(half %x) {
 ; GFX7GLISEL:       ; %bb.0:
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -1892,12 +2498,33 @@ define i1 @issubnormal_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: issubnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x90
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: issubnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x90
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: issubnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x90
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: issubnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x90
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: issubnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x90
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 144)  ; 0x90 = "subnormal"
   ret i1 %class
 }
@@ -1925,7 +2552,7 @@ define i1 @not_issubnormal_f16(half %x) {
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX7GLISEL-NEXT:    v_cmp_gt_u32_e32 vcc, v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -1956,12 +2583,33 @@ define i1 @not_issubnormal_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_issubnormal_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x36f
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_issubnormal_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x36f
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_issubnormal_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x36f
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_issubnormal_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x36f
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_issubnormal_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x36f
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 879)  ; ~0x90 = ~"subnormal"
   ret i1 %class
 }
@@ -2008,12 +2656,33 @@ define i1 @iszero_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: iszero_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x60
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: iszero_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x60
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: iszero_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x60
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: iszero_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x60
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: iszero_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x60
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 96)  ; 0x60 = "zero"
   ret i1 %class
 }
@@ -2032,7 +2701,7 @@ define i1 @not_iszero_f16(half %x) {
 ; GFX7GLISEL:       ; %bb.0:
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v1, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v1, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
@@ -2042,7 +2711,7 @@ define i1 @not_iszero_f16(half %x) {
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX7GLISEL-NEXT:    v_cmp_gt_u32_e32 vcc, v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -2073,12 +2742,33 @@ define i1 @not_iszero_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_iszero_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39f
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_iszero_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39f
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_iszero_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39f
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_iszero_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39f
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_iszero_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39f
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 927)  ; ~0x60 = ~"zero"
   ret i1 %class
 }
@@ -2125,12 +2815,33 @@ define i1 @ispositive_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: ispositive_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3c0
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: ispositive_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3c0
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: ispositive_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3c0
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: ispositive_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3c0
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: ispositive_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3c0
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 960)  ; fcPositive
   ret i1 %class
 }
@@ -2193,12 +2904,33 @@ define i1 @not_ispositive_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_ispositive_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 63
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_ispositive_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 63
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_ispositive_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 63
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_ispositive_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 63
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_ispositive_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 63
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 63)  ; ~fcPositive
   ret i1 %class
 }
@@ -2257,12 +2989,33 @@ define i1 @isnegative_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isnegative_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 60
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isnegative_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 60
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isnegative_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 60
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isnegative_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 60
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isnegative_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 60
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 60)  ; fcNegative
   ret i1 %class
 }
@@ -2318,12 +3071,33 @@ define i1 @not_isnegative_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_isnegative_f16:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3c3
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_isnegative_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0:
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3c3
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_isnegative_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0:
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3c3
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_isnegative_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0:
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x3c3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_isnegative_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0:
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3c3
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %class = tail call i1 @llvm.is.fpclass.f16(half %x, i32 963)  ; ~fcNegative
   ret i1 %class
 }
@@ -2375,12 +3149,33 @@ define i1 @iszero_or_nan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: iszero_or_nan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: iszero_or_nan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x63
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: iszero_or_nan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: iszero_or_nan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x63
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: iszero_or_nan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 99)  ; 0x60|0x3 = "zero|nan"
   ret i1 %0
@@ -2433,12 +3228,33 @@ define i1 @iszero_or_nan_f_daz(half %x) #0 {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: iszero_or_nan_f_daz:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: iszero_or_nan_f_daz:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x63
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: iszero_or_nan_f_daz:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: iszero_or_nan_f_daz:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x63
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: iszero_or_nan_f_daz:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 99)  ; 0x60|0x3 = "zero|nan"
   ret i1 %0
@@ -2491,12 +3307,33 @@ define i1 @iszero_or_nan_f_maybe_daz(half %x) #1 {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: iszero_or_nan_f_maybe_daz:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: iszero_or_nan_f_maybe_daz:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x63
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: iszero_or_nan_f_maybe_daz:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: iszero_or_nan_f_maybe_daz:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x63
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: iszero_or_nan_f_maybe_daz:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x63
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 99)  ; 0x60|0x3 = "zero|nan"
   ret i1 %0
@@ -2519,7 +3356,7 @@ define i1 @not_iszero_or_nan_f16(half %x) {
 ; GFX7GLISEL:       ; %bb.0: ; %entry
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v1, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v1, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
@@ -2527,7 +3364,7 @@ define i1 @not_iszero_or_nan_f16(half %x) {
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x7c00
 ; GFX7GLISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -2558,12 +3395,33 @@ define i1 @not_iszero_or_nan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_iszero_or_nan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_iszero_or_nan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39c
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_iszero_or_nan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_iszero_or_nan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39c
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_iszero_or_nan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 924)  ; ~0x60 = "~(zero|nan)"
   ret i1 %0
@@ -2586,7 +3444,7 @@ define i1 @not_iszero_or_nan_f_daz(half %x) #0 {
 ; GFX7GLISEL:       ; %bb.0: ; %entry
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v1, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v1, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
@@ -2594,7 +3452,7 @@ define i1 @not_iszero_or_nan_f_daz(half %x) #0 {
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x7c00
 ; GFX7GLISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -2625,12 +3483,33 @@ define i1 @not_iszero_or_nan_f_daz(half %x) #0 {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_iszero_or_nan_f_daz:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_iszero_or_nan_f_daz:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39c
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_iszero_or_nan_f_daz:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_iszero_or_nan_f_daz:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39c
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_iszero_or_nan_f_daz:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 924)  ; ~(0x60|0x3) = "~(zero|nan)"
   ret i1 %0
@@ -2653,7 +3532,7 @@ define i1 @not_iszero_or_nan_f_maybe_daz(half %x) #1 {
 ; GFX7GLISEL:       ; %bb.0: ; %entry
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v1, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v1, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
@@ -2661,7 +3540,7 @@ define i1 @not_iszero_or_nan_f_maybe_daz(half %x) #1 {
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x7c00
 ; GFX7GLISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -2692,12 +3571,33 @@ define i1 @not_iszero_or_nan_f_maybe_daz(half %x) #1 {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_iszero_or_nan_f_maybe_daz:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_iszero_or_nan_f_maybe_daz:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39c
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_iszero_or_nan_f_maybe_daz:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_iszero_or_nan_f_maybe_daz:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39c
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_iszero_or_nan_f_maybe_daz:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39c
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 924)  ; ~(0x60|0x3) = "~(zero|nan)"
   ret i1 %0
@@ -2750,12 +3650,33 @@ define i1 @iszero_or_qnan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: iszero_or_qnan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x62
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: iszero_or_qnan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x62
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: iszero_or_qnan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x62
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: iszero_or_qnan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x62
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: iszero_or_qnan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x62
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 98)  ; 0x60|0x2 = "zero|qnan"
   ret i1 %0
@@ -2813,12 +3734,33 @@ define i1 @iszero_or_snan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: iszero_or_snan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x61
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: iszero_or_snan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x61
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: iszero_or_snan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x61
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: iszero_or_snan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x61
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: iszero_or_snan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x61
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 97)  ; 0x60|0x1 = "zero|snan"
   ret i1 %0
@@ -2853,7 +3795,7 @@ define i1 @not_iszero_or_qnan_f16(half %x) {
 ; GFX7GLISEL:       ; %bb.0: ; %entry
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v1, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v1, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
@@ -2865,7 +3807,7 @@ define i1 @not_iszero_or_qnan_f16(half %x) {
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x1ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -2896,12 +3838,33 @@ define i1 @not_iszero_or_qnan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_iszero_or_qnan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39d
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_iszero_or_qnan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39d
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_iszero_or_qnan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39d
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_iszero_or_qnan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39d
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_iszero_or_qnan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39d
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 925)  ; ~(0x60|0x2) = "~(zero|qnan)"
   ret i1 %0
@@ -2934,7 +3897,7 @@ define i1 @not_iszero_or_snan_f16(half %x) {
 ; GFX7GLISEL:       ; %bb.0: ; %entry
 ; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v1, vcc, 1, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v1, vcc, -1, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v2
@@ -2945,7 +3908,7 @@ define i1 @not_iszero_or_snan_f16(half %x) {
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX7GLISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
 ; GFX7GLISEL-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7GLISEL-NEXT:    v_subrev_i32_e32 v0, vcc, 0x400, v0
+; GFX7GLISEL-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7GLISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x7800
 ; GFX7GLISEL-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
@@ -2976,12 +3939,33 @@ define i1 @not_iszero_or_snan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_iszero_or_snan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39e
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_iszero_or_snan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39e
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_iszero_or_snan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39e
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_iszero_or_snan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x39e
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_iszero_or_snan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x39e
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 926)  ; ~(0x60|0x1) = "~(zero|snan)"
   ret i1 %0
@@ -3031,12 +4015,33 @@ define i1 @isinf_or_nan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isinf_or_nan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x207
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isinf_or_nan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x207
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isinf_or_nan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x207
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isinf_or_nan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x207
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isinf_or_nan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x207
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 519)  ; 0x204|0x3 = "inf|nan"
   ret i1 %0
@@ -3086,12 +4091,33 @@ define i1 @not_isinf_or_nan_f16(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_isinf_or_nan_f16:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1f8
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_isinf_or_nan_f16:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1f8
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_isinf_or_nan_f16:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1f8
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_isinf_or_nan_f16:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1f8
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_isinf_or_nan_f16:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1f8
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 504)  ; ~(0x204|0x3) = "~(inf|nan)"
   ret i1 %0
@@ -3141,12 +4167,33 @@ define i1 @isfinite_or_nan_f(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: isfinite_or_nan_f:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1fb
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: isfinite_or_nan_f:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1fb
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: isfinite_or_nan_f:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1fb
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: isfinite_or_nan_f:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x1fb
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: isfinite_or_nan_f:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x1fb
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 507)  ; 0x1f8|0x3 = "finite|nan"
   ret i1 %0
@@ -3196,12 +4243,33 @@ define i1 @not_isfinite_or_nan_f(half %x) {
 ; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11CHECK-LABEL: not_isfinite_or_nan_f:
-; GFX11CHECK:       ; %bb.0: ; %entry
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GFX11SELDAG-TRUE16-LABEL: not_isfinite_or_nan_f:
+; GFX11SELDAG-TRUE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x204
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-FAKE16-LABEL: not_isfinite_or_nan_f:
+; GFX11SELDAG-FAKE16:       ; %bb.0: ; %entry
+; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
+; GFX11SELDAG-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11SELDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-TRUE16-LABEL: not_isfinite_or_nan_f:
+; GFX11GLISEL-TRUE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x204
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-FAKE16-LABEL: not_isfinite_or_nan_f:
+; GFX11GLISEL-FAKE16:       ; %bb.0: ; %entry
+; GFX11GLISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-FAKE16-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x204
+; GFX11GLISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f16(half %x, i32 516)  ; ~(0x1f8|0x3) = "~(finite|nan)"
   ret i1 %0
@@ -3217,3 +4285,6 @@ attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
 
 ; Maybe daz
 attributes #1 = { "denormal-fp-math"="ieee,dynamic" }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11GLISEL: {{.*}}
+; GFX11SELDAG: {{.*}}

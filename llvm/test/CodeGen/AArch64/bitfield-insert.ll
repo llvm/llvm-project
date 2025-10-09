@@ -193,11 +193,10 @@ define void @test_64bit_badmask(ptr %existing, ptr %new) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    mov w10, #135 // =0x87
-; CHECK-NEXT:    mov w11, #664 // =0x298
-; CHECK-NEXT:    lsl w9, w9, #3
-; CHECK-NEXT:    and x8, x8, x10
-; CHECK-NEXT:    and x9, x9, x11
+; CHECK-NEXT:    mov w10, #664 // =0x298
+; CHECK-NEXT:    mov w11, #135 // =0x87
+; CHECK-NEXT:    and x9, x10, x9, lsl #3
+; CHECK-NEXT:    and x8, x8, x11
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -579,7 +578,6 @@ define <2 x i32> @test_complex_type(ptr %addr, i64 %in, ptr %bf ) {
 define i64 @test_truncated_shift(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_truncated_shift:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 killed $x1 def $x1
 ; CHECK-NEXT:    bfi x0, x1, #25, #5
 ; CHECK-NEXT:    ret
 entry:
@@ -593,7 +591,6 @@ entry:
 define i64 @test_and_extended_shift_with_imm(i64 %0) {
 ; CHECK-LABEL: test_and_extended_shift_with_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0 def $x0
 ; CHECK-NEXT:    ubfiz x0, x0, #7, #8
 ; CHECK-NEXT:    ret
   %2 = shl i64 %0, 7
@@ -737,4 +734,22 @@ define i32 @orr_not_bfxil_test2_i32(i32 %0) {
   %3 = lshr i32 %2, 12
   %4 = or i32 %2, %3
   ret i32 %4
+}
+
+define i16 @implicit_trunc_of_imm(ptr %p, i16 %a, i16 %b) {
+; CHECK-LABEL: implicit_trunc_of_imm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w1, #0xffffe000
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    mov w10, w8
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    bfxil w10, w2, #0, #1
+; CHECK-NEXT:    strh w10, [x9]
+; CHECK-NEXT:    ret
+entry:
+  %and1 = and i16 %a, -8192
+  %and2 = and i16 %b, 1
+  %or = or i16 %and2, %and1
+  store i16 %or, ptr %p
+  ret i16 %and1
 }

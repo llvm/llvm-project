@@ -10,13 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-class VCIXSuffix<string range> {
-  list<string> suffix = !cond(!eq(range, "c"): ["e8mf8", "e8mf4", "e8mf2", "e8m1", "e8m2", "e8m4", "e8m8"],
-                              !eq(range, "s"): ["e16mf4", "e16mf2", "e16m1", "e16m2", "e16m4", "e16m8"],
-                              !eq(range, "i"): ["e32mf2", "e32m1", "e32m2", "e32m4", "e32m8"],
-                              !eq(range, "l"): ["e64m1", "e64m2", "e64m4", "e64m8"]);
-}
-
 let TargetPrefix = "riscv" in {
   // Output: (vector_out)
   // Input: (bit<27-26>, bit<24-20>, scalar_in, vl) or

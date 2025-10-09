@@ -30,11 +30,10 @@
 #include <optional>
 using namespace llvm;
 
-cl::OptionCategory AsCat("llvm-as Options");
+static cl::OptionCategory AsCat("llvm-as Options");
 
-static cl::opt<std::string> InputFilename(cl::Positional,
-                                          cl::desc("<input .llvm file>"),
-                                          cl::init("-"));
+static cl::opt<std::string>
+    InputFilename(cl::Positional, cl::desc("<input .ll file>"), cl::init("-"));
 
 static cl::opt<std::string> OutputFilename("o",
                                            cl::desc("Override output filename"),
@@ -135,16 +134,19 @@ int main(int argc, char **argv) {
                                                 nullptr, SetDataLayout);
   }
   std::unique_ptr<Module> M = std::move(ModuleAndIndex.Mod);
-  if (!M.get()) {
+  if (!M) {
     Err.print(argv[0], errs());
     return 1;
   }
+
+  M->removeDebugIntrinsicDeclarations();
+
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 
   if (!DisableVerify) {
     std::string ErrorStr;
     raw_string_ostream OS(ErrorStr);
-    if (verifyModule(*M.get(), &OS)) {
+    if (verifyModule(*M, &OS)) {
       errs() << argv[0]
              << ": assembly parsed, but does not verify as correct!\n";
       errs() << OS.str();
@@ -154,7 +156,7 @@ int main(int argc, char **argv) {
   }
 
   if (DumpAsm) {
-    errs() << "Here's the assembly:\n" << *M.get();
+    errs() << "Here's the assembly:\n" << *M;
     if (Index.get() && Index->begin() != Index->end())
       Index->print(errs());
   }

@@ -78,10 +78,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerUnreachablePass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerUnreachable : public FunctionPass {
   StringRef getPassName() const override;
@@ -110,17 +106,24 @@ StringRef NVPTXLowerUnreachable::getPassName() const {
 }
 
 // =============================================================================
-// Returns whether a `trap` intrinsic should be emitted before I.
+// Returns whether a `trap` intrinsic would be emitted before I.
 //
 // This is a copy of the logic in SelectionDAGBuilder::visitUnreachable().
 // =============================================================================
 bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
-  if (!TrapUnreachable)
-    return false;
-  if (!NoTrapAfterNoreturn)
-    return true;
-  const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
-  return Call && Call->doesNotReturn();
+  if (const auto *Call = dyn_cast_or_null<CallInst>(I.getPrevNode())) {
+    // We've already emitted a non-continuable trap.
+    if (Call->isNonContinuableTrap())
+      return true;
+
+    // No traps are emitted for calls that do not return
+    // when this option is enabled.
+    if (NoTrapAfterNoreturn && Call->doesNotReturn())
+      return false;
+  }
+
+  // In all other cases, we will generate a trap if TrapUnreachable is set.
+  return TrapUnreachable;
 }
 
 // =============================================================================
@@ -143,7 +146,7 @@ bool NVPTXLowerUnreachable::runOnFunction(Function &F) {
       if (auto unreachableInst = dyn_cast<UnreachableInst>(&I)) {
         if (isLoweredToTrap(*unreachableInst))
           continue; // trap is emitted as `trap; exit;`.
-        CallInst::Create(ExitFTy, Exit, "", unreachableInst);
+        CallInst::Create(ExitFTy, Exit, "", unreachableInst->getIterator());
         Changed = true;
       }
     }

@@ -1,4 +1,4 @@
-//===--- PreferMemberInitializerCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,9 +67,7 @@ static bool canAdvanceAssignment(AssignedLevel Level) {
 static void updateAssignmentLevel(
     const FieldDecl *Field, const Expr *Init, const CXXConstructorDecl *Ctor,
     llvm::DenseMap<const FieldDecl *, AssignedLevel> &AssignedFields) {
-  auto It = AssignedFields.find(Field);
-  if (It == AssignedFields.end())
-    It = AssignedFields.insert({Field, AssignedLevel::None}).first;
+  auto It = AssignedFields.try_emplace(Field, AssignedLevel::None).first;
 
   if (!canAdvanceAssignment(It->second))
     // fast path for already decided field.
@@ -85,7 +83,7 @@ static void updateAssignmentLevel(
       memberExpr(hasObjectExpression(cxxThisExpr()),
                  member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
   auto DeclMatcher = declRefExpr(
-      to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Ctor)))));
+      to(valueDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Ctor)))));
   const bool HasDependence = !match(expr(anyOf(MemberMatcher, DeclMatcher,
                                                hasDescendant(MemberMatcher),
                                                hasDescendant(DeclMatcher))),
@@ -193,6 +191,9 @@ void PreferMemberInitializerCheck::check(
     if (!AssignmentToMember)
       continue;
     const FieldDecl *Field = AssignmentToMember->Field;
+    // Skip if the field is inherited from a base class.
+    if (Field->getParent() != Class)
+      continue;
     const Expr *InitValue = AssignmentToMember->Init;
     updateAssignmentLevel(Field, InitValue, Ctor, AssignedFields);
     if (!canAdvanceAssignment(AssignedFields[Field]))
@@ -203,6 +204,7 @@ void PreferMemberInitializerCheck::check(
     SourceLocation InsertPos;
     SourceRange ReplaceRange;
     bool AddComma = false;
+    bool AddBrace = false;
     bool InvalidFix = false;
     unsigned Index = Field->getFieldIndex();
     const CXXCtorInitializer *LastInListInit = nullptr;
@@ -215,6 +217,7 @@ void PreferMemberInitializerCheck::check(
           InsertPos = Init->getRParenLoc();
         else {
           ReplaceRange = Init->getInit()->getSourceRange();
+          AddBrace = isa<InitListExpr>(Init->getInit());
         }
         break;
       }
@@ -279,6 +282,9 @@ void PreferMemberInitializerCheck::check(
     if (HasInitAlready) {
       if (InsertPos.isValid())
         Diag << FixItHint::CreateInsertion(InsertPos, NewInit);
+      else if (AddBrace)
+        Diag << FixItHint::CreateReplacement(ReplaceRange,
+                                             ("{" + NewInit + "}").str());
       else
         Diag << FixItHint::CreateReplacement(ReplaceRange, NewInit);
     } else {

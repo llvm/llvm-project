@@ -8,14 +8,14 @@ subroutine ordered
         integer :: i
         integer :: a(20)
 
-!CHECK: omp.ordered_region  {
+!CHECK: omp.ordered.region  {
 !$OMP ORDERED
         a(i) = a(i-1) + 1
 !CHECK:   omp.terminator
 !CHECK-NEXT: }
 !$OMP END ORDERED
 
-!CHECK: omp.ordered_region  {
+!CHECK: omp.ordered.region  {
 !$OMP ORDERED THREADS
         a(i) = a(i-1) + 1
 !CHECK:   omp.terminator

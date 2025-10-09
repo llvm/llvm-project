@@ -15,6 +15,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,7 +34,7 @@ BreakpointLocationList::Create(const Address &addr,
   lldb::break_id_t bp_loc_id = ++m_next_id;
   BreakpointLocationSP bp_loc_sp(
       new BreakpointLocation(bp_loc_id, m_owner, addr, LLDB_INVALID_THREAD_ID,
-                             m_owner.IsHardware(), resolve_indirect_symbols));
+                             resolve_indirect_symbols));
   m_locations.push_back(bp_loc_sp);
   m_address_to_location[addr] = bp_loc_sp;
   return bp_loc_sp;
@@ -72,8 +74,7 @@ BreakpointLocationList::FindByID(lldb::break_id_t break_id) const {
       llvm::lower_bound(m_locations, break_id, Compare);
   if (pos != end && (*pos)->GetID() == break_id)
     return *(pos);
-  else
-    return BreakpointLocationSP();
+  return BreakpointLocationSP();
 }
 
 size_t BreakpointLocationList::FindInModule(
@@ -103,8 +104,7 @@ BreakpointLocationList::FindByAddress(const Address &addr) const {
       so_addr = addr;
     } else {
       // Try and resolve as a load address if possible.
-      m_owner.GetTarget().GetSectionLoadList().ResolveLoadAddress(
-          addr.GetOffset(), so_addr);
+      m_owner.GetTarget().ResolveLoadAddress(addr.GetOffset(), so_addr);
       if (!so_addr.IsValid()) {
         // The address didn't resolve, so just set to passed in addr.
         so_addr = addr;
@@ -153,17 +153,24 @@ const BreakpointLocationSP BreakpointLocationList::GetByIndex(size_t i) const {
 void BreakpointLocationList::ClearAllBreakpointSites() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   collection::iterator pos, end = m_locations.end();
-  for (pos = m_locations.begin(); pos != end; ++pos)
-    (*pos)->ClearBreakpointSite();
+  Log *log = GetLog(LLDBLog::Breakpoints);
+
+  for (pos = m_locations.begin(); pos != end; ++pos) {
+    if (llvm::Error error = (*pos)->ClearBreakpointSite())
+      LLDB_LOG_ERROR(log, std::move(error), "{0}");
+  }
 }
 
 void BreakpointLocationList::ResolveAllBreakpointSites() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   collection::iterator pos, end = m_locations.end();
+  Log *log = GetLog(LLDBLog::Breakpoints);
 
   for (pos = m_locations.begin(); pos != end; ++pos) {
-    if ((*pos)->IsEnabled())
-      (*pos)->ResolveBreakpointSite();
+    if ((*pos)->IsEnabled()) {
+      if (llvm::Error error = (*pos)->ResolveBreakpointSite())
+        LLDB_LOG_ERROR(log, std::move(error), "{0}");
+    }
   }
 }
 
@@ -214,7 +221,8 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
   if (!bp_loc_sp) {
     bp_loc_sp = Create(addr, resolve_indirect_symbols);
     if (bp_loc_sp) {
-      bp_loc_sp->ResolveBreakpointSite();
+      if (llvm::Error error = bp_loc_sp->ResolveBreakpointSite())
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), std::move(error), "{0}");
 
       if (new_location)
         *new_location = true;
@@ -236,7 +244,7 @@ void BreakpointLocationList::SwapLocation(
   to_location_sp->SwapLocation(from_location_sp);
   RemoveLocation(from_location_sp);
   m_address_to_location[to_location_sp->GetAddress()] = to_location_sp;
-  to_location_sp->ResolveBreakpointSite();
+  llvm::consumeError(to_location_sp->ResolveBreakpointSite());
 }
 
 bool BreakpointLocationList::RemoveLocation(

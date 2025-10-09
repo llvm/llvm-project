@@ -8,11 +8,12 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: abs_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ASHR]]
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR]]
-    ; CHECK-NEXT: $w0 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[SUB]]
+    ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
+    ;
     ; CHECK-CSSC-LABEL: name: abs_s32
     ; CHECK-CSSC: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-CSSC-NEXT: [[ABS:%[0-9]+]]:_(s32) = G_ABS [[COPY]]
@@ -28,11 +29,12 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: abs_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY]], [[C]](s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[ASHR]]
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ADD]], [[ASHR]]
-    ; CHECK-NEXT: $x0 = COPY [[XOR]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[COPY]](s64), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s32), [[COPY]], [[SUB]]
+    ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
+    ;
     ; CHECK-CSSC-LABEL: name: abs_s64
     ; CHECK-CSSC: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-CSSC-NEXT: [[ABS:%[0-9]+]]:_(s64) = G_ABS [[COPY]]
@@ -55,6 +57,7 @@ body:             |
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:_(<4 x s16>) = G_ABS [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[ABS]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-CSSC-LABEL: name: abs_v4s16
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -82,6 +85,7 @@ body:             |
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:_(<8 x s16>) = G_ABS [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[ABS]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: abs_v8s16
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -109,6 +113,7 @@ body:             |
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:_(<2 x s32>) = G_ABS [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[ABS]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-CSSC-LABEL: name: abs_v2s32
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -136,6 +141,7 @@ body:             |
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:_(<4 x s32>) = G_ABS [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[ABS]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: abs_v4s32
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -163,6 +169,7 @@ body:             |
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:_(<8 x s8>) = G_ABS [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[ABS]](<8 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; CHECK-CSSC-LABEL: name: abs_v4s8
     ; CHECK-CSSC: liveins: $d0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -190,6 +197,7 @@ body:             |
     ; CHECK-NEXT: [[ABS:%[0-9]+]]:_(<16 x s8>) = G_ABS [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[ABS]](<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; CHECK-CSSC-LABEL: name: abs_v16s8
     ; CHECK-CSSC: liveins: $q0
     ; CHECK-CSSC-NEXT: {{  $}}

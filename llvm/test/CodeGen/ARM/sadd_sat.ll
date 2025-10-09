@@ -72,22 +72,21 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-T16-NEXT:    adcs r3, r4
 ; CHECK-T16-NEXT:    eors r4, r3
 ; CHECK-T16-NEXT:    bics r4, r1
-; CHECK-T16-NEXT:    asrs r1, r3, #31
+; CHECK-T16-NEXT:    asrs r0, r3, #31
+; CHECK-T16-NEXT:    movs r1, #1
+; CHECK-T16-NEXT:    lsls r1, r1, #31
+; CHECK-T16-NEXT:    eors r1, r0
 ; CHECK-T16-NEXT:    cmp r4, #0
-; CHECK-T16-NEXT:    mov r0, r1
-; CHECK-T16-NEXT:    bmi .LBB1_2
+; CHECK-T16-NEXT:    bpl .LBB1_3
 ; CHECK-T16-NEXT:  @ %bb.1:
-; CHECK-T16-NEXT:    mov r0, r2
+; CHECK-T16-NEXT:    bpl .LBB1_4
 ; CHECK-T16-NEXT:  .LBB1_2:
-; CHECK-T16-NEXT:    cmp r4, #0
-; CHECK-T16-NEXT:    bmi .LBB1_4
-; CHECK-T16-NEXT:  @ %bb.3:
-; CHECK-T16-NEXT:    mov r1, r3
 ; CHECK-T16-NEXT:    pop {r4, pc}
+; CHECK-T16-NEXT:  .LBB1_3:
+; CHECK-T16-NEXT:    mov r0, r2
+; CHECK-T16-NEXT:    bmi .LBB1_2
 ; CHECK-T16-NEXT:  .LBB1_4:
-; CHECK-T16-NEXT:    movs r2, #1
-; CHECK-T16-NEXT:    lsls r2, r2, #31
-; CHECK-T16-NEXT:    eors r1, r2
+; CHECK-T16-NEXT:    mov r1, r3
 ; CHECK-T16-NEXT:    pop {r4, pc}
 ;
 ; CHECK-T2-LABEL: func2:
@@ -128,23 +127,22 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-T15TE-NEXT:    adcs r3, r4
 ; CHECK-T15TE-NEXT:    eors r4, r3
 ; CHECK-T15TE-NEXT:    bics r4, r1
-; CHECK-T15TE-NEXT:    asrs r1, r3, #31
+; CHECK-T15TE-NEXT:    asrs r0, r3, #31
+; CHECK-T15TE-NEXT:    movs r1, #1
+; CHECK-T15TE-NEXT:    lsls r1, r1, #31
+; CHECK-T15TE-NEXT:    eors r1, r0
 ; CHECK-T15TE-NEXT:    cmp r4, #0
-; CHECK-T15TE-NEXT:    push {r1}
-; CHECK-T15TE-NEXT:    pop {r0}
-; CHECK-T15TE-NEXT:    bmi .LBB1_2
+; CHECK-T15TE-NEXT:    bpl .LBB1_3
 ; CHECK-T15TE-NEXT:  @ %bb.1:
-; CHECK-T15TE-NEXT:    movs r0, r2
+; CHECK-T15TE-NEXT:    bpl .LBB1_4
 ; CHECK-T15TE-NEXT:  .LBB1_2:
-; CHECK-T15TE-NEXT:    cmp r4, #0
-; CHECK-T15TE-NEXT:    bmi .LBB1_4
-; CHECK-T15TE-NEXT:  @ %bb.3:
-; CHECK-T15TE-NEXT:    movs r1, r3
 ; CHECK-T15TE-NEXT:    pop {r4, pc}
+; CHECK-T15TE-NEXT:  .LBB1_3:
+; CHECK-T15TE-NEXT:    mov r12, r2
+; CHECK-T15TE-NEXT:    mov r0, r12
+; CHECK-T15TE-NEXT:    bmi .LBB1_2
 ; CHECK-T15TE-NEXT:  .LBB1_4:
-; CHECK-T15TE-NEXT:    movs r2, #1
-; CHECK-T15TE-NEXT:    lsls r2, r2, #31
-; CHECK-T15TE-NEXT:    eors r1, r2
+; CHECK-T15TE-NEXT:    movs r1, r3
 ; CHECK-T15TE-NEXT:    pop {r4, pc}
   %tmp = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y)
   ret i64 %tmp

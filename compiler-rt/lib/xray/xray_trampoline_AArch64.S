@@ -26,6 +26,17 @@
   ldp x1, x2, [sp], #16
 .endm
 
+.macro LOAD_HANDLER_ADDR reg handler
+#if !defined(XRAY_PIC)
+    adrp \reg, ASM_SYMBOL(\handler)
+    ldr \reg, [\reg, :lo12:ASM_SYMBOL(\handler)]
+#else
+    adrp \reg, :got:ASM_SYMBOL(\handler)
+    ldr \reg, [\reg, :got_lo12:ASM_SYMBOL(\handler)]
+    ldr \reg, [\reg]
+#endif
+.endm
+
 .text
 .p2align 2
 .global ASM_SYMBOL(__xray_FunctionEntry)
@@ -42,8 +53,7 @@ ASM_SYMBOL(__xray_FunctionEntry):
   SAVE_REGISTERS
 
   // Load the handler function pointer.
-  adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-  ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  LOAD_HANDLER_ADDR x2, _ZN6__xray19XRayPatchedFunctionE
   cbz x2, 1f
   // Set w0 to the function ID (w17). Set x1 to XRayEntryType::ENTRY = 0.
   mov w0, w17
@@ -69,8 +79,7 @@ ASM_SYMBOL(__xray_FunctionExit):
   SAVE_REGISTERS
 
   // Load the handler function pointer into x2.
-  adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-  ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  LOAD_HANDLER_ADDR x2, _ZN6__xray19XRayPatchedFunctionE
   cbz x2, 1f
   // Set w0 to the function ID (w17). Set x1 to XRayEntryType::EXIT = 1.
   mov w0, w17
@@ -96,8 +105,7 @@ ASM_SYMBOL(__xray_FunctionTailExit):
   // Save the registers which may be modified by the handler function.
   SAVE_REGISTERS
   // Load the handler function pointer into x2.
-  adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-  ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  LOAD_HANDLER_ADDR x2, _ZN6__xray19XRayPatchedFunctionE
   cbz x2, 1f
   // Set w0 to the function ID (w17). Set x1 to XRayEntryType::TAIL = 2.
   mov w0, w17
@@ -118,13 +126,11 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
   // Push the registers which may be modified by the handler function.
   SAVE_REGISTERS
 
-  adrp x8, ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)
-  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)]
+  LOAD_HANDLER_ADDR x8, _ZN6__xray13XRayArgLoggerE
   cbnz x8, 2f
 
   // Load the handler function pointer.
-  adrp x8, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
-  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  LOAD_HANDLER_ADDR x8, _ZN6__xray19XRayPatchedFunctionE
   cbz x8, 1f
 
 2:
@@ -138,13 +144,13 @@ ASM_SYMBOL(__xray_ArgLoggerEntry):
   ret
 ASM_SIZE(__xray_ArgLoggerEntry)
 
+// __xray_*Event have default visibility so that they can be referenced by user
+// DSOs that do not link against the runtime.
 .global ASM_SYMBOL(__xray_CustomEvent)
-ASM_HIDDEN(__xray_CustomEvent)
 ASM_TYPE_FUNCTION(__xray_CustomEvent)
 ASM_SYMBOL(__xray_CustomEvent):
   SAVE_REGISTERS
-  adrp x8, ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)
-  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)]
+  LOAD_HANDLER_ADDR x8, _ZN6__xray22XRayPatchedCustomEventE
   cbz x8, 1f
   blr x8
 1:
@@ -153,12 +159,10 @@ ASM_SYMBOL(__xray_CustomEvent):
 ASM_SIZE(__xray_CustomEvent)
 
 .global ASM_SYMBOL(__xray_TypedEvent)
-ASM_HIDDEN(__xray_TypedEvent)
 ASM_TYPE_FUNCTION(__xray_TypedEvent)
 ASM_SYMBOL(__xray_TypedEvent):
   SAVE_REGISTERS
-  adrp x8, ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)
-  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)]
+  LOAD_HANDLER_ADDR x8, _ZN6__xray21XRayPatchedTypedEventE
   cbz x8, 1f
   blr x8
 1:

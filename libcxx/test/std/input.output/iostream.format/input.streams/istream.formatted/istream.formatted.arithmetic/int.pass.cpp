@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// Requires 396145d in the built library.
+// XFAIL: using-built-library-before-llvm-9
 
 // <istream>
 
@@ -18,6 +19,8 @@
 #include <istream>
 #include <limits>
 #include <cassert>
+#include <streambuf>
+
 #include "test_macros.h"
 
 template <class CharT>

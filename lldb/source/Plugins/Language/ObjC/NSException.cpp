@@ -10,14 +10,14 @@
 
 #include "Cocoa.h"
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -123,11 +123,9 @@ public:
 
   ~NSExceptionSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
-    return 4;
-  }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 4; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     switch (idx) {
       case 0: return m_name_sp;
       case 1: return m_reason_sp;
@@ -137,19 +135,20 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  bool Update() override {
+  lldb::ChildCacheState Update() override {
     m_name_sp.reset();
     m_reason_sp.reset();
     m_userinfo_sp.reset();
     m_reserved_sp.reset();
 
-    return ExtractFields(m_backend, &m_name_sp, &m_reason_sp, &m_userinfo_sp,
-                         &m_reserved_sp);
+    const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
+                                   &m_userinfo_sp, &m_reserved_sp);
+
+    return ret ? lldb::ChildCacheState::eReuse
+               : lldb::ChildCacheState::eRefetch;
   }
 
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     // NSException has 4 members:
     //   NSString *name;
     //   NSString *reason;
@@ -163,7 +162,8 @@ public:
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
 private:

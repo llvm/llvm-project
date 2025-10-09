@@ -26,9 +26,11 @@ on how to get in touch with us and to learn more about the current status.
    C++style
    DesignGuideline
    FortranForCProgrammers
+   FortranStandardsSupport
    GettingInvolved
    GettingStarted
    ImplementingASemanticCheck
+   OpenMPSupport
    PullRequestChecklist
 ```
 
@@ -41,14 +43,17 @@ on how to get in touch with us and to learn more about the current status.
    Aliasing
    AliasingAnalysisFIR
    ArrayComposition
+   ArrayRepacking
    AssumedRank
    BijectiveInternalNameUniquing
    Calls
    Character
    ComplexOperations
    ControlFlowGraph
+   DebugGeneration
    Directives
    DoConcurrent
+   DoConcurrentConversionToOpenMP
    Extensions
    F202X
    FIRArrayOperations
@@ -68,9 +73,12 @@ on how to get in touch with us and to learn more about the current status.
    OpenACC
    OpenACC-descriptor-management.md
    OpenMP-4.5-grammar.md
+   OpenMP-declare-target
+   OpenMP-descriptor-management
    OpenMP-semantics
    OptionComparison
    Overview
+   ParallelMultiImageFortranRuntime
    ParameterizedDerivedTypes
    ParserCombinators
    Parsing
@@ -78,10 +86,13 @@ on how to get in touch with us and to learn more about the current status.
    Preprocessing
    ProcedurePointer
    RuntimeDescriptor
+   RuntimeEnvironment
    RuntimeTypeInfo
    Semantics
    f2018-grammar.md
    fstack-arrays
+   Real16MathSupport
+   Unsigned
 ```
 
 # Indices and tables

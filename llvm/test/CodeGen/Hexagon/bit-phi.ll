@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon < %s
-; RUN: llc -march=hexagon -disable-hcp < %s
+; RUN: llc -mtriple=hexagon < %s
+; RUN: llc -mtriple=hexagon -disable-hcp < %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"

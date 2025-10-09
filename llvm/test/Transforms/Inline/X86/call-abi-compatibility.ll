@@ -34,8 +34,7 @@ define i64 @callee_not_avx(<4 x i64> %arg) noinline {
   ret i64 %v
 }
 
-; This call also shouldn't be inlined, as we don't know whether callee_unknown
-; is ABI compatible or not.
+; This call also shouldn't be inlined, as caller_not_avx2 is not ABI compatible.
 define void @caller_avx2() "target-features"="+avx" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_avx2
 ; CHECK-SAME: () #[[ATTR0]] {
@@ -55,6 +54,29 @@ define internal void @caller_not_avx2() {
   ret void
 }
 
+; Should be inlined, as caller_avx7 is ABI compatible. The fact that we don't
+; know anything about callee_unknown doesn't matter, as it is the caller that
+; determines the ABI as far as target features are concerned.
+define void @caller_avx6() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@caller_avx6
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    ret void
+;
+  call void @caller_avx7()
+  ret void
+}
+
+define void @caller_avx7() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@caller_avx7
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    ret void
+;
+  call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+  ret void
+}
+
 declare i64 @callee_unknown(<4 x i64>)
 
 ; This call should get inlined, because we assume that intrinsics are always
@@ -62,19 +84,23 @@ declare i64 @callee_unknown(<4 x i64>)
 define void @caller_avx3() "target-features"="+avx" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_avx3
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.some_intrinsic(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    [[V_I:%.*]] = load <4 x i64>, ptr @g, align 32
+; CHECK-NEXT:    [[V2_I:%.*]] = call <4 x i64> @llvm.abs.v4i64(<4 x i64> [[V_I]], i1 false)
+; CHECK-NEXT:    store <4 x i64> [[V2_I]], ptr @g, align 32
 ; CHECK-NEXT:    ret void
 ;
   call void @caller_not_avx3()
   ret void
 }
 
+@g = external global <4 x i64>
+
 define internal void @caller_not_avx3() {
-  call i64 @llvm.some_intrinsic(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+  %v = load <4 x i64>, ptr @g
+  %v2 = call <4 x i64> @llvm.abs(<4 x i64> %v, i1 false)
+  store <4 x i64> %v2, ptr @g
   ret void
 }
-
-declare i64 @llvm.some_intrinsic(<4 x i64>)
 
 ; This call should get inlined, because only simple types are involved.
 define void @caller_avx4() "target-features"="+avx" {
@@ -93,3 +119,29 @@ define internal void @caller_not_avx4() {
 }
 
 declare i64 @caller_unknown_simple(i64)
+
+; This call should get inlined, because the callee only contains
+; inline ASM, not real calls.
+define <8 x i64> @caller_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2) #0 {
+; CHECK-LABEL: define {{[^@]+}}@caller_inline_asm
+; CHECK-SAME: (ptr [[P0:%.*]], i64 [[K:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[SRC_I:%.*]] = load <8 x i64>, ptr [[P0]], align 64
+; CHECK-NEXT:    [[A_I:%.*]] = load <8 x i64>, ptr [[P1]], align 64
+; CHECK-NEXT:    [[B_I:%.*]] = load <8 x i64>, ptr [[P2]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> asm "vpaddb\09$($3, $2, $0 {$1}", "=v,^Yk,v,v,0,~{dirflag},~{fpsr},~{flags}"(i64 [[K]], <8 x i64> [[A_I]], <8 x i64> [[B_I]], <8 x i64> [[SRC_I]])
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
+;
+  %call = call <8 x i64> @callee_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2)
+  ret <8 x i64> %call
+}
+
+define internal <8 x i64> @callee_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2) #1 {
+  %src = load <8 x i64>, ptr %p0, align 64
+  %a = load <8 x i64>, ptr %p1, align 64
+  %b = load <8 x i64>, ptr %p2, align 64
+  %3 = tail call <8 x i64> asm "vpaddb\09$($3, $2, $0 {$1}", "=v,^Yk,v,v,0,~{dirflag},~{fpsr},~{flags}"(i64 %k, <8 x i64> %a, <8 x i64> %b, <8 x i64> %src) #2
+  ret <8 x i64> %3
+}
+
+attributes #0 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512dq,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
+attributes #1 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }

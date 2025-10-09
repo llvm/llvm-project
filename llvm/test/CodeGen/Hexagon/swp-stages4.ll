@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner -pipeliner-max-stages=2 -disable-block-placement=0 -hexagon-bit=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -enable-pipeliner -pipeliner-max-stages=2 -disable-block-placement=0 -hexagon-bit=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we rename registers correctly for multiple stages when there is a
 ; Phi and depends upon another Phi.

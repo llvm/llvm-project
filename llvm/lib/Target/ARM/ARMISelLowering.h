@@ -27,7 +27,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/CodeGen.h"
 #include <optional>
@@ -35,6 +34,7 @@
 
 namespace llvm {
 
+class ARMBaseTargetMachine;
 class ARMSubtarget;
 class DataLayout;
 class FastISel;
@@ -42,6 +42,7 @@ class FunctionLoweringInfo;
 class GlobalValue;
 class InstrItineraryData;
 class Instruction;
+class IRBuilderBase;
 class MachineBasicBlock;
 class MachineInstr;
 class SelectionDAG;
@@ -95,22 +96,21 @@ class VectorType;
     FMSTAT,   // ARM fmstat instruction.
 
     CMOV, // ARM conditional move instructions.
-    SUBS, // Flag-setting subtraction.
 
     SSAT, // Signed saturation
     USAT, // Unsigned saturation
 
     BCC_i64,
 
-    SRL_GLUE, // V,Flag = srl_flag X -> srl X, 1 + save carry out.
-    SRA_GLUE, // V,Flag = sra_flag X -> sra X, 1 + save carry out.
-    RRX,      // V = RRX X, Flag     -> srl X, 1 + shift in carry flag.
+    LSLS,  // Flag-setting shift left.
+    LSRS1, // Flag-setting logical shift right by one bit.
+    ASRS1, // Flag-setting arithmetic shift right by one bit.
+    RRX,   // Shift right one bit with carry in.
 
     ADDC, // Add with carry
     ADDE, // Add using carry
     SUBC, // Sub with carry
     SUBE, // Sub using carry
-    LSLS, // Shift left producing carry
 
     VMOVRRD, // double to two gprs.
     VMOVDRR, // Two gprs to double.
@@ -244,7 +244,7 @@ class VectorType;
     VADDLVAps, // Same as VADDLVp[su] but with a v4i1 predicate mask
     VADDLVApu,
     VMLAVs, // sign- or zero-extend the elements of two vectors to i32, multiply
-    VMLAVu, //   them and add the results together, returning an i32 of their sum
+    VMLAVu, //   them and add the results together, returning an i32 of the sum
     VMLAVps, // Same as VMLAV[su] with a v4i1 predicate mask
     VMLAVpu,
     VMLALVs,  // Same as VMLAV but with i64, returning the low and
@@ -322,7 +322,8 @@ class VectorType;
     CSINC, // Conditional select increment.
 
     // Vector load N-element structure to all lanes:
-    VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    VLD1DUP = FIRST_MEMORY_OPCODE,
     VLD2DUP,
     VLD3DUP,
     VLD4DUP,
@@ -357,7 +358,8 @@ class VectorType;
 
     // Load/Store of dual registers
     LDRD,
-    STRD
+    STRD,
+    LAST_MEMORY_OPCODE = STRD,
   };
 
   } // end namespace ARMISD
@@ -396,9 +398,24 @@ class VectorType;
   //  ARMTargetLowering - ARM Implementation of the TargetLowering interface
 
   class ARMTargetLowering : public TargetLowering {
+    // Copying needed for an outgoing byval argument.
+    enum ByValCopyKind {
+      // Argument is already in the correct location, no copy needed.
+      NoCopy,
+      // Argument value is currently in the local stack frame, needs copying to
+      // outgoing arguemnt area.
+      CopyOnce,
+      // Argument value is currently in the outgoing argument area, but not at
+      // the correct offset, so needs copying via a temporary in local stack
+      // space.
+      CopyViaTemp,
+    };
+
   public:
     explicit ARMTargetLowering(const TargetMachine &TM,
                                const ARMSubtarget &STI);
+
+    const ARMBaseTargetMachine &getTM() const;
 
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
@@ -455,14 +472,12 @@ class VectorType;
                                         MachineMemOperand::Flags Flags,
                                         unsigned *Fast) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
     bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
-    bool shouldSinkOperands(Instruction *I,
-                            SmallVectorImpl<Use *> &Ops) const override;
     Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const override;
 
     bool isFNegFree(EVT VT) const override;
@@ -518,8 +533,6 @@ class VectorType;
     bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
-
-    bool ExpandInlineAsm(CallInst *CI) const override;
 
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
@@ -592,7 +605,14 @@ class VectorType;
 
     bool preferZeroCompareBranch() const override { return true; }
 
+    bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
+
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
+    bool hasAndNotCompare(SDValue V) const override {
+      // We can use bics for any scalar.
+      return V.getValueType().isScalarInteger();
+    }
 
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
@@ -661,12 +681,13 @@ class VectorType;
 
     unsigned getMaxSupportedInterleaveFactor() const override;
 
-    bool lowerInterleavedLoad(LoadInst *LI,
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
-                              ArrayRef<unsigned> Indices,
-                              unsigned Factor) const override;
-    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
-                               unsigned Factor) const override;
+                              ArrayRef<unsigned> Indices, unsigned Factor,
+                              const APInt &GapMask) const override;
+    bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;
     TargetLoweringBase::AtomicExpansionKind
@@ -678,14 +699,17 @@ class VectorType;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
 
     void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
     Function *getSSPStackGuardCheck(const Module &M) const override;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
+
+    bool canCreateUndefOrPoisonForTargetNode(
+        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {
@@ -702,6 +726,11 @@ class VectorType;
 
     bool supportSwiftError() const override {
       return true;
+    }
+
+    bool supportSplitCSR(MachineFunction *MF) const override {
+      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+             MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
     }
 
     bool hasStandaloneRem(EVT VT) const override {
@@ -746,8 +775,19 @@ class VectorType;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    /// Return true if it is profitable to fold a pair of shifts into a mask.
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+      EVT VT = Y.getValueType();
+
+      if (VT.isVector())
+        return false;
+
+      return VT.getScalarSizeInBits() <= 32;
+    }
+
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     bool preferIncOfAddToSubOfNot(EVT VT) const override;
 
@@ -812,6 +852,9 @@ class VectorType;
     computeAddrForCallArg(const SDLoc &dl, SelectionDAG &DAG,
                           const CCValAssign &VA, SDValue StackPtr,
                           bool IsTailCall, int SPDiff) const;
+    ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                            SDValue Dst,
+                                            ISD::ArgFlagsTy Flags) const;
     SDValue LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_SJLJ_SETUP_DISPATCH(SDValue Op, SelectionDAG &DAG) const;
@@ -873,6 +916,9 @@ class VectorType;
     SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                    SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
@@ -895,12 +941,7 @@ class VectorType;
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                            SDValue ThisVal) const;
-
-    bool supportSplitCSR(MachineFunction *MF) const override {
-      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
-          MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
-    }
+                            SDValue ThisVal, bool isCmseNSCall) const;
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(
@@ -943,17 +984,13 @@ class VectorType;
     /// for tail call optimization. Targets which want to do tail call
     /// optimization should implement this function.
     bool IsEligibleForTailCallOptimization(
-        SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
-        bool isCalleeStructRet, bool isCallerStructRet,
-        const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<SDValue> &OutVals,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG,
-        const bool isIndirect) const;
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const;
 
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -969,13 +1006,11 @@ class VectorType;
     bool isUnsupportedFloatingType(EVT VT) const;
 
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
-                    SDValue ARMcc, SDValue CCR, SDValue Cmp,
-                    SelectionDAG &DAG) const;
+                    SDValue ARMcc, SDValue Flags, SelectionDAG &DAG) const;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
                       const SDLoc &dl, bool Signaling = false) const;
-    SDValue duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const;
 
     SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;
 

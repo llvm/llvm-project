@@ -17,6 +17,9 @@
 # WHITESPACE-NEXT: {{^}}  4 .other        00000000 0000000000000000 0000000000000000 {{$}}
 # WHITESPACE-NEXT: {{^}}  5 .debug_abbrev 00000000 0000000000000000 0000000000000000 DEBUG{{$}}
 # WHITESPACE-NEXT: {{^}}  6 .debug_info   00000000 0000000000000000 0000000000000000 DATA, DEBUG{{$}}
+# WHITESPACE-NEXT: {{^}}  7 .mydata       00000000 0000000000000000 0000000000000000 DATA{{$}}
+# WHITESPACE-NEXT: {{^}}  8 .bss1         00000000 0000000000000000 0000000000000000 BSS{{$}}
+# WHITESPACE-NEXT: {{^}}  9 .nonalloc.bss 00000000 0000000000000000 0000000000000000 {{$}}
 
 # WHITESPACE-NO-LMA:      {{^}}Sections:{{$}}
 # WHITESPACE-NO-LMA-NEXT: {{^}}Idx Name          Size     VMA              Type{{$}}
@@ -27,6 +30,9 @@
 # WHITESPACE-NO-LMA-NEXT: {{^}}  4 .other        00000000 0000000000000000 {{$}}
 # WHITESPACE-NO-LMA-NEXT: {{^}}  5 .debug_abbrev 00000000 0000000000000000 DEBUG{{$}}
 # WHITESPACE-NO-LMA-NEXT: {{^}}  6 .debug_info   00000000 0000000000000000 DATA, DEBUG{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  7 .mydata       00000000 0000000000000000 DATA{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  8 .bss1         00000000 0000000000000000 BSS{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  9 .nonalloc.bss 00000000 0000000000000000 {{$}}
 
 --- !ELF
 FileHeader:
@@ -51,6 +57,14 @@ Sections:
   - Name:  .debug_info
     Type:  SHT_PROGBITS
     Flags: [ SHF_WRITE, SHF_ALLOC ]
+  - Name:  .mydata
+    Type:  0x70000000
+    Flags: [ SHF_ALLOC ]
+  - Name:  .bss1
+    Type:  SHT_NOBITS
+    Flags: [SHF_ALLOC]
+  - Name:  .nonalloc.bss
+    Type:  SHT_NOBITS
  
 ## Check that --section-headers and --headers are aliases for -h.
 # RUN: llvm-objdump --section-headers --show-lma %t-whitespace.o \

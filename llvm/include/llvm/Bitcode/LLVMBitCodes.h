@@ -307,7 +307,8 @@ enum GlobalValueSummarySymtabCodes {
   // [valueid, n x stackidindex]
   FS_PERMODULE_CALLSITE_INFO = 26,
   // Summary of per-module allocation memprof metadata.
-  // [n x (alloc type, nummib, nummib x stackidindex)]
+  // [nummib, nummib x (alloc type, context radix tree index),
+  // [nummib x (numcontext x total size)]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
   // [valueid, numstackindices, numver,
@@ -315,10 +316,30 @@ enum GlobalValueSummarySymtabCodes {
   FS_COMBINED_CALLSITE_INFO = 28,
   // Summary of combined index allocation memprof metadata.
   // [nummib, numver,
-  //  nummib x (alloc type, numstackids, numstackids x stackidindex),
+  //  nummib x (alloc type, context radix tree index),
   //  numver x version]
   FS_COMBINED_ALLOC_INFO = 29,
+  // List of all stack ids referenced by index in the callsite and alloc infos.
+  // [n x stack id]
   FS_STACK_IDS = 30,
+  // List of all full stack id pairs corresponding to the total sizes recorded
+  // at the end of the alloc info when reporting of hinted bytes is enabled.
+  // We use a fixed-width array, which is more efficient as these ids typically
+  // are close to 64 bits in size. The max fixed width value supported is 32
+  // bits so each 64-bit context id hash is recorded as a pair (upper 32 bits
+  // first). This record must immediately precede the associated alloc info, and
+  // the entries must be in the exact same order as the corresponding sizes.
+  // [nummib x (numcontext x full stack id)]
+  FS_ALLOC_CONTEXT_IDS = 31,
+  // Linearized radix tree of allocation contexts. See the description above the
+  // CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
+  // [n x entry]
+  FS_CONTEXT_RADIX_TREE_ARRAY = 32,
+  // Summary of combined index allocation memprof metadata, without context.
+  // [nummib, numver,
+  //  nummib x alloc type,
+  //  numver x version]
+  FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
 };
 
 enum MetadataCodes {
@@ -369,6 +390,8 @@ enum MetadataCodes {
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
   METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
+  METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
+  METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -385,7 +408,7 @@ enum ConstantsCodes {
   CST_CODE_CSTRING = 9,          // CSTRING:       [values]
   CST_CODE_CE_BINOP = 10,        // CE_BINOP:      [opcode, opval, opval]
   CST_CODE_CE_CAST = 11,         // CE_CAST:       [opcode, opty, opval]
-  CST_CODE_CE_GEP = 12,          // CE_GEP:        [n x operands]
+  CST_CODE_CE_GEP_OLD = 12,      // CE_GEP:        [n x operands]
   CST_CODE_CE_SELECT = 13,       // CE_SELECT:     [opval, opval, opval]
   CST_CODE_CE_EXTRACTELT = 14,   // CE_EXTRACTELT: [opty, opval, opval]
   CST_CODE_CE_INSERTELT = 15,    // CE_INSERTELT:  [opval, opval, opval]
@@ -399,18 +422,21 @@ enum ConstantsCodes {
   CST_CODE_DATA = 22,            // DATA:          [n x elements]
   CST_CODE_INLINEASM_OLD2 = 23,  // INLINEASM:     [sideeffect|alignstack|
                                  //                 asmdialect,asmstr,conststr]
-  CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
-  CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
-  CST_CODE_POISON = 26,                    // POISON
-  CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
-  CST_CODE_INLINEASM_OLD3 = 28,    // INLINEASM:     [sideeffect|alignstack|
-                                   //                 asmdialect|unwind,
-                                   //                 asmstr,conststr]
-  CST_CODE_NO_CFI_VALUE = 29, // NO_CFI [ fty, f ]
-  CST_CODE_INLINEASM = 30,    // INLINEASM:     [fnty,
-                              //                 sideeffect|alignstack|
-                              //                 asmdialect|unwind,
-                              //                 asmstr,conststr]
+  CST_CODE_CE_GEP_WITH_INRANGE_INDEX_OLD = 24, //  [opty, flags, n x operands]
+  CST_CODE_CE_UNOP = 25,                       // CE_UNOP:      [opcode, opval]
+  CST_CODE_POISON = 26,                        // POISON
+  CST_CODE_DSO_LOCAL_EQUIVALENT = 27, // DSO_LOCAL_EQUIVALENT [gvty, gv]
+  CST_CODE_INLINEASM_OLD3 = 28,       // INLINEASM:     [sideeffect|alignstack|
+                                      //                 asmdialect|unwind,
+                                      //                 asmstr,conststr]
+  CST_CODE_NO_CFI_VALUE = 29,         // NO_CFI [ fty, f ]
+  CST_CODE_INLINEASM = 30,            // INLINEASM:     [fnty,
+                                      //                 sideeffect|alignstack|
+                                      //                 asmdialect|unwind,
+                                      //                 asmstr,conststr]
+  CST_CODE_CE_GEP_WITH_INRANGE = 31,  // [opty, flags, range, n x operands]
+  CST_CODE_CE_GEP = 32,               // [opty, flags, n x operands]
+  CST_CODE_PTRAUTH = 33,              // [ptr, key, disc, addrdisc]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -430,7 +456,8 @@ enum CastOpcodes {
   CAST_PTRTOINT = 9,
   CAST_INTTOPTR = 10,
   CAST_BITCAST = 11,
-  CAST_ADDRSPACECAST = 12
+  CAST_ADDRSPACECAST = 12,
+  CAST_PTRTOADDR = 13,
 };
 
 /// UnaryOpcodes - These are values used in the bitcode files to encode which
@@ -481,7 +508,11 @@ enum RMWOperations {
   RMW_FMAX = 13,
   RMW_FMIN = 14,
   RMW_UINC_WRAP = 15,
-  RMW_UDEC_WRAP = 16
+  RMW_UDEC_WRAP = 16,
+  RMW_USUB_COND = 17,
+  RMW_USUB_SAT = 18,
+  RMW_FMAXIMUM = 19,
+  RMW_FMINIMUM = 20,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -489,6 +520,13 @@ enum RMWOperations {
 enum OverflowingBinaryOperatorOptionalFlags {
   OBO_NO_UNSIGNED_WRAP = 0,
   OBO_NO_SIGNED_WRAP = 1
+};
+
+/// TruncInstOptionalFlags - Flags for serializing
+/// TruncInstOptionalFlags's SubclassOptionalData contents.
+enum TruncInstOptionalFlags {
+  TIO_NO_UNSIGNED_WRAP = 0,
+  TIO_NO_SIGNED_WRAP = 1
 };
 
 /// FastMath Flags
@@ -515,6 +553,21 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// Mark to distinguish metadata from value in an operator bundle.
+enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
+
+/// GetElementPtrOptionalFlags - Flags for serializing
+/// GEPOperator's SubclassOptionalData contents.
+enum GetElementPtrOptionalFlags {
+  GEP_INBOUNDS = 0,
+  GEP_NUSW = 1,
+  GEP_NUW = 2,
+};
+
+/// ICmpOptionalFlags - Flags for serializing
+/// ICmpOptionalFlags's SubclassOptionalData contents.
+enum ICmpOptionalFlags { ICMP_SAME_SIGN = 0 };
 
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
@@ -624,6 +677,17 @@ enum FunctionCodes {
                                   //             operation, align, vol,
                                   //             ordering, synchscope]
   FUNC_CODE_BLOCKADDR_USERS = 60, // BLOCKADDR_USERS: [value...]
+
+  FUNC_CODE_DEBUG_RECORD_VALUE =
+      61, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
+  FUNC_CODE_DEBUG_RECORD_DECLARE =
+      62, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
+  FUNC_CODE_DEBUG_RECORD_ASSIGN =
+      63, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata,
+          //  DIAssignID, DIExpression (addr), ValueAsMetadata (addr)]
+  FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE =
+      64, // [DILocation, DILocalVariable, DIExpression, Value]
+  FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
 };
 
 enum UseListCodes {
@@ -724,6 +788,19 @@ enum AttributeKindCodes {
   ATTR_KIND_WRITABLE = 89,
   ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE = 90,
   ATTR_KIND_DEAD_ON_UNWIND = 91,
+  ATTR_KIND_RANGE = 92,
+  ATTR_KIND_SANITIZE_NUMERICAL_STABILITY = 93,
+  ATTR_KIND_INITIALIZES = 94,
+  ATTR_KIND_HYBRID_PATCHABLE = 95,
+  ATTR_KIND_SANITIZE_REALTIME = 96,
+  ATTR_KIND_SANITIZE_REALTIME_BLOCKING = 97,
+  ATTR_KIND_CORO_ELIDE_SAFE = 98,
+  ATTR_KIND_NO_EXT = 99,
+  ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
+  ATTR_KIND_SANITIZE_TYPE = 101,
+  ATTR_KIND_CAPTURES = 102,
+  ATTR_KIND_DEAD_ON_RETURN = 103,
+  ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
 };
 
 enum ComdatSelectionKindCodes {

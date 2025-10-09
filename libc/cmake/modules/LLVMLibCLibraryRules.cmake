@@ -19,8 +19,7 @@ function(collect_object_file_deps target result)
     return()
   endif()
 
-  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
-     ${target_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
+  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
     set(entrypoint_target ${target})
     get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
     if(is_alias)
@@ -50,6 +49,70 @@ function(collect_object_file_deps target result)
   endif()
 endfunction(collect_object_file_deps)
 
+function(get_all_object_file_deps result fq_deps_list)
+  set(all_deps "")
+  foreach(dep ${fq_deps_list})
+    get_target_property(dep_type ${dep} "TARGET_TYPE")
+    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
+      message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
+                          "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
+    endif()
+    collect_object_file_deps(${dep} recursive_deps)
+    list(APPEND all_deps ${recursive_deps})
+    # Add the entrypoint object target explicitly as collect_object_file_deps
+    # only collects object files from non-entrypoint targets.
+    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+      set(entrypoint_target ${dep})
+      get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(aliasee ${entrypoint_target} "DEPS")
+        if(NOT aliasee)
+          message(FATAL_ERROR
+                  "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
+        endif()
+        set(entrypoint_target ${aliasee})
+      endif()
+    endif()
+    list(APPEND all_deps ${entrypoint_target})
+  endforeach(dep)
+  list(REMOVE_DUPLICATES all_deps)
+  set(${result} ${all_deps} PARENT_SCOPE)
+endfunction()
+
+# A rule to build a library from a collection of entrypoint objects and bundle
+# it in a single LLVM-IR bitcode file.
+# Usage:
+#     add_gpu_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+function(add_bitcode_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
+  set(objects "")
+  foreach(dep IN LISTS all_deps)
+    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
+    list(APPEND objects ${object})
+  endforeach()
+
+  add_executable(${target_name} ${objects})
+  target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+endfunction(add_bitcode_entrypoint_library)
+
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
 #     add_entrypoint_library(
@@ -73,35 +136,8 @@ function(add_entrypoint_library target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
-  set(all_deps "")
-  foreach(dep IN LISTS fq_deps_list)
-    get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
-            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
-            (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
-      message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
-                          "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
-    endif()
-    collect_object_file_deps(${dep} recursive_deps)
-    list(APPEND all_deps ${recursive_deps})
-    # Add the entrypoint object target explicitly as collect_object_file_deps
-    # only collects object files from non-entrypoint targets.
-    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
-       ${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-      set(entrypoint_target ${dep})
-      get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
-      if(is_alias)
-        get_target_property(aliasee ${entrypoint_target} "DEPS")
-        if(NOT aliasee)
-          message(FATAL_ERROR
-                  "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
-        endif()
-        set(entrypoint_target ${aliasee})
-      endif()
-    endif()
-    list(APPEND all_deps ${entrypoint_target})
-  endforeach(dep)
-  list(REMOVE_DUPLICATES all_deps)
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
   set(objects "")
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
@@ -114,35 +150,6 @@ function(add_entrypoint_library target_name)
   )
   set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
 endfunction(add_entrypoint_library)
-
-# Rule to build a shared library of redirector objects.
-function(add_redirector_library target_name)
-  cmake_parse_arguments(
-    "REDIRECTOR_LIBRARY"
-    ""
-    ""
-    "DEPENDS"
-    ${ARGN}
-  )
-
-  set(obj_files "")
-  foreach(dep IN LISTS REDIRECTOR_LIBRARY_DEPENDS)
-    # TODO: Ensure that each dep is actually a add_redirector_object target.
-    list(APPEND obj_files $<TARGET_OBJECTS:${dep}>)
-  endforeach(dep)
-
-  # TODO: Call the linker explicitly instead of calling the compiler driver to
-  # prevent DT_NEEDED on C++ runtime.
-  add_library(
-    ${target_name}
-    EXCLUDE_FROM_ALL
-    SHARED
-    ${obj_files}
-  )
-  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
-  target_link_libraries(${target_name}  -nostdlib -lc -lm)
-  set_target_properties(${target_name}  PROPERTIES LINKER_LANGUAGE "C")
-endfunction(add_redirector_library)
 
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
 

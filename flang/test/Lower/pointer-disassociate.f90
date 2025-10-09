@@ -1,5 +1,5 @@
 ! Test lowering of pointer disassociation
-! RUN: bbc -emit-fir -hlfir=false --polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 
 ! -----------------------------------------------------------------------------
@@ -118,7 +118,7 @@ end subroutine
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.tdesc<!fir.type<_QFtest_polymorphic_nullTt>>) -> !fir.ref<none> 
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : i32
-! CHECK:  %[[VAL_6:.*]] = fir.call @_FortranAPointerNullifyDerived(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK:  fir.call @_FortranAPointerNullifyDerived(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> ()
 
 subroutine test_unlimited_polymorphic_null(p)
   class(*), pointer :: p(:)

@@ -9,12 +9,10 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/UriParser.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "AdbClient.h"
 #include "PlatformAndroid.h"
@@ -177,28 +175,27 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
   m_device_id.clear();
 
   if (IsHost())
-    return Status("can't connect to the host platform, always connected");
+    return Status::FromErrorString(
+        "can't connect to the host platform, always connected");
 
   if (!m_remote_platform_sp)
     m_remote_platform_sp = PlatformSP(new PlatformAndroidRemoteGDBServer());
 
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
-    return Status("URL is null.");
+    return Status::FromErrorString("URL is null.");
   std::optional<URI> parsed_url = URI::Parse(url);
   if (!parsed_url)
-    return Status("Invalid URL: %s", url);
+    return Status::FromErrorStringWithFormat("Invalid URL: %s", url);
   if (parsed_url->hostname != "localhost")
     m_device_id = parsed_url->hostname.str();
 
   auto error = PlatformLinux::ConnectRemote(args);
   if (error.Success()) {
-    AdbClient adb;
-    error = AdbClient::CreateByDeviceID(m_device_id, adb);
-    if (error.Fail())
-      return error;
-
-    m_device_id = adb.GetDeviceID();
+    auto resolved_device_id_or_error = AdbClient::ResolveDeviceID(m_device_id);
+    if (!resolved_device_id_or_error)
+      return Status::FromError(resolved_device_id_or_error.takeError());
+    m_device_id = *resolved_device_id_or_error;
   }
   return error;
 }
@@ -215,28 +212,33 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
 
   Status error;
   auto sync_service = GetSyncService(error);
-  if (error.Fail())
-    return error;
 
-  uint32_t mode = 0, size = 0, mtime = 0;
-  error = sync_service->Stat(source_spec, mode, size, mtime);
-  if (error.Fail())
-    return error;
+  // If sync service is available, try to use it
+  if (error.Success() && sync_service) {
+    uint32_t mode = 0, size = 0, mtime = 0;
+    error = sync_service->Stat(source_spec, mode, size, mtime);
+    if (error.Success()) {
+      if (mode != 0)
+        return sync_service->PullFile(source_spec, destination);
 
-  if (mode != 0)
-    return sync_service->PullFile(source_spec, destination);
+      // mode == 0 can signify that adbd cannot access the file due security
+      // constraints - fall through to try "cat ..." as a fallback.
+      Log *log = GetLog(LLDBLog::Platform);
+      LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
+                source_spec.GetPath(false).c_str());
+    }
+  }
 
+  // Fallback to shell cat command if sync service failed or returned mode == 0
   std::string source_file = source_spec.GetPath(false);
 
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
-            source_file.c_str());
+  LLDB_LOGF(log, "Using shell cat fallback for '%s'", source_file.c_str());
 
   if (strchr(source_file.c_str(), '\'') != nullptr)
-    return Status("Doesn't support single-quotes in filenames");
+    return Status::FromErrorString(
+        "Doesn't support single-quotes in filenames");
 
-  // mode == 0 can signify that adbd cannot access the file due security
-  // constraints - try "cat ..." as a fallback.
   AdbClientUP adb(GetAdbClient(error));
   if (error.Fail())
     return error;
@@ -273,21 +275,29 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
                                             const uint64_t src_offset,
                                             const uint64_t src_size,
                                             const FileSpec &dst_file_spec) {
+  std::string source_file = src_file_spec.GetPath(false);
+  if (source_file.empty())
+    return Status::FromErrorString("Source file path cannot be empty");
+
+  std::string destination_file = dst_file_spec.GetPath(false);
+  if (destination_file.empty())
+    return Status::FromErrorString("Destination file path cannot be empty");
+
   // In Android API level 23 and above, dynamic loader is able to load .so
   // file directly from APK. In that case, src_offset will be an non-zero.
   if (src_offset == 0) // Use GetFile for a normal file.
     return GetFile(src_file_spec, dst_file_spec);
 
-  std::string source_file = src_file_spec.GetPath(false);
   if (source_file.find('\'') != std::string::npos)
-    return Status("Doesn't support single-quotes in filenames");
+    return Status::FromErrorString(
+        "Doesn't support single-quotes in filenames");
 
   // For zip .so file, src_file_spec will be "zip_path!/so_path".
   // Extract "zip_path" from the source_file.
   static constexpr llvm::StringLiteral k_zip_separator("!/");
   size_t pos = source_file.find(k_zip_separator);
   if (pos != std::string::npos)
-    source_file = source_file.substr(0, pos);
+    source_file.resize(pos);
 
   Status error;
   AdbClientUP adb(GetAdbClient(error));
@@ -350,21 +360,22 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
   // For oat file we can try to fetch additional debug info from the device
   llvm::StringRef extension = module_sp->GetFileSpec().GetFileNameExtension();
   if (extension != ".oat" && extension != ".odex")
-    return Status(
+    return Status::FromErrorString(
         "Symbol file downloading only supported for oat and odex files");
 
   // If we have no information about the platform file we can't execute oatdump
   if (!module_sp->GetPlatformFileSpec())
-    return Status("No platform file specified");
+    return Status::FromErrorString("No platform file specified");
 
   // Symbolizer isn't available before SDK version 23
   if (GetSdkVersion() < 23)
-    return Status("Symbol file generation only supported on SDK 23+");
+    return Status::FromErrorString(
+        "Symbol file generation only supported on SDK 23+");
 
   // If we already have symtab then we don't have to try and generate one
   if (module_sp->GetSectionList()->FindSectionByName(ConstString(".symtab")) !=
       nullptr)
-    return Status("Symtab already available in the module");
+    return Status::FromErrorString("Symtab already available in the module");
 
   Status error;
   AdbClientUP adb(GetAdbClient(error));
@@ -374,8 +385,9 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
   error = adb->Shell("mktemp --directory --tmpdir /data/local/tmp", seconds(5),
                      &tmpdir);
   if (error.Fail() || tmpdir.empty())
-    return Status("Failed to generate temporary directory on the device (%s)",
-                  error.AsCString());
+    return Status::FromErrorStringWithFormat(
+        "Failed to generate temporary directory on the device (%s)",
+        error.AsCString());
   tmpdir = llvm::StringRef(tmpdir).trim().str();
 
   // Create file remover for the temporary directory created on the device
@@ -401,7 +413,8 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
                  symfile_platform_filespec.GetPath(false).c_str());
   error = adb->Shell(command.GetData(), minutes(1), nullptr);
   if (error.Fail())
-    return Status("Oatdump failed: %s", error.AsCString());
+    return Status::FromErrorStringWithFormat("Oatdump failed: %s",
+                                             error.AsCString());
 
   // Download the symbolfile from the remote device
   return GetFile(symfile_platform_filespec, dst_file_spec);
@@ -418,7 +431,7 @@ PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
   std::vector<const char *> dl_open_names = {"__dl_dlopen", "dlopen"};
   const char *dl_open_name = nullptr;
   Target &target = process->GetTarget();
-  for (auto name : dl_open_names) {
+  for (auto *name : dl_open_names) {
     target.GetImages().FindFunctionSymbols(
         ConstString(name), eFunctionNameTypeFull, matching_symbols);
     if (matching_symbols.GetSize()) {
@@ -439,11 +452,8 @@ PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
 }
 
 PlatformAndroid::AdbClientUP PlatformAndroid::GetAdbClient(Status &error) {
-  AdbClientUP adb(std::make_unique<AdbClient>(m_device_id));
-  if (adb)
-    error.Clear();
-  else
-    error = Status("Failed to create AdbClient");
+  AdbClientUP adb = std::make_unique<AdbClient>(m_device_id);
+  error = adb->Connect();
   return adb;
 }
 
@@ -467,14 +477,10 @@ std::string PlatformAndroid::GetRunAs() {
   }
   return run_as.str();
 }
-
-AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {
-  if (m_adb_sync_svc && m_adb_sync_svc->IsConnected())
-    return m_adb_sync_svc.get();
-
-  AdbClientUP adb(GetAdbClient(error));
+std::unique_ptr<AdbSyncService> PlatformAndroid::GetSyncService(Status &error) {
+  auto sync_service = std::make_unique<AdbSyncService>(m_device_id);
+  error = sync_service->SetupSyncConnection();
   if (error.Fail())
     return nullptr;
-  m_adb_sync_svc = adb->GetSyncService(error);
-  return (error.Success()) ? m_adb_sync_svc.get() : nullptr;
+  return sync_service;
 }

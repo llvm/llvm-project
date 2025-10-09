@@ -51,7 +51,7 @@ define { i8, i1 } @no_fold_on_constant_add_overflow(i8 %x) {
 
 define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant(<2 x i32> %x) {
 ; CHECK-LABEL: @fold_simple_splat_constant(
-; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 42, i32 42>)
+; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> splat (i32 42))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = add nsw <2 x i32> %x, <i32 12, i32 12>
@@ -62,7 +62,7 @@ define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant(<2 x i32> %x) {
 define { <2 x i32>, <2 x i1> } @no_fold_splat_undef_constant(<2 x i32> %x) {
 ; CHECK-LABEL: @no_fold_splat_undef_constant(
 ; CHECK-NEXT:    [[A:%.*]] = add nsw <2 x i32> [[X:%.*]], <i32 12, i32 undef>
-; CHECK-NEXT:    [[B:%.*]] = tail call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> <i32 30, i32 30>)
+; CHECK-NEXT:    [[B:%.*]] = tail call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> splat (i32 30))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = add nsw <2 x i32> %x, <i32 12, i32 undef>
@@ -73,7 +73,7 @@ define { <2 x i32>, <2 x i1> } @no_fold_splat_undef_constant(<2 x i32> %x) {
 define { <2 x i32>, <2 x i1> } @no_fold_splat_not_constant(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @no_fold_splat_not_constant(
 ; CHECK-NEXT:    [[A:%.*]] = add nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = tail call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> <i32 30, i32 30>)
+; CHECK-NEXT:    [[B:%.*]] = tail call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> splat (i32 30))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
 ;
   %a = add nsw <2 x i32> %x, %y
@@ -120,5 +120,37 @@ define { i32, i1 } @fold_sub_simple(i32 %x) {
 ;
   %a = sub nsw i32 %x, -12
   %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 30)
+  ret { i32, i1 } %b
+}
+
+define { i32, i1 } @fold_with_distjoin_or(i32 %x) {
+; CHECK-LABEL: @fold_with_distjoin_or(
+; CHECK-NEXT:    [[B:%.*]] = add nsw i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[B]], 0
+; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
+;
+  %a = or disjoint i32 %x, 13
+  %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 -7)
+  ret { i32, i1 } %b
+}
+
+define { i32, i1 } @fold_with_disjoint_or2(i32 %x) {
+; CHECK-LABEL: @fold_with_disjoint_or2(
+; CHECK-NEXT:    [[B:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 127)
+; CHECK-NEXT:    ret { i32, i1 } [[B]]
+;
+  %a = or disjoint i32 %x, 100
+  %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 27)
+  ret { i32, i1 } %b
+}
+
+define { i32, i1 } @fold_with_or_fail(i32 %x) {
+; CHECK-LABEL: @fold_with_or_fail(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 100
+; CHECK-NEXT:    [[B:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A]], i32 27)
+; CHECK-NEXT:    ret { i32, i1 } [[B]]
+;
+  %a = or i32 %x, 100
+  %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 27)
   ret { i32, i1 } %b
 }

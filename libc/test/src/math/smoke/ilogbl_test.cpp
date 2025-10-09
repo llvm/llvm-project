@@ -8,29 +8,6 @@
 
 #include "ILogbTest.h"
 
-#include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/math/ilogbl.h"
-#include "test/UnitTest/FPMatcher.h"
-#include "test/UnitTest/Test.h"
-#include <math.h>
 
-TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogbl) {
-  test_special_numbers<long double>(&LIBC_NAMESPACE::ilogbl);
-}
-
-TEST_F(LlvmLibcILogbTest, PowersOfTwo_ilogbl) {
-  test_powers_of_two<long double>(&LIBC_NAMESPACE::ilogbl);
-}
-
-TEST_F(LlvmLibcILogbTest, SomeIntegers_ilogbl) {
-  test_some_integers<long double>(&LIBC_NAMESPACE::ilogbl);
-}
-
-TEST_F(LlvmLibcILogbTest, SubnormalRange_ilogbl) {
-  test_subnormal_range<long double>(&LIBC_NAMESPACE::ilogbl);
-}
-
-TEST_F(LlvmLibcILogbTest, NormalRange_ilogbl) {
-  test_normal_range<long double>(&LIBC_NAMESPACE::ilogbl);
-}
+LIST_INTLOGB_TESTS(int, long double, LIBC_NAMESPACE::ilogbl);

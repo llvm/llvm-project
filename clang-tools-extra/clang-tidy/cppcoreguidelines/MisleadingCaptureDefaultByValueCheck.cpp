@@ -1,4 +1,4 @@
-//===--- MisleadingCaptureDefaultByValueCheck.cpp - clang-tidy-------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,8 +67,7 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
       AppendName("this");
     }
   }
-  if (!Replacement.empty() &&
-      Lambda->explicit_capture_begin() != Lambda->explicit_capture_end()) {
+  if (!Replacement.empty() && !Lambda->explicit_captures().empty()) {
     // Add back separator if we are adding explicit capture variables.
     Stream << ", ";
   }

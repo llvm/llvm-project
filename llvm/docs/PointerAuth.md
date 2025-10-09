@@ -10,10 +10,17 @@ Before the pointer is used, it needs to be authenticated, i.e., have its
 signature checked.  This prevents pointer values of unknown origin from being
 used to replace the signed pointer value.
 
+For more details, see the clang documentation page for
+[Pointer Authentication](https://clang.llvm.org/docs/PointerAuthentication.html).
+
 At the IR level, it is represented using:
 
 * a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)
+* a [signed pointer constant](#constant) (to sign globals)
 * a [call operand bundle](#operand-bundle) (to authenticate called pointers)
+* a [set of function attributes](#function-attributes) (to describe what
+  pointers are signed and how, to control implicit codegen in the backend, as
+  well as preserve invariants in the mid-level optimizer)
 
 The current implementation leverages the
 [Armv8.3-A PAuth/Pointer Authentication Code](#armv8-3-a-pauth-pointer-authentication-code)
@@ -222,6 +229,27 @@ with a pointer address discriminator, in a way that is specified by the target
 implementation.
 
 
+### Constant
+
+[Intrinsics](#intrinsics) can be used to produce signed pointers dynamically,
+in code, but not for signed pointers referenced by constants, in, e.g., global
+initializers.
+
+The latter are represented using a
+[``ptrauth`` constant](https://llvm.org/docs/LangRef.html#ptrauth-constant),
+which describes an authenticated relocation producing a signed pointer.
+
+```llvm
+ptrauth (ptr CST, i32 KEY, i64 DISC, ptr ADDRDISC)
+```
+
+is equivalent to:
+
+```llvm
+  %disc = call i64 @llvm.ptrauth.blend(i64 ptrtoint(ptr ADDRDISC to i64), i64 DISC)
+  %signedval = call i64 @llvm.ptrauth.sign(ptr CST, i32 KEY, i64 %disc)
+```
+
 ### Operand Bundle
 
 Function pointers used as indirect call targets can be signed when materialized,
@@ -260,6 +288,27 @@ define void @f(void ()* %fp) {
 
 but with the added guarantee that `%fp_i`, `%fp_auth`, and `%fp_auth_p`
 are not stored to (and reloaded from) memory.
+
+
+### Function Attributes
+
+Some function attributes are used to describe other pointer authentication
+operations that are not otherwise explicitly expressed in IR.
+
+#### ``ptrauth-indirect-gotos``
+
+``ptrauth-indirect-gotos`` specifies that indirect gotos in this function
+should authenticate their target.  At the IR level, no other change is needed.
+When lowering [``blockaddress`` constants](https://llvm.org/docs/LangRef.html#blockaddress),
+and [``indirectbr`` instructions](https://llvm.org/docs/LangRef.html#i-indirectbr),
+this tells the backend to respectively sign and authenticate the pointers.
+
+The specific scheme isn't ABI-visible.  Currently, the AArch64 backend
+signs blockaddresses using the `ASIA` key, with an integer discriminator
+derived from the parent function's name, using the SipHash stable discriminator:
+```
+  ptrauth_string_discriminator("<function_name> blockaddress")
+```
 
 
 ## AArch64 Support
@@ -323,6 +372,19 @@ For example:
     .quad _sym@AUTH(db,0)
   _authenticated_reference_to_sym_addr_disc:
     .quad _sym@AUTH(ia,12,addr)
+```
+
+#### MachO Object File Representation
+
+At the object file level, authenticated relocations are represented using the
+``ARM64_RELOC_AUTHENTICATED_POINTER`` relocation kind (with value ``11``).
+
+The pointer authentication information is encoded into the addend as follows:
+
+```
+| 63 | 62 | 61-51 | 50-49 |   48   | 47     -     32 | 31  -  0 |
+| -- | -- | ----- | ----- | ------ | --------------- | -------- |
+|  1 |  0 |   0   |  key  |  addr  |  discriminator  |  addend  |
 ```
 
 #### ELF Object File Representation

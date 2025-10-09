@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -passes='function(instsimplify),hotcoldsplit' -hotcoldsplit-threshold=-1 -debug < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes='function(instsimplify),hotcoldsplit' -hotcoldsplit-threshold=-1 < %s 2>&1 | FileCheck %s
 ; RUN: opt -passes='function(instcombine),hotcoldsplit,function(instsimplify)' %s -o /dev/null
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -13,13 +13,13 @@ target triple = "aarch64"
 ; CHECK-NOT: @llvm.assume
 ; CHECK: }
 ; CHECK: declare {{.*}}@llvm.assume
-; CHECK: define {{.*}}@f.cold.1()
-; CHECK-LABEL: newFuncRoot:
-; CHECK: }
-; CHECK: define {{.*}}@f.cold.2(i64 %load1)
+; CHECK: define {{.*}}@f.cold.1(i64 %load1)
 ; CHECK-LABEL: newFuncRoot:
 ; CHECK: %cmp1 = icmp eq i64 %load1, 0
 ; CHECK-NOT: call void @llvm.assume
+; CHECK: define {{.*}}@f.cold.2()
+; CHECK-LABEL: newFuncRoot:
+; CHECK: }
 
 define void @f() {
 entry:

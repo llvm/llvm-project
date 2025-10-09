@@ -242,3 +242,99 @@ t:
 f:
   ret i32 3
 }
+
+define i32 @dom_true(i1 %cmp) {
+; CHECK-LABEL: @dom_true(
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+
+if.else:
+  ret i32 0
+}
+
+define i32 @dom_false(i1 %cmp) {
+; CHECK-LABEL: @dom_false(
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  br i1 %cmp, label %if.else, label %if.then
+
+if.then:
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+
+if.else:
+  ret i32 0
+}
+
+define i32 @dom_true_phi(i1 %cmp) {
+; CHECK-LABEL: @dom_true_phi(
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %if.end
+
+if.else:
+  br label %if.end
+
+if.end:
+  %phi = phi i1 [ true, %if.then ], [ %cmp, %if.else ]
+  %zext = zext i1 %phi to i32
+  ret i32 %zext
+}
+
+; Negative tests
+
+define i32 @same_dest(i1 %cmp) {
+; CHECK-LABEL: @same_dest(
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_THEN]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  br i1 %cmp, label %if.then, label %if.then
+
+if.then:
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
+define i32 @not_dom(i1 %cmp) {
+; CHECK-LABEL: @not_dom(
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_ELSE]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %if.else
+
+if.else:
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}

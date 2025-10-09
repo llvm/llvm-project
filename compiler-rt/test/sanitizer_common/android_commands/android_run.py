@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os, signal, sys, subprocess, tempfile
 from android_common import *
@@ -12,10 +12,13 @@ def build_env():
     args = []
     # Android linker ignores RPATH. Set LD_LIBRARY_PATH to Output dir.
     args.append("LD_LIBRARY_PATH=%s" % (ANDROID_TMPDIR,))
-    for (key, value) in list(os.environ.items()):
-        if key in ["ASAN_ACTIVATION_OPTIONS", "SCUDO_OPTIONS"] or key.endswith(
-            "SAN_OPTIONS"
-        ):
+    for key, value in list(os.environ.items()):
+        if key in [
+            "ASAN_ACTIVATION_OPTIONS",
+            "SCUDO_OPTIONS",
+            "HOME",
+            "TMPDIR",
+        ] or key.endswith("SAN_OPTIONS"):
             args.append('%s="%s"' % (key, value.replace('"', '\\"')))
     return " ".join(args)
 

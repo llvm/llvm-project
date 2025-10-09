@@ -7,6 +7,18 @@
 declare float @foo()
 
 ; Check register subtraction.
+define half @f0(half %f1, half %f2) {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: sebr %f0, %f9
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = fsub half %f1, %f2
+  ret half %res
+}
+
+; Check register subtraction.
 define float @f1(float %f1, float %f2) {
 ; CHECK-LABEL: f1:
 ; CHECK: sebr %f0, %f2
@@ -118,4 +130,16 @@ define float @f7(ptr %ptr0) {
   %sub10 = fsub float %sub9, %val10
 
   ret float %sub10
+}
+
+; Check that reassociation flags do not get in the way of SEB.
+define float @f8(ptr %x) {
+; CHECK-LABEL: f8:
+; CHECK: seb %f0
+entry:
+  %0 = load float, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds float, ptr %x, i64 1
+  %1 = load float, ptr %arrayidx1, align 8
+  %add = fsub reassoc nsz arcp contract afn float %1, %0
+  ret float %add
 }

@@ -47,7 +47,7 @@ define i32 @test_load_i32(ptr %p1) {
 define ptr @test_store_i1(i1 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl 4(%esp), %ecx
+; CHECK-NEXT:    movzbl 4(%esp), %ecx
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    movb %cl, (%eax)
@@ -59,7 +59,7 @@ define ptr @test_store_i1(i1 %val, ptr %p1) {
 define ptr @test_store_i8(i8 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl 4(%esp), %ecx
+; CHECK-NEXT:    movzbl 4(%esp), %ecx
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    movb %cl, (%eax)
 ; CHECK-NEXT:    retl
@@ -70,7 +70,7 @@ define ptr @test_store_i8(i8 %val, ptr %p1) {
 define ptr @test_store_i16(i16 %val, ptr %p1) {
 ; CHECK-LABEL: test_store_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl 4(%esp), %ecx
+; CHECK-NEXT:    movzwl 4(%esp), %ecx
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    movw %cx, (%eax)
 ; CHECK-NEXT:    retl

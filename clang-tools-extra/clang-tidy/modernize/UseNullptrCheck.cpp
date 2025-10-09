@@ -1,4 +1,4 @@
-//===--- UseNullptrCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,15 +35,25 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// to null within.
 /// Finding sequences of explicit casts is necessary so that an entire sequence
 /// can be replaced instead of just the inner-most implicit cast.
+///
+/// TODO/NOTE: The second "anyOf" below discards matches on a substituted type,
+/// since we don't know if that would _always_ be a pointer type for all other
+/// specializations, unless the expression was "__null", in which case we assume
+/// that all specializations are expected to be for pointer types. Ideally this
+/// would check for the "NULL" macro instead, but that'd be harder to express.
+/// In practice, "NULL" is often defined as "__null", and this is a useful
+/// condition.
 StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
   auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
-      unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
+      anyOf(hasSourceExpression(gnuNullExpr()),
+            unless(hasImplicitDestinationType(
+                qualType(substTemplateTypeParmType())))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))),
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(NameList)))));
 
-  auto IsOrHasDescendant = [](auto InnerMatcher) {
+  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
@@ -219,7 +229,7 @@ public:
       return true;
     }
 
-    auto* CastSubExpr = C->getSubExpr()->IgnoreParens();
+    auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
     if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
       return true;
@@ -483,9 +493,8 @@ UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
       IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes",
-          "std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec"))) {
-  StringRef(NullMacrosStr).split(NullMacros, ",");
+          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))) {
+  NullMacrosStr.split(NullMacros, ",");
 }
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

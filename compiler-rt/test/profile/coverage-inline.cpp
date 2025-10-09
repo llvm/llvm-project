@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // Test that the instrumentation puts the right linkage on the profile data for
 // inline functions.
 // RUN: %clang_profgen -g -fcoverage-mapping -c -o %t1.o %s -DOBJECT_1

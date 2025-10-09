@@ -187,6 +187,10 @@ class ScriptedProcesTestCase(TestBase):
             + os.path.join(self.getSourceDir(), scripted_process_example_relpath)
         )
 
+        self.runCmd(
+            "target stop-hook add -k first -v 1 -k second -v 2 -P dummy_scripted_process.DummyStopHook"
+        )
+
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
         launch_info.SetScriptedProcessClassName(
@@ -201,13 +205,14 @@ class ScriptedProcesTestCase(TestBase):
 
         py_impl = process_0.GetScriptedImplementation()
         self.assertTrue(py_impl)
-        self.assertTrue(
-            isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
-        )
+        self.assertIsInstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
         self.assertFalse(hasattr(py_impl, "my_super_secret_member"))
         py_impl.my_super_secret_member = 42
         self.assertTrue(hasattr(py_impl, "my_super_secret_member"))
         self.assertEqual(py_impl.my_super_secret_method(), 42)
+
+        self.assertTrue(hasattr(py_impl, "handled_stop"))
+        self.assertTrue(py_impl.handled_stop)
 
         # Try reading from target #0 process ...
         addr = 0x500000000
@@ -279,6 +284,6 @@ class ScriptedProcesTestCase(TestBase):
                 break
             self.assertEqual(idx, int(reg.value, 16))
 
-        self.assertTrue(frame.IsArtificial(), "Frame is not artificial")
+        self.assertTrue(frame.IsSynthetic(), "Frame is not synthetic")
         pc = frame.GetPCAddress().GetLoadAddress(target_0)
         self.assertEqual(pc, 0x0100001B00)

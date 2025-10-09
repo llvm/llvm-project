@@ -112,27 +112,10 @@ define <4 x i8> @func_8_16(ptr %a, ptr %b) nounwind {
 ;
 ; X64-LABEL: func_8_16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrl $16, %ecx
-; X64-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $32, %rcx
-; X64-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; X64-NEXT:    movq (%rsi), %rax
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrl $16, %ecx
-; X64-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $32, %rcx
-; X64-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
+; X64-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    retq
   %F = load <4 x i16>, ptr %a
   %G = trunc <4 x i16> %F to <4 x i8>

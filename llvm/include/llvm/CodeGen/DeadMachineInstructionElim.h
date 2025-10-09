@@ -14,7 +14,7 @@
 namespace llvm {
 
 class DeadMachineInstructionElimPass
-    : public MachinePassInfoMixin<DeadMachineInstructionElimPass> {
+    : public PassInfoMixin<DeadMachineInstructionElimPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: not llc -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn-unknown-unknown -mcpu=kaveri < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: in function test{{.*}}: unsupported hsa intrinsic without hsa target
 
@@ -33,4 +33,4 @@ declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
 attributes #0 = { readnone }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

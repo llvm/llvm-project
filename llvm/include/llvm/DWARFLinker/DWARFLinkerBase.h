@@ -16,7 +16,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 namespace llvm {
 class DWARFUnit;
@@ -68,7 +69,7 @@ getSectionName(DebugSectionKind SectionKind) {
 }
 
 /// Recognise the table name and match it with the DebugSectionKind.
-std::optional<DebugSectionKind> parseDebugTableName(StringRef Name);
+LLVM_ABI std::optional<DebugSectionKind> parseDebugTableName(StringRef Name);
 
 /// The base interface for DWARFLinker implementations.
 class DWARFLinkerBase {
@@ -82,7 +83,6 @@ public:
       std::function<void(const DWARFFile &File, llvm::StringRef Output)>;
   using ObjectPrefixMapTy = std::map<std::string, std::string>;
   using CompileUnitHandlerTy = function_ref<void(const DWARFUnit &Unit)>;
-  using TranslatorFuncTy = std::function<StringRef(StringRef)>;
   using SwiftInterfacesMapTy = std::map<std::string, std::string>;
   /// Type of output file.
   enum class OutputFileType : uint8_t {
