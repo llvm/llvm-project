@@ -258,15 +258,14 @@ void test7(void) {
 
 #ifdef USE_DOMAIN
 void test8(void) {
-  // FIXME: Use of 'func21()' should not be diagnosed because feature5 is always available.
-  func21(); // expected-error {{cannot use 'func21' because feature 'feature5' is unavailable in this context}}
+  func21();
   func22(); // expected-error {{cannot use 'func22' because feature 'feature5' is available in this context}}
 
   if (__builtin_available(domain:feature5)) {
     func21();
     func22(); // expected-error {{cannot use 'func22' because feature 'feature5' is available in this context}}
   } else {
-    func21(); // expected-error {{cannot use 'func21' because feature 'feature5' is unavailable in this context}}
+    func21();
     func22();
   }
 }

@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fblocks -ffeature-availability=feature1:ON -ffeature-availability=feature2:OFF -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -DUSE_DOMAIN %s
+// RUN: %clang_cc1 -fblocks -ffeature-availability=feature1:ON -ffeature-availability=feature2:OFF -fsyntax-only -verify=expected,enabled %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify=expected,enabled -DUSE_DOMAIN %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify=expected -DUSE_DOMAIN -DALWAYS_ENABLED %s
 
 #include <availability_domain.h>
 
@@ -7,7 +8,11 @@
 #define UNAVAIL 1
 
 #ifdef USE_DOMAIN
+#ifdef ALWAYS_ENABLED
+CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(feature1);
+#else
 CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
+#endif
 CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 #endif
 
@@ -19,18 +24,18 @@ struct __attribute__((availability(domain:feature1, AVAIL))) S1 {};
 
 @interface C0 {
   struct S0 ivar0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
-  struct S1 ivar1; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+  struct S1 ivar1; // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
   struct S1 ivar2 __attribute__((availability(domain:feature1, AVAIL)));
-  struct S1 ivar3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+  struct S1 ivar3 __attribute__((availability(domain:feature1, UNAVAIL))); // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 }
 @property struct S0 prop0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
-@property struct S1 prop1; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+@property struct S1 prop1; // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @property struct S1 prop2 __attribute__((availability(domain:feature1, AVAIL)));
-@property struct S1 prop3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+@property struct S1 prop3 __attribute__((availability(domain:feature1, UNAVAIL))); // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 -(struct S0)m0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
--(struct S1)m1; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+-(struct S1)m1; // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 -(struct S1)m2 __attribute__((availability(domain:feature1, AVAIL)));
--(struct S1)m3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+-(struct S1)m3 __attribute__((availability(domain:feature1, UNAVAIL))); // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @end
 
 @class Base0;
@@ -59,7 +64,7 @@ __attribute__((availability(domain:feature1, AVAIL), // expected-note {{is incom
 @interface Base7<T> : NSObject
 @end
 
-@interface Derived3 : Base7<Base0 *> // expected-error {{cannot use 'Base0' because feature 'feature1' is unavailable in this context}}
+@interface Derived3 : Base7<Base0 *> // enabled-error {{cannot use 'Base0' because feature 'feature1' is unavailable in this context}}
 @end
 
 __attribute__((availability(domain:feature1, AVAIL))) // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}} expected-note 2 {{feature attribute __attribute__((availability(domain:feature1, 0)))}}
@@ -116,7 +121,7 @@ __attribute__((availability(domain:feature1, UNAVAIL))) // expected-note {{featu
 @end
 
 @protocol P0
-@property struct S1 *p0; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+@property struct S1 *p0; // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @end
 
 __attribute__((availability(domain:feature1, AVAIL)))
@@ -198,8 +203,8 @@ __attribute__((availability(domain:feature1, AVAIL)))
 -(void)m4 {
   // Check that this method doesn't inherit the domain availablity attribute
   // from the base class method.
-  func1(); // expected-error {{cannot use 'func1' because feature 'feature1' is unavailable in this context}}
+  func1(); // enabled-error {{cannot use 'func1' because feature 'feature1' is unavailable in this context}}
 
-  [super m4]; // expected-error {{cannot use 'm4' because feature 'feature1' is unavailable in this context}}
+  [super m4]; // enabled-error {{cannot use 'm4' because feature 'feature1' is unavailable in this context}}
 }
 @end

@@ -1,14 +1,20 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -ffeature-availability=feature3:on -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN -DALWAYS_ENABLED %s | FileCheck %s
 
 #include <availability_domain.h>
 
 #define AVAIL 0
 
 #ifdef USE_DOMAIN
+#ifdef ALWAYS_ENABLED
+CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(feature1);
+CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(feature3);
+#else
 CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
-CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 CLANG_ENABLED_AVAILABILITY_DOMAIN(feature3);
+#endif
+CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 #endif
 
 // CHECK: @"OBJC_CLASS_$_C0" = global %struct._class_t { ptr @"OBJC_METACLASS_$_C0", ptr null, ptr @_objc_empty_cache, ptr @_objc_empty_vtable, ptr @"_OBJC_CLASS_RO_$_C0" }, section "__DATA, __objc_data", align 8

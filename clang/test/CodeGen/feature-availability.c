@@ -1,11 +1,14 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-llvm -o - -DUSE_DOMAIN -DALWAYS_ENABLED %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
 
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -ffeature-availability=feature1:on -ffeature-availability=feature2:off -include-pch %t -emit-llvm -o - %s | FileCheck %s
 
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-pch -o %t -DUSE_DOMAIN %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -include-pch %t -emit-llvm -o - -DUSE_DOMAIN %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -emit-pch -o %t -DUSE_DOMAIN -DALWAYS_ENABLED %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fblocks -include-pch %t -emit-llvm -o - -DUSE_DOMAIN -DALWAYS_ENABLED %s | FileCheck --check-prefixes=CHECK,DOMAIN %s
 
 // CHECK: %[[STRUCT_S0:.*]] = type { i32 }
 // CHECK: @g0 = external global i32, align 4
@@ -22,7 +25,11 @@
 #ifdef USE_DOMAIN
 // DOMAIN: @g3 = extern_weak global i32, align 4
 
+#ifdef ALWAYS_ENABLED
+CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(feature1);
+#else
 CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
+#endif
 CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
 #endif
 
