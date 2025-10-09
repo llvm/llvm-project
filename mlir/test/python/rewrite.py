@@ -19,6 +19,7 @@ def run(f):
     gc.collect()
     assert Context._get_live_count() == 0
 
+
 # CHECK-LABEL: TEST: testRewritePattern
 @run
 def testRewritePattern():
