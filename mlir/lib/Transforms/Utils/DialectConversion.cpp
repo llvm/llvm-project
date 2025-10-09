@@ -3830,7 +3830,7 @@ static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
   auto newType = FunctionType::get(rewriter.getContext(),
                                    result.getConvertedTypes(), newResults);
 
-  // If using 1-to-n type conversion, we must re-map argument attributes 
+  // If using 1-to-n type conversion, we must re-map argument attributes
   // to the corresponding new argument index.
   auto newArgAttrs = convertFuncOpAttrs(funcOp, result, newType);
 
