@@ -388,25 +388,4 @@ def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
   let hasVerifier = 1;
 }
 
-def cuf_SetAllocatorIndexOp : cuf_Op<"set_allocator_idx", []> {
-  let summary = "Set the allocator index in a descriptor";
-
-  let description = [{
-    Allocator index in the Fortran descriptor is used to retrived the correct
-    CUDA allocator to allocate the memory on the device.
-    In many cases the allocator index is set when the descriptor is created. For
-    device components, the descriptor is part of the derived-type itself and
-    needs to be set after the derived-type is allocated in managed memory.
-  }];
-
-  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-      cuf_DataAttributeAttr:$data_attr);
-
-  let assemblyFormat = [{
-    $box `:` qualified(type($box)) attr-dict
-  }];
-
-  let hasVerifier = 1;
-}
-
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

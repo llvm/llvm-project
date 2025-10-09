@@ -11,7 +11,7 @@ define void @test(i128 %n, i128 %m) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i128 [[TMP0]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i128 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i128 [[TMP1]], 7
-; CHECK-NEXT:    br i1 [[TMP2]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i128 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -29,18 +29,18 @@ define void @test(i128 %n, i128 %m) {
 ; CHECK-NEXT:    [[IV_NEXT_7]] = add i128 [[IV]], 8
 ; CHECK-NEXT:    [[NITER_NEXT_7]] = add i128 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp ne i128 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[LOOP]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i128 [ [[IV_NEXT_7]], [[LOOP]] ]
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[LOOP]], label [[EXIT_UNR_LCSSA:%.*]]
 ; CHECK:       exit.unr-lcssa:
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i128 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR_PH]], [[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i128 [ [[IV_NEXT_7]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i128 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       loop.epil.preheader:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i128 [ 0, [[ENTRY:%.*]] ], [ [[IV_UNR]], [[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i128 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[LOOP_EPIL:%.*]]
 ; CHECK:       loop.epil:
-; CHECK-NEXT:    [[IV_EPIL:%.*]] = phi i128 [ [[IV_UNR]], [[LOOP_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], [[LOOP_EPIL]] ]
+; CHECK-NEXT:    [[IV_EPIL:%.*]] = phi i128 [ [[IV_EPIL_INIT]], [[LOOP_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], [[LOOP_EPIL]] ]
 ; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i128 [ 0, [[LOOP_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[LOOP_EPIL]] ]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[IV_NEXT_EPIL]] = add i128 [[IV_EPIL]], 1

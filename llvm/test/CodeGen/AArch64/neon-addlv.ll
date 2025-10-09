@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple aarch64-none-linux-gnu -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:         warning: Instruction selection used fallback path for uaddlv_v8i8_urshr
+; CHECK-GI:       warning: Instruction selection used fallback path for uaddlv_v8i8_urshr
 
 declare <4 x i16>  @llvm.aarch64.neon.uaddlp.v4i16.v8i8(<8 x i8>) nounwind readnone
 declare <8 x i16>  @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8>) nounwind readnone
