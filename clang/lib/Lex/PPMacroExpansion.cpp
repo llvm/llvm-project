@@ -1741,13 +1741,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
          getLangOpts().C2y ? diag::warn_counter : diag::ext_counter);
     // __COUNTER__ expands to a simple numeric value that must be less than
     // 2147483647.
-    if (CounterValue > 2147483647) {
+    constexpr unsigned long MaxPosValue = std::numeric_limits<int32_t>::max();
+    if (CounterValue > MaxPosValue) {
       Diag(Tok.getLocation(), diag::err_counter_overflow);
       // Retain the maximal value so we don't issue conversion-related
       // diagnostics by overflowing into a long long. While this does produce
       // a duplicate value, there's no way to ignore this error so there's no
       // translation anyway.
-      CounterValue = 2147483647;
+      CounterValue = MaxPosValue;
     }
     OS << CounterValue++;
     Tok.setKind(tok::numeric_constant);
