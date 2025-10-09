@@ -3,6 +3,7 @@ set(files
   AllocAction.cpp
   ResourceManager.cpp
   RTTI.cpp
+  Session.cpp
   SimpleNativeMemoryMap.cpp
   )
 
