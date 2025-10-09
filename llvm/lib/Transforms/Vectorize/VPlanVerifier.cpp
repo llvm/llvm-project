@@ -24,6 +24,7 @@
 #define DEBUG_TYPE "loop-vectorize"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPlanVerifier {
@@ -198,7 +199,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           // EVLIVIncrement is only used by EVLIV & BranchOnCount.
           // Having more than two users is unexpected.
-          using namespace llvm::VPlanPatternMatch;
           if (I->getOpcode() != VPInstruction::Broadcast &&
               I->getNumUsers() != 1 &&
               (I->getNumUsers() != 2 ||
@@ -479,8 +479,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!LastInst || (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
-                    LastInst->getOpcode() != VPInstruction::BranchOnCond)) {
+  if (!match(LastInst, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()))) {
     errs() << "VPlan vector loop exit must end with BranchOnCount or "
               "BranchOnCond VPInstruction\n";
     return false;
