@@ -180,12 +180,23 @@ round_trip_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
       });
 }
 
-TEST(SPSWrapperFunctionUtilsTest, TransparentSerializationPointers) {
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionPointers) {
   int X = 42;
   int *P = nullptr;
   SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
       DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
       [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); }, &X);
+
+  EXPECT_EQ(P, &X);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionReferenceArguments) {
+  int X = 42;
+  int *P = nullptr;
+  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
+      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
+      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); },
+      static_cast<int *const &>(&X));
 
   EXPECT_EQ(P, &X);
 }
@@ -201,7 +212,7 @@ expected_int_pointer_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
       });
 }
 
-TEST(SPSWrapperFunctionUtilsTest, TransparentSerializationExpectedPointers) {
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionExpectedPointers) {
   int X = 42;
   int *P = nullptr;
   SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr)>::call(
