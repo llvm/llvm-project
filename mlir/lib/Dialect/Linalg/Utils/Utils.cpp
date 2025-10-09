@@ -460,7 +460,7 @@ bool isaDepthwiseConv1DNwcWcmOp(LinalgOp op) {
 }
 
 bool isaConv2DOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -475,7 +475,7 @@ bool isaConv2DOp(LinalgOp op) {
 }
 
 bool isaConv2DNhwcFhwcOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNhwcFhwcOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -494,7 +494,7 @@ bool isaConv2DNhwcFhwcOp(LinalgOp op) {
 }
 
 bool isaConv2DNhwcHwcfOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNhwcHwcfOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -513,7 +513,7 @@ bool isaConv2DNhwcHwcfOp(LinalgOp op) {
 }
 
 bool isaConv2DNchwFchwOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNchwFchwOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -532,7 +532,7 @@ bool isaConv2DNchwFchwOp(LinalgOp op) {
 }
 
 bool isaConv2DNhwcFhwcQOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNhwcFhwcQOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -552,7 +552,7 @@ bool isaConv2DNhwcFhwcQOp(LinalgOp op) {
 }
 
 bool isaConv2DNchwFchwQOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNchwFchwQOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -572,7 +572,7 @@ bool isaConv2DNchwFchwQOp(LinalgOp op) {
 }
 
 bool isaConv2DNgchwFgchwOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNgchwFgchwOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -593,7 +593,7 @@ bool isaConv2DNgchwFgchwOp(LinalgOp op) {
 }
 
 bool isaConv2DNgchwGfchwOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNgchwGfchwOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -615,7 +615,7 @@ bool isaConv2DNgchwGfchwOp(LinalgOp op) {
 }
 
 bool isaConv2DNgchwGfchwQOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNgchwGfchwQOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -637,7 +637,7 @@ bool isaConv2DNgchwGfchwQOp(LinalgOp op) {
 }
 
 bool isaConv2DNhwgcGfhwcOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv2DNhwgcGfhwcOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -658,7 +658,7 @@ bool isaConv2DNhwgcGfhwcOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv2DNchwChwOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv2DNchwChwOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -677,7 +677,7 @@ bool isaDepthwiseConv2DNchwChwOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv2DNhwcHwcOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -696,7 +696,7 @@ bool isaDepthwiseConv2DNhwcHwcOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv2DNhwcHwcmOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -716,7 +716,7 @@ bool isaDepthwiseConv2DNhwcHwcmOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv2DNhwcHwcmQOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -737,7 +737,7 @@ bool isaDepthwiseConv2DNhwcHwcmQOp(LinalgOp op) {
 }
 
 bool isaConv3DOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv3DOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -753,7 +753,7 @@ bool isaConv3DOp(LinalgOp op) {
 }
 
 bool isaConv3DNcdhwFcdhwOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv3DNcdhwFcdhwOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -773,7 +773,7 @@ bool isaConv3DNcdhwFcdhwOp(LinalgOp op) {
 }
 
 bool isaConv3DNdhwcDhwcfOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::Conv3DNdhwcDhwcfOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -793,7 +793,7 @@ bool isaConv3DNdhwcDhwcfOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv3DNdhwcDhwcmOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -814,7 +814,7 @@ bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv3DNcdhwCdhwOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
@@ -834,7 +834,7 @@ bool isaDepthwiseConv3DNcdhwCdhwOp(LinalgOp op) {
 }
 
 bool isaDepthwiseConv3DNdhwcDhwcOp(LinalgOp op) {
-  if (isa<linalg::Conv1DOp>(op)) return true;
+  if (isa<linalg::DepthwiseConv3DNdhwcDhwcOp>(op)) return true;
 
   if (!isaConvolutionOpInterface(op)) return false;
 
