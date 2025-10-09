@@ -22,6 +22,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -44,6 +45,7 @@ class FunctionPass;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
+class SelectInst;
 class LoopInfo;
 class MemDepResult;
 class MemoryAccess;
@@ -409,6 +411,8 @@ private:
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
   void assignBlockRPONumber(Function &F);
+  
+  bool optimizeMinMaxFindingSelectPattern(SelectInst *Select);
 };
 
 /// Create a legacy GVN pass.
