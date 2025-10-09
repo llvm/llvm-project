@@ -34,6 +34,20 @@ LIBC_INLINE R syscall_impl(long __number, Ts... ts) {
   return cpp::bit_or_static_cast<R>(syscall_impl(__number, (long)ts...));
 }
 
+// Linux-specific function for checking
+namespace linux_utils {
+LIBC_INLINE_VAR constexpr unsigned long MAX_ERRNO = 4095;
+// Ideally, this should be defined using PAGE_OFFSET
+// However, that is a configurable parameter. We mimic kernel's behavior
+// by checking against MAX_ERRNO.
+template <typename PointerLike>
+LIBC_INLINE constexpr bool is_valid_mmap(PointerLike ptr) {
+  long addr = cpp::bit_cast<long>(ptr);
+  return __builtin_expect(addr > 0 || addr < -cpp::bit_cast<long>(MAX_ERRNO),
+                          true);
+}
+} // namespace linux_utils
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_H

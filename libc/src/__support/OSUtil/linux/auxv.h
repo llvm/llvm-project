@@ -91,7 +91,7 @@ LIBC_INLINE void Vector::fallback_initialize_unsync() {
                                      PROT_READ | PROT_WRITE,
                                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   // We do not proceed if mmap fails.
-  if (mmap_ret <= 0 && mmap_ret > -EXEC_PAGESIZE)
+  if (!linux_utils::is_valid_mmap(mmap_ret))
     return;
 
   // Initialize the auxv array with AT_NULL entries.
