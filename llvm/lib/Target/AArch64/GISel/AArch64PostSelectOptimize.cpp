@@ -87,6 +87,26 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
     return AArch64::ADDXri;
   case AArch64::ADDSWri:
     return AArch64::ADDWri;
+  case AArch64::ANDSWri:
+    return AArch64::ANDWri;
+  case AArch64::ANDSWrr:
+    return AArch64::ANDWrr;
+  case AArch64::ANDSWrs:
+    return AArch64::ANDWrs;
+  case AArch64::ANDSXri:
+    return AArch64::ANDXri;
+  case AArch64::ANDSXrr:
+    return AArch64::ANDXrr;
+  case AArch64::ANDSXrs:
+    return AArch64::ANDXrs;
+  case AArch64::BICSWrr:
+    return AArch64::BICWrr;
+  case AArch64::BICSXrr:
+    return AArch64::BICXrr;
+  case AArch64::BICSWrs:
+    return AArch64::BICWrs;
+  case AArch64::BICSXrs:
+    return AArch64::BICXrs;
   case AArch64::SBCSXr:
     return AArch64::SBCXr;
   case AArch64::SBCSWr:
