@@ -623,13 +623,15 @@ static void SetupLangOpts(CompilerInstance &compiler,
     compiler.getHeaderSearchOpts().UseLibcxx = true;
 
     language_for_note = lldb::eLanguageTypeObjC_plus_plus;
-    if (language != lldb::eLanguageTypeUnknown)
-      language_fallback_reason = llvm::formatv(
-          "Expression evaluation in {0} not supported. ",
-          lldb_private::Language::GetDisplayNameForLanguageType(language));
+    if (language != language_for_note) {
+      if (language != lldb::eLanguageTypeUnknown)
+        language_fallback_reason = llvm::formatv(
+            "Expression evaluation in {0} not supported. ",
+            lldb_private::Language::GetDisplayNameForLanguageType(language));
 
-    language_fallback_reason +=
-        llvm::formatv("Falling back to default language. ");
+      language_fallback_reason +=
+          llvm::formatv("Falling back to default language. ");
+    }
     break;
   }
 
