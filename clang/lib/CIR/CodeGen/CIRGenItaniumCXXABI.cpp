@@ -59,7 +59,11 @@ public:
 
   void addImplicitStructorParams(CIRGenFunction &cgf, QualType &resTy,
                                  FunctionArgList &params) override;
-
+  mlir::Value getCXXDestructorImplicitParam(CIRGenFunction &cgf,
+                                            const CXXDestructorDecl *dd,
+                                            CXXDtorType type,
+                                            bool forVirtualBase,
+                                            bool delegating) override;
   void emitCXXConstructors(const clang::CXXConstructorDecl *d) override;
   void emitCXXDestructors(const clang::CXXDestructorDecl *d) override;
   void emitCXXStructor(clang::GlobalDecl gd) override;
@@ -1504,11 +1508,8 @@ void CIRGenItaniumCXXABI::emitDestructorCall(
     CIRGenFunction &cgf, const CXXDestructorDecl *dd, CXXDtorType type,
     bool forVirtualBase, bool delegating, Address thisAddr, QualType thisTy) {
   GlobalDecl gd(dd, type);
-  if (needsVTTParameter(gd)) {
-    cgm.errorNYI(dd->getSourceRange(), "emitDestructorCall: VTT");
-  }
-
-  mlir::Value vtt = nullptr;
+  mlir::Value vtt =
+      getCXXDestructorImplicitParam(cgf, dd, type, forVirtualBase, delegating);
   ASTContext &astContext = cgm.getASTContext();
   QualType vttTy = astContext.getPointerType(astContext.VoidPtrTy);
   assert(!cir::MissingFeatures::appleKext());
@@ -1538,6 +1539,13 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
 
   // The default behavior is to use atexit. This is handled in lowering
   // prepare. Nothing to be done for CIR here.
+}
+
+mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
+    CIRGenFunction &cgf, const CXXDestructorDecl *dd, CXXDtorType type,
+    bool forVirtualBase, bool delegating) {
+  GlobalDecl gd(dd, type);
+  return cgf.getVTTParameter(gd, forVirtualBase, delegating);
 }
 
 // The idea here is creating a separate block for the throw with an
