@@ -526,6 +526,11 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableUniformIntrinsicCombine(
+    "amdgpu-enable-uniform-intrinsic-combine",
+    cl::desc("Enable/Disable the Uniform Intrinsic Combine Pass"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -879,6 +884,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
+
+        if (EnableUniformIntrinsicCombine)
+          PM.addPass(AMDGPUUniformIntrinsicCombinePass());
       });
 
   PB.registerPeepholeEPCallback(
@@ -929,8 +937,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
       if (!isLTOPreLink(Phase)) {
-        AMDGPUAttributorOptions Opts;
-        MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+        if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
+          AMDGPUAttributorOptions Opts;
+          MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+        }
       }
     }
   });
@@ -964,7 +974,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(InternalizePass(mustPreserveGV));
             PM.addPass(GlobalDCEPass());
           }
-          if (EnableAMDGPUAttributor) {
+          if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
               Opt.IsClosedWorld = true;
@@ -1296,7 +1306,8 @@ void AMDGPUPassConfig::addIRPasses() {
   if (LowerCtorDtor)
     addPass(createAMDGPUCtorDtorLoweringLegacyPass());
 
-  if (isPassEnabled(EnableImageIntrinsicOptimizer))
+  if (TM.getTargetTriple().isAMDGCN() &&
+      isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   // This can be disabled by passing ::Disable here or on the command line

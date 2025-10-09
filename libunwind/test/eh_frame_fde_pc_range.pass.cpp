@@ -21,7 +21,7 @@
 
 // RUN: %{build}
 // RUN: %{objcopy} --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
-// RUN: echo -ne '\xFF' | dd of=%t_ehf_hdr.bin bs=1 seek=2 count=2 conv=notrunc status=none 
+// RUN: echo -ne '\xFF' | dd of=%t_ehf_hdr.bin bs=1 seek=2 count=2 conv=notrunc status=none
 // RUN: %{objcopy} --update-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
 // RUN: %{exec} %t.exe
 
@@ -53,7 +53,7 @@ void f() {
   assert(fde_fpc == fde_fpc1);
 }
 
-int main() {
+int main(int, char **) {
   f();
   return 0;
 }
