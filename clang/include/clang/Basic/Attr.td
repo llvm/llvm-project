@@ -1599,7 +1599,7 @@ def CUDAShared : InheritableAttr {
 }
 def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 
-def DeviceKernel : DeclOrTypeAttr {
+def DeviceKernel : InheritableAttr {
   let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
                    Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
                    CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
