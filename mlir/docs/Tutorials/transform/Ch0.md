@@ -134,7 +134,7 @@ Furthermore, the operation now contains a region that explicitly specifies the m
 
 ## “Loop” Fusion
 
-Since the region of the `linalg.generic` operation can contain arbitrarily many operations, we can use it to express “fusion” of the implicit loops by simply having more operations chained in the region. For example, the common machine learning rectified linear unit layer (ReLU), which can be defined as `relu(x) = max(0, x)`, can be defined be expressed using the “compare-and-select” idiom in one `linalg.generic` operation, without the temporary buffer for the comparison result and without repeating the outer operation:
+Since the region of the `linalg.generic` operation can contain arbitrarily many operations, we can use it to express “fusion” of the implicit loops by simply having more operations chained in the region. For example, the common machine learning rectified linear unit layer (ReLU), which can be defined as `relu(x) = max(0, x)`, can be expressed using the “compare-and-select” idiom in one `linalg.generic` operation, without the temporary buffer for the comparison result and without repeating the outer operation:
 
 ```mlir
 linalg.generic {

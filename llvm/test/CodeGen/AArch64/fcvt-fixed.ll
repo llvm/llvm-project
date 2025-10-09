@@ -166,9 +166,9 @@ define i32 @fcvtzs_f16_i32_7(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI8_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -206,9 +206,9 @@ define i32 @fcvtzs_f16_i32_15(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI9_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI9_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -246,9 +246,9 @@ define i64 @fcvtzs_f16_i64_7(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI10_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -286,9 +286,9 @@ define i64 @fcvtzs_f16_i64_15(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI11_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -470,9 +470,9 @@ define i32 @fcvtzu_f16_i32_7(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI20_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI20_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -510,9 +510,9 @@ define i32 @fcvtzu_f16_i32_15(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI21_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI21_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -550,9 +550,9 @@ define i64 @fcvtzu_f16_i64_7(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI22_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -590,9 +590,9 @@ define i64 @fcvtzu_f16_i64_15(half %flt) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI23_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -775,10 +775,10 @@ define half @scvtf_f16_i32_7(i32 %int) {
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    scvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI32_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI32_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -815,10 +815,10 @@ define half @scvtf_f16_i32_15(i32 %int) {
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    scvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI33_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI33_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -855,10 +855,10 @@ define half @scvtf_f16_i64_7(i64 %long) {
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    scvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI34_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI34_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -895,10 +895,10 @@ define half @scvtf_f16_i64_15(i64 %long) {
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    scvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI35_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1079,10 +1079,10 @@ define half @ucvtf_f16_i32_7(i32 %int) {
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    ucvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI44_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI44_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1119,10 +1119,10 @@ define half @ucvtf_f16_i32_15(i32 %int) {
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    ucvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI45_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI45_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1159,10 +1159,10 @@ define half @ucvtf_f16_i64_7(i64 %long) {
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    ucvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI46_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI46_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1199,10 +1199,10 @@ define half @ucvtf_f16_i64_15(i64 %long) {
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    ucvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI47_0
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI47_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1373,9 +1373,9 @@ define i32 @fcvtzs_sat_f16_i32_7(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI55_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI55_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1413,9 +1413,9 @@ define i32 @fcvtzs_sat_f16_i32_15(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI56_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI56_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1453,9 +1453,9 @@ define i64 @fcvtzs_sat_f16_i64_7(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI57_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI57_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1493,9 +1493,9 @@ define i64 @fcvtzs_sat_f16_i64_15(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI58_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI58_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1667,9 +1667,9 @@ define i32 @fcvtzu_sat_f16_i32_7(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI66_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI66_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1707,9 +1707,9 @@ define i32 @fcvtzu_sat_f16_i32_15(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI67_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI67_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1747,9 +1747,9 @@ define i64 @fcvtzu_sat_f16_i64_7(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #22528 // =0x5800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI68_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI68_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
@@ -1787,9 +1787,9 @@ define i64 @fcvtzu_sat_f16_i64_15(half %dbl) {
 ;
 ; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    mov w8, #30720 // =0x7800
+; CHECK-GI-NO16-NEXT:    adrp x8, .LCPI69_0
 ; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
+; CHECK-GI-NO16-NEXT:    ldr h1, [x8, :lo12:.LCPI69_0]
 ; CHECK-GI-NO16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0

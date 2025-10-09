@@ -583,23 +583,23 @@ bool CodeGenPrepare::_run(Function &F) {
   // if requested.
   if (BBSectionsGuidedSectionPrefix && BBSectionsProfileReader &&
       BBSectionsProfileReader->isFunctionHot(F.getName())) {
-    F.setSectionPrefix("hot");
+    (void)F.setSectionPrefix("hot");
   } else if (ProfileGuidedSectionPrefix) {
     // The hot attribute overwrites profile count based hotness while profile
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.
     if (F.hasFnAttribute(Attribute::Hot) ||
         PSI->isFunctionHotInCallGraph(&F, *BFI))
-      F.setSectionPrefix("hot");
+      (void)F.setSectionPrefix("hot");
     // If PSI shows this function is not hot, we will placed the function
     // into unlikely section if (1) PSI shows this is a cold function, or
     // (2) the function has a attribute of cold.
     else if (PSI->isFunctionColdInCallGraph(&F, *BFI) ||
              F.hasFnAttribute(Attribute::Cold))
-      F.setSectionPrefix("unlikely");
+      (void)F.setSectionPrefix("unlikely");
     else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
              PSI->isFunctionHotnessUnknown(F))
-      F.setSectionPrefix("unknown");
+      (void)F.setSectionPrefix("unknown");
   }
 
   /// This optimization identifies DIV instructions that can be
@@ -1749,6 +1749,12 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
                                  Sub->hasNUsesOrMore(1)))
     return false;
 
+  // We don't want to move around uses of condition values this late, so we
+  // check if it is legal to create the call to the intrinsic in the basic
+  // block containing the icmp.
+  if (Sub->getParent() != Cmp->getParent() && !Sub->hasOneUse())
+    return false;
+
   if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
                                    Cmp, Intrinsic::usub_with_overflow))
     return false;
@@ -2618,22 +2624,9 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros, LoopInfo &LI,
 bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   BasicBlock *BB = CI->getParent();
 
-  // Lower inline assembly if we can.
-  // If we found an inline asm expession, and if the target knows how to
-  // lower it to normal LLVM code, do so now.
-  if (CI->isInlineAsm()) {
-    if (TLI->ExpandInlineAsm(CI)) {
-      // Avoid invalidating the iterator.
-      CurInstIterator = BB->begin();
-      // Avoid processing instructions out of order, which could cause
-      // reuse before a value is defined.
-      SunkAddrs.clear();
-      return true;
-    }
-    // Sink address computing for memory operands into the block.
-    if (optimizeInlineAsmInst(CI))
-      return true;
-  }
+  // Sink address computing for memory operands into the block.
+  if (CI->isInlineAsm() && optimizeInlineAsmInst(CI))
+    return true;
 
   // Align the pointer arguments to this call if the target thinks it's a good
   // idea
@@ -5606,6 +5599,19 @@ static bool FindAllMemoryUses(
       if (U.getOperandNo() != AtomicCmpXchgInst::getPointerOperandIndex())
         return true; // Storing addr, not into addr.
       MemoryUses.push_back({&U, CmpX->getCompareOperand()->getType()});
+      continue;
+    }
+
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
+      SmallVector<Value *, 2> PtrOps;
+      Type *AccessTy;
+      if (!TLI.getAddrModeArguments(II, PtrOps, AccessTy))
+        return true;
+
+      if (!find(PtrOps, U.get()))
+        return true;
+
+      MemoryUses.push_back({&U, AccessTy});
       continue;
     }
 

@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SarifDiagnostics.h"
+#include "HTMLDiagnostics.h"
+#include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/Sarif.h"
@@ -30,12 +33,13 @@ namespace {
 class SarifDiagnostics : public PathDiagnosticConsumer {
   std::string OutputFile;
   const LangOptions &LO;
+  const SourceManager &SM;
   SarifDocumentWriter SarifWriter;
 
 public:
   SarifDiagnostics(const std::string &Output, const LangOptions &LO,
                    const SourceManager &SM)
-      : OutputFile(Output), LO(LO), SarifWriter(SM) {}
+      : OutputFile(Output), LO(LO), SM(SM), SarifWriter(SM) {}
   ~SarifDiagnostics() override = default;
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
@@ -45,6 +49,11 @@ public:
   PathGenerationScheme getGenerationScheme() const override { return Minimal; }
   bool supportsLogicalOpControlFlow() const override { return true; }
   bool supportsCrossFileDiagnostics() const override { return true; }
+
+private:
+  SarifResult createResult(const PathDiagnostic *Diag,
+                           const StringMap<uint32_t> &RuleMapping,
+                           const LangOptions &LO, FilesMade *FM);
 };
 } // end anonymous namespace
 
@@ -54,14 +63,24 @@ void ento::createSarifDiagnosticConsumer(
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
 
+  createSarifDiagnosticConsumerImpl(DiagOpts, C, Output, PP);
+
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
+                                          CTU, MacroExpansions);
+}
+
+/// Creates and registers a SARIF diagnostic consumer, without any additional
+/// text consumer.
+void ento::createSarifDiagnosticConsumerImpl(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &Output, const Preprocessor &PP) {
+
   // TODO: Emit an error here.
   if (Output.empty())
     return;
 
   C.push_back(std::make_unique<SarifDiagnostics>(Output, PP.getLangOpts(),
                                                  PP.getSourceManager()));
-  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
-                                          CTU, MacroExpansions);
 }
 
 static StringRef getRuleDescription(StringRef CheckName) {
@@ -162,9 +181,12 @@ createRuleMapping(const std::vector<const PathDiagnostic *> &Diags,
   return RuleMapping;
 }
 
-static SarifResult createResult(const PathDiagnostic *Diag,
-                                const StringMap<uint32_t> &RuleMapping,
-                                const LangOptions &LO) {
+static const llvm::StringRef IssueHashKey = "clang/issueHash/v1";
+
+SarifResult
+SarifDiagnostics::createResult(const PathDiagnostic *Diag,
+                               const StringMap<uint32_t> &RuleMapping,
+                               const LangOptions &LO, FilesMade *FM) {
 
   StringRef CheckName = Diag->getCheckerName();
   uint32_t RuleIdx = RuleMapping.lookup(CheckName);
@@ -172,17 +194,40 @@ static SarifResult createResult(const PathDiagnostic *Diag,
       Diag->getLocation().asRange(), Diag->getLocation().getManager(), LO);
 
   SmallVector<ThreadFlow, 8> Flows = createThreadFlows(Diag, LO);
+
+  auto IssueHash = Diag->getIssueHash(SM, LO);
+
+  std::string HtmlReportURL;
+  if (FM && !FM->empty()) {
+    // Find the HTML report that was generated for this issue, if one exists.
+    PDFileEntry::ConsumerFiles *Files = FM->getFiles(*Diag);
+    if (Files) {
+      auto HtmlFile =
+          std::find_if(Files->cbegin(), Files->cend(), [](auto &File) {
+            return File.first == HTML_DIAGNOSTICS_NAME;
+          });
+      if (HtmlFile != Files->cend()) {
+        SmallString<128> HtmlReportPath =
+            llvm::sys::path::parent_path(OutputFile);
+        llvm::sys::path::append(HtmlReportPath, HtmlFile->second);
+        HtmlReportURL = SarifDocumentWriter::fileNameToURI(HtmlReportPath);
+      }
+    }
+  }
+
   auto Result = SarifResult::create(RuleIdx)
                     .setRuleId(CheckName)
                     .setDiagnosticMessage(Diag->getVerboseDescription())
                     .setDiagnosticLevel(SarifResultLevel::Warning)
                     .setLocations({Range})
+                    .addPartialFingerprint(IssueHashKey, IssueHash)
+                    .setHostedViewerURI(HtmlReportURL)
                     .setThreadFlows(Flows);
   return Result;
 }
 
 void SarifDiagnostics::FlushDiagnosticsImpl(
-    std::vector<const PathDiagnostic *> &Diags, FilesMade *) {
+    std::vector<const PathDiagnostic *> &Diags, FilesMade *FM) {
   // We currently overwrite the file if it already exists. However, it may be
   // useful to add a feature someday that allows the user to append a run to an
   // existing SARIF file. One danger from that approach is that the size of the
@@ -199,7 +244,7 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
   SarifWriter.createRun("clang", "clang static analyzer", ToolVersion);
   StringMap<uint32_t> RuleMapping = createRuleMapping(Diags, SarifWriter);
   for (const PathDiagnostic *D : Diags) {
-    SarifResult Result = createResult(D, RuleMapping, LO);
+    SarifResult Result = createResult(D, RuleMapping, LO, FM);
     SarifWriter.appendResult(Result);
   }
   auto Document = SarifWriter.createDocument();
