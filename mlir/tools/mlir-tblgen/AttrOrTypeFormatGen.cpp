@@ -874,13 +874,13 @@ static void guardOnAnyOptional(FmtContext &ctx, MethodBody &os,
 }
 
 void DefFormat::genCommaSeparatedPrinter(
-    ArrayRef<FormatElement *> params, FmtContext &ctx, MethodBody &os,
+    ArrayRef<FormatElement *> args, FmtContext &ctx, MethodBody &os,
     function_ref<void(FormatElement *)> extra) {
   // Emit a space if necessary, but only if the struct is present.
   if (shouldEmitSpace || !lastWasPunctuation) {
-    bool allOptional = llvm::all_of(params, formatIsOptional);
+    bool allOptional = llvm::all_of(args, formatIsOptional);
     if (allOptional)
-      guardOnAnyOptional(ctx, os, params);
+      guardOnAnyOptional(ctx, os, args);
     os << tgfmt("$_printer << ' ';\n", &ctx);
     if (allOptional)
       os.unindent() << "}\n";
@@ -889,7 +889,7 @@ void DefFormat::genCommaSeparatedPrinter(
   // The first printed element does not need to emit a comma.
   os << "{\n";
   os.indent() << "bool _firstPrinted = true;\n";
-  for (FormatElement *arg : params) {
+  for (FormatElement *arg : args) {
     ParameterElement *param = getEncapsulatedParameterElement(arg);
     if (param->isOptional()) {
       param->genPrintGuard(ctx, os << "if (") << ") {\n";
