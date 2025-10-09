@@ -526,14 +526,19 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       } else {
         const auto expr = Fortran::evaluate::AsGenericExpr(s);
         fir::ExtendedValue exv = converter.genExprAddr(*expr, stmtCtx);
-        mlir::Type type = fir::getBase(exv).getType();
-        if (mlir::Type baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
-          type = baseTy;
-        fir::BoxType boxType = fir::BoxType::get(fir::PointerType::get(type));
-        descAddr = builder.createTemporary(loc, boxType);
-        fir::MutableBoxValue box = fir::MutableBoxValue(descAddr, {}, {});
-        fir::factory::associateMutableBox(builder, loc, box, exv,
-                                          /*lbounds=*/{});
+        descAddr = fir::getBase(exv);
+        mlir::Type type = descAddr.getType();
+
+        // Don't need temp descriptor if the namelist item is polymorphic.
+        if (!mlir::isa<fir::ClassType>(type)) {
+          if (mlir::Type baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
+            type = baseTy;
+          fir::BoxType boxType = fir::BoxType::get(fir::PointerType::get(type));
+          descAddr = builder.createTemporary(loc, boxType);
+          fir::MutableBoxValue box = fir::MutableBoxValue(descAddr, {}, {});
+          fir::factory::associateMutableBox(builder, loc, box, exv,
+                                            /*lbounds=*/{});
+        }
       }
       descAddr = builder.createConvert(loc, descRefTy, descAddr);
       list = fir::InsertValueOp::create(builder, loc, listTy, list, descAddr,
