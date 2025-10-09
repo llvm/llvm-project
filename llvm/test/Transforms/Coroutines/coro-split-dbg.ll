@@ -38,7 +38,7 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !36
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call i1 @llvm.coro.end(ptr null, i1 false, token none) #9, !dbg !38
+  tail call void @llvm.coro.end(ptr null, i1 false, token none) #9, !dbg !38
   ret ptr %2, !dbg !39
 }
 
@@ -57,7 +57,7 @@ declare i8 @llvm.coro.suspend(token, i1) #7
 declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
 declare void @free(ptr nocapture) local_unnamed_addr #6
-declare i1 @llvm.coro.end(ptr, i1, token) #7
+declare void @llvm.coro.end(ptr, i1, token) #7
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #5
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
@@ -77,7 +77,7 @@ attributes #9 = { noduplicate }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "coro.c", directory: "/home/gor/build/bin")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

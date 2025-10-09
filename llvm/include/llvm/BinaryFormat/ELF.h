@@ -303,7 +303,7 @@ enum {
   EM_BA2 = 202,           // Beyond BA2 CPU architecture
   EM_XCORE = 203,         // XMOS xCORE processor family
   EM_MCHP_PIC = 204,      // Microchip 8-bit PIC(r) family
-  EM_INTEL205 = 205,      // Reserved by Intel
+  EM_INTELGT = 205,       // Intel Graphics Technology
   EM_INTEL206 = 206,      // Reserved by Intel
   EM_INTEL207 = 207,      // Reserved by Intel
   EM_INTEL208 = 208,      // Reserved by Intel
@@ -859,6 +859,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
   EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
   EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
+  EF_AMDGPU_MACH_AMDGCN_GFX1251         = 0x05a,
   EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
   // clang-format on
 
@@ -931,6 +932,12 @@ enum : unsigned {
   // Processor selection mask for EF_CUDA_SM* values prior to blackwell.
   EF_CUDA_SM = 0xff,
 
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_MASK = 0xff00,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_OFFSET = 8,
+
   // SM based processor values.
   EF_CUDA_SM20 = 0x14,
   EF_CUDA_SM21 = 0x15,
@@ -950,9 +957,15 @@ enum : unsigned {
   EF_CUDA_SM80 = 0x50,
   EF_CUDA_SM86 = 0x56,
   EF_CUDA_SM87 = 0x57,
+  EF_CUDA_SM88 = 0x58,
   EF_CUDA_SM89 = 0x59,
-  // The sm_90a variant uses the same machine flag.
   EF_CUDA_SM90 = 0x5a,
+  EF_CUDA_SM100 = 0x64,
+  EF_CUDA_SM101 = 0x65,
+  EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM110 = 0x6e,
+  EF_CUDA_SM120 = 0x78,
+  EF_CUDA_SM121 = 0x79,
 
   // Unified texture binding is enabled.
   EF_CUDA_TEXMODE_UNIFIED = 0x100,
@@ -968,17 +981,7 @@ enum : unsigned {
   // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
   EF_CUDA_VIRTUAL_SM = 0xff0000,
 
-  // Processor selection mask for EF_CUDA_SM* values following blackwell.
-  EF_CUDA_SM_MASK = 0xff00,
-
-  // SM based processor values.
-  EF_CUDA_SM100 = 0x6400,
-  EF_CUDA_SM101 = 0x6500,
-  EF_CUDA_SM103 = 0x6700,
-  EF_CUDA_SM120 = 0x7800,
-  EF_CUDA_SM121 = 0x7900,
-
-  // Set when using an accelerator variant like sm_100a.
+  // Set when using an accelerator variant like sm_100a in the new ABI.
   EF_CUDA_ACCELERATORS = 0x8,
 };
 

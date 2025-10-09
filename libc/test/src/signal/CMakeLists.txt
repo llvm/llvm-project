@@ -51,6 +51,7 @@ add_libc_unittest(
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
     libc.src.signal.sigprocmask
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -77,6 +78,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.signal
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -124,5 +126,6 @@ add_libc_unittest(
     libc.src.signal.raise
     libc.src.signal.sigaltstack
     libc.src.signal.sigaction
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

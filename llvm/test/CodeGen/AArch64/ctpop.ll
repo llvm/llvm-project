@@ -505,3 +505,125 @@ entry:
   %s = call <4 x i128> @llvm.ctpop(<4 x i128> %d)
   ret <4 x i128> %s
 }
+
+define i8 @i8(i8 %x) {
+; CHECK-SD-LABEL: i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    and x8, x0, #0xff
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
+; CHECK-GI-NEXT:    uaddlv h0, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %s = call i8 @llvm.ctpop.i8(i8 %x)
+  ret i8 %s
+}
+
+define i16 @i16_mask(i16 %x) {
+; CHECK-SD-LABEL: i16_mask:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i16_mask:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and w8, w0, #0xff
+; CHECK-GI-NEXT:    and x8, x8, #0xffff
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
+; CHECK-GI-NEXT:    uaddlv h0, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %and = and i16 %x, 255
+  %s = call i16 @llvm.ctpop.i16(i16 %and)
+  ret i16 %s
+}
+
+define i32 @i32_mask(i32 %x) {
+; CHECK-SD-LABEL: i32_mask:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    and w8, w0, #0xff
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i32_mask:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and w8, w0, #0xff
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
+; CHECK-GI-NEXT:    uaddlv h0, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %and = and i32 %x, 255
+  %s = call i32 @llvm.ctpop.i32(i32 %and)
+  ret i32 %s
+}
+
+define i32 @i32_mask_negative(i32 %x) {
+; CHECK-SD-LABEL: i32_mask_negative:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    and w8, w0, #0xffff
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
+; CHECK-SD-NEXT:    addv b0, v0.8b
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i32_mask_negative:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and w8, w0, #0xffff
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
+; CHECK-GI-NEXT:    uaddlv h0, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %and = and i32 %x, 65535
+  %s = call i32 @llvm.ctpop.i32(i32 %and)
+  ret i32 %s
+}
+
+define i128 @i128_mask(i128 %x) {
+; CHECK-SD-LABEL: i128_mask:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    and x8, x0, #0xff
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
+; CHECK-SD-NEXT:    addv b0, v0.16b
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i128_mask:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and x8, x0, #0xff
+; CHECK-GI-NEXT:    mov x1, xzr
+; CHECK-GI-NEXT:    mov v0.d[0], x8
+; CHECK-GI-NEXT:    mov v0.d[1], xzr
+; CHECK-GI-NEXT:    cnt v0.16b, v0.16b
+; CHECK-GI-NEXT:    uaddlv h0, v0.16b
+; CHECK-GI-NEXT:    mov w0, v0.s[0]
+; CHECK-GI-NEXT:    ret
+entry:
+  %and = and i128 %x, 255
+  %s = call i128 @llvm.ctpop.i128(i128 %and)
+  ret i128 %s
+}

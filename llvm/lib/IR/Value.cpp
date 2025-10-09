@@ -36,7 +36,7 @@
 
 using namespace llvm;
 
-cl::opt<bool> UseDerefAtPointSemantics(
+static cl::opt<bool> UseDerefAtPointSemantics(
     "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
@@ -622,6 +622,7 @@ enum PointerStripKind {
   PSK_InBoundsConstantIndices,
   PSK_InBounds
 };
+} // end anonymous namespace
 
 template <PointerStripKind StripKind> static void NoopCallback(const Value *) {}
 
@@ -696,7 +697,6 @@ static const Value *stripPointerCastsAndOffsets(
 
   return V;
 }
-} // end anonymous namespace
 
 const Value *Value::stripPointerCasts() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
@@ -835,6 +835,9 @@ bool Value::canBeFreed() const {
     if (F->doesNotFreeMemory() && F->hasNoSync())
       return false;
   }
+
+  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+    return false;
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
@@ -997,14 +1000,12 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       return Align(CI->getLimitedValue());
     }
-  } else if (auto *CstPtr = dyn_cast<Constant>(this)) {
-    // Strip pointer casts to avoid creating unnecessary ptrtoint expression
-    // if the only "reduction" is combining a bitcast + ptrtoint.
-    CstPtr = CstPtr->stripPointerCasts();
-    if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
-            const_cast<Constant *>(CstPtr), DL.getIntPtrType(getType()),
-            /*OnlyIfReduced=*/true))) {
-      size_t TrailingZeros = CstInt->getValue().countr_zero();
+  } else if (auto *CE = dyn_cast<ConstantExpr>(this)) {
+    // Determine the alignment of inttoptr(C).
+    if (CE->getOpcode() == Instruction::IntToPtr &&
+        isa<ConstantInt>(CE->getOperand(0))) {
+      ConstantInt *IntPtr = cast<ConstantInt>(CE->getOperand(0));
+      size_t TrailingZeros = IntPtr->getValue().countr_zero();
       // While the actual alignment may be large, elsewhere we have
       // an arbitrary upper alignmet limit, so let's clamp to it.
       return Align(TrailingZeros < Value::MaxAlignmentExponent

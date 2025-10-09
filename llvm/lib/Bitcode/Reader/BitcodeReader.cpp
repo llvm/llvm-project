@@ -1609,7 +1609,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           if (!Disc)
             return error("ptrauth disc operand must be ConstantInt");
 
-          auto *DeactivationSymbol =
+          Constant *DeactivationSymbol =
               ConstOps.size() > 4 ? ConstOps[4]
                                   : ConstantPointerNull::get(cast<PointerType>(
                                         ConstOps[3]->getType()));
@@ -2212,6 +2212,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
     return Attribute::SanitizeRealtimeBlocking;
+  case bitc::ATTR_KIND_SANITIZE_ALLOC_TOKEN:
+    return Attribute::SanitizeAllocToken;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -3819,7 +3821,7 @@ Error BitcodeReader::parseConstants() {
       break;
     }
     case bitc::CST_CODE_PTRAUTH2: {
-      if (Record.size() < 4)
+      if (Record.size() < 5)
         return error("Invalid ptrauth record");
       // Ptr, Key, Disc, AddrDisc, DeactivationSymbol
       V = BitcodeConstant::create(
@@ -7043,7 +7045,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!MDLoader->isStrippingTBAA()) {
     for (auto &I : instructions(F)) {
       MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa);
-      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(I, TBAA))
+      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA))
         continue;
       MDLoader->setStripTBAA(true);
       stripTBAA(F->getParent());
