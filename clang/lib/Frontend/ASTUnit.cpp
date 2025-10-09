@@ -520,7 +520,7 @@ class ASTInfoCollector : public ASTReaderListener {
   CodeGenOptions &CodeGenOpts;
   std::shared_ptr<TargetOptions> &TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> &Target;
-  unsigned long &Counter;
+  uint32_t &Counter;
   bool InitializedLanguage = false;
   bool InitializedHeaderSearchPaths = false;
 
@@ -529,8 +529,7 @@ public:
                    HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
                    LangOptions &LangOpt, CodeGenOptions &CodeGenOpts,
                    std::shared_ptr<TargetOptions> &TargetOpts,
-                   IntrusiveRefCntPtr<TargetInfo> &Target,
-                   unsigned long &Counter)
+                   IntrusiveRefCntPtr<TargetInfo> &Target, uint32_t &Counter)
       : PP(PP), Context(Context), HSOpts(HSOpts), PPOpts(PPOpts),
         LangOpt(LangOpt), CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts),
         Target(Target), Counter(Counter) {}
@@ -628,7 +627,7 @@ public:
   }
 
   void ReadCounter(const serialization::ModuleFile &M,
-                   unsigned long Value) override {
+                   uint32_t Value) override {
     Counter = Value;
   }
 
@@ -874,7 +873,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       /*isysroot=*/"",
       /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
 
-  unsigned long Counter = 0;
+  uint32_t Counter = 0;
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
       *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
       *AST->CodeGenOpts, AST->TargetOpts, AST->Target, Counter));
