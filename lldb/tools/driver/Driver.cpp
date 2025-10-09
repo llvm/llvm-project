@@ -33,7 +33,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
-#if _WIN32
+#ifdef _WIN32
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
@@ -434,11 +434,11 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 }
 
 #ifdef _WIN32
-// Returns the full path to the lldb.exe executable
+/// Returns the full path to the lldb.exe executable.
 inline std::wstring GetPathToExecutableW() {
-  // Iterate until we reach the Windows max path length (32,767).
+  // Iterate until we reach the Windows API maximum path length (32,767).
   std::vector<WCHAR> buffer;
-  buffer.resize(MAX_PATH);
+  buffer.resize(MAX_PATH/*=260*/);
   while (buffer.size() < 32767) {
     if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
       return std::wstring(buffer.begin(), buffer.end());
@@ -447,9 +447,9 @@ inline std::wstring GetPathToExecutableW() {
   return L"";
 }
 
-// Resolve the full path of the directory defined by
-// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL search
-// directories.
+/// Resolve the full path of the directory defined by
+/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL search
+/// directories.
 void AddPythonDLLToSearchPath() {
   std::wstring modulePath = GetPathToExecutableW();
   if (modulePath.empty()) {
