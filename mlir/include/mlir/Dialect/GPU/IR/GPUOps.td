@@ -3255,4 +3255,37 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   let hasVerifier = 1;
 }
 
+def GPU_SubgroupUniformOp : GPU_Op<"subgroup_uniform",
+    [Pure, AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>] #
+    ElementwiseMappable.traits>,
+  Arguments<(ins AnyType:$src)> {
+  let summary = "Assumes value is unform across the lanes in subgroup";
+  let description = [{
+    The "subgroup_uniform" op assumes that the value is uniform across all lanes
+    in a subgroup. This means that all active lanes in the subgroup are expected
+    to have the same value.
+
+    This op can be used to inform the compiler that a value is uniform across
+    the subgroup, enabling optimizations. The result is poison if the value
+    is not actually uniform.
+
+    This op is functionally no-op as no valid program should change its
+    semantics if this op is removed. Backends can choose to ignore it or do
+    some optimizations (e.g. put value into scalar registers).
+
+    This op can be freely speculated across structured control flow as parent
+    active mask is always superset of current mask and if can hoist input
+    calculation you can hoist the operation itself as well.
+
+    Example:
+
+    ```mlir
+    %1 = gpu.subgroup_uniform %0 : f32
+    ```
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "$src attr-dict `:` type($result)";
+}
+
 #endif // GPU_OPS
