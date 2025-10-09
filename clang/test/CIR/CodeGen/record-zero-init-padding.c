@@ -6,32 +6,32 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 struct padding_after_field {
-    char c;
-    int i;
+  char c;
+  int i;
 };
 
 struct bitfield_with_padding {
-    unsigned int a : 3;
-    unsigned int b : 5;
-    int c;
+  unsigned int a : 3;
+  unsigned int b : 5;
+  int c;
 };
 
 struct tail_padding {
-    int a;
-    char b;
+  int a;
+  char b;
 };
 
 struct multiple_padding {
-    char a;
-    short b;
-    long long c;
+  char a;
+  short b;
+  long long c;
 };
 
 void test_zero_init_padding(void) {
-    static const struct padding_after_field paf = {1, 42};
-    static const struct bitfield_with_padding bfp = {1, 2, 99};
-    static const struct tail_padding tp = {10, 20};
-    static const struct multiple_padding mp = {5, 10, 100};
+  static const struct padding_after_field paf = {1, 42};
+  static const struct bitfield_with_padding bfp = {1, 2, 99};
+  static const struct tail_padding tp = {10, 20};
+  static const struct multiple_padding mp = {5, 10, 100};
 }
 
 // Type definitions for anonymous structs with padding
