@@ -2,12 +2,12 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -fast-isel                            | FileCheck %s --check-prefixes=X86,FASTISEL-X86
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=0 -fast-isel=0           | FileCheck %s --check-prefixes=X86,SDAG-X86
 ; DISABLED: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2   | FileCheck %s --check-prefixes=X86,GISEL-X86
-; RUN: llc < %s -mtriple=i686-linux-gnu -fast-isel -mattr=+sse                            | FileCheck %s --check-prefixes=SSE-X86,FASTISEL-SSE-X86
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=0 -fast-isel=0 -mattr=+sse           | FileCheck %s --check-prefixes=SSE-X86,SDAG-SSE-X86
-; DISABLED: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2 -mattr=+sse   | FileCheck %s --check-prefixes=SSE-X86,GISEL-SSE-X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel -mattr=+sse                          | FileCheck %s --check-prefixes=SSE-X64,FASTISEL-SSE-X64
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=0 -fast-isel=0 -mattr=+sse         | FileCheck %s --check-prefixes=SSE-X64,SDAG-SSE-X64
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=2 -mattr=+sse | FileCheck %s --check-prefixes=SSE-X64,GISEL-SSE-X64
+; RUN: llc < %s -mtriple=i686-linux-gnu -fast-isel -mattr=+sse                            | FileCheck %s --check-prefixes=X86,SSE-X86,FASTISEL-SSE-X86
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=0 -fast-isel=0 -mattr=+sse           | FileCheck %s --check-prefixes=X86,SSE-X86,SDAG-SSE-X86
+; DISABLED: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2 -mattr=+sse   | FileCheck %s --check-prefixes=X86,SSE-X86,GISEL-SSE-X86
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel -mattr=+sse                          | FileCheck %s --check-prefixes=X64,SSE-X64,FASTISEL-SSE-X64
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=0 -fast-isel=0 -mattr=+sse         | FileCheck %s --check-prefixes=X64,SSE-X64,SDAG-SSE-X64
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=2 -mattr=+sse | FileCheck %s --check-prefixes=X64,SSE-X64,GISEL-SSE-X64
 
 define double @fneg_f64(double %x) nounwind {
 ; X86-LABEL: fneg_f64:
@@ -15,12 +15,6 @@ define double @fneg_f64(double %x) nounwind {
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fchs
 ; X86-NEXT:    retl
-;
-; SSE-X86-LABEL: fneg_f64:
-; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    fchs
-; SSE-X86-NEXT:    retl
 ;
 ; FASTISEL-SSE-X64-LABEL: fneg_f64:
 ; FASTISEL-SSE-X64:       # %bb.0:
@@ -47,11 +41,17 @@ define double @fneg_f64(double %x) nounwind {
 }
 
 define float @fneg_f32(float %x) nounwind {
-; X86-LABEL: fneg_f32:
-; X86:       # %bb.0:
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fchs
-; X86-NEXT:    retl
+; FASTISEL-X86-LABEL: fneg_f32:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    fchs
+; FASTISEL-X86-NEXT:    retl
+;
+; SDAG-X86-LABEL: fneg_f32:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fchs
+; SDAG-X86-NEXT:    retl
 ;
 ; SSE-X86-LABEL: fneg_f32:
 ; SSE-X86:       # %bb.0:
@@ -95,15 +95,6 @@ define void @fneg_f64_mem(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    fstpl (%eax)
 ; X86-NEXT:    retl
 ;
-; SSE-X86-LABEL: fneg_f64_mem:
-; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE-X86-NEXT:    fldl (%ecx)
-; SSE-X86-NEXT:    fchs
-; SSE-X86-NEXT:    fstpl (%eax)
-; SSE-X86-NEXT:    retl
-;
 ; FASTISEL-SSE-X64-LABEL: fneg_f64_mem:
 ; FASTISEL-SSE-X64:       # %bb.0:
 ; FASTISEL-SSE-X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -134,14 +125,23 @@ define void @fneg_f64_mem(ptr %x, ptr %y) nounwind {
 }
 
 define void @fneg_f32_mem(ptr %x, ptr %y) nounwind {
-; X86-LABEL: fneg_f32_mem:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
-; X86-NEXT:    xorl (%ecx), %edx
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    retl
+; FASTISEL-X86-LABEL: fneg_f32_mem:
+; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; FASTISEL-X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; FASTISEL-X86-NEXT:    xorl (%ecx), %edx
+; FASTISEL-X86-NEXT:    movl %edx, (%eax)
+; FASTISEL-X86-NEXT:    retl
+;
+; SDAG-X86-LABEL: fneg_f32_mem:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; SDAG-X86-NEXT:    xorl (%ecx), %edx
+; SDAG-X86-NEXT:    movl %edx, (%eax)
+; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-SSE-X86-LABEL: fneg_f32_mem:
 ; FASTISEL-SSE-X86:       # %bb.0:
@@ -196,20 +196,13 @@ define x86_fp80 @test_fp80(x86_fp80 %a) nounwind {
 ; X86-NEXT:    fchs
 ; X86-NEXT:    retl
 ;
-; SSE-X86-LABEL: test_fp80:
-; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    fchs
-; SSE-X86-NEXT:    retl
-;
-; SSE-X64-LABEL: test_fp80:
-; SSE-X64:       # %bb.0:
-; SSE-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; SSE-X64-NEXT:    fchs
-; SSE-X64-NEXT:    retq
+; X64-LABEL: test_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fchs
+; X64-NEXT:    retq
   %1 = fneg x86_fp80 %a
   ret x86_fp80 %1
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; FASTISEL-X86: {{.*}}
-; SDAG-X86: {{.*}}
+; SSE-X64: {{.*}}
