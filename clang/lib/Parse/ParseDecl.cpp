@@ -1934,7 +1934,8 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
     bool RequireSemi, ForRangeInit *FRI, SourceLocation *DeclSpecStart) {
   // Need to retain these for diagnostics before we add them to the DeclSepc.
   ParsedAttributesView OriginalDeclSpecAttrs;
-  OriginalDeclSpecAttrs.addAllPrepend(DeclSpecAttrs.begin(), DeclSpecAttrs.end());
+  OriginalDeclSpecAttrs.addAllPrepend(DeclSpecAttrs.begin(),
+                                      DeclSpecAttrs.end());
   OriginalDeclSpecAttrs.Range = DeclSpecAttrs.Range;
 
   // Parse the common declaration-specifiers piece.

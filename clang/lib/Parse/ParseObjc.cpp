@@ -1066,7 +1066,7 @@ void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
 /// Take all the decl attributes out of the given list and add
 /// them to the given attribute set.
 static void takeDeclAttributesAppend(ParsedAttributesView &attrs,
-                               ParsedAttributesView &from) {
+                                     ParsedAttributesView &from) {
   for (auto &AL : llvm::reverse(from)) {
     if (!AL.isUsedAsTypeAttr()) {
       from.remove(&AL);
