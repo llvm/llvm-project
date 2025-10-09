@@ -60,7 +60,7 @@ class LibcallImplBitset : public Bitset<RTLIB::NumLibcallImpls> {
 public:
   constexpr LibcallImplBitset() = default;
   constexpr LibcallImplBitset(
-      const Bitset<RTLIB::NumLibcallImpls>::StorageType &Src)
+      const std::array<uint64_t, (RTLIB::NumLibcallImpls + 63) / 64> &Src)
       : Bitset(Src) {}
 };
 
