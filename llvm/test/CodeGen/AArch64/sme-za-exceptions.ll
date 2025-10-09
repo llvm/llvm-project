@@ -769,9 +769,13 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-NEXT:    sub sp, sp, x0
 ; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:  .Ltmp15: // EH_LABEL
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_save
 ; CHECK-NEXT:    bl agnostic_za_call
 ; CHECK-NEXT:  .Ltmp16: // EH_LABEL
 ; CHECK-NEXT:  .LBB5_1: // %exit
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_restore
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
@@ -781,8 +785,6 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-NEXT:    bl __cxa_begin_catch
 ; CHECK-NEXT:    bl noexcept_agnostic_za_call
 ; CHECK-NEXT:    bl __cxa_end_catch
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    bl __arm_sme_restore
 ; CHECK-NEXT:    b .LBB5_1
 ;
 ; CHECK-SDAG-LABEL: try_catch_agnostic_za_invoke:
@@ -802,7 +804,11 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-SDAG-NEXT:    sub sp, sp, x0
 ; CHECK-SDAG-NEXT:    mov x19, sp
 ; CHECK-SDAG-NEXT:  .Ltmp15: // EH_LABEL
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_save
 ; CHECK-SDAG-NEXT:    bl agnostic_za_call
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_restore
 ; CHECK-SDAG-NEXT:  .Ltmp16: // EH_LABEL
 ; CHECK-SDAG-NEXT:  .LBB5_1: // %exit
 ; CHECK-SDAG-NEXT:    mov sp, x29
@@ -876,9 +882,13 @@ define void @try_catch_agnostic_za_invoke_normal_return() "aarch64_za_state_agno
 ; CHECK-NEXT:    sub sp, sp, x0
 ; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:  .Ltmp18: // EH_LABEL
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_save
 ; CHECK-NEXT:    bl agnostic_za_call
 ; CHECK-NEXT:  .Ltmp19: // EH_LABEL
 ; CHECK-NEXT:  .LBB6_1: // %exit
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_restore
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
@@ -887,8 +897,6 @@ define void @try_catch_agnostic_za_invoke_normal_return() "aarch64_za_state_agno
 ; CHECK-NEXT:  .Ltmp20: // EH_LABEL
 ; CHECK-NEXT:    bl __cxa_begin_catch
 ; CHECK-NEXT:    bl __cxa_end_catch
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    bl __arm_sme_restore
 ; CHECK-NEXT:    b .LBB6_1
 ;
 ; CHECK-SDAG-LABEL: try_catch_agnostic_za_invoke_normal_return:
@@ -908,7 +916,11 @@ define void @try_catch_agnostic_za_invoke_normal_return() "aarch64_za_state_agno
 ; CHECK-SDAG-NEXT:    sub sp, sp, x0
 ; CHECK-SDAG-NEXT:    mov x19, sp
 ; CHECK-SDAG-NEXT:  .Ltmp18: // EH_LABEL
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_save
 ; CHECK-SDAG-NEXT:    bl agnostic_za_call
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_restore
 ; CHECK-SDAG-NEXT:  .Ltmp19: // EH_LABEL
 ; CHECK-SDAG-NEXT:  .LBB6_1: // %exit
 ; CHECK-SDAG-NEXT:    mov sp, x29
@@ -969,24 +981,26 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    stp x9, x8, [x29, #-16]
 ; CHECK-NEXT:  .Ltmp21: // EH_LABEL
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl agnostic_za_call
 ; CHECK-NEXT:  .Ltmp22: // EH_LABEL
 ; CHECK-NEXT:  .LBB7_1: // %exit
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB7_2: // %catch
-; CHECK-NEXT:  .Ltmp23: // EH_LABEL
-; CHECK-NEXT:    bl __cxa_begin_catch
-; CHECK-NEXT:    bl __cxa_end_catch
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB7_4
-; CHECK-NEXT:  // %bb.3: // %catch
+; CHECK-NEXT:    cbnz x8, .LBB7_3
+; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB7_4: // %catch
+; CHECK-NEXT:  .LBB7_3: // %exit
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB7_4: // %catch
+; CHECK-NEXT:  .Ltmp23: // EH_LABEL
+; CHECK-NEXT:    bl __cxa_begin_catch
+; CHECK-NEXT:    bl __cxa_end_catch
 ; CHECK-NEXT:    b .LBB7_1
 ;
 ; CHECK-SDAG-LABEL: try_catch_inout_za_agnostic_za_callee:
@@ -1009,28 +1023,26 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:    mov sp, x9
 ; CHECK-SDAG-NEXT:    stp x9, x8, [x29, #-16]
 ; CHECK-SDAG-NEXT:  .Ltmp21: // EH_LABEL
+; CHECK-SDAG-NEXT:    sub x19, x29, #16
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
 ; CHECK-SDAG-NEXT:    bl agnostic_za_call
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB7_2
+; CHECK-SDAG-NEXT:  // %bb.1: // %entry
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB7_2: // %entry
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-SDAG-NEXT:  .Ltmp22: // EH_LABEL
-; CHECK-SDAG-NEXT:  .LBB7_1: // %exit
+; CHECK-SDAG-NEXT:  .LBB7_3: // %exit
 ; CHECK-SDAG-NEXT:    mov sp, x29
 ; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SDAG-NEXT:    ret
-; CHECK-SDAG-NEXT:  .LBB7_2: // %catch
+; CHECK-SDAG-NEXT:  .LBB7_4: // %catch
 ; CHECK-SDAG-NEXT:  .Ltmp23: // EH_LABEL
 ; CHECK-SDAG-NEXT:    mov x1, x0
-; CHECK-SDAG-NEXT:    smstart za
-; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-SDAG-NEXT:    sub x0, x29, #16
-; CHECK-SDAG-NEXT:    sub x19, x29, #16
-; CHECK-SDAG-NEXT:    cbnz x8, .LBB7_4
-; CHECK-SDAG-NEXT:  // %bb.3: // %catch
-; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
-; CHECK-SDAG-NEXT:  .LBB7_4: // %catch
-; CHECK-SDAG-NEXT:    mov x0, x1
-; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
-; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
 ; CHECK-SDAG-NEXT:    smstart za
 ; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-SDAG-NEXT:    sub x0, x29, #16
@@ -1038,9 +1050,10 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:  // %bb.5: // %catch
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB7_6: // %catch
+; CHECK-SDAG-NEXT:    mov x0, x1
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
-; CHECK-SDAG-NEXT:    bl __cxa_end_catch
+; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
 ; CHECK-SDAG-NEXT:    smstart za
 ; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-SDAG-NEXT:    sub x0, x29, #16
@@ -1049,7 +1062,17 @@ define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personal
 ; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-SDAG-NEXT:  .LBB7_8: // %catch
 ; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-SDAG-NEXT:    b .LBB7_1
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
+; CHECK-SDAG-NEXT:    bl __cxa_end_catch
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB7_10
+; CHECK-SDAG-NEXT:  // %bb.9: // %catch
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB7_10: // %catch
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    b .LBB7_3
 entry:
   invoke void @agnostic_za_call()
           to label %exit unwind label %catch
