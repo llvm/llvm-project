@@ -170,8 +170,8 @@ private:
   /// Find the tree path for \p Path, getting the real path for its parent
   /// directory but not following symlinks in \a sys::path::filename().
   ///
-  /// \returns The tree path, or the original path if there are any errors.
-  StringRef getTreePath(StringRef Path);
+  /// \returns The tree path, or none if there are any errors.
+  std::optional<StringRef> getTreePath(StringRef Path);
 
 public:
   void add(const MappedPrefix &Mapping) override;

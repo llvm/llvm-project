@@ -18,15 +18,15 @@
 
 // CHECK: <module-includes> llvmcas://
 // CHECK: 1:1 <built-in> llvmcas://
-// CHECK: 2:1 [[PREFIX]]/Mod.framework/Headers/Mod.h llvmcas://
+// CHECK: 2:1 [[PREFIX]]{{[/\\]}}Mod.framework{{[/\\]}}Headers{{[/\\]}}Mod.h llvmcas://
 // CHECK:   Submodule: Mod
 // CHECK: Module Map:
 // CHECK: Mod (framework)
 // CHECK:   link Mod (framework)
 // CHECK: Files:
-// CHECK-NOT: [[PREFIX]]/module.modulemap
-// CHECK: [[PREFIX]]/Mod.framework/Headers/Mod.h llvmcas://
-// CHECK-NOT: [[PREFIX]]/module.modulemap
+// CHECK-NOT: [[PREFIX]]{{[/\\]}}module.modulemap
+// CHECK: [[PREFIX]]{{[/\\]}}Mod.framework{{[/\\]}}Headers{{[/\\]}}Mod.h llvmcas://
+// CHECK-NOT: [[PREFIX]]{{[/\\]}}module.modulemap
 
 //--- cdb.json.template
 [{

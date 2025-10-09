@@ -17,15 +17,13 @@ namespace cas {
 class ObjectStore;
 class CASID;
 
-// FIXME: Consider taking a "mount point". Then this could perhaps be
-// generalized for windows.
 Expected<std::unique_ptr<vfs::FileSystem>>
-createCASFileSystem(std::shared_ptr<ObjectStore> DB, const CASID &RootID);
+createCASFileSystem(std::shared_ptr<ObjectStore> DB, const CASID &RootID,
+                    sys::path::Style PathStyle = sys::path::Style::native);
 
-// FIXME: Consider taking a "mount point". Then this could perhaps be
-// generalized for windows.
 Expected<std::unique_ptr<vfs::FileSystem>>
-createCASFileSystem(ObjectStore &DB, const CASID &RootID);
+createCASFileSystem(ObjectStore &DB, const CASID &RootID,
+                    sys::path::Style PathStyle = sys::path::Style::native);
 
 } // namespace cas
 } // namespace llvm

@@ -9,6 +9,8 @@
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/TreePath.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -102,6 +104,30 @@ static bool startsWith(StringRef Path, StringRef Prefix,
   return true;
 }
 
+static bool equals(StringRef Prefix1, StringRef Prefix2,
+                   sys::path::Style PathStyle) {
+  if (PathStyle == sys::path::Style::posix ||
+      (PathStyle == sys::path::Style::native &&
+       sys::path::is_style_posix(sys::path::Style::native)))
+    return Prefix1 == Prefix2;
+
+  if (Prefix1.size() != Prefix2.size())
+    return false;
+
+  // Windows prefix matching : case and separator insensitive
+  for (size_t I = 0, E = Prefix1.size(); I != E; ++I) {
+    bool Sep1 = sys::path::is_separator(Prefix1[I], PathStyle);
+    bool Sep2 = sys::path::is_separator(Prefix2[I], PathStyle);
+    if (Sep1 != Sep2)
+      return false;
+    if (Sep1)
+      continue;
+    if (toLower(Prefix1[I]) != toLower(Prefix2[I]))
+      return false;
+  }
+  return true;
+}
+
 std::optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
                                           SmallVectorImpl<char> &Storage) {
   for (const MappedPrefix &Map : Mappings) {
@@ -189,22 +215,24 @@ TreePathPrefixMapper::~TreePathPrefixMapper() = default;
 
 std::optional<StringRef>
 TreePathPrefixMapper::mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) {
-  StringRef TreePath = getTreePath(Path);
-  std::optional<StringRef> Mapped = PrefixMapper::mapImpl(TreePath, Storage);
+  std::optional<StringRef> TreePath = getTreePath(Path);
+  StringRef FilePath = TreePath ?
+      llvm::cas::getFilePath(TreePath.value(), getPathStyle()) : Path;
+  std::optional<StringRef> Mapped = PrefixMapper::mapImpl(FilePath, Storage);
   if (Mapped)
     return *Mapped;
-  if (TreePath != Path)
-    return TreePath;
+  if (FilePath != Path)
+    return FilePath;
   return std::nullopt;
 }
 
-StringRef TreePathPrefixMapper::getTreePath(StringRef Path) {
+std::optional<StringRef> TreePathPrefixMapper::getTreePath(StringRef Path) {
   if (Path.empty())
-    return Path;
+    return std::nullopt;
   auto Entry = FS->getDirectoryEntry(Path, /*FollowSymlinks=*/false);
   if (!Entry) {
     consumeError(Entry.takeError());
-    return Path;
+    return std::nullopt;
   }
   return (*Entry)->getTreePath();
 }
@@ -214,10 +242,12 @@ void TreePathPrefixMapper::add(const MappedPrefix &Mapping) {
   // only affect the behaviour when later mapping a path that cannot be
   // canonicalized, since a non-canonical prefix cannot match a canonical path.
   PrefixMapper::add(Mapping);
-  StringRef Old = getTreePath(Mapping.Old);
+  std::optional<StringRef> OldTreePath = getTreePath(Mapping.Old);
+  if (!OldTreePath) return;
+  StringRef Old = llvm::cas::getFilePath(OldTreePath.value(), getPathStyle());
   StringRef New = Mapping.New;
   // Add the canonical prefix mapping, if different.
-  if (Old != Mapping.Old)
+  if (!equals(Old, Mapping.Old, getPathStyle()))
     PrefixMapper::add(MappedPrefix{Old, New});
 }
 
@@ -225,6 +255,13 @@ StringRef
 TreePathPrefixMapper::mapDirEntry(const vfs::CachedDirectoryEntry &Entry,
                                   SmallVectorImpl<char> &Storage) {
   StringRef TreePath = Entry.getTreePath();
-  std::optional<StringRef> Mapped = PrefixMapper::mapImpl(TreePath, Storage);
-  return Mapped ? *Mapped : TreePath;
+  StringRef FilePath = llvm::cas::getFilePath(TreePath, getPathStyle());
+  std::optional<StringRef> Mapped = PrefixMapper::mapImpl(FilePath, Storage);
+  if (Mapped) {
+    std::string MappedTreePath =
+        llvm::cas::getTreePath(*Mapped, getPathStyle());
+    Storage.assign(MappedTreePath.begin(), MappedTreePath.end());
+    return StringRef(Storage.begin(), Storage.size());
+  }
+  return TreePath;
 }

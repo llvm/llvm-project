@@ -1443,6 +1443,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
             ("%{fs-tmp-root}", pathlib.Path(tmpBase).anchor),
             ("%{fs-sep}", os.path.sep),
+            ("%{fs-sep-yaml}", "\\\\\\\\\\\\\\\\" if kIsWindows else "/"),
         ]
     )
 
@@ -1486,6 +1487,25 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         # "%:[STpst]" are normalized paths without colons and without
         # a leading slash.
         substitutions.append(("%:" + letter, colonNormalizePath(path)))
+
+    substitutions.extend(
+        [
+            # %t (tmpName) in tree path forms for Windows
+            ("%{t-tree}", "\\" + tmpName if kIsWindows else tmpName),
+            ("%{t-tree-/}", "/" + tmpName.replace("\\", "/") if kIsWindows else tmpName),
+        ]
+    )
+
+    substitutions.extend(
+        [
+            # The filesystem root and their tree path forms for
+            # Windows for CAS prefix mapping. The t suffix stands for
+            # tree path. Those with suffixes need to use {} because
+            # lit macro names cannot be a prefix of another macro.
+            ("%/root", os.environ.get('SystemDrive') + "/" if kIsWindows else "/"),
+            ("%{/roott}", "/" + os.environ.get('SystemDrive') + "/" if kIsWindows else "/"),
+        ]
+    )
 
     return substitutions
 

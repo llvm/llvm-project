@@ -12,7 +12,7 @@
 // RUN:   -cas-path %t/cas2 -format experimental-include-tree-full \
 // RUN:   >> %t/result.json
 
-// RUN: cat %t/result.json | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s
 
 // CHECK: "modules": [
 // CHECK:   {
@@ -33,7 +33,7 @@
 // CHECK:         ],
 // CHECK:         "command-line": [
 // CHECK:           "-fmodule-file-cache-key"
-// CHECK:           "[[PREFIX]]/outputs/[[HASH]]/Mod-[[HASH]].pcm"
+// CHECK:           "PREFIX{{/|\\\\}}outputs{{/|\\\\}}[[HASH]]{{/|\\\\}}Mod-[[HASH]].pcm"
 // CHECK:           "llvmcas://[[KEY]]"
 // CHECK:         ]
 
@@ -57,7 +57,7 @@
 // CHECK:         ],
 // CHECK:         "command-line": [
 // CHECK:           "-fmodule-file-cache-key"
-// CHECK:           "[[PREFIX]]/outputs/[[HASH]]/Mod-[[HASH]].pcm"
+// CHECK:           "PREFIX{{/|\\\\}}outputs{{/|\\\\}}[[HASH]]{{/|\\\\}}Mod-[[HASH]].pcm"
 // CHECK:           "llvmcas://[[KEY]]"
 // CHECK:         ]
 

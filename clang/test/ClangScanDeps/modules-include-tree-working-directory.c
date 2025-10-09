@@ -23,9 +23,9 @@
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/H.casid | FileCheck %s -DPREFIX=%/t
 
 // CHEK:C <module-includes>
-// CHECK: 2:1 [[PREFIX]]/relative/h1.h llvmcas://
+// CHECK: 2:1 [[PREFIX]]{{[/\\]}}relative{{[/\\]}}h1.h llvmcas://
 // CHECK: Files:
-// CHECK: [[PREFIX]]/relative/h1.h llvmcas://
+// CHECK: [[PREFIX]]{{[/\\]}}relative{{[/\\]}}h1.h llvmcas://
 
 //--- cdb.json.template
 [{

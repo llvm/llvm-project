@@ -61,6 +61,10 @@ TEST(CachingOnDiskFileSystemTest, BasicRealFSIteration) {
   EXPECT_EQ(vfs::directory_iterator(), I);
 }
 
+#ifndef _WIN32
+  // Disabled on Windows. As the create_link uses a hard link and a
+  // hard link cannot be a directory on Windows, this TempLink will
+  // fail.
 TEST(CachingOnDiskFileSystemTest, MultipleWorkingDirs) {
   // Our root contains a/aa, b/bb, c, where c is a link to a/.
   // Run tests both in root/b/ and root/c/ (to test "normal" and symlink dirs).
@@ -134,7 +138,11 @@ TEST(CachingOnDiskFileSystemTest, MultipleWorkingDirs) {
   ASSERT_FALSE(EC);
   ASSERT_EQ(CIt, vfs::directory_iterator());
 }
+#endif
 
+#ifndef _WIN32
+// Disabled on Windows. As the create_link uses a hard link on
+// Windows, TempLink will fail if the target doesn't exist.
 TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSIteration) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<vfs::FileSystem> FS =
@@ -164,6 +172,7 @@ TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSIteration) {
           testing::Pair("c", std::make_error_code(
                                  std::errc::no_such_file_or_directory))));
 }
+#endif
 
 TEST(CachingOnDiskFileSystemTest, BasicRealFSRecursiveIteration) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
@@ -288,6 +297,9 @@ TEST(CachingOnDiskFileSystemTest, BasicRealFSRecursiveIterationNoPush) {
   }
 }
 
+#ifndef _WIN32
+// Disabled on Windows. As the create_link uses a hard link on
+// Windows, TempLink will fail if the target doesn't exist.
 TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<vfs::FileSystem> FS =
@@ -326,7 +338,12 @@ TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
                                             _d.path().str(), _dd.path().str(),
                                             _ddd.path().str()));
 }
+#endif
 
+#ifndef _WIN32
+// Disabled on Windows. As the create_link uses a hard link on
+// Windows, the full path is required for the link target and TempLink
+// will fail if the target doesn't exist.
 TEST(CachingOnDiskFileSystemTest, Exists) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -342,6 +359,7 @@ TEST(CachingOnDiskFileSystemTest, Exists) {
   EXPECT_TRUE(FS->exists(Link.path()));
   EXPECT_FALSE(FS->exists(BrokenLink.path()));
 }
+#endif
 
 TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
@@ -350,7 +368,8 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   TempFile Extra(TestDirectory.path("Extra"), "", "content");
   SmallVector<TempFile> Temps;
@@ -383,6 +402,15 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
 
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
+
     // Check that all the files are found.
     EXPECT_EQ(Files.size(), TreeNode->size());
     for (const auto &F : Files)
@@ -397,7 +425,8 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   TempFile Extra(TestDirectory.path("Extra"), "", "content");
   SmallVector<TempFile> Temps;
@@ -431,6 +460,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     ASSERT_EQ(TreeNode->size(), 2u);
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[3].path())));
@@ -452,6 +489,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     ASSERT_EQ(TreeNode->size(), 2u);
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[0].path())));
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[1].path())));
@@ -467,7 +512,8 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   SmallVector<TempFile> Temps;
   for (size_t I = 0, E = 4; I != E; ++I)
@@ -513,6 +559,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
     auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
     ASSERT_TRUE(Node0);
@@ -537,6 +591,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
     auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
     ASSERT_TRUE(Node0);
@@ -561,6 +623,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
     auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
     ASSERT_TRUE(Node0);
@@ -604,7 +674,8 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   TempDir D1(TestDirectory.path("d1"));
   TempDir D2(TestDirectory.path("d2"));
@@ -662,6 +733,15 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     AccessAllFiles();
     auto Tree = CreateTreeFromNewAccesses();
+#ifdef _WIN32
+    ASSERT_NE(Tree, std::nullopt);
+    EXPECT_EQ(Tree->size(), 1u);
+    auto DriveNode = Tree->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    auto DriveDir = Schema.load(DriveNode->getRef());
+    ASSERT_THAT_EXPECTED(DriveDir, Succeeded());
+    Tree = *DriveDir;
+#endif
     ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d1"));
@@ -680,6 +760,15 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
+#ifdef _WIN32
+    ASSERT_NE(Tree, std::nullopt);
+    EXPECT_EQ(Tree->size(), 1u);
+    auto DriveNode = Tree->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    auto DriveDir = Schema.load(DriveNode->getRef());
+    ASSERT_THAT_EXPECTED(DriveDir, Succeeded());
+    Tree = *DriveDir;
+#endif
     ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d1"));
@@ -698,6 +787,15 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1Sub.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(D2.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
+#ifdef _WIN32
+    ASSERT_NE(Tree, std::nullopt);
+    EXPECT_EQ(Tree->size(), 1u);
+    auto DriveNode = Tree->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    auto DriveDir = Schema.load(DriveNode->getRef());
+    ASSERT_THAT_EXPECTED(DriveDir, Succeeded());
+    Tree = *DriveDir;
+#endif
     ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d2"));
@@ -711,6 +809,8 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
   }
 }
 
+#ifndef _WIN32
+// As the create_link uses a hard link on Windows, the paths don't match.
 TEST(CachingOnDiskFileSystemTest, getRealPath) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -725,6 +825,7 @@ TEST(CachingOnDiskFileSystemTest, getRealPath) {
   EXPECT_FALSE(FS->getRealPath(Link.path(), LinkPath));
   EXPECT_EQ(FilePath, LinkPath);
 }
+#endif
 
 TEST(CachingOnDiskFileSystemTest, caseSensitivityFile) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
@@ -768,6 +869,9 @@ TEST(CachingOnDiskFileSystemTest, caseSensitivityFile) {
   }
 }
 
+#ifndef _WIN32
+// On windows, create_link uses a hard link and cannot handle a link
+// to a directory.
 TEST(CachingOnDiskFileSystemTest, caseSensitivityDir) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -834,5 +938,6 @@ TEST(CachingOnDiskFileSystemTest, caseSensitivityDir) {
     EXPECT_EQ(StatF1.getUniqueID(), StatF2.getUniqueID());
   }
 }
+#endif
 
 } // namespace

@@ -22,14 +22,14 @@
 // RUN: %clang @%t/tu.rsp
 
 // Check specifics of the command-line
-// RUN: cat %t/deps.json | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK:            "command-line": [
 // CHECK:              "-fcas-fs-working-directory"
-// CHECK-NEXT:         "[[PREFIX]]/B"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}B"
 // CHECK:            ]
 // CHECK:            "name": "Mod"
 // CHECK:          }
@@ -40,7 +40,7 @@
 // CHECK:              {
 // CHECK:                "command-line": [
 // CHECK:                  "-fcas-fs-working-directory"
-// CHECK-NEXT:             "[[PREFIX]]/B"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}B"
 // CHECK:                ]
 
 //--- cdb.json.template

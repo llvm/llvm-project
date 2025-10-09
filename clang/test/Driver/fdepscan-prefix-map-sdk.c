@@ -1,3 +1,5 @@
+// REQUIRES: !system-windows
+
 // RUN: %clang -fdepscan-prefix-map-sdk=/^sdk -### %s 2>&1 | FileCheck %s -check-prefix=NONE
 // RUN: %clang -fdepscan-prefix-map-sdk=/^sdk -isysroot relative -### %s 2>&1 | FileCheck %s -check-prefix=NONE
 

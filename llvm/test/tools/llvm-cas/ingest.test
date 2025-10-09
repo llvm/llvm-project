@@ -1,3 +1,5 @@
+REQUIRES: symlinks
+
 RUN: rm -rf %t
 RUN: mkdir %t
 

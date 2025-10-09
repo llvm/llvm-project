@@ -6367,7 +6367,11 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   // Output to a temporary file?
   if ((!AtTopLevel && !isSaveTempsEnabled() &&
        !C.getArgs().hasArg(options::OPT__SLASH_Fo)) ||
-      CCGenDiagnostics) {
+      CCGenDiagnostics ||
+      // Use a temp file for the depscan reponse file in CL mode
+      // (even with a /Fo flag).
+      (!AtTopLevel && isa<DepscanJobAction>(JA) &&
+       JA.getType() == types::TY_ResponseFile && IsCLMode())) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
     const char *Suffix =

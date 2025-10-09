@@ -20,7 +20,7 @@
 // RUN: %deps-to-rsp %t/deps_tu.json --tu-index 0 > %t/tu.rsp
 // RUN: %clang @%t/tu.rsp
 
-// RUN: cat %t/tu.ll | FileCheck %s -check-prefix=LLVMIR -DPREFIX=%/t
+// RUN: cat %t/tu.ll | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s -check-prefix=LLVMIR
 // LLVMIR: !DICompileUnit({{.*}}, splitDebugFilename: "prefix.pch"
 
 // Extract include-tree casid

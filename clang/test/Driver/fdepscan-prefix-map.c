@@ -1,3 +1,5 @@
+// REQUIRES: !system-windows
+
 // RUN: not %clang -fdepscan-prefix-map=/^bad -### %s 2>&1 | FileCheck %s -check-prefix=INVALID
 // RUN: not %clang -fdepscan-prefix-map==/^bad -### %s 2>&1 | FileCheck %s -check-prefix=INVALID
 // RUN: not %clang -fdepscan-prefix-map=relative=/^bad -### %s 2>&1 | FileCheck %s -check-prefix=INVALID

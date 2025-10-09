@@ -59,6 +59,7 @@
 #if LLVM_ON_UNIX
 #include <sys/file.h> // FIXME: Unix-only. Not portable.
 #include <sys/signal.h> // FIXME: Unix-only. Not portable.
+#endif // LLVM_ON_UNIX
 
 #ifdef CLANG_HAVE_RLIMITS
 #include <sys/resource.h>
@@ -66,7 +67,9 @@
 
 using namespace clang;
 using namespace llvm::opt;
+#if LLVM_ON_UNIX
 using cc1depscand::DepscanSharing;
+#endif // LLVM_ON_UNIX
 using llvm::Error;
 
 #define DEBUG_TYPE "cc1depscand"
@@ -203,6 +206,7 @@ private:
 };
 } // namespace
 
+#ifdef LLVM_ON_UNIX
 namespace {
 /// FIXME: Move to LLVMSupport; probably llvm/Support/Process.h.
 ///
@@ -354,6 +358,7 @@ makeDepscanDaemonPath(StringRef Mode, const DepscanSharing &Sharing) {
 
   return std::nullopt;
 }
+#endif // LLVM_ON_UNIX
 
 static int
 scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
@@ -371,6 +376,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     SmallVectorImpl<const char *> &OutputArgs, llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg);
 
+#ifdef LLVM_ON_UNIX
 static int scanAndUpdateCC1UsingDaemon(
     const char *Exec, ArrayRef<const char *> OldArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &NewArgs,
@@ -432,6 +438,7 @@ static int scanAndUpdateCC1UsingDaemon(
 
   return 0;
 }
+#endif // LLVM_ON_UNIX
 
 // FIXME: This is a copy of Command::writeResponseFile. Command is too deeply
 // tied with clang::Driver to use directly.
@@ -480,6 +487,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
   }
 
   // Collect these before returning to ensure they're claimed.
+#ifdef LLVM_ON_UNIX
   DepscanSharing Sharing;
   if (Arg *A = Args.getLastArg(options::OPT_fdepscan_share_stop_EQ))
     Sharing.Stop = A->getValue();
@@ -515,9 +523,11 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
     }
   }
 
+#endif // LLVM_ON_UNIX
   bool ProduceIncludeTree = Args.hasArg(options::OPT_fdepscan_include_tree);
 
   auto SaveArg = [&Args](const Twine &T) { return Args.MakeArgString(T); };
+#ifdef LLVM_ON_UNIX
   CompilerInvocation::GenerateCASArgs(CASOpts, Sharing.CASArgs, SaveArg);
   if (ProduceIncludeTree)
     Sharing.CASArgs.push_back("-fdepscan-include-tree");
@@ -526,6 +536,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
     return scanAndUpdateCC1UsingDaemon(Exec, OldArgs, WorkingDirectory, NewArgs,
                                        *DaemonPath, Sharing, Diag, SaveArg,
                                        CASOpts, RootID);
+#endif // LLVM_ON_UNIX
 
   return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
                                 ProduceIncludeTree, SaveArg, CASOpts, Diag,
@@ -626,6 +637,7 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   return 0;
 }
 
+#ifdef LLVM_ON_UNIX
 namespace {
 struct ScanServer {
   const char *Argv0 = nullptr;
@@ -1079,6 +1091,7 @@ int ScanServer::listen() {
 
   return 0;
 }
+#endif // LLVM_ON_UNIX
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
@@ -1151,4 +1164,3 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
 
   return DiagsConsumer->getNumErrors() != 0;
 }
-#endif /* LLVM_ON_UNIX */

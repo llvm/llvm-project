@@ -22,41 +22,44 @@ using namespace llvm::cas;
 
 using DirectoryEntry = FileSystemCache::DirectoryEntry;
 
-FileSystemCache::FileSystemCache(std::optional<ObjectRef> RootRef) {
-  // FIXME: Only correct for posix. To generalize this (for both posix and
-  // windows) we should refactor so that the root node has no name (instead of
-  // "/").
-  Root = new (EntryAlloc.Allocate())
-      DirectoryEntry(nullptr, "/", DirectoryEntry::Directory, RootRef);
+DirectoryEntry &FileSystemCache::getRoot(StringRef root_path,
+                                         std::optional<ObjectRef> RootRef) {
+  auto it = Roots.find(root_path);
+  if (it != Roots.end()) {
+    return *it->second;
+  }
+  DirectoryEntry *Root = new (EntryAlloc.Allocate())
+      DirectoryEntry(nullptr, root_path, DirectoryEntry::Directory, RootRef);
   Root->setDirectory(*new (DirectoryAlloc.Allocate()) Directory);
+  Roots[root_path] = Root;
+  return *Root;
 }
 
 StringRef
-FileSystemCache::canonicalizeWorkingDirectory(const Twine &Path,
+FileSystemCache::canonicalizeWorkingDirectory(sys::path::Style PathStyle,
                                               StringRef WorkingDirectory,
                                               SmallVectorImpl<char> &Storage) {
-  // Not portable.
-  assert(WorkingDirectory.starts_with("/"));
-  Path.toVector(Storage);
+  const char PathSeparatorChar = get_separator(PathStyle)[0];
+  StringRef Path = StringRef(Storage.begin(), Storage.size());
   if (Storage.empty())
     return WorkingDirectory;
 
-  if (Storage[0] != '/') {
+  if (!is_absolute(Path, PathStyle)) {
+    assert(is_absolute(WorkingDirectory, PathStyle));
     SmallString<128> Prefix = StringRef(WorkingDirectory);
-    Prefix.push_back('/');
+    Prefix.push_back(PathSeparatorChar);
     Storage.insert(Storage.begin(), Prefix.begin(), Prefix.end());
   }
 
   // Remove ".." components based on working directory string, not based on
   // real path. This matches shell behaviour.
-  sys::path::remove_dots(Storage, /*remove_dot_dot=*/true,
-                         sys::path::Style::posix);
+  sys::path::remove_dots(Storage, /*remove_dot_dot=*/true, PathStyle);
 
   // Remove double slashes.
   int W = 0;
   bool WasSlash = false;
   for (int R = 0, E = Storage.size(); R != E; ++R) {
-    bool IsSlash = Storage[R] == '/';
+    bool IsSlash = Storage[R] == PathSeparatorChar;
     if (IsSlash && WasSlash)
       continue;
     WasSlash = IsSlash;
@@ -65,7 +68,9 @@ FileSystemCache::canonicalizeWorkingDirectory(const Twine &Path,
   Storage.resize(W);
 
   // Remove final slash.
-  if (Storage.size() > 1 && Storage.back() == '/')
+  if (sys::path::root_path(StringRef(Storage.begin(), Storage.size()), PathStyle)
+          != StringRef(Storage.begin(), Storage.size()) &&
+      Storage.back() == PathSeparatorChar)
     Storage.pop_back();
 
   return StringRef(Storage.begin(), Storage.size());
@@ -84,8 +89,8 @@ static StringRef allocateTreePath(
   // Use constant strings when reasonable.
   if (TreePath.empty())
     return "";
-  if (TreePath == "/")
-    return "/";
+  if (sys::path::root_path(TreePath) == TreePath)
+    return TreePath;
 
   char *AllocatedTreePath = TreePathAlloc.Allocate(TreePath.size() + 1);
   llvm::copy(TreePath, AllocatedTreePath);
@@ -97,9 +102,14 @@ static DirectoryEntry &makeLazyEntry(
     ThreadSafeAllocator<SpecificBumpPtrAllocator<char>> &TreePathAlloc,
     ThreadSafeAllocator<SpecificBumpPtrAllocator<DirectoryEntry>> &EntryAlloc,
     DirectoryEntry &Parent, FileSystemCache::Directory &D, StringRef TreePath,
-    DirectoryEntry::EntryKind Kind, std::optional<ObjectRef> Ref) {
-  assert(sys::path::parent_path(TreePath) == Parent.getTreePath());
-  assert(!D.lookup(sys::path::filename(TreePath)));
+    DirectoryEntry::EntryKind Kind, std::optional<ObjectRef> Ref,
+    sys::path::Style PathStyle) {
+  if (!is_style_windows(PathStyle)) {
+    assert(sys::path::parent_path(TreePath, PathStyle) == Parent.getTreePath());
+  } else {
+    assert(sys::path::parent_path(TreePath, PathStyle).equals_insensitive(Parent.getTreePath()));
+  }
+  assert(!D.lookup(sys::path::filename(TreePath, PathStyle)));
   assert(!D.isComplete());
 
   TreePath = allocateTreePath(TreePathAlloc, TreePath);
@@ -112,7 +122,7 @@ static DirectoryEntry &makeLazyEntry(
 DirectoryEntry &FileSystemCache::makeLazySymlinkAlreadyLocked(
     DirectoryEntry &Parent, StringRef TreePath, ObjectRef Ref) {
   return makeLazyEntry(TreePathAlloc, EntryAlloc, Parent, Parent.asDirectory(),
-                       TreePath, DirectoryEntry::Symlink, Ref);
+                       TreePath, DirectoryEntry::Symlink, Ref, PathStyle);
 }
 
 DirectoryEntry &
@@ -121,7 +131,8 @@ FileSystemCache::makeLazyFileAlreadyLocked(DirectoryEntry &Parent,
                                            bool IsExecutable) {
   return makeLazyEntry(
       TreePathAlloc, EntryAlloc, Parent, Parent.asDirectory(), TreePath,
-      IsExecutable ? DirectoryEntry::Executable : DirectoryEntry::Regular, Ref);
+      IsExecutable ? DirectoryEntry::Executable : DirectoryEntry::Regular, Ref,
+      PathStyle);
 }
 
 DirectoryEntry &FileSystemCache::makeDirectory(DirectoryEntry &Parent,
@@ -129,7 +140,7 @@ DirectoryEntry &FileSystemCache::makeDirectory(DirectoryEntry &Parent,
                                                std::optional<ObjectRef> Ref) {
   Directory &D = Parent.asDirectory();
   Directory::Writer W(D);
-  if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath)))
+  if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath, PathStyle)))
     return *Existing;
 
   return makeDirectoryAlreadyLocked(Parent, TreePath, Ref);
@@ -139,7 +150,7 @@ DirectoryEntry &FileSystemCache::makeDirectoryAlreadyLocked(
     DirectoryEntry &Parent, StringRef TreePath, std::optional<ObjectRef> Ref) {
   DirectoryEntry &Entry =
       makeLazyEntry(TreePathAlloc, EntryAlloc, Parent, Parent.asDirectory(),
-                    TreePath, DirectoryEntry::Directory, Ref);
+                    TreePath, DirectoryEntry::Directory, Ref, PathStyle);
   Entry.setDirectory(*new (DirectoryAlloc.Allocate()) Directory);
   return Entry;
 }
@@ -149,7 +160,7 @@ DirectoryEntry &FileSystemCache::makeSymlink(DirectoryEntry &Parent,
                                              StringRef Target) {
   Directory &D = Parent.asDirectory();
   Directory::Writer W(D);
-  if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath)))
+  if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath, PathStyle)))
     return *Existing;
 
   DirectoryEntry &Entry = makeLazySymlinkAlreadyLocked(Parent, TreePath, Ref);
@@ -175,7 +186,7 @@ DirectoryEntry &FileSystemCache::makeFile(DirectoryEntry &Parent,
                                           size_t Size, bool IsExecutable) {
   Directory &D = Parent.asDirectory();
   Directory::Writer W(D);
-  if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath)))
+  if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath, PathStyle)))
     return *Existing;
 
   DirectoryEntry &Entry =
@@ -250,8 +261,6 @@ Expected<DirectoryEntry *>
 FileSystemCache::lookupPath(DiscoveryInstance &DI, StringRef Path,
                             DirectoryEntry &WorkingDirectory,
                             bool FollowSymlinks) {
-  assert(Root && "Expected root filesystem to exist");
-
   struct WorklistNode {
     StringRef Remaining;
     unsigned SymlinkDepth;
@@ -266,15 +275,23 @@ FileSystemCache::lookupPath(DiscoveryInstance &DI, StringRef Path,
 
   // Start at the current working directory, unless the path is absolute.
   DirectoryEntry *Current = &WorkingDirectory;
-  if (Path.consume_front("/"))
-    Current = Root;
+  if (is_absolute(Path, PathStyle)) {
+    if (is_style_windows(PathStyle)) {
+      Current = &getRoot(get_separator(PathStyle));
+      // Pretend that we consumed the dummy root "\"
+    } else {
+      StringRef root_path = sys::path::root_path(Path, PathStyle);
+      Current = &getRoot(root_path);
+      Path.consume_front(root_path);
+    }
+  }
 
   pushWork(Path);
   while (!Worklist.empty()) {
     assert(Current);
     auto Work = Worklist.pop_back_val();
-    Expected<LookupPathState> Found =
-        lookupRealPathPrefixFrom(DI, LookupPathState(*Current, Work.Remaining));
+    Expected<LookupPathState> Found = lookupRealPathPrefixFrom(DI,
+        LookupPathState(PathStyle, *Current, Work.Remaining));
     if (!Found)
       return createFileError(Path, Found.takeError());
     Current = Found->Entry;
@@ -307,9 +324,16 @@ FileSystemCache::lookupPath(DiscoveryInstance &DI, StringRef Path,
       if (Error E = DI.requestSymlinkTarget(*Current))
         return createFileError(Path, std::move(E));
     StringRef Target = Current->asSymlink().getTarget();
-    if (Target.consume_front("/"))
-      Current = Root;
-    else
+    if (is_absolute(Target, PathStyle)) {
+      if (is_style_windows(PathStyle)) {
+        Current = &getRoot(get_separator(PathStyle));
+        // Pretend that we consumed the dummy root "\"
+      } else {
+        StringRef root_path = sys::path::root_path(Target, PathStyle);
+        Current = &getRoot(root_path);
+        Target.consume_front(root_path);
+      }
+    } else
       Current = Current->getParent();
     pushWork(Target, SymlinkDepth);
   }
@@ -419,14 +443,14 @@ vfs::directory_iterator FileSystemCache::getCachedVFSDirIter(
   SmallString<128> Storage;
   if (RequestedName.empty()) {
     RequestedName = WorkingDirectory;
-  } else if (!RequestedName.starts_with("/")) {
+  } else if (!is_absolute(RequestedName, PathStyle)) {
     Storage.append(WorkingDirectory);
-    sys::path::append(Storage, sys::path::Style::posix, RequestedName);
+    sys::path::append(Storage, PathStyle, RequestedName);
     RequestedName = Storage;
   }
-  RequestedName = RequestedName.rtrim("/");
+  RequestedName = RequestedName.rtrim(get_separator(PathStyle));
   std::shared_ptr<VFSDirIterImpl> DirIter = VFSDirIterImpl::create(
-      std::move(LookupSymlinkPath), RequestedName, Entries);
+      this, std::move(LookupSymlinkPath), RequestedName, Entries);
   return vfs::directory_iterator(std::move(DirIter));
 }
 
@@ -436,7 +460,8 @@ void FileSystemCache::VFSDirIterImpl::setEntry() {
     return;
   }
   const DirectoryEntry &Entry = **I;
-  std::string Path = (ParentPath + "/" + Entry.getName()).str();
+  std::string Path =
+      (ParentPath + get_separator(Cache->PathStyle) + Entry.getName()).str();
   if (!Entry.isSymlink()) {
     CurrentEntry = vfs::directory_entry(std::move(Path), Entry.getFileType());
     return;
@@ -461,8 +486,8 @@ std::error_code FileSystemCache::VFSDirIterImpl::increment() {
 
 std::shared_ptr<FileSystemCache::VFSDirIterImpl>
 FileSystemCache::VFSDirIterImpl::create(
-    LookupSymlinkPathType LookupSymlinkPath, StringRef ParentPath,
-    ArrayRef<const DirectoryEntry *> Entries) {
+    FileSystemCache *Cache, LookupSymlinkPathType LookupSymlinkPath,
+    StringRef ParentPath, ArrayRef<const DirectoryEntry *> Entries) {
   // Compute where to put the entry pointers and allocate.
   size_t IterSize = sizeof(VFSDirIterImpl);
   IterSize = alignTo(IterSize, alignof(DirectoryEntry *));
@@ -488,6 +513,7 @@ FileSystemCache::VFSDirIterImpl::create(
 
   // Construct the iterator, pointing at the co-allocated entries.
   return std::shared_ptr<VFSDirIterImpl>(new (IterPtr) VFSDirIterImpl(
+      Cache,
       std::move(LookupSymlinkPath),
       StringRef(HungOffParentPath, ParentPath.size()),
       ArrayRef(HungOffEntries, Entries.size())));

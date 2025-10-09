@@ -5,19 +5,19 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: cp -r %t/dir1 %t/dir2
-// RUN: sed -e "s|DIR|%t/dir1|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb.json.template > %t/dir1/cdb.json
-// RUN: sed -e "s|DIR|%t/dir2|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb.json.template > %t/dir2/cdb.json
+// RUN: sed -e "s|DIR|%/t/dir1|g" -e "s|CLANG|%/ncclang|g" -e "s|SDK|%/S/Inputs/SDK|g" %t/cdb.json.template > %t/dir1/cdb.json
+// RUN: sed -e "s|DIR|%/t/dir2|g" -e "s|CLANG|%/ncclang|g" -e "s|SDK|%/S/Inputs/SDK|g" %t/cdb.json.template > %t/dir2/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/dir1/cdb.json -format experimental-full \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir1/modules \
-// RUN:    -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
-// RUN:    -prefix-map=%t/dir1/modules=/^modules -prefix-map=%t/dir1=/^src -optimize-args=none \
+// RUN:    -prefix-map-sdk=%/root^sdk -prefix-map-toolchain=%/root^tc \
+// RUN:    -prefix-map=%t/dir1/modules=%/root^modules -prefix-map=%t/dir1=%/root^src -optimize-args=none \
 // RUN:  > %t/dir1.txt
 
 // RUN: clang-scan-deps -compilation-database %t/dir2/cdb.json -format experimental-full \
 // RUN:    -cas-path %t/cas -module-files-dir %t/dir2/modules \
-// RUN:    -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
-// RUN:    -prefix-map=%t/dir2/modules=/^modules -prefix-map=%t/dir2=/^src -optimize-args=none \
+// RUN:    -prefix-map-sdk=%/root^sdk -prefix-map-toolchain=%/root^tc \
+// RUN:    -prefix-map=%t/dir2/modules=%/root^modules -prefix-map=%t/dir2=%/root^src -optimize-args=none \
 // RUN:  > %t/dir2.txt
 
 // Extract individual commands.
@@ -29,15 +29,21 @@
 // RUN: %deps-to-rsp %t/dir2.txt --module-name=A > %t/dir2/A.cc1.rsp
 // RUN: %deps-to-rsp %t/dir2.txt --tu-index 0 > %t/dir2/tu.cc1.rsp
 
-// RUN: (cd %t/dir1; %clang @B.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
-// RUN: (cd %t/dir1; %clang @A.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
-// RUN: (cd %t/dir1; %clang @tu.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: cd %t/dir1 && %clang @B.cc1.rsp > %t/miss-B.txt 2>&1
+// RUN: cat %t/miss-B.txt | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: cd %t/dir1 && %clang @A.cc1.rsp > %t/miss-A.txt 2>&1
+// RUN: cat %t/miss-A.txt | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: cd %t/dir1 && %clang @tu.cc1.rsp > %t/miss-tu.txt 2>&1
+// RUN: cat %t/miss-tu.txt | FileCheck %s -check-prefix=CACHE-MISS
 
 // CACHE-MISS: compile job cache miss
 
-// RUN: (cd %t/dir2; %clang @B.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
-// RUN: (cd %t/dir2; %clang @A.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
-// RUN: (cd %t/dir2; %clang @tu.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
+// RUN: cd %t/dir2 && %clang @B.cc1.rsp > %t/hit-B.txt 2>&1
+// RUN: cat %t/hit-B.txt | FileCheck %s -check-prefix=CACHE-HIT
+// RUN: cd %t/dir2 && %clang @A.cc1.rsp > %t/hit-A.txt 2>&1
+// RUN: cat %t/hit-B.txt | FileCheck %s -check-prefix=CACHE-HIT
+// RUN: cd %t/dir2 && %clang @tu.cc1.rsp > %t/hit-tu.txt 2>&1
+// RUN: cat %t/hit-tu.txt | FileCheck %s -check-prefix=CACHE-HIT
 
 // CACHE-HIT: compile job cache hit
 

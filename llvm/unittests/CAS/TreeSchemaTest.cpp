@@ -231,7 +231,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
     return cantFail(CAS->storeFromString({}, Content));
   };
 
-  HierarchicalTreeBuilder Builder;
+  HierarchicalTreeBuilder Builder(sys::path::Style::posix);
   Builder.push(make("blob2"), TreeEntry::Regular, "/d2");
   Builder.push(make("blob1"), TreeEntry::Regular, "/t1/d1");
   Builder.push(make("blob3"), TreeEntry::Regular, "/t3/d3");

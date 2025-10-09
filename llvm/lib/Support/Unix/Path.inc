@@ -600,6 +600,10 @@ std::error_code resize_file(int FD, uint64_t Size) {
   return std::error_code();
 }
 
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  return resize_file(FD, Size);
+}
+
 static int convertAccessMode(AccessMode Mode) {
   switch (Mode) {
   case AccessMode::Exist:

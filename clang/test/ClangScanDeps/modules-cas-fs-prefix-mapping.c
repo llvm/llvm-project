@@ -5,15 +5,15 @@
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s|DIR|%t|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb.json.template > %t/cdb.json
+// RUN: sed -e "s|DIR|%/t|g" -e "s|CLANG|%/ncclang|g" -e "s|SDK|%/S/Inputs/SDK|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
 // RUN:    -cas-path %t/cas -module-files-dir %t/modules \
-// RUN:    -prefix-map=%t/modules=/^modules -prefix-map=%t=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
+// RUN:    -prefix-map=%t/modules=%/root^modules -prefix-map=%t=%/root^src -prefix-map-sdk=%/root^sdk -prefix-map-toolchain=%/root^tc \
 // RUN:  > %t/full_result.txt
 
 // Check the command-lines.
-// RUN: FileCheck %s -input-file %t/full_result.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK
+// RUN: cat %t/full_result.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t --sanitize SDK_PREFIX=%/S/Inputs/SDK --sanitize ROOT^=%/root^ --enable-yaml-compatibility %s
 
 // Extract individual commands.
 // RUN: %deps-to-rsp %t/full_result.txt --module-name=B > %t/B.cc1.rsp
@@ -27,18 +27,18 @@
 // RUN: llvm-cas -cas %t/cas -ls-tree-recursive @%t/B_id.txt > %t/B_fs.txt
 // RUN: llvm-cas -cas %t/cas -ls-tree-recursive @%t/A_id.txt > %t/A_fs.txt
 // RUN: llvm-cas -cas %t/cas -ls-tree-recursive @%t/tu_id.txt > %t/tu_fs.txt
-// RUN: FileCheck %s -input-file %t/A_fs.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -check-prefixes=FS_NEG,FS
-// RUN: FileCheck %s -input-file %t/B_fs.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -check-prefixes=FS_NEG,FS
-// RUN: FileCheck %s -input-file %t/tu_fs.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -check-prefixes=FS_NEG,FS
+// RUN: FileCheck %s -input-file %t/A_fs.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -DROOT=%{/roott} -check-prefixes=FS_NEG,FS
+// RUN: FileCheck %s -input-file %t/B_fs.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -DROOT=%{/roott} -check-prefixes=FS_NEG,FS
+// RUN: FileCheck %s -input-file %t/tu_fs.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK -DROOT=%{/roott} -check-prefixes=FS_NEG,FS
 
 // FS_NEG-NOT: [[PREFIX]]
 // FS_NEG-NOT: [[SDK_PREFIX]]
 // FS_NEG-NOT: .pcm{{$}}
-// FS: file llvmcas://{{.*}} /^sdk/usr/include/stdlib.h
-// FS: file llvmcas://{{.*}} /^src/a.h
-// FS: file llvmcas://{{.*}} /^src/b.h
-// FS: file llvmcas://{{.*}} /^src/module.modulemap
-// FS: file llvmcas://{{.*}} /^tc/lib/clang/{{.*}}/include/stdarg.h
+// FS: file llvmcas://{{.*}} [[ROOT]]^sdk/usr/include/stdlib.h
+// FS: file llvmcas://{{.*}} [[ROOT]]^src/a.h
+// FS: file llvmcas://{{.*}} [[ROOT]]^src/b.h
+// FS: file llvmcas://{{.*}} [[ROOT]]^src/module.modulemap
+// FS: file llvmcas://{{.*}} [[ROOT]]^tc/lib/clang/{{.*}}/include/stdarg.h
 
 // Check that it builds.
 // RUN: %clang @%t/B.cc1.rsp
@@ -54,71 +54,71 @@
 // CHECK:                "module-name": "B"
 // CHECK:              }
 // CHECK:            ]
-// CHECK:            "clang-modulemap-file": "[[PREFIX]]/module.modulemap"
+// CHECK:            "clang-modulemap-file": "PREFIX{{/|\\\\}}module.modulemap"
 // CHECK:            "command-line": [
 // CHECK:              "-fcas-path"
-// CHECK:              "[[PREFIX]]/cas"
+// CHECK:              "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-fcas-fs"
 // CHECK:              "[[A_ROOT_ID]]"
 // CHECK:              "-fcas-fs-working-directory"
-// CHECK:              "/^src"
-// CHECK:              "-fmodule-map-file=/^src/module.modulemap"
+// CHECK:              "ROOT^src"
+// CHECK:              "-fmodule-map-file=ROOT^src{{/|\\\\}}module.modulemap"
 // CHECK:              "-o"
-// CHECK:              "[[PREFIX]]/modules/{{.*}}/A-{{.*}}.pcm"
+// CHECK:              "PREFIX{{/|\\\\}}modules{{/|\\\\}}{{.*}}{{/|\\\\}}A-{{.*}}.pcm"
 // CHECK:              "-fmodule-file-cache-key"
-// CHECK:              "/^modules/{{.*}}/B-[[B_CONTEXT_HASH:[^.]+]].pcm"
+// CHECK:              "ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}B-[[B_CONTEXT_HASH:[^.]+]].pcm"
 // CHECK:              "llvmcas://{{.*}}"
 // CHECK:              "-x"
 // CHECK:              "c"
-// CHECK:              "/^src/module.modulemap"
+// CHECK:              "ROOT^src{{/|\\\\}}module.modulemap"
 // CHECK:              "-isysroot"
-// CHECK:              "/^sdk"
+// CHECK:              "ROOT^sdk"
 // CHECK:              "-resource-dir"
-// CHECK:              "/^tc/lib/clang/{{.*}}"
-// CHECK:              "-fmodule-file=B=/^modules/{{.*}}/B-[[B_CONTEXT_HASH]].pcm"
+// CHECK:              "ROOT^tc{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{.*}}"
+// CHECK:              "-fmodule-file=B=ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}B-[[B_CONTEXT_HASH]].pcm"
 // CHECK:              "-isystem"
-// CHECK:              "/^tc/lib/clang/{{.*}}/include"
+// CHECK:              "ROOT^tc{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{.*}}{{/|\\\\}}include"
 // CHECK:              "-internal-externc-isystem"
-// CHECK:              "/^sdk/usr/include"
+// CHECK:              "ROOT^sdk{{/|\\\\}}usr{{/|\\\\}}include"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK:              "[[PREFIX]]/module.modulemap"
-// CHECK:              "[[PREFIX]]/a.h"
+// CHECK:              "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK:              "PREFIX{{/|\\\\}}a.h"
 // CHECK:            ]
 // CHECK:            "name": "A"
 // CHECK:          }
 // CHECK:          {
 // CHECK:            "casfs-root-id": "[[B_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": [],
-// CHECK:            "clang-modulemap-file": "[[PREFIX]]/module.modulemap"
+// CHECK:            "clang-modulemap-file": "PREFIX{{/|\\\\}}module.modulemap"
 // CHECK:            "command-line": [
 // CHECK:              "-fcas-path"
-// CHECK:              "[[PREFIX]]/cas"
+// CHECK:              "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-fcas-fs"
 // CHECK:              "[[B_ROOT_ID]]"
 // CHECK:              "-fcas-fs-working-directory"
-// CHECK:              "/^src"
+// CHECK:              "ROOT^src"
 // CHECK:              "-o"
-// CHECK:              "[[PREFIX]]/modules/{{.*}}/B-[[B_CONTEXT_HASH]].pcm"
+// CHECK:              "PREFIX{{/|\\\\}}modules{{/|\\\\}}{{.*}}{{/|\\\\}}B-[[B_CONTEXT_HASH]].pcm"
 // CHECK:              "-x"
 // CHECK:              "c"
-// CHECK:              "/^src/module.modulemap"
+// CHECK:              "ROOT^src{{/|\\\\}}module.modulemap"
 // CHECK:              "-isysroot"
-// CHECK:              "/^sdk"
+// CHECK:              "ROOT^sdk"
 // CHECK:              "-resource-dir"
-// CHECK:              "/^tc/lib/clang/{{.*}}"
+// CHECK:              "ROOT^tc{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{.*}}"
 // CHECK:              "-isystem"
-// CHECK:              "/^tc/lib/clang/{{.*}}/include"
+// CHECK:              "ROOT^tc{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{.*}}{{/|\\\\}}include"
 // CHECK:              "-internal-externc-isystem"
-// CHECK:              "/^sdk/usr/include"
+// CHECK:              "ROOT^sdk{{/|\\\\}}usr{{/|\\\\}}include"
 // CHECK:            ]
 // CHECK:            "context-hash": "[[B_CONTEXT_HASH]]"
 // CHECK:            "file-deps": [
 // Note: PREFIX, SDK_PREFIX and toolchain path are unordered
-// CHECK-DAG:          "[[PREFIX]]/module.modulemap"
-// CHECK-DAG:          "[[PREFIX]]/b.h"
-// CHECK-DAG:          "{{.*}}/include/stdarg.h"
-// CHECK-DAG:          "[[SDK_PREFIX]]/usr/include/stdlib.h"
+// CHECK-DAG:          "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-DAG:          "PREFIX{{/|\\\\}}b.h"
+// CHECK-DAG:          "{{.*}}{{/|\\\\}}include{{/|\\\\}}stdarg.h"
+// CHECK-DAG:          "SDK_PREFIX{{/|\\\\}}usr{{/|\\\\}}include{{/|\\\\}}stdlib.h"
 // CHECK:            ]
 // CHECK:            "name": "B"
 // CHECK:          }
@@ -135,32 +135,32 @@
 // CHECK:                ]
 // CHECK:                "command-line": [
 // CHECK:                  "-fcas-path"
-// CHECK:                  "[[PREFIX]]/cas"
+// CHECK:                  "PREFIX{{/|\\\\}}cas"
 // CHECK:                  "-fcas-fs"
 // CHECK:                  "[[TU_ROOT_ID]]"
 // CHECK:                  "-fcas-fs-working-directory"
-// CHECK:                  "/^src"
-// CHECK:                  "-fmodule-map-file=/^src/module.modulemap"
+// CHECK:                  "ROOT^src"
+// CHECK:                  "-fmodule-map-file=ROOT^src{{/|\\\\}}module.modulemap"
 // CHECK:                  "-fmodule-file-cache-key"
-// CHECK:                  "/^modules/{{.*}}A-{{.*}}.pcm"
+// CHECK:                  "ROOT^modules{{/|\\\\}}{{.*}}A-{{.*}}.pcm"
 // CHECK:                  "llvmcas://{{.*}}"
 // CHECK:                  "-x"
 // CHECK:                  "c"
-// CHECK:                  "/^src/t.c"
+// CHECK:                  "ROOT^src{{/|\\\\}}t.c"
 // CHECK:                  "-isysroot"
-// CHECK:                  "/^sdk"
+// CHECK:                  "ROOT^sdk"
 // CHECK:                  "-resource-dir"
-// CHECK:                  "/^tc/lib/clang/{{.*}}"
-// CHECK:                  "-fmodule-file=A=/^modules/{{.*}}/A-{{.*}}.pcm"
+// CHECK:                  "ROOT^tc{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{.*}}"
+// CHECK:                  "-fmodule-file=A=ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}A-{{.*}}.pcm"
 // CHECK:                  "-isystem"
-// CHECK:                  "/^tc/lib/clang/{{.*}}/include"
+// CHECK:                  "ROOT^tc{{/|\\\\}}lib{{/|\\\\}}clang{{/|\\\\}}{{.*}}{{/|\\\\}}include"
 // CHECK:                  "-internal-externc-isystem"
-// CHECK:                  "/^sdk/usr/include"
+// CHECK:                  "ROOT^sdk{{/|\\\\}}usr{{/|\\\\}}include"
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK:                  "[[PREFIX]]/t.c"
+// CHECK:                  "PREFIX{{/|\\\\}}t.c"
 // CHECK:                ]
-// CHECK:                "input-file": "[[PREFIX]]/t.c"
+// CHECK:                "input-file": "PREFIX{{/|\\\\}}t.c"
 // CHECK:              }
 
 

@@ -19,25 +19,28 @@ using namespace llvm::cas;
 /// Critical to canonicalize components so that paths come up next to each
 /// other when sorted.
 static StringRef canonicalize(SmallVectorImpl<char> &Path,
-                              TreeEntry::EntryKind Kind) {
-  // Make absolute.
-  if (Path.empty() || Path.front() != '/')
-    Path.insert(Path.begin(), '/');
+                              TreeEntry::EntryKind Kind,
+                              sys::path::Style PathStyle) {
+  const char PathSeparatorChar = get_separator(PathStyle)[0];
+  // Make absolute. Use has_root_directory instead of is_absolute
+  // because we may not have the drive like C: for abstract tree
+  // structures on Windows.
+  if (Path.empty() || !has_root_directory(Path, PathStyle))
+    Path.insert(Path.begin(), PathSeparatorChar);
 
   // FIXME: consider rejecting ".." instead of removing them.
-  sys::path::remove_dots(Path, /*remove_dot_dot=*/true,
-                         sys::path::Style::posix);
+  sys::path::remove_dots(Path, /*remove_dot_dot=*/true, PathStyle);
 
   // Canonicalize slashes.
   bool PendingSlash = false;
   char *NewEnd = Path.begin();
   for (int I = 0, E = Path.size(); I != E; ++I) {
-    if (Path[I] == '/') {
+    if (Path[I] == PathSeparatorChar) {
       PendingSlash = true;
       continue;
     }
     if (PendingSlash)
-      *NewEnd++ = '/';
+      *NewEnd++ = PathSeparatorChar;
     PendingSlash = false;
     *NewEnd++ = Path[I];
   }
@@ -45,7 +48,7 @@ static StringRef canonicalize(SmallVectorImpl<char> &Path,
 
   // For correct sorting, all explicit trees need to end with a '/'.
   if (Path.empty() || Kind == TreeEntry::Tree)
-    Path.push_back('/');
+    Path.push_back(PathSeparatorChar);
   return StringRef(Path.begin(), Path.size());
 }
 
@@ -54,7 +57,7 @@ void HierarchicalTreeBuilder::pushImpl(std::optional<ObjectRef> Ref,
                                        const Twine &Path) {
   SmallVector<char, 256> CanonicalPath;
   Path.toVector(CanonicalPath);
-  Entries.emplace_back(Ref, Kind, canonicalize(CanonicalPath, Kind));
+  Entries.emplace_back(Ref, Kind, canonicalize(CanonicalPath, Kind, PathStyle));
 }
 
 void HierarchicalTreeBuilder::pushTreeContent(ObjectRef Ref,
@@ -62,10 +65,12 @@ void HierarchicalTreeBuilder::pushTreeContent(ObjectRef Ref,
   SmallVector<char, 256> CanonicalPath;
   Path.toVector(CanonicalPath);
   TreeEntry::EntryKind Kind = TreeEntry::Tree;
-  TreeContents.emplace_back(Ref, Kind, canonicalize(CanonicalPath, Kind));
+  TreeContents.emplace_back(Ref, Kind, canonicalize(CanonicalPath, Kind, PathStyle));
 }
 
 Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
+  StringRef PathSeparator = get_separator(PathStyle);
+  const char PathSeparatorChar = PathSeparator[0];
   // FIXME: It is inefficient expanding the whole tree recursively like this,
   // use a more efficient algorithm to merge contents.
   TreeSchema Schema(CAS);
@@ -150,11 +155,13 @@ Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
     Tree *Current = &Root;
     StringRef Path = Entry.getPath();
     {
-      bool Consumed = Path.consume_front("/");
-      (void)Consumed;
-      assert(Consumed && "Expected canonical POSIX absolute paths");
+      assert(has_root_directory(Path, PathStyle) && "Expected absolute paths");
+      StringRef root_path = sys::path::root_path(Path, PathStyle);
+      assert(!root_path.empty() && "Expected canonical POSIX absolute paths");
+      Path.consume_front(root_path);
     }
-    for (auto Slash = Path.find('/'); !Path.empty(); Slash = Path.find('/')) {
+    for (auto Slash = Path.find(PathSeparatorChar); !Path.empty();
+         Slash = Path.find(PathSeparatorChar)) {
       StringRef Name;
       if (Slash == StringRef::npos) {
         Name = Path;
@@ -173,7 +180,7 @@ Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
 
       // Need to canonicalize first, or else the sorting trick doesn't work.
       assert(Name != "");
-      assert(Name != "/");
+      assert(Name != PathSeparator);
       assert(Name != ".");
       assert(Name != "..");
 

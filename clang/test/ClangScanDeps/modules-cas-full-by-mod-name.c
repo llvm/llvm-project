@@ -30,7 +30,7 @@ module transitive { header "transitive.h" }
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -cas-path %t/cas -format experimental-full -module-name=root > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: cat %t/result.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -43,7 +43,7 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:           "module-name": "transitive"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:       "clang-modulemap-file": "PREFIX{{/|\\\\}}module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK:              "-fmodule-file-cache-key"
 // CHECK-NEXT:         "{{.*transitive-.*\.pcm}}"
@@ -51,8 +51,8 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/direct.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}direct.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
@@ -66,7 +66,7 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:           "module-name": "direct"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:       "clang-modulemap-file": "PREFIX{{/|\\\\}}module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK:              "-fmodule-file-cache-key"
 // CHECK-NEXT:         "{{.*direct-.*\.pcm}}"
@@ -74,9 +74,9 @@ module transitive { header "transitive.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/root.h"
-// CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}root.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}root{{/|\\\\}}textual.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
@@ -85,13 +85,13 @@ module transitive { header "transitive.h" }
 // CHECK-NEXT:       "cache-key": "[[TRANSITIVE_CACHE_KEY]]"
 // CHECK-NEXT:       "casfs-root-id": "[[LEFT_ROOT_ID]]"
 // CHECK-NEXT:       "clang-module-deps": [],
-// CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:       "clang-modulemap-file": "PREFIX{{/|\\\\}}module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/transitive.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}transitive.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "transitive"
