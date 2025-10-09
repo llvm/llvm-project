@@ -485,11 +485,6 @@ void SANITIZER_CDECL __sanitizer_finish_switch_fiber(void *fake_stack_save,
 int SANITIZER_CDECL __sanitizer_get_module_and_offset_for_pc(
     void *pc, char *module_path, size_t module_path_len, void **pc_offset);
 
-// If cloak_sanitizer_signal_handlers() is set, signal/sigaction will pretend
-// that sanitizers did not preinstall any signal handlers. This function clears
-// the cloaking state.
-void SANITIZER_CDECL __sanitizer_uncloak_preinstalled_signal_handlers();
-
 #ifdef __cplusplus
 } // extern "C"
 #endif

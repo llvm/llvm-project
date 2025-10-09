@@ -24,7 +24,6 @@ INTERFACE_WEAK_FUNCTION(__sanitizer_on_print)
 INTERFACE_WEAK_FUNCTION(__sanitizer_report_error_summary)
 INTERFACE_WEAK_FUNCTION(__sanitizer_sandbox_on_notify)
 INTERFACE_WEAK_FUNCTION(__sanitizer_get_dtls_size)
-INTERFACE_FUNCTION(__sanitizer_uncloak_preinstalled_signal_handlers)
 // Sanitizer weak hooks
 INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_memcmp)
 INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_strcmp)
