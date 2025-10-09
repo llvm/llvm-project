@@ -3339,7 +3339,7 @@ PHINode *FunctionStackPoisoner::createPHI(IRBuilder<> &IRB, Value *Cond,
                                           Value *ValueIfTrue,
                                           Instruction *ThenTerm,
                                           Value *ValueIfFalse) {
-  PHINode *PHI = IRB.CreatePHI(IntptrTy, 2);
+  PHINode *PHI = IRB.CreatePHI(ValueIfTrue->getType(), 2);
   BasicBlock *CondBlock = cast<Instruction>(Cond)->getParent();
   PHI->addIncoming(ValueIfFalse, CondBlock);
   BasicBlock *ThenBlock = ThenTerm->getParent();
@@ -3362,7 +3362,7 @@ Value *FunctionStackPoisoner::createAllocaForLayout(
   assert((ClRealignStack & (ClRealignStack - 1)) == 0);
   uint64_t FrameAlignment = std::max(L.FrameAlignment, uint64_t(ClRealignStack));
   Alloca->setAlignment(Align(FrameAlignment));
-  return IRB.CreatePointerCast(Alloca, IntptrTy);
+  return Alloca;
 }
 
 void FunctionStackPoisoner::createDynamicAllocasInitStorage() {
@@ -3574,10 +3574,12 @@ void FunctionStackPoisoner::processStaticAllocas() {
   DoDynamicAlloca &= !HasInlineAsm && !HasReturnsTwiceCall;
   DoStackMalloc &= !HasInlineAsm && !HasReturnsTwiceCall;
 
+  Type *PtrTy = F.getDataLayout().getAllocaPtrType(F.getContext());
   Value *StaticAlloca =
       DoDynamicAlloca ? nullptr : createAllocaForLayout(IRB, L, false);
 
-  Value *FakeStack;
+  Value *FakeStackPtr;
+  Value *FakeStackInt;
   Value *LocalStackBase;
   Value *LocalStackBaseAlloca;
   uint8_t DIExprFlags = DIExpression::ApplyOffset;
@@ -3605,20 +3607,21 @@ void FunctionStackPoisoner::processStaticAllocas() {
           RTCI.createRuntimeCall(IRBIf, AsanStackMallocFunc[StackMallocIdx],
                                  ConstantInt::get(IntptrTy, LocalStackSize));
       IRB.SetInsertPoint(InsBefore);
-      FakeStack = createPHI(IRB, UseAfterReturnIsEnabled, FakeStackValue, Term,
-                            ConstantInt::get(IntptrTy, 0));
+      FakeStackInt = createPHI(IRB, UseAfterReturnIsEnabled, FakeStackValue,
+                               Term, ConstantInt::get(IntptrTy, 0));
     } else {
       // assert(ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode:Always)
       // void *FakeStack = __asan_stack_malloc_N(LocalStackSize);
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
       StackMallocIdx = StackMallocSizeClass(LocalStackSize);
-      FakeStack =
+      FakeStackInt =
           RTCI.createRuntimeCall(IRB, AsanStackMallocFunc[StackMallocIdx],
                                  ConstantInt::get(IntptrTy, LocalStackSize));
     }
+    FakeStackPtr = IRB.CreateIntToPtr(FakeStackInt, PtrTy);
     Value *NoFakeStack =
-        IRB.CreateICmpEQ(FakeStack, Constant::getNullValue(IntptrTy));
+        IRB.CreateICmpEQ(FakeStackInt, Constant::getNullValue(IntptrTy));
     Instruction *Term =
         SplitBlockAndInsertIfThen(NoFakeStack, InsBefore, false);
     IRBuilder<> IRBIf(Term);
@@ -3626,67 +3629,53 @@ void FunctionStackPoisoner::processStaticAllocas() {
         DoDynamicAlloca ? createAllocaForLayout(IRBIf, L, true) : StaticAlloca;
 
     IRB.SetInsertPoint(InsBefore);
-    LocalStackBase = createPHI(IRB, NoFakeStack, AllocaValue, Term, FakeStack);
+    LocalStackBase =
+        createPHI(IRB, NoFakeStack, AllocaValue, Term, FakeStackPtr);
     IRB.CreateStore(LocalStackBase, LocalStackBaseAlloca);
     DIExprFlags |= DIExpression::DerefBefore;
   } else {
     // void *FakeStack = nullptr;
     // void *LocalStackBase = alloca(LocalStackSize);
-    FakeStack = ConstantInt::get(IntptrTy, 0);
+    FakeStackInt = Constant::getNullValue(IntptrTy);
+    FakeStackPtr = Constant::getNullValue(PtrTy);
     LocalStackBase =
         DoDynamicAlloca ? createAllocaForLayout(IRB, L, true) : StaticAlloca;
     LocalStackBaseAlloca = LocalStackBase;
   }
 
-  // It shouldn't matter whether we pass an `alloca` or a `ptrtoint` as the
-  // dbg.declare address opereand, but passing a `ptrtoint` seems to confuse
-  // later passes and can result in dropped variable coverage in debug info.
-  Value *LocalStackBaseAllocaPtr =
-      isa<PtrToIntInst>(LocalStackBaseAlloca)
-          ? cast<PtrToIntInst>(LocalStackBaseAlloca)->getPointerOperand()
-          : LocalStackBaseAlloca;
-  assert(isa<AllocaInst>(LocalStackBaseAllocaPtr) &&
-         "Variable descriptions relative to ASan stack base will be dropped");
-
   // Replace Alloca instructions with base+offset.
   SmallVector<Value *> NewAllocaPtrs;
   for (const auto &Desc : SVD) {
     AllocaInst *AI = Desc.AI;
-    replaceDbgDeclare(AI, LocalStackBaseAllocaPtr, DIB, DIExprFlags,
-                      Desc.Offset);
-    Value *NewAllocaPtr = IRB.CreateIntToPtr(
-        IRB.CreateAdd(LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset)),
-        AI->getType());
+    replaceDbgDeclare(AI, LocalStackBaseAlloca, DIB, DIExprFlags, Desc.Offset);
+    Value *NewAllocaPtr = IRB.CreatePtrAdd(
+        LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset));
     AI->replaceAllUsesWith(NewAllocaPtr);
     NewAllocaPtrs.push_back(NewAllocaPtr);
   }
 
   // The left-most redzone has enough space for at least 4 pointers.
   // Write the Magic value to redzone[0].
-  Value *BasePlus0 = IRB.CreateIntToPtr(LocalStackBase, IntptrPtrTy);
   IRB.CreateStore(ConstantInt::get(IntptrTy, kCurrentStackFrameMagic),
-                  BasePlus0);
+                  LocalStackBase);
   // Write the frame description constant to redzone[1].
-  Value *BasePlus1 = IRB.CreateIntToPtr(
-      IRB.CreateAdd(LocalStackBase,
-                    ConstantInt::get(IntptrTy, ASan.LongSize / 8)),
-      IntptrPtrTy);
+  Value *BasePlus1 = IRB.CreatePtrAdd(
+      LocalStackBase, ConstantInt::get(IntptrTy, ASan.LongSize / 8));
   GlobalVariable *StackDescriptionGlobal =
       createPrivateGlobalForString(*F.getParent(), DescriptionString,
                                    /*AllowMerging*/ true, genName("stack"));
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
   // Write the PC to redzone[2].
-  Value *BasePlus2 = IRB.CreateIntToPtr(
-      IRB.CreateAdd(LocalStackBase,
-                    ConstantInt::get(IntptrTy, 2 * ASan.LongSize / 8)),
-      IntptrPtrTy);
+  Value *BasePlus2 = IRB.CreatePtrAdd(
+      LocalStackBase, ConstantInt::get(IntptrTy, 2 * ASan.LongSize / 8));
   IRB.CreateStore(IRB.CreatePointerCast(&F, IntptrTy), BasePlus2);
 
   const auto &ShadowAfterScope = GetShadowBytesAfterScope(SVD, L);
 
   // Poison the stack red zones at the entry.
-  Value *ShadowBase = ASan.memToShadow(LocalStackBase, IRB);
+  Value *ShadowBase =
+      ASan.memToShadow(IRB.CreatePtrToInt(LocalStackBase, IntptrTy), IRB);
   // As mask we must use most poisoned case: red zones and after scope.
   // As bytes we can use either the same or just red zones only.
   copyToShadow(ShadowAfterScope, ShadowAfterScope, IRB, ShadowBase);
@@ -3725,7 +3714,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
     IRBuilder<> IRBRet(Ret);
     // Mark the current frame as retired.
     IRBRet.CreateStore(ConstantInt::get(IntptrTy, kRetiredStackFrameMagic),
-                       BasePlus0);
+                       LocalStackBase);
     if (DoStackMalloc) {
       assert(StackMallocIdx >= 0);
       // if FakeStack != 0  // LocalStackBase == FakeStack
@@ -3739,7 +3728,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // else
       //     <This is not a fake stack; unpoison the redzones>
       Value *Cmp =
-          IRBRet.CreateICmpNE(FakeStack, Constant::getNullValue(IntptrTy));
+          IRBRet.CreateICmpNE(FakeStackInt, Constant::getNullValue(IntptrTy));
       Instruction *ThenTerm, *ElseTerm;
       SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
@@ -3750,11 +3739,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
                                  kAsanStackUseAfterReturnMagic);
         copyToShadow(ShadowAfterReturn, ShadowAfterReturn, IRBPoison,
                      ShadowBase);
-        Value *SavedFlagPtrPtr = IRBPoison.CreateAdd(
-            FakeStack,
+        Value *SavedFlagPtrPtr = IRBPoison.CreatePtrAdd(
+            FakeStackPtr,
             ConstantInt::get(IntptrTy, ClassSize - ASan.LongSize / 8));
-        Value *SavedFlagPtr = IRBPoison.CreateLoad(
-            IntptrTy, IRBPoison.CreateIntToPtr(SavedFlagPtrPtr, IntptrPtrTy));
+        Value *SavedFlagPtr = IRBPoison.CreateLoad(IntptrTy, SavedFlagPtrPtr);
         IRBPoison.CreateStore(
             Constant::getNullValue(IRBPoison.getInt8Ty()),
             IRBPoison.CreateIntToPtr(SavedFlagPtr, IRBPoison.getPtrTy()));
@@ -3762,7 +3750,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
         // For larger frames call __asan_stack_free_*.
         RTCI.createRuntimeCall(
             IRBPoison, AsanStackFreeFunc[StackMallocIdx],
-            {FakeStack, ConstantInt::get(IntptrTy, LocalStackSize)});
+            {FakeStackInt, ConstantInt::get(IntptrTy, LocalStackSize)});
       }
 
       IRBuilder<> IRBElse(ElseTerm);
