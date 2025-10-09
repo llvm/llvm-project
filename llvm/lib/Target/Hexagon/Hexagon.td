@@ -108,8 +108,8 @@ def FeatureNVS: SubtargetFeature<"nvs", "UseNewValueStores", "true",
       "Support for new-value stores", [FeaturePackets]>;
 def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
       "Allow GP-relative addressing of global variables">;
-def FeatureDuplex : SubtargetFeature<"duplex", "EnableDuplex", "true",
-                                     "Enable generation of duplex instruction">;
+def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
+      "Enable generation of duplex instruction">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
@@ -163,8 +163,8 @@ def UseHVXIEEEFP       : Predicate<"HST->useHVXIEEEFPOps()">,
 def UseHVXQFloat       : Predicate<"HST->useHVXQFloatOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXQFloat)>;
 def UseHVXFloatingPoint: Predicate<"HST->useHVXFloatingPoint()">;
-def HasMemNoShuf : Predicate<"HST->hasMemNoShuf()">,
-                   AssemblerPredicate<(all_of FeatureMemNoShuf)>;
+def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
+                         AssemblerPredicate<(all_of FeatureMemNoShuf)>;
 def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
                                    "MF->getFunction().hasOptSize()"> {
   let RecomputePerFunction = 1;
