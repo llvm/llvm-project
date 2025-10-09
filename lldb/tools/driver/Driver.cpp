@@ -443,7 +443,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
 /// Returns the full path to the lldb.exe executable.
 inline std::wstring GetPathToExecutableW() {
   // Iterate until we reach the Windows API maximum path length (32,767).
