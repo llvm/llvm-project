@@ -1165,14 +1165,24 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     const CXXDestructorDecl *Dtor = RD->getDestructor();
     if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
       return true;
-    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())) {
-      for (CXXConstructorDecl *Ctr : RD->ctors()) {
-        if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
-          continue;
-        if (Ctr->isTrivial())
-          return true;
-      }
+    if (!(RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())))
+      return false;
+    bool FoundCopyCtr = false;
+    bool FoundMoveCtr = false;
+    for (CXXConstructorDecl *Ctr : RD->ctors()) {
+      FoundCopyCtr = Ctr->isCopyConstructor();
+      FoundMoveCtr = Ctr->isMoveConstructor();
+      if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
+        continue;
+      if (Ctr->isTrivial())
+        return true;
     }
+    if (!FoundCopyCtr && RD->hasTrivialCopyConstructor() &&
+        !RD->defaultedCopyConstructorIsDeleted())
+      return true;
+    if (!FoundMoveCtr && RD->hasTrivialMoveConstructor() &&
+        !RD->defaultedMoveConstructorIsDeleted())
+      return true;
     return false;
   }
   case UTT_IsIntangibleType:
