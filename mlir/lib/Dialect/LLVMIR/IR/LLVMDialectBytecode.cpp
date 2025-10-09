@@ -33,7 +33,7 @@ static LogicalResult writeAttribute(Attribute attribute,
 // Optional ArrayRefs
 //
 // Note that both the writer and reader functions consider attributes to be
-// optional. This is because the attribute may be present by empty.
+// optional. This is because the attribute may be present or empty.
 //===--------------------------------------------------------------------===//
 
 template <class EntryTy>
@@ -64,7 +64,7 @@ static LogicalResult readOptionalArrayRef(DialectBytecodeReader &reader,
   if (!isPresent)
     return success();
 
-  auto readOperations = [&]() -> FailureOr<EntryTy> {
+  auto readEntry = [&]() -> FailureOr<EntryTy> {
     EntryTy temp;
     if constexpr (std::is_base_of_v<Attribute, EntryTy>) {
       if (succeeded(reader.readOptionalAttribute(temp)))
@@ -77,7 +77,7 @@ static LogicalResult readOptionalArrayRef(DialectBytecodeReader &reader,
     return failure();
   };
 
-  return reader.readList(storage, readOperations);
+  return reader.readList(storage, readEntry);
 }
 
 //===--------------------------------------------------------------------===//
@@ -103,7 +103,7 @@ static LogicalResult readOptionalInt(DialectBytecodeReader &reader,
   if (failed(reader.readVarIntWithFlag(result, flag)))
     return failure();
   if (flag)
-    storage = (decltype(storage.value()))result;
+    storage = static_cast<EntryTy>(result);
   else
     storage = std::nullopt;
   return success();
@@ -124,9 +124,7 @@ struct LLVMDialectBytecodeInterface : public BytecodeDialectInterface {
   LLVMDialectBytecodeInterface(Dialect *dialect)
       : BytecodeDialectInterface(dialect) {}
 
-  //===--------------------------------------------------------------------===//
   // Attributes
-
   Attribute readAttribute(DialectBytecodeReader &reader) const override {
     return ::readAttribute(getContext(), reader);
   }
@@ -136,9 +134,7 @@ struct LLVMDialectBytecodeInterface : public BytecodeDialectInterface {
     return ::writeAttribute(attr, writer);
   }
 
-  //===--------------------------------------------------------------------===//
   // Types
-
   Type readType(DialectBytecodeReader &reader) const override {
     return ::readType(getContext(), reader);
   }

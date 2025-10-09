@@ -57,6 +57,8 @@ class EnumClassFlag<string flag, string getter> :
 //   LLVMAttrDefs.td
 // - The mnemonics are either LLVM or builtin MLIR attributes and types, but
 //   regular C++ types are also allowed to match builders and parsers.
+// - DIScopeAttr and DINodeAttr are empty base classes, custom encoding not
+//   needed.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -107,7 +109,7 @@ def DIFileAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def DILocalVariableAttr : DialectAttribute<(attr
-  Attr<"DIScopeAttr">:$scope, // Non-optional attribute
+  Attr<"DIScopeAttr">:$scope,
   OptionalAttribute<"StringAttr">:$name,
   OptionalAttribute<"DIFileAttr">:$file,
   VarInt:$line,
@@ -158,7 +160,7 @@ def DISubprogramAttr : DialectAttribute<(attr
   Bool:$isRecSelf,
   OptionalAttribute<"DistinctAttr">:$id,
   OptionalAttribute<"DICompileUnitAttr">:$compileUnit,
-  OptionalAttribute<"DIScopeAttr">:$scope, // TODO: DIScopeAttr
+  OptionalAttribute<"DIScopeAttr">:$scope,
   OptionalAttribute<"StringAttr">:$name,
   OptionalAttribute<"StringAttr">:$linkageName,
   OptionalAttribute<"DIFileAttr">:$file,
@@ -207,7 +209,7 @@ def DIDerivedTypeAttr : DialectAttribute<(attr
   VarInt:$alignInBits,
   VarInt:$offsetInBits,
   OptionalInt<"unsigned">:$dwarfAddressSpace,
-  OptionalAttribute<"DINodeAttr">:$extraData // TODO: DINodeAttr
+  OptionalAttribute<"DINodeAttr">:$extraData
 )>;
 
 //===----------------------------------------------------------------------===//
@@ -305,26 +307,27 @@ def DISubrangeAttr : DialectAttribute<(attr
 
 def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"BoolAttr">:$disableNonforced,
-  OptionalAttribute<"LoopVectorizeAttr">:$vectorize, // TODO: LoopVectorizeAttr
-  OptionalAttribute<"LoopInterleaveAttr">:$interleave, // TODO: LoopInterleaveAttr
-  OptionalAttribute<"LoopUnrollAttr">:$unroll, // TODO: LoopUnrollAttr
-  OptionalAttribute<"LoopUnrollAndJamAttr">:$unrollAndJam, // TODO: LoopUnrollAndJamAttr
-  OptionalAttribute<"LoopLICMAttr">:$licm, // TODO: LoopLICMAttr
-  OptionalAttribute<"LoopDistributeAttr">:$distribute, // TODO: LoopDistributeAttr
-  OptionalAttribute<"LoopPipelineAttr">:$pipeline, // TODO: LoopPipelineAttr
-  OptionalAttribute<"LoopPeeledAttr">:$peeled, // TODO: LoopPeeledAttr
-  OptionalAttribute<"LoopUnswitchAttr">:$unswitch, // TODO: LoopUnswitchAttr
+  OptionalAttribute<"LoopVectorizeAttr">:$vectorize,
+  OptionalAttribute<"LoopInterleaveAttr">:$interleave,
+  OptionalAttribute<"LoopUnrollAttr">:$unroll,
+  OptionalAttribute<"LoopUnrollAndJamAttr">:$unrollAndJam,
+  OptionalAttribute<"LoopLICMAttr">:$licm,
+  OptionalAttribute<"LoopDistributeAttr">:$distribute,
+  OptionalAttribute<"LoopPipelineAttr">:$pipeline,
+  OptionalAttribute<"LoopPeeledAttr">:$peeled,
+  OptionalAttribute<"LoopUnswitchAttr">:$unswitch,
   OptionalAttribute<"BoolAttr">:$mustProgress,
   OptionalAttribute<"BoolAttr">:$isVectorized,
   OptionalAttribute<"FusedLoc">:$startLoc,
   OptionalAttribute<"FusedLoc">:$endLoc,
-  OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses // TODO: AccessGroupAttr
+  OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses
 )>;
 
 //===----------------------------------------------------------------------===//
 // Attributes & Types with custom bytecode handling.
 //===----------------------------------------------------------------------===//
 
+// All the attributes with custom bytecode handling.
 def LLVMDialectAttributes : DialectAttributes<"LLVM"> {
   let elems = [
     AliasScopeAttr,
@@ -347,6 +350,10 @@ def LLVMDialectAttributes : DialectAttributes<"LLVM"> {
     DISubrangeAttr,
     DISubroutineTypeAttr,
     LoopAnnotationAttr
+    // Referenced attributes currently missing support:
+    // AccessGroupAttr, LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
+    // LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
+    // LoopPeeledAttr, LoopUnswitchAttr
   ];
 }
 

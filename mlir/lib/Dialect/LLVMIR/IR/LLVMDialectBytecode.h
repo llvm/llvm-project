@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header defines hooks into the LLVMization dialect bytecode
+// This header defines hooks into the LLVM dialect bytecode
 // implementation.
 //
 //===----------------------------------------------------------------------===//
@@ -18,8 +18,8 @@ namespace mlir::LLVM {
 class LLVMDialect;
 
 namespace detail {
-/// Add the interfaces necessary for encoding the LLVMization dialect
-/// components in bytecode.
+/// Add the interfaces necessary for encoding the LLVM dialect components in
+/// bytecode.
 void addBytecodeInterface(LLVMDialect *dialect);
 } // namespace detail
 } // namespace mlir::LLVM
