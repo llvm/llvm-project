@@ -307,6 +307,17 @@ let Predicates = [IsISAFuture] in {
       : XForm_RS5<31, 564, (outs), (ins g8rc:$RS), "tlbsyncio $RS", []>;
   def PTESYNCIO
       : XForm_RS5<31, 596, (outs), (ins g8rc:$RS), "ptesyncio $RS", []>;
+  def TLBIEP : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
+                                       (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                           u1imm:$PRS, u1imm:$R),
+                                       "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def TLBIEP8
+        : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
+                                  (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
+                                      u1imm:$PRS, u1imm:$R),
+                                  "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+  }
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {
