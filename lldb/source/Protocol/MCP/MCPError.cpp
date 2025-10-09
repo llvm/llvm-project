@@ -1,4 +1,4 @@
-//===-- MCPError.cpp ------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCPError.h"
+#include "lldb/Protocol/MCP/MCPError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
-namespace lldb_private::mcp {
+using namespace lldb_protocol::mcp;
 
 char MCPError::ID;
 char UnsupportedURI::ID;
@@ -25,10 +25,10 @@ std::error_code MCPError::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
 
-protocol::Error MCPError::toProtcolError() const {
-  protocol::Error error;
-  error.error.code = m_error_code;
-  error.error.message = m_message;
+lldb_protocol::mcp::Error MCPError::toProtocolError() const {
+  lldb_protocol::mcp::Error error;
+  error.code = m_error_code;
+  error.message = m_message;
   return error;
 }
 
@@ -41,5 +41,3 @@ void UnsupportedURI::log(llvm::raw_ostream &OS) const {
 std::error_code UnsupportedURI::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
-
-} // namespace lldb_private::mcp

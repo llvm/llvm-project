@@ -1,4 +1,4 @@
-//===-- MCPError.h --------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Protocol.h"
+#ifndef LLDB_PROTOCOL_MCP_MCPERROR_H
+#define LLDB_PROTOCOL_MCP_MCPERROR_H
+
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FormatVariadic.h"
 #include <string>
 
-namespace lldb_private::mcp {
+namespace lldb_protocol::mcp {
 
 class MCPError : public llvm::ErrorInfo<MCPError> {
 public:
@@ -24,7 +26,7 @@ public:
 
   const std::string &getMessage() const { return m_message; }
 
-  protocol::Error toProtcolError() const;
+  lldb_protocol::mcp::Error toProtocolError() const;
 
   static constexpr int64_t kResourceNotFound = -32002;
   static constexpr int64_t kInternalError = -32603;
@@ -47,4 +49,6 @@ private:
   std::string m_uri;
 };
 
-} // namespace lldb_private::mcp
+} // namespace lldb_protocol::mcp
+
+#endif

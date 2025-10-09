@@ -7,22 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
-#include "Plugins/Protocol/MCP/MCPError.h"
 #include "Plugins/Protocol/MCP/ProtocolServerMCP.h"
 #include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/JSONTransport.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Protocol/MCP/MCPError.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::mcp::protocol;
+using namespace lldb_protocol::mcp;
 
 namespace {
 class TestProtocolServerMCP : public lldb_private::mcp::ProtocolServerMCP {
@@ -43,12 +45,11 @@ public:
 };
 
 /// Test tool that returns it argument as text.
-class TestTool : public mcp::Tool {
+class TestTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
+  virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     std::string argument;
     if (const json::Object *args_obj =
             std::get<json::Value>(args).getAsObject()) {
@@ -57,14 +58,14 @@ public:
       }
     }
 
-    mcp::protocol::TextResult text_result;
-    text_result.content.emplace_back(mcp::protocol::TextContent{{argument}});
+    TextResult text_result;
+    text_result.content.emplace_back(TextContent{{argument}});
     return text_result;
   }
 };
 
-class TestResourceProvider : public mcp::ResourceProvider {
-  using mcp::ResourceProvider::ResourceProvider;
+class TestResourceProvider : public ResourceProvider {
+  using ResourceProvider::ResourceProvider;
 
   virtual std::vector<Resource> GetResources() const override {
     std::vector<Resource> resources;
@@ -82,7 +83,7 @@ class TestResourceProvider : public mcp::ResourceProvider {
   virtual llvm::Expected<ResourceResult>
   ReadResource(llvm::StringRef uri) const override {
     if (uri != "lldb://foo/bar")
-      return llvm::make_error<mcp::UnsupportedURI>(uri.str());
+      return llvm::make_error<UnsupportedURI>(uri.str());
 
     ResourceContents contents;
     contents.uri = "lldb://foo/bar";
@@ -96,25 +97,23 @@ class TestResourceProvider : public mcp::ResourceProvider {
 };
 
 /// Test tool that returns an error.
-class ErrorTool : public mcp::Tool {
+class ErrorTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
+  virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     return llvm::createStringError("error");
   }
 };
 
 /// Test tool that fails but doesn't return an error.
-class FailTool : public mcp::Tool {
+class FailTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
-    mcp::protocol::TextResult text_result;
-    text_result.content.emplace_back(mcp::protocol::TextContent{{"failed"}});
+  virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
+    TextResult text_result;
+    text_result.content.emplace_back(TextContent{{"failed"}});
     text_result.isError = true;
     return text_result;
   }
@@ -179,7 +178,7 @@ public:
 
 } // namespace
 
-TEST_F(ProtocolServerMCPTest, Intialization) {
+TEST_F(ProtocolServerMCPTest, Initialization) {
   llvm::StringLiteral request =
       R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":0})json";
   llvm::StringLiteral response =
@@ -309,8 +308,7 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   std::mutex mutex;
 
   m_server_up->AddNotificationHandler(
-      "notifications/initialized",
-      [&](const mcp::protocol::Notification &notification) {
+      "notifications/initialized", [&](const Notification &notification) {
         {
           std::lock_guard<std::mutex> lock(mutex);
           handler_called = true;
