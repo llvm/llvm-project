@@ -449,29 +449,56 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
   // Go through all the stacks, ranges and branches in sample counters, use
   // the start of the range to look up the function it belongs and record the
   // function.
+  uint64_t ErrStkAddr = 0, ErrFuncRange = 0, ErrSrc = 0, ErrTgt = 0;
+  uint64_t TotalStkAddr = 0, TotalFuncRange = 0, TotalSrc = 0, TotalTgt = 0;
   for (const auto &CI : *SampleCounters) {
     if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
       for (auto StackAddr : CtxKey->Context) {
+        uint64_t inc = Binary->addressIsCode(StackAddr) ? 1 : 0;
+        TotalStkAddr += inc;
         if (FuncRange *FRange = Binary->findFuncRange(StackAddr))
           ProfiledFunctions.insert(FRange->Func);
+        else
+          ErrStkAddr += inc;
       }
     }
 
     for (auto Item : CI.second.RangeCounter) {
       uint64_t StartAddress = Item.first.first;
+      uint64_t inc = Binary->addressIsCode(StartAddress) ? 1 : 0;
+      TotalFuncRange += inc;
       if (FuncRange *FRange = Binary->findFuncRange(StartAddress))
         ProfiledFunctions.insert(FRange->Func);
+      else
+        ErrFuncRange += inc;
     }
 
     for (auto Item : CI.second.BranchCounter) {
       uint64_t SourceAddress = Item.first.first;
       uint64_t TargetAddress = Item.first.second;
+      uint64_t srcinc = Binary->addressIsCode(SourceAddress) ? 1 : 0;
+      uint64_t tgtinc = Binary->addressIsCode(TargetAddress) ? 1 : 0;
+      TotalSrc += srcinc;
       if (FuncRange *FRange = Binary->findFuncRange(SourceAddress))
         ProfiledFunctions.insert(FRange->Func);
+      else
+        ErrSrc += srcinc;
+      TotalTgt += tgtinc;
       if (FuncRange *FRange = Binary->findFuncRange(TargetAddress))
         ProfiledFunctions.insert(FRange->Func);
+      else
+        ErrTgt += tgtinc;
     }
   }
+
+  if (ErrStkAddr)
+    WithColor::warning() << "Cannot find Stack Address from DWARF Info: " << ErrStkAddr << "/" << TotalStkAddr << " missing\n";
+  if (ErrFuncRange)
+    WithColor::warning() << "Cannot find Function Range from DWARF Info: " << ErrFuncRange << "/" << TotalFuncRange << " missing\n";
+  if (ErrSrc)
+    WithColor::warning() << "Cannot find LBR Source Addr from DWARF Info: " << ErrSrc << "/" << TotalSrc << " missing\n";
+  if (ErrTgt)
+    WithColor::warning() << "Cannot find LBR Target Addr from DWARF Info: " << ErrTgt << "/" << TotalTgt << " missing\n";
   return true;
 }
 
