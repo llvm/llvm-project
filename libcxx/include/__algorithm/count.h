@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___ALGORITHM_COUNT_H
 #define _LIBCPP___ALGORITHM_COUNT_H
 
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/min.h>
 #include <__bit/invert_if.h>
 #include <__bit/popcount.h>
@@ -31,10 +30,10 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // generic implementation
-template <class _AlgPolicy, class _Iter, class _Sent, class _Tp, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>
+template <class _Iter, class _Sent, class _Tp, class _Proj>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_difference_t<_Iter>
 __count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
-  typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __r(0);
+  __iter_difference_t<_Iter> __r(0);
   for (; __first != __last; ++__first)
     if (std::__invoke(__proj, *__first) == __value)
       ++__r;
@@ -71,8 +70,8 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_t
   return __r;
 }
 
-template <class, class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iterator_difference_type<__bit_iterator<_Cp, _IsConst> >
+template <class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_difference_t<__bit_iterator<_Cp, _IsConst> >
 __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
   if (__value)
     return std::__count_bool<true>(
@@ -82,10 +81,10 @@ __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __l
 }
 
 template <class _InputIterator, class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iterator_difference_type<_InputIterator>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_difference_t<_InputIterator>
 count(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
-  return std::__count<_ClassicAlgPolicy>(__first, __last, __value, __proj);
+  return std::__count(__first, __last, __value, __proj);
 }
 
 _LIBCPP_END_NAMESPACE_STD

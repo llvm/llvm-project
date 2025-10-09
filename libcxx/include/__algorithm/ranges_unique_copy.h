@@ -73,7 +73,7 @@ struct __unique_copy {
               indirectly_copyable_storable<_InIter, _OutIter>)
   _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret = std::__unique_copy<_RangeAlgPolicy>(
+    auto __ret = std::__unique_copy(
         std::move(__first),
         std::move(__last),
         std::move(__result),
@@ -92,7 +92,7 @@ struct __unique_copy {
               indirectly_copyable_storable<iterator_t<_Range>, _OutIter>)
   _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret = std::__unique_copy<_RangeAlgPolicy>(
+    auto __ret = std::__unique_copy(
         ranges::begin(__range),
         ranges::end(__range),
         std::move(__result),

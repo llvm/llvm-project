@@ -48,13 +48,7 @@ struct _RangeAlgPolicy {};
 template <>
 struct _IterOps<_RangeAlgPolicy> {
   template <class _Iter>
-  using __value_type _LIBCPP_NODEBUG = iter_value_t<_Iter>;
-
-  template <class _Iter>
   using __iterator_category _LIBCPP_NODEBUG = ranges::__iterator_concept<_Iter>;
-
-  template <class _Iter>
-  using __difference_type _LIBCPP_NODEBUG = iter_difference_t<_Iter>;
 
   static constexpr auto advance      = ranges::advance;
   static constexpr auto distance     = ranges::distance;
@@ -72,13 +66,7 @@ struct _ClassicAlgPolicy {};
 template <>
 struct _IterOps<_ClassicAlgPolicy> {
   template <class _Iter>
-  using __value_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::value_type;
-
-  template <class _Iter>
   using __iterator_category _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
-
-  template <class _Iter>
-  using __difference_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
 
   // advance
   template <class _Iter, class _Distance>
@@ -164,17 +152,17 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   // advance with sentinel, a la std::ranges::advance
   template <class _Iter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_Iter>
-  __advance_to(_Iter& __iter, __difference_type<_Iter> __count, const _Iter& __sentinel) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __iter_difference_t<_Iter>
+  __advance_to(_Iter& __iter, __iter_difference_t<_Iter> __count, const _Iter& __sentinel) {
     return _IterOps::__advance_to(__iter, __count, __sentinel, typename iterator_traits<_Iter>::iterator_category());
   }
 
 private:
   // advance with sentinel, a la std::ranges::advance -- InputIterator specialization
   template <class _InputIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_InputIter> __advance_to(
-      _InputIter& __iter, __difference_type<_InputIter> __count, const _InputIter& __sentinel, input_iterator_tag) {
-    __difference_type<_InputIter> __dist = 0;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __iter_difference_t<_InputIter> __advance_to(
+      _InputIter& __iter, __iter_difference_t<_InputIter> __count, const _InputIter& __sentinel, input_iterator_tag) {
+    __iter_difference_t<_InputIter> __dist = 0;
     for (; __dist < __count && __iter != __sentinel; ++__dist)
       ++__iter;
     return __count - __dist;
@@ -182,12 +170,12 @@ private:
 
   // advance with sentinel, a la std::ranges::advance -- BidirectionalIterator specialization
   template <class _BiDirIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_BiDirIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __iter_difference_t<_BiDirIter>
   __advance_to(_BiDirIter& __iter,
-               __difference_type<_BiDirIter> __count,
+               __iter_difference_t<_BiDirIter> __count,
                const _BiDirIter& __sentinel,
                bidirectional_iterator_tag) {
-    __difference_type<_BiDirIter> __dist = 0;
+    __iter_difference_t<_BiDirIter> __dist = 0;
     if (__count >= 0)
       for (; __dist < __count && __iter != __sentinel; ++__dist)
         ++__iter;
@@ -199,9 +187,9 @@ private:
 
   // advance with sentinel, a la std::ranges::advance -- RandomIterator specialization
   template <class _RandIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_RandIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __iter_difference_t<_RandIter>
   __advance_to(_RandIter& __iter,
-               __difference_type<_RandIter> __count,
+               __iter_difference_t<_RandIter> __count,
                const _RandIter& __sentinel,
                random_access_iterator_tag) {
     auto __dist = _IterOps::distance(__iter, __sentinel);
@@ -215,9 +203,6 @@ private:
     return __count - __dist;
   }
 };
-
-template <class _AlgPolicy, class _Iter>
-using __policy_iter_diff_t _LIBCPP_NODEBUG = typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>;
 
 _LIBCPP_END_NAMESPACE_STD
 
