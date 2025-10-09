@@ -231,8 +231,8 @@ static inline void hoistUnrelatedCopies(MachineFunction &MF) {
       while (!CopyMoveIt.isEnd()) {
         EpilogIterator Next = CopyMoveIt;
         ++Next;
-        if (CopyMoveIt->getOpcode() == AMDGPU::COPY &&
-                !RelatedCopySources.count(CopyMoveIt->getOperand(1).getReg()) ||
+        if ((CopyMoveIt->getOpcode() == AMDGPU::COPY &&
+             !RelatedCopySources.count(CopyMoveIt->getOperand(1).getReg())) ||
             CopyMoveIt->getOpcode() == AMDGPU::IMPLICIT_DEF) {
           MachineInstr &MIToMove = *CopyMoveIt;
           MIToMove.removeFromBundle();
@@ -242,4 +242,20 @@ static inline void hoistUnrelatedCopies(MachineFunction &MF) {
         CopyMoveIt = Next;
       }
     }
+}
+
+static inline bool makeEverySuccessorBeBranchTarget(MachineFunction &MF) {
+  bool Changed = false;
+  auto &TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+  for (MachineBasicBlock &MBB : MF)
+    if (MBB.empty() ||
+        (!MBB.back().isUnconditionalBranch() && !MBB.back().isReturn())) {
+      MachineBasicBlock *LayoutSuccessor =
+          &*std::next(MachineFunction::iterator(MBB));
+      BuildMI(&MBB, DebugLoc(), TII.get(AMDGPU::S_BRANCH))
+          .addMBB(LayoutSuccessor);
+      Changed = true;
+    }
+
+  return Changed;
 }
