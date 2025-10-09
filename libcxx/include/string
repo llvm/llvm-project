@@ -2384,6 +2384,19 @@ private:
     return __guess;
   }
 
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
+  __get_amortized_growth_capacity(size_type __required_capacity) {
+    size_type __max_size = max_size();
+    if (__required_capacity > __max_size)
+      __throw_length_error();
+    size_type __current_cap = capacity();
+    _LIBCPP_ASSERT_INTERNAL(
+        __current_cap < __required_capacity, "Trying to grow string even though there is enough capacity already?");
+    if (__current_cap > __max_size / 2 - __alignment)
+      return __max_size;
+    return std::max(__required_capacity, 2 * __current_cap);
+  }
+
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(const value_type* __s, size_type __sz);
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(size_type __n, value_type __c);
 
@@ -2714,14 +2727,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     size_type __n_del,
     size_type __n_add,
     const value_type* __p_new_stuff) {
-  size_type __ms = max_size();
-  if (__delta_cap > __ms - __old_cap)
-    __throw_length_error();
+  __long __buffer = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__old_cap + __delta_cap));
   pointer __old_p = __get_pointer();
-  size_type __cap = __old_cap < __ms / 2 - __alignment ? std::max(__old_cap + __delta_cap, 2 * __old_cap) : __ms;
   __annotate_delete();
-  auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
-  __long __buffer = __allocate_long_buffer(__alloc_, __cap);
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
   if (__n_add != 0)
@@ -2751,12 +2760,8 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
-  size_type __ms = max_size();
-  if (__delta_cap > __ms - __old_cap)
-    this->__throw_length_error();
+  __long __buffer = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__old_cap + __delta_cap));
   pointer __old_p = __get_pointer();
-  size_type __cap = __old_cap < __ms / 2 - __alignment ? std::max(__old_cap + __delta_cap, 2 * __old_cap) : __ms;
-  __long __buffer = __allocate_long_buffer(__alloc_, __cap);
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
   size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
