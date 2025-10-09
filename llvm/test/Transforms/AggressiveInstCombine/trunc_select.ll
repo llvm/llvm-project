@@ -13,7 +13,7 @@ define dso_local i16 @select_i16(i16 %a, i16 %b, i1 %cond) !prof !0 {
 entry:
   %conv0 = sext i16 %a to i32
   %conv1 = sext i16 %b to i32
-  %sel = select i1 %cond, i32 %conv0, i32 %conv1
+  %sel = select i1 %cond, i32 %conv0, i32 %conv1, !prof !1
   %conv4 = trunc i32 %sel to i16
   ret i16 %conv4
 }
@@ -136,6 +136,7 @@ entry:
 }
 
 !0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"branch_weights", i32 2, i32 3}
 ; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF_1]] = !{!"branch_weights", i32 2, i32 3}
 

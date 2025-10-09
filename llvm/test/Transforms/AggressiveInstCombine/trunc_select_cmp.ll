@@ -14,7 +14,7 @@ define dso_local i16 @cmp_select_sext_const(i8 %a) !prof !0 {
 entry:
   %conv = sext i8 %a to i32
   %cmp = icmp slt i32 %conv, 109
-  %cond = select i1 %cmp, i32 109, i32 %conv
+  %cond = select i1 %cmp, i32 109, i32 %conv, !prof !1
   %conv4 = trunc i32 %cond to i16
   ret i16 %conv4
 }
@@ -211,5 +211,6 @@ define i16 @cmp_select_unsigned_const_i16Const_noTransformation(i8 %a) {
 }
 
 !0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"branch_weights", i32 2, i32 3}
 ; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF_1]] = !{!"branch_weights", i32 2, i32 3}
