@@ -40,6 +40,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
     coverFunctionFragmentStart(BF, FF);
     bool FirstIter = true;
     MCInst PrevInst;
+    bool PrevRAState = false;
     // As this pass runs after function splitting, we should only check
     // consecutive instructions inside FunctionFragments.
     for (BinaryBasicBlock *BB : FF) {
@@ -47,18 +48,22 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
         MCInst &Inst = *It;
         if (BC.MIB->isCFI(Inst))
           continue;
+        auto RAState = BC.MIB->getRAState(Inst);
+        if (!RAState) {
+          BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
+                    << " in function " << BF.getPrintName() << "\n";
+        }
         if (!FirstIter) {
           // Consecutive instructions with different RAState means we need to
           // add a OpNegateRAState.
-          if ((BC.MIB->isRASigned(PrevInst) && BC.MIB->isRAUnsigned(Inst)) ||
-              (BC.MIB->isRAUnsigned(PrevInst) && BC.MIB->isRASigned(Inst))) {
+          if (*RAState != PrevRAState)
             It = BF.addCFIInstruction(
                 BB, It, MCCFIInstruction::createNegateRAState(nullptr));
-          }
         } else {
           FirstIter = false;
         }
         PrevInst = *It;
+        PrevRAState = *RAState;
       }
     }
   }
@@ -81,10 +86,15 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
       });
   // If a function is already split in the input, the first FF can also start
   // with Signed state. This covers that scenario as well.
-  if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin()))) {
+  auto RAState = BC.MIB->getRAState(*(*FirstNonEmpty)->begin());
+  if (!RAState) {
+    BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
+              << " in function " << BF.getPrintName() << "\n";
+    return;
+  }
+  if (*RAState)
     BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
                          MCCFIInstruction::createNegateRAState(nullptr));
-  }
 }
 
 void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
@@ -96,15 +106,21 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
       if (BC.MIB->isCFI(Inst))
         continue;
 
-      if (!FirstIter && BC.MIB->isRAStateUnknown(Inst)) {
-        if (BC.MIB->isRASigned(PrevInst) || BC.MIB->isPSignOnLR(PrevInst)) {
-          BC.MIB->setRASigned(Inst);
-        } else if (BC.MIB->isRAUnsigned(PrevInst) ||
-                   BC.MIB->isPAuthOnLR(PrevInst)) {
-          BC.MIB->setRAUnsigned(Inst);
+      auto RAState = BC.MIB->getRAState(Inst);
+      if (!FirstIter && !RAState) {
+        if (BC.MIB->isPSignOnLR(PrevInst))
+          RAState = true;
+        else if (BC.MIB->isPAuthOnLR(PrevInst))
+          RAState = false;
+        else {
+          auto PrevRAState = BC.MIB->getRAState(PrevInst);
+          RAState = PrevRAState ? *PrevRAState : false;
         }
+        BC.MIB->setRAState(Inst, *RAState);
       } else {
         FirstIter = false;
+        if (!RAState)
+          BC.MIB->setRAState(Inst, BF.getInitialRAState());
       }
       PrevInst = Inst;
     }
