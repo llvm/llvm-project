@@ -75,6 +75,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -5865,25 +5866,25 @@ static const char *getSectionNameForCommandline(const Triple &T) {
 void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
                                 bool EmbedBitcode, bool EmbedCmdline,
                                 const std::vector<uint8_t> &CmdArgs) {
-  // Save llvm.compiler.used and remove it.
-  SmallVector<Constant *, 2> UsedArray;
-  SmallVector<GlobalValue *, 4> UsedGlobals;
-  GlobalVariable *Used = collectUsedGlobalVariables(M, UsedGlobals, true);
-  Type *UsedElementType = Used ? Used->getValueType()->getArrayElementType()
-                               : PointerType::getUnqual(M.getContext());
-  for (auto *GV : UsedGlobals) {
-    if (GV->getName() != "llvm.embedded.module" &&
-        GV->getName() != "llvm.cmdline")
-      UsedArray.push_back(
-          ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
-  }
-  if (Used)
-    Used->eraseFromParent();
 
   // Embed the bitcode for the llvm module.
   std::string Data;
   ArrayRef<uint8_t> ModuleData;
   Triple T(M.getTargetTriple());
+  SmallVector<GlobalValue *, 2> NewGlobals;
+
+  auto IsCmdOrBitcode = [&](Constant *C) {
+    GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
+    StringRef Name = GV ? GV->getName() : "";
+    if (EmbedBitcode && Name == "llvm.embedded.module")
+      return true;
+    if (EmbedCmdline && Name == "llvm.cmdline")
+      return true;
+    return false;
+  };
+
+  if (EmbedBitcode || EmbedCmdline)
+    removeFromUsedLists(M, IsCmdOrBitcode);
 
   if (EmbedBitcode) {
     if (Buf.getBufferSize() == 0 ||
@@ -5902,23 +5903,22 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   }
   llvm::Constant *ModuleConstant =
       llvm::ConstantDataArray::get(M.getContext(), ModuleData);
-  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+  llvm::GlobalVariable *EmbeddedModule = new llvm::GlobalVariable(
       M, ModuleConstant->getType(), true, llvm::GlobalValue::PrivateLinkage,
       ModuleConstant);
-  GV->setSection(getSectionNameForBitcode(T));
+  EmbeddedModule->setSection(getSectionNameForBitcode(T));
   // Set alignment to 1 to prevent padding between two contributions from input
   // sections after linking.
-  GV->setAlignment(Align(1));
-  UsedArray.push_back(
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
+  EmbeddedModule->setAlignment(Align(1));
+  NewGlobals.push_back(EmbeddedModule);
   if (llvm::GlobalVariable *Old =
           M.getGlobalVariable("llvm.embedded.module", true)) {
     assert(Old->hasZeroLiveUses() &&
            "llvm.embedded.module can only be used once in llvm.compiler.used");
-    GV->takeName(Old);
+    EmbeddedModule->takeName(Old);
     Old->eraseFromParent();
   } else {
-    GV->setName("llvm.embedded.module");
+    EmbeddedModule->setName("llvm.embedded.module");
   }
 
   // Skip if only bitcode needs to be embedded.
@@ -5928,30 +5928,20 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
                               CmdArgs.size());
     llvm::Constant *CmdConstant =
         llvm::ConstantDataArray::get(M.getContext(), CmdData);
-    GV = new llvm::GlobalVariable(M, CmdConstant->getType(), true,
-                                  llvm::GlobalValue::PrivateLinkage,
-                                  CmdConstant);
-    GV->setSection(getSectionNameForCommandline(T));
-    GV->setAlignment(Align(1));
-    UsedArray.push_back(
-        ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
+    GlobalVariable *CmdLine = new llvm::GlobalVariable(
+        M, CmdConstant->getType(), true, llvm::GlobalValue::PrivateLinkage,
+        CmdConstant);
+    CmdLine->setSection(getSectionNameForCommandline(T));
+    CmdLine->setAlignment(Align(1));
     if (llvm::GlobalVariable *Old = M.getGlobalVariable("llvm.cmdline", true)) {
       assert(Old->hasZeroLiveUses() &&
              "llvm.cmdline can only be used once in llvm.compiler.used");
-      GV->takeName(Old);
+      CmdLine->takeName(Old);
       Old->eraseFromParent();
     } else {
-      GV->setName("llvm.cmdline");
+      CmdLine->setName("llvm.cmdline");
     }
+    NewGlobals.push_back(CmdLine);
+    appendToCompilerUsed(M, NewGlobals);
   }
-
-  if (UsedArray.empty())
-    return;
-
-  // Recreate llvm.compiler.used.
-  ArrayType *ATy = ArrayType::get(UsedElementType, UsedArray.size());
-  auto *NewUsed = new GlobalVariable(
-      M, ATy, false, llvm::GlobalValue::AppendingLinkage,
-      llvm::ConstantArray::get(ATy, UsedArray), "llvm.compiler.used");
-  NewUsed->setSection("llvm.metadata");
 }
