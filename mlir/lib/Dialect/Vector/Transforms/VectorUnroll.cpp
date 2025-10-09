@@ -473,7 +473,6 @@ struct UnrollElementwisePattern : public RewritePattern {
 
     // Handle rank mismatch by adding leading unit dimensions to targetShape
     SmallVector<int64_t> adjustedTargetShape = *targetShape;
-    SmallVector<int64_t> adjustedOffsets;
     if (originalSize.size() > targetShape->size()) {
       // Add leading unit dimensions to targetShape
       int64_t rankDiff = originalSize.size() - targetShape->size();
