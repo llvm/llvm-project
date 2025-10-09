@@ -157,7 +157,8 @@ public:
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           StoppointCallbackContext context(event_ptr, exe_ctx, true);
           bp_site_sp->BumpHitCounts();
-          m_should_stop = bp_site_sp->ShouldStop(&context);
+          m_should_stop =
+              bp_site_sp->ShouldStop(&context, m_async_stopped_locs);
         } else {
           Log *log = GetLog(LLDBLog::Process);
 
@@ -180,6 +181,7 @@ public:
   }
 
   const char *GetDescription() override {
+    // FIXME: only print m_async_stopped_locs.
     if (m_description.empty()) {
       ThreadSP thread_sp(m_thread_wp.lock());
       if (thread_sp) {
@@ -202,7 +204,7 @@ public:
           }
 
           strm.Printf("breakpoint ");
-          bp_site_sp->GetDescription(&strm, eDescriptionLevelBrief);
+          m_async_stopped_locs.GetDescription(&strm, eDescriptionLevelBrief);
           m_description = std::string(strm.GetString());
         } else {
           StreamString strm;
@@ -244,6 +246,12 @@ public:
   }
 
   uint32_t GetStopReasonDataCount() const override {
+    size_t num_async_locs = m_async_stopped_locs.GetSize();
+    // If we have async locations, they are the ones we should report:
+    if (num_async_locs > 0)
+      return num_async_locs * 2;
+
+    // Otherwise report the number of locations at this breakpoint's site.
     lldb::BreakpointSiteSP bp_site_sp = GetBreakpointSiteSP();
     if (bp_site_sp)
       return bp_site_sp->GetNumberOfConstituents() * 2;
@@ -251,22 +259,25 @@ public:
   }
 
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
-    lldb::BreakpointSiteSP bp_site_sp = GetBreakpointSiteSP();
-    if (bp_site_sp) {
-      uint32_t bp_index = idx / 2;
-      BreakpointLocationSP bp_loc_sp(
-          bp_site_sp->GetConstituentAtIndex(bp_index));
-      if (bp_loc_sp) {
-        if (idx & 1) {
-          // FIXME: This might be a Facade breakpoint, so we need to fetch
-          // the one that the thread actually hit, not the native loc ID.
+    uint32_t bp_index = idx / 2;
+    BreakpointLocationSP loc_to_report_sp;
 
-          // Odd idx, return the breakpoint location ID
-          return bp_loc_sp->GetID();
-        } else {
-          // Even idx, return the breakpoint ID
-          return bp_loc_sp->GetBreakpoint().GetID();
-        }
+    size_t num_async_locs = m_async_stopped_locs.GetSize();
+    if (num_async_locs > 0) {
+      // GetByIndex returns an empty SP if we ask past its contents:
+      loc_to_report_sp = m_async_stopped_locs.GetByIndex(bp_index);
+    } else {
+      lldb::BreakpointSiteSP bp_site_sp = GetBreakpointSiteSP();
+      if (bp_site_sp)
+        loc_to_report_sp = bp_site_sp->GetConstituentAtIndex(bp_index);
+    }
+    if (loc_to_report_sp) {
+      if (idx & 1) {
+        // Odd idx, return the breakpoint location ID
+        return loc_to_report_sp->GetID();
+      } else {
+        // Even idx, return the breakpoint ID
+        return loc_to_report_sp->GetBreakpoint().GetID();
       }
     }
     return LLDB_INVALID_BREAK_ID;
@@ -335,8 +346,7 @@ protected:
         // local list.  That way if one of the breakpoint actions changes the
         // site, then we won't be operating on a bad list.
         BreakpointLocationCollection site_locations;
-        size_t num_constituents =
-            bp_site_sp->CopyConstituentsList(site_locations);
+        size_t num_constituents = m_async_stopped_locs.GetSize();
 
         if (num_constituents == 0) {
           m_should_stop = true;
@@ -436,16 +446,26 @@ protected:
           // I'm just sticking the BreakpointSP's in a vector since I'm only
           // using it to locally increment their retain counts.
 
+          // We are holding onto the breakpoint locations that were hit
+          // by this stop info between the "synchonous" ShouldStop and now.
+          // But an intervening action might have deleted one of the breakpoints
+          // we hit before we get here.  So at the same time let's build a list
+          // of the still valid locations:
           std::vector<lldb::BreakpointSP> location_constituents;
 
+          BreakpointLocationCollection valid_locs;
           for (size_t j = 0; j < num_constituents; j++) {
-            BreakpointLocationSP loc(site_locations.GetByIndex(j));
-            location_constituents.push_back(
-                loc->GetBreakpoint().shared_from_this());
+            BreakpointLocationSP loc_sp(m_async_stopped_locs.GetByIndex(j));
+            if (loc_sp->IsValid()) {
+              location_constituents.push_back(
+                  loc_sp->GetBreakpoint().shared_from_this());
+              valid_locs.Add(loc_sp);
+            }
           }
 
-          for (size_t j = 0; j < num_constituents; j++) {
-            lldb::BreakpointLocationSP bp_loc_sp = site_locations.GetByIndex(j);
+          size_t num_valid_locs = valid_locs.GetSize();
+          for (size_t j = 0; j < num_valid_locs; j++) {
+            lldb::BreakpointLocationSP bp_loc_sp = valid_locs.GetByIndex(j);
             StreamString loc_desc;
             if (log) {
               bp_loc_sp->GetDescription(&loc_desc, eDescriptionLevelBrief);
@@ -679,6 +699,7 @@ private:
   lldb::break_id_t m_break_id;
   bool m_was_all_internal;
   bool m_was_one_shot;
+  BreakpointLocationCollection m_async_stopped_locs;
 };
 
 // StopInfoWatchpoint
