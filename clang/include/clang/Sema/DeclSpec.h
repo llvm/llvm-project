@@ -2638,7 +2638,7 @@ public:
     return InventedTemplateParameterList;
   }
 
-  /// takeAttributesPrepend - Takes attributes from the given parsed-attributes
+  /// takeAttributesAppend - Takes attributes from the given parsed-attributes
   /// set and add them to this declarator.
   ///
   /// These examples both add 3 attributes to "var":
