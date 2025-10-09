@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
-
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/FileSystem.h"
@@ -18,6 +17,8 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "llvm/Testing/Support/SupportHelpers.h"
 
 #include "gtest/gtest.h"
 
@@ -43,7 +44,7 @@ constexpr const char *ext = ".dll";
 constexpr const char *ext = ".so";
 #endif
 
-static bool EnvReady = true;
+bool EnvReady = false;
 
 Triple getTargetTriple() {
   auto JTMB = JITTargetMachineBuilder::detectHost();
@@ -84,9 +85,9 @@ unsigned getYamlDocNum() {
 }
 
 class LibraryTestEnvironment : public ::testing::Environment {
-  std::vector<std::string> createdDylibsDir;
-  std::vector<std::string> createdDylibs;
-  SmallVector<char, 128> dirPath;
+  std::vector<std::string> CreatedDylibsDir;
+  std::vector<std::string> CreatedDylibs;
+  SmallVector<char, 128> DirPath;
 
 public:
   void SetUp() override {
@@ -95,40 +96,48 @@ public:
       return;
     }
 
-    StringRef thisFile = __FILE__;
-    SmallVector<char, 128> filedirpath(thisFile.begin(), thisFile.end());
-    sys::path::remove_filename(filedirpath);
-    const char *indir = "Inputs";
-    sys::path::append(dirPath, filedirpath, indir);
+    StringRef ThisFile = __FILE__;
+    SmallVector<char, 128> InputDirPath(ThisFile.begin(), ThisFile.end());
+    sys::path::remove_filename(InputDirPath);
+    sys::path::append(InputDirPath, "Inputs");
+    if (!sys::fs::exists(InputDirPath))
+      return;
 
-    // given yamlPath + dylibPath, validate + convert
-    auto processYamlToDylib = [&](const SmallVector<char, 128> &yamlPath,
-                                  const SmallVector<char, 128> &dylibPath,
+    SmallString<128> UniqueDir;
+    sys::path::append(UniqueDir, InputDirPath);
+    std::error_code EC = sys::fs::createUniqueDirectory(UniqueDir, DirPath);
+
+    if (EC)
+      return;
+
+    // given yamlPath + DylibPath, validate + convert
+    auto processYamlToDylib = [&](const SmallVector<char, 128> &YamlPath,
+                                  const SmallVector<char, 128> &DylibPath,
                                   unsigned DocNum) -> bool {
-      if (!sys::fs::exists(yamlPath)) {
+      if (!sys::fs::exists(YamlPath)) {
         errs() << "YAML file missing: "
-               << StringRef(yamlPath.data(), yamlPath.size()) << "\n";
+               << StringRef(YamlPath.data(), YamlPath.size()) << "\n";
         EnvReady = false;
         return false;
       }
 
-      auto bufOrErr = MemoryBuffer::getFile(yamlPath);
-      if (!bufOrErr) {
+      auto BufOrErr = MemoryBuffer::getFile(YamlPath);
+      if (!BufOrErr) {
         errs() << "Failed to read "
-               << StringRef(yamlPath.data(), yamlPath.size()) << ": "
-               << bufOrErr.getError().message() << "\n";
+               << StringRef(YamlPath.data(), YamlPath.size()) << ": "
+               << BufOrErr.getError().message() << "\n";
         EnvReady = false;
         return false;
       }
 
-      yaml::Input yin(bufOrErr->get()->getBuffer());
+      yaml::Input yin(BufOrErr->get()->getBuffer());
       std::error_code EC;
-      raw_fd_ostream outFile(StringRef(dylibPath.data(), dylibPath.size()), EC,
+      raw_fd_ostream outFile(StringRef(DylibPath.data(), DylibPath.size()), EC,
                              sys::fs::OF_None);
 
       if (EC) {
         errs() << "Failed to open "
-               << StringRef(dylibPath.data(), dylibPath.size())
+               << StringRef(DylibPath.data(), DylibPath.size())
                << " for writing: " << EC.message() << "\n";
         EnvReady = false;
         return false;
@@ -142,69 +151,76 @@ public:
               },
               DocNum)) {
         errs() << "Failed to convert "
-               << StringRef(yamlPath.data(), yamlPath.size()) << " to "
-               << StringRef(dylibPath.data(), dylibPath.size()) << "\n";
+               << StringRef(YamlPath.data(), YamlPath.size()) << " to "
+               << StringRef(DylibPath.data(), DylibPath.size()) << "\n";
         EnvReady = false;
         return false;
       }
 
-      createdDylibsDir.push_back(std::string(sys::path::parent_path(
-          StringRef(dylibPath.data(), dylibPath.size()))));
-      createdDylibs.push_back(std::string(dylibPath.begin(), dylibPath.end()));
+      CreatedDylibsDir.push_back(std::string(sys::path::parent_path(
+          StringRef(DylibPath.data(), DylibPath.size()))));
+      CreatedDylibs.push_back(std::string(DylibPath.begin(), DylibPath.end()));
       return true;
     };
 
-    std::vector<const char *> libDirs = {"Z", "A", "B", "C", "D"};
+    std::vector<const char *> LibDirs = {"Z", "A", "B", "C", "D"};
 
     unsigned DocNum = getYamlDocNum();
     std::string YamlPltExt = getYamlFilePlatformExt();
-    for (const auto &libdirName : libDirs) {
+    for (const auto &LibdirName : LibDirs) {
       // YAML path
-      SmallVector<char, 128> yamlPath(dirPath.begin(), dirPath.end());
-      SmallVector<char, 128> yamlFileName;
-      yamlFileName.append(libdirName, libdirName + strlen(libdirName));
-      yamlFileName.append(YamlPltExt.begin(), YamlPltExt.end());
-      sys::path::append(yamlPath, libdirName, yamlFileName);
-      sys::path::replace_extension(yamlPath, ".yaml");
+      SmallVector<char, 128> YamlPath(InputDirPath.begin(), InputDirPath.end());
+      SmallVector<char, 128> YamlFileName;
+      YamlFileName.append(LibdirName, LibdirName + strlen(LibdirName));
+      YamlFileName.append(YamlPltExt.begin(), YamlPltExt.end());
+      sys::path::append(YamlPath, LibdirName, YamlFileName);
+      sys::path::replace_extension(YamlPath, ".yaml");
 
       // dylib path
-      SmallVector<char, 128> dylibPath(dirPath.begin(), dirPath.end());
-      SmallVector<char, 128> dylibFileName;
+      SmallVector<char, 128> DylibPath(DirPath.begin(), DirPath.end());
+      SmallVector<char, 128> DylibFileName;
       StringRef prefix("lib");
-      dylibFileName.append(prefix.begin(), prefix.end());
-      dylibFileName.append(libdirName, libdirName + strlen(libdirName));
+      DylibFileName.append(prefix.begin(), prefix.end());
+      DylibFileName.append(LibdirName, LibdirName + strlen(LibdirName));
 
-      sys::path::append(dylibPath, libdirName, dylibFileName);
-      sys::path::replace_extension(dylibPath, ext);
-      if (!processYamlToDylib(yamlPath, dylibPath, DocNum))
+      sys::path::append(DylibPath, LibdirName);
+      if (!sys::fs::exists(DylibPath)) {
+        auto EC = sys::fs::create_directory(DylibPath);
+        if (EC)
+          return;
+      }
+      sys::path::append(DylibPath, DylibFileName);
+      sys::path::replace_extension(DylibPath, ext);
+      if (!processYamlToDylib(YamlPath, DylibPath, DocNum))
         return;
     }
+
+    EnvReady = true;
   }
 
   void TearDown() override {
-    for (const auto &dylibFile : createdDylibs)
-      sys::fs::remove(dylibFile);
-
-    createdDylibs.clear();
+    sys::fs::remove_directories(DirPath);
   }
 
   std::string getBaseDir() const {
-    return std::string(dirPath.begin(), dirPath.end());
+    return std::string(DirPath.begin(), DirPath.end());
   }
+
+  std::vector<std::string> getDylibPaths() const { return CreatedDylibs; }
 };
 
 static LibraryTestEnvironment *GlobalEnv =
     static_cast<LibraryTestEnvironment *>(
         ::testing::AddGlobalTestEnvironment(new LibraryTestEnvironment()));
 
-inline std::string libPath(const std::string &baseDir,
+inline std::string libPath(const std::string &BaseDir,
                            const std::string &name) {
 #if defined(__APPLE__)
-  return baseDir + "/" + name + ".dylib";
+  return BaseDir + "/" + name + ".dylib";
 #elif defined(_WIN32)
-  return baseDir + "/" + name + ".dll";
+  return BaseDir + "/" + name + ".dll";
 #else
-  return baseDir + "/" + name + ".so";
+  return BaseDir + "/" + name + ".so";
 #endif
 }
 
@@ -229,19 +245,23 @@ struct TestLibrary {
 
 class LibraryResolverIT : public ::testing::Test {
 protected:
-  std::string baseDir;
+  std::string BaseDir;
   std::unordered_map<std::string, TestLibrary> libs;
   void SetUp() override {
     if (!EnvReady)
       GTEST_SKIP() << "Skipping test: environment setup failed.";
 
     ASSERT_NE(GlobalEnv, nullptr);
-    baseDir = GlobalEnv->getBaseDir();
-    libs["A"] = {libPath(baseDir, "A/libA"), {platformSymbolName("sayA")}};
-    libs["B"] = {libPath(baseDir, "B/libB"), {platformSymbolName("sayB")}};
-    libs["C"] = {libPath(baseDir, "C/libC"), {platformSymbolName("sayC")}};
-    libs["D"] = {libPath(baseDir, "D/libD"), {platformSymbolName("sayD")}};
-    libs["Z"] = {libPath(baseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
+    BaseDir = GlobalEnv->getBaseDir();
+    libs["A"] = {libPath(BaseDir, "A/libA"), {platformSymbolName("sayA")}};
+    libs["B"] = {libPath(BaseDir, "B/libB"), {platformSymbolName("sayB")}};
+    libs["C"] = {libPath(BaseDir, "C/libC"), {platformSymbolName("sayC")}};
+    libs["D"] = {libPath(BaseDir, "D/libD"), {platformSymbolName("sayD")}};
+    libs["Z"] = {libPath(BaseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
+    for (const auto &P : GlobalEnv->getDylibPaths()) {
+      if (!sys::fs::exists(P))
+        GTEST_SKIP();
+    }
   }
 
   const std::vector<std::string> &sym(const std::string &key) {
@@ -403,7 +423,7 @@ TEST_F(LibraryResolverIT, EnumerateSymbolsIncludesUndefWhenNotIgnored) {
 // --- 3) Full resolution via LibraryResolutionDriver/LibraryResolver ---
 TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
   // Create the resolver from real base paths (our fixtures dir)
-  auto setup = LibraryResolver::Setup::create({baseDir});
+  auto setup = LibraryResolver::Setup::create({BaseDir});
 
   // Full system behavior: no mocks
   auto driver = LibraryResolutionDriver::create(setup);
@@ -478,7 +498,7 @@ TEST_F(LibraryResolverIT, EnumeratorSeesInterLibraryRelationship) {
 // // // --- 5) Optional: stress SymbolQuery with the real resolve flow
 // // // And resolve libC dependency libA, libB, libZ ---
 TEST_F(LibraryResolverIT, ResolveManySymbols) {
-  auto setup = LibraryResolver::Setup::create({baseDir});
+  auto setup = LibraryResolver::Setup::create({BaseDir});
   auto driver = LibraryResolutionDriver::create(setup);
   ASSERT_NE(driver, nullptr);
   driver->addScanPath(libdir("C"), PathType::User);
@@ -517,7 +537,7 @@ TEST_F(LibraryResolverIT, ResolveManySymbols) {
 // // // --- 5) Optional: stress SymbolQuery with the real resolve flow
 // // // And resolve libD dependency libA ---
 TEST_F(LibraryResolverIT, ResolveManySymbols2) {
-  auto setup = LibraryResolver::Setup::create({baseDir});
+  auto setup = LibraryResolver::Setup::create({BaseDir});
   auto driver = LibraryResolutionDriver::create(setup);
   ASSERT_NE(driver, nullptr);
   driver->addScanPath(libdir("D"), PathType::User);
@@ -627,15 +647,15 @@ TEST_F(LibraryResolverIT, PathResolverResolvesKnownPaths) {
   EXPECT_FALSE(missing.has_value()) << "Unexpectedly resolved a bogus path";
   EXPECT_TRUE(ec) << "Expected error resolving path";
 
-  auto dirPath = presolver->resolve(baseDir, ec);
-  ASSERT_TRUE(dirPath.has_value());
+  auto DirPath = presolver->resolve(BaseDir, ec);
+  ASSERT_TRUE(DirPath.has_value());
   EXPECT_FALSE(ec) << "Expected no error resolving path";
-  EXPECT_EQ(*dirPath, baseDir);
+  EXPECT_EQ(*DirPath, BaseDir);
 
-  auto dylibPath = presolver->resolve(lib("C"), ec);
-  ASSERT_TRUE(dylibPath.has_value());
+  auto DylibPath = presolver->resolve(lib("C"), ec);
+  ASSERT_TRUE(DylibPath.has_value());
   EXPECT_FALSE(ec) << "Expected no error resolving path";
-  EXPECT_EQ(*dylibPath, lib("C"));
+  EXPECT_EQ(*DylibPath, lib("C"));
 }
 
 TEST_F(LibraryResolverIT, PathResolverNormalizesDotAndDotDot) {
@@ -644,8 +664,8 @@ TEST_F(LibraryResolverIT, PathResolverNormalizesDotAndDotDot) {
 
   std::error_code ec;
 
-  // e.g. baseDir + "/./C/../C/C.dylib" → baseDir + "/C.dylib"
-  std::string messy = baseDir + "/C/./../C/./libC" + ext;
+  // e.g. BaseDir + "/./C/../C/C.dylib" → BaseDir + "/C.dylib"
+  std::string messy = BaseDir + "/C/./../C/./libC" + ext;
   auto resolved = presolver->resolve(messy, ec);
   ASSERT_TRUE(resolved.has_value());
   EXPECT_FALSE(ec);
@@ -659,8 +679,8 @@ TEST_F(LibraryResolverIT, PathResolverFollowsSymlinks) {
 
   std::error_code ec;
 
-  // Create a symlink temp -> baseDir (only if filesystem allows it)
-  std::string linkName = baseDir + withext("/link_to_C");
+  // Create a symlink temp -> BaseDir (only if filesystem allows it)
+  std::string linkName = BaseDir + withext("/link_to_C");
   std::string target = lib("C");
   ::symlink(target.c_str(), linkName.c_str());
 
@@ -703,11 +723,11 @@ TEST_F(LibraryResolverIT, LoaderPathSubstitutionAndResolve) {
   DylibSubstitutor substitutor;
   substitutor.configure(libdir("C"));
 #if defined(__APPLE__)
-  // Substitute @loader_path with baseDir
+  // Substitute @loader_path with BaseDir
   std::string substituted =
       substitutor.substitute(withext("@loader_path/libC"));
 #elif defined(__linux__)
-  // Substitute $origin with baseDir
+  // Substitute $origin with BaseDir
   std::string substituted = substitutor.substitute(withext("$ORIGIN/libC"));
 #endif
   ASSERT_FALSE(substituted.empty());

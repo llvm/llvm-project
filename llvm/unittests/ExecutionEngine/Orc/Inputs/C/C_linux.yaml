@@ -246,7 +246,7 @@ Sections:
       - Tag:             DT_NEEDED
         Value:           0x0
       - Tag:             DT_NEEDED
-        Value:           0x08
+        Value:           0x8
       - Tag:             DT_NEEDED
         Value:           0x10
       - Tag:             DT_NEEDED

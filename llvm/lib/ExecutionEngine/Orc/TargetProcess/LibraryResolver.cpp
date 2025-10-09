@@ -120,7 +120,6 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
     std::string ErrMsg;
     handleAllErrors(ObjOrErr.takeError(),
                     [&](const ErrorInfoBase &EIB) { ErrMsg = EIB.message(); });
-
     LLVM_DEBUG(dbgs() << "Failed loading object file: " << Path
                       << "\nError: " << ErrMsg << "\n");
     return false;
@@ -210,27 +209,35 @@ void LibraryResolver::resolveSymbolsInLibrary(
     return;
   }
 
-  LLVM_DEBUG(dbgs() << "Enumerating symbols in library: " << Lib.getFullPath()
-                    << "\n";);
-  SymbolEnumerator::enumerateSymbols(
-      Lib.getFullPath(),
-      [&](StringRef sym) {
-        DiscoveredSymbols.insert(sym);
-        return EnumerateResult::Continue;
-      },
-      Opts);
+  bool HasEnumerated = false;
+  auto enumerateSymbolsIfNeeded = [&]() {
+    if (HasEnumerated)
+      return;
 
-  if (DiscoveredSymbols.empty()) {
-    LLVM_DEBUG(dbgs() << "  No symbols and remove library : "
-                      << Lib.getFullPath() << "\n";);
-    LibMgr.removeLibrary(Lib.getFullPath());
-    return;
-  }
+    HasEnumerated = true;
+
+    LLVM_DEBUG(dbgs() << "Enumerating symbols in library: " << Lib.getFullPath()
+                      << "\n";);
+    SymbolEnumerator::enumerateSymbols(
+        Lib.getFullPath(),
+        [&](StringRef sym) {
+          DiscoveredSymbols.insert(sym);
+          return EnumerateResult::Continue;
+        },
+        Opts);
+
+    if (DiscoveredSymbols.empty()) {
+      LLVM_DEBUG(dbgs() << "  No symbols and remove library : "
+                        << Lib.getFullPath() << "\n";);
+      LibMgr.removeLibrary(Lib.getFullPath());
+      return;
+    }
+  };
 
   if (!Lib.hasFilter()) {
     LLVM_DEBUG(dbgs() << "Building filter for library: " << Lib.getFullPath()
                       << "\n";);
-
+    enumerateSymbolsIfNeeded();
     SmallVector<StringRef> SymbolVec;
     SymbolVec.reserve(DiscoveredSymbols.size());
     for (const auto &KV : DiscoveredSymbols)
@@ -252,6 +259,7 @@ void LibraryResolver::resolveSymbolsInLibrary(
     if (Lib.mayContain(Sym)) {
       LLVM_DEBUG(dbgs() << "Checking symbol '" << Sym
                         << "' in library: " << Lib.getFullPath() << "\n";);
+      enumerateSymbolsIfNeeded();
       if (DiscoveredSymbols.count(Sym) > 0) {
         LLVM_DEBUG(dbgs() << "  Resolved symbol: " << Sym
                           << " in library: " << Lib.getFullPath() << "\n";);
