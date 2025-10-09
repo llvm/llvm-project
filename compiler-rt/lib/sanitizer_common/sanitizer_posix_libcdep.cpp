@@ -233,7 +233,6 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // This will cause SetAlternateSignalStack to be called twice, but the stack
   // will be actually set only once.
   if (common_flags()->use_sigaltstack) SetAlternateSignalStack();
-
   MaybeInstallSigaction(SIGSEGV, handler);
   MaybeInstallSigaction(SIGBUS, handler);
   MaybeInstallSigaction(SIGABRT, handler);
