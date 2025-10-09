@@ -13986,10 +13986,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (Val.getBitWidth() == 8) {
-        bool ret =  Success(Val, E);
-        return ret;
-    }
+    if (Val.getBitWidth() == 8)
+      return Success(Val, E);
         
     return Success(Val.byteSwap(), E);
   }
