@@ -153,7 +153,7 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
       bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
       bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
       if (IsCallerPresplitCoroutine && HasAttr) {
-        static BranchProbability MinBranchProbability(
+        BranchProbability MinBranchProbability(
             static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
             MinBlockCounterExecution);
 
