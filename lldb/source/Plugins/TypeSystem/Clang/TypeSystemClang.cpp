@@ -11,6 +11,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTConsumers.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -959,6 +960,12 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     if (type_name == "long double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
       return GetType(ast.LongDoubleTy);
+    if (type_name == "__bf16" &&
+        QualTypeMatchesBitSize(bit_size, ast, ast.BFloat16Ty))
+      return GetType(ast.BFloat16Ty);
+    if (type_name == "_Float16" &&
+        QualTypeMatchesBitSize(bit_size, ast, ast.Float16Ty))
+      return GetType(ast.Float16Ty);
     // As Rust currently uses `TypeSystemClang`, match `f128` here as well so it
     // doesn't get misinterpreted as `long double` on targets where they are
     // the same size but different formats.
@@ -1791,6 +1798,8 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
     for (base_class = cxx_record_decl->bases_begin(),
         base_class_end = cxx_record_decl->bases_end();
          base_class != base_class_end; ++base_class) {
+      assert(record_decl != base_class->getType()->getAsCXXRecordDecl() &&
+             "Base can't inherit from itself.");
       if (RecordHasFields(base_class->getType()->getAsCXXRecordDecl()))
         return true;
     }
@@ -3962,8 +3971,6 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     return 0;
   case clang::Type::DependentSizedExtVector:
     return eTypeHasChildren | eTypeIsVector;
-  case clang::Type::DependentTemplateSpecialization:
-    return eTypeIsTemplate;
 
   case clang::Type::Enum:
     if (pointee_or_element_clang_type)
@@ -4236,8 +4243,6 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::InjectedClassName:
     break;
   case clang::Type::DependentName:
-    break;
-  case clang::Type::DependentTemplateSpecialization:
     break;
   case clang::Type::PackExpansion:
     break;
@@ -5036,6 +5041,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
     case clang::BuiltinType::DMR1024:
+    case clang::BuiltinType::DMR2048:
       break;
 
     // ARM -- Scalable Vector Extension
@@ -5108,7 +5114,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::SubstTemplateTypeParmPack:
   case clang::Type::InjectedClassName:
   case clang::Type::DependentName:
-  case clang::Type::DependentTemplateSpecialization:
   case clang::Type::PackExpansion:
   case clang::Type::ObjCObject:
 
@@ -5277,7 +5282,6 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::SubstTemplateTypeParmPack:
   case clang::Type::InjectedClassName:
   case clang::Type::DependentName:
-  case clang::Type::DependentTemplateSpecialization:
   case clang::Type::PackExpansion:
   case clang::Type::ObjCObject:
 
@@ -6170,8 +6174,6 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
   case clang::Type::InjectedClassName:
     return 0;
   case clang::Type::DependentName:
-    return 1;
-  case clang::Type::DependentTemplateSpecialization:
     return 1;
   case clang::Type::ObjCObject:
     return 0;
@@ -8540,7 +8542,24 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
+namespace {
+struct ScopedASTColor {
+  ScopedASTColor(clang::ASTContext &ast, bool show_colors)
+      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
+    ast.getDiagnostics().setShowColors(show_colors);
+  }
+
+  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+
+  clang::ASTContext &ast;
+  const bool old_show_colors;
+};
+} // namespace
+
+void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                           bool show_color) {
+  ScopedASTColor colored(getASTContext(), show_color);
+
   auto consumer =
       clang::CreateASTDumper(output, filter,
                              /*DumpDecls=*/true,
@@ -9683,10 +9702,10 @@ GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
 }
 
 void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
-                                  llvm::StringRef filter) {
+                                  llvm::StringRef filter, bool show_color) {
   // First dump the main scratch AST.
   output << "State of scratch Clang type system:\n";
-  TypeSystemClang::Dump(output, filter);
+  TypeSystemClang::Dump(output, filter, show_color);
 
   // Now sort the isolated sub-ASTs.
   typedef std::pair<IsolatedASTKey, TypeSystem *> KeyAndTS;
@@ -9701,7 +9720,7 @@ void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
         static_cast<ScratchTypeSystemClang::IsolatedASTKind>(a.first);
     output << "State of scratch Clang type subsystem "
            << GetNameForIsolatedASTKind(kind) << ":\n";
-    a.second->Dump(output, filter);
+    a.second->Dump(output, filter, show_color);
   }
 }
 

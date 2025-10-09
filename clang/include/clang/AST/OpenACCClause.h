@@ -835,19 +835,37 @@ public:
   ArrayRef<Expr *> getVarList() const { return getExprs(); }
 };
 
+// Represents all the data needed for recipe generation.  The declaration and
+// init are stored separately, because in the case of subscripts, we do the
+// alloca at the level of the base, and the init at the element level.
+struct OpenACCPrivateRecipe {
+  VarDecl *AllocaDecl;
+
+  OpenACCPrivateRecipe(VarDecl *A) : AllocaDecl(A) {}
+
+  bool isSet() const { return AllocaDecl; }
+
+  static OpenACCPrivateRecipe Empty() {
+    return OpenACCPrivateRecipe(/*AllocaDecl=*/nullptr);
+  }
+};
+
 class OpenACCPrivateClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *, VarDecl *> {
+      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *,
+                                    OpenACCPrivateRecipe> {
   friend TrailingObjects;
 
   OpenACCPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                        ArrayRef<Expr *> VarList,
-                       ArrayRef<VarDecl *> InitRecipes, SourceLocation EndLoc)
+                       ArrayRef<OpenACCPrivateRecipe> InitRecipes,
+                       SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::Private, BeginLoc,
                                  LParenLoc, EndLoc) {
     assert(VarList.size() == InitRecipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-    llvm::uninitialized_copy(InitRecipes, getTrailingObjects<VarDecl *>());
+    llvm::uninitialized_copy(InitRecipes,
+                             getTrailingObjects<OpenACCPrivateRecipe>());
   }
 
 public:
@@ -856,19 +874,19 @@ public:
   }
   // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
   // ensure that we properly initialize each of these variables.
-  ArrayRef<VarDecl *> getInitRecipes() {
-    return ArrayRef<VarDecl *>{getTrailingObjects<VarDecl *>(),
-                               getExprs().size()};
+  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() {
+    return ArrayRef<OpenACCPrivateRecipe>{
+        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
   }
 
-  ArrayRef<VarDecl *> getInitRecipes() const {
-    return ArrayRef<VarDecl *>{getTrailingObjects<VarDecl *>(),
-                               getExprs().size()};
+  ArrayRef<OpenACCPrivateRecipe> getInitRecipes() const {
+    return ArrayRef<OpenACCPrivateRecipe>{
+        getTrailingObjects<OpenACCPrivateRecipe>(), getExprs().size()};
   }
 
   static OpenACCPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, ArrayRef<VarDecl *> InitRecipes,
+         ArrayRef<Expr *> VarList, ArrayRef<OpenACCPrivateRecipe> InitRecipes,
          SourceLocation EndLoc);
 
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
@@ -879,11 +897,19 @@ public:
 // A 'pair' to stand in for the recipe.  RecipeDecl is the main declaration, and
 // InitFromTemporary is the 'temp' declaration we put in to be 'copied from'.
 struct OpenACCFirstPrivateRecipe {
-  VarDecl *RecipeDecl, *InitFromTemporary;
-  OpenACCFirstPrivateRecipe(VarDecl *R, VarDecl *T)
-      : RecipeDecl(R), InitFromTemporary(T) {}
-  OpenACCFirstPrivateRecipe(std::pair<VarDecl *, VarDecl *> p)
-      : RecipeDecl(p.first), InitFromTemporary(p.second) {}
+  VarDecl *AllocaDecl;
+  VarDecl *InitFromTemporary;
+  OpenACCFirstPrivateRecipe(VarDecl *A, VarDecl *T)
+      : AllocaDecl(A), InitFromTemporary(T) {
+    assert(!InitFromTemporary || InitFromTemporary->getInit() == nullptr);
+  }
+
+  bool isSet() const { return AllocaDecl; }
+
+  static OpenACCFirstPrivateRecipe Empty() {
+    return OpenACCFirstPrivateRecipe(/*AllocaDecl=*/nullptr,
+                                     /*InitFromTemporary=*/nullptr);
+  }
 };
 
 class OpenACCFirstPrivateClause final
@@ -1253,8 +1279,15 @@ public:
 // A structure to stand in for the recipe on a reduction.  RecipeDecl is the
 // 'main' declaration used for initializaiton, which is fixed. 
 struct OpenACCReductionRecipe {
-  VarDecl *RecipeDecl;
+  VarDecl *AllocaDecl;
   // TODO: OpenACC: this should eventually have the operations here too.
+
+  OpenACCReductionRecipe(VarDecl *A) : AllocaDecl(A) {}
+
+  bool isSet() const { return AllocaDecl; }
+  static OpenACCReductionRecipe Empty() {
+    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr);
+  }
 };
 
 class OpenACCReductionClause final

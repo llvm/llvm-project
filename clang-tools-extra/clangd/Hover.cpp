@@ -794,7 +794,9 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
     for (const auto &ExpandedTok : Expansion->Expanded) {
       ExpansionText += ExpandedTok.text(SM);
       ExpansionText += " ";
-      if (ExpansionText.size() > 2048) {
+      const Config &Cfg = Config::current();
+      const size_t Limit = static_cast<size_t>(Cfg.Hover.MacroContentsLimit);
+      if (Limit && ExpansionText.size() > Limit) {
         ExpansionText.clear();
         break;
       }
@@ -1307,7 +1309,9 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       }
     } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       HoverCountMetric.record(1, "keyword");
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         HI = getDeducedTypeHoverContents(*Deduced, Tok, AST.getASTContext(), PP,
                                          Index);
         HighlightRange = Tok.range(SM).toCharRange(SM);
