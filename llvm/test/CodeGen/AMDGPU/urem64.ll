@@ -182,7 +182,6 @@ define amdgpu_kernel void @s_test_urem_i64(ptr addrspace(1) %out, i64 %x, i64 %y
 ; GCN-IR-NEXT:    s_add_u32 s14, s12, 1
 ; GCN-IR-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GCN-IR-NEXT:    s_or_b32 s8, s8, s9
-; GCN-IR-NEXT:    s_cmp_lg_u32 s8, 0
 ; GCN-IR-NEXT:    s_addc_u32 s8, s13, 0
 ; GCN-IR-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GCN-IR-NEXT:    s_sub_i32 s12, 63, s12
@@ -216,7 +215,6 @@ define amdgpu_kernel void @s_test_urem_i64(ptr addrspace(1) %out, i64 %x, i64 %y
 ; GCN-IR-NEXT:    s_add_u32 s16, s16, 1
 ; GCN-IR-NEXT:    s_cselect_b64 s[18:19], -1, 0
 ; GCN-IR-NEXT:    s_or_b32 s18, s18, s19
-; GCN-IR-NEXT:    s_cmp_lg_u32 s18, 0
 ; GCN-IR-NEXT:    s_addc_u32 s17, s17, 0
 ; GCN-IR-NEXT:    s_cselect_b64 s[18:19], -1, 0
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], s[4:5]
@@ -960,7 +958,6 @@ define amdgpu_kernel void @s_test_urem_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_add_u32 s10, s8, 1
 ; GCN-IR-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-IR-NEXT:    s_or_b32 s6, s6, s7
-; GCN-IR-NEXT:    s_cmp_lg_u32 s6, 0
 ; GCN-IR-NEXT:    s_addc_u32 s6, s9, 0
 ; GCN-IR-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-IR-NEXT:    s_sub_i32 s8, 63, s8
@@ -993,7 +990,6 @@ define amdgpu_kernel void @s_test_urem_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_add_u32 s14, s14, 1
 ; GCN-IR-NEXT:    s_cselect_b64 s[16:17], -1, 0
 ; GCN-IR-NEXT:    s_or_b32 s16, s16, s17
-; GCN-IR-NEXT:    s_cmp_lg_u32 s16, 0
 ; GCN-IR-NEXT:    s_addc_u32 s15, s15, 0
 ; GCN-IR-NEXT:    s_cselect_b64 s[16:17], -1, 0
 ; GCN-IR-NEXT:    s_mov_b64 s[8:9], s[4:5]
@@ -1083,7 +1079,6 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_add_u32 s11, s8, 1
 ; GCN-IR-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-IR-NEXT:    s_or_b32 s6, s6, s7
-; GCN-IR-NEXT:    s_cmp_lg_u32 s6, 0
 ; GCN-IR-NEXT:    s_addc_u32 s6, s9, 0
 ; GCN-IR-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-IR-NEXT:    s_sub_i32 s8, 63, s8
@@ -1113,7 +1108,6 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_add_u32 s12, s12, 1
 ; GCN-IR-NEXT:    s_cselect_b64 s[14:15], -1, 0
 ; GCN-IR-NEXT:    s_or_b32 s14, s14, s15
-; GCN-IR-NEXT:    s_cmp_lg_u32 s14, 0
 ; GCN-IR-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN-IR-NEXT:    s_cselect_b64 s[14:15], -1, 0
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], s[4:5]

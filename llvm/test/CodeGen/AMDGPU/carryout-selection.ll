@@ -704,7 +704,6 @@ define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; CISI-NEXT:    s_add_u32 s4, s4, s6
 ; CISI-NEXT:    s_cselect_b64 s[12:13], -1, 0
 ; CISI-NEXT:    s_or_b32 s6, s12, s13
-; CISI-NEXT:    s_cmp_lg_u32 s6, 0
 ; CISI-NEXT:    s_addc_u32 s5, s5, s7
 ; CISI-NEXT:    s_mov_b32 s8, s0
 ; CISI-NEXT:    s_mov_b32 s9, s1
@@ -1691,7 +1690,6 @@ define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; CISI-NEXT:    s_sub_u32 s4, s4, s6
 ; CISI-NEXT:    s_cselect_b64 s[12:13], -1, 0
 ; CISI-NEXT:    s_or_b32 s6, s12, s13
-; CISI-NEXT:    s_cmp_lg_u32 s6, 0
 ; CISI-NEXT:    s_subb_u32 s5, s5, s7
 ; CISI-NEXT:    s_mov_b32 s8, s0
 ; CISI-NEXT:    s_mov_b32 s9, s1
