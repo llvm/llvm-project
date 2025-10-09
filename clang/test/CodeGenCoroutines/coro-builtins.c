@@ -37,7 +37,7 @@ void f(int n) {
   // CHECK-NEXT: call ptr @llvm.coro.free(token %[[COROID]], ptr %[[FRAME]])
   __builtin_coro_free(__builtin_coro_frame());
 
-  // CHECK-NEXT: call i1  @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
+  // CHECK-NEXT: call void  @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
   __builtin_coro_end(__builtin_coro_frame(), 0);
 
   // CHECK-NEXT: call i8 @llvm.coro.suspend(token none, i1 true)

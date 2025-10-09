@@ -1,4 +1,5 @@
-// REQUIRES: shell
+// Due to chmod
+// UNSUPPORTED: system-windows
 
 // RUN: mkdir -p %t
 // RUN: rm -f %t/amdgpu_arch_fail %t/amdgpu_arch_different

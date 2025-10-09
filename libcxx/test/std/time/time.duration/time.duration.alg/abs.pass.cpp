@@ -19,8 +19,18 @@
 #include <cassert>
 #include <ratio>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
+
+template <class T, class = void>
+inline constexpr bool has_abs_v = false;
+
+template <class T>
+inline constexpr bool has_abs_v<T, decltype((void)std::chrono::abs(std::declval<T>()))> = true;
+
+static_assert(has_abs_v<std::chrono::milliseconds>);
+static_assert(!has_abs_v<std::chrono::duration<unsigned>>);
 
 template <class Duration>
 void

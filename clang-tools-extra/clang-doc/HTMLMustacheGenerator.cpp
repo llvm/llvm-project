@@ -274,11 +274,12 @@ Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
 }
 
 Error MustacheHTMLGenerator::createResources(ClangDocContext &CDCtx) {
+  std::string ResourcePath(CDCtx.OutDirectory + "/html");
   for (const auto &FilePath : CDCtx.UserStylesheets)
-    if (Error Err = copyFile(FilePath, CDCtx.OutDirectory))
+    if (Error Err = copyFile(FilePath, ResourcePath))
       return Err;
   for (const auto &FilePath : CDCtx.JsScripts)
-    if (Error Err = copyFile(FilePath, CDCtx.OutDirectory))
+    if (Error Err = copyFile(FilePath, ResourcePath))
       return Err;
   return Error::success();
 }

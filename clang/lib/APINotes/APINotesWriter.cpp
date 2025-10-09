@@ -507,6 +507,12 @@ void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   uint8_t payload = 0;
+  if (auto safety = CEI.getSwiftSafety()) {
+    payload = static_cast<unsigned>(*safety);
+    payload <<= 1;
+    payload |= 0x01;
+  }
+  payload <<= 2;
   if (auto swiftPrivate = CEI.isSwiftPrivate()) {
     payload |= 0x01;
     if (*swiftPrivate)

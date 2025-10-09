@@ -53,6 +53,8 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "kcfi";
   case LLVMContext::OB_convergencectrl:
     return "convergencectrl";
+  case LLVMContext::OB_align:
+    return "align";
   case LLVMContext::OB_deactivation_symbol:
     return "deactivation-symbol";
   default:
@@ -78,7 +80,7 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   }
 
   for (unsigned BundleTagID = LLVMContext::OB_deopt;
-       BundleTagID <= LLVMContext::OB_deactivation_symbol; ++BundleTagID) {
+       BundleTagID <= LLVMContext::OB_LastBundleID; ++BundleTagID) {
     [[maybe_unused]] const auto *Entry =
         pImpl->getOrInsertBundleTag(knownBundleName(BundleTagID));
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");

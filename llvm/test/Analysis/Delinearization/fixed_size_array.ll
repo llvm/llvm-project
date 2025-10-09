@@ -11,7 +11,6 @@
 define void @a_i_j_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_j_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
@@ -60,7 +59,6 @@ exit:
 define void @a_i_nj_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_nj_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}896,+,1024}<nuw><nsw><%for.i.header>,+,-128}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
@@ -116,14 +114,12 @@ exit:
 define void @a_ijk_b_i2jk(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'a_ijk_b_i2jk'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %a.idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store i32 1, ptr %b.idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %b
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
@@ -180,7 +176,6 @@ exit:
 define void @a_i_2j1_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_2j1_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}128,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
@@ -234,7 +229,6 @@ exit:
 define void @a_i_3j_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_3j_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,384}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  failed to delinearize
 ;
@@ -286,7 +280,6 @@ exit:
 define void @a_i_j_3k(ptr %a) {
 ; CHECK-LABEL: 'a_i_j_3k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,12}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
@@ -338,7 +331,6 @@ exit:
 define void @a_i_j2k_i(ptr %a) {
 ; CHECK-LABEL: 'a_i_j2k_i'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1028}<%for.i.header>,+,256}<nw><%for.j.header>,+,128}<nw><%for.k>
 ; CHECK-NEXT:  failed to delinearize
 ;
@@ -390,7 +382,6 @@ exit:
 define void @a_i_i_jk(ptr %a) {
 ; CHECK-LABEL: 'a_i_i_jk'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1152}<%for.i.header>,+,4}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][288] with elements of 4 bytes.
@@ -441,7 +432,6 @@ exit:
 define void @a_i_jk_l(ptr %a) {
 ; CHECK-LABEL: 'a_i_jk_l'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.l
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,128}<nw><%for.k.header>,+,4}<nw><%for.l>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
@@ -502,7 +492,6 @@ exit:
 define void @non_divisible_by_element_size(ptr %a) {
 ; CHECK-LABEL: 'non_divisible_by_element_size'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,256}<nuw><nsw><%for.i.header>,+,32}<nw><%for.j.header>,+,1}<nw><%for.k>
 ; CHECK-NEXT:  failed to delinearize
 ;

@@ -235,7 +235,7 @@ void BTFTypeEnum64::completeType(BTFDebug &BDebug) {
     BTFEnum.NameOff = BDebug.addString(Enum->getName());
     uint64_t Value;
     if (Enum->isUnsigned())
-      Value = static_cast<uint64_t>(Enum->getValue().getZExtValue());
+      Value = Enum->getValue().getZExtValue();
     else
       Value = static_cast<uint64_t>(Enum->getValue().getSExtValue());
     BTFEnum.Val_Lo32 = Value;

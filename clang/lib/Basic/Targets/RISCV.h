@@ -147,7 +147,7 @@ public:
 
   bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
-    if (ISAInfo->hasExtension("zicfiss"))
+    if (ISAInfo->hasExtension("zimop"))
       return true;
     return TargetInfo::checkCFProtectionReturnSupported(Diags);
   }

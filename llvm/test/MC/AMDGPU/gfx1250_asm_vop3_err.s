@@ -1,4 +1,5 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX125X-ERR,GFX1250-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1251 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX125X-ERR,GFX1251-ERR --implicit-check-not=error: --strict-whitespace %s
 
 v_lshl_add_u64 v[2:3], v[4:5], v7, v[8:9] dpp8:[7,6,5,4,3,2,1,0]
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
@@ -277,9 +278,9 @@ v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
 // GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
 // GFX125X-ERR-NEXT:{{^}}                            ^
 
-v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:8
+v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:16
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid scale_sel value.
-// GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:8
+// GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:16
 // GFX125X-ERR-NEXT:{{^}}                                               ^
 
 v_cvt_sr_bf8_f16 v1, v2, v3 byte_sel:4
