@@ -1939,7 +1939,7 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
 
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this);
-  DS.takeAttributesFromPrepend(DeclSpecAttrs);
+  DS.takeAttributesFromAppend(DeclSpecAttrs);
 
   ParsedTemplateInfo TemplateInfo;
   DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(Context);
@@ -3462,7 +3462,7 @@ void Parser::ParseDeclarationSpecifiers(
           PA.setInvalid();
         }
 
-        DS.takeAttributesFromPrepend(attrs);
+        DS.takeAttributesFromAppend(attrs);
       }
 
       // If this is not a declaration specifier token, we're done reading decl
@@ -3689,7 +3689,7 @@ void Parser::ParseDeclarationSpecifiers(
         if (ParseImplicitInt(DS, &SS, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
             AttrsLastTime = true;
-            attrs.takeAllFromPrepend(Attrs);
+            attrs.takeAllFromAppend(Attrs);
           }
           continue;
         }
@@ -3854,7 +3854,7 @@ void Parser::ParseDeclarationSpecifiers(
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
             AttrsLastTime = true;
-            attrs.takeAllFromPrepend(Attrs);
+            attrs.takeAllFromAppend(Attrs);
           }
           continue;
         }
@@ -4463,7 +4463,7 @@ void Parser::ParseDeclarationSpecifiers(
       // take them over and handle them here.
       if (!Attributes.empty()) {
         AttrsLastTime = true;
-        attrs.takeAllFromPrepend(Attributes);
+        attrs.takeAllFromAppend(Attributes);
       }
       continue;
     }
@@ -4830,7 +4830,7 @@ void Parser::ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
     ConsumeAnyToken();
 
   if (OutAttrs) {
-    OutAttrs->takeAllFromPrepend(Attrs);
+    OutAttrs->takeAllFromAppend(Attrs);
   }
 }
 
@@ -6122,7 +6122,7 @@ void Parser::ParseTypeQualifierListOpt(
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
     ParseCXX11Attributes(Attrs);
-    DS.takeAttributesFromPrepend(Attrs);
+    DS.takeAttributesFromAppend(Attrs);
   }
 
   SourceLocation EndLoc;
@@ -7505,7 +7505,7 @@ void Parser::ParseParameterDeclarationClause(
                                DeclSpecContext::DSC_normal,
                                /*LateAttrs=*/nullptr, AllowImplicitTypename);
 
-    DS.takeAttributesFromPrepend(ArgDeclSpecAttrs);
+    DS.takeAttributesFromAppend(ArgDeclSpecAttrs);
 
     // Parse the declarator.  This is "PrototypeContext" or
     // "LambdaExprParameterContext", because we must accept either

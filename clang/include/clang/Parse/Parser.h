@@ -2173,7 +2173,7 @@ private:
     if (Tok.is(tok::kw___attribute)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
-      D.takeAttributesPrepend(Attrs);
+      D.takeAttributesAppend(Attrs);
     }
   }
 
@@ -2272,7 +2272,7 @@ private:
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);
       ParseCXX11Attributes(Attrs);
-      D.takeAttributesPrepend(Attrs);
+      D.takeAttributesAppend(Attrs);
     }
   }
 
@@ -2292,7 +2292,7 @@ private:
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
-      Attrs.takeAllFromPrepend(AttrsWithRange);
+      Attrs.takeAllFromAppend(AttrsWithRange);
     }
     return AttrsParsed;
   }
@@ -5175,7 +5175,7 @@ private:
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
-      D.takeAttributesPrepend(Attrs);
+      D.takeAttributesAppend(Attrs);
       return true;
     }
     return false;

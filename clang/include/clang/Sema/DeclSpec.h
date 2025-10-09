@@ -843,8 +843,8 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  void takeAttributesFromPrepend(ParsedAttributes &attrs) {
-    Attrs.takeAllFromPrepend(attrs);
+  void takeAttributesFromAppend(ParsedAttributes &attrs) {
+    Attrs.takeAllFromAppend(attrs);
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
@@ -2647,8 +2647,8 @@ public:
   ///                                 __attribute__((common,deprecated));
   ///
   /// Also extends the range of the declarator.
-  void takeAttributesPrepend(ParsedAttributes &attrs) {
-    Attrs.takeAllFromPrepend(attrs);
+  void takeAttributesAppend(ParsedAttributes &attrs) {
+    Attrs.takeAllFromAppend(attrs);
 
     if (attrs.Range.getEnd().isValid())
       SetRangeEnd(attrs.Range.getEnd());
