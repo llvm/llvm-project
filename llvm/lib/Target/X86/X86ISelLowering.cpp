@@ -19885,7 +19885,7 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   // TODO: Allow FP_TO_UINT.
   SDValue CastToInt = CastToFP.getOperand(0);
   MVT VT = CastToFP.getSimpleValueType();
-  if (CastToInt.getOpcode() != ISD::FP_TO_SINT || VT.isVector())
+  if ((CastToInt.getOpcode() != ISD::FP_TO_SINT && CastToInt.getOpcode() != ISD::FP_TO_UINT) || VT.isVector())
     return SDValue();
 
   MVT IntVT = CastToInt.getSimpleValueType();
@@ -19897,22 +19897,68 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   // See if we have 128-bit vector cast instructions for this type of cast.
   // We need cvttps2dq/cvttpd2dq and cvtdq2ps/cvtdq2pd.
   if (!Subtarget.hasSSE2() || (VT != MVT::f32 && VT != MVT::f64) ||
-      IntVT != MVT::i32)
+      !(IntVT == MVT::i32 || (IntVT == MVT::i64 && Subtarget.hasDQI())))
     return SDValue();
 
   unsigned SrcSize = SrcVT.getSizeInBits();
   unsigned IntSize = IntVT.getSizeInBits();
   unsigned VTSize = VT.getSizeInBits();
-  MVT VecSrcVT = MVT::getVectorVT(SrcVT, 128 / SrcSize);
-  MVT VecIntVT = MVT::getVectorVT(IntVT, 128 / IntSize);
-  MVT VecVT = MVT::getVectorVT(VT, 128 / VTSize);
+  unsigned ToIntOpcode, ToFPOpcode;
+  unsigned Width = 128;
+  bool IsUnsigned = CastToInt.getOpcode() == ISD::FP_TO_UINT;
 
-  // We need target-specific opcodes if this is v2f64 -> v4i32 -> v2f64.
-  unsigned ToIntOpcode =
-      SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
-  unsigned ToFPOpcode =
-      IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+  if (IntVT == MVT::i32) {
+    if (IsUnsigned && !Subtarget.hasVLX())
+      return SDValue(); // Need AVX512VL for unsigned i32
 
+    if (Subtarget.hasVLX()) {
+      if (IsUnsigned) {
+        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
+        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
+      } else {
+        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+      }
+     } else {
+      // SSE2
+      ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+      ToFPOpcode = IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+    }
+  } else {
+    if (Subtarget.hasVLX()) {
+      if (IsUnsigned) {
+        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2UI : (unsigned)ISD::FP_TO_UINT;
+        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTUI2P : (unsigned)ISD::UINT_TO_FP;
+      } else {
+        ToIntOpcode = SrcSize != IntSize ? X86ISD::CVTTP2SI : (unsigned)ISD::FP_TO_SINT;
+        ToFPOpcode = IntSize != VTSize ? X86ISD::CVTSI2P : (unsigned)ISD::SINT_TO_FP;
+      }
+    } else {
+      // Need to extend width for AVX512DQ
+      Width = 512;
+      ToIntOpcode = CastToInt.getOpcode();
+      ToFPOpcode = IsUnsigned ? ISD::UINT_TO_FP : ISD::SINT_TO_FP;
+    }
+  }
+
+  MVT VecSrcVT; 
+  MVT VecIntVT;
+  MVT VecVT;
+  if (IntVT == MVT::i64) {
+    unsigned NumElts = Width / IntSize;
+    VecIntVT = MVT::getVectorVT(IntVT, NumElts);
+    
+    // minimum legal size is v4f32
+    unsigned SrcElts = (SrcVT == MVT::f32) ? std::max(NumElts, 4u) : NumElts;
+    unsigned VTElts = (VT == MVT::f32) ? std::max(NumElts, 4u) : NumElts;
+    
+    VecSrcVT = MVT::getVectorVT(SrcVT, SrcElts);
+    VecVT = MVT::getVectorVT(VT, VTElts); 
+  } else {
+    VecSrcVT = MVT::getVectorVT(SrcVT, Width / SrcSize);
+    VecIntVT = MVT::getVectorVT(IntVT, Width / IntSize);
+    VecVT = MVT::getVectorVT(VT, Width / VTSize);
+  }
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
   //
   // We are not defining the high elements (for example, zero them) because
