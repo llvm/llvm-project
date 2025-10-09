@@ -140,16 +140,17 @@ public:
   }
 };
 
-class AddressRangeValuePair {
+template <typename T> class AddressRangeValuePair {
 public:
   explicit operator AddressRange() const { return Range; }
 
   AddressRange Range;
-  int64_t Value = 0;
+  T Value = T();
 };
 
-inline bool operator==(const AddressRangeValuePair &LHS,
-                       const AddressRangeValuePair &RHS) {
+template <typename T>
+inline bool operator==(const AddressRangeValuePair<T> &LHS,
+                       const AddressRangeValuePair<T> &RHS) {
   return LHS.Range == RHS.Range && LHS.Value == RHS.Value;
 }
 
@@ -160,15 +161,18 @@ inline bool operator==(const AddressRangeValuePair &LHS,
 /// Intersecting([100,200), [150,300)) ranges splitted into non-conflicting
 /// parts([100,200), [200,300)). Adjacent([100,200), [200,300)) address
 /// ranges are not combined during insertion.
-class AddressRangesMap : public AddressRangesBase<AddressRangeValuePair> {
+template <typename T>
+class AddressRangesMap : public AddressRangesBase<AddressRangeValuePair<T>> {
+  using AddressRangesBase<AddressRangeValuePair<T>>::Ranges;
+
 public:
-  void insert(AddressRange Range, int64_t Value) {
+  void insert(AddressRange Range, T Value) {
     if (Range.empty())
       return;
 
     // Search for range which is less than or equal incoming Range.
     auto It =
-        llvm::partition_point(Ranges, [=](const AddressRangeValuePair &R) {
+        llvm::partition_point(Ranges, [=](const AddressRangeValuePair<T> &R) {
           return R.Range.start() <= Range.start();
         });
 

@@ -786,7 +786,7 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
     // the function entry point, thus we can't just lookup the address
     // in the debug map. Use the AddressInfo's range map to see if the FDE
     // describes something that we can relocate.
-    std::optional<AddressRangeValuePair> Range =
+    std::optional<AddressRangeValuePair<int64_t>> Range =
         AllUnitsRanges.getRangeThatContains(Loc);
     if (!Range) {
       // The +4 is to account for the size of the InitialLength field itself.

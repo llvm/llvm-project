@@ -21,7 +21,7 @@ namespace dwarf_linker {
 
 /// Mapped value in the address map is the offset to apply to the
 /// linked address.
-using RangesTy = AddressRangesMap;
+using RangesTy = AddressRangesMap<int64_t>;
 
 /// AddressesMap represents information about valid addresses used
 /// by debug information. Valid addresses are those which points to
