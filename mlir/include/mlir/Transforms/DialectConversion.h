@@ -811,17 +811,19 @@ convertOpResultTypes(Operation *op, ValueRange operands,
 /// ops which use FunctionType to represent their type.
 void populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    const TypeConverter &converter);
+    const TypeConverter &converter, PatternBenefit benefit = 1);
 
 template <typename FuncOpT>
 void populateFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter) {
-  populateFunctionOpInterfaceTypeConversionPattern(FuncOpT::getOperationName(),
-                                                   patterns, converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1) {
+  populateFunctionOpInterfaceTypeConversionPattern(
+      FuncOpT::getOperationName(), patterns, converter, benefit);
 }
 
 void populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter

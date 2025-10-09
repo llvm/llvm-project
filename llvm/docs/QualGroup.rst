@@ -12,8 +12,9 @@ Introduction
 
 The LLVM Qualification Group is an open working group within the LLVM community. 
 It was created to coordinate efforts around enabling the use of LLVM components 
-in safety-critical applications such as those governed by ISO 26262 (automotive), 
-DO-178C (aerospace), and EN 50128 (railways).
+in safety-critical applications governed by functional safety standards 
+such as IEC 61508 (for general E/E/PE systems), IEC 62304 (medical devices), 
+ISO 26262 (automotive), DO-178C (aerospace), and EN 50716 (railways).
 
 Motivation
 ==========
@@ -62,7 +63,7 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
    * - Alan Phipps
      - Texas Instruments
      - evodius96
-     - \-
+     - alanphipps
      - evodius96
    * - Carlos Andrés Ramírez
      - Woven by Toyota
@@ -177,20 +178,6 @@ This document serves as our central hub for all ongoing topics and will
 be updated regularly to reflect our progress. We welcome your 
 contributions and feedback.
 
-Current Topics & Backlog
-========================
-
-Our working group is actively engaged in discussions about the project's
-direction and tackling technical challenges. You can find our current 
-discussions, challenges, and the project backlog in the following 
-document.
-
-`Backlog document <https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing>`
-
-This document serves as our central hub for all ongoing topics and will
-be updated regularly to reflect our progress. We welcome your 
-contributions and feedback.
-
 Meeting Materials
 =================
 
@@ -203,13 +190,64 @@ Slides used to support discussions during sync-up meetings are stored in LLVM's 
 
 Available slides:
 
-* `September 2025 <qual-wg/slides/202509_llvm_qual_wg.pdf>`_
-* `August 2025 <qual-wg/slides/202508_llvm_qual_wg.pdf>`_
-* `July 2025 <qual-wg/slides/202507_llvm_qual_wg.pdf>`_
+* `September 2025 <https://docs.google.com/presentation/d/1SZAE-QHfJED6CxJCCtBkPDxcw7XU9ORX54TJyXe1ppc/edit?usp=sharing>`_
+* `August 2025 <https://docs.google.com/presentation/d/1K8GWoRm8ZAeyyGvTeV5f-sMOhMr7WHiEk6_Nm5Fk10o/edit?usp=sharing>`_
+* `July 2025 <https://docs.google.com/presentation/d/1ktURe9qz5ggbdOQYK-2ISpiC18B-Y_35WvGyAnnxEpw/edit?usp=sharing>`_
 * (add future entries here)
 
-Note: A future patch will migrate these slide files to the `llvm-www` repository, once
-a suitable hosting location is confirmed with the community.
+AI Transcription Policy
+=======================
+
+Objective
+---------
+
+The LLVM Qualification Group may enable AI auto-transcription (currently using Gemini) during sync-up calls in order to:
+
+* Make complex discussions easier to follow.
+* Reduce the effort of manual note-taking.
+* Support inclusivity for participants who are not native English speakers.
+
+Usage
+-----
+
+The purpose of auto-transcripts is to:
+
+* Ensure participants can remain engaged during the sync-up meeting (particularly helpful for non-native English speakers or when audio clarity is limited).
+* Serve as an aid for preparing the meeting minutes that are published on Discourse:
+  `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_
+
+Additional safeguards include:
+
+* Transcript files are private to the note-taker(s) and never circulated to attendees or the public.
+* Transcript files are permanently deleted once the minutes are posted.
+* The meeting chair or scribe remains responsible for reviewing the transcript, ensuring accuracy, and editing out sensitive details in the official minutes.
+
+Vendor Retention
+----------------
+
+Long-term storage or model-training settings are disabled on the account used for organizing the working group calls.
+
+However, according to Google’s Gemini documentation, even with all history features disabled, voice and transcript data may be retained on Google’s servers for up to ~72 hours for the purpose of "*keeping Gemini safe and secure, including with help from human reviewers*" before deletion.
+
+This retention period cannot currently be shortened.
+
+Consent
+-------
+
+* At the start of each sync-up, participants will be asked if they are comfortable with enabling auto-transcription.
+* If any participant objects, auto-transcription will be disabled for that meeting.
+* Participants may also request at any point that parts of the discussion not be transcribed.
+
+Recordings
+----------
+
+* Meetings are not recorded by default.
+* Exceptions are made only when explicit approval from attendees is obtained (e.g., for a special-hosted demo).
+
+Transparency & Feedback
+-----------------------
+
+We want to ensure this practice remains transparent and comfortable for everyone. If any group members have concerns (e.g., about names appearing in transcripts or minutes), they are encouraged to raise them on Discourse or Discord so they can be addressed.
 
 Code of Conduct
 ===============

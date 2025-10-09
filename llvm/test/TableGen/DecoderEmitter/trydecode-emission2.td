@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s
-// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../../include %s | FileCheck %s --check-prefix=CHECK-LARGE
 
 include "llvm/Target/Target.td"
 
@@ -31,25 +30,17 @@ def InstB : TestInstruction {
   let hasCompleteDecoder = 0;
 }
 
-// CHECK:      /* 0 */       OPC_CheckField, 2, 1, 0,
-// CHECK-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
-// CHECK-NEXT: /* 8 */       OPC_Scope, 8, 0, // end scope at 19
-// CHECK-NEXT: /* 11 */      OPC_CheckField, 0, 2, 3,
-// CHECK-NEXT: /* 15 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0,
-// CHECK-NEXT: /* 19 */      OPC_CheckField, 3, 2, 0,
-// CHECK-NEXT: /* 23 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1,
+// CHECK-LABEL: static const uint8_t DecoderTable8[26] = {
+// CHECK-NEXT:    OPC_CheckField, 2, 1, 0,     //  0: check Inst[2] == 0x0
+// CHECK-NEXT:    OPC_CheckField, 5, 3, 0,     //  4: check Inst[7:5] == 0x0
+// CHECK-NEXT:    OPC_Scope, 8,                //  8: try {
+// CHECK-NEXT:    OPC_CheckField, 0, 2, 3,     // 10:  check Inst[1:0] == 0x3
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 14:  decode to InstB using decoder 0
+// CHECK-NEXT:                                 // 14: } else try {
+// CHECK-NEXT:    OPC_CheckField, 3, 2, 0,     // 18:  check Inst[4:3] == 0x0
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 22:  decode to InstA using decoder 1
+// CHECK-NEXT:                                 // 22: }
+// CHECK-NEXT: };
 
 // CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
 // CHECK: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-
-// CHECK-LARGE:      /* 0 */       OPC_CheckField, 2, 1, 0,
-// CHECK-LARGE-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
-// CHECK-LARGE-NEXT: /* 8 */       OPC_Scope, 8, 0, 0, // end scope at 20
-// CHECK-LARGE-NEXT: /* 12 */      OPC_CheckField, 0, 2, 3,
-// CHECK-LARGE-NEXT: /* 16 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0,
-// CHECK-LARGE-NEXT: /* 20 */      OPC_CheckField, 3, 2, 0,
-// CHECK-LARGE-NEXT: /* 24 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1,
-// CHECK-LARGE-NEXT: };
-
-// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-// CHECK-LARGE: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

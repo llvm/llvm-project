@@ -265,7 +265,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 1, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
@@ -695,9 +695,6 @@ def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
-def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
-                        AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
-                            "'Zvfbfmin' (Vector BF16 Converts)">;
 
 def FeatureStdExtZvfbfwma
     : RISCVExtension<1, 0, "Vector BF16 widening mul-add",
@@ -722,6 +719,22 @@ def HasStdExtZfhOrZvfh
       AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZvfh),
                          "'Zfh' (Half-Precision Floating-Point) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
+
+def FeatureStdExtZvfofp8min
+    : RISCVExperimentalExtension<0, 2,
+                                 "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
+def HasStdExtZvfofp8min
+    : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfofp8min),
+                         "'Zvfofp8min' (Vector OFP8 Converts)">;
+
+def HasStdExtZvfbfminOrZvfofp8min
+    : Predicate<"Subtarget->hasStdExtZvfbfmin() ||"
+                "Subtarget->hasStdExtZvfofp8min()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvfbfmin,
+                             FeatureStdExtZvfofp8min),
+                         "'Zvfbfmin' (Vector BF16 Converts) or "
+                         "'Zvfofp8min' (Vector OFP8 Converts)">;
 
 // Vector Cryptography and Bitmanip Extensions
 
@@ -1408,7 +1421,7 @@ def HasVendorXMIPSCMov
     : Predicate<"Subtarget->hasVendorXMIPSCMov()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
-def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+def UseMIPSCCMovInsn : Predicate<"Subtarget->useMIPSCCMovInsn()">;
 
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
@@ -1426,7 +1439,7 @@ def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
 def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
 def HasVendorXMIPSEXECTL
-    : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
+    : Predicate<"Subtarget->hasVendorXMIPSEXECTL()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
                          "'Xmipsexectl' (MIPS execution control)">;
 
@@ -1634,6 +1647,14 @@ def HasVendorXAndesVBFHCvt
     : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
+
+def FeatureVendorXAndesVSIntH
+    : RISCVExtension<5, 0, "Andes Vector Small INT Handling Extension",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXAndesVSIntH
+    : Predicate<"Subtarget->hasVendorXAndesVSIntH()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntH),
+                         "'XAndesVSIntH' (Andes Vector Small INT Handling Extension)">;
 
 def FeatureVendorXAndesVSIntLoad
     : RISCVExtension<5, 0, "Andes Vector INT4 Load Extension",

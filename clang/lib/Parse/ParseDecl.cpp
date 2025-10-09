@@ -2083,6 +2083,9 @@ void Parser::SkipMalformedDecl() {
         return;
       break;
 
+    case tok::kw_extern:
+      // 'extern' at the start of a line is almost certainly a good
+      // place to pick back up parsing
     case tok::kw_namespace:
       // 'namespace' at the start of a line is almost certainly a good
       // place to pick back up parsing, except in an Objective-C

@@ -178,6 +178,11 @@ struct StaticSamplerYamlDesc {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   dxbc::ShaderVisibility ShaderVisibility;
+
+  LLVM_ABI uint32_t getEncodedFlags() const;
+
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag) bool Enum = false;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
 struct RootSignatureYamlDesc {
