@@ -3740,7 +3740,11 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT: Res = SoftPromoteHalfOp_FP_TO_XINT(N); break;
+  case ISD::FP_TO_UINT:
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    Res = SoftPromoteHalfOp_Op0WithStrict(N);
+    break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
                         Res = SoftPromoteHalfOp_FP_TO_XINT_SAT(N); break;
@@ -3819,7 +3823,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(SVT, RVT), SDLoc(N), RVT, Op);
 }
 
-SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_Op0WithStrict(SDNode *N) {
   EVT RVT = N->getValueType(0);
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);

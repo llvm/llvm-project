@@ -461,7 +461,7 @@ implementation.
 +=============================================================+===========================+===========================+==========================================================================+
 | free-agent threads                                          | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| threadset clause                                            | :part:`partial`           | :none:`unclaimed`         | Parse/Sema/CodeGen - https://github.com/llvm/llvm-project/pull/135807    |
+| threadset clause                                            | :part:`partial`           | :none:`unclaimed`         | Parse/Sema/Codegen : https://github.com/llvm/llvm-project/pull/135807    |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Recording of task graphs                                    | :part:`in progress`       | :part:`in progress`       | clang: jtb20, flang: kparzysz                                            |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
@@ -548,9 +548,9 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Increment between places for OMP_PLACES                     | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMP_AVAILABLE_DEVICES envirable                             | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| OMP_AVAILABLE_DEVICES envirable                             | :none:`unclaimed`         | :none:`unclaimed`         | (should wait for "Traits for default device envirable" being done)       |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Traits for default device envirable                         | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| Traits for default device envirable                         | :part:`in progress`       | :none:`unclaimed`         | ro-i                                                                     |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Optionally omit array length expression                     | :good:`done`              | :none:`unclaimed`         | (Parse) https://github.com/llvm/llvm-project/pull/148048,                |
 |                                                             |                           |                           | (Sema) https://github.com/llvm/llvm-project/pull/152786                  |

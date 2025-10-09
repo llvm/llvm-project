@@ -1184,9 +1184,10 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
-                             unsigned SourceLanguage, bool IsOptimized,
-                             unsigned RuntimeVersion, unsigned EmissionKind,
-                             uint64_t DWOId, bool SplitDebugInlining,
+                             DISourceLanguageName SourceLanguage,
+                             bool IsOptimized, unsigned RuntimeVersion,
+                             unsigned EmissionKind, uint64_t DWOId,
+                             bool SplitDebugInlining,
                              bool DebugInfoForProfiling, unsigned NameTableKind,
                              bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
     : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
@@ -1199,7 +1200,7 @@ DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
 }
 
 DICompileUnit *DICompileUnit::getImpl(
-    LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
+    LLVMContext &Context, DISourceLanguageName SourceLanguage, Metadata *File,
     MDString *Producer, bool IsOptimized, MDString *Flags,
     unsigned RuntimeVersion, MDString *SplitDebugFilename,
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,

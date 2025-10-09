@@ -16371,16 +16371,21 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
       AssociatedDecl == E->getAssociatedDecl())
     return E;
 
+  auto getParamAndType = [Index = E->getIndex()](Decl *AssociatedDecl)
+      -> std::tuple<NonTypeTemplateParmDecl *, QualType> {
+    auto [PDecl, Arg] = getReplacedTemplateParameter(AssociatedDecl, Index);
+    auto *Param = cast<NonTypeTemplateParmDecl>(PDecl);
+    return {Param, Arg.isNull() ? Param->getType()
+                                : Arg.getNonTypeTemplateArgumentType()};
+  };
+
   // If the replacement expression did not change, and the parameter type
   // did not change, we can skip the semantic action because it would
   // produce the same result anyway.
-  auto *Param = cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(AssociatedDecl)
-          ->asArray()[E->getIndex()]);
-  if (QualType ParamType = Param->getType();
-      !SemaRef.Context.hasSameType(ParamType, E->getParameter()->getType()) ||
+  if (auto [Param, ParamType] = getParamAndType(AssociatedDecl);
+      !SemaRef.Context.hasSameType(
+          ParamType, std::get<1>(getParamAndType(E->getAssociatedDecl()))) ||
       Replacement.get() != OrigReplacement) {
-
     // When transforming the replacement expression previously, all Sema
     // specific annotations, such as implicit casts, are discarded. Calling the
     // corresponding sema action is necessary to recover those. Otherwise,
