@@ -223,11 +223,10 @@ define i64 @test_inv_and_nez(i64 %f, i64 %x, i1 %cond) {
 ; RV32ZICOND-LABEL: test_inv_and_nez:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    addi a4, a4, -1
-; RV32ZICOND-NEXT:    orn a3, a4, a3
-; RV32ZICOND-NEXT:    orn a2, a4, a2
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a3, a1
+; RV32ZICOND-NEXT:    czero.eqz a3, a3, a4
+; RV32ZICOND-NEXT:    czero.eqz a2, a2, a4
+; RV32ZICOND-NEXT:    andn a0, a0, a2
+; RV32ZICOND-NEXT:    andn a1, a1, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: test_inv_and_nez:
@@ -246,12 +245,11 @@ define i64 @test_inv_and_nez(i64 %f, i64 %x, i1 %cond) {
 define i64 @test_inv_and_eqz(i64 %f, i64 %x, i1 %cond) {
 ; RV32ZICOND-LABEL: test_inv_and_eqz:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    slli a4, a4, 31
-; RV32ZICOND-NEXT:    srai a4, a4, 31
-; RV32ZICOND-NEXT:    orn a3, a4, a3
-; RV32ZICOND-NEXT:    orn a2, a4, a2
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a3, a1
+; RV32ZICOND-NEXT:    andi a4, a4, 1
+; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
+; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
+; RV32ZICOND-NEXT:    andn a0, a0, a2
+; RV32ZICOND-NEXT:    andn a1, a1, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: test_inv_and_eqz:

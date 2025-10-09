@@ -142,7 +142,7 @@ define <2 x float> @vfpext_v2bf16_v2f32_unmasked(<2 x bfloat> %a, i32 zeroext %v
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x float> @llvm.vp.fpext.v2f32.v2bf16(<2 x bfloat> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x float> @llvm.vp.fpext.v2f32.v2bf16(<2 x bfloat> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> poison, i1 true, i32 0), <2 x i1> poison, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x float> %v
 }
 
@@ -168,6 +168,6 @@ define <2 x double> @vfpext_v2bf16_v2f64_unmasked(<2 x bfloat> %a, i32 zeroext %
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x double> @llvm.vp.fpext.v2f64.v2bf16(<2 x bfloat> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x double> @llvm.vp.fpext.v2f64.v2bf16(<2 x bfloat> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> poison, i1 true, i32 0), <2 x i1> poison, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x double> %v
 }

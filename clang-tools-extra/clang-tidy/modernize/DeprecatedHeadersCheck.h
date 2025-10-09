@@ -1,4 +1,4 @@
-//===--- DeprecatedHeadersCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +29,7 @@ namespace clang::tidy::modernize {
 /// Example: ``<stdio.h> => <cstdio>``
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-headers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-headers.html
 class DeprecatedHeadersCheck : public ClangTidyCheck {
 public:
   DeprecatedHeadersCheck(StringRef Name, ClangTidyContext *Context);

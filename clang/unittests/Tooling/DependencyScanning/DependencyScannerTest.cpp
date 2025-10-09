@@ -61,12 +61,11 @@ public:
                               std::move(PCHContainerOps));
     Compiler.setFileManager(FileMgr);
 
-    Compiler.createDiagnostics(FileMgr->getVirtualFileSystem(), DiagConsumer,
-                               /*ShouldOwnClient=*/false);
+    Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
       return false;
 
-    Compiler.createSourceManager(*FileMgr);
+    Compiler.createSourceManager();
     Compiler.addDependencyCollector(std::make_shared<TestFileCollector>(
         Compiler.getInvocation().getDependencyOutputOpts(), Deps));
 

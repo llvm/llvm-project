@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -99,4 +99,15 @@ cir.func @ullfunc() -> !u64i {
 // CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u64i
 // CHECK:   cir.return %[[VAL:.*]] : !u64i
 // CHECK: }
+
+cir.func coroutine @coro() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} coroutine @coro()
+
+cir.func builtin @builtin() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} builtin @builtin()
+
 }

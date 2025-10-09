@@ -5,6 +5,7 @@
 // CHECK-LABEL:SYMBOL TABLE:
 // CHECK-NEXT: 0000000000000001 l     F .text  0000000000000000 a"b\{{$}}
 // CHECK-NEXT: 0000000000000006 l       .text  0000000000000000 a\{{$}}
+// CHECK-NEXT: 000000000000000b l       .text  0000000000000000 a\\{{$}}
 // CHECK-NEXT: 0000000000000000 g     F .text  0000000000000000 foo?bar
 // CHECK-NEXT: 0000000000000000 *UND*          0000000000000000 a"b\q{{$}}
 // CHECK-EMPTY:
@@ -26,3 +27,5 @@ ret
 "a\\":
 /// GAS emits a warning for \q
   call "a\"b\q"
+
+"a\\\\" = .

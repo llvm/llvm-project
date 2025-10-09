@@ -420,7 +420,7 @@ public:
     std::vector<ModuleDeps *> NewMDs;
     {
       std::unique_lock<std::mutex> ul(Lock);
-      for (const ModuleDeps &MD : Graph) {
+      for (ModuleDeps &MD : Graph) {
         auto I = Modules.find({MD.ID, 0});
         if (I != Modules.end()) {
           I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
@@ -429,12 +429,12 @@ public:
         auto Res = Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
         NewMDs.push_back(&Res->second);
       }
-      // First call to \c getBuildArguments is somewhat expensive. Let's call it
-      // on the current thread (instead of the main one), and outside the
-      // critical section.
-      for (ModuleDeps *MD : NewMDs)
-        (void)MD->getBuildArguments();
     }
+    // First call to \c getBuildArguments is somewhat expensive. Let's call it
+    // on the current thread (instead of the main one), and outside the
+    // critical section.
+    for (ModuleDeps *MD : NewMDs)
+      (void)MD->getBuildArguments();
   }
 
   bool roundTripCommand(ArrayRef<std::string> ArgStrs,
