@@ -1135,3 +1135,19 @@ define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i
   store <8 x i64> %sel, ptr %ptr_vec, align 1
   ret void
 }
+
+define void @PR159912(<1 x i1> %arg, ptr %ptr) #0 {
+; SVE-LABEL: PR159912:
+; SVE:       // %bb.0:
+; SVE-NEXT:    tst w0, #0x1
+; SVE-NEXT:    ldr d0, [x1]
+; SVE-NEXT:    csetm x8, ne
+; SVE-NEXT:    fmov d1, x8
+; SVE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; SVE-NEXT:    str d0, [x1]
+; SVE-NEXT:    ret
+  %load = load <1 x i64>, ptr %ptr, align 8
+  %select = select <1 x i1> %arg, <1 x i64> zeroinitializer, <1 x i64> %load
+  store <1 x i64> %select, ptr %ptr, align 8
+  ret void
+}

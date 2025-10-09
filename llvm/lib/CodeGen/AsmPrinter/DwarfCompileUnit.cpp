@@ -1836,8 +1836,12 @@ DIE *DwarfCompileUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
   if (!F && SP->isDefinition()) {
     F = DD->getLexicalScopes().getFunction(SP);
 
-    if (!F)
-      return &getCU().getOrCreateAbstractSubprogramDIE(SP);
+    if (!F) {
+      // SP may belong to another CU. Determine the CU similarly
+      // to DwarfDebug::constructAbstractSubprogramScopeDIE.
+      return &DD->getOrCreateAbstractSubprogramCU(SP, *this)
+                  .getOrCreateAbstractSubprogramDIE(SP);
+    }
   }
 
   return DwarfUnit::getOrCreateSubprogramDIE(SP, F, Minimal);

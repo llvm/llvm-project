@@ -746,7 +746,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
         CGF.emitAtomicRMWInst(llvm::AtomicRMWInst::Xchg, Ptr,
                               CGF.Builder.getInt8(1), Order, Scope, E);
     RMWI->setVolatile(E->isVolatile());
-    llvm::Value *Result = CGF.Builder.CreateIsNotNull(RMWI, "tobool");
+    llvm::Value *Result = CGF.EmitToMemory(
+        CGF.Builder.CreateIsNotNull(RMWI, "tobool"), E->getType());
     auto *I = CGF.Builder.CreateStore(Result, Dest);
     CGF.addInstToCurrentSourceAtom(I, Result);
     return;
@@ -891,7 +892,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
   DiagnosticsEngine &Diags = CGM.getDiags();
-  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
+  bool Misaligned = !Ptr.getAlignment().isMultipleOf(TInfo.Width);
   bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   if (Misaligned) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)

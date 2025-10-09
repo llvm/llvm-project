@@ -933,6 +933,16 @@ entry:
   ret i32 %tmp6
 }
 
+define <8 x float> @freeze_permps(<8 x float> %a0) {
+; CHECK-LABEL: freeze_permps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}}
+  %s0 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
+  %f0 = freeze <8 x float> %s0
+  %s1 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %f0, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
+  ret <8 x float> %s1
+}
+
 define <32 x i8> @PR27320(<8 x i32> %a0) {
 ; CHECK-LABEL: PR27320:
 ; CHECK:       # %bb.0:

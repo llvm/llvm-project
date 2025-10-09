@@ -330,76 +330,6 @@ void ASTContext::addComment(const RawComment &RC) {
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }
 
-/// If we have a 'templated' declaration for a template, adjust 'D' to
-/// refer to the actual template.
-/// If we have an implicit instantiation, adjust 'D' to refer to template.
-static const Decl &adjustDeclToTemplate(const Decl &D) {
-  if (const auto *FD = dyn_cast<FunctionDecl>(&D)) {
-    // Is this function declaration part of a function template?
-    if (const FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate())
-      return *FTD;
-
-    // Nothing to do if function is not an implicit instantiation.
-    if (FD->getTemplateSpecializationKind() != TSK_ImplicitInstantiation)
-      return D;
-
-    // Function is an implicit instantiation of a function template?
-    if (const FunctionTemplateDecl *FTD = FD->getPrimaryTemplate())
-      return *FTD;
-
-    // Function is instantiated from a member definition of a class template?
-    if (const FunctionDecl *MemberDecl =
-            FD->getInstantiatedFromMemberFunction())
-      return *MemberDecl;
-
-    return D;
-  }
-  if (const auto *VD = dyn_cast<VarDecl>(&D)) {
-    // Static data member is instantiated from a member definition of a class
-    // template?
-    if (VD->isStaticDataMember())
-      if (const VarDecl *MemberDecl = VD->getInstantiatedFromStaticDataMember())
-        return *MemberDecl;
-
-    return D;
-  }
-  if (const auto *CRD = dyn_cast<CXXRecordDecl>(&D)) {
-    // Is this class declaration part of a class template?
-    if (const ClassTemplateDecl *CTD = CRD->getDescribedClassTemplate())
-      return *CTD;
-
-    // Class is an implicit instantiation of a class template or partial
-    // specialization?
-    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CRD)) {
-      if (CTSD->getSpecializationKind() != TSK_ImplicitInstantiation)
-        return D;
-      llvm::PointerUnion<ClassTemplateDecl *,
-                         ClassTemplatePartialSpecializationDecl *>
-          PU = CTSD->getSpecializedTemplateOrPartial();
-      return isa<ClassTemplateDecl *>(PU)
-                 ? *static_cast<const Decl *>(cast<ClassTemplateDecl *>(PU))
-                 : *static_cast<const Decl *>(
-                       cast<ClassTemplatePartialSpecializationDecl *>(PU));
-    }
-
-    // Class is instantiated from a member definition of a class template?
-    if (const MemberSpecializationInfo *Info =
-            CRD->getMemberSpecializationInfo())
-      return *Info->getInstantiatedFrom();
-
-    return D;
-  }
-  if (const auto *ED = dyn_cast<EnumDecl>(&D)) {
-    // Enum is instantiated from a member definition of a class template?
-    if (const EnumDecl *MemberDecl = ED->getInstantiatedFromMemberEnum())
-      return *MemberDecl;
-
-    return D;
-  }
-  // FIXME: Adjust alias templates?
-  return D;
-}
-
 const RawComment *ASTContext::getRawCommentForAnyRedecl(
                                                 const Decl *D,
                                                 const Decl **OriginalDecl) const {
@@ -976,6 +906,9 @@ void ASTContext::cleanup() {
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
+
+  XRayFilter.reset();
+  NoSanitizeL.reset();
 }
 
 ASTContext::~ASTContext() { cleanup(); }
@@ -1707,6 +1640,9 @@ ASTContext::findPointerAuthContent(QualType T) const {
   assert(isPointerAuthenticationAvailable());
 
   T = T.getCanonicalType();
+  if (T->isDependentType())
+    return PointerAuthContent::None;
+
   if (T.hasAddressDiscriminatedPointerAuth())
     return PointerAuthContent::AddressDiscriminatedData;
   const RecordDecl *RD = T->getAsRecordDecl();
@@ -3498,6 +3434,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::VectorQuad:
     case BuiltinType::VectorPair:
     case BuiltinType::DMR1024:
+    case BuiltinType::DMR2048:
       OS << "?";
       return;
 
@@ -4564,6 +4501,10 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
+  auto K = llvm::ScalableVecTyKey{EltTy, NumElts, NumFields};
+  if (auto It = ScalableVecTyMap.find(K); It != ScalableVecTyMap.end())
+    return It->second;
+
   if (Target->hasAArch64ACLETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 
@@ -4572,29 +4513,29 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   if (EltTy->hasIntegerRepresentation() && !EltTy->isBooleanType() &&          \
       EltTy->hasSignedIntegerRepresentation() == IsSigned &&                   \
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls,      \
                               ElBits, NF)                                      \
   if (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&        \
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_BFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
                                ElBits, NF)                                     \
   if (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&         \
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
                                ElBits, NF)                                     \
   if (EltTy->isMFloat8Type() && EltTySize == ElBits &&                         \
       NumElts == (NumEls * NF) && NumFields == 1) {                            \
-    return SingletonId;                                                        \
+    return ScalableVecTyMap[K] = SingletonId;                                  \
   }
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
-    return SingletonId;
+    return ScalableVecTyMap[K] = SingletonId;
 #include "clang/Basic/AArch64ACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -4608,10 +4549,10 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
        (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
         IsBF && !IsFP)) &&                                                     \
       EltTySize == ElBits && NumElts == NumEls && NumFields == NF)             \
-    return SingletonId;
+    return ScalableVecTyMap[K] = SingletonId;
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
-    return SingletonId;
+    return ScalableVecTyMap[K] = SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
   }
   return QualType();
@@ -5866,8 +5807,14 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
 
   QualType Canon;
   TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
-  if (!CanonArgPack.structurallyEquals(ArgPack))
+  if (!CanonArgPack.structurallyEquals(ArgPack)) {
     Canon = getSubstBuiltinTemplatePack(CanonArgPack);
+    // Refresh InsertPos, in case the recursive call above caused rehashing,
+    // which would invalidate the bucket pointer.
+    [[maybe_unused]] const auto *Nothing =
+        SubstBuiltinTemplatePackTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!Nothing);
+  }
 
   auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
       SubstBuiltinTemplatePackType(Canon, ArgPack);
@@ -12575,6 +12522,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     }
     case 'b': {
       Type = Context.AMDGPUBufferRsrcTy;
+      break;
+    }
+    case 't': {
+      Type = Context.AMDGPUTextureTy;
       break;
     }
     default:

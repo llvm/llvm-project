@@ -1618,6 +1618,8 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     if (!inputMap) {
       // This block argument was dropped and no replacement value was provided.
       // Materialize a replacement value "out of thin air".
+      // Note: Materialization must be built here because we cannot find a
+      // valid insertion point in the new block. (Will point to the old block.)
       Value mat =
           buildUnresolvedMaterialization(
               MaterializationKind::Source,
@@ -1725,29 +1727,29 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // (regardless of the type) and build a source materialization to the
   // original type.
   repl = lookupOrNull(value);
-  if (repl.empty()) {
-    // No replacement value is registered in the mapping. This means that the
-    // value is dropped and no longer needed. (If the value were still needed,
-    // a source materialization producing a replacement value "out of thin air"
-    // would have already been created during `replaceOp` or
-    // `applySignatureConversion`.)
-    return Value();
-  }
 
-  // Note: `computeInsertPoint` computes the "earliest" insertion point at
-  // which all values in `repl` are defined. It is important to emit the
-  // materialization at that location because the same materialization may be
-  // reused in a different context. (That's because materializations are cached
-  // in the conversion value mapping.) The insertion point of the
-  // materialization must be valid for all future users that may be created
-  // later in the conversion process.
-  Value castValue =
-      buildUnresolvedMaterialization(MaterializationKind::Source,
-                                     computeInsertPoint(repl), value.getLoc(),
-                                     /*valuesToMap=*/repl, /*inputs=*/repl,
-                                     /*outputTypes=*/value.getType(),
-                                     /*originalType=*/Type(), converter)
-          .front();
+  // Compute the insertion point of the materialization.
+  OpBuilder::InsertPoint ip;
+  if (repl.empty()) {
+    // The source materialization has no inputs. Insert it right before the
+    // value that it is replacing.
+    ip = computeInsertPoint(value);
+  } else {
+    // Compute the "earliest" insertion point at which all values in `repl` are
+    // defined. It is important to emit the materialization at that location
+    // because the same materialization may be reused in a different context.
+    // (That's because materializations are cached in the conversion value
+    // mapping.) The insertion point of the materialization must be valid for
+    // all future users that may be created later in the conversion process.
+    ip = computeInsertPoint(repl);
+  }
+  Value castValue = buildUnresolvedMaterialization(
+                        MaterializationKind::Source, ip, value.getLoc(),
+                        /*valuesToMap=*/repl, /*inputs=*/repl,
+                        /*outputTypes=*/value.getType(),
+                        /*originalType=*/Type(), converter,
+                        /*isPureTypeConversion=*/!repl.empty())
+                        .front();
   return castValue;
 }
 
@@ -1854,6 +1856,44 @@ void ConversionPatternRewriterImpl::replaceOp(
     Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(newValues.size() == op->getNumResults() &&
          "incorrect number of replacement values");
+  LLVM_DEBUG({
+    logger.startLine() << "** Replace : '" << op->getName() << "'(" << op
+                       << ")\n";
+    if (currentTypeConverter) {
+      // If the user-provided replacement types are different from the
+      // legalized types, as per the current type converter, print a note.
+      // In most cases, the replacement types are expected to match the types
+      // produced by the type converter, so this could indicate a bug in the
+      // user code.
+      for (auto [result, repls] :
+           llvm::zip_equal(op->getResults(), newValues)) {
+        Type resultType = result.getType();
+        auto logProlog = [&, repls = repls]() {
+          logger.startLine() << "   Note: Replacing op result of type "
+                             << resultType << " with value(s) of type (";
+          llvm::interleaveComma(repls, logger.getOStream(), [&](Value v) {
+            logger.getOStream() << v.getType();
+          });
+          logger.getOStream() << ")";
+        };
+        SmallVector<Type> convertedTypes;
+        if (failed(currentTypeConverter->convertTypes(resultType,
+                                                      convertedTypes))) {
+          logProlog();
+          logger.getOStream() << ", but the type converter failed to legalize "
+                                 "the original type.\n";
+          continue;
+        }
+        if (TypeRange(convertedTypes) != TypeRange(ValueRange(repls))) {
+          logProlog();
+          logger.getOStream() << ", but the legalized type(s) is/are (";
+          llvm::interleaveComma(convertedTypes, logger.getOStream(),
+                                [&](Type t) { logger.getOStream() << t; });
+          logger.getOStream() << ")\n";
+        }
+      }
+    }
+  });
 
   if (!config.allowPatternRollback) {
     // Pattern rollback is not allowed: materialize all IR changes immediately.
@@ -1897,21 +1937,8 @@ void ConversionPatternRewriterImpl::replaceOp(
   }
 
   // Create mappings for each of the new result values.
-  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults())) {
-    if (repl.empty()) {
-      // This result was dropped and no replacement value was provided.
-      // Materialize a replacement value "out of thin air".
-      buildUnresolvedMaterialization(
-          MaterializationKind::Source, computeInsertPoint(result),
-          result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
-          /*outputTypes=*/result.getType(), /*originalType=*/Type(),
-          currentTypeConverter, /*isPureTypeConversion=*/false);
-      continue;
-    }
-
-    // Remap result to replacement value.
+  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults()))
     mapping.map(static_cast<Value>(result), std::move(repl));
-  }
 
   appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
   // Mark this operation and all nested ops as replaced.
@@ -2083,10 +2110,6 @@ void ConversionPatternRewriter::replaceOp(Operation *op, Operation *newOp) {
 void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
-  });
 
   // If the current insertion point is before the erased operation, we adjust
   // the insertion point to be after the operation.
@@ -2104,10 +2127,6 @@ void ConversionPatternRewriter::replaceOpWithMultiple(
     Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
-  });
 
   // If the current insertion point is before the erased operation, we adjust
   // the insertion point to be after the operation.
@@ -3802,8 +3821,9 @@ namespace {
 struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
   FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
                                          MLIRContext *ctx,
-                                         const TypeConverter &converter)
-      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
+                                         const TypeConverter &converter,
+                                         PatternBenefit benefit)
+      : ConversionPattern(converter, functionLikeOpName, benefit, ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> /*operands*/,
@@ -3848,15 +3868,16 @@ mlir::convertOpResultTypes(Operation *op, ValueRange operands,
 
 void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    const TypeConverter &converter) {
+    const TypeConverter &converter, PatternBenefit benefit) {
   patterns.add<FunctionOpInterfaceSignatureConversion>(
-      functionLikeOpName, patterns.getContext(), converter);
+      functionLikeOpName, patterns.getContext(), converter, benefit);
 }
 
 void mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter) {
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit) {
   patterns.add<AnyFunctionOpInterfaceSignatureConversion>(
-      converter, patterns.getContext());
+      converter, patterns.getContext(), benefit);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,0 +1,13 @@
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -mattr=+wavefrontsize32 -disassemble -o - %s | FileCheck %s
+
+# Make sure there's no assertion when trying to use an unsupported
+# wave32 on a wave64-only target
+
+# CHECK: v_add_f64 v[0:1], 1.0, v[0:1]
+0x00,0x00,0x80,0xd2,0xf2,0x00,0x02,0x00
+
+# CHECK: v_cmp_eq_u32_e64 s[0:1], 1.0, s1
+0x00,0x00,0xca,0xd0,0xf2,0x02,0x00,0x00
+
+# CHECK: v_cndmask_b32_e64 v1, v2, v3, s[0:1]
+0x01,0x00,0x00,0xd1,0x02,0x07,0x02,0x00

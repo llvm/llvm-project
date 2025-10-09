@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -triple=x86_64 -std=c++2c -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple=x86_64 -std=c++2c -fsyntax-only -verify -fexperimental-new-constant-interpreter
 
 
 struct S0 {};
@@ -229,3 +229,19 @@ static_assert(__is_same_as(tag_of_t<S1>, int));
 static_assert(__is_same_as(tag_of_t<int>, int)); // error
 // expected-error@-1 {{constraints not satisfied for alias template 'tag_of_t' [with T = int]}}
 // expected-note@#tag-of-constr {{because substituted constraint expression is ill-formed: type 'int' cannot be decomposed}}
+
+struct MinusOne;
+template <> struct ::std::tuple_size<MinusOne> {
+  static constexpr int value = -1;
+};
+int minus_one = __builtin_structured_binding_size(MinusOne);
+// expected-error@-1 {{cannot decompose this type; 'std::tuple_size<MinusOne>::value' is not a valid size: -1}}
+// expected-error@-2 {{type 'MinusOne' cannot be decomposed}}
+
+struct UintMax;
+template <> struct ::std::tuple_size<UintMax> {
+  static constexpr unsigned value = -1;
+};
+int uint_max = __builtin_structured_binding_size(UintMax);
+// expected-error@-1 {{cannot decompose this type; 'std::tuple_size<UintMax>::value' is not a valid size: 4294967295}}
+// expected-error@-2 {{type 'UintMax' cannot be decomposed}}

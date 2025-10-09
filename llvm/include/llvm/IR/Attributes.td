@@ -342,6 +342,9 @@ def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]
 /// during a real-time sanitized function (see `sanitize_realtime`).
 def SanitizeRealtimeBlocking : EnumAttr<"sanitize_realtime_blocking", IntersectPreserve, [FnAttr]>;
 
+/// Allocation token instrumentation is on.
+def SanitizeAllocToken : EnumAttr<"sanitize_alloc_token", IntersectPreserve, [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
