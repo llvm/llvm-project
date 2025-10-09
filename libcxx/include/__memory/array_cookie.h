@@ -91,11 +91,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
 
 #if defined(_LIBCPP_ABI_ITANIUM)
 
-  using _ArrayCookie             = size_t;
-  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
-  char __cookie[sizeof(_ArrayCookie)];
-  __builtin_memcpy(&__cookie, __allocation_start, sizeof(_ArrayCookie)); // necessary to avoid violating strict aliasing
-  return *reinterpret_cast<_ArrayCookie const*>(&__cookie);
+  struct _ArrayCookie {
+    size_t __element_count;
+  };
 
 #elif defined(_LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES)
 
@@ -104,16 +102,18 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
     size_t __element_count;
   };
 
-  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
-  char __cookie[sizeof(_ArrayCookie)];
-  __builtin_memcpy(&__cookie, __allocation_start, sizeof(_ArrayCookie)); // necessary to avoid violating strict aliasing
-  return reinterpret_cast<_ArrayCookie const*>(&__cookie)->__element_count;
-
 #else
 
-  static_assert(sizeof(_Tp) == 0, "This function is not implemented for this ABI");
+  static_assert(false, "Getting the array cookie is not implemented on this ABI");
 
 #endif
+
+  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - sizeof(_ArrayCookie);
+  _ArrayCookie __cookie;
+  // This is necessary to avoid violating strict aliasing. It's valid because _ArrayCookie is an
+  // implicit lifetime type.
+  __builtin_memcpy(&__cookie, __allocation_start, sizeof(_ArrayCookie));
+  return __cookie.__element_count;
 }
 
 _LIBCPP_END_NAMESPACE_STD
