@@ -245,7 +245,7 @@ class MockGDBServerResponder:
     def qHostInfo(self):
         return "ptrsize:8;endian:little;"
 
-    def qEcho(self, _: int):
+    def qEcho(self, num: int):
         return "E04"
 
     def qQueryGDBServer(self):
