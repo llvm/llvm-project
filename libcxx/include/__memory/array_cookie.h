@@ -78,8 +78,8 @@ struct [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(_Tp))]] __arm_array_cookie {
 // In practice, it is sufficient to read the bytes immediately before the first array element.
 //
 //
-// In the ARM ABI [2]
-// ------------------
+// In the Itanium ABI with ARM differences [2]
+// -------------------------------------------
 // The array cookie is stored at the very start of the allocation and it has the following form:
 //
 //    struct array_cookie {
