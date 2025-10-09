@@ -13,6 +13,8 @@ entry:
   ret i32 0
 }
 
+; CHECK: _ZL10myCallbacki:
+; CHECK-NEXT: [[LABEL_FUNC:\.Lfunc_begin[0-9]+]]:
 define internal void @_ZL10myCallbacki(i32 %value) !type !2 {
 entry:
   %sink = alloca i32, align 4
