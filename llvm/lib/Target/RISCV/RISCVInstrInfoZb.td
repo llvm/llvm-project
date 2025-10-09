@@ -702,13 +702,13 @@ def : Pat<(binop_allwusers<or>
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 def : Pat<(binop_allwusers<or>
                (or (zexti16 (XLenVT GPR:$rs1)),
-                   (shl GPR:$op1rs1, (XLenVT 24))),
-               (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
+                   (shl GPR:$op1rs2, (XLenVT 24))),
+               (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 
 def : Pat<(i64 (or (or (zexti16 (XLenVT GPR:$rs1)),
-                       (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
-                   (sext_inreg (shl GPR:$op1rs1, (XLenVT 24)), i32))),
+                       (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+                   (sext_inreg (shl GPR:$op1rs2, (XLenVT 24)), i32))),
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 
 // Match a pattern of 2 halfwords being inserted into bits [63:32], with bits
