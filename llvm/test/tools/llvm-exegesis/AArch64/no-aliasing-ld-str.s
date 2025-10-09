@@ -4,5 +4,7 @@ RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-objec
 RUN: llvm-objdump -d %t.obj > %t.s
 RUN: FileCheck %s < %t.s
 
+// Start matching after the printed file path, as that may contain something that looks like a mnemonic.
+CHECK: Disassembly of section .text:
 CHECK-NOT: ld{{[1-4]}}
 CHECK-NOT: st{{[1-4]}}

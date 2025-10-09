@@ -110,6 +110,7 @@ STATISTIC(NumFailZeroMII, "Pipeliner abort due to zero MII");
 STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
 STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
+STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
 
 /// A command line option to turn software pipelining on or off.
 static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
@@ -192,6 +193,13 @@ static cl::opt<int>
 static cl::opt<bool>
     MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
                cl::desc("Use the MVE code generator for software pipelining"));
+
+/// A command line argument to limit the number of store instructions in the
+/// target basic block.
+static cl::opt<unsigned> SwpMaxNumStores(
+    "pipeliner-max-num-stores",
+    cl::desc("Maximum number of stores allwed in the target loop."), cl::Hidden,
+    cl::init(200));
 
 namespace llvm {
 
@@ -540,6 +548,23 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
                                                L.getStartLoc(), L.getHeader())
              << "No loop preheader found";
+    });
+    return false;
+  }
+
+  unsigned NumStores = 0;
+  for (MachineInstr &MI : *L.getHeader())
+    if (MI.mayStore())
+      ++NumStores;
+  if (NumStores > SwpMaxNumStores) {
+    LLVM_DEBUG(dbgs() << "Too many stores\n");
+    NumFailTooManyStores++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Too many store instructions in the loop: "
+             << ore::NV("NumStores", NumStores) << " > "
+             << ore::NV("SwpMaxNumStores", SwpMaxNumStores) << ".";
     });
     return false;
   }
