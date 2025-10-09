@@ -1023,13 +1023,6 @@ public:
         llvm::SmallVector<mlir::Value> newMapOpsForFields;
         llvm::SmallVector<llvm::SmallVector<int64_t>> newMemberIndexPaths;
 
-        // we probably want to block adding additional maps based on their index... if we can be sure the tied to mapper refers to the current map...
-        //   - IT SEEMS WE HAVE THIS, BUT IT ISN'T QUITE WORKING IN ONE SITUATION FOR SOME REASON...
-        //     check appendMemberMapIfNew which seems to do some veirifcation of duplicate maps
-
-        // is there an issue with the implicit map generation looping over derived type maps in other derived types and spawning 
-        // extra additional unncessary maps...? Does this do something funky with some of the examples I have...? 
-
         // 1) Handle direct top-level allocatable fields.
         for (auto fieldMemTyPair : recordType.getTypeList()) {
           auto &field = fieldMemTyPair.first;
