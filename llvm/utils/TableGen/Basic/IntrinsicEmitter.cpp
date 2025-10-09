@@ -170,7 +170,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
       OS.indent(40 - Int.EnumName.size());
     OS << formatv(
         " // {} ({})\n", Int.Name,
-        SrcMgr.getFormattedLocationNoOffset(Int.TheDef->getLoc().front()));
+        SrcMgr.getFormattedLocationNoOffset(Int.TheDef->getTopDefLoc()));
   }
 
   // Emit num_intrinsics into the target neutral enum.
