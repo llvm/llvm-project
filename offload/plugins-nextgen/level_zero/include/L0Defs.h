@@ -17,8 +17,6 @@
 #include "Shared/Requirements.h"
 #include "omptarget.h"
 
-#define LIBOMP_DECL(RetType, FnDecl) RetType __cdecl FnDecl
-
 enum class AllocOptionTy : int32_t {
   ALLOC_OPT_NONE = 0,
   ALLOC_OPT_REDUCTION_SCRATCH = 1,
