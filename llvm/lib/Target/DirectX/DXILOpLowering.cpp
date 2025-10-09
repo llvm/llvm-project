@@ -627,7 +627,7 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerGetDimensionsBuffer(Function &F) {
+  [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
 
@@ -956,8 +956,8 @@ public:
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
-      case Intrinsic::dx_resource_getdimensions_buffer:
-        HasErrors |= lowerGetDimensionsBuffer(F);
+      case Intrinsic::dx_resource_getdimensions_x:
+        HasErrors |= lowerGetDimensionsX(F);
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);

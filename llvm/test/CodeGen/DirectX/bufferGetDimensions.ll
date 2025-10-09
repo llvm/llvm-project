@@ -9,7 +9,7 @@ define i32 @test_getdimensions_no_mips() {
 
   ; CHECK-NEXT: %[[RETVAL:.*]] = call %dx.types.Dimensions @dx.op.getDimensions(i32 72, %dx.types.Handle %[[ANNOT_HANDLE]], i32 undef)
   ; CHECK-NEXT: %[[DIM:.*]] = extractvalue %dx.types.Dimensions %[[RETVAL]], 0
-  %1 = call i32 @llvm.dx.resource.getdimensions.buffer(target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %handle)
+  %1 = call i32 @llvm.dx.resource.getdimensions.x(target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %handle)
   
   ; CHECK-NEXT: ret i32 %[[DIM]]
   ret i32 %1

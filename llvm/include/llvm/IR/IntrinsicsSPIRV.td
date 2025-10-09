@@ -159,7 +159,7 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
                               [IntrInaccessibleMemOrArgMemOnly]>;
 
-  def int_spv_resource_getdimensions_buffer
+  def int_spv_resource_getdimensions_x
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;
 
   def int_spv_resource_getpointer
