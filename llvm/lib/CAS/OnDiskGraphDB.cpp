@@ -343,6 +343,12 @@ private:
   const Header *H = nullptr;
 };
 
+/// Proxy for any on-disk object or raw data.
+struct OnDiskContent {
+  std::optional<DataRecordHandle> Record;
+  std::optional<ArrayRef<char>> Bytes;
+};
+
 // Data loaded inside the memory from standalone file.
 class StandaloneDataInMemory {
 public:
@@ -454,12 +460,6 @@ private:
 
 } // namespace
 
-/// Proxy for any on-disk object or raw data.
-struct ondisk::OnDiskContent {
-  std::optional<DataRecordHandle> Record;
-  std::optional<ArrayRef<char>> Bytes;
-};
-
 Expected<DataRecordHandle> DataRecordHandle::createWithError(
     function_ref<Expected<char *>(size_t Size)> Alloc, const Input &I) {
   Layout L(I);
@@ -506,12 +506,14 @@ StandaloneDataMap<N>::lookup(ArrayRef<uint8_t> Hash) const {
   return &*I->second;
 }
 
+namespace {
+
 /// Copy of \a sys::fs::TempFile that skips RemoveOnSignal, which is too
 /// expensive to register/unregister at this rate.
 ///
 /// FIXME: Add a TempFileManager that maintains a thread-safe list of open temp
 /// files and has a signal handler registerd that removes them all.
-class OnDiskGraphDB::TempFile {
+class TempFile {
   bool Done = false;
   TempFile(StringRef Name, int FD) : TmpName(std::string(Name)), FD(FD) {}
 
@@ -541,7 +543,7 @@ public:
   ~TempFile() { consumeError(discard()); }
 };
 
-class OnDiskGraphDB::MappedTempFile {
+class MappedTempFile {
 public:
   char *data() const { return Map.data(); }
   size_t size() const { return Map.size(); }
@@ -565,8 +567,9 @@ private:
   TempFile Temp;
   sys::fs::mapped_file_region Map;
 };
+} // namespace
 
-Error OnDiskGraphDB::TempFile::discard() {
+Error TempFile::discard() {
   Done = true;
   if (FD != -1) {
     sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
@@ -587,7 +590,7 @@ Error OnDiskGraphDB::TempFile::discard() {
   return Error::success();
 }
 
-Error OnDiskGraphDB::TempFile::keep(const Twine &Name) {
+Error TempFile::keep(const Twine &Name) {
   assert(!Done);
   Done = true;
   // Always try to close and rename.
@@ -604,8 +607,7 @@ Error OnDiskGraphDB::TempFile::keep(const Twine &Name) {
   return errorCodeToError(RenameEC);
 }
 
-Expected<OnDiskGraphDB::TempFile>
-OnDiskGraphDB::TempFile::create(const Twine &Model) {
+Expected<TempFile> TempFile::create(const Twine &Model) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC = sys::fs::createUniqueFile(Model, FD, ResultPath))
@@ -1164,8 +1166,28 @@ ArrayRef<uint8_t> OnDiskGraphDB::getDigest(const IndexProxy &I) const {
   return I.Hash;
 }
 
+static OnDiskContent getContentFromHandle(const OnDiskDataAllocator &DataPool,
+                                          ObjectHandle OH) {
+  auto getInternalHandle = [](ObjectHandle Handle) -> InternalHandle {
+    uint64_t Data = Handle.getOpaqueData();
+    if (Data & 1)
+      return InternalHandle(*reinterpret_cast<const StandaloneDataInMemory *>(
+          Data & (-1ULL << 1)));
+    return InternalHandle(Data);
+  };
+
+  InternalHandle Handle = getInternalHandle(OH);
+  if (Handle.SDIM)
+    return Handle.SDIM->getContent();
+
+  auto DataHandle = cantFail(
+      DataRecordHandle::getFromDataPool(DataPool, Handle.getAsFileOffset()));
+  assert(DataHandle.getData().end()[0] == 0 && "Null termination");
+  return OnDiskContent{DataHandle, std::nullopt};
+}
+
 ArrayRef<char> OnDiskGraphDB::getObjectData(ObjectHandle Node) const {
-  OnDiskContent Content = getContentFromHandle(Node);
+  OnDiskContent Content = getContentFromHandle(DataPool, Node);
   if (Content.Bytes)
     return *Content.Bytes;
   assert(Content.Record && "Expected record or bytes");
@@ -1174,7 +1196,7 @@ ArrayRef<char> OnDiskGraphDB::getObjectData(ObjectHandle Node) const {
 
 InternalRefArrayRef OnDiskGraphDB::getInternalRefs(ObjectHandle Node) const {
   if (std::optional<DataRecordHandle> Record =
-          getContentFromHandle(Node).Record)
+          getContentFromHandle(DataPool, Node).Record)
     return Record->getRefs();
   return std::nullopt;
 }
@@ -1292,25 +1314,6 @@ void OnDiskGraphDB::getStandalonePath(StringRef Prefix, const IndexProxy &I,
   sys::path::append(Path, Prefix + Twine(I.Offset.get()) + "." + CASVersion);
 }
 
-OnDiskContent OnDiskGraphDB::getContentFromHandle(ObjectHandle OH) const {
-  auto getInternalHandle = [](ObjectHandle Handle) -> InternalHandle {
-    uint64_t Data = Handle.getOpaqueData();
-    if (Data & 1)
-      return InternalHandle(*reinterpret_cast<const StandaloneDataInMemory *>(
-          Data & (-1ULL << 1)));
-    return InternalHandle(Data);
-  };
-
-  InternalHandle Handle = getInternalHandle(OH);
-  if (Handle.SDIM)
-    return Handle.SDIM->getContent();
-
-  auto DataHandle = cantFail(
-      DataRecordHandle::getFromDataPool(DataPool, Handle.getAsFileOffset()));
-  assert(DataHandle.getData().end()[0] == 0 && "Null termination");
-  return OnDiskContent{DataHandle, std::nullopt};
-}
-
 OnDiskContent StandaloneDataInMemory::getContent() const {
   bool Leaf0 = false;
   bool Leaf = false;
@@ -1341,8 +1344,8 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
   return OnDiskContent{Record, std::nullopt};
 }
 
-Expected<OnDiskGraphDB::MappedTempFile>
-OnDiskGraphDB::createTempFile(StringRef FinalPath, uint64_t Size) {
+static Expected<MappedTempFile> createTempFile(StringRef FinalPath,
+                                               uint64_t Size) {
   assert(Size && "Unexpected request for an empty temp file");
   Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%");
   if (!File)

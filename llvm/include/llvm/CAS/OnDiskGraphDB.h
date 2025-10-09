@@ -172,9 +172,6 @@ private:
   size_t Size = 0;
 };
 
-/// Proxy for any on-disk object or raw data.
-struct OnDiskContent;
-
 /// Reference to a node. The node's data may not be stored in the database.
 /// An \p ObjectID instance can only be used with the \p OnDiskGraphDB instance
 /// it came from. \p ObjectIDs from different \p OnDiskGraphDB instances are not
@@ -356,9 +353,8 @@ public:
   ~OnDiskGraphDB();
 
 private:
+  /// Forward declaration for a proxy for an ondisk index record.
   struct IndexProxy;
-  class TempFile;
-  class MappedTempFile;
 
   enum class ObjectPresence {
     Missing,
@@ -404,8 +400,6 @@ private:
                          SmallVectorImpl<char> &Path) const;
   /// Create a standalone leaf file.
   Error createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
-  /// Create temporary file for standalone file storage.
-  Expected<MappedTempFile> createTempFile(StringRef FinalPath, uint64_t Size);
 
   /// @name Helper functions for internal data structures.
   /// @{
@@ -424,8 +418,6 @@ private:
   Expected<ArrayRef<uint8_t>> getDigest(InternalRef Ref) const;
 
   ArrayRef<uint8_t> getDigest(const IndexProxy &I) const;
-
-  OnDiskContent getContentFromHandle(ObjectHandle H) const;
 
   Expected<IndexProxy> getIndexProxyFromRef(InternalRef Ref) const;
 
