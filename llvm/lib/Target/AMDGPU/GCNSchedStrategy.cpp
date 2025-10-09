@@ -2239,7 +2239,7 @@ uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Info) const {
   // rematerialization in the other direction should get maximum score. Default
   // to values that will yield the worst possible score given known frequencies
   // in order to penalize rematerializations from or into regions whose
-  // frequency is unknown
+  // frequency is unknown.
   uint64_t DefOrOne = Info.Regions[Remat->DefRegion];
   if (!DefOrOne)
     DefOrOne = 1;
