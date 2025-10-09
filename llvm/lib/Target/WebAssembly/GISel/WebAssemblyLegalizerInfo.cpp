@@ -87,7 +87,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL, G_CTLZ, G_CTLZ_ZERO_UNDEF,
-                               G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP})
+                               G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP, G_ROTL, G_ROTR})
       .legalFor({{s32, s32}, {s64, s64}})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)

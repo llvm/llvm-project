@@ -97,6 +97,9 @@ LLVMInitializeWebAssemblyTarget() {
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeWebAssemblyO0PreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -449,7 +452,9 @@ public:
   bool addRegAssignAndRewriteOptimized() override { return false; }
 
   bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
 };
@@ -677,9 +682,21 @@ bool WebAssemblyPassConfig::addIRTranslator() {
   return false;
 }
 
+void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() == CodeGenOptLevel::None) {
+    addPass(createWebAssemblyO0PreLegalizerCombiner());
+  } else {
+    addPass(createWebAssemblyPreLegalizerCombiner());
+  }
+}
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
+}
+
+void WebAssemblyPassConfig::addPreRegBankSelect() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createWebAssemblyPostLegalizerCombiner());
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {

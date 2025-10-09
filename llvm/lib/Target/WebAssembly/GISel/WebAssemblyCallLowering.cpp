@@ -521,13 +521,10 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       }
 
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        auto NewOutReg = Arg.Regs[Part];
-        if (!RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI)) {
-          NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
-          assert(RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI) &&
-                 "Couldn't constrain brand-new register?");
-          MIRBuilder.buildCopy(NewOutReg, Arg.Regs[Part]);
-        }
+        auto NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
+        assert(RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI) &&
+                "Couldn't constrain brand-new register?");
+        MIRBuilder.buildCopy(NewOutReg, Arg.Regs[Part]);
         MIB.addUse(NewOutReg);
       }
     }

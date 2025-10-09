@@ -167,6 +167,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_CTPOP:
   case G_FSHL:
   case G_FSHR:
+  case G_ROTR:
+  case G_ROTL:
     OperandsMapping = &Op0IntValueMapping;
     break;
   case G_FADD:
@@ -218,6 +220,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case G_LOAD:
+  case G_ZEXTLOAD:
+  case G_SEXTLOAD:
   case G_STORE:
     if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() != 0)
       break;
