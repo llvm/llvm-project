@@ -308,7 +308,8 @@ public:
   /// The line entry must have the same start address as the address for this
   /// location.
   bool SetPreferredLineEntry(const LineEntry &line_entry) {
-    if (m_address == line_entry.range.GetBaseAddress()) {
+    if (line_entry.HasValidRange() &&
+        m_address == line_entry.GetRange().GetBaseAddress()) {
       m_preferred_line_entry = line_entry;
       return true;
     }
