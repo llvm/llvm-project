@@ -816,14 +816,15 @@ set(s390x_SOURCES
   ${GENERIC_TF_SOURCES}
 )
 
-set(wasm32_SOURCES
+
+set(wasm_SOURCES
+  wasm/__c_longjmp.S
+  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
-set(wasm64_SOURCES
-  ${GENERIC_TF_SOURCES}
-  ${GENERIC_SOURCES}
-)
+set(wasm32_SOURCES ${wasm_SOURCES})
+set(wasm64_SOURCES ${wasm_SOURCES})
 
 set(ve_SOURCES
   ve/grow_stack.S

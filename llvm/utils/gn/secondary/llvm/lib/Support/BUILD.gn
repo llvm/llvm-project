@@ -103,6 +103,7 @@ static_library("Support") {
     "IntEqClasses.cpp",
     "IntervalMap.cpp",
     "JSON.cpp",
+    "Jobserver.cpp",
     "KnownBits.cpp",
     "KnownFPClass.cpp",
     "LEB128.cpp",

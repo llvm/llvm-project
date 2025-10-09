@@ -14,10 +14,12 @@ add_clang_library(clangCIR
   CIRGenCall.cpp
   CIRGenClass.cpp
   CIRGenCleanup.cpp
+  CIRGenCoroutine.cpp
   CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenBuiltin.cpp
   CIRGenDecl.cpp
+  CIRGenDeclCXX.cpp
   CIRGenDeclOpenACC.cpp
   CIRGenException.cpp
   CIRGenExpr.cpp

@@ -510,6 +510,13 @@ void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
     Profiler->VisitExpr(Factor);
 }
 
+void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
+  if (const Expr *First = C->getFirst())
+    Profiler->VisitExpr(First);
+  if (const Expr *Count = C->getCount())
+    Profiler->VisitExpr(Count);
+}
+
 void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   if (C->getAllocator())
     Profiler->VisitStmt(C->getAllocator());
@@ -1023,6 +1030,15 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPCanonicalLoopSequenceTransformationDirective(
+    const OMPCanonicalLoopSequenceTransformationDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPFuseDirective(const OMPFuseDirective *S) {
+  VisitOMPCanonicalLoopSequenceTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
@@ -2639,8 +2655,6 @@ void OpenACCClauseProfiler::VisitPrivateClause(
 
   for (auto &Recipe : Clause.getInitRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
-    if (Recipe.InitExpr)
-      Profiler.VisitExpr(Recipe.InitExpr);
   }
 }
 
@@ -2650,8 +2664,6 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
 
   for (auto &Recipe : Clause.getInitRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
-    if (Recipe.InitExpr)
-      Profiler.VisitExpr(Recipe.InitExpr);
     Profiler.VisitDecl(Recipe.InitFromTemporary);
   }
 }
@@ -2757,12 +2769,10 @@ void OpenACCClauseProfiler::VisitReductionClause(
 
   for (auto &Recipe : Clause.getRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
-    if (Recipe.InitExpr)
-      Profiler.VisitExpr(Recipe.InitExpr);
     // TODO: OpenACC: Make sure we remember to update this when we figure out
     // what we're adding for the operation recipe, in the meantime, a static
     // assert will make sure we don't add something.
-    static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
+    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
   }
 }
 

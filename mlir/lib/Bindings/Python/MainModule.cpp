@@ -115,9 +115,6 @@ NB_MODULE(_mlir, m) {
         });
       },
       "typeid"_a, nb::kw_only(), "replace"_a = false,
-      // clang-format off
-      nb::sig("def register_type_caster(typeid: " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID") ", *, replace: bool = False) -> object"),
-      // clang-format on
       "Register a type caster for casting MLIR types to custom user types.");
   m.def(
       MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR,
@@ -130,9 +127,6 @@ NB_MODULE(_mlir, m) {
             });
       },
       "typeid"_a, nb::kw_only(), "replace"_a = false,
-      // clang-format off
-      nb::sig("def register_value_caster(typeid: " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID") ", *, replace: bool = False) -> object"),
-      // clang-format on
       "Register a value caster for casting MLIR values to custom user values.");
 
   // Define and populate IR submodule.
