@@ -30,6 +30,9 @@ using namespace llvm;
 using namespace llvm::orc;
 
 #if defined(__APPLE__) || defined(__linux__)
+// TODO: Add COFF (Windows) support for these tests.
+// this facility also works correctly on Windows (COFF),
+// so we should eventually enable and run these tests for that platform as well.
 namespace {
 
 #if defined(__APPLE__)
@@ -53,6 +56,8 @@ Triple getTargetTriple() {
 
 static bool CheckHostSupport() {
   auto Triple = getTargetTriple();
+  // TODO: Extend support to COFF (Windows) once test setup and YAML conversion
+  // are verified.
   if (!Triple.isOSBinFormatMachO() &&
       !(Triple.isOSBinFormatELF() && Triple.getArch() == Triple::x86_64))
     return false;
