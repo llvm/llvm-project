@@ -78,6 +78,7 @@ static bool isRuntimeCall(Operation *op) {
 
 /// This is the single source of truth about whether we should parallelize an
 /// operation nested in an omp.workdistribute region.
+/// Parallelize here refers to dividing into units of work.
 static bool shouldParallelize(Operation *op) {
   // True if the op is a runtime call to Assign
   if (isRuntimeCall(op)) {
@@ -124,7 +125,7 @@ static T getPerfectlyNested(Operation *op) {
 /// verifyTargetTeamsWorkdistribute method verifies that
 /// omp.target { teams { workdistribute { ... } } } is well formed
 /// and fails for function calls that don't have lowering implemented yet.
-static FailureOr<bool>
+static LogicalResult
 verifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
   OpBuilder rewriter(workdistribute);
   auto loc = workdistribute->getLoc();
@@ -141,10 +142,30 @@ verifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
     emitError(loc, "teams with multiple blocks\n");
     return failure();
   }
+
+  bool foundWorkdistribute = false;
+  for (auto &op : teams.getOps()) {
+    if (isa<omp::WorkdistributeOp>(op)) {
+      if (foundWorkdistribute) {
+        emitError(loc, "teams has multiple workdistribute ops.\n");
+        return failure();
+      }
+      foundWorkdistribute = true;
+      continue;
+    }
+    // Identify any omp dialect ops present before/after workdistribute.
+    if (op.getDialect() && isa<omp::OpenMPDialect>(op.getDialect()) &&
+        !isa<omp::TerminatorOp>(op)) {
+      emitError(loc, "teams has omp ops other than workdistribute. Lowering "
+                     "not implemented yet.\n");
+      return failure();
+    }
+  }
+
   omp::TargetOp targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
   // return if not omp.target
   if (!targetOp)
-    return true;
+    return success();
 
   for (auto &op : workdistribute.getOps()) {
     if (auto callOp = dyn_cast<fir::CallOp>(op)) {
@@ -162,7 +183,7 @@ verifyTargetTeamsWorkdistribute(omp::WorkdistributeOp workdistribute) {
       }
     }
   }
-  return true;
+  return success();
 }
 
 /// fissionWorkdistribute method finds the parallelizable ops
@@ -1779,27 +1800,42 @@ public:
     auto moduleOp = getOperation();
     bool changed = false;
     SetVector<omp::TargetOp> targetOpsToProcess;
-    moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      auto res = verifyTargetTeamsWorkdistribute(workdistribute);
-      if (failed(res))
-        signalPassFailure();
-    });
-    moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      auto res = fissionWorkdistribute(workdistribute);
-      if (failed(res))
-        signalPassFailure();
-      changed |= *res;
-    });
-    moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-      auto res =
-          workdistributeRuntimeCallLower(workdistribute, targetOpsToProcess);
-      if (failed(res))
-        signalPassFailure();
-      changed |= *res;
-    });
+    auto verify =
+        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+          if (failed(verifyTargetTeamsWorkdistribute(workdistribute)))
+            return WalkResult::interrupt();
+          return WalkResult::advance();
+        });
+    if (verify.wasInterrupted())
+      return signalPassFailure();
+
+    auto fission =
+        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+          auto res = fissionWorkdistribute(workdistribute);
+          if (failed(res))
+            return WalkResult::interrupt();
+          changed |= *res;
+          return WalkResult::advance();
+        });
+    if (fission.wasInterrupted())
+      return signalPassFailure();
+
+    auto rtCallLower =
+        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+          auto res = workdistributeRuntimeCallLower(workdistribute,
+                                                    targetOpsToProcess);
+          if (failed(res))
+            return WalkResult::interrupt();
+          changed |= *res;
+          return WalkResult::advance();
+        });
+    if (rtCallLower.wasInterrupted())
+      return signalPassFailure();
+
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
       changed |= workdistributeDoLower(workdistribute, targetOpsToProcess);
     });
+
     moduleOp->walk([&](mlir::omp::TeamsOp teams) {
       changed |= teamsWorkdistributeToSingleOp(teams, targetOpsToProcess);
     });
@@ -1811,10 +1847,10 @@ public:
       for (auto targetOp : targetOpsToProcess) {
         auto res = splitTargetData(targetOp, rewriter);
         if (failed(res))
-          signalPassFailure();
+          return signalPassFailure();
         if (*res) {
           if (failed(fissionTarget(*res, rewriter, moduleOp, isTargetDevice)))
-            signalPassFailure();
+            return signalPassFailure();
         }
       }
     }
