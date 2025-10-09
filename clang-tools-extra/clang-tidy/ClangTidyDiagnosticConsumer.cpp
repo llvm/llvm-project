@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-tidy/ClangTidyDiagnosticConsumer.cpp ----------=== //
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 ///  and ClangTidyError classes.
 ///
 ///  This tool uses the Clang Tooling infrastructure, see
-///    http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+///    https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 ///  for details on setting it up with LLVM source tree.
 ///
 //===----------------------------------------------------------------------===//
@@ -160,11 +160,12 @@ ClangTidyError::ClangTidyError(StringRef CheckName,
 
 ClangTidyContext::ClangTidyContext(
     std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-    bool AllowEnablingAnalyzerAlphaCheckers, bool EnableModuleHeadersParsing)
+    bool AllowEnablingAnalyzerAlphaCheckers, bool EnableModuleHeadersParsing,
+    bool ExperimentalCustomChecks)
     : OptionsProvider(std::move(OptionsProvider)),
-
       AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers),
-      EnableModuleHeadersParsing(EnableModuleHeadersParsing) {
+      EnableModuleHeadersParsing(EnableModuleHeadersParsing),
+      ExperimentalCustomChecks(ExperimentalCustomChecks) {
   // Before the first translation unit we can get errors related to command-line
   // parsing, use dummy string for the file name in this case.
   setCurrentFile("dummy");

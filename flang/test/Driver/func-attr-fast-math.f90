@@ -11,8 +11,8 @@ end subroutine func
 
 ! CHECK-OFAST-LABEL: define void @func_() local_unnamed_addr
 ! CHECK-OFAST-SAME: #[[ATTRS:[0-9]+]]
-! CHECK-OFAST: attributes #[[ATTRS]] = { {{.*}}"approx-func-fp-math"="true" {{.*}}"no-infs-fp-math"="true" {{.*}}"no-nans-fp-math"="true" {{.*}}"no-signed-zeros-fp-math"="true" {{.*}}"unsafe-fp-math"="true"{{.*}} }
+! CHECK-OFAST: attributes #[[ATTRS]] = { {{.*}}"no-infs-fp-math"="true" {{.*}}"no-nans-fp-math"="true" {{.*}}"no-signed-zeros-fp-math"="true" {{.*}}"unsafe-fp-math"="true"{{.*}} }
 
 ! CHECK-FFAST-MATH-LABEL: define void @func_() local_unnamed_addr
 ! CHECK-FFAST-MATH-SAME: #[[ATTRS:[0-9]+]]
-! CHECK-FFAST-MATH: attributes #[[ATTRS]] = { {{.*}}"approx-func-fp-math"="true" {{.*}}"no-infs-fp-math"="true" {{.*}}"no-nans-fp-math"="true" {{.*}}"no-signed-zeros-fp-math"="true" {{.*}}"unsafe-fp-math"="true"{{.*}} }
+! CHECK-FFAST-MATH: attributes #[[ATTRS]] = { {{.*}}"no-infs-fp-math"="true" {{.*}}"no-nans-fp-math"="true" {{.*}}"no-signed-zeros-fp-math"="true" {{.*}}"unsafe-fp-math"="true"{{.*}} }

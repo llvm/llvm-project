@@ -1069,22 +1069,22 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (Expr *E = Record->dyn_cast<Expr *>()) {
+      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
       } else {
-        auto Pair = Record->dyn_cast<std::pair<SourceLocation, StringRef> *>();
+        auto Pair =
+            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
           return ToPairFirst.takeError();
         StringRef ToPairSecond = ImportASTStringRef(Pair->second);
-        ToSat.Details.emplace_back(
-            new (Importer.getToContext())
-                ConstraintSatisfaction::SubstitutionDiagnostic{
-                    ToPairFirst.get(), ToPairSecond});
+        ToSat.Details.emplace_back(new (Importer.getToContext())
+                                       ConstraintSubstitutionDiagnostic{
+                                           ToPairFirst.get(), ToPairSecond});
       }
     }
   }
@@ -1740,9 +1740,18 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 }
 
 ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
-  Expected<TagDecl *> ToDeclOrErr = import(T->getOriginalDecl());
+  TagDecl *DeclForType = T->getOriginalDecl();
+  Expected<TagDecl *> ToDeclOrErr = import(DeclForType);
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
+
+  // If there is a definition of the 'OriginalDecl', it should be imported to
+  // have all information for the type in the "To" AST. (In some cases no
+  // other reference may exist to the definition decl and it would not be
+  // imported otherwise.)
+  Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
+  if (!ToDefDeclOrErr)
+    return ToDefDeclOrErr.takeError();
 
   if (T->isCanonicalUnqualified())
     return Importer.getToContext().getCanonicalTagType(*ToDeclOrErr);
@@ -1879,25 +1888,6 @@ ASTNodeImporter::VisitPackExpansionType(const PackExpansionType *T) {
   return Importer.getToContext().getPackExpansionType(*ToPatternOrErr,
                                                       T->getNumExpansions(),
                                                       /*ExpactPack=*/false);
-}
-
-ExpectedType ASTNodeImporter::VisitDependentTemplateSpecializationType(
-    const DependentTemplateSpecializationType *T) {
-  const DependentTemplateStorage &DTN = T->getDependentTemplateName();
-  auto QualifierOrErr = import(DTN.getQualifier());
-  if (!QualifierOrErr)
-    return QualifierOrErr.takeError();
-
-  SmallVector<TemplateArgument, 2> ToPack;
-  ToPack.reserve(T->template_arguments().size());
-  if (Error Err = ImportTemplateArguments(T->template_arguments(), ToPack))
-    return std::move(Err);
-
-  return Importer.getToContext().getDependentTemplateSpecializationType(
-      T->getKeyword(),
-      {*QualifierOrErr, Importer.Import(DTN.getName()),
-       DTN.hasTemplateKeyword()},
-      ToPack);
 }
 
 ExpectedType
@@ -7337,18 +7327,28 @@ ExpectedStmt ASTNodeImporter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
       ToGotoLoc, ToStarLoc, ToTarget);
 }
 
+template <typename StmtClass>
+static ExpectedStmt ImportLoopControlStmt(ASTNodeImporter &NodeImporter,
+                                          ASTImporter &Importer, StmtClass *S) {
+  Error Err = Error::success();
+  auto ToLoc = NodeImporter.importChecked(Err, S->getKwLoc());
+  auto ToLabelLoc = S->hasLabelTarget()
+                        ? NodeImporter.importChecked(Err, S->getLabelLoc())
+                        : SourceLocation();
+  auto ToDecl = S->hasLabelTarget()
+                    ? NodeImporter.importChecked(Err, S->getLabelDecl())
+                    : nullptr;
+  if (Err)
+    return std::move(Err);
+  return new (Importer.getToContext()) StmtClass(ToLoc, ToLabelLoc, ToDecl);
+}
+
 ExpectedStmt ASTNodeImporter::VisitContinueStmt(ContinueStmt *S) {
-  ExpectedSLoc ToContinueLocOrErr = import(S->getContinueLoc());
-  if (!ToContinueLocOrErr)
-    return ToContinueLocOrErr.takeError();
-  return new (Importer.getToContext()) ContinueStmt(*ToContinueLocOrErr);
+  return ImportLoopControlStmt(*this, Importer, S);
 }
 
 ExpectedStmt ASTNodeImporter::VisitBreakStmt(BreakStmt *S) {
-  auto ToBreakLocOrErr = import(S->getBreakLoc());
-  if (!ToBreakLocOrErr)
-    return ToBreakLocOrErr.takeError();
-  return new (Importer.getToContext()) BreakStmt(*ToBreakLocOrErr);
+  return ImportLoopControlStmt(*this, Importer, S);
 }
 
 ExpectedStmt ASTNodeImporter::VisitReturnStmt(ReturnStmt *S) {

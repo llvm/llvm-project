@@ -6,8 +6,6 @@ struct CompositeOfScalars {
   short J;
   char C;
   double D;
-  _Complex float CF;
-  _Complex double CD;
 };
 
 struct CompositeHasComposite {
@@ -16,8 +14,6 @@ struct CompositeHasComposite {
   short J;
   char C;
   double D;
-  _Complex float CF;
-  _Complex double CD;
   struct CompositeOfScalars COS; // #COS_FIELD
 };
 
