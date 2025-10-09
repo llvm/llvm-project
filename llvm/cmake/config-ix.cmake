@@ -579,9 +579,7 @@ elseif (LLVM_NATIVE_ARCH MATCHES "riscv64")
   set(LLVM_NATIVE_ARCH RISCV)
 elseif (LLVM_NATIVE_ARCH STREQUAL "m68k")
   set(LLVM_NATIVE_ARCH M68k)
-elseif (LLVM_NATIVE_ARCH MATCHES "loongarch32")
-  set(LLVM_NATIVE_ARCH LoongArch)
-elseif (LLVM_NATIVE_ARCH MATCHES "loongarch64")
+elseif (LLVM_NATIVE_ARCH MATCHES "loongarch")
   set(LLVM_NATIVE_ARCH LoongArch)
 else ()
   message(FATAL_ERROR "Unknown architecture ${LLVM_NATIVE_ARCH}")
@@ -617,21 +615,6 @@ else ()
     set(LLVM_NATIVE_DISASSEMBLER LLVMInitialize${LLVM_NATIVE_ARCH}Disassembler)
   endif ()
 endif ()
-
-foreach(i IN ITEMS 8 4)
-  try_compile(SIZEOF_UINTPTR_T_IS_${i}
-    SOURCE_FROM_CONTENT
-    "test-sizeof-uintptr_t.cpp"
-    "#include <cstdint>\n
-     static_assert(sizeof(uintptr_t) == ${i}); int main(){}"
-    CXX_STANDARD 17
-    LOG_DESCRIPTION "testing sizeof(uintptr_t)")
-
-  if(SIZEOF_UINTPTR_T_IS_${i})
-    set(LLVM_NATIVE_ARCH_SIZEOF_UINTPTR_T ${i})
-    break()
-  endif()
-endforeach()
 
 if( MSVC )
   set(SHLIBEXT ".lib")

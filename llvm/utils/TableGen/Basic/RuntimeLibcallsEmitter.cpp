@@ -588,9 +588,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     PredicateSorter.insert(
         PredicateWithCC()); // No predicate or CC override first.
 
-    constexpr unsigned BitsPerStorageElt =
-        LLVM_NATIVE_ARCH_SIZEOF_UINTPTR_T * CHAR_BIT;
-
+    constexpr unsigned BitsPerStorageElt = 64;
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
 
     SmallVector<uintptr_t, 32> BitsetValues(
