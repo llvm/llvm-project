@@ -189,7 +189,16 @@ enum NodeType : unsigned {
   XVMSKNEZ,
 
   // Vector Horizontal Addition with Widening‌
-  VHADDW
+  VHADDW,
+
+  // Perform element-wise vector multiplication at even/odd indices,
+  // and keep each result in its corresponding widened slot
+  VMULWEV,
+  VMULWOD,
+  VMULWEVU,
+  VMULWODU,
+  VMULWEVUS,
+  VMULWODUS
 
   // Intrinsic operations end =============================================
 };
