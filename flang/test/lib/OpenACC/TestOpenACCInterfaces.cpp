@@ -15,6 +15,7 @@
 #include "mlir/Support/LLVM.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 
 using namespace mlir;
@@ -99,11 +100,23 @@ struct TestFIROpenACCInterfaces
             }
           }
 
+          if (auto declareOp =
+                  dyn_cast_if_present<hlfir::DeclareOp>(var.getDefiningOp())) {
+            llvm::errs() << "\t\tShape: " << declareOp.getShape() << "\n";
+          }
+
           builder.setInsertionPoint(op);
           auto bounds = mappableTy.generateAccBounds(acc::getVar(op), builder);
           if (!bounds.empty()) {
             for (auto [idx, bound] : llvm::enumerate(bounds)) {
-              llvm::errs() << "\t\tBound[" << idx << "]: " << bound << "\n";
+              if (auto boundOp = dyn_cast_if_present<acc::DataBoundsOp>(
+                      bound.getDefiningOp())) {
+                llvm::errs() << "\t\tBound[" << idx << "]: " << bound << "\n";
+                llvm::errs()
+                    << "\t\tLower bound: " << boundOp.getLowerbound() << "\n";
+                llvm::errs()
+                    << "\t\tUpper bound: " << boundOp.getUpperbound() << "\n";
+              }
             }
           }
         }

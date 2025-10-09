@@ -943,10 +943,19 @@ void ConstructInitializer(const Symbol &symbol,
 
 void ConvertToInitializers(
     DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer) {
+  // Process DATA-style component /initializers/ now, so that they appear as
+  // default values in time for EQUIVALENCE processing in ProcessScopes.
+  for (auto &[symbolPtr, initialization] : inits) {
+    if (symbolPtr->owner().IsDerivedType()) {
+      ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+    }
+  }
   if (ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
-      ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+      if (!symbolPtr->owner().IsDerivedType()) {
+        ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
+      }
     }
   }
 }

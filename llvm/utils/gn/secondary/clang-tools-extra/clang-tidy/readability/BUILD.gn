@@ -52,6 +52,7 @@ static_library("readability") {
     "RedundantFunctionPtrDereferenceCheck.cpp",
     "RedundantInlineSpecifierCheck.cpp",
     "RedundantMemberInitCheck.cpp",
+    "RedundantParenthesesCheck.cpp",
     "RedundantPreprocessorCheck.cpp",
     "RedundantSmartptrGetCheck.cpp",
     "RedundantStringCStrCheck.cpp",

@@ -215,7 +215,7 @@ static void test_units() {
 
 template <class CharT>
 static void test_unsigned_types() {
-  // Reported in https://github.com/llvm/llvm-project/issues/96820
+  // Reported in https://llvm.org/PR96820
   using namespace std::literals::chrono_literals;
 
   // C locale

@@ -14,6 +14,10 @@
 using namespace mlir;
 using namespace mlir::lsp;
 
+using llvm::lsp::Hover;
+using llvm::lsp::Range;
+using llvm::lsp::URIForFile;
+
 //===----------------------------------------------------------------------===//
 // Utils
 //===----------------------------------------------------------------------===//
