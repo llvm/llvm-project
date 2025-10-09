@@ -10674,6 +10674,9 @@ class InstructionsCompatibilityAnalysis {
     }
     unsigned BestOpcodeNum = 0;
     MainOp = nullptr;
+    // All opcodes are the same - exit.
+    if (Candidates.size() == 1 && Candidates.back().second.size() == VL.size())
+      return;
     for (const auto &P : Candidates) {
       if (P.second.size() < BestOpcodeNum)
         continue;
@@ -10895,6 +10898,13 @@ public:
     findAndSetMainInstruction(VL, R);
     if (!MainOp)
       return InstructionsState::invalid();
+    InstructionsState AltS = InstructionsState::invalid();
+    if (SkipSameCodeCheck && allSameBlock(VL)) {
+      AltS = getSameOpcode(VL, TLI);
+      if (AltS.valid() && !AltS.isAltShuffle())
+        return AltS;
+    }
+
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
     if (!WithProfitabilityCheck)
       return S;
@@ -11376,27 +11386,27 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   }
 
   ScalarsVectorizationLegality Legality = getScalarsVectorizationLegality(
-      VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+      VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/true);
   InstructionsState S = Legality.getInstructionsState();
   if (!Legality.isLegal()) {
-    if (Legality.trySplitVectorize()) {
-      auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
-      // Last chance to try to vectorize alternate node.
-      if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
-        return;
-    }
-    if (!S)
+    if (!S) {
       Legality = getScalarsVectorizationLegality(
-          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/true);
+          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+      S = Legality.getInstructionsState();
+    }
     if (!Legality.isLegal()) {
+      if (Legality.trySplitVectorize()) {
+        auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
+        // Last chance to try to vectorize alternate node.
+        if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
+          return;
+      }
       if (Legality.tryToFindDuplicates())
         tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S,
                             UserTreeIdx);
-
       newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
       return;
     }
-    S = Legality.getInstructionsState();
   }
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
@@ -11440,16 +11450,41 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   BS.verify();
 #endif
   if (!BundlePtr || (*BundlePtr && !*BundlePtr.value())) {
-    LLVM_DEBUG(dbgs() << "SLP: We are not able to schedule this bundle!\n");
-    // Last chance to try to vectorize alternate node.
-    if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
+    // Last chance - check if it does not require scheduling and check if it can
+    // be vectorized without copyables.
+    bool TryNonCopyableButAlternateOpcode = false;
+    if (S.areInstructionsWithCopyableElements() && doesNotNeedToSchedule(VL)) {
+      Legality = getScalarsVectorizationLegality(
+          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+      if (!Legality.isLegal()) {
+        if (Legality.trySplitVectorize()) {
+          auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
+          // Last chance to try to vectorize alternate node.
+          if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
+            return;
+        }
+      } else {
+        S = Legality.getInstructionsState();
+        if (S.isAltShuffle() && TrySplitNode(S))
+          return;
+        TryNonCopyableButAlternateOpcode = true;
+      }
+    }
+    if (!TryNonCopyableButAlternateOpcode) {
+      LLVM_DEBUG(dbgs() << "SLP: We are not able to schedule this bundle!\n");
+      // Last chance to try to vectorize alternate node.
+      if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
+        return;
+      newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+      NonScheduledFirst.insert(VL.front());
+      if (S.getOpcode() == Instruction::Load &&
+          BS.ScheduleRegionSize < BS.ScheduleRegionSizeLimit)
+        registerNonVectorizableLoads(ArrayRef(VL));
       return;
-    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
-    NonScheduledFirst.insert(VL.front());
-    if (S.getOpcode() == Instruction::Load &&
-        BS.ScheduleRegionSize < BS.ScheduleRegionSizeLimit)
-      registerNonVectorizableLoads(ArrayRef(VL));
-    return;
+    }
+    LLVM_DEBUG(dbgs() << "SLP: We are not able to schedule this bundle, "
+                         "trying alternate without scheduling instead.\n");
+    BundlePtr = nullptr;
   }
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL);
