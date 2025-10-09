@@ -2089,7 +2089,8 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
+  SDValue Chain = Node->getOperand(0);
+  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4), Chain};
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -2110,14 +2111,15 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
                                                 unsigned Opc) {
-
   SDValue ZtValue;
-  SmallVector<SDValue, 4> Ops;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  Ops.push_back(ZtValue);
-  Ops.push_back(createZMulTuple({Node->getOperand(3), Node->getOperand(4)}));
+  SDValue Chain = Node->getOperand(0);
+  SDValue Ops[] = {ZtValue,
+                   createZMulTuple({Node->getOperand(3), Node->getOperand(4)}),
+                   Chain};
+
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -7495,7 +7497,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (MFI.hasScalableStackID(FI)) {
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
       OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
       return true;
@@ -7541,7 +7543,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     int FI = cast<FrameIndexSDNode>(Base)->getIndex();
     // We can only encode VL scaled offsets, so only fold in frame indexes
     // referencing SVE objects.
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+    if (MFI.hasScalableStackID(FI))
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
   }
 

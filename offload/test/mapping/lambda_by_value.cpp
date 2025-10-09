@@ -1,4 +1,5 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compileopt-generic -fno-exceptions
+// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 
 #include <stdint.h>
 #include <stdio.h>

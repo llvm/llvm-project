@@ -2231,7 +2231,7 @@ static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
     return 0;
 
   unsigned Value = 0;
-  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 5 ||
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 6 ||
       Value < 2)
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
@@ -2244,13 +2244,14 @@ unsigned tools::DwarfVersionNum(StringRef ArgValue) {
       .Case("-gdwarf-3", 3)
       .Case("-gdwarf-4", 4)
       .Case("-gdwarf-5", 5)
+      .Case("-gdwarf-6", 6)
       .Default(0);
 }
 
 const Arg *tools::getDwarfNArg(const ArgList &Args) {
   return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
                          options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-                         options::OPT_gdwarf);
+                         options::OPT_gdwarf_6, options::OPT_gdwarf);
 }
 
 unsigned tools::getDwarfVersion(const ToolChain &TC,
@@ -3556,4 +3557,52 @@ tools::renderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
   if (!ComplexRangeStr.empty())
     return "-complex-range=" + ComplexRangeStr;
   return ComplexRangeStr;
+}
+
+static void emitComplexRangeDiag(const Driver &D, StringRef LastOpt,
+                                 LangOptions::ComplexRangeKind Range,
+                                 StringRef NewOpt,
+                                 LangOptions::ComplexRangeKind NewRange) {
+  //  Do not emit a warning if NewOpt overrides LastOpt in the following cases.
+  //
+  // | LastOpt               | NewOpt                |
+  // |-----------------------|-----------------------|
+  // | -fcx-limited-range    | -fno-cx-limited-range |
+  // | -fno-cx-limited-range | -fcx-limited-range    |
+  // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
+  // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
+  // | -ffast-math           | -fno-fast-math        |
+  // | -ffp-model=           | -ffast-math           |
+  // | -ffp-model=           | -fno-fast-math        |
+  // | -ffp-model=           | -ffp-model=           |
+  // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
+  if (LastOpt == NewOpt || NewOpt.empty() || LastOpt.empty() ||
+      (LastOpt == "-fcx-limited-range" && NewOpt == "-fno-cx-limited-range") ||
+      (LastOpt == "-fno-cx-limited-range" && NewOpt == "-fcx-limited-range") ||
+      (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
+      (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
+      (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") &&
+       NewOpt.starts_with("-ffp-model=")) ||
+      (LastOpt.starts_with("-fcomplex-arithmetic=") &&
+       NewOpt.starts_with("-fcomplex-arithmetic=")))
+    return;
+
+  D.Diag(clang::diag::warn_drv_overriding_complex_range)
+      << LastOpt << NewOpt << complexRangeKindToStr(Range)
+      << complexRangeKindToStr(NewRange);
+}
+
+void tools::setComplexRange(const Driver &D, StringRef NewOpt,
+                            LangOptions::ComplexRangeKind NewRange,
+                            StringRef &LastOpt,
+                            LangOptions::ComplexRangeKind &Range) {
+  // Warn if user overrides the previously set complex number
+  // multiplication/division option.
+  if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
+    emitComplexRangeDiag(D, LastOpt, Range, NewOpt, NewRange);
+  LastOpt = NewOpt;
+  Range = NewRange;
 }
