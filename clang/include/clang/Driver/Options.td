@@ -2025,14 +2025,26 @@ def fno_bounds_safety_bringup_missing_checks : Flag<["-"], "fno-bounds-safety-br
 
 defm bounds_safety_unique_traps : BoolFOption<"bounds-safety-unique-traps",
   CodeGenOpts<"BoundsSafetyUniqueTraps">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
     "Make trap instructions unique by preventing traps from being merged by the"
     " optimizer. This is useful for preserving the debug information on traps "
     "in optimized code. This makes it easier to debug programs at the cost of "
     "increased code size">,
-  NegFlag<SetFalse, [], [CC1Option],
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
     "Don't try to make trap instructions unique. This allows trap instructions "
     "to be merged by the optimizer.">>;
+
+// Legacy aliases
+// TODO(dliew): Remove these (rdar://162215869).
+// This isn't declared using `Alias<fbounds_safety_unique_traps>` because that
+// prevents identifying that this flag as distinct from
+// `fbounds_safety_unique_traps`.
+defm bounds_safety_legacy_unique_traps : BoolOptionWithoutMarshalling<"f", "unique-traps",
+  PosFlag<SetTrue, [], [ClangOption],
+    "legacy alias for -fbounds-safety-unique-traps">,
+  NegFlag<SetFalse, [], [ClangOption],
+    "legacy alias for -fno-bounds-safety-unique-traps">>;
+
 // TO_UPSTREAM(BoundsSafety) OFF
 
 defm lifetime_safety : BoolFOption<

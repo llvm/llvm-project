@@ -7099,8 +7099,43 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
           << "-ftrap-function-returns" << "-ftrap-function=";
     }
 
-  Args.addOptInFlag(CmdArgs, options::OPT_fbounds_safety_unique_traps,
-                    options::OPT_fno_bounds_safety_unique_traps);
+  // Diagnose uses of legacy `-funique-traps` flags.
+  // TODO(dliew): Remove this once all uses of the legacy flag are removed
+  // (rdar://162215869).
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fbounds_safety_legacy_unique_traps,
+                          options::OPT_fno_bounds_safety_legacy_unique_traps)) {
+
+    StringRef ReplacementArg;
+    if (A->getOption().matches(options::OPT_fbounds_safety_legacy_unique_traps))
+      ReplacementArg = getDriverOptTable().getOptionName(
+          options::OPT_fbounds_safety_unique_traps);
+    else
+      ReplacementArg = getDriverOptTable().getOptionName(
+          options::OPT_fno_bounds_safety_unique_traps);
+    D.Diag(diag::warn_drv_deprecated_arg)
+        << A->getSpelling() << 1 << ReplacementArg;
+  }
+
+  // Pass the flag to enable unique traps if necessary. This handles both the
+  // legacy and new flag name for unique traps such that the old flags are
+  // treated as aliases of the new flags.
+  // TODO(dliew): Remove support for the legacy flag (rdar://162215869).
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fbounds_safety_unique_traps,
+                          options::OPT_fno_bounds_safety_unique_traps,
+                          options::OPT_fbounds_safety_legacy_unique_traps,
+                          options::OPT_fno_bounds_safety_legacy_unique_traps)) {
+
+    // Note we only pass the flag for enabling unique traps to cc1. It isn't
+    // necessary to pass the flag to disable unique traps because it is cc1's
+    // default behavior.
+    if (A->getOption().matches(options::OPT_fbounds_safety_unique_traps) ||
+        A->getOption().matches(
+            options::OPT_fbounds_safety_legacy_unique_traps)) {
+      CmdArgs.push_back("-fbounds-safety-unique-traps");
+    }
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both
