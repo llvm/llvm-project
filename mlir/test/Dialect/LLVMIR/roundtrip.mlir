@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -emit-bytecode | mlir-opt | FileCheck %s
 
 
 // CHECK-LABEL: func @baz
@@ -757,7 +758,7 @@ llvm.func @stackrestore(%arg0: !llvm.ptr)  {
 
 // CHECK-LABEL: @experimental_noalias_scope_decl
 llvm.func @experimental_noalias_scope_decl() {
-  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #alias_scope{{.*}}
   llvm.intr.experimental.noalias.scope.decl #alias_scope
   llvm.return
 }
@@ -767,7 +768,7 @@ llvm.func @experimental_noalias_scope_decl() {
 
 // CHECK-LABEL: @experimental_noalias_scope_with_string_id
 llvm.func @experimental_noalias_scope_with_string_id() {
-  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #alias_scope{{.*}}
   llvm.intr.experimental.noalias.scope.decl #alias_scope2
   llvm.return
 }
