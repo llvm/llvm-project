@@ -2211,6 +2211,8 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
 
   Expr *Arg = ArgRes.get();
   TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
 
   QualType ArgTy = Arg->getType();
 
