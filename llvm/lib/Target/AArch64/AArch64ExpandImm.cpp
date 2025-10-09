@@ -259,7 +259,7 @@ static bool trySequenceOfOnes(uint64_t UImm,
 //                                =0xffff56780000a987.
 // In any of these cases, the expansion with EOR/EON saves an instruction
 // compared to the default expansion based on MOV and MOVKs.
-static bool tryCopyWithNegation(uint64_t Imm,
+static bool tryCopyWithNegation(uint64_t Imm, bool AllowThreeSequence,
                                 SmallVectorImpl<ImmInsnModel> &Insn) {
   // We need the negation of the upper half of Imm to match the lower half.
   // Degenerate cases where Imm is a run of ones should be handled separately.
@@ -278,6 +278,8 @@ static bool tryCopyWithNegation(uint64_t Imm,
 
   unsigned Imm0 = Imm & Mask;
   unsigned Imm16 = (Imm >> 16) & Mask;
+  if (Imm0 != Mask && Imm16 != Mask && !AllowThreeSequence)
+    return false;
   if (Imm0 != Mask) {
     Insn.push_back({AArch64::MOVNXi, Imm0 ^ Mask, 0});
     if (Imm16 != Mask)
@@ -667,15 +669,14 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   if (tryEorOfLogicalImmediates(UImm, Insn))
     return;
 
+  // Attempt to use a sequence of MOVN+EOR/EON (shifted register).
+  if (tryCopyWithNegation(Imm, /*AllowThreeSequence=*/false, Insn))
+    return;
+
   // FIXME: Add more two-instruction sequences.
 
   // Three instruction sequences.
-
-  // Attempt to use a sequence of MOVN+MOVK+EOR/EON (shifted register).
-  // The MOVK can be avoided if Imm contains a zero / one chunk.
-  if (tryCopyWithNegation(Imm, Insn))
-    return;
-
+  //
   // Prefer MOVZ/MOVN followed by two MOVK; it's more readable, and possibly
   // the fastest sequence with fast literal generation. (If neither MOVK is
   // part of a fast literal generation pair, it could be slower than the
@@ -697,6 +698,10 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // are either interrupting the sequence or outside of the sequence with a
   // MOVK instruction.
   if (BitSize == 64 && trySequenceOfOnes(UImm, Insn))
+    return;
+
+  // Attempt to use a sequence of MOVN+MOVK+EOR (shifted register).
+  if (tryCopyWithNegation(Imm, /*AllowThreeSequence=*/true, Insn))
     return;
 
   // We found no possible two or three instruction sequence; use the general
