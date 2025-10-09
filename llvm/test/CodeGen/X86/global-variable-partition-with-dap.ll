@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefix=ERR
 
-ERR: Global variable hot_bss already has a section prefix hot
+; ERR: Global variable hot_bss already has a section prefix hot
 
 @hot_bss = internal global i32 0, !section_prefix !17
 
