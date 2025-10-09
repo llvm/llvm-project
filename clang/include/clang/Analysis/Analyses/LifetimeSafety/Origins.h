@@ -21,6 +21,7 @@
 namespace clang::lifetimes::internal {
 
 using OriginID = utils::ID<struct OriginTag>;
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
   return OS << ID.Value;
 }

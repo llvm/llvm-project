@@ -16,7 +16,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
@@ -34,9 +33,6 @@
 
 namespace clang::lifetimes {
 namespace internal {
-
-// We need this here for unique_ptr with forward declared class.
-LifetimeSafetyAnalysis::~LifetimeSafetyAnalysis() = default;
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                                LifetimeSafetyReporter *Reporter)
@@ -64,17 +60,14 @@ void LifetimeSafetyAnalysis::run() {
   ///    the analysis.
   /// 3. Collapse ExpireFacts belonging to same source location into a single
   ///    Fact.
-  LoanPropagation = std::make_unique<LoanPropagationAnalysis>(
+  LP = std::make_unique<LoanPropagation>(
       Cfg, AC, FactMgr, Factory.OriginMapFactory, Factory.LoanSetFactory);
-  LoanPropagation->run();
 
-  LiveOrigins = std::make_unique<LiveOriginAnalysis>(
-      Cfg, AC, FactMgr, Factory.LivenessMapFactory);
-  LiveOrigins->run();
-  DEBUG_WITH_TYPE("LiveOrigins",
-                  LiveOrigins->dump(llvm::dbgs(), getTestPoints()));
+  LO = std::make_unique<LiveOrigins>(Cfg, AC, FactMgr,
+                                     Factory.LivenessMapFactory);
+  DEBUG_WITH_TYPE("LiveOrigins", LO->dump(llvm::dbgs(), getTestPoints()));
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
+  runLifetimeChecker(*LP, *LO, FactMgr, AC, Reporter);
 }
 
 std::optional<OriginID>
@@ -96,9 +89,9 @@ LifetimeSafetyAnalysis::getLoanIDForVar(const VarDecl *VD) const {
 
 std::vector<std::pair<OriginID, LivenessKind>>
 LifetimeSafetyAnalysis::getLiveOriginsAtPoint(ProgramPoint PP) const {
-  assert(LiveOrigins && "LiveOriginAnalysis has not been run.");
+  assert(LO && "LiveOriginAnalysis has not been run.");
   std::vector<std::pair<OriginID, LivenessKind>> Result;
-  for (auto &[OID, Info] : LiveOrigins->getLiveOrigins(PP))
+  for (auto &[OID, Info] : LO->getLiveOrigins(PP))
     Result.push_back({OID, Info.Kind});
   return Result;
 }

@@ -15,13 +15,11 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H
 
-#include "clang/Analysis/Analyses/LifetimeSafety/Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
-#include "llvm/Support/Debug.h"
 
 namespace clang::lifetimes::internal {
 
@@ -31,65 +29,22 @@ namespace clang::lifetimes::internal {
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
-/// Represents the dataflow lattice for loan propagation.
-///
-/// This lattice tracks which loans each origin may hold at a given program
-/// point.The lattice has a finite height: An origin's loan set is bounded by
-/// the total number of loans in the function.
-/// TODO(opt): To reduce the lattice size, propagate origins of declarations,
-/// not expressions, because expressions are not visible across blocks.
-struct LoanPropagationLattice {
-  /// The map from an origin to the set of loans it contains.
-  OriginLoanMap Origins = OriginLoanMap(nullptr);
-
-  explicit LoanPropagationLattice(const OriginLoanMap &S) : Origins(S) {}
-  LoanPropagationLattice() = default;
-
-  bool operator==(const LoanPropagationLattice &Other) const {
-    return Origins == Other.Origins;
-  }
-  bool operator!=(const LoanPropagationLattice &Other) const {
-    return !(*this == Other);
-  }
-
-  void dump(llvm::raw_ostream &OS) const;
-};
-
-class LoanPropagationAnalysis
-    : public DataflowAnalysis<LoanPropagationAnalysis, LoanPropagationLattice,
-                              Direction::Forward> {
-  OriginLoanMap::Factory &OriginLoanMapFactory;
-  LoanSet::Factory &LoanSetFactory;
-
+class LoanPropagation {
 public:
-  LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                          OriginLoanMap::Factory &OriginLoanMapFactory,
-                          LoanSet::Factory &LoanSetFactory)
-      : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
-        LoanSetFactory(LoanSetFactory) {}
+  LoanPropagation(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+                  OriginLoanMap::Factory &OriginLoanMapFactory,
+                  LoanSet::Factory &LoanSetFactory);
+  ~LoanPropagation();
 
-  using Base::transfer;
-
-  StringRef getAnalysisName() const { return "LoanPropagation"; }
-
-  Lattice getInitialState() { return Lattice{}; }
-
-  Lattice join(Lattice A, Lattice B);
-
-  Lattice transfer(Lattice In, const IssueFact &F);
-  Lattice transfer(Lattice In, const OriginFlowFact &F);
-
-  LoanSet getLoans(OriginID OID, ProgramPoint P) const {
-    return getLoans(getState(P), OID);
-  }
+  LoanSet getLoans(OriginID OID, ProgramPoint P) const;
 
 private:
-  LoanSet getLoans(Lattice L, OriginID OID) const {
-    if (auto *Loans = L.Origins.lookup(OID))
-      return *Loans;
-    return LoanSetFactory.getEmptySet();
-  }
+  class Impl;
+
+public:
+  std::unique_ptr<Impl> PImpl;
 };
+
 } // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H

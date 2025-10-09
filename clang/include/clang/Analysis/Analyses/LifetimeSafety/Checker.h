@@ -15,18 +15,17 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_CHECKER_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Reporter.h"
 
 namespace clang::lifetimes::internal {
 
 /// Runs the lifetime checker, which detects use-after-free errors by
 /// examining loan expiration points and checking if any live origins hold
 /// the expired loan.
-void runLifetimeChecker(LoanPropagationAnalysis &LoanPropagation,
-                        LiveOriginAnalysis &LiveOrigins, FactManager &FactMgr,
-                        AnalysisDeclContext &ADC,
+void runLifetimeChecker(const LoanPropagation &LP, const LiveOrigins &LO,
+                        const FactManager &FactMgr, AnalysisDeclContext &ADC,
                         LifetimeSafetyReporter *Reporter);
 
 } // namespace clang::lifetimes::internal

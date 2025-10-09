@@ -21,12 +21,28 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Reporter.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes {
+
+/// Enum to track the confidence level of a potential error.
+enum class Confidence : uint8_t {
+  None,
+  Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
+  Definite // Reported as a definite error (-Wlifetime-safety-permissive)
+};
+
+class LifetimeSafetyReporter {
+public:
+  LifetimeSafetyReporter() = default;
+  virtual ~LifetimeSafetyReporter() = default;
+
+  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                                  SourceLocation FreeLoc,
+                                  Confidence Confidence) {}
+};
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
@@ -36,10 +52,10 @@ namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  llvm::BumpPtrAllocator Allocator;
-  OriginLoanMap::Factory OriginMapFactory{Allocator, /*canonicalize=*/false};
-  LoanSet::Factory LoanSetFactory{Allocator, /*canonicalize=*/false};
-  LivenessMap::Factory LivenessMapFactory{Allocator, /*canonicalize=*/false};
+  // llvm::BumpPtrAllocator Allocator;
+  OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
+  LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
+  LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
 };
 
 /// Running the lifetime safety analysis and querying its results. It
@@ -48,22 +64,21 @@ class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter);
-  ~LifetimeSafetyAnalysis();
 
   void run();
 
   /// Returns the loan propagation analysis object.
   /// \note This is intended for testing only.
-  LoanPropagationAnalysis &getLoanPropagationAnalysis() const {
-    assert(LoanPropagation && "Analysis has not been run.");
-    return *LoanPropagation;
+  LoanPropagation &getLoanPropagation() const {
+    assert(LP && "Analysis has not been run.");
+    return *LP;
   }
 
   /// Returns the live origin analysis object.
   /// \note This is intended for testing only.
-  LiveOriginAnalysis &getLiveOriginAnalysis() const {
-    assert(LiveOrigins && "Analysis has not been run.");
-    return *LiveOrigins;
+  LiveOrigins &getLiveOriginAnalysis() const {
+    assert(LO && "Analysis has not been run.");
+    return *LO;
   }
 
   /// Returns the set of origins that are live at a specific program point,
@@ -101,8 +116,8 @@ private:
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
   FactManager FactMgr;
-  std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
-  std::unique_ptr<LiveOriginAnalysis> LiveOrigins;
+  std::unique_ptr<LiveOrigins> LO;
+  std::unique_ptr<LoanPropagation> LP;
 };
 } // namespace internal
 } // namespace clang::lifetimes

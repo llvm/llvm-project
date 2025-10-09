@@ -20,7 +20,6 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H
 
-#include "clang/Analysis/Analyses/LifetimeSafety/Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
@@ -30,8 +29,6 @@
 #include "llvm/Support/Debug.h"
 
 namespace clang::lifetimes::internal {
-
-using OriginSet = llvm::ImmutableSet<OriginID>;
 
 enum class LivenessKind : uint8_t {
   Dead,  // Not alive
@@ -45,6 +42,7 @@ struct LivenessInfo {
   /// multiple uses along different paths, this will point to the use appearing
   /// earlier in the translation unit.
   /// This is 'null' when the origin is not live.
+
   const UseFact *CausingUseFact;
   /// The kind of liveness of the origin.
   /// `Must`: The origin is live on all control-flow paths from the current
@@ -74,63 +72,22 @@ struct LivenessInfo {
 
 using LivenessMap = llvm::ImmutableMap<OriginID, LivenessInfo>;
 
-/// The dataflow lattice for origin liveness analysis.
-/// It tracks which origins are live, why they're live (which UseFact),
-/// and the confidence level of that liveness.
-struct LivenessLattice {
-  LivenessMap LiveOrigins;
-
-  LivenessLattice() : LiveOrigins(nullptr) {};
-
-  explicit LivenessLattice(LivenessMap L) : LiveOrigins(L) {}
-
-  bool operator==(const LivenessLattice &Other) const {
-    return LiveOrigins == Other.LiveOrigins;
-  }
-
-  bool operator!=(const LivenessLattice &Other) const {
-    return !(*this == Other);
-  }
-
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const;
-};
-
-/// The analysis that tracks which origins are live, with granular information
-/// about the causing use fact and confidence level. This is a backward
-/// analysis.
-class LiveOriginAnalysis
-    : public DataflowAnalysis<LiveOriginAnalysis, LivenessLattice,
-                              Direction::Backward> {
-
+class LiveOrigins {
 public:
-  LiveOriginAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                     LivenessMap::Factory &SF)
-      : DataflowAnalysis(C, AC, F), FactMgr(F), Factory(SF) {}
-  using DataflowAnalysis<LiveOriginAnalysis, Lattice,
-                         Direction::Backward>::transfer;
+  LiveOrigins(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+              LivenessMap::Factory &SF);
+  ~LiveOrigins();
 
-  StringRef getAnalysisName() const { return "LiveOrigins"; }
-
-  Lattice getInitialState() { return Lattice(Factory.getEmptyMap()); }
-
-  Lattice join(Lattice L1, Lattice L2) const;
-
-  Lattice transfer(Lattice In, const UseFact &UF);
-  Lattice transfer(Lattice In, const IssueFact &IF);
-  Lattice transfer(Lattice In, const OriginFlowFact &OF);
-
-  LivenessMap getLiveOrigins(ProgramPoint P) const {
-    return getState(P).LiveOrigins;
-  }
-
+  LivenessMap getLiveOrigins(ProgramPoint P) const;
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
             llvm::StringMap<ProgramPoint> TestPoints) const;
 
 private:
-  FactManager &FactMgr;
-  LivenessMap::Factory &Factory;
+  class Impl;
+  std::unique_ptr<Impl> PImpl;
 };
+
 } // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIVE_ORIGINS_H

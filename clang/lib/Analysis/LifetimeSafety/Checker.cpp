@@ -17,7 +17,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Reporter.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
@@ -34,81 +33,7 @@ struct PendingWarning {
   Confidence ConfidenceLevel;
 };
 
-class LifetimeChecker {
-private:
-  llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
-  LoanPropagationAnalysis &LoanPropagation;
-  LiveOriginAnalysis &LiveOrigins;
-  FactManager &FactMgr;
-  AnalysisDeclContext &ADC;
-  LifetimeSafetyReporter *Reporter;
-
-  void checkExpiry(const ExpireFact *EF);
-  void issuePendingWarnings();
-  static Confidence livenessKindToConfidence(LivenessKind K);
-
-public:
-  LifetimeChecker(LoanPropagationAnalysis &LPA, LiveOriginAnalysis &LOA,
-                  FactManager &FM, AnalysisDeclContext &ADC,
-                  LifetimeSafetyReporter *Reporter);
-
-  void run();
-};
-
-LifetimeChecker::LifetimeChecker(LoanPropagationAnalysis &LPA,
-                                 LiveOriginAnalysis &LOA, FactManager &FM,
-                                 AnalysisDeclContext &ADC,
-                                 LifetimeSafetyReporter *Reporter)
-    : LoanPropagation(LPA), LiveOrigins(LOA), FactMgr(FM), ADC(ADC),
-      Reporter(Reporter) {}
-
-void LifetimeChecker::run() {
-  for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
-    for (const Fact *F : FactMgr.getFacts(B))
-      if (const auto *EF = F->getAs<ExpireFact>())
-        checkExpiry(EF);
-  issuePendingWarnings();
-}
-
-/// Checks for use-after-free errors when a loan expires.
-///
-/// This method examines all live origins at the expiry point and determines
-/// if any of them hold the expiring loan. If so, it creates a pending
-/// warning with the appropriate confidence level based on the liveness
-/// information. The confidence reflects whether the origin is definitely
-/// or maybe live at this point.
-///
-/// Note: This implementation considers only the confidence of origin
-/// liveness. Future enhancements could also consider the confidence of loan
-/// propagation (e.g., a loan may only be held on some execution paths).
-void LifetimeChecker::checkExpiry(const ExpireFact *EF) {
-  LoanID ExpiredLoan = EF->getLoanID();
-  LivenessMap Origins = LiveOrigins.getLiveOrigins(EF);
-  Confidence CurConfidence = Confidence::None;
-  const UseFact *BadUse = nullptr;
-  for (auto &[OID, LiveInfo] : Origins) {
-    LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
-    if (!HeldLoans.contains(ExpiredLoan))
-      continue;
-    // Loan is defaulted.
-    Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
-    if (CurConfidence < NewConfidence) {
-      CurConfidence = NewConfidence;
-      BadUse = LiveInfo.CausingUseFact;
-    }
-  }
-  if (!BadUse)
-    return;
-  // We have a use-after-free.
-  Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
-  if (LastConf >= CurConfidence)
-    return;
-  FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                   /*UseExpr=*/BadUse->getUseExpr(),
-                                   /*ConfidenceLevel=*/CurConfidence};
-}
-
-Confidence LifetimeChecker::livenessKindToConfidence(LivenessKind K) {
+static Confidence livenessKindToConfidence(LivenessKind K) {
   switch (K) {
   case LivenessKind::Must:
     return Confidence::Definite;
@@ -120,23 +45,84 @@ Confidence LifetimeChecker::livenessKindToConfidence(LivenessKind K) {
   llvm_unreachable("unknown liveness kind");
 }
 
-void LifetimeChecker::issuePendingWarnings() {
-  if (!Reporter)
-    return;
-  for (const auto &[LID, Warning] : FinalWarningsMap) {
-    const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
-    const Expr *IssueExpr = L.IssueExpr;
-    Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr, Warning.ExpiryLoc,
-                                 Warning.ConfidenceLevel);
-  }
-}
+class LifetimeChecker {
+private:
+  llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  const LoanPropagation &LP;
+  const LiveOrigins &LO;
+  const FactManager &FactMgr;
+  AnalysisDeclContext &ADC;
+  LifetimeSafetyReporter *Reporter;
 
-void runLifetimeChecker(LoanPropagationAnalysis &LoanPropagation,
-                        LiveOriginAnalysis &LiveOrigins, FactManager &FactMgr,
-                        AnalysisDeclContext &ADC,
+public:
+  LifetimeChecker(const LoanPropagation &LP, const LiveOrigins &LO,
+                  const FactManager &FM, AnalysisDeclContext &ADC,
+                  LifetimeSafetyReporter *Reporter)
+      : LP(LP), LO(LO), FactMgr(FM), ADC(ADC), Reporter(Reporter) {}
+
+  void run() {
+    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
+      for (const Fact *F : FactMgr.getFacts(B))
+        if (const auto *EF = F->getAs<ExpireFact>())
+          checkExpiry(EF);
+    issuePendingWarnings();
+  }
+
+  /// Checks for use-after-free errors when a loan expires.
+  ///
+  /// This method examines all live origins at the expiry point and determines
+  /// if any of them hold the expiring loan. If so, it creates a pending
+  /// warning with the appropriate confidence level based on the liveness
+  /// information. The confidence reflects whether the origin is definitely
+  /// or maybe live at this point.
+  ///
+  /// Note: This implementation considers only the confidence of origin
+  /// liveness. Future enhancements could also consider the confidence of loan
+  /// propagation (e.g., a loan may only be held on some execution paths).
+  void checkExpiry(const ExpireFact *EF) {
+    LoanID ExpiredLoan = EF->getLoanID();
+    LivenessMap Origins = LO.getLiveOrigins(EF);
+    Confidence CurConfidence = Confidence::None;
+    const UseFact *BadUse = nullptr;
+    for (auto &[OID, LiveInfo] : Origins) {
+      LoanSet HeldLoans = LP.getLoans(OID, EF);
+      if (!HeldLoans.contains(ExpiredLoan))
+        continue;
+      // Loan is defaulted.
+      Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
+      if (CurConfidence < NewConfidence) {
+        CurConfidence = NewConfidence;
+        BadUse = LiveInfo.CausingUseFact;
+      }
+    }
+    if (!BadUse)
+      return;
+    // We have a use-after-free.
+    Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
+    if (LastConf >= CurConfidence)
+      return;
+    FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
+                                     /*UseExpr=*/BadUse->getUseExpr(),
+                                     /*ConfidenceLevel=*/CurConfidence};
+  }
+
+  void issuePendingWarnings() {
+    if (!Reporter)
+      return;
+    for (const auto &[LID, Warning] : FinalWarningsMap) {
+      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
+      const Expr *IssueExpr = L.IssueExpr;
+      Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr,
+                                   Warning.ExpiryLoc, Warning.ConfidenceLevel);
+    }
+  }
+};
+
+void runLifetimeChecker(const LoanPropagation &LP, const LiveOrigins &LO,
+                        const FactManager &FactMgr, AnalysisDeclContext &ADC,
                         LifetimeSafetyReporter *Reporter) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LoanPropagation, LiveOrigins, FactMgr, ADC, Reporter);
+  LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter);
   Checker.run();
 }
 
