@@ -545,15 +545,16 @@ multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
               Group<f_Group>;
 }
 
-// Creates a BoolOption where both of the flags are prefixed with "g" and have
-// the Group<g_Group>.
+// Creates a BoolOption where both of the flags are prefixed with "g".
+// Does *not* map to g_Group, because that is reserved for flags that are
+// intended to enable (or disable) debug info, which is not appropriate for a
+// negative boolean flag (-gno-${feature}).
 // Used for -cc1 frontend options. Driver-only options do not map to
 // CompilerInvocation.
 multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[]>> {
-  defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>,
-              Group<g_Group>;
+  defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>;
 }
 
 multiclass BoolMOption<string flag_base, KeyPathAndMacro kpm,
