@@ -2861,7 +2861,9 @@ usual build cycle when using sample profilers for optimization:
    that executes faster than the original one. Note that you are not
    required to build the code with the exact same arguments that you
    used in the first step. The only requirement is that you build the code
-   with the same debug info options and ``-fprofile-sample-use``.
+   with the same debug info options and ``-fprofile-sample-use``. ``-gdwarf``
+   and ``-gline-tables-only`` can be omitted if you do not need debug info
+   in the final binary.
 
    On Linux:
 
