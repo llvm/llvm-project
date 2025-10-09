@@ -368,8 +368,8 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
 }
 
-void riscv::addMtuneWithFeatures(const Driver &D, const Arg *A,
-                                 const ArgList &Args, ArgStringList &CmdArgs) {
+void riscv::addMtuneWithFeatures(const Arg *A, const ArgList &Args,
+                                 ArgStringList &CmdArgs) {
   // format: -mtune=<tune cpu>[:+a,-b,+c...]
   StringRef MTune(A->getValue());
   size_t ColonPos = MTune.find(':');

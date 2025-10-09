@@ -2046,7 +2046,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
-    riscv::addMtuneWithFeatures(getToolChain().getDriver(), A, Args, CmdArgs);
+    riscv::addMtuneWithFeatures(A, Args, CmdArgs);
   }
 
   // Handle -mrvv-vector-bits=<bits>
