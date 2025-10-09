@@ -551,7 +551,7 @@ static void SetupLangOpts(CompilerInstance &compiler,
         lldb_private::Language::GetNameForLanguageType(language));
 
   lldb::LanguageType language_for_note = language;
-  llvm::StringRef language_fallback_reason;
+  std::string language_fallback_reason;
 
   LangOptions &lang_opts = compiler.getLangOpts();
 
@@ -623,7 +623,13 @@ static void SetupLangOpts(CompilerInstance &compiler,
     compiler.getHeaderSearchOpts().UseLibcxx = true;
 
     language_for_note = lldb::eLanguageTypeObjC_plus_plus;
-    language_fallback_reason = "Using default language. ";
+    if (language != lldb::eLanguageTypeUnknown)
+      language_fallback_reason = llvm::formatv(
+          "Expression evaluation in {0} not supported. ",
+          lldb_private::Language::GetDisplayNameForLanguageType(language));
+
+    language_fallback_reason +=
+        llvm::formatv("Falling back to default language. ");
     break;
   }
 
