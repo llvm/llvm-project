@@ -548,7 +548,8 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const {
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const {
+  needsDestroy = false;
   mlir::Value retVal;
   mlir::Type unwrappedTy = fir::unwrapRefType(type);
   mlir::ModuleOp mod = builder.getInsertionBlock()
@@ -615,9 +616,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       mlir::Value firClass =
           fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
       fir::StoreOp::create(builder, loc, firClass, retVal);
+      needsDestroy = true;
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
-      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+      auto [temp, cleanupFlag] =
+          hlfir::createTempFromMold(loc, firBuilder, source);
       if (fir::isa_ref_type(type)) {
         // When the temp is created - it is not a reference - thus we can
         // end up with a type inconsistency. Therefore ensure storage is created
@@ -636,6 +639,9 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       } else {
         retVal = temp;
       }
+      // If heap was allocated, a destroy is required later.
+      if (cleanupFlag)
+        needsDestroy = true;
     } else {
       TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
     }
@@ -667,23 +673,23 @@ template mlir::Value
 OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents, mlir::Value initVal) const;
+    mlir::ValueRange extents, mlir::Value initVal, bool &needsDestroy) const;
 
 } // namespace fir::acc

@@ -274,6 +274,12 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         The `initVal` can be empty - it is primarily needed for reductions
         to ensure the variable is also initialized with appropriate value.
 
+        The `needsDestroy` out-parameter is set by implementations to indicate
+        that destruction code must be generated after the returned private
+        variable usages, typically in the destroy region of recipe operations
+        (for example, when heap allocations or temporaries requiring cleanup
+        are created during initialization).
+
         If the return value is empty, it means that recipe body was not
         successfully generated.
       }],
@@ -284,7 +290,8 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
                     "::llvm::StringRef":$varName,
                     "::mlir::ValueRange":$extents,
-                    "::mlir::Value":$initVal),
+                    "::mlir::Value":$initVal,
+                    "bool &":$needsDestroy),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return {};

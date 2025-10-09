@@ -978,15 +978,18 @@ static RecipeOp genRecipeOp(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
+  bool needsDestroy = false;
   auto retVal = mappableTy.generatePrivateInit(
       builder, loc,
       mlir::cast<mlir::TypedValue<mlir::acc::MappableType>>(
           initBlock->getArgument(0)),
       initName,
       initBlock->getArguments().take_back(initBlock->getArguments().size() - 1),
-      initValue);
+      initValue, needsDestroy);
   mlir::acc::YieldOp::create(builder, loc,
                              retVal ? retVal : initBlock->getArgument(0));
+  // TODO: insert destruction when needed.
+  (void)needsDestroy;
   return recipe;
 }
 
