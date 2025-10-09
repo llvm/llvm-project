@@ -15,14 +15,14 @@
   define signext i16 @partial_write(ptr %p, i32 %a, i32 %b, i16 signext %x, i16 signext %y) #0 {
   ; RCDEFAULT-LABEL: partial_write:
   ; RCDEFAULT:       # %bb.0: # %entry
-  ; RCDEFAULT-NEXT:    addl %esi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x01,0xf2]
+  ; RCDEFAULT-NEXT:    leal (%rdx,%rsi), %eax # encoding: [0x8d,0x04,0x32]
   ; RCDEFAULT-NEXT:    movl %eax, (%rdi) # encoding: [0x89,0x07]
   ; RCDEFAULT-NEXT:    addw %cx, %ax, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x01,0xc8]
   ; RCDEFAULT-NEXT:    retq # encoding: [0xc3]
   ;
   ; RC1-LABEL: partial_write:
   ; RC1:       # %bb.0: # %entry
-  ; RC1-NEXT:    addl %esi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x01,0xf2]
+  ; RC1-NEXT:    leal (%rdx,%rsi), %eax # encoding: [0x8d,0x04,0x32]
   ; RC1-NEXT:    movl %eax, (%rdi) # encoding: [0x89,0x07]
   ; RC1-NEXT:    addw %cx, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xc8]
   ; RC1-NEXT:    retq # encoding: [0xc3]

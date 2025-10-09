@@ -50,9 +50,9 @@ int main(int argc, char **argv) {
 // CHECK:      1: name = 'main', locations = 1
 // CHECK:        1.1: where = break-by-function.cpp.tmp.exe`main + {{[0-9]+}}
 // CHECK:      2: name = 'OvlGlobalFn', locations = 3
-// CHECK:        2.1: where = break-by-function.cpp.tmp.exe`OvlGlobalFn + {{[0-9]+}}
-// CHECK:        2.2: where = break-by-function.cpp.tmp.exe`OvlGlobalFn
-// CHECK:        2.3: where = break-by-function.cpp.tmp.exe`OvlGlobalFn + {{[0-9]+}}
+// CHECK:        2.1: where = break-by-function.cpp.tmp.exe`int OvlGlobalFn(int) + {{[0-9]+}}
+// CHECK:        2.2: where = break-by-function.cpp.tmp.exe`int OvlGlobalFn(int, int)
+// CHECK:        2.3: where = break-by-function.cpp.tmp.exe`int OvlGlobalFn(int, int, int) + {{[0-9]+}}
 // CHECK:      3: name = 'StaticFn', locations = 1
 // CHECK:        3.1: where = break-by-function.cpp.tmp.exe`StaticFn + {{[0-9]+}}
 // CHECK:      4: name = 'DoesntExist', locations = 0 (pending)

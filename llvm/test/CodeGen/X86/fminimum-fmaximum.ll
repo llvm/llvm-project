@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx      | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f  | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq | FileCheck %s --check-prefixes=AVX,AVX512,AVX512DQ
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2-256 | FileCheck %s --check-prefixes=AVX10_2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx10.2  | FileCheck %s --check-prefixes=AVX10_2
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx        | FileCheck %s --check-prefixes=X86
 
 declare float @llvm.maximum.f32(float, float)

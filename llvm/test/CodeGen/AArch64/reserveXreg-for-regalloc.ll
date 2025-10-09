@@ -7,20 +7,16 @@
 define void @foo(i64 %v1, i64 %v2, ptr %ptr) {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    add x3, x0, x1
-; CHECK-NEXT:    str x3, [sp, #8] // 8-byte Folded Spill
 ; CHECK-NEXT:    str x3, [x2, #8]
 ; CHECK-NEXT:    ldr x3, [x2, #16]
 ; CHECK-NEXT:    add x3, x0, x3
 ; CHECK-NEXT:    sub x3, x3, x1
 ; CHECK-NEXT:    str x3, [x2, #16]
-; CHECK-NEXT:    ldr x3, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    add x3, x0, x1
 ; CHECK-NEXT:    str x3, [x2, #24]
 ; CHECK-NEXT:    str x0, [x2, #32]
 ; CHECK-NEXT:    str x1, [x2, #40]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %v3 = add i64 %v1, %v2
   %p1 = getelementptr i64, ptr %ptr, i64 1

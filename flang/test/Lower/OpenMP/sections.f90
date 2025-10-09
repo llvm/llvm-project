@@ -264,7 +264,7 @@ subroutine lastprivate2()
 end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate_common
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} storage(%{{.*}}[0]) {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[I_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections
 !CHECK: omp.section

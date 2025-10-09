@@ -84,8 +84,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vgpr(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v3, v0, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
@@ -227,8 +226,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_agpr(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v3, v0, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
@@ -347,8 +345,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_virtual_agpr(ptr 
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
@@ -454,8 +451,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr add
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
@@ -561,8 +557,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_no_agprs(ptr addr
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
@@ -690,8 +685,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
@@ -835,8 +829,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call_multi_bb(ptr addrspace(
 ; GFX908-NEXT:    v_mov_b32_e32 v3, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v6, v3, a[0:31] cbsz:1 abid:2 blgp:3
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v6, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v5, a26
@@ -977,8 +970,7 @@ define void @test_mfma_f32_32x32x1f32_nonentry_noagpr(ptr addrspace(1) %arg) #0 
 ; GFX908-NEXT:    v_mov_b32_e32 v3, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v5, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v4, a26
@@ -1079,8 +1071,7 @@ define void @test_mfma_f32_32x32x1f32_nonentry_with_agpr(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    v_mov_b32_e32 v3, 2.0
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v5, a27
 ; GFX908-NEXT:    v_accvgpr_read_b32 v4, a26

@@ -27,7 +27,8 @@ static bool my_streq(const char *lhs, const char *rhs) {
   return *l == '\0' && *r == '\0';
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
+          [[maybe_unused]] char **envp) {
   ASSERT_TRUE(
       my_streq(LIBC_NAMESPACE::getenv(""), static_cast<char *>(nullptr)));
   ASSERT_TRUE(

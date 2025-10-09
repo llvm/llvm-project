@@ -7,10 +7,9 @@
 define i64 @load(ptr %a) nounwind {
 ; CHECK-LABEL: load:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld a2, 80(a0)
-; CHECK-NEXT:    ld zero, 0(a0)
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    ld a0, 80(a0)
+; CHECK-NEXT:    ld zero, 0(a2)
 ; CHECK-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 10
   %2 = load i64, ptr %1
