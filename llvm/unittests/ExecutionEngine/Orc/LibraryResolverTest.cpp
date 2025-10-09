@@ -176,6 +176,8 @@ public:
 
       sys::path::append(dylibPath, libdirName, dylibFileName);
       sys::path::replace_extension(dylibPath, ext);
+      llvm::outs() << "Yaml file Path -> " << yamlPath << "\n";
+      llvm::outs() << "SO Path -> " << dylibPath << "\n";
       if (!processYamlToDylib(yamlPath, dylibPath, DocNum))
         return;
     }
@@ -242,6 +244,11 @@ protected:
     libs["C"] = {libPath(baseDir, "C/libC"), {platformSymbolName("sayC")}};
     libs["D"] = {libPath(baseDir, "D/libD"), {platformSymbolName("sayD")}};
     libs["Z"] = {libPath(baseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
+    ASSERT_TRUE(sys::fs::exists(libs["A"].path));
+    ASSERT_TRUE(sys::fs::exists(libs["B"].path));
+    ASSERT_TRUE(sys::fs::exists(libs["D"].path));
+    ASSERT_TRUE(sys::fs::exists(libs["Z"].path));
+    ASSERT_TRUE(sys::fs::exists(libs["C"].path));
   }
 
   const std::vector<std::string> &sym(const std::string &key) {
