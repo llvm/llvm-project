@@ -16248,7 +16248,9 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
 
   bool Negated;
   uint64_t SplatVal;
-  if (Signed && isPow2Splat(Op.getOperand(1), SplatVal, Negated)) {
+  // NOTE: SRAD cannot be used to represent sdiv-by-one.
+  if (Signed && isPow2Splat(Op.getOperand(1), SplatVal, Negated) &&
+      SplatVal > 1) {
     SDValue Pg = getPredicateForScalableVector(DAG, DL, VT);
     SDValue Res =
         DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, DL, VT, Pg, Op->getOperand(0),
@@ -30033,7 +30035,9 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
 
   bool Negated;
   uint64_t SplatVal;
-  if (Signed && isPow2Splat(Op.getOperand(1), SplatVal, Negated)) {
+  // NOTE: SRAD cannot be used to represent sdiv-by-one.
+  if (Signed && isPow2Splat(Op.getOperand(1), SplatVal, Negated) &&
+      SplatVal > 1) {
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
     SDValue Op1 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
     SDValue Op2 = DAG.getTargetConstant(Log2_64(SplatVal), DL, MVT::i32);
