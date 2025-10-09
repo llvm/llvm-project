@@ -14,8 +14,11 @@
 #ifndef ORC_RT_SPSWRAPPERFUNCTION_H
 #define ORC_RT_SPSWRAPPERFUNCTION_H
 
+#include "orc-rt/Compiler.h"
 #include "orc-rt/SimplePackedSerialization.h"
 #include "orc-rt/WrapperFunction.h"
+
+#define ORC_RT_SPS_INTERFACE ORC_RT_INTERFACE
 
 namespace orc_rt {
 namespace detail {
