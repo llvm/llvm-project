@@ -266,6 +266,7 @@ body:             |
   %1:av_64_align2 = COPY $vgpr2_vgpr3
   DS_WRITE_B64_gfx9 %0, %1, 40, 0, implicit $exec :: (store (s64), addrspace 3)
   DS_WRITE_B64_gfx9 %0, $vgpr4_vgpr5, 96, 0, implicit $exec :: (store (s64), addrspace 3)
+...
 
 
 ...
