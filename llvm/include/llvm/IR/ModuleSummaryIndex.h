@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -177,22 +178,29 @@ struct alignas(8) GlobalValueSummaryInfo {
 /// of the map is unknown, resulting in inefficiencies due to repeated
 /// insertions and resizing.
 using GlobalValueSummaryMapTy =
-    std::map<GlobalValue::GUID, GlobalValueSummaryInfo>;
+    llvm::MapVector<GlobalValue::GUID, GlobalValueSummaryInfo>;
 
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
 struct ValueInfo {
   enum Flags { HaveGV = 1, ReadOnly = 2, WriteOnly = 4 };
-  PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 3, int>
+  PointerIntPair<const GlobalValueSummaryMapTy *, 3, int>
       RefAndFlags;
+  PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 1, bool>
+      Offset;
 
   ValueInfo() = default;
-  ValueInfo(bool HaveGVs, const GlobalValueSummaryMapTy::value_type *R) {
-    RefAndFlags.setPointer(R);
+  ValueInfo(bool HaveGVs, const GlobalValueSummaryMapTy::value_type *R, const GlobalValueSummaryMapTy *Map/* = nullptr*/) {
+    RefAndFlags.setPointer(Map);
     RefAndFlags.setInt(HaveGVs);
+    Offset.setPointer(R);
+    if (R != nullptr && Map != nullptr)
+      Offset.setPointer((const GlobalValueSummaryMapTy::value_type *)((uintptr_t)R - (uintptr_t)Map->begin()));
+    if (R != nullptr)
+      Offset.setInt(true);
   }
 
-  explicit operator bool() const { return getRef(); }
+  explicit operator bool() const { return Offset.getInt(); }
 
   GlobalValue::GUID getGUID() const { return getRef()->first; }
   const GlobalValue *getValue() const {
@@ -243,7 +251,9 @@ struct ValueInfo {
   }
 
   const GlobalValueSummaryMapTy::value_type *getRef() const {
-    return RefAndFlags.getPointer();
+    if (RefAndFlags.getPointer())
+      return RefAndFlags.getPointer()->begin() + (intptr_t)Offset.getPointer() / sizeof(GlobalValueSummaryMapTy::value_type);
+    return Offset.getPointer();
   }
 
   /// Returns the most constraining visibility among summaries. The
@@ -286,11 +296,11 @@ inline bool operator<(const ValueInfo &A, const ValueInfo &B) {
 
 template <> struct DenseMapInfo<ValueInfo> {
   static inline ValueInfo getEmptyKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
+    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8, nullptr);
   }
 
   static inline ValueInfo getTombstoneKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-16);
+    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-16, nullptr);
   }
 
   static inline bool isSpecialKey(ValueInfo V) {
@@ -301,7 +311,7 @@ template <> struct DenseMapInfo<ValueInfo> {
     // We are not supposed to mix ValueInfo(s) with different HaveGVs flag
     // in a same container.
     assert(isSpecialKey(L) || isSpecialKey(R) || (L.haveGVs() == R.haveGVs()));
-    return L.getRef() == R.getRef();
+    return L.Offset == R.Offset && L.RefAndFlags.getPointer() == R.RefAndFlags.getPointer();
   }
   static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
 };
@@ -1397,7 +1407,7 @@ class ModuleSummaryIndex {
 private:
   /// Map from value name to list of summary instances for values of that
   /// name (may be duplicates in the COMDAT case, e.g.).
-  GlobalValueSummaryMapTy GlobalValueMap;
+  std::unique_ptr<GlobalValueSummaryMapTy> GlobalValueMap = std::make_unique<GlobalValueSummaryMapTy>();
 
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
@@ -1501,7 +1511,7 @@ private:
 
   GlobalValueSummaryMapTy::value_type *
   getOrInsertValuePtr(GlobalValue::GUID GUID) {
-    return &*GlobalValueMap.emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
+    return &*GlobalValueMap->try_emplace(GUID, GlobalValueSummaryInfo(HaveGVs))
                  .first;
   }
 
@@ -1534,11 +1544,11 @@ public:
   void addBlockCount(uint64_t C) { BlockCount += C; }
   void setBlockCount(uint64_t C) { BlockCount = C; }
 
-  gvsummary_iterator begin() { return GlobalValueMap.begin(); }
-  const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
-  gvsummary_iterator end() { return GlobalValueMap.end(); }
-  const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
-  size_t size() const { return GlobalValueMap.size(); }
+  gvsummary_iterator begin() { return GlobalValueMap->begin(); }
+  const_gvsummary_iterator begin() const { return GlobalValueMap->begin(); }
+  gvsummary_iterator end() { return GlobalValueMap->end(); }
+  const_gvsummary_iterator end() const { return GlobalValueMap->end(); }
+  size_t size() const { return GlobalValueMap->size(); }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
 
@@ -1610,7 +1620,7 @@ public:
       if (!S.second.SummaryList.size() ||
           !isa<FunctionSummary>(S.second.SummaryList.front().get()))
         continue;
-      discoverNodes(ValueInfo(HaveGVs, &S), FunctionHasParent);
+      discoverNodes(ValueInfo(HaveGVs, &S, GlobalValueMap.get()), FunctionHasParent);
     }
 
     SmallVector<FunctionSummary::EdgeTy, 0> Edges;
@@ -1677,18 +1687,18 @@ public:
   /// Return a ValueInfo for the index value_type (convenient when iterating
   /// index).
   ValueInfo getValueInfo(const GlobalValueSummaryMapTy::value_type &R) const {
-    return ValueInfo(HaveGVs, &R);
+    return ValueInfo(HaveGVs, &R, GlobalValueMap.get());
   }
 
   /// Return a ValueInfo for GUID if it exists, otherwise return ValueInfo().
   ValueInfo getValueInfo(GlobalValue::GUID GUID) const {
-    auto I = GlobalValueMap.find(GUID);
-    return ValueInfo(HaveGVs, I == GlobalValueMap.end() ? nullptr : &*I);
+    auto I = GlobalValueMap->find(GUID);
+    return ValueInfo(HaveGVs, I == GlobalValueMap->end() ? nullptr : &*I, GlobalValueMap.get());
   }
 
   /// Return a ValueInfo for \p GUID.
   ValueInfo getOrInsertValueInfo(GlobalValue::GUID GUID) {
-    return ValueInfo(HaveGVs, getOrInsertValuePtr(GUID));
+    return ValueInfo(HaveGVs, getOrInsertValuePtr(GUID), GlobalValueMap.get());
   }
 
   // Save a string in the Index. Use before passing Name to
@@ -1701,7 +1711,7 @@ public:
     assert(!HaveGVs);
     auto VP = getOrInsertValuePtr(GUID);
     VP->second.U.Name = Name;
-    return ValueInfo(HaveGVs, VP);
+    return ValueInfo(HaveGVs, VP, GlobalValueMap.get());
   }
 
   /// Return a ValueInfo for \p GV and mark it as belonging to GV.
@@ -1709,7 +1719,7 @@ public:
     assert(HaveGVs);
     auto VP = getOrInsertValuePtr(GV->getGUID());
     VP->second.U.GV = GV;
-    return ValueInfo(HaveGVs, VP);
+    return ValueInfo(HaveGVs, VP, GlobalValueMap.get());
   }
 
   /// Return the GUID for \p OriginalId in the OidGuidMap.
@@ -2038,7 +2048,7 @@ struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
     G.SummaryList.push_back(std::move(Root));
     static auto P =
         GlobalValueSummaryMapTy::value_type(GlobalValue::GUID(0), std::move(G));
-    return ValueInfo(I->haveGVs(), &P);
+    return ValueInfo(I->haveGVs(), &P, nullptr);
   }
 };
 } // end namespace llvm
