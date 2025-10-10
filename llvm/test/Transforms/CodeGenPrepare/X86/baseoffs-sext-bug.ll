@@ -50,3 +50,32 @@ exit:
   ret i128 %phi
 }
 
+define void @test_combine(ptr %ptr, i128 %arg) {
+; GEP-LABEL: define void @test_combine(
+; GEP-SAME: ptr [[PTR:%.*]], i128 [[ARG:%.*]]) {
+; GEP-NEXT:  [[ENTRY:.*:]]
+; GEP-NEXT:    [[CMP:%.*]] = icmp ugt i128 [[ARG]], 10
+; GEP-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP]], i128 18446744073709551584, i128 0
+; GEP-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i128 [[SELECT1]]
+; GEP-NEXT:    store i128 1, ptr [[SUNKADDR]], align 16
+; GEP-NEXT:    ret void
+;
+; NO-GEP-LABEL: define void @test_combine(
+; NO-GEP-SAME: ptr [[PTR:%.*]], i128 [[ARG:%.*]]) {
+; NO-GEP-NEXT:  [[ENTRY:.*:]]
+; NO-GEP-NEXT:    [[CMP:%.*]] = icmp ugt i128 [[ARG]], 10
+; NO-GEP-NEXT:    [[SELECT1:%.*]] = select i1 [[CMP]], i128 18446744073709551584, i128 0
+; NO-GEP-NEXT:    [[SUNKADDR:%.*]] = ptrtoint ptr [[PTR]] to i128
+; NO-GEP-NEXT:    [[SUNKADDR2:%.*]] = add i128 [[SUNKADDR]], [[SELECT1]]
+; NO-GEP-NEXT:    [[SUNKADDR3:%.*]] = inttoptr i128 [[SUNKADDR2]] to ptr
+; NO-GEP-NEXT:    store i128 1, ptr [[SUNKADDR3]], align 16
+; NO-GEP-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ugt i128 %arg, 10
+  %gep = getelementptr inbounds i8, ptr %ptr, i128 -32
+  %select = select i1 %cmp, ptr %gep, ptr %ptr
+  store i128 1, ptr %select, align 16
+  ret void
+}
+
