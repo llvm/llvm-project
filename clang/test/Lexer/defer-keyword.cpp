@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=disabled %s
-// RUN: %clang_cc1 -fsyntax-only -verify=enabled -fdefer-ts %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fdefer-ts %s
 
-// disabled-no-diagnostics
-int defer; // enabled-error {{expected unqualified-id}}
+// expected-no-diagnostics
+int defer;
