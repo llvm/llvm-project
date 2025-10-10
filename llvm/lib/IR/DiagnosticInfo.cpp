@@ -273,6 +273,13 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   C.print(OS);
 }
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   BranchProbability P)
+    : Key(std::string(Key)) {
+  raw_string_ostream OS(Val);
+  P.print(OS);
+}
+
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
     : Key(std::string(Key)), Loc(Loc) {
   if (Loc) {

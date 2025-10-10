@@ -2515,7 +2515,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(kindDummyArg);
       CHECK(result.categorySet == CategorySet{*category});
       if (kindArg) {
-        if (auto *expr{kindArg->UnwrapExpr()}) {
+        auto *expr{kindArg->UnwrapExpr()};
+        if (expr) {
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
@@ -2529,8 +2530,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        messages.Say(
-            "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
+        if (context.analyzingPDTComponentKindSelector() && expr &&
+            IsConstantExpr(*expr)) {
+          // Don't emit an error about a KIND= actual argument value when
+          // processing a kind selector in a PDT component declaration before
+          // it is instantianted, so long as it's a constant expression.
+          // It will be renanalyzed later during instantiation.
+        } else {
+          messages.Say(
+              "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
+        }
         // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);

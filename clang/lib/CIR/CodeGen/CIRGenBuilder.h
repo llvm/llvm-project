@@ -122,6 +122,11 @@ public:
     return getPointerTo(cir::VPtrType::get(getContext()));
   }
 
+  cir::FuncType getFuncType(llvm::ArrayRef<mlir::Type> params, mlir::Type retTy,
+                            bool isVarArg = false) {
+    return cir::FuncType::get(params, retTy, isVarArg);
+  }
+
   /// Get a CIR record kind from a AST declaration tag.
   cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
     switch (kind) {
@@ -314,12 +319,6 @@ public:
     return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
   }
 
-  // Creates constant nullptr for pointer type ty.
-  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return cir::ConstantOp::create(*this, loc, getConstPtrAttr(ty, 0));
-  }
-
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
@@ -370,6 +369,15 @@ public:
     assert(!cir::MissingFeatures::fastMathFlags());
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
+  }
+
+  mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
+                            cir::PointerType destType, bool isRefCast,
+                            cir::DynamicCastInfoAttr info) {
+    auto castKind =
+        isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
+                                      /*relative_layout=*/false);
   }
 
   Address createBaseClassAddr(mlir::Location loc, Address addr,
