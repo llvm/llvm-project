@@ -119,9 +119,10 @@ class DwarfInfoHolder {
 public:
   using LVMapT = DINodeMap<DILocalVariable, DbgVariable>;
   using LabelMapT = DINodeMap<DILabel, DbgLabel>;
+  using LocalScopeMapT = DINodeMap<DILocalScope, Function>;
   using AbstractEntityMapT =
       DenseMap<const DINode *, std::unique_ptr<DbgEntity>>;
-  using AbstractScopeMapT = DenseMap<const DILocalScope *, DIE *>;
+  using AbstractScopeMapT = LocalScopeMapT::AbstractMapT;
 
 private:
   /// DIEs of local DbgVariables.
@@ -129,8 +130,9 @@ private:
   /// DIEs of labels.
   LabelMapT LabelMap;
   AbstractEntityMapT AbstractEntities;
-  // List of abstract local scopes (either DISubprogram or DILexicalBlock).
-  AbstractScopeMapT AbstractLocalScopeDIEs;
+  /// DIEs of abstract local scopes and concrete non-inlined subprograms.
+  /// Inlined subprograms and concrete lexical blocks are not stored here.
+  LocalScopeMapT LSMap;
   /// Keeps track of abstract subprograms to populate them only once.
   // FIXME: merge creation and population of abstract scopes.
   SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
@@ -140,11 +142,12 @@ private:
 
 public:
   void insertDIE(const DINode *N, DIE *Die) {
-    assert((!isa<DILabel>(N) && !isa<DILocalVariable>(N)) &&
+    assert((!isa<DILabel>(N) && !isa<DILocalVariable>(N) &&
+            !isa<DILocalScope>(N)) &&
            "Use getLabels().insertDIE() for labels or getLVs().insertDIE() for "
-           "local variables");
+           "local variables, or getSubprogram().insertDIE() for subprograms.");
     auto [_, Inserted] = MDNodeToDieMap.try_emplace(N, Die);
-    assert((Inserted || isa<DISubprogram>(N) || isa<DIType>(N)) &&
+    assert((Inserted || isa<DIType>(N)) &&
            "DIE for this DINode has already been added");
   }
 
@@ -152,9 +155,10 @@ public:
 
   DIE *getDIE(const DINode *N) const {
     DIE *D = MDNodeToDieMap.lookup(N);
-    assert((!D || (!isa<DILabel>(N) && !isa<DILocalVariable>(N))) &&
+    assert((!D || (!isa<DILabel>(N) && !isa<DILocalVariable>(N) &&
+                   !isa<DILocalScope>(N))) &&
            "Use getLabels().getDIE() for labels or getLVs().getDIE() for "
-           "local variables");
+           "local variables, or getLocalScopes().getDIE() for local scopes.");
     return D;
   }
 
@@ -163,6 +167,9 @@ public:
 
   LabelMapT &getLabels() { return LabelMap; }
   const LabelMapT &getLabels() const { return LabelMap; }
+
+  LocalScopeMapT &getLocalScopes() { return LSMap; }
+  const LocalScopeMapT &getLocalScopes() const { return LSMap; }
 
   /// For a global variable, returns DIE of the variable.
   ///
@@ -174,8 +181,6 @@ public:
         return D;
     return getDIE(V);
   }
-
-  AbstractScopeMapT &getAbstractScopeDIEs() { return AbstractLocalScopeDIEs; }
 
   AbstractEntityMapT &getAbstractEntities() { return AbstractEntities; }
 

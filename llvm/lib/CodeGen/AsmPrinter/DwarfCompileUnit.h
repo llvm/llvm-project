@@ -124,8 +124,8 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   DwarfInfoHolder &getDIEs() { return getDIEs(nullptr); }
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
-    return getDIEs().getAbstractScopeDIEs();
+  DwarfInfoHolder::AbstractScopeMapT &getAbstractScopeDIEs() {
+    return getDIEs().getLocalScopes().getAbstractDIEs();
   }
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
@@ -319,7 +319,7 @@ public:
   DIE *getOrCreateImportedEntityDIE(const DIImportedEntity *IE);
   DIE *constructImportedEntityDIE(const DIImportedEntity *IE);
 
-  void finishSubprogramDefinition(const DISubprogram *SP);
+  void finishSubprogramDefinition(const DISubprogram *SP, const Function *F);
   void finishEntityDefinition(const DbgEntity *Entity);
   void attachLexicalScopesAbstractOrigins();
 

@@ -298,6 +298,8 @@ public:
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
   DIE &createAndAddDIE(dwarf::Tag Tag, DIE &Parent, const DINode *N = nullptr);
+  DIE &createAndAddSubprogramDIE(DIE &Parent, const DISubprogram *SP,
+                                 const Function *F);
 
   bool useSegmentedStringOffsetsTable() const {
     return DD->useSegmentedStringOffsetsTable();
@@ -398,6 +400,9 @@ private:
                                          const DITemplateTypeParameter *TP);
   void constructTemplateValueParameterDIE(DIE &Buffer,
                                           const DITemplateValueParameter *TVP);
+
+  DIE *getExistingSubprogramDIE(const DISubprogram *SP,
+                                const Function *FnHint) const;
 
   /// Return the default lower bound for an array.
   ///
