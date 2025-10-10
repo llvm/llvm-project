@@ -143,6 +143,7 @@ public:
   Instruction *visitUIToFP(CastInst &CI);
   Instruction *visitSIToFP(CastInst &CI);
   Instruction *visitPtrToInt(PtrToIntInst &CI);
+  Instruction *visitPtrToAddr(PtrToAddrInst &CI);
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
