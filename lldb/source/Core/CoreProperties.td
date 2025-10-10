@@ -162,10 +162,12 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to use Ansi color codes or not.">;
-  def ShowProgress: Property<"show-progress", "Boolean">,
-    Global,
-    DefaultTrue,
-    Desc<"Whether to show progress or not if the debugger's output is an interactive color-enabled terminal.">;
+  def ShowProgress
+      : Property<"show-progress", "Boolean">,
+        Global,
+        DefaultFalse,
+        Desc<"Whether to show progress using Operating System Command (OSC) "
+             "Sequences in supporting terminal emulators.">;
   def ShowProgressAnsiPrefix: Property<"show-progress-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.faint}">,
