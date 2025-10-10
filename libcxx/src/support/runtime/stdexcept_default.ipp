@@ -9,7 +9,7 @@
 #include "../../include/refstring.h"
 
 /* For _LIBCPPABI_VERSION */
-#if !defined(_LIBCPP_CXX_ABI_NONE) && (defined(LIBCPP_CXX_ABI_LIBCXXABI) || defined(LIBCPP_CXX_ABI_LIBCXXRT))
+#if defined(_LIBCPP_CXX_ABI_LIBCXXABI) || defined(_LIBCPP_CXX_ABI_LIBCXXRT)
 #  include <cxxabi.h>
 #endif
 
