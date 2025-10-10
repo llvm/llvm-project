@@ -834,5 +834,4 @@ Examples:
   %tex2dms_samples_count = extractvalue {i32, i32, i32} %2, 2
 
 .. _Dimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
-.. _getDimensions:https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions
-
+.. _getDimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions
