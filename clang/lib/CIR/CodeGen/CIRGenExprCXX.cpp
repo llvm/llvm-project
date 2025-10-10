@@ -174,8 +174,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
       // CIRGen does not pass CallOrInvoke here (different from OG LLVM codegen)
       // because in practice it always null even in OG.
       emitCXXDestructorCall(globalDecl, callee, thisPtr.getPointer(), thisTy,
-                            /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), ce);
+                            /*implicitParam=*/nullptr,
+                            /*implicitParamTy=*/QualType(), ce);
     }
     return RValue::get(nullptr);
   }

@@ -483,11 +483,8 @@ mlir::Value CIRGenItaniumCXXABI::emitVirtualDestructorCall(
   const cir::FuncType &fnTy = cgm.getTypes().getFunctionType(*fnInfo);
   auto callee = CIRGenCallee::forVirtual(callExpr, globalDecl, thisAddr, fnTy);
 
-  QualType thisTy;
-  if (callExpr)
-    thisTy = callExpr->getObjectType();
-  else
-    thisTy = delExpr->getDestroyedType();
+  QualType thisTy =
+      callExpr ? callExpr->getObjectType() : delExpr->getDestroyedType();
 
   cgf.emitCXXDestructorCall(globalDecl, callee, thisAddr.emitRawPointer(),
                             thisTy, nullptr, QualType(), nullptr);

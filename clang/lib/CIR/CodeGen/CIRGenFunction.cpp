@@ -682,8 +682,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
-      emitCXXDestructorCall(dtor, Dtor_Complete, /*ForVirtualBase=*/false,
-                            /*Delegating=*/false, loadCXXThisAddress(), thisTy);
+      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
     }
     return;
   }

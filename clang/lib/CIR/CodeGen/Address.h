@@ -17,6 +17,7 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace clang::CIRGen {
@@ -93,7 +94,7 @@ public:
   /// Return the pointer contained in this class after authenticating it and
   /// adding offset to it if necessary.
   mlir::Value emitRawPointer() const {
-    // TODO(cir): update this class with latest traditional LLVM codegen bits
+    assert(!cir::MissingFeatures::addressPointerAuthInfo());
     return getBasePointer();
   }
 
