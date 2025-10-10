@@ -9,10 +9,10 @@
 ///  Tests of `ugt` (unsigned greater than)
 ///===------------------------------------===//
 
-// CHECK-LABEL: @check_ugt_constant_3_lhs
+// CHECK-LABEL: @ugt_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ugt_constant_3_lhs() -> vector<3xi1> {
+func.func @ugt_constant_3_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // 3 > [0, 1, 2] => true
@@ -22,10 +22,10 @@ func.func @check_ugt_constant_3_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ugt_constant_2_lhs
+// CHECK-LABEL: @negative_ugt_constant_2_lhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ugt_constant_2_lhs() -> vector<3xi1> {
+func.func @negative_ugt_constant_2_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // 2 > [0, 1, 2] => not constant
@@ -35,10 +35,10 @@ func.func @check_ugt_constant_2_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ugt_constant_1_lhs
+// CHECK-LABEL: @negative_ugt_constant_1_lhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ugt_constant_1_lhs() -> vector<3xi1> {
+func.func @negative_ugt_constant_1_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // 1 > [0, 1, 2] => not constant
@@ -48,10 +48,10 @@ func.func @check_ugt_constant_1_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ugt_constant_3_rhs
+// CHECK-LABEL: @ugt_constant_3_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ugt_constant_3_rhs() -> vector<3xi1> {
+func.func @ugt_constant_3_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // [0, 1, 2] > 3 => false
@@ -61,10 +61,10 @@ func.func @check_ugt_constant_3_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ugt_constant_max_rhs
+// CHECK-LABEL: @ugt_constant_max_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ugt_constant_max_rhs() -> vector<3xi1> {
+func.func @ugt_constant_max_rhs() -> vector<3xi1> {
   // The largest i64 possible:
   %cst = arith.constant dense<0x7fffffffffffffff> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
@@ -75,10 +75,10 @@ func.func @check_ugt_constant_max_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ugt_constant_2_rhs
+// CHECK-LABEL: @ugt_constant_2_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ugt_constant_2_rhs() -> vector<3xi1> {
+func.func @ugt_constant_2_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // [0, 1, 2] > 2 => false
@@ -88,10 +88,10 @@ func.func @check_ugt_constant_2_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ugt_constant_1_rhs
+// CHECK-LABEL: @negative_ugt_constant_1_rhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ugt_constant_1_rhs() -> vector<3xi1> {
+func.func @negative_ugt_constant_1_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // [0, 1, 2] > 1 => not constant
@@ -105,10 +105,10 @@ func.func @check_ugt_constant_1_rhs() -> vector<3xi1> {
 ///  Tests of `uge` (unsigned greater than or equal)
 ///===------------------------------------===//
 
-// CHECK-LABEL: @check_uge_constant_3_lhs
+// CHECK-LABEL: @uge_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_uge_constant_3_lhs() -> vector<3xi1> {
+func.func @uge_constant_3_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // 3 >= [0, 1, 2] => true
@@ -118,10 +118,10 @@ func.func @check_uge_constant_3_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_uge_constant_2_lhs
+// CHECK-LABEL: @uge_constant_2_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_uge_constant_2_lhs() -> vector<3xi1> {
+func.func @uge_constant_2_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // 2 >= [0, 1, 2] => true
@@ -131,10 +131,10 @@ func.func @check_uge_constant_2_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_uge_constant_1_lhs
+// CHECK-LABEL: @negative_uge_constant_1_lhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_uge_constant_1_lhs() -> vector<3xi1> {
+func.func @negative_uge_constant_1_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // 1 >= [0, 1, 2] => not constant
@@ -144,10 +144,10 @@ func.func @check_uge_constant_1_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_uge_constant_3_rhs
+// CHECK-LABEL: @uge_constant_3_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_uge_constant_3_rhs() -> vector<3xi1> {
+func.func @uge_constant_3_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // [0, 1, 2] >= 3 => false
@@ -157,10 +157,10 @@ func.func @check_uge_constant_3_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_uge_constant_2_rhs
+// CHECK-LABEL: @negative_uge_constant_2_rhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_uge_constant_2_rhs() -> vector<3xi1> {
+func.func @negative_uge_constant_2_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // [0, 1, 2] >= 2 => not constant
@@ -170,10 +170,10 @@ func.func @check_uge_constant_2_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_uge_constant_1_rhs
+// CHECK-LABEL: @negative_uge_constant_1_rhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_uge_constant_1_rhs() -> vector<3xi1> {
+func.func @negative_uge_constant_1_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   // [0, 1, 2] >= 1 => not constant
@@ -189,10 +189,10 @@ func.func @check_uge_constant_1_rhs() -> vector<3xi1> {
 ///  Tests of `ult` (unsigned less than)
 ///===------------------------------------===//
 
-// CHECK-LABEL: @check_ult_constant_3_lhs
+// CHECK-LABEL: @ult_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ult_constant_3_lhs() -> vector<3xi1> {
+func.func @ult_constant_3_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ult, %cst, %0 : vector<3xindex>
@@ -201,10 +201,10 @@ func.func @check_ult_constant_3_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ult_constant_2_lhs
+// CHECK-LABEL: @ult_constant_2_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ult_constant_2_lhs() -> vector<3xi1> {
+func.func @ult_constant_2_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ult, %cst, %0 : vector<3xindex>
@@ -213,10 +213,10 @@ func.func @check_ult_constant_2_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ult_constant_1_lhs
+// CHECK-LABEL: @negative_ult_constant_1_lhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ult_constant_1_lhs() -> vector<3xi1> {
+func.func @negative_ult_constant_1_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ult, %cst, %0 : vector<3xindex>
@@ -225,10 +225,10 @@ func.func @check_ult_constant_1_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ult_constant_3_rhs
+// CHECK-LABEL: @ult_constant_3_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ult_constant_3_rhs() -> vector<3xi1> {
+func.func @ult_constant_3_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ult, %0, %cst : vector<3xindex>
@@ -237,10 +237,10 @@ func.func @check_ult_constant_3_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ult_constant_2_rhs
+// CHECK-LABEL: @negative_ult_constant_2_rhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ult_constant_2_rhs() -> vector<3xi1> {
+func.func @negative_ult_constant_2_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ult, %0, %cst : vector<3xindex>
@@ -249,10 +249,10 @@ func.func @check_ult_constant_2_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ult_constant_1_rhs
+// CHECK-LABEL: @negative_ult_constant_1_rhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ult_constant_1_rhs() -> vector<3xi1> {
+func.func @negative_ult_constant_1_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ult, %0, %cst: vector<3xindex>
@@ -265,10 +265,10 @@ func.func @check_ult_constant_1_rhs() -> vector<3xi1> {
 ///  Tests of `ule` (unsigned less than or equal)
 ///===------------------------------------===//
 
-// CHECK-LABEL: @check_ule_constant_3_lhs
+// CHECK-LABEL: @ule_constant_3_lhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ule_constant_3_lhs() -> vector<3xi1> {
+func.func @ule_constant_3_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ule, %cst, %0 : vector<3xindex>
@@ -277,10 +277,10 @@ func.func @check_ule_constant_3_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ule_constant_2_lhs
+// CHECK-LABEL: @negative_ule_constant_2_lhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ule_constant_2_lhs() -> vector<3xi1> {
+func.func @negative_ule_constant_2_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ule, %cst, %0 : vector<3xindex>
@@ -289,10 +289,10 @@ func.func @check_ule_constant_2_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ule_constant_1_lhs
+// CHECK-LABEL: @negative_ule_constant_1_lhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ule_constant_1_lhs() -> vector<3xi1> {
+func.func @negative_ule_constant_1_lhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ule, %cst, %0 : vector<3xindex>
@@ -301,10 +301,10 @@ func.func @check_ule_constant_1_lhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ule_constant_3_rhs
+// CHECK-LABEL: @ule_constant_3_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ule_constant_3_rhs() -> vector<3xi1> {
+func.func @ule_constant_3_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ule, %0, %cst : vector<3xindex>
@@ -313,10 +313,10 @@ func.func @check_ule_constant_3_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ule_constant_2_rhs
+// CHECK-LABEL: @ule_constant_2_rhs
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ule_constant_2_rhs() -> vector<3xi1> {
+func.func @ule_constant_2_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ule, %0, %cst : vector<3xindex>
@@ -325,10 +325,10 @@ func.func @check_ule_constant_2_rhs() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ule_constant_1_rhs
+// CHECK-LABEL: @negative_ule_constant_1_rhs
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ule_constant_1_rhs() -> vector<3xi1> {
+func.func @negative_ule_constant_1_rhs() -> vector<3xi1> {
   %cst = arith.constant dense<1> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ule, %0, %cst: vector<3xindex>
@@ -341,10 +341,10 @@ func.func @check_ule_constant_1_rhs() -> vector<3xi1> {
 ///  Tests of `eq` (equal)
 ///===------------------------------------===//
 
-// CHECK-LABEL: @check_eq_constant_3
+// CHECK-LABEL: @eq_constant_3
 //       CHECK: %[[CST:.*]] = arith.constant dense<false> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_eq_constant_3() -> vector<3xi1> {
+func.func @eq_constant_3() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi eq, %0, %cst: vector<3xindex>
@@ -353,10 +353,10 @@ func.func @check_eq_constant_3() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_eq_constant_2
+// CHECK-LABEL: @negative_eq_constant_2
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_eq_constant_2() -> vector<3xi1> {
+func.func @negative_eq_constant_2() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi eq, %0, %cst: vector<3xindex>
@@ -369,10 +369,10 @@ func.func @check_eq_constant_2() -> vector<3xi1> {
 ///  Tests of `ne` (not equal)
 ///===------------------------------------===//
 
-// CHECK-LABEL: @check_ne_constant_3
+// CHECK-LABEL: @ne_constant_3
 //       CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<3xi1>
 //       CHECK: return %[[CST]] : vector<3xi1>
-func.func @check_ne_constant_3() -> vector<3xi1> {
+func.func @ne_constant_3() -> vector<3xi1> {
   %cst = arith.constant dense<3> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ne, %0, %cst: vector<3xindex>
@@ -381,10 +381,10 @@ func.func @check_ne_constant_3() -> vector<3xi1> {
 
 // -----
 
-// CHECK-LABEL: @check_ne_constant_2
+// CHECK-LABEL: @negative_ne_constant_2
 //       CHECK: %[[CMP:.*]] = arith.cmpi
 //       CHECK: return %[[CMP]]
-func.func @check_ne_constant_2() -> vector<3xi1> {
+func.func @negative_ne_constant_2() -> vector<3xi1> {
   %cst = arith.constant dense<2> : vector<3xindex>
   %0 = vector.step : vector<3xindex>
   %1 = arith.cmpi ne, %0, %cst: vector<3xindex>
