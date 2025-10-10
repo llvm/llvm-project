@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/Delinearization.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -41,7 +41,7 @@ static cl::opt<bool> UseFixedSizeArrayHeuristic(
     cl::desc("When printing analysis, use the heuristic for fixed-size arrays "
              "if the default delinearizetion fails."));
 
-static cl::opt<bool> useGEPToDelinearize(
+static cl::opt<bool> UseGEPToDelinearize(
     "use-gep-to-delinearize", cl::init(true), cl::Hidden,
     cl::desc("validate both delinearization methods match."));
 
@@ -623,9 +623,8 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG(dbgs() << "delinearize falling back to parametric method\n");
 
   // Fall back to parametric delinearization.
-  const SCEVUnknown *BasePointer =
-      dyn_cast<SCEVUnknown>(SE.getPointerBase(Expr));
-  if (BasePointer)
+  if (const SCEVUnknown *BasePointer =
+          dyn_cast<SCEVUnknown>(SE.getPointerBase(Expr)))
     Expr = SE.getMinusSCEV(Expr, BasePointer);
 
   SmallVector<const SCEV *, 4> Terms;
@@ -895,8 +894,8 @@ bool llvm::tryDelinearizeFixedSizeImpl(
   if (!SrcGEP)
     return false;
 
-  // When flag useGEPToDelinearize is false, delinearize only using array_info.
-  if (!useGEPToDelinearize) {
+  // When flag UseGEPToDelinearize is false, delinearize only using array_info.
+  if (!UseGEPToDelinearize) {
     SmallVector<const SCEV *, 4> SCEVSizes;
     const SCEV *ElementSize = SE->getElementSize(Inst);
     if (!delinearizeUsingArrayInfo(*SE, AccessFn, Subscripts, SCEVSizes,
@@ -913,7 +912,7 @@ bool llvm::tryDelinearizeFixedSizeImpl(
   }
 
   // TODO: Remove all the following code once we are satisfied with array_info.
-  // Run both methods when useGEPToDelinearize is true: validation is enabled.
+  // Run both methods when UseGEPToDelinearize is true: validation is enabled.
 
   // Store results from both methods.
   SmallVector<const SCEV *, 4> GEPSubscripts, ArrayInfoSubscripts;
@@ -937,82 +936,70 @@ bool llvm::tryDelinearizeFixedSizeImpl(
     convertSCEVSizesToIntSizes(SCEVSizes, ArrayInfoSizes);
 
   // Validate consistency between methods.
-  if (GEPSuccess && ArrayInfoSuccess) {
-    // If both methods succeeded, validate they produce the same results.
-    // Compare sizes arrays.
-    if (GEPSizes.size() + 2 != ArrayInfoSizes.size()) {
-      LLVM_DEBUG({
+  LLVM_DEBUG({
+    if (GEPSuccess && ArrayInfoSuccess) {
+      // If both methods succeeded, validate they produce the same results.
+      // Compare sizes arrays.
+      if (GEPSizes.size() + 2 != ArrayInfoSizes.size()) {
         dbgs() << "WARN: Size arrays have different lengths!\n";
         dbgs() << "GEP sizes count: " << GEPSizes.size() << "\n"
                << "ArrayInfo sizes count: " << ArrayInfoSizes.size() << "\n";
-      });
-    }
-
-    for (size_t i = 0; i < GEPSizes.size(); ++i) {
-      if (GEPSizes[i] != ArrayInfoSizes[i + 1]) {
-        LLVM_DEBUG({
-          dbgs() << "WARN: Size arrays differ at index " << i << "!\n";
-          dbgs() << "GEP size[" << i << "]: " << GEPSizes[i] << "\n"
-                 << "ArrayInfo size[" << i + 1 << "]: " << ArrayInfoSizes[i + 1]
-                 << "\n";
-        });
       }
-    }
 
-    // Compare subscripts arrays.
-    if (GEPSubscripts.size() != ArrayInfoSubscripts.size()) {
-      LLVM_DEBUG({
+      for (size_t I : seq<size_t>(GEPSizes.size())) {
+        if (GEPSizes[I] != ArrayInfoSizes[I + 1]) {
+          dbgs() << "WARN: Size arrays differ at index " << I << "!\n";
+          dbgs() << "GEP size[" << I << "]: " << GEPSizes[I] << "\n"
+                 << "ArrayInfo size[" << I + 1 << "]: " << ArrayInfoSizes[I + 1]
+                 << "\n";
+        }
+      }
+
+      // Compare subscripts arrays.
+      if (GEPSubscripts.size() != ArrayInfoSubscripts.size()) {
         dbgs() << "WARN: Subscript arrays have different lengths!\n";
         dbgs() << "  GEP subscripts count: " << GEPSubscripts.size() << "\n"
                << "  ArrayInfo subscripts count: " << ArrayInfoSubscripts.size()
                << "\n";
 
         dbgs() << "  GEP subscripts:\n";
-        for (size_t i = 0; i < GEPSubscripts.size(); ++i)
-          dbgs() << "    subscript[" << i << "]: " << *GEPSubscripts[i] << "\n";
+        for (size_t I : seq<size_t>(GEPSubscripts.size()))
+          dbgs() << "    subscript[" << I << "]: " << *GEPSubscripts[I] << "\n";
 
         dbgs() << "  ArrayInfo subscripts:\n";
-        for (size_t i = 0; i < ArrayInfoSubscripts.size(); ++i)
-          dbgs() << "    subscript[" << i << "]: " << *ArrayInfoSubscripts[i]
+        for (size_t I : seq<size_t>(ArrayInfoSubscripts.size()))
+          dbgs() << "    subscript[" << I << "]: " << *ArrayInfoSubscripts[I]
                  << "\n";
-      });
-    }
-
-    for (size_t i = 0; i < GEPSubscripts.size(); ++i) {
-      const SCEV *GEPS = GEPSubscripts[i];
-      const SCEV *AIS = ArrayInfoSubscripts[i];
-      // FIXME: there's no good way to compare two scevs: don't abort, warn.
-      if (GEPS != AIS || !SE->getMinusSCEV(GEPS, AIS)->isZero()) {
-        LLVM_DEBUG({
-          dbgs() << "WARN: Subscript arrays differ at index " << i << "!\n";
-          dbgs() << "  GEP subscript[" << i << "]: " << *GEPSubscripts[i]
-                 << "\n"
-                 << "  ArrayInfo subscript[" << i
-                 << "]: " << *ArrayInfoSubscripts[i] << "\n";
-        });
       }
-    }
 
-    LLVM_DEBUG(dbgs() << "SUCCESS: Both delinearization methods produced "
-                         "identical results\n");
-  } else if (GEPSuccess && !ArrayInfoSuccess) {
-    LLVM_DEBUG({
+      for (size_t I : seq<size_t>(GEPSubscripts.size())) {
+        const SCEV *GEPS = GEPSubscripts[I];
+        const SCEV *AIS = ArrayInfoSubscripts[I];
+        // FIXME: there's no good way to compare two scevs: don't abort, warn.
+        if (GEPS != AIS || !SE->getMinusSCEV(GEPS, AIS)->isZero()) {
+          dbgs() << "WARN: Subscript arrays differ at index " << I << "!\n";
+          dbgs() << "  GEP subscript[" << I << "]: " << *GEPSubscripts[I]
+                 << "\n"
+                 << "  ArrayInfo subscript[" << I
+                 << "]: " << *ArrayInfoSubscripts[I] << "\n";
+        }
+      }
+
+      dbgs() << "SUCCESS: Both delinearization methods produced "
+                "identical results\n";
+    } else if (GEPSuccess && !ArrayInfoSuccess) {
       dbgs() << "WARNING: array_info failed and GEP analysis succeeded.\n";
       dbgs() << "  Instruction: " << *Inst << "\n";
       dbgs() << "  Using GEP analysis results despite array_info failure\n";
-    });
-  } else if (!GEPSuccess && ArrayInfoSuccess) {
-    LLVM_DEBUG({
+    } else if (!GEPSuccess && ArrayInfoSuccess) {
       dbgs() << "WARNING: GEP failed and array_info analysis succeeded.\n";
       dbgs() << "  Instruction: " << *Inst << "\n";
       dbgs() << "  Using array_info analysis results despite GEP failure\n";
-    });
-  } else if (!GEPSuccess && !ArrayInfoSuccess) {
-    LLVM_DEBUG({
+    } else if (!GEPSuccess && !ArrayInfoSuccess) {
       dbgs() << "WARNING: both GEP and array_info analysis failed.\n";
       dbgs() << "  Instruction: " << *Inst << "\n";
-    });
-  }
+    }
+  });
 
   // Choose which result to use.
   // Prefer array_info when available.
@@ -1081,7 +1068,7 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
 
     SmallVector<const SCEV *, 3> Subscripts, Sizes;
     auto IsDelinearizationFailed = [&]() {
-      return Subscripts.size() == 0 || Sizes.size() == 0;
+      return Subscripts.empty() || Sizes.empty();
     };
 
     const SCEV *ElementSize = SE->getElementSize(&Inst);
@@ -1117,8 +1104,8 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
     // Handle different size relationships between Subscripts and Sizes.
     if (NumSizes > 0) {
       // Print array dimensions (all but the last, which is element size).
-      for (int i = 0; i < NumSizes - 1; i++)
-        O << "[" << *Sizes[i] << "]";
+      for (const SCEV *Size : ArrayRef(Sizes).drop_back())
+        O << "[" << *Size << "]";
 
       // Print element size (last element in Sizes array).
       O << " with elements of " << *Sizes[NumSizes - 1] << " bytes.\n";
