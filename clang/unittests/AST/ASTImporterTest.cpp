@@ -3300,6 +3300,22 @@ TEST_P(ImportExpr, ConceptNestedNonInstantiationDependentRequirement) {
              conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
 }
 
+TEST_P(ImportExpr, ImportSubstNonTypeTemplateParmPackExpr) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<auto ...> struct X {};
+    template<typename ...> struct Z {};
+
+    template<int ...N> struct E {
+      template<int ...M> using B = Z<X<N, M>...>;
+      template<int M1, int M2> E(B<M1, M2>);
+    };
+    using declToImport = E<1, 3>;
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             typedefNameDecl(hasName("declToImport")));
+}
+
 class ImportImplicitMethods : public ASTImporterOptionSpecificTestBase {
 public:
   static constexpr auto DefaultCode = R"(
