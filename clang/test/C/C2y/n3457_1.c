@@ -16,5 +16,5 @@ static_assert(__COUNTER__ == 2147483646); // Test and increment
 static_assert(__COUNTER__ == 2147483647); // Test and increment
 
 // This one should fail.
-signed long i = __COUNTER__; // expected-error {{'__COUNTER__' value cannot exceed 2147483647}}
+signed long i = __COUNTER__; // expected-error {{'__COUNTER__' value cannot exceed 2'147'483'647}}
 
