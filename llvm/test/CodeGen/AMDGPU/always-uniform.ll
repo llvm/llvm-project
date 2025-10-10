@@ -8,22 +8,20 @@ define amdgpu_kernel void @readfirstlane_uniform(ptr addrspace(1) noalias nocapt
 ; GCN-LABEL: readfirstlane_uniform:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
-; GCN-NEXT:    v_readfirstlane_b32 s4, v0
-; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_u32 s0, s0, s4
-; GCN-NEXT:    s_addc_u32 s1, s1, s5
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[0:1]
 ; GCN-NEXT:    s_add_u32 s0, s2, 40
 ; GCN-NEXT:    s_addc_u32 s1, s3, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
