@@ -248,7 +248,6 @@ body:             |
   DS_WRITE_B32_gfx9 %0, %2, 96, 0, implicit $exec :: (store (s32), addrspace 3)
 ...
 
-
 ---
 name:            ds_write_b64__physical_av64
 body:             |
