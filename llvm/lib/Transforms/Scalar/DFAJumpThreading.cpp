@@ -158,7 +158,6 @@ public:
 private:
   void
   unfoldSelectInstrs(const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
-    // TODO: Have everything use a single lazy DTU
     SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
