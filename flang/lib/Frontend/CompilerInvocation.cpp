@@ -1359,6 +1359,11 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         res.getLangOpts().OMPTargetTriples.push_back(tt);
     }
   }
+
+  if (args.hasArg(
+          clang::driver::options::OPT_famd_allow_threadprivate_equivalence))
+    res.getLangOpts().AllowThreadprivateEquivalence = true;
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
