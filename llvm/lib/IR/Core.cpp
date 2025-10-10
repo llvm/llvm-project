@@ -4106,6 +4106,8 @@ LLVMBool LLVMGetVolatile(LLVMValueRef MemAccessInst) {
     return SI->isVolatile();
   if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(P))
     return AI->isVolatile();
+  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(P))
+    return MI->isVolatile();
   return cast<AtomicCmpXchgInst>(P)->isVolatile();
 }
 
@@ -4117,6 +4119,8 @@ void LLVMSetVolatile(LLVMValueRef MemAccessInst, LLVMBool isVolatile) {
     return SI->setVolatile(isVolatile);
   if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(P))
     return AI->setVolatile(isVolatile);
+  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(P))
+    return MI->setVolatile(ConstantInt::getBool(P->getContext(), isVolatile));
   return cast<AtomicCmpXchgInst>(P)->setVolatile(isVolatile);
 }
 
