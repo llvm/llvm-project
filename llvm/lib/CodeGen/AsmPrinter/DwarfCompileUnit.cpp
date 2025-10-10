@@ -1476,8 +1476,9 @@ DIE *DwarfCompileUnit::getOrCreateImportedEntityDIE(
   return IMDie;
 }
 
-void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
-  DIE *D = getDIE(SP);
+void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP,
+                                                  const Function *F) {
+  DIE *D = getDIEs(SP).getLocalScopes().getConcreteDIE(SP, F);
   if (DIE *AbsSPDIE = getAbstractScopeDIEs().lookup(SP)) {
     if (D)
       // If this subprogram has an abstract definition, reference that
