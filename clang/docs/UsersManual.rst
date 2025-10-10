@@ -2879,7 +2879,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
    edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2898,7 +2898,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /clang:-fsample-profile-use-profi /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code
 
 Sample Profile Formats
 """"""""""""""""""""""
