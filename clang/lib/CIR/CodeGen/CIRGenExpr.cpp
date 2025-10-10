@@ -22,6 +22,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <optional>
@@ -1197,7 +1199,16 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_AddressSpaceConversion:
+  case CK_AddressSpaceConversion: {
+    LValue lv = emitLValue(e->getSubExpr());
+    QualType destTy = getContext().getPointerType(e->getType());
+    mlir::Value v = getTargetHooks().performAddrSpaceCast(
+        *this, lv.getPointer(), convertType(destTy));
+
+    return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
+                                  lv.getAddress().getAlignment()),
+                          e->getType(), lv.getBaseInfo());
+  }
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -2275,6 +2286,8 @@ Address CIRGenFunction::createTempAllocaWithoutCast(
 
 /// This creates a alloca and inserts it into the entry block. The alloca is
 /// casted to default address space if necessary.
+// TODO(cir): Implement address space casting to match classic codegen's
+// CreateTempAlloca behavior with DestLangAS parameter
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
                                          mlir::Value arraySize,
@@ -2289,7 +2302,18 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  assert(!cir::MissingFeatures::addressSpace());
+
+  LangAS allocaAS = cgm.getLangTempAllocaAddressSpace();
+  LangAS dstTyAS = clang::LangAS::Default;
+  if (getCIRAllocaAddressSpace()) {
+    dstTyAS = clang::getLangASFromTargetAS(
+        getCIRAllocaAddressSpace().getValue().getUInt());
+  }
+
+  if (dstTyAS != allocaAS) {
+    getTargetHooks().performAddrSpaceCast(*this, v,
+                                          builder.getPointerTo(ty, dstTyAS));
+  }
   return Address(v, ty, align);
 }
 

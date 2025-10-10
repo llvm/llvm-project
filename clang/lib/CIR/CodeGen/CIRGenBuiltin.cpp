@@ -58,6 +58,24 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
+// Initialize the alloca with the given size and alignment according to the lang
+// opts. Supporting only the trivial non-initialization for now.
+static void initializeAlloca(CIRGenFunction &cgf,
+                             [[maybe_unused]] mlir::Value allocaAddr,
+                             [[maybe_unused]] mlir::Value size,
+                             [[maybe_unused]] CharUnits alignmentInBytes) {
+
+  switch (cgf.getLangOpts().getTrivialAutoVarInit()) {
+  case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+    // Nothing to initialize.
+    return;
+  case LangOptions::TrivialAutoVarInitKind::Zero:
+  case LangOptions::TrivialAutoVarInitKind::Pattern:
+    cgf.cgm.errorNYI("trivial auto var init");
+    return;
+  }
+}
+
 RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   mlir::Value input = emitScalarExpr(e->getArg(0));
   mlir::Value amount = emitScalarExpr(e->getArg(1));
@@ -172,32 +190,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.getUInt8Ty(), "bi_alloca", suitableAlignmentInBytes, size);
 
     // Initialize the allocated buffer if required.
-    if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
-      // Initialize the alloca with the given size and alignment according to
-      // the lang opts. Only the trivial non-initialization is supported for
-      // now.
-
-      switch (getLangOpts().getTrivialAutoVarInit()) {
-      case LangOptions::TrivialAutoVarInitKind::Uninitialized:
-        // Nothing to initialize.
-        break;
-      case LangOptions::TrivialAutoVarInitKind::Zero:
-      case LangOptions::TrivialAutoVarInitKind::Pattern:
-        cgm.errorNYI("trivial auto var init");
-        break;
-      }
-    }
+    if (builtinID != Builtin::BI__builtin_alloca_uninitialized)
+      initializeAlloca(*this, allocaAddr, size, suitableAlignmentInBytes);
 
     // An alloca will always return a pointer to the alloca (stack) address
     // space. This address space need not be the same as the AST / Language
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    assert(!cir::MissingFeatures::addressSpace());
+
+    LangAS allocaAddrSpace = clang::LangAS::Default;
+    if (getCIRAllocaAddressSpace()) {
+      allocaAddrSpace = clang::getLangASFromTargetAS(
+          getCIRAllocaAddressSpace().getValue().getUInt());
+    }
+    LangAS exprAddrSpace = e->getType()->getPointeeType().getAddressSpace();
+    if (exprAddrSpace != allocaAddrSpace) {
+      cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
+    }
 
     // Bitcast the alloca to the expected type.
-    return RValue::get(
-        builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
+    return RValue::get(builder.createBitcast(
+        allocaAddr, builder.getVoidPtrTy(allocaAddrSpace)));
   }
 
   case Builtin::BIcos:
