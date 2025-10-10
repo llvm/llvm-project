@@ -64,7 +64,10 @@ int wmain(int, wchar_t *[], wchar_t *[]) {}
 // Invalid signatures.
 #if defined(INVALID1)
 inline int main(int, char *[]); /* invalid-error {{'main' is not allowed to be declared inline}} */
+#if !__is_target_os(darwin)
+// This test doesn't make sense on Darwin where four arguments are allowed.
 int main(int, char *[], char *[], float); /* invalid-error {{too many parameters (4) for 'main': must be 0, 2, or 3}} */
+#endif
 float main(int); /* invalid-error {{'main' must return 'int'}} */
 _Noreturn int main(int, char *[]); /* invalid-warning {{'main' is not allowed to be declared _Noreturn}}
                                       invalid-note {{remove '_Noreturn'}}
