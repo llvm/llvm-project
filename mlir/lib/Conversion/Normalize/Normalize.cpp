@@ -163,6 +163,7 @@ std::string inline split(std::string_view str, const char &delimiter,
       cnt++;
     }
   }
+  return nullptr;
 }
 
 void NormalizePass::nameAsInitialOperation(mlir::Operation *op) {
