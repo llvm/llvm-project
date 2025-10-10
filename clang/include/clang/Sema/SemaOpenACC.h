@@ -228,6 +228,11 @@ private:
 
   bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                               SourceLocation ClauseLoc);
+  bool CreateReductionCombinerRecipe(
+      SourceLocation loc, OpenACCReductionOperator ReductionOperator,
+      QualType VarTy,
+      llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+          &CombinerRecipes);
 
 public:
   // Needed from the visitor, so should be public.
