@@ -1,4 +1,4 @@
-//===- Normalize.h - Math to outlined impl conversion -----------*- C++ -*-===//
+//===- Normalize.h - Conversion from MLIR to its canonical form -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,6 @@
 
 #ifndef MLIR_CONVERSION_NORMALIZE_NORMALIZE_H
 #define MLIR_CONVERSION_NORMALIZE_NORMALIZE_H
-
-#include <memory>
 
 namespace mlir {
 class Pass;
