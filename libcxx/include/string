@@ -1312,6 +1312,8 @@ public:
 #  if _LIBCPP_STD_VER >= 23
   template <class _Op>
   _LIBCPP_HIDE_FROM_ABI constexpr void resize_and_overwrite(size_type __n, _Op __op) {
+    using __result_type = decltype(std::move(__op)(data(), auto(__n)));
+    static_assert(__integer_like<__result_type>, "Operation return type must be integer-like");
     size_type __sz  = size();
     size_type __cap = capacity();
     if (__n > __cap)
