@@ -2099,7 +2099,25 @@ class Tpl {
 };
 static_assert(__builtin_is_implicit_lifetime(Tpl<int>));
 
+template <typename>
+class MultipleDefaults {
+  MultipleDefaults() {};
+  MultipleDefaults() requires true = default;
+};
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults<int>));
+template <typename>
+class MultipleDefaults2 {
+  MultipleDefaults2() requires true {};
+  MultipleDefaults2() = default;
+};
+
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults2<int>));
+
+
 #endif
+
+
+
 }
 
 void is_signed()
