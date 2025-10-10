@@ -18,7 +18,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib-dir} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env LIBPATH=%{lib-dir} -- '
+    '%{executor} --execdir %{temp} --env LIBPATH=%{lib-dir} -- '
 ))
 
 # LIBCXX-AIX-FIXME is the feature name used to XFAIL the
