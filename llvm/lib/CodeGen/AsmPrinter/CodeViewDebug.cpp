@@ -603,46 +603,11 @@ MapDWARFLanguageToCVLang(dwarf::SourceLanguageName DWLName) {
 }
 
 static SourceLanguage MapDWARFLanguageToCVLang(dwarf::SourceLanguage DWLang) {
-  switch (DWLang) {
-  case dwarf::DW_LANG_C:
-  case dwarf::DW_LANG_C89:
-  case dwarf::DW_LANG_C99:
-  case dwarf::DW_LANG_C11:
-    return SourceLanguage::C;
-  case dwarf::DW_LANG_C_plus_plus:
-  case dwarf::DW_LANG_C_plus_plus_03:
-  case dwarf::DW_LANG_C_plus_plus_11:
-  case dwarf::DW_LANG_C_plus_plus_14:
-    return SourceLanguage::Cpp;
-  case dwarf::DW_LANG_Fortran77:
-  case dwarf::DW_LANG_Fortran90:
-  case dwarf::DW_LANG_Fortran95:
-  case dwarf::DW_LANG_Fortran03:
-  case dwarf::DW_LANG_Fortran08:
-    return SourceLanguage::Fortran;
-  case dwarf::DW_LANG_Pascal83:
-    return SourceLanguage::Pascal;
-  case dwarf::DW_LANG_Cobol74:
-  case dwarf::DW_LANG_Cobol85:
-    return SourceLanguage::Cobol;
-  case dwarf::DW_LANG_Java:
-    return SourceLanguage::Java;
-  case dwarf::DW_LANG_D:
-    return SourceLanguage::D;
-  case dwarf::DW_LANG_Swift:
-    return SourceLanguage::Swift;
-  case dwarf::DW_LANG_Rust:
-    return SourceLanguage::Rust;
-  case dwarf::DW_LANG_ObjC:
-    return SourceLanguage::ObjC;
-  case dwarf::DW_LANG_ObjC_plus_plus:
-    return SourceLanguage::ObjCpp;
-  default:
-    // There's no CodeView representation for this language, and CV doesn't
-    // have an "unknown" option for the language field, so we'll use MASM,
-    // as it's very low level.
-    return SourceLanguage::Masm;
-  }
+  auto MaybeLName = dwarf::toDW_LNAME(DWLang);
+  if (!MaybeLName)
+    return MapDWARFLanguageToCVLang(static_cast<dwarf::SourceLanguageName>(0));
+
+  return MapDWARFLanguageToCVLang(MaybeLName->first);
 }
 
 void CodeViewDebug::beginModule(Module *M) {
