@@ -712,10 +712,10 @@ TEST(SymbolDocumentation, MarkdownCodeSpans) {
 line
 \c span`)",
        R"(\`multi
-line
+line  
 \\c span\`)",
        R"(`multi
-line
+line  
 \c span`)",
        R"(`multi line
 \c span`)"},
