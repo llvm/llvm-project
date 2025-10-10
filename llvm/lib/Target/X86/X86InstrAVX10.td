@@ -592,10 +592,10 @@ def : Pat<(X86mcvttp2sis (v2f64 (X86VBroadcastld64 addr:$src)),
           (VCVTTPD2DQSZ128rmbkz VK2WM:$mask, addr:$src)>;
 
 // Patterns VCVTTPD2UDQSZ128
-def : Pat<(v4i32 (X86cvttp2uis (v2f64 (X86VBroadcastld64 addr:$src)))),
-          (VCVTTPD2UDQSZ128rmb addr:$src)>;
 def : Pat<(v4i32 (X86cvttp2uis (v2f64 VR128X:$src))),
           (VCVTTPD2UDQSZ128rr VR128X:$src)>;
+def : Pat<(v4i32 (X86cvttp2uis (loadv2f64 addr:$src))),
+          (VCVTTPD2UDQSZ128rm addr:$src)>;
 def : Pat<(v4i32 (X86cvttp2uis (v2f64 (X86VBroadcastld64 addr:$src)))),
           (VCVTTPD2UDQSZ128rmb addr:$src)>;
 def : Pat<(X86mcvttp2uis (v2f64 VR128X:$src), (v4i32 VR128X:$src0),

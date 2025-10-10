@@ -158,7 +158,7 @@ define i1 @extract_array([4 x i1] %a) {
 define [4 x i1] @insert_array([4 x i1] %a, i1 %e2) {
   ; NO_COMBINE_LOAD_PTR: @insert_array.dfsan
   ; NO_COMBINE_LOAD_PTR: [[EM:%.*]] = load i8, ptr
-  ; NO_COMBINE_LOAD_PTR-SAME: inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align [[ALIGN:2]]
+  ; NO_COMBINE_LOAD_PTR-SAME: getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: [[AM:%.*]] = load [4 x i8], ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; NO_COMBINE_LOAD_PTR: [[AM1:%.*]] = insertvalue [4 x i8] [[AM]], i8 [[EM]], 0
   ; NO_COMBINE_LOAD_PTR: store [4 x i8] [[AM1]], ptr @__dfsan_retval_tls, align [[ALIGN]]

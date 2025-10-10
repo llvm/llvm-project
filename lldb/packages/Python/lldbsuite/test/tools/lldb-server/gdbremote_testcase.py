@@ -444,13 +444,20 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if not exe_path:
             exe_path = self.getBuildArtifact("a.out")
 
-        args = []
+        # This file will be created once the inferior has enabled attaching.
+        sync_file_path = lldbutil.append_to_process_working_directory(
+            self, "process_ready"
+        )
+        args = [f"syncfile:{sync_file_path}"]
         if inferior_args:
             args.extend(inferior_args)
         if sleep_seconds:
             args.append("sleep:%d" % sleep_seconds)
 
-        return self.spawnSubprocess(exe_path, args)
+        inferior = self.spawnSubprocess(exe_path, args)
+        lldbutil.wait_for_file_on_target(self, sync_file_path)
+
+        return inferior
 
     def prep_debug_monitor_and_inferior(
         self,
