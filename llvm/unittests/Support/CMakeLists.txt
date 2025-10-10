@@ -52,6 +52,7 @@ add_llvm_unittest(SupportTests
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
   InterleavedRangeTest.cpp
+  JobserverTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
@@ -124,6 +125,8 @@ add_llvm_unittest(SupportTests
   DEPENDS
   intrinsics_gen
   )
+
+add_subdirectory(LSP)
 
 target_link_libraries(SupportTests PRIVATE LLVMTestingSupport)
 

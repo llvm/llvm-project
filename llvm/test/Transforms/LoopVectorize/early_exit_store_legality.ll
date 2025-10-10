@@ -353,7 +353,7 @@ exit:
 
 define void @loop_contains_store_condition_load_is_chained(ptr dereferenceable(40) noalias %array, ptr align 8 dereferenceable(160) readonly %offsets, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_is_chained'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
 
@@ -407,7 +407,7 @@ exit:
 
 define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_requires_gather'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
 
@@ -544,7 +544,7 @@ exit:
 
 define void @uncountable_exit_condition_address_is_invariant(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_invariant'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
 
@@ -566,6 +566,97 @@ for.inc:
 exit:
   ret void
 }
+
+define void @uncountable_exit_condition_address_is_addrec_in_outer_loop(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_addrec_in_outer_loop'
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
+entry:
+  br label %outer.body
+
+outer.body:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.inc ]
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %outer.iv
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %outer.body ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %outer.inc, label %for.body
+
+outer.inc:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.cond = icmp eq i64 %outer.iv.next, 2
+  br i1 %outer.cond, label %exit, label %outer.body
+
+exit:
+  ret void
+}
+
+;; ICE was caused by assert for the load used in the uncountable exit condition
+;; being guaranteed to execute.
+@ee.global = external global [4 x i8]
+define void @crash_conditional_load_for_uncountable_exit(ptr dereferenceable(40) noalias %store.area) {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr i8, ptr @ee.global, i64 %iv
+  br i1 false, label %ee.block, label %invalid.block
+
+ee.block:
+  %ee.val = load i8, ptr %ee.addr, align 1
+  store i16 0, ptr %store.area, align 2
+  %ee.cmp = icmp eq i8 %ee.val, 0
+  br i1 %ee.cmp, label %for.inc, label %invalid.block
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 10
+  br i1 %counted.cond, label %invalid.block, label %for.body
+
+invalid.block:
+  unreachable
+}
+
+define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area, i1 %skip.cond) {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit_argptr'
+; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr i8, ptr %load.area, i64 %iv
+  br i1 %skip.cond, label %ee.block, label %invalid.block
+
+ee.block:
+  %ee.val = load i8, ptr %ee.addr, align 1
+  store i16 0, ptr %store.area, align 2
+  %ee.cmp = icmp eq i8 %ee.val, 0
+  br i1 %ee.cmp, label %for.inc, label %invalid.block
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 10
+  br i1 %counted.cond, label %invalid.block, label %for.body
+
+invalid.block:
+  unreachable
+}
+
 
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

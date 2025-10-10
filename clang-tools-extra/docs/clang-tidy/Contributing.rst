@@ -33,6 +33,9 @@ If CMake is configured with ``CLANG_TIDY_ENABLE_STATIC_ANALYZER=NO``,
 :program:`clang-tidy` will not be built with support for the
 ``clang-analyzer-*`` checks or the ``mpi-*`` checks.
 
+If CMake is configured with ``CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS=NO``,
+:program:`clang-tidy` will not be built with support for query based checks. 
+
 
 .. _AST Matchers: https://clang.llvm.org/docs/LibASTMatchers.html
 .. _PPCallbacks: https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html
@@ -433,7 +436,7 @@ in the release notes, as the first sentence in the doxygen comments in the heade
 for your check class and as the first sentence of the check documentation.  Avoid the
 phrase "this check" in your check summary and check documentation.
 
-If your check relates to a published coding guideline (C++ Core Guidelines, MISRA, etc.)
+If your check relates to a published coding guideline (C++ Core Guidelines, SEI CERT, etc.)
 or style guide, provide links to the relevant guideline or style guide sections in your
 check documentation.
 

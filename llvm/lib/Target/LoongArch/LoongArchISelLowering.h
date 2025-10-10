@@ -57,7 +57,10 @@ enum NodeType : unsigned {
   MOD_WU,
 
   // FPR<->GPR transfer operations
+  MOVGR2FR_W,
   MOVGR2FR_W_LA64,
+  MOVGR2FR_D,
+  MOVGR2FR_D_LO_HI,
   MOVFR2GR_S_LA64,
   MOVFCSR2GR,
   MOVGR2FCSR,
@@ -146,6 +149,9 @@ enum NodeType : unsigned {
   VREPLGR2VR,
   XVPERMI,
   XVPERM,
+  XVREPLVE0,
+  XVREPLVE0Q,
+  XVINSVE0,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -332,6 +338,17 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool shouldScalarizeBinop(SDValue VecOp) const override;
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                               unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
+
+  /// Check if a constant splat can be generated using [x]vldi, where imm[12]
+  /// is 1.
+  std::pair<bool, uint64_t>
+  isImmVLDILegalForMode1(const APInt &SplatValue,
+                         const unsigned SplatBitSize) const;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
@@ -397,6 +414,7 @@ private:
   SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

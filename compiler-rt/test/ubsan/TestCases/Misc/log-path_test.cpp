@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
 

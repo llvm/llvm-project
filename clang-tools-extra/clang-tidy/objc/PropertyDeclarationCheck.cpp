@@ -1,4 +1,4 @@
-//===--- PropertyDeclarationCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,8 +39,11 @@ static FixItHint generateFixItHint(const ObjCPropertyDecl *Decl,
   auto NewName = Decl->getName().str();
   size_t Index = 0;
   if (Style == CategoryProperty) {
-    Index = Name.find_first_of('_') + 1;
-    NewName.replace(0, Index - 1, Name.substr(0, Index - 1).lower());
+    size_t UnderScorePos = Name.find_first_of('_');
+    if (UnderScorePos != llvm::StringRef::npos) {
+      Index = UnderScorePos + 1;
+      NewName.replace(0, Index - 1, Name.substr(0, Index - 1).lower());
+    }
   }
   if (Index < Name.size()) {
     NewName[Index] = tolower(NewName[Index]);

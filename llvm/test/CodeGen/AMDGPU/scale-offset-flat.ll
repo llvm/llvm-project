@@ -28,27 +28,14 @@ entry:
 }
 
 define amdgpu_ps float @flat_load_b32_idxprom_wrong_stride(ptr align 4 inreg %p, i32 %idx) {
-; SDAG-LABEL: flat_load_b32_idxprom_wrong_stride:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
-; SDAG-NEXT:    flat_load_b32 v0, v[0:1]
-; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-LABEL: flat_load_b32_idxprom_wrong_stride:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
-; GISEL-NEXT:    flat_load_b32 v0, v[0:1]
-; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: flat_load_b32_idxprom_wrong_stride:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
+; GCN-NEXT:    flat_load_b32 v0, v[0:1]
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds <2 x float>, ptr %p, i64 %idxprom
@@ -337,11 +324,9 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-LABEL: flat_atomicrmw_b64_rtn_idxprom:
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 3, s[0:1]
-; SDAG-NEXT:    s_mov_b32 s0, src_flat_scratch_base_hi
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; SDAG-NEXT:    v_xor_b32_e32 v0, s0, v3
+; SDAG-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v3
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
@@ -363,10 +348,9 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; SDAG-NEXT:    s_cbranch_execz .LBB21_2
 ; SDAG-NEXT:  .LBB21_4: ; %atomicrmw.private
-; SDAG-NEXT:    s_mov_b32 s1, src_flat_scratch_base_lo
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; SDAG-NEXT:    v_subrev_nc_u32_e32 v0, s1, v2
+; SDAG-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v2
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; SDAG-NEXT:    scratch_load_b64 v[0:1], v4, off
@@ -380,17 +364,12 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ;
 ; GISEL-LABEL: flat_atomicrmw_b64_rtn_idxprom:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_mov_b32 s2, src_flat_scratch_base_hi
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v0
-; GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[2:3]
+; GISEL-NEXT:    v_lshl_add_u64 v[4:5], v[2:3], 3, s[0:1]
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v4, v0
-; GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v1, vcc_lo
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_xor_b32_e32 v0, s2, v5
+; GISEL-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v5
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GISEL-NEXT:    s_and_saveexec_b32 s2, vcc_lo
@@ -406,16 +385,15 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    s_branch .LBB21_5
 ; GISEL-NEXT:  .LBB21_3: ; %atomicrmw.global
 ; GISEL-NEXT:    v_mov_b64_e32 v[0:1], 1
-; GISEL-NEXT:    ; implicit-def: $vgpr4
+; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    flat_atomic_add_u64 v[0:1], v2, v[0:1], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s2
 ; GISEL-NEXT:    s_cbranch_execz .LBB21_2
 ; GISEL-NEXT:  .LBB21_4: ; %atomicrmw.private
-; GISEL-NEXT:    s_mov_b32 s1, src_flat_scratch_base_lo
 ; GISEL-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    v_subrev_nc_u32_e32 v0, s1, v4
+; GISEL-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GISEL-NEXT:    scratch_load_b64 v[0:1], v4, off

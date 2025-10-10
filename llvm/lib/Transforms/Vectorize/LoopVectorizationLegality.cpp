@@ -293,9 +293,8 @@ void LoopVectorizeHints::getHintsFromMetadata() {
 }
 
 void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
-  if (!Name.starts_with(Prefix()))
+  if (!Name.consume_front(Prefix()))
     return;
-  Name = Name.substr(Prefix().size(), StringRef::npos);
 
   const ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Arg);
   if (!C)
@@ -1878,11 +1877,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
 
   // Make sure that the load address is not loop invariant; we want an
   // address calculation that we can rotate to the next vector iteration.
-  const SCEV *PtrScev = PSE.getSE()->getSCEV(Ptr);
-  if (!isa<SCEVAddRecExpr>(PtrScev)) {
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSE()->getSCEV(Ptr));
+  if (!AR || AR->getLoop() != TheLoop || !AR->isAffine()) {
     reportVectorizationFailure(
         "Uncountable exit condition depends on load with an address that is "
-        "not an add recurrence",
+        "not an add recurrence in the loop",
         "EarlyExitLoadInvariantAddress", ORE, TheLoop);
     return false;
   }
@@ -1903,11 +1902,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   SafetyInfo.computeLoopSafetyInfo(TheLoop);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
-  // FIXME: Currently, other restrictions prevent us from reaching this point
-  //        with a loop where the uncountable exit condition is determined
-  //        by a conditional load.
-  assert(SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop) &&
-         "Unhandled control flow in uncountable exit loop with side effects");
+  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+    reportVectorizationFailure(
+        "Load for uncountable exit not guaranteed to execute",
+        "ConditionalUncountableExitLoad", ORE, TheLoop);
+    return false;
+  }
 
   // Prohibit any potential aliasing with any instruction in the loop which
   // might store to memory.

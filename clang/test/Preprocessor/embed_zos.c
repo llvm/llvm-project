@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -std=c23 %s -fsyntax-only --embed-dir=%t -verify
 // expected-no-diagnostics
 
-// REQUIRES: shell, system-zos
+// REQUIRES: system-zos
 
 const char data[] = {
 #embed <media/art.txt>

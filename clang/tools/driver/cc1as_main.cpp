@@ -480,7 +480,10 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI) {
+    return Diags.Report(diag::err_fe_unable_to_create_subtarget)
+           << Opts.CPU << FS.empty() << FS;
+  }
 
   MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr,
                 &MCOptions);
@@ -666,6 +669,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagClient->setPrefix("clang -cc1as");
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
+  auto VFS = vfs::getRealFileSystem();
+
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
   ScopedFatalErrorHandler FatalErrorHandler
@@ -704,7 +709,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
   }
 
   // Execute the invocation, unless there were parsing errors.

@@ -8,4 +8,4 @@ RUN: not %run %t            2>&1 | FileCheck %s
 CHECK-DAG: BINGO
 CHECK-DAG: ERROR: libFuzzer: deadly signal
 
-RUN: trap "%run %t -handle_trap=0" TRAP
+RUN: bash -c "trap '%run %t -handle_trap=0' TRAP"

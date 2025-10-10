@@ -47,6 +47,8 @@ class LoopOp;
 
 namespace clang::CIRGen {
 
+struct CGCoroData;
+
 class CIRGenFunction : public CIRGenTypeCache {
 public:
   CIRGenModule &cgm;
@@ -66,12 +68,28 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  // Holds coroutine data if the current function is a coroutine. We use a
+  // wrapper to manage its lifetime, so that we don't have to define CGCoroData
+  // in this header.
+  struct CGCoroInfo {
+    std::unique_ptr<CGCoroData> data;
+    CGCoroInfo();
+    ~CGCoroInfo();
+  };
+  CGCoroInfo curCoro;
+
+  bool isCoroutine() const { return curCoro.data != nullptr; }
+
   /// The temporary alloca to hold the return value. This is
   /// invalid iff the function has no return value.
   Address returnValue = Address::invalid();
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
+
+  llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
+      lambdaCaptureFields;
+  clang::FieldDecl *lambdaThisCaptureField = nullptr;
 
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
@@ -91,9 +109,13 @@ public:
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
+  /// This is the inner-most code context, which includes blocks.
+  const clang::Decl *curCodeDecl = nullptr;
 
-  /// The function for which code is currently being generated.
-  cir::FuncOp curFn;
+  /// The current function or global initializer that is generated code for.
+  /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
+  /// global initializers.
+  mlir::Operation *curFn = nullptr;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -110,7 +132,11 @@ public:
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
 
-  mlir::Block *getCurFunctionEntryBlock() { return &curFn.getRegion().front(); }
+  mlir::Block *getCurFunctionEntryBlock() {
+    // We currently assume this isn't called for a global initializer.
+    auto fn = mlir::cast<cir::FuncOp>(curFn);
+    return &fn.getRegion().front();
+  }
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
@@ -467,55 +493,55 @@ public:
   ConstantEmission tryEmitAsConstant(const MemberExpr *me);
 
   struct AutoVarEmission {
-    const clang::VarDecl *Variable;
+    const clang::VarDecl *variable;
     /// The address of the alloca for languages with explicit address space
     /// (e.g. OpenCL) or alloca casted to generic pointer for address space
     /// agnostic languages (e.g. C++). Invalid if the variable was emitted
     /// as a global constant.
-    Address Addr;
+    Address addr;
 
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
-    bool IsConstantAggregate = false;
+    bool isConstantAggregate = false;
 
     /// True if the variable is a __block variable that is captured by an
     /// escaping block.
-    bool IsEscapingByRef = false;
+    bool isEscapingByRef = false;
 
     /// True if the variable was emitted as an offload recipe, and thus doesn't
     /// have the same sort of alloca initialization.
-    bool EmittedAsOffload = false;
+    bool emittedAsOffload = false;
 
-    mlir::Value NRVOFlag{};
+    mlir::Value nrvoFlag{};
 
     struct Invalid {};
-    AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}
+    AutoVarEmission(Invalid) : variable(nullptr), addr(Address::invalid()) {}
 
     AutoVarEmission(const clang::VarDecl &variable)
-        : Variable(&variable), Addr(Address::invalid()) {}
+        : variable(&variable), addr(Address::invalid()) {}
 
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
 
-    bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
+    bool wasEmittedAsGlobal() const { return !addr.isValid(); }
 
-    bool wasEmittedAsOffloadClause() const { return EmittedAsOffload; }
+    bool wasEmittedAsOffloadClause() const { return emittedAsOffload; }
 
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
     /// address space for address space agnostic languages.
-    Address getAllocatedAddress() const { return Addr; }
+    Address getAllocatedAddress() const { return addr; }
 
     // Changes the stored address for the emission.  This function should only
     // be used in extreme cases, and isn't required to model normal AST
     // initialization/variables.
-    void setAllocatedAddress(Address A) { Addr = A; }
+    void setAllocatedAddress(Address a) { addr = a; }
 
     /// Returns the address of the object within this declaration.
     /// Note that this does not chase the forwarding pointer for
     /// __block decls.
     Address getObjectAddress(CIRGenFunction &cgf) const {
-      if (!IsEscapingByRef)
-        return Addr;
+      if (!isEscapingByRef)
+        return addr;
 
       assert(!cir::MissingFeatures::opAllocaEscapeByReference());
       return Address::invalid();
@@ -529,6 +555,33 @@ public:
   cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
                                               cir::GlobalOp gv,
                                               cir::GetGlobalOp gvAddr);
+
+  /// Enter the cleanups necessary to complete the given phase of destruction
+  /// for a destructor. The end result should call destructors on members and
+  /// base classes in reverse order of their construction.
+  void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
+
+  /// Determines whether an EH cleanup is required to destroy a type
+  /// with the given destruction kind.
+  /// TODO(cir): could be shared with Clang LLVM codegen
+  bool needsEHCleanup(QualType::DestructionKind kind) {
+    switch (kind) {
+    case QualType::DK_none:
+      return false;
+    case QualType::DK_cxx_destructor:
+    case QualType::DK_objc_weak_lifetime:
+    case QualType::DK_nontrivial_c_struct:
+      return getLangOpts().Exceptions;
+    case QualType::DK_objc_strong_lifetime:
+      return getLangOpts().Exceptions &&
+             cgm.getCodeGenOpts().ObjCAutoRefCountExceptions;
+    }
+    llvm_unreachable("bad destruction kind");
+  }
+
+  CleanupKind getCleanupKind(QualType::DestructionKind kind) {
+    return needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup;
+  }
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -705,6 +758,14 @@ public:
 
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
                                    mlir::Type fieldType, unsigned index);
+
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
 
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
@@ -1056,7 +1117,9 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
-  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+  void emitAnyExprToExn(const Expr *e, Address addr);
+
+  void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
 
@@ -1154,6 +1217,10 @@ public:
 
   void emitConstructorBody(FunctionArgList &args);
 
+  mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
+  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 
   void emitDestructorBody(FunctionArgList &args);
@@ -1182,6 +1249,8 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitCXXDeleteExpr(const CXXDeleteExpr *e);
 
   void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
                              bool forVirtualBase, bool delegating,
@@ -1212,11 +1281,19 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
+  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
+                               mlir::Type ElementTy, Address BeginPtr,
+                               mlir::Value NumElements,
+                               mlir::Value AllocSizeWithoutCookie);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
+
+  void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
+                        Address ptr);
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
@@ -1230,7 +1307,12 @@ public:
   void emitDelegatingCXXConstructorCall(const CXXConstructorDecl *ctor,
                                         const FunctionArgList &args);
 
+  void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
+                      QualType deleteTy);
+
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+
+  mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -1254,11 +1336,15 @@ public:
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
+  LValue emitPredefinedLValue(const PredefinedExpr *e);
+
   mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
 
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
+
+  void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
@@ -1278,6 +1364,9 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
+                                  CallArgList &callArgs);
 
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
@@ -1341,6 +1430,9 @@ public:
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
+  void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
+  void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
+
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
@@ -1376,6 +1468,10 @@ public:
   LValue emitLValue(const clang::Expr *e);
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitLValueForLambdaField(const FieldDecl *field);
+  LValue emitLValueForLambdaField(const FieldDecl *field,
+                                  mlir::Value thisValue);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -1436,7 +1532,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
-  LValue emitStringLiteralLValue(const StringLiteral *e);
+  LValue emitStringLiteralLValue(const StringLiteral *e,
+                                 llvm::StringRef name = ".str");
 
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
@@ -1690,6 +1787,10 @@ private:
     ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
   };
 
+  // Keep track of the last place we inserted a 'recipe' so that we can insert
+  // the next one in lexical order.
+  mlir::OpBuilder::InsertPoint lastRecipeLocation;
+
 public:
   // Helper type used to store the list of important information for a 'data'
   // clause variable, or a 'cache' variable reference.
@@ -1697,9 +1798,17 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    // The type of the original variable reference: that is, after 'bounds' have
+    // removed pointers/array types/etc. So in the case of int arr[5], and a
+    // private(arr[1]), 'origType' is 'int', but 'baseType' is 'int[5]'.
+    QualType origType;
     QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
+    // The list of types that we found when going through the bounds, which we
+    // can use to properly set the alloca section.
+    llvm::SmallVector<QualType> boundTypes;
   };
+
   // Gets the collection of info required to lower and OpenACC clause or cache
   // construct variable reference.
   OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);
