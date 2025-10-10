@@ -128,6 +128,22 @@ multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                     IsWorstCase>;
 }
 
+multiclass LMULSEWWriteResMXSEWVariant<string name, SchedPredicateBase Pred,
+                                       list<ProcResourceKind> predResources,
+                                       int predLat, list<int> predAcquireCycles,
+                                       list<int> predReleaseCycles,
+                                       list<ProcResourceKind> noPredResources,
+                                       int noPredLat, list<int> noPredAcquireCycles,
+                                       list<int> noPredReleaseCycles,
+                                       string mx, int sew, bit IsWorstCase> {
+  defm "" : LMULWriteResVariantImpl<name, name # "_" # mx # "_E" # sew, Pred, predResources,
+                                    predLat, predAcquireCycles,
+                                    predReleaseCycles, noPredResources,
+                                    noPredLat, noPredAcquireCycles,
+                                    noPredReleaseCycles,
+                                    IsWorstCase>;
+}
+
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
 // ReadAdvance for each (name, LMUL) pair and for each LMUL in each of the
 // SchedMxList variants above. Each multiclass is responsible for defining

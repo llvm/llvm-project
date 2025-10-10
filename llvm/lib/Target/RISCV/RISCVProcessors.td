@@ -338,7 +338,8 @@ def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
                                        FeatureStdExtZvl1024b,
                                        FeatureVendorXSiFivecdiscarddlone,
                                        FeatureVendorXSiFivecflushdlone],
-                                      SiFiveIntelligenceTuneFeatures>;
+                                      !listconcat(SiFiveIntelligenceTuneFeatures,
+                                                  [TuneHasSingleElementVecFP64])>;
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
