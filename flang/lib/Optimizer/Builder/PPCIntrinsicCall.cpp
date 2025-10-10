@@ -2383,7 +2383,7 @@ PPCIntrinsicLibrary::genVecSplat(mlir::Type resultType,
   auto context{builder.getContext()};
   auto argBases{getBasesForArgs(args)};
 
-  mlir::vector::SplatOp splatOp{nullptr};
+  mlir::vector::BroadcastOp splatOp{nullptr};
   mlir::Type retTy{nullptr};
   switch (vop) {
   case VecOp::Splat: {
@@ -2391,9 +2391,9 @@ PPCIntrinsicLibrary::genVecSplat(mlir::Type resultType,
     auto vecTyInfo{getVecTypeFromFir(argBases[0])};
 
     auto extractOp{genVecExtract(resultType, args)};
-    splatOp =
-        mlir::vector::SplatOp::create(builder, loc, *(extractOp.getUnboxed()),
-                                      vecTyInfo.toMlirVectorType(context));
+    splatOp = mlir::vector::BroadcastOp::create(
+        builder, loc, vecTyInfo.toMlirVectorType(context),
+        *(extractOp.getUnboxed()));
     retTy = vecTyInfo.toFirVectorType();
     break;
   }
@@ -2401,8 +2401,8 @@ PPCIntrinsicLibrary::genVecSplat(mlir::Type resultType,
     assert(args.size() == 1);
     auto vecTyInfo{getVecTypeFromEle(argBases[0])};
 
-    splatOp = mlir::vector::SplatOp::create(
-        builder, loc, argBases[0], vecTyInfo.toMlirVectorType(context));
+    splatOp = mlir::vector::BroadcastOp::create(
+        builder, loc, vecTyInfo.toMlirVectorType(context), argBases[0]);
     retTy = vecTyInfo.toFirVectorType();
     break;
   }
@@ -2412,8 +2412,8 @@ PPCIntrinsicLibrary::genVecSplat(mlir::Type resultType,
     auto intOp{builder.createConvert(loc, eleTy, argBases[0])};
 
     // the intrinsic always returns vector(integer(4))
-    splatOp = mlir::vector::SplatOp::create(builder, loc, intOp,
-                                            mlir::VectorType::get(4, eleTy));
+    splatOp = mlir::vector::BroadcastOp::create(
+        builder, loc, mlir::VectorType::get(4, eleTy), intOp);
     retTy = fir::VectorType::get(4, eleTy);
     break;
   }
@@ -2444,7 +2444,8 @@ PPCIntrinsicLibrary::genVecXlds(mlir::Type resultType,
   auto addrConv{fir::ConvertOp::create(builder, loc, i64RefTy, addr)};
 
   auto addrVal{fir::LoadOp::create(builder, loc, addrConv)};
-  auto splatRes{mlir::vector::SplatOp::create(builder, loc, addrVal, i64VecTy)};
+  auto splatRes{
+      mlir::vector::BroadcastOp::create(builder, loc, i64VecTy, addrVal)};
 
   mlir::Value result{nullptr};
   if (mlirTy != splatRes.getType()) {

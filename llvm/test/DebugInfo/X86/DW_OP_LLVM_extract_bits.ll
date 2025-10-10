@@ -67,6 +67,8 @@ entry:
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_plus_uconst 0x3, DW_OP_deref_size 0x1, DW_OP_constu 0x38, DW_OP_shl, DW_OP_constu 0x39, DW_OP_shr, DW_OP_stack_value)
 ; CHECK: DW_AT_name ("z")
+; CHECK: DW_AT_location (DW_OP_fbreg -4, DW_OP_deref_size 0x8, DW_OP_stack_value)
+; CHECK: DW_AT_name ("q")
 
 define i32 @test4() !dbg !28 {
 entry:
@@ -74,6 +76,7 @@ entry:
   tail call void @llvm.dbg.declare(metadata ptr %0, metadata !29, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 31, 1)), !dbg !30
   tail call void @llvm.dbg.declare(metadata ptr %0, metadata !31, metadata !DIExpression(DW_OP_LLVM_extract_bits_sext, 1, 31)), !dbg !30
   tail call void @llvm.dbg.declare(metadata ptr %0, metadata !32, metadata !DIExpression(DW_OP_plus_uconst, 3, DW_OP_LLVM_extract_bits_zext, 1, 7)), !dbg !30
+  tail call void @llvm.dbg.declare(metadata ptr %0, metadata !33, metadata !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 64)), !dbg !30
   ret i32 0, !dbg !30
 }
 
@@ -116,3 +119,5 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !30 = !DILocation(line: 0, scope: !28)
 !31 = !DILocalVariable(name: "y", scope: !28, file: !3, type: !19)
 !32 = !DILocalVariable(name: "z", scope: !28, file: !3, type: !9)
+!33 = !DILocalVariable(name: "q", scope: !28, file: !3, type: !34)
+!34 = !DIBasicType(name: "uint64_t", size: 64, encoding: DW_ATE_unsigned)

@@ -42,19 +42,6 @@ private:
   llvm::StringLiteral Name;
 };
 
-class BoolEPStat : public EntryPointStat {
-  std::optional<bool> Value = {};
-
-public:
-  explicit BoolEPStat(llvm::StringLiteral Name);
-  unsigned value() const { return Value && *Value; }
-  void set(bool V) {
-    assert(!Value.has_value());
-    Value = V;
-  }
-  void reset() { Value = {}; }
-};
-
 // used by CounterEntryPointTranslationUnitStat
 class CounterEPStat : public EntryPointStat {
   using EntryPointStat::EntryPointStat;

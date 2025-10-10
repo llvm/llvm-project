@@ -26,6 +26,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include <atomic>
 #include <functional>
 #include <mutex>
 #include <optional>

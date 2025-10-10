@@ -510,6 +510,11 @@ public:
   const std::list<SourceName> &componentNames() const {
     return componentNames_;
   }
+  const std::map<SourceName, const parser::Expr *> &
+  originalKindParameterMap() const {
+    return originalKindParameterMap_;
+  }
+  void add_originalKindParameter(SourceName, const parser::Expr *);
 
   // If this derived type extends another, locate the parent component's symbol.
   const Symbol *GetParentComponent(const Scope &) const;
@@ -538,6 +543,8 @@ private:
   bool sequence_{false};
   bool isDECStructure_{false};
   bool isForwardReferenced_{false};
+  std::map<SourceName, const parser::Expr *> originalKindParameterMap_;
+
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);
 };

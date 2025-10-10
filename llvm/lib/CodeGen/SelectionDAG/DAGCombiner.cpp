@@ -18870,27 +18870,38 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
 
 static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                const TargetLowering &TLI) {
-  // We only do this if the target has legal ftrunc. Otherwise, we'd likely be
-  // replacing casts with a libcall. We also must be allowed to ignore -0.0
-  // because FTRUNC will return -0.0 for (-1.0, -0.0), but using integer
-  // conversions would return +0.0.
+  // We can fold the fpto[us]i -> [us]itofp pattern into a single ftrunc.
+  // If NoSignedZerosFPMath is enabled, this is a direct replacement.
+  // Otherwise, for strict math, we must handle edge cases:
+  // 1. For unsigned conversions, use FABS to handle negative cases. Take -0.0
+  // as example, it first becomes integer 0, and is converted back to +0.0.
+  // FTRUNC on its own could produce -0.0.
+
   // FIXME: We should be able to use node-level FMF here.
-  // TODO: If strict math, should we use FABS (+ range check for signed cast)?
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) ||
-      !DAG.getTarget().Options.NoSignedZerosFPMath)
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
     return SDValue();
 
   // fptosi/fptoui round towards zero, so converting from FP to integer and
   // back is the same as an 'ftrunc': [us]itofp (fpto[us]i X) --> ftrunc X
   SDValue N0 = N->getOperand(0);
   if (N->getOpcode() == ISD::SINT_TO_FP && N0.getOpcode() == ISD::FP_TO_SINT &&
-      N0.getOperand(0).getValueType() == VT)
-    return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+      N0.getOperand(0).getValueType() == VT) {
+    if (DAG.getTarget().Options.NoSignedZerosFPMath)
+      return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+  }
 
   if (N->getOpcode() == ISD::UINT_TO_FP && N0.getOpcode() == ISD::FP_TO_UINT &&
-      N0.getOperand(0).getValueType() == VT)
-    return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+      N0.getOperand(0).getValueType() == VT) {
+    if (DAG.getTarget().Options.NoSignedZerosFPMath)
+      return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+
+    // Strict math: use FABS to handle negative inputs correctly.
+    if (TLI.isFAbsFree(VT)) {
+      SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, N0.getOperand(0));
+      return DAG.getNode(ISD::FTRUNC, DL, VT, Abs);
+    }
+  }
 
   return SDValue();
 }

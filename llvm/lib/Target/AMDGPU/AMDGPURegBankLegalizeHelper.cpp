@@ -468,6 +468,38 @@ void RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
+  Register Lo, Hi;
+  switch (MI.getOpcode()) {
+  case AMDGPU::G_SMIN:
+  case AMDGPU::G_SMAX: {
+    // For signed operations, use sign extension
+    auto [Val0_Lo, Val0_Hi] = unpackSExt(MI.getOperand(1).getReg());
+    auto [Val1_Lo, Val1_Hi] = unpackSExt(MI.getOperand(2).getReg());
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+             .getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+             .getReg(0);
+    break;
+  }
+  case AMDGPU::G_UMIN:
+  case AMDGPU::G_UMAX: {
+    // For unsigned operations, use zero extension
+    auto [Val0_Lo, Val0_Hi] = unpackZExt(MI.getOperand(1).getReg());
+    auto [Val1_Lo, Val1_Hi] = unpackZExt(MI.getOperand(2).getReg());
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+             .getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+             .getReg(0);
+    break;
+  }
+  default:
+    llvm_unreachable("Unpack min/max lowering not implemented");
+  }
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(), {Lo, Hi});
+  MI.eraseFromParent();
+}
+
 static bool isSignedBFE(MachineInstr &MI) {
   if (GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI))
     return (GI->is(Intrinsic::amdgcn_sbfe));
@@ -654,6 +686,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case UnpackBitShift:
     return lowerUnpackBitShift(MI);
+  case UnpackMinMax:
+    return lowerUnpackMinMax(MI);
   case Ext32To64: {
     const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
     MachineInstrBuilder Hi;

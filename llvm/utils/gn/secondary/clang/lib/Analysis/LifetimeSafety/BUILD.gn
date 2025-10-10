@@ -1,0 +1,16 @@
+static_library("LifetimeSafety") {
+  output_name = "clangAnalysisLifetimeSafety"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [ "//clang/lib/Basic" ]
+  sources = [
+    "Checker.cpp",
+    "Facts.cpp",
+    "FactsGenerator.cpp",
+    "LifetimeAnnotations.cpp",
+    "LifetimeSafety.cpp",
+    "LiveOrigins.cpp",
+    "Loans.cpp",
+    "LoanPropagation.cpp",
+    "Origins.cpp",
+  ]
+}

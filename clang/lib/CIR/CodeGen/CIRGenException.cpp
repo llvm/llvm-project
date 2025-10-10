@@ -64,3 +64,11 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
   // Deactivate the cleanup block.
   assert(!cir::MissingFeatures::ehCleanupScope());
 }
+
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
+  if (s.getTryBlock()->body_empty())
+    return mlir::LogicalResult::success();
+
+  cgm.errorNYI("exitCXXTryStmt: CXXTryStmt with non-empty body");
+  return mlir::LogicalResult::success();
+}

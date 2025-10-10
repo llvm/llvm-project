@@ -428,33 +428,6 @@ func.func @test_linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
 
 // -----
 
-// CHECK-LABEL: linearize_vector_splat
-// CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x2xi32>
-func.func @linearize_vector_splat(%arg0: i32) -> vector<4x2xi32> {
-
-  // CHECK: %[[SPLAT:.*]] = vector.splat %[[ARG]] : vector<8xi32>
-  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[SPLAT]] : vector<8xi32> to vector<4x2xi32>
-  // CHECK: return %[[CAST]] : vector<4x2xi32>
-  %0 = vector.splat %arg0 : vector<4x2xi32>
-  return %0 : vector<4x2xi32>
-}
-
-// -----
-
-// CHECK-LABEL: linearize_scalable_vector_splat
-// CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x[2]xi32>
-func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
-
-  // CHECK: %[[SPLAT:.*]] = vector.splat %[[ARG]] : vector<[8]xi32>
-  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[SPLAT]] : vector<[8]xi32> to vector<4x[2]xi32>
-  // CHECK: return %[[CAST]] : vector<4x[2]xi32>
-  %0 = vector.splat %arg0 : vector<4x[2]xi32>
-  return %0 : vector<4x[2]xi32>
-
-}
-
-// -----
-
 // CHECK-LABEL: linearize_create_mask
 // CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<1x16xi1>
 func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {

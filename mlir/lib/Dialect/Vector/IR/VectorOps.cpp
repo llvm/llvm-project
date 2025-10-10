@@ -1665,10 +1665,10 @@ static bool hasZeroDimVectors(Operation *op) {
          llvm::any_of(op->getResultTypes(), hasZeroDimVectorType);
 }
 
-/// All BroadcastOps and SplatOps, as well as ShapeCastOps that only prepend
-/// 1s, are considered to be 'broadcastlike'.
+/// All BroadcastOps, as well as ShapeCastOps that only prepend 1s, are
+/// considered to be 'broadcastlike'.
 static bool isBroadcastLike(Operation *op) {
-  if (isa<BroadcastOp, SplatOp>(op))
+  if (isa<BroadcastOp>(op))
     return true;
 
   auto shapeCast = dyn_cast<ShapeCastOp>(op);
@@ -3249,22 +3249,17 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
 };
 
 /// Consider the defining operation `defOp` of `value`. If `defOp` is a
-/// vector.splat or a vector.broadcast with a scalar operand, return the scalar
-/// value that is splatted. Otherwise return null.
+/// vector.broadcast with a scalar operand, return the scalar value that is
+/// splatted. Otherwise return null.
 ///
-/// Examples:
+/// Example:
 ///
-/// scalar_source --> vector.splat --> value     - return scalar_source
 /// scalar_source --> vector.broadcast --> value - return scalar_source
 static Value getScalarSplatSource(Value value) {
   // Block argument:
   Operation *defOp = value.getDefiningOp();
   if (!defOp)
     return {};
-
-  // Splat:
-  if (auto splat = dyn_cast<vector::SplatOp>(defOp))
-    return splat.getInput();
 
   auto broadcast = dyn_cast<vector::BroadcastOp>(defOp);
 
@@ -7509,41 +7504,6 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
            ScatterFolder, ExpandLoadFolder, CompressStoreFolder,
            StridedSliceConstantMaskFolder, TransposeFolder>(
           patterns.getContext(), benefit);
-}
-
-//===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
-  auto constOperand = adaptor.getInput();
-  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
-    return {};
-
-  // SplatElementsAttr::get treats single value for second arg as being a splat.
-  return SplatElementsAttr::get(getType(), {constOperand});
-}
-
-// Canonicalizer for vector.splat. It always gets canonicalized to a
-// vector.broadcast.
-class SplatToBroadcastPattern final : public OpRewritePattern<SplatOp> {
-public:
-  using Base::Base;
-  LogicalResult matchAndRewrite(SplatOp splatOp,
-                                PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splatOp, splatOp.getType(),
-                                                     splatOp.getOperand());
-    return success();
-  }
-};
-void SplatOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                          MLIRContext *context) {
-  results.add<SplatToBroadcastPattern>(context);
-}
-
-void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges.front());
 }
 
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,

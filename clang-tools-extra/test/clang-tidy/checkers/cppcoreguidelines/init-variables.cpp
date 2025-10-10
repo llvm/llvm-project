@@ -148,3 +148,23 @@ namespace gh112089 {
     }
 } // namespace gh112089
 
+namespace gh161978 {
+  void test() {
+    bool (*fp1)(int);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'fp1' is not initialized [cppcoreguidelines-init-variables]
+    // CHECK-FIXES: bool (*fp1)(int) = nullptr;
+    bool (*fp2)(int, int);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'fp2' is not initialized [cppcoreguidelines-init-variables]
+    // CHECK-FIXES: bool (*fp2)(int, int) = nullptr;
+    bool (*fp3)(int, int, int);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'fp3' is not initialized [cppcoreguidelines-init-variables]
+    // CHECK-FIXES: bool (*fp3)(int, int, int) = nullptr;
+    bool (*fp4)(int, int, int, ...);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'fp4' is not initialized [cppcoreguidelines-init-variables]
+    // CHECK-FIXES: bool (*fp4)(int, int, int, ...) = nullptr;
+    bool (*fp5)(int, int), (*fp6)(int, int);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'fp5' is not initialized [cppcoreguidelines-init-variables]
+    // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: variable 'fp6' is not initialized [cppcoreguidelines-init-variables]
+    // CHECK-FIXES: bool (*fp5)(int, int) = nullptr, (*fp6)(int, int) = nullptr;
+  }
+}

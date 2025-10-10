@@ -22,7 +22,6 @@ However, note that with ``LLVM_ENABLE_STATS`` disabled, only storage of the valu
 If you want to define a statistic only for entry point, EntryPointStats.h has four classes at your disposal:
 
 
-- ``BoolEPStat`` - a boolean value assigned at most once per entry point. For example: "has the inline limit been reached".
 - ``UnsignedEPStat`` - an unsigned value assigned at most once per entry point. For example: "the number of source characters in an entry-point body".
 - ``CounterEPStat`` - an additive statistic. It starts with 0 and you can add to it as many times as needed. For example: "the number of bugs discovered".
 - ``UnsignedMaxEPStat`` - a maximizing statistic. It starts with 0 and when you join it with a value, it picks the maximum of the previous value and the new one. For example, "the longest execution path of a bug".

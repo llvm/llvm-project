@@ -10,6 +10,7 @@ CodeGen/AArch64/llvm-masked-gather-legal-for-sve.ll
 CodeGen/AArch64/llvm-masked-scatter-legal-for-sve.ll
 CodeGen/AArch64/selectopt-cast.ll
 CodeGen/AArch64/selectopt.ll
+CodeGen/AMDGPU/amdgpu-attributor-min-agpr-alloc.ll
 CodeGen/AMDGPU/amdgpu-attributor-no-agpr.ll
 CodeGen/AMDGPU/amdgpu-codegenprepare-fdiv.ll
 CodeGen/AMDGPU/amdgpu-codegenprepare-sqrt.ll

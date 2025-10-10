@@ -1297,6 +1297,8 @@ public:
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
+  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
+
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
 
