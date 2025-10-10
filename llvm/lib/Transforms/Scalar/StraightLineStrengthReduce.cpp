@@ -52,6 +52,9 @@
 // S1: X = &B[i * S]
 // S2: Y = &B[i * S']   => X + i * (S' - S)
 //
+// PS: Stride delta write on form Mul is usually non-profitable, and Base delta
+// write sometimes is profitable, so we do not support them on form Mul.
+//
 // This rewriting is in general a good idea. The code patterns we focus on
 // usually come from loop unrolling, so the delta is likely the same
 // across iterations and can be reused. When that happens, the optimized form
