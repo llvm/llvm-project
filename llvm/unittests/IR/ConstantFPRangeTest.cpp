@@ -879,6 +879,28 @@ TEST_F(ConstantFPRangeTest, cast) {
                                        APFloat::getInf(Sem, /*Negative=*/false))
                 .cast(F8NanOnlySem),
             ConstantFPRange::getFull(F8NanOnlySem));
+  // other rounding modes
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/true),
+                                 APFloat::getSmallest(Sem, /*Negative=*/false))
+          .cast(F32Sem, APFloat::rmTowardNegative),
+      ConstantFPRange::getNonNaN(
+          APFloat::getSmallest(F32Sem, /*Negative=*/true),
+          APFloat::getZero(F32Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/true),
+                                 APFloat::getSmallest(Sem, /*Negative=*/false))
+          .cast(F32Sem, APFloat::rmTowardPositive),
+      ConstantFPRange::getNonNaN(
+          APFloat::getZero(F32Sem, /*Negative=*/true),
+          APFloat::getSmallest(F32Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::getNonNaN(
+          APFloat::getSmallestNormalized(Sem, /*Negative=*/true),
+          APFloat::getSmallestNormalized(Sem, /*Negative=*/false))
+          .cast(F32Sem, APFloat::rmTowardZero),
+      ConstantFPRange::getNonNaN(APFloat::getZero(F32Sem, /*Negative=*/true),
+                                 APFloat::getZero(F32Sem, /*Negative=*/false)));
 
   EnumerateValuesInConstantFPRange(
       ConstantFPRange::getFull(APFloat::Float8E4M3()),
