@@ -1108,7 +1108,7 @@ map_from_llvmChecksumKind(LLVMChecksumKind CSKind) {
   llvm_unreachable("Unhandled Checksum Kind");
 }
 
-LLVMMetadataRef LLVMDIBuilderCreateFileWithCheckSum(
+LLVMMetadataRef LLVMDIBuilderCreateFileWithChecksum(
     LLVMDIBuilderRef Builder, const char *Filename, size_t FilenameLen,
     const char *Directory, size_t DirectoryLen, LLVMChecksumKind ChecksumKind,
     const char *Checksum, size_t ChecksumLen, const char *Source,
@@ -1120,8 +1120,6 @@ LLVMMetadataRef LLVMDIBuilderCreateFileWithCheckSum(
   std::optional<StringRef> Src;
   if (SourceLen > 0)
     Src = StringRef(Source, SourceLen);
-  else
-    Src = std::nullopt;
   return wrap(unwrap(Builder)->createFile(StringRef(Filename, FilenameLen),
                                           StringRef(Directory, DirectoryLen),
                                           CSInfo, Src));

@@ -344,7 +344,7 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder,
  * \param Souce        The embedded source.
  * \param SourceLen    The length of the source.
  */
-LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateFileWithCheckSum(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderCreateFileWithChecksum(
     LLVMDIBuilderRef Builder, const char *Filename, size_t FilenameLen,
     const char *Directory, size_t DirectoryLen, LLVMChecksumKind ChecksumKind,
     const char *Checksum, size_t ChecksumLen, const char *Source,

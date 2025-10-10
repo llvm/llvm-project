@@ -43,7 +43,7 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef File = LLVMDIBuilderCreateFile(DIB, Filename,
     strlen(Filename), ".", 1);
 
-  LLVMMetadataRef FileCS = LLVMDIBuilderCreateFileWithCheckSum(
+  LLVMMetadataRef FileCS = LLVMDIBuilderCreateFileWithChecksum(
       DIB, Filename, strlen(Filename), ".", 1, CSK_MD5, "1234", 4, "source", 6);
 
   LLVMMetadataRef CompileUnit = LLVMDIBuilderCreateCompileUnit(
