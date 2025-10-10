@@ -459,7 +459,8 @@ GccIRCompiler::~GccIRCompiler() {
 
 void GccIRCompiler::loadPlugin() {
   std::string Error;
-  plugin = llvm::sys::DynamicLibrary::getPermanentLibrary(ctx.arg.plugin.data(), &Error);
+  plugin = llvm::sys::DynamicLibrary::getPermanentLibrary(ctx.arg.plugin.data(),
+                                                          &Error);
   if (!plugin.isValid()) {
     error(Error);
     return;

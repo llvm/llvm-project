@@ -24,8 +24,8 @@
 #include "lld/config.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <vector>
 
