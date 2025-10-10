@@ -148,6 +148,62 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   return IsChanged;
 }
 
+// Legacy PM version
+static bool runUniformIntrinsicCombine(Module &M, ModulePass &P) {
+  bool IsChanged = false;
+  ValueMap<const Value *, bool> Tracker;
+
+  for (Function &F : M) {
+    switch (F.getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane64:
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_ballot:
+      break;
+    default:
+      continue;
+    }
+
+    for (User *U : make_early_inc_range(F.users())) {
+      auto *II = cast<IntrinsicInst>(U);
+      Function *ParentF = II->getFunction();
+      auto &UI = P.getAnalysis<UniformityInfoWrapperPass>(*ParentF)
+                     .getUniformityInfo();
+      IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
+    }
+  }
+  return IsChanged;
+}
+
+namespace {
+class AMDGPUUniformIntrinsicCombineLegacy : public ModulePass {
+public:
+  static char ID;
+  AMDGPUUniformIntrinsicCombineLegacy() : ModulePass(ID) {
+    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+private:
+  bool runOnModule(Module &M) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+  }
+};
+} // namespace
+
+char AMDGPUUniformIntrinsicCombineLegacy::ID = 0;
+char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
+    AMDGPUUniformIntrinsicCombineLegacy::ID;
+
+bool AMDGPUUniformIntrinsicCombineLegacy::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+  return runUniformIntrinsicCombine(M, *this);
+}
+
 PreservedAnalyses
 AMDGPUUniformIntrinsicCombinePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!runUniformIntrinsicCombine(M, AM))
@@ -156,4 +212,15 @@ AMDGPUUniformIntrinsicCombinePass::run(Module &M, ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<UniformityInfoAnalysis>();
   return PA;
+}
+
+INITIALIZE_PASS_BEGIN(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
+                      "AMDGPU Uniform Intrinsic Combine", false, false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
+                    "AMDGPU Uniform Intrinsic Combine", false, false)
+
+ModulePass *llvm::createAMDGPUUniformIntrinsicCombineLegacyPass() {
+  return new AMDGPUUniformIntrinsicCombineLegacy();
 }

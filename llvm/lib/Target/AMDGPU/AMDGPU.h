@@ -562,6 +562,10 @@ public:
 void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
 extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
+void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
+extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
+ModulePass *createAMDGPUUniformIntrinsicCombineLegacyPass();
+
 struct AMDGPUUniformIntrinsicCombinePass
     : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
