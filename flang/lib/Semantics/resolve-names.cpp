@@ -7,6 +7,7 @@
 
 #include "resolve-names.h"
 #include "assignment.h"
+#include "data-to-inits.h"
 #include "definable.h"
 #include "mod-file.h"
 #include "pointer-assignment.h"
@@ -1085,8 +1086,12 @@ public:
       const parser::Name &, const parser::InitialDataTarget &);
   void PointerInitialization(
       const parser::Name &, const parser::ProcPointerInit &);
+  bool CheckNonPointerInitialization(
+      const parser::Name &, bool inLegacyDataInitialization);
   void NonPointerInitialization(
       const parser::Name &, const parser::ConstantExpr &);
+  void LegacyDataInitialization(const parser::Name &,
+      const std::list<common::Indirection<parser::DataStmtValue>> &values);
   void CheckExplicitInterface(const parser::Name &);
   void CheckBindings(const parser::TypeBoundProcedureStmt::WithoutInterface &);
 
@@ -9029,6 +9034,14 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               ultimate.set(Symbol::Flag::InDataStmt);
             }
           },
+          [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
+            Walk(values);
+            if (inComponentDecl) {
+              LegacyDataInitialization(name, values);
+            } else {
+              ultimate.set(Symbol::Flag::InDataStmt);
+            }
+          },
           [&](const parser::NullInit &null) { // => NULL()
             Walk(null);
             if (auto nullInit{EvaluateExpr(null)}) {
@@ -9061,11 +9074,6 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               Walk(target);
               ultimate.set(Symbol::Flag::InDataStmt);
             }
-          },
-          [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
-            // Handled later in data-to-inits conversion
-            ultimate.set(Symbol::Flag::InDataStmt);
-            Walk(values);
           },
       },
       init.u);
@@ -9137,34 +9145,80 @@ void DeclarationVisitor::PointerInitialization(
   }
 }
 
-void DeclarationVisitor::NonPointerInitialization(
-    const parser::Name &name, const parser::ConstantExpr &expr) {
+bool DeclarationVisitor::CheckNonPointerInitialization(
+    const parser::Name &name, bool inLegacyDataInitialization) {
   if (!context().HasError(name.symbol)) {
     Symbol &ultimate{name.symbol->GetUltimate()};
     if (!context().HasError(ultimate)) {
-      if (IsPointer(ultimate)) {
+      if (IsPointer(ultimate) && !inLegacyDataInitialization) {
         Say(name,
             "'%s' is a pointer but is not initialized like one"_err_en_US);
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         if (details->init()) {
           SayWithDecl(name, *name.symbol,
               "'%s' has already been initialized"_err_en_US);
-        } else if (details->isCDefined()) {
-          context().Warn(common::UsageWarning::CdefinedInit, name.source,
-              "CDEFINED variable should not have an initializer"_warn_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
-        } else if (ultimate.owner().IsParameterizedDerivedType()) {
-          // Save the expression for per-instantiation analysis.
-          details->set_unanalyzedPDTComponentInit(&expr.thing.value());
-        } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
-                       ultimate, expr, expr.thing.value().source)}) {
-          details->set_init(std::move(*folded));
-          ultimate.set(Symbol::Flag::InDataStmt, false);
+        } else {
+          if (details->isCDefined()) {
+            context().Warn(common::UsageWarning::CdefinedInit, name.source,
+                "CDEFINED variable should not have an initializer"_warn_en_US);
+          }
+          return true;
         }
       } else {
         Say(name, "'%s' is not an object that can be initialized"_err_en_US);
       }
+    }
+  }
+  return false;
+}
+
+void DeclarationVisitor::NonPointerInitialization(
+    const parser::Name &name, const parser::ConstantExpr &expr) {
+  if (CheckNonPointerInitialization(
+          name, /*inLegacyDataInitialization=*/false)) {
+    Symbol &ultimate{name.symbol->GetUltimate()};
+    auto &details{ultimate.get<ObjectEntityDetails>()};
+    if (ultimate.owner().IsParameterizedDerivedType()) {
+      // Save the expression for per-instantiation analysis.
+      details.set_unanalyzedPDTComponentInit(&expr.thing.value());
+    } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
+                   ultimate, expr, expr.thing.value().source)}) {
+      details.set_init(std::move(*folded));
+      ultimate.set(Symbol::Flag::InDataStmt, false);
+    }
+  }
+}
+
+void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
+    const std::list<common::Indirection<parser::DataStmtValue>> &values) {
+  if (CheckNonPointerInitialization(
+          name, /*inLegacyDataInitialization=*/true)) {
+    Symbol &ultimate{name.symbol->GetUltimate()};
+    if (ultimate.owner().IsParameterizedDerivedType()) {
+      Say(name,
+          "Component '%s' in a parameterized data type may not be initialized with a legacy DATA-style value list"_err_en_US,
+          name.source);
+    } else {
+      evaluate::ExpressionAnalyzer exprAnalyzer{context()};
+      for (const auto &value : values) {
+        exprAnalyzer.Analyze(value.value());
+      }
+      DataInitializations inits;
+      auto oldSize{ultimate.size()};
+      if (auto chars{evaluate::characteristics::TypeAndShape::Characterize(
+              ultimate, GetFoldingContext())}) {
+        if (auto size{evaluate::ToInt64(
+                chars->MeasureSizeInBytes(GetFoldingContext()))}) {
+          // Temporarily set the byte size of the component so that we don't
+          // get bogus "initialization out of range" errors below.
+          ultimate.set_size(*size);
+        }
+      }
+      AccumulateDataInitializations(inits, exprAnalyzer, ultimate, values);
+      ConvertToInitializers(inits, exprAnalyzer);
+      ultimate.set_size(oldSize);
     }
   }
 }
@@ -10516,12 +10570,16 @@ private:
       if (const auto *target{
               std::get_if<parser::InitialDataTarget>(&init->u)}) {
         resolver_.PointerInitialization(name, *target);
-      } else if (const auto *expr{
-                     std::get_if<parser::ConstantExpr>(&init->u)}) {
-        if (name.symbol) {
-          if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
-              !object || !object->init()) {
+      } else if (name.symbol) {
+        if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
+            !object || !object->init()) {
+          if (const auto *expr{std::get_if<parser::ConstantExpr>(&init->u)}) {
             resolver_.NonPointerInitialization(name, *expr);
+          } else {
+            // Don't check legacy DATA /initialization/ here.  Component
+            // initializations will have already been handled, and variable
+            // initializations need to be done in DATA checking so that
+            // EQUIVALENCE storage association can be handled.
           }
         }
       }
