@@ -405,11 +405,11 @@ define i32 @t17(i32 %x, i32 %y) #0 {
 ;
 ; T2-LABEL: t17:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    adds r0, #1
+; T2-NEXT:    cmn.w r0, #1
 ; T2-NEXT:    mov.w r0, #2
 ; T2-NEXT:    it eq
 ; T2-NEXT:    moveq r0, #5
-; T2-NEXT:    adds r1, #1
+; T2-NEXT:    cmn.w r1, #1
 ; T2-NEXT:    mov.w r1, #4
 ; T2-NEXT:    it eq
 ; T2-NEXT:    moveq r1, #3
@@ -442,7 +442,7 @@ define i32 @t18(i32 %x, i32 %y) #0 {
 ; T2-NEXT:    cmp r0, #0
 ; T2-NEXT:    it ne
 ; T2-NEXT:    movne r1, #5
-; T2-NEXT:    adds r0, #1
+; T2-NEXT:    cmn.w r0, #1
 ; T2-NEXT:    mov.w r0, #4
 ; T2-NEXT:    it ne
 ; T2-NEXT:    movne r0, #3
@@ -504,11 +504,11 @@ define i32 @t20(i32 %x, i32 %y) #0 {
 ;
 ; T2-LABEL: t20:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    adds r0, #1
+; T2-NEXT:    cmn.w r0, #1
 ; T2-NEXT:    mov.w r0, #2
 ; T2-NEXT:    it ne
 ; T2-NEXT:    movne r0, #5
-; T2-NEXT:    adds r1, #1
+; T2-NEXT:    cmn.w r1, #1
 ; T2-NEXT:    mov.w r1, #4
 ; T2-NEXT:    it ne
 ; T2-NEXT:    movne r1, #3
