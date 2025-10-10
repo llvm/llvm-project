@@ -13,8 +13,10 @@
 // flat_multiset& operator=(const flat_multiset& m);
 
 #include <algorithm>
+#include <cassert>
 #include <flat_set>
 #include <functional>
+#include <utility>
 #include <vector>
 
 #include "operator_hijacker.h"
