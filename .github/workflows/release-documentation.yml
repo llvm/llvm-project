@@ -25,6 +25,10 @@ on:
         description: 'Upload documentation'
         required: false
         type: boolean
+    secrets:
+      WWW_RELEASES_TOKEN:
+        description: "Secret used to create a PR with the documentation changes."
+        required: false
 
 jobs:
   release-documentation:
