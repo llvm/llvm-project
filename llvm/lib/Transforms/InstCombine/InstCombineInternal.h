@@ -471,18 +471,19 @@ private:
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
 
-  SelectInst *createSelectInst(Value *C, Value *S1, Value *S2,
-                               const Twine &NameStr = "",
-                               InsertPosition InsertBefore = nullptr,
-                               Instruction *MDFrom = nullptr) {
-    SelectInst *SI =
-        SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
-    if (!MDFrom)
-      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, F, DEBUG_TYPE);
-    return SI;
+public:
+  /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
+  /// from existing profile metadata: if the Function has profiles, this will
+  /// set the profile of this select to "unknown".
+  SelectInst *
+  createSelectInstWithUnknownProfile(Value *C, Value *S1, Value *S2,
+                                     const Twine &NameStr = "",
+                                     InsertPosition InsertBefore = nullptr) {
+    auto *Sel = SelectInst::Create(C, S1, S2, NameStr, InsertBefore, nullptr);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, F, DEBUG_TYPE);
+    return Sel;
   }
 
-public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
