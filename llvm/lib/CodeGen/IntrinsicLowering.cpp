@@ -383,66 +383,27 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     ReplaceCallWith("memset", CI, Ops, Ops+3, CI->getArgOperand(0)->getType());
     break;
   }
-  case Intrinsic::sqrt: {
-    ReplaceFPIntrinsicWithCall(CI, "sqrtf", "sqrt", "sqrtl");
-    break;
+#define MATH_INTRINSIC_CASE(baseName)                                          \
+  case Intrinsic::baseName: {                                                  \
+    ReplaceFPIntrinsicWithCall(CI, #baseName "f", #baseName, #baseName "l");   \
+    break;                                                                     \
   }
-  case Intrinsic::log: {
-    ReplaceFPIntrinsicWithCall(CI, "logf", "log", "logl");
-    break;
-  }
-  case Intrinsic::log2: {
-    ReplaceFPIntrinsicWithCall(CI, "log2f", "log2", "log2l");
-    break;
-  }
-  case Intrinsic::log10: {
-    ReplaceFPIntrinsicWithCall(CI, "log10f", "log10", "log10l");
-    break;
-  }
-  case Intrinsic::exp: {
-    ReplaceFPIntrinsicWithCall(CI, "expf", "exp", "expl");
-    break;
-  }
-  case Intrinsic::exp2: {
-    ReplaceFPIntrinsicWithCall(CI, "exp2f", "exp2", "exp2l");
-    break;
-  }
-  case Intrinsic::pow: {
-    ReplaceFPIntrinsicWithCall(CI, "powf", "pow", "powl");
-    break;
-  }
-  case Intrinsic::sin: {
-    ReplaceFPIntrinsicWithCall(CI, "sinf", "sin", "sinl");
-    break;
-  }
-  case Intrinsic::cos: {
-    ReplaceFPIntrinsicWithCall(CI, "cosf", "cos", "cosl");
-    break;
-  }
-  case Intrinsic::floor: {
-    ReplaceFPIntrinsicWithCall(CI, "floorf", "floor", "floorl");
-    break;
-  }
-  case Intrinsic::ceil: {
-    ReplaceFPIntrinsicWithCall(CI, "ceilf", "ceil", "ceill");
-    break;
-  }
-  case Intrinsic::trunc: {
-    ReplaceFPIntrinsicWithCall(CI, "truncf", "trunc", "truncl");
-    break;
-  }
-  case Intrinsic::round: {
-    ReplaceFPIntrinsicWithCall(CI, "roundf", "round", "roundl");
-    break;
-  }
-  case Intrinsic::roundeven: {
-    ReplaceFPIntrinsicWithCall(CI, "roundevenf", "roundeven", "roundevenl");
-    break;
-  }
-  case Intrinsic::copysign: {
-    ReplaceFPIntrinsicWithCall(CI, "copysignf", "copysign", "copysignl");
-    break;
-  }
+    MATH_INTRINSIC_CASE(sqrt)
+    MATH_INTRINSIC_CASE(log)
+    MATH_INTRINSIC_CASE(log2)
+    MATH_INTRINSIC_CASE(log10)
+    MATH_INTRINSIC_CASE(exp)
+    MATH_INTRINSIC_CASE(exp2)
+    MATH_INTRINSIC_CASE(pow)
+    MATH_INTRINSIC_CASE(sin)
+    MATH_INTRINSIC_CASE(cos)
+    MATH_INTRINSIC_CASE(floor)
+    MATH_INTRINSIC_CASE(ceil)
+    MATH_INTRINSIC_CASE(trunc)
+    MATH_INTRINSIC_CASE(round)
+    MATH_INTRINSIC_CASE(roundeven)
+    MATH_INTRINSIC_CASE(copysign)
+#undef MATH_INTRINSIC_CASE
   case Intrinsic::get_rounding:
      // Lower to "round to the nearest"
      if (!CI->getType()->isVoidTy())
