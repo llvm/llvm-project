@@ -19,6 +19,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <set>
 
 using namespace mlir;
@@ -40,6 +41,7 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
               OutputType outputType, std::vector<std::string> &includeDirs,
               bool dumpODS, std::set<std::string> *includedFiles) {
   llvm::SourceMgr sourceMgr;
+  sourceMgr.setFileSystem(llvm::vfs::getRealFileSystem());
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
 
