@@ -74,7 +74,7 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks
 ; CHECK-SAME:  (ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]])
 ; CHECK:       entry:
-; CHECK:         br i1 false, label %scalar.ph, label %vector.memcheck
+; CHECK:         br label %vector.memcheck
 ; CHECK:       vector.memcheck:
 ; CHECK:       vector.body:
 ; CHECK:         call { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float> [[WIDE_LOAD:%.*]])

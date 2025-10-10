@@ -1269,6 +1269,12 @@ class OMPDefaultClause : public OMPClause {
   /// Start location of the kind in source code.
   SourceLocation KindKwLoc;
 
+  /// Variable-Category to indicate where Kind is applied
+  OpenMPDefaultClauseVariableCategory VC = OMPC_DEFAULT_VC_all;
+
+  /// Start location of Variable-Category
+  SourceLocation VCLoc;
+
   /// Set kind of the clauses.
   ///
   /// \param K Argument of clause.
@@ -1279,6 +1285,15 @@ class OMPDefaultClause : public OMPClause {
   /// \param KLoc Argument location.
   void setDefaultKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
 
+  /// Set Variable Category used with the Kind Clause (Default Modifier)
+  void setDefaultVariableCategory(OpenMPDefaultClauseVariableCategory VC) {
+    this->VC = VC;
+  }
+
+  void setDefaultVariableCategoryLocation(SourceLocation VCLoc) {
+    this->VCLoc = VCLoc;
+  }
+
 public:
   /// Build 'default' clause with argument \a A ('none' or 'shared').
   ///
@@ -1288,10 +1303,11 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   OMPDefaultClause(llvm::omp::DefaultKind A, SourceLocation ALoc,
+                   OpenMPDefaultClauseVariableCategory VC, SourceLocation VCLoc,
                    SourceLocation StartLoc, SourceLocation LParenLoc,
                    SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_default, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc) {}
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc), VC(VC), VCLoc(VCLoc) {}
 
   /// Build an empty clause.
   OMPDefaultClause()
@@ -1309,6 +1325,10 @@ public:
 
   /// Returns location of clause kind.
   SourceLocation getDefaultKindKwLoc() const { return KindKwLoc; }
+
+  OpenMPDefaultClauseVariableCategory getDefaultVC() const { return VC; }
+
+  SourceLocation getDefaultVCLoc() const { return VCLoc; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
@@ -1865,62 +1885,43 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp error' has simple
 /// 'message' clause with user error message of "GNU compiler required.".
-class OMPMessageClause final : public OMPClause {
+class OMPMessageClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_message, OMPClause>,
+      public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
-  /// Location of '('
-  SourceLocation LParenLoc;
-
-  // Expression of the 'message' clause.
-  Stmt *MessageString = nullptr;
-
   /// Set message string of the clause.
-  void setMessageString(Expr *MS) { MessageString = MS; }
-
-  /// Sets the location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setMessageString(Expr *MS) { setStmt(MS); }
 
 public:
   /// Build 'message' clause with message string argument
   ///
   /// \param MS Argument of the clause (message string).
+  /// \param HelperMS Helper statement for the construct.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPMessageClause(Expr *MS, SourceLocation StartLoc, SourceLocation LParenLoc,
+  OMPMessageClause(Expr *MS, Stmt *HelperMS, OpenMPDirectiveKind CaptureRegion,
+                   SourceLocation StartLoc, SourceLocation LParenLoc,
                    SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_message, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), MessageString(MS) {}
+      : OMPOneStmtClause(MS, StartLoc, LParenLoc, EndLoc),
+        OMPClauseWithPreInit(this) {
+    setPreInitStmt(HelperMS, CaptureRegion);
+  }
 
   /// Build an empty clause.
-  OMPMessageClause()
-      : OMPClause(llvm::omp::OMPC_message, SourceLocation(), SourceLocation()) {
-  }
-
-  /// Returns the locaiton of '('.
-  SourceLocation getLParenLoc() const { return LParenLoc; }
+  OMPMessageClause() : OMPOneStmtClause(), OMPClauseWithPreInit(this) {}
 
   /// Returns message string of the clause.
-  Expr *getMessageString() const { return cast_or_null<Expr>(MessageString); }
+  Expr *getMessageString() const { return getStmtAs<Expr>(); }
 
-  child_range children() {
-    return child_range(&MessageString, &MessageString + 1);
-  }
-
-  const_child_range children() const {
-    return const_child_range(&MessageString, &MessageString + 1);
-  }
-
-  child_range used_children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range used_children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-
-  static bool classof(const OMPClause *T) {
-    return T->getClauseKind() == llvm::omp::OMPC_message;
+  /// Try to evaluate the message string at compile time.
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const {
+    if (Expr *MessageExpr = getMessageString())
+      return MessageExpr->tryEvaluateString(Ctx);
+    return std::nullopt;
   }
 };
 

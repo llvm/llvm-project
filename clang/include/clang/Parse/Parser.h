@@ -5188,6 +5188,14 @@ private:
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
+  struct ParsedSemantic {
+    StringRef Name = "";
+    unsigned Index = 0;
+    bool Explicit = false;
+  };
+
+  ParsedSemantic ParseHLSLSemantic();
+
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
@@ -7213,7 +7221,8 @@ public:
   /// 'while', or 'for').
   StmtResult
   ParseStatement(SourceLocation *TrailingElseLoc = nullptr,
-                 ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt);
+                 ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt,
+                 LabelDecl *PrecedingLabel = nullptr);
 
   /// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
   /// \verbatim
@@ -7268,12 +7277,13 @@ public:
   ///
   StmtResult
   ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
-                              SourceLocation *TrailingElseLoc = nullptr);
+                              SourceLocation *TrailingElseLoc = nullptr,
+                              LabelDecl *PrecedingLabel = nullptr);
 
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
-      ParsedAttributes &DeclSpecAttrs);
+      ParsedAttributes &DeclSpecAttrs, LabelDecl *PrecedingLabel);
 
   /// Parse an expression statement.
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
@@ -7398,7 +7408,8 @@ public:
   ///         'switch' '(' expression ')' statement
   /// [C++]   'switch' '(' condition ')' statement
   /// \endverbatim
-  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                                  LabelDecl *PrecedingLabel);
 
   /// ParseWhileStatement
   /// \verbatim
@@ -7406,7 +7417,8 @@ public:
   ///         'while' '(' expression ')' statement
   /// [C++]   'while' '(' condition ')' statement
   /// \endverbatim
-  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                                 LabelDecl *PrecedingLabel);
 
   /// ParseDoStatement
   /// \verbatim
@@ -7414,7 +7426,7 @@ public:
   ///         'do' statement 'while' '(' expression ')' ';'
   /// \endverbatim
   /// Note: this lets the caller parse the end ';'.
-  StmtResult ParseDoStatement();
+  StmtResult ParseDoStatement(LabelDecl *PrecedingLabel);
 
   /// ParseForStatement
   /// \verbatim
@@ -7441,7 +7453,8 @@ public:
   /// [C++0x]   expression
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
-  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
+                               LabelDecl *PrecedingLabel);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7458,6 +7471,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'continue' ';'
+  /// [C2y]   'continue' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7468,6 +7482,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'break' ';'
+  /// [C2y]   'break' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7484,6 +7499,8 @@ public:
   /// \endverbatim
   StmtResult ParseReturnStatement();
 
+  StmtResult ParseBreakOrContinueStatement(bool IsContinue);
+
   /// ParseDeferStatement
   /// \verbatim
   ///       defer-statement:
@@ -7496,7 +7513,8 @@ public:
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
-                                 ParsedAttributes &Attrs);
+                                 ParsedAttributes &Attrs,
+                                 LabelDecl *PrecedingLabel);
 
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 
@@ -7666,7 +7684,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

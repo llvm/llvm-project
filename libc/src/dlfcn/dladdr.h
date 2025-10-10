@@ -11,9 +11,11 @@
 
 #include "src/__support/macros/config.h"
 
+#include "hdr/types/dl_info.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
-int dladdr(const void *, Dl_info *);
+int dladdr(const void *__restrict, Dl_info *__restrict);
 
 } // namespace LIBC_NAMESPACE_DECL
 

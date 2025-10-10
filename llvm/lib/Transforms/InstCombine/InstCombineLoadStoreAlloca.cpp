@@ -107,8 +107,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         // a load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
         bool NoCapture = Call->doesNotCapture(DataOpNo);
-        if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
-            (Call->onlyReadsMemory(DataOpNo) && NoCapture))
+        if (NoCapture &&
+            (Call->onlyReadsMemory() || Call->onlyReadsMemory(DataOpNo)))
           continue;
       }
 
@@ -737,6 +737,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
                                                   ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
+      // Copy invariant metadata from parent load.
+      NewLoad->copyMetadata(LI, LLVMContext::MD_invariant_load);
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -764,6 +766,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
+      // Copy invariant metadata from parent load.
+      L->copyMetadata(LI, LLVMContext::MD_invariant_load);
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
 

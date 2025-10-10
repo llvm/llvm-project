@@ -24,13 +24,13 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr), FrameOffset(0), IsBottom(true) {}
+      ArgSize(0), Args(nullptr), FrameOffset(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
       RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()), IsBottom(!Caller) {
+      FrameOffset(S.Stk.size()) {
   if (!Func)
     return;
 
@@ -169,7 +169,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
       print(OS, This, S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getRecordType(M->getParent())));
+                S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
     }
   }
@@ -193,12 +193,6 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
       OS << ", ";
   }
   OS << ")";
-}
-
-Frame *InterpFrame::getCaller() const {
-  if (Caller->Caller)
-    return Caller;
-  return S.getSplitFrame();
 }
 
 SourceRange InterpFrame::getCallRange() const {
@@ -229,6 +223,10 @@ const FunctionDecl *InterpFrame::getCallee() const {
 Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   assert(Offset < Func->getFrameSize() && "Invalid local offset.");
   return Pointer(localBlock(Offset));
+}
+
+Block *InterpFrame::getLocalBlock(unsigned Offset) const {
+  return localBlock(Offset);
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {

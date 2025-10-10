@@ -21,38 +21,38 @@
 # RUN: llvm-profdata merge a.proftext -o a.profdata
 # RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
-# STARTUP-FUNC-ORDER: Ordered 3 sections ([[#]] bytes) using balanced partitioning
-# STARTUP-FUNC-ORDER: Total area under the page fault curve: 3.
+# STARTUP-FUNC-ORDER: Ordered 4 sections ([[#]] bytes) using balanced partitioning
+# STARTUP-FUNC-ORDER: Total area under the page fault curve: 4.
 
 # RUN: ld.lld -o out.s a.o --irpgo-profile=a.profdata --bp-startup-sort=function
 # RUN: llvm-nm -jn out.s | tr '\n' , | FileCheck %s --check-prefix=STARTUP
-# STARTUP: s5,s4,s3,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d3,d2,d1,g1,{{$}}
+# STARTUP: s5,s4,s3,s2,s1,A,B,C,L1,F,E,D,merged1,merged2,G,_start,d4,d3,d2,d1,g1,{{$}}
 
 # RUN: ld.lld -o out.os a.o --irpgo-profile=a.profdata --bp-startup-sort=function --symbol-ordering-file a.txt
 # RUN: llvm-nm -jn out.os | tr '\n' , | FileCheck %s --check-prefix=ORDER-STARTUP
-# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,merged1,merged2,_start,d3,d2,d4,d1,g1,{{$}}
+# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,L1,merged1,merged2,G,_start,d3,d2,d4,d1,g1,{{$}}
 
 # RUN: ld.lld -o out.cf a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
 # RUN: ld.lld -o out.cf.icf a.o --verbose-bp-section-orderer --bp-compression-sort=function --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-ICF-FUNC
 # RUN: llvm-nm -jn out.cf | tr '\n' , | FileCheck %s --check-prefix=CFUNC
-# CFUNC: s5,s4,s3,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d3,d2,d1,g1,{{$}}
+# CFUNC: s5,s4,s3,s2,s1,C,E,D,B,G,F,merged1,merged2,A,_start,L1,d4,d3,d2,d1,g1,{{$}}
 
 # RUN: ld.lld -o out.cd a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
 # RUN: llvm-nm -jn out.cd | tr '\n' , | FileCheck %s --check-prefix=CDATA
-# CDATA: s5,s3,s4,s2,s1,F,C,E,D,B,A,merged1,merged2,_start,d4,d1,d3,d2,g1,{{$}}
+# CDATA: s5,s3,s4,s2,s1,F,C,E,D,B,A,merged1,merged2,L1,G,_start,d4,d1,d3,d2,g1,{{$}}
 
 # RUN: ld.lld -o out.cb a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cb | tr '\n' , | FileCheck %s --check-prefix=CBOTH
-# CBOTH: s5,s3,s4,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d1,d3,d2,g1,{{$}}
+# CBOTH: s5,s3,s4,s2,s1,C,E,D,B,G,F,merged1,merged2,A,_start,L1,d4,d1,d3,d2,g1,{{$}}
 
 # RUN: ld.lld -o out.cbs a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cbs | tr '\n' , | FileCheck %s --check-prefix=CBOTH-STARTUP
-# CBOTH-STARTUP: s5,s3,s4,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d1,d3,d2,g1,{{$}}
+# CBOTH-STARTUP: s5,s3,s4,s2,s1,A,B,C,L1,F,E,D,merged1,merged2,G,_start,d4,d1,d3,d2,g1,{{$}}
 
-# BP-COMPRESSION-FUNC: Ordered 9 sections ([[#]] bytes) using balanced partitioning
-# BP-COMPRESSION-ICF-FUNC: Ordered 8 sections ([[#]] bytes) using balanced partitioning
+# BP-COMPRESSION-FUNC: Ordered 11 sections ([[#]] bytes) using balanced partitioning
+# BP-COMPRESSION-ICF-FUNC: Ordered 9 sections ([[#]] bytes) using balanced partitioning
 # BP-COMPRESSION-DATA: Ordered 9 sections ([[#]] bytes) using balanced partitioning
-# BP-COMPRESSION-BOTH: Ordered 18 sections ([[#]] bytes) using balanced partitioning
+# BP-COMPRESSION-BOTH: Ordered 20 sections ([[#]] bytes) using balanced partitioning
 
 #--- a.proftext
 :ir
@@ -63,7 +63,7 @@
 1
 # Weight
 1
-A, B, C
+A, B, C, L1
 
 A
 # Func Hash:
@@ -92,6 +92,14 @@ C
 D
 # Func Hash:
 4444
+# Num Counters:
+1
+# Counter Values:
+1
+
+L1
+# Func Hash:
+5555
 # Num Counters:
 1
 # Counter Values:
@@ -137,6 +145,9 @@ void A() {}
 RETAIN int merged1(int a) { return F(a + 101); }
 int merged2(int a) { return F(a + 101); }
 
+RETAIN static int L1(int a) { return a + 103; }
+int G(int a) { return L1(a); }
+
 int _start() { return 0; }
 
 #--- gen
@@ -148,7 +159,7 @@ clang --target=aarch64-linux-gnu -O0 -ffunction-sections -fdata-sections -fno-as
 	.p2align	2
 	.type	F,@function
 F:                                      // @F
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -167,7 +178,7 @@ F:                                      // @F
 	.p2align	2
 	.type	C,@function
 C:                                      // @C
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -186,7 +197,7 @@ C:                                      // @C
 	.p2align	2
 	.type	E,@function
 E:                                      // @E
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -205,7 +216,7 @@ E:                                      // @E
 	.p2align	2
 	.type	D,@function
 D:                                      // @D
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -224,7 +235,7 @@ D:                                      // @D
 	.p2align	2
 	.type	B,@function
 B:                                      // @B
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -243,7 +254,7 @@ B:                                      // @B
 	.p2align	2
 	.type	A,@function
 A:                                      // @A
-// %bb.0:                               // %entry
+// %bb.0:
 	ret
 .Lfunc_end5:
 	.size	A, .Lfunc_end5-A
@@ -253,7 +264,7 @@ A:                                      // @A
 	.p2align	2
 	.type	merged1,@function
 merged1:                                // @merged1
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -272,7 +283,7 @@ merged1:                                // @merged1
 	.p2align	2
 	.type	merged2,@function
 merged2:                                // @merged2
-// %bb.0:                               // %entry
+// %bb.0:
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -286,16 +297,48 @@ merged2:                                // @merged2
 .Lfunc_end7:
 	.size	merged2, .Lfunc_end7-merged2
                                         // -- End function
+	.section	.text.L1,"axR",@progbits
+	.p2align	2                               // -- Begin function L1
+	.type	L1,@function
+L1:                                     // @L1
+// %bb.0:
+	sub	sp, sp, #16
+	str	w0, [sp, #12]
+	ldr	w8, [sp, #12]
+	add	w0, w8, #103
+	add	sp, sp, #16
+	ret
+.Lfunc_end8:
+	.size	L1, .Lfunc_end8-L1
+                                        // -- End function
+	.section	.text.G,"ax",@progbits
+	.globl	G                               // -- Begin function G
+	.p2align	2
+	.type	G,@function
+G:                                      // @G
+// %bb.0:
+	sub	sp, sp, #32
+	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
+	add	x29, sp, #16
+	stur	w0, [x29, #-4]
+	ldur	w0, [x29, #-4]
+	bl	L1
+	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
+	add	sp, sp, #32
+	ret
+.Lfunc_end9:
+	.size	G, .Lfunc_end9-G
+                                        // -- End function
 	.section	.text._start,"ax",@progbits
 	.globl	_start                          // -- Begin function _start
 	.p2align	2
 	.type	_start,@function
 _start:                                 // @_start
-// %bb.0:                               // %entry
+// %bb.0:
 	mov	w0, wzr
 	ret
-.Lfunc_end8:
-	.size	_start, .Lfunc_end8-_start
+.Lfunc_end10:
+	.size	_start, .Lfunc_end10-_start
                                         // -- End function
 	.type	s5,@object                      // @s5
 	.section	.rodata.s5,"a",@progbits
@@ -395,3 +438,4 @@ g1:
 	.addrsig_sym B
 	.addrsig_sym A
 	.addrsig_sym merged1
+	.addrsig_sym L1

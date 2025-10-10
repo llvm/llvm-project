@@ -62,7 +62,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   TLSSupported = true;
   VLASupported = true;
   NoAsmVariants = false;
-  HasLegalHalfType = false;
+  HasFastHalfType = false;
   HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;
@@ -624,6 +624,14 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
       (ClangABICompat4 || getTriple().isPS4()))
     return CCK_ClangABI4OrPS4;
   return CCK_Default;
+}
+
+bool TargetInfo::callGlobalDeleteInDeletingDtor(
+    const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
 }
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {

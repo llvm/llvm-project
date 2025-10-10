@@ -147,6 +147,14 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
 }
 
 TEST_F(InterpreterTest, UndoCommand) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Host.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -434,22 +435,14 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
                                             ArrayRef<uint64_t> UniqueCpuInfos) {
   // On Windows, the registry provides cached copied of the MIDR_EL1 register.
-  union MIDR_EL1 {
-    uint64_t Raw;
-    struct _Components {
-      uint64_t Revision : 4;
-      uint64_t Partnum : 12;
-      uint64_t Architecture : 4;
-      uint64_t Variant : 4;
-      uint64_t Implementer : 8;
-      uint64_t Reserved : 32;
-    } Components;
-  };
+  using PartNum = Bitfield::Element<uint16_t, 4, 12>;
+  using Implementer = Bitfield::Element<uint16_t, 24, 8>;
+  using Variant = Bitfield::Element<uint16_t, 20, 4>;
 
   SmallVector<std::string> PartsHolder;
   PartsHolder.reserve(UniqueCpuInfos.size());
   for (auto Info : UniqueCpuInfos)
-    PartsHolder.push_back("0x" + utohexstr(MIDR_EL1{Info}.Components.Partnum,
+    PartsHolder.push_back("0x" + utohexstr(Bitfield::get<PartNum>(Info),
                                            /*LowerCase*/ true,
                                            /*Width*/ 3));
 
@@ -459,14 +452,14 @@ StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
     Parts.push_back(Part);
 
   return getHostCPUNameForARMFromComponents(
-      "0x" + utohexstr(MIDR_EL1{PrimaryCpuInfo}.Components.Implementer,
+      "0x" + utohexstr(Bitfield::get<Implementer>(PrimaryCpuInfo),
                        /*LowerCase*/ true,
                        /*Width*/ 2),
       /*Hardware*/ "",
-      "0x" + utohexstr(MIDR_EL1{PrimaryCpuInfo}.Components.Partnum,
+      "0x" + utohexstr(Bitfield::get<PartNum>(PrimaryCpuInfo),
                        /*LowerCase*/ true,
                        /*Width*/ 3),
-      Parts, [=]() { return MIDR_EL1{PrimaryCpuInfo}.Components.Variant; });
+      Parts, [=]() { return Bitfield::get<Variant>(PrimaryCpuInfo); });
 }
 
 namespace {
@@ -766,20 +759,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
   StringRef CPU;
 
   switch (Family) {
-  case 3:
+  case 0x3:
     CPU = "i386";
     break;
-  case 4:
+  case 0x4:
     CPU = "i486";
     break;
-  case 5:
+  case 0x5:
     if (testFeature(X86::FEATURE_MMX)) {
       CPU = "pentium-mmx";
       break;
     }
     CPU = "pentium";
     break;
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -1127,7 +1120,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 15: {
+  case 0xf: {
     if (testFeature(X86::FEATURE_64BIT)) {
       CPU = "nocona";
       break;
@@ -1139,7 +1132,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:
@@ -1309,16 +1302,17 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 26:
     CPU = "znver5";
     *Type = X86::AMDFAM1AH;
-    if (Model <= 0x77) {
+    if (Model <= 0x4f || (Model >= 0x60 && Model <= 0x77) ||
+        (Model >= 0xd0 && Model <= 0xd7)) {
       // Models 00h-0Fh (Breithorn).
       // Models 10h-1Fh (Breithorn-Dense).
       // Models 20h-2Fh (Strix 1).
       // Models 30h-37h (Strix 2).
       // Models 38h-3Fh (Strix 3).
       // Models 40h-4Fh (Granite Ridge).
-      // Models 50h-5Fh (Weisshorn).
       // Models 60h-6Fh (Krackan1).
       // Models 70h-77h (Sarlak).
+      // Models D0h-D7h (Annapurna).
       CPU = "znver5";
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
@@ -1403,7 +1397,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
-    setFeature(X86::FEATURE_EVEX512);
   }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
@@ -2057,6 +2050,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rdpru"]    = HasExtLeaf8 && ((EBX >> 4) & 1);
   Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
@@ -2070,8 +2068,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  if (Features["avx512f"])
-    Features["evex512"]  = true;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
@@ -2141,7 +2137,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
-  Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
+  Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
@@ -2183,11 +2179,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
   int AVX10Ver = HasLeaf24 && (EBX & 0xff);
-  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
-  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
-  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
-  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
-  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
+  Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
   return Features;
 }

@@ -806,7 +806,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       // go-to-definition on auto should find the definition of the deduced
       // type, if possible
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         auto LocSym = locateSymbolForType(AST, *Deduced, Index);
         if (!LocSym.empty())
           return LocSym;
@@ -1106,11 +1108,11 @@ public:
     return true;
   }
   bool VisitBreakStmt(BreakStmt *B) {
-    found(Break, B->getBreakLoc());
+    found(Break, B->getKwLoc());
     return true;
   }
   bool VisitContinueStmt(ContinueStmt *C) {
-    found(Continue, C->getContinueLoc());
+    found(Continue, C->getKwLoc());
     return true;
   }
   bool VisitSwitchCase(SwitchCase *C) {
@@ -1876,7 +1878,7 @@ static void fillSubTypes(const SymbolID &ID,
   });
 }
 
-using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 // Extracts parents from AST and populates the type hierarchy item.
 static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,
@@ -1965,7 +1967,8 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
 // Return the type most associated with an AST node.
 // This isn't precisely defined: we want "go to type" to do something useful.
-static QualType typeForNode(const SelectionTree::Node *N) {
+static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
+                            const SelectionTree::Node *N) {
   // If we're looking at a namespace qualifier, walk up to what it's qualifying.
   // (If we're pointing at a *class* inside a NNS, N will be a TypeLoc).
   while (N && N->ASTNode.get<NestedNameSpecifierLoc>())
@@ -1977,7 +1980,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
   if (const TypeLoc *TL = N->ASTNode.get<TypeLoc>()) {
     if (llvm::isa<DeducedType>(TL->getTypePtr()))
       if (auto Deduced = getDeducedType(
-              N->getDeclContext().getParentASTContext(), TL->getBeginLoc()))
+              N->getDeclContext().getParentASTContext(), H, TL->getBeginLoc()))
         return *Deduced;
     // Exception: an alias => underlying type.
     if (llvm::isa<TypedefType>(TL->getTypePtr()))
@@ -1999,10 +2002,13 @@ static QualType typeForNode(const SelectionTree::Node *N) {
 
   if (const Decl *D = N->ASTNode.get<Decl>()) {
     struct Visitor : ConstDeclVisitor<Visitor, QualType> {
+      const ASTContext &Ctx;
+      Visitor(const ASTContext &Ctx) : Ctx(Ctx) {}
+
       QualType VisitValueDecl(const ValueDecl *D) { return D->getType(); }
       // Declaration of a type => that type.
       QualType VisitTypeDecl(const TypeDecl *D) {
-        return QualType(D->getTypeForDecl(), 0);
+        return Ctx.getTypeDeclType(D);
       }
       // Exception: alias declaration => the underlying type, not the alias.
       QualType VisitTypedefNameDecl(const TypedefNameDecl *D) {
@@ -2012,7 +2018,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
       QualType VisitTemplateDecl(const TemplateDecl *D) {
         return Visit(D->getTemplatedDecl());
       }
-    } V;
+    } V(Ctx);
     return V.Visit(D);
   }
 
@@ -2156,7 +2162,9 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
-    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+    for (const QualType &Type : unwrapFindType(
+             typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
+             AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 

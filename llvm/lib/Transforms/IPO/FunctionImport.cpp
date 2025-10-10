@@ -40,6 +40,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -1550,6 +1551,7 @@ void llvm::computeDeadSymbolsWithConstProp(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
     bool ImportEnabled) {
+  llvm::TimeTraceScope timeScope("Drop dead symbols and propagate attributes");
   computeDeadSymbolsAndUpdateIndirectCalls(Index, GUIDPreservedSymbols,
                                            isPrevailing);
   if (ImportEnabled)
@@ -1664,6 +1666,7 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
 void llvm::thinLTOFinalizeInModule(Module &TheModule,
                                    const GVSummaryMapTy &DefinedGlobals,
                                    bool PropagateAttrs) {
+  llvm::TimeTraceScope timeScope("ThinLTO finalize in module");
   DenseSet<Comdat *> NonPrevailingComdats;
   auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
@@ -1791,6 +1794,7 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
 /// Run internalization on \p TheModule based on symmary analysis.
 void llvm::thinLTOInternalizeModule(Module &TheModule,
                                     const GVSummaryMapTy &DefinedGlobals) {
+  llvm::TimeTraceScope timeScope("ThinLTO internalize module");
   // Declare a callback for the internalize pass that will ask for every
   // candidate GlobalValue if it can be internalized or not.
   auto MustPreserveGV = [&](const GlobalValue &GV) -> bool {
@@ -1885,6 +1889,7 @@ Expected<bool> FunctionImporter::importFunctions(
 
   // Do the actual import of functions now, one Module at a time
   for (const auto &ModName : ImportList.getSourceModules()) {
+    llvm::TimeTraceScope timeScope("Import", ModName);
     // Get the module for the import
     Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(ModName);
     if (!SrcModuleOrErr)
@@ -1900,102 +1905,114 @@ Expected<bool> FunctionImporter::importFunctions(
 
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
-    for (Function &F : *SrcModule) {
-      if (!F.hasName())
-        continue;
-      auto GUID = F.getGUID();
-      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
-      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
+    {
+      llvm::TimeTraceScope functionsScope("Functions");
+      for (Function &F : *SrcModule) {
+        if (!F.hasName())
+          continue;
+        auto GUID = F.getGUID();
+        auto MaybeImportType = ImportList.getImportType(ModName, GUID);
+        bool ImportDefinition =
+            MaybeImportType == GlobalValueSummary::Definition;
 
-      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
-                        << " importing function"
-                        << (ImportDefinition
-                                ? " definition "
-                                : (MaybeImportType ? " declaration " : " "))
-                        << GUID << " " << F.getName() << " from "
-                        << SrcModule->getSourceFileName() << "\n");
-      if (ImportDefinition) {
-        if (Error Err = F.materialize())
-          return std::move(Err);
-        // MemProf should match function's definition and summary,
-        // 'thinlto_src_module' is needed.
-        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
-          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
-          // statistics and debugging.
-          F.setMetadata(
-              "thinlto_src_module",
-              MDNode::get(DestModule.getContext(),
-                          {MDString::get(DestModule.getContext(),
-                                         SrcModule->getModuleIdentifier())}));
-          F.setMetadata(
-              "thinlto_src_file",
-              MDNode::get(DestModule.getContext(),
-                          {MDString::get(DestModule.getContext(),
-                                         SrcModule->getSourceFileName())}));
-        }
-        GlobalsToImport.insert(&F);
-      }
-    }
-    for (GlobalVariable &GV : SrcModule->globals()) {
-      if (!GV.hasName())
-        continue;
-      auto GUID = GV.getGUID();
-      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
-      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
-
-      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
-                        << " importing global"
-                        << (ImportDefinition
-                                ? " definition "
-                                : (MaybeImportType ? " declaration " : " "))
-                        << GUID << " " << GV.getName() << " from "
-                        << SrcModule->getSourceFileName() << "\n");
-      if (ImportDefinition) {
-        if (Error Err = GV.materialize())
-          return std::move(Err);
-        ImportedGVCount += GlobalsToImport.insert(&GV);
-      }
-    }
-    for (GlobalAlias &GA : SrcModule->aliases()) {
-      if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
-        continue;
-      auto GUID = GA.getGUID();
-      auto MaybeImportType = ImportList.getImportType(ModName, GUID);
-      bool ImportDefinition = MaybeImportType == GlobalValueSummary::Definition;
-
-      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
-                        << " importing alias"
-                        << (ImportDefinition
-                                ? " definition "
-                                : (MaybeImportType ? " declaration " : " "))
-                        << GUID << " " << GA.getName() << " from "
-                        << SrcModule->getSourceFileName() << "\n");
-      if (ImportDefinition) {
-        if (Error Err = GA.materialize())
-          return std::move(Err);
-        // Import alias as a copy of its aliasee.
-        GlobalObject *GO = GA.getAliaseeObject();
-        if (Error Err = GO->materialize())
-          return std::move(Err);
-        auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
-        LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID() << " "
-                          << GO->getName() << " from "
+        LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                          << " importing function"
+                          << (ImportDefinition
+                                  ? " definition "
+                                  : (MaybeImportType ? " declaration " : " "))
+                          << GUID << " " << F.getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
-        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
-          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
-          // statistics and debugging.
-          Fn->setMetadata(
-              "thinlto_src_module",
-              MDNode::get(DestModule.getContext(),
-                          {MDString::get(DestModule.getContext(),
-                                         SrcModule->getModuleIdentifier())}));
-          Fn->setMetadata(
-              "thinlto_src_file",
-              MDNode::get(DestModule.getContext(),
-                          {MDString::get(DestModule.getContext(),
-                                         SrcModule->getSourceFileName())}));
+        if (ImportDefinition) {
+          if (Error Err = F.materialize())
+            return std::move(Err);
+          // MemProf should match function's definition and summary,
+          // 'thinlto_src_module' is needed.
+          if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+            // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+            // statistics and debugging.
+            F.setMetadata(
+                "thinlto_src_module",
+                MDNode::get(DestModule.getContext(),
+                            {MDString::get(DestModule.getContext(),
+                                           SrcModule->getModuleIdentifier())}));
+            F.setMetadata(
+                "thinlto_src_file",
+                MDNode::get(DestModule.getContext(),
+                            {MDString::get(DestModule.getContext(),
+                                           SrcModule->getSourceFileName())}));
+          }
+          GlobalsToImport.insert(&F);
         }
-        GlobalsToImport.insert(Fn);
+      }
+    }
+    {
+      llvm::TimeTraceScope globalsScope("Globals");
+      for (GlobalVariable &GV : SrcModule->globals()) {
+        if (!GV.hasName())
+          continue;
+        auto GUID = GV.getGUID();
+        auto MaybeImportType = ImportList.getImportType(ModName, GUID);
+        bool ImportDefinition =
+            MaybeImportType == GlobalValueSummary::Definition;
+
+        LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                          << " importing global"
+                          << (ImportDefinition
+                                  ? " definition "
+                                  : (MaybeImportType ? " declaration " : " "))
+                          << GUID << " " << GV.getName() << " from "
+                          << SrcModule->getSourceFileName() << "\n");
+        if (ImportDefinition) {
+          if (Error Err = GV.materialize())
+            return std::move(Err);
+          ImportedGVCount += GlobalsToImport.insert(&GV);
+        }
+      }
+    }
+    {
+      llvm::TimeTraceScope aliasesScope("Aliases");
+      for (GlobalAlias &GA : SrcModule->aliases()) {
+        if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
+          continue;
+        auto GUID = GA.getGUID();
+        auto MaybeImportType = ImportList.getImportType(ModName, GUID);
+        bool ImportDefinition =
+            MaybeImportType == GlobalValueSummary::Definition;
+
+        LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                          << " importing alias"
+                          << (ImportDefinition
+                                  ? " definition "
+                                  : (MaybeImportType ? " declaration " : " "))
+                          << GUID << " " << GA.getName() << " from "
+                          << SrcModule->getSourceFileName() << "\n");
+        if (ImportDefinition) {
+          if (Error Err = GA.materialize())
+            return std::move(Err);
+          // Import alias as a copy of its aliasee.
+          GlobalObject *GO = GA.getAliaseeObject();
+          if (Error Err = GO->materialize())
+            return std::move(Err);
+          auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
+          LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID()
+                            << " " << GO->getName() << " from "
+                            << SrcModule->getSourceFileName() << "\n");
+          if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+            // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+            // statistics and debugging.
+            Fn->setMetadata(
+                "thinlto_src_module",
+                MDNode::get(DestModule.getContext(),
+                            {MDString::get(DestModule.getContext(),
+                                           SrcModule->getModuleIdentifier())}));
+            Fn->setMetadata(
+                "thinlto_src_file",
+                MDNode::get(DestModule.getContext(),
+                            {MDString::get(DestModule.getContext(),
+                                           SrcModule->getSourceFileName())}));
+          }
+          GlobalsToImport.insert(Fn);
+        }
       }
     }
 

@@ -14,6 +14,7 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
+#include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1788,6 +1789,23 @@ bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
   return false;
 }
 
+/// RegClassByHwMode acts like ValueTypeByHwMode, taking the type of the
+/// register class from the active mode.
+static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
+                                                  const Record *R) {
+  TypeSetByHwMode TypeSet;
+  RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
+
+  for (auto [ModeID, RegClass] : Helper) {
+    ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();
+    MachineValueTypeSet &ModeTypeSet = TypeSet.getOrCreate(ModeID);
+    for (const ValueTypeByHwMode &VT : RegClassVTs)
+      ModeTypeSet.insert(VT.getType(ModeID));
+  }
+
+  return TypeSet;
+}
+
 // Update the node type to match an instruction operand or result as specified
 // in the ins or outs lists on the instruction definition. Return true if the
 // type was actually changed.
@@ -1813,13 +1831,16 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
   // Both RegisterClass and RegisterOperand operands derive their types from a
   // register class def.
   const Record *RC = nullptr;
-  if (Operand->isSubClassOf("RegisterClass"))
+  if (Operand->isSubClassOf("RegisterClassLike"))
     RC = Operand;
   else if (Operand->isSubClassOf("RegisterOperand"))
     RC = Operand->getValueAsDef("RegClass");
 
   assert(RC && "Unknown operand type");
   CodeGenTarget &Tgt = TP.getDAGPatterns().getTargetInfo();
+  if (RC->isSubClassOf("RegClassByHwMode"))
+    return UpdateNodeType(ResNo, getTypeForRegClassByHwMode(Tgt, RC), TP);
+
   return UpdateNodeType(ResNo, Tgt.getRegisterClass(RC).getValueTypes(), TP);
 }
 
@@ -2305,6 +2326,10 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
       return TypeSetByHwMode(); // Unknown.
     const Record *RegClass = R->getValueAsDef("RegClass");
     const CodeGenTarget &T = TP.getDAGPatterns().getTargetInfo();
+
+    if (RegClass->isSubClassOf("RegClassByHwMode"))
+      return getTypeForRegClassByHwMode(T, RegClass);
+
     return TypeSetByHwMode(T.getRegisterClass(RegClass).getValueTypes());
   }
 
@@ -2322,6 +2347,11 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
       return TypeSetByHwMode(); // Unknown.
     const CodeGenTarget &T = TP.getDAGPatterns().getTargetInfo();
     return TypeSetByHwMode(T.getRegisterClass(R).getValueTypes());
+  }
+
+  if (R->isSubClassOf("RegClassByHwMode")) {
+    const CodeGenTarget &T = CDP.getTargetInfo();
+    return getTypeForRegClassByHwMode(T, R);
   }
 
   if (R->isSubClassOf("PatFrags")) {
@@ -2794,7 +2824,11 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     return MadeChange;
   }
 
-  assert(getOperator()->isSubClassOf("SDNodeXForm") && "Unknown node type!");
+  if (!getOperator()->isSubClassOf("SDNodeXForm")) {
+    TP.error("unknown node type '" + getOperator()->getName() +
+             "' in input pattern");
+    return false;
+  }
 
   // Node transforms always take one operand.
   if (getNumChildren() != 1) {
@@ -3576,7 +3610,7 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
       continue;
     }
 
-    if (Val->getDef()->isSubClassOf("RegisterClass") ||
+    if (Val->getDef()->isSubClassOf("RegisterClassLike") ||
         Val->getDef()->isSubClassOf("ValueType") ||
         Val->getDef()->isSubClassOf("RegisterOperand") ||
         Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
@@ -4498,13 +4532,17 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      AppendPattern(P, M, HM.Predicates);
+
+      SmallString<128> PredicateCheck;
+      raw_svector_ostream PS(PredicateCheck);
+      SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
+      AppendPattern(P, M, PredicateCheck);
 
       // Add negations of the HM's predicates to the default predicate.
       if (!DefaultCheck.empty())
         DefaultCheck += " && ";
       DefaultCheck += "!(";
-      DefaultCheck += HM.Predicates;
+      DefaultCheck.append(PredicateCheck);
       DefaultCheck += ")";
     }
 

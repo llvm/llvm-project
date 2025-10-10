@@ -399,6 +399,11 @@ ADDITIONAL OPTIONS
  Show all features used in the test suite (in ``XFAIL``, ``UNSUPPORTED`` and
  ``REQUIRES``) and exit.
 
+.. option:: --update-tests
+
+ Pass failing tests to functions in the ``lit_config.test_updaters`` list to
+ check whether any of them know how to update the test to make it pass.
+
 EXIT STATUS
 -----------
 
@@ -659,6 +664,7 @@ TestRunner.py:
                          Otherwise, %t but with a single leading ``/`` removed.
  %:T                     On Windows, %/T but a ``:`` is removed if its the second character.
                          Otherwise, %T but with a single leading ``/`` removed.
+ %{readfile:<filename>}  Reads the file specified.
  ======================= ==============
 
 Other substitutions are provided that are variations on this base set and

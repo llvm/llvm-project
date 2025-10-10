@@ -297,6 +297,23 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
 }
 
 // -----
+func.func @bad_cmpchar_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
+  // expected-error@+1 {{'hlfir.cmpchar' op character arguments must have the same KIND}}
+  %0 = hlfir.cmpchar ne %arg0  %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i1
+}
+
+func.func @bad_cmpchar_2(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<1,10>>) {
+  // expected-error@+1 {{'hlfir.cmpchar' op expected signed predicate}}
+  %0 = hlfir.cmpchar ugt %arg0  %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>) -> i1
+}
+
+// -----
+func.func @bad_index_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
+  // expected-error@+1 {{'hlfir.index' op character arguments must have the same KIND}}
+  %0 = hlfir.index %arg0 in %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i32
+}
+
+// -----
 func.func @bad_any1(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.any' op result must have the same element type as MASK argument}}
   %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !fir.logical<8>
@@ -1555,3 +1572,121 @@ func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<
   %0 = hlfir.reshape %arg0 %arg1 pad %arg2 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2,?>>) -> !hlfir.expr<?x!fir.char<1,?>>
   return
 }
+
+// -----
+
+func.func @bad_eoshift1(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?x?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift2(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift3(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.eoshift' op output array's shape conflicts with the input array's shape}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, i32) -> !hlfir.expr<2x3xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift4(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'hlfir.eoshift' op DIM must be >= 1}}
+  %0 = hlfir.eoshift %arg0 %arg1 dim %c0 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift5(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c10 = arith.constant 10 : index
+  // expected-error@+1 {{'hlfir.eoshift' op DIM must be <= input array's rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 dim %c10 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift6(%arg0: !hlfir.expr<2x2xi32>, %arg1: !hlfir.expr<2x2xi32>) {
+  // expected-error@+1 {{'hlfir.eoshift' op SHIFT's rank must be 1 less than the input array's rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift7(%arg0: !hlfir.expr<?x2xi32>, %arg1: !hlfir.expr<3xi32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.eoshift' op SHAPE(ARRAY)(2) must be equal to SHAPE(SHIFT)(1): 2 != 3}}
+  %0 = hlfir.eoshift %arg0 %arg1 dim %c1 : (!hlfir.expr<?x2xi32>, !hlfir.expr<3xi32>, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift8(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.eoshift' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,?>>, i32) -> !hlfir.expr<?x!fir.char<2,?>>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift9(%arg0: !hlfir.expr<?x!fir.char<1,1>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.eoshift' op character LEN mismatch}}
+  // expected-error@+1 {{'hlfir.eoshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,1>>, i32) -> !hlfir.expr<?x!fir.char<1,2>>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift10(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32, %arg2: f32) {
+  // expected-error@+1 {{'hlfir.eoshift' op ARRAY and BOUNDARY operands must have the same element type}}
+  %0 = hlfir.eoshift %arg0 %arg1 boundary %arg2 : (!hlfir.expr<2x2xi32>, i32, f32) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_eoshift11(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32, %arg2: !hlfir.expr<2x2xi32>) {
+  // expected-error@+1 {{'hlfir.eoshift' op BOUNDARY's rank must be 1 less than the input array's rank}}
+  %0 = hlfir.eoshift %arg0 %arg1 boundary %arg2 : (!hlfir.expr<2x2xi32>, i32, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
+  %c0 = arith.constant 0 : index
+  %addr = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+  %2 = fir.convert %addr : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %var = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  // expected-error@+1 {{negative integer literal not valid for unsigned integer type}}
+  %decl:2 = hlfir.declare %var storage (%addr[-1]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  return
+}
+
+// -----
+
+"func.func"() <{function_type = (!fir.ref<!fir.array<8xi8>>) -> (), sym_name = "fir_declare_bad_storage_offset"}> ({
+^bb0(%arg0: !fir.ref<!fir.array<8xi8>>):
+  %0 = "arith.constant"() <{value = 0 : index}> : () -> index
+  %1 = "fir.address_of"() <{symbol = @block_}> : () -> !fir.ref<!fir.array<8xi8>>
+  %2 = "fir.convert"(%1) : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %3 = "fir.coordinate_of"(%2, %0) <{baseType = !fir.ref<!fir.array<?xi8>>}> : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+// expected-error@+1 {{storage offset specified without the storage reference}}
+  %4:2 = "hlfir.declare"(%3) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64, uniq_name = "a"}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  "func.return"() : () -> ()
+}) : () -> ()

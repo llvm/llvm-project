@@ -25,13 +25,15 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
+/// Returns true if only scalar values of \p Def are used by all users.
+bool onlyScalarValuesUsed(const VPValue *Def);
+
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
 /// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                       ScalarEvolution &SE);
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
@@ -47,6 +49,8 @@ inline bool isSingleScalar(const VPValue *VPV) {
     case Instruction::GetElementPtr:
     case Instruction::ICmp:
     case Instruction::FCmp:
+    case Instruction::Select:
+    case VPInstruction::Not:
     case VPInstruction::Broadcast:
     case VPInstruction::PtrAdd:
       return true;
@@ -97,6 +101,17 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Returns the VPValue representing the uncountable exit comparison used by
+/// AnyOf if the recipes it depends on can be traced back to live-ins and
+/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
+/// generating the values for the comparison. The recipes are stored in
+/// \p Recipes, and recipes forming an address for a load are also added to
+/// \p GEPs.
+std::optional<VPValue *>
+getRecipesForUncountableExit(VPlan &Plan,
+                             SmallVectorImpl<VPRecipeBase *> &Recipes,
+                             SmallVectorImpl<VPRecipeBase *> &GEPs);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

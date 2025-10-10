@@ -182,18 +182,22 @@ public:
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                 bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
+        Node, TraverseQualifier);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                               bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
+        Node, TraverseQualifier);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
@@ -896,22 +900,22 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
-    StringRef FmtStr;
+    if (SL->getCharByteWidth() == 1) {
+      StringRef FmtStr = SL->getString();
+      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
 
-    if (SL->getCharByteWidth() == 1)
-      FmtStr = SL->getString();
-    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
-      FmtStr = *EvaledFmtStr;
-    else
-      goto CHECK_UNSAFE_PTR;
+      return analyze_format_string::ParsePrintfString(
+          Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+          Ctx.getTargetInfo(), isKprintf);
+    }
 
-    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
-
-    return analyze_format_string::ParsePrintfString(
-        Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
-        Ctx.getTargetInfo(), isKprintf);
+    if (auto FmtStr = SL->tryEvaluateString(Ctx)) {
+      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
+      return analyze_format_string::ParsePrintfString(
+          Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
+          Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf);
+    }
   }
-CHECK_UNSAFE_PTR:
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
@@ -1986,6 +1990,14 @@ public:
     const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
     if (!FD)
       return false;
+
+    bool IsGlobalAndNotInAnyNamespace =
+        FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
+
+    // A libc function must either be in the std:: namespace or a global
+    // function that is not in any namespace:
+    if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
+      return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {
       isSingleStringLiteralArg =
@@ -2244,7 +2256,7 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using UseSetTy = llvm::SmallPtrSet<const DeclRefExpr *, 16>;
   using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.

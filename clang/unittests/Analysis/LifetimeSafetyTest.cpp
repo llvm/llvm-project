@@ -20,6 +20,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
 
 // A helper class to run the full lifetime analysis on a piece of code
@@ -29,11 +30,19 @@ public:
   LifetimeTestRunner(llvm::StringRef Code) {
     std::string FullCode = R"(
       #define POINT(name) void("__lifetime_test_point_" #name)
+
       struct MyObj { ~MyObj() {} int i; };
+
+      struct [[gsl::Pointer()]] View { 
+        View(const MyObj&);
+        View();
+      };
     )";
     FullCode += Code.str();
 
-    AST = std::make_unique<clang::TestAST>(FullCode);
+    Inputs = TestInputs(FullCode);
+    Inputs.Language = TestLanguage::Lang_CXX20;
+    AST = std::make_unique<clang::TestAST>(Inputs);
     ASTCtx = &AST->context();
 
     // Find the target function using AST matchers.
@@ -51,7 +60,7 @@ public:
     BuildOptions.AddTemporaryDtors = true;
 
     // Run the main analysis.
-    Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx);
+    Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
     Analysis->run();
 
     AnnotationToPointMap = Analysis->getTestPoints();
@@ -70,6 +79,7 @@ public:
   }
 
 private:
+  TestInputs Inputs;
   std::unique_ptr<TestAST> AST;
   ASTContext *ASTCtx = nullptr;
   std::unique_ptr<AnalysisDeclContext> AnalysisCtx;
@@ -93,21 +103,18 @@ public:
     return OID;
   }
 
-  std::optional<LoanID> getLoanForVar(llvm::StringRef VarName) {
+  std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
     auto *VD = findDecl<VarDecl>(VarName);
-    if (!VD)
-      return std::nullopt;
+    if (!VD) {
+      ADD_FAILURE() << "No VarDecl found for '" << VarName << "'";
+      return {};
+    }
     std::vector<LoanID> LID = Analysis.getLoanIDForVar(VD);
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
-      return std::nullopt;
+      return {};
     }
-    // TODO: Support retrieving more than one loans to a var.
-    if (LID.size() > 1) {
-      ADD_FAILURE() << "More than 1 loans found for '" << VarName;
-      return std::nullopt;
-    }
-    return LID[0];
+    return LID;
   }
 
   std::optional<LoanSet> getLoansAtPoint(OriginID OID,
@@ -118,7 +125,8 @@ public:
     return Analysis.getLoansAtPoint(OID, PP);
   }
 
-  std::optional<LoanSet> getExpiredLoansAtPoint(llvm::StringRef Annotation) {
+  std::optional<std::vector<LoanID>>
+  getExpiredLoansAtPoint(llvm::StringRef Annotation) {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
@@ -192,12 +200,13 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
 
   std::vector<LoanID> ExpectedLoans;
   for (const auto &LoanVar : LoanVars) {
-    std::optional<LoanID> ExpectedLIDOpt = Info.Helper.getLoanForVar(LoanVar);
-    if (!ExpectedLIDOpt) {
+    std::vector<LoanID> ExpectedLIDs = Info.Helper.getLoansForVar(LoanVar);
+    if (ExpectedLIDs.empty()) {
       *result_listener << "could not find loan for var '" << LoanVar << "'";
       return false;
     }
-    ExpectedLoans.push_back(*ExpectedLIDOpt);
+    ExpectedLoans.insert(ExpectedLoans.end(), ExpectedLIDs.begin(),
+                         ExpectedLIDs.end());
   }
 
   return ExplainMatchResult(UnorderedElementsAreArray(ExpectedLoans),
@@ -216,17 +225,17 @@ MATCHER_P(AreExpiredAt, Annotation, "") {
                      << Annotation << "'";
     return false;
   }
-  std::vector<LoanID> ActualExpiredLoans(ActualExpiredSetOpt->begin(),
-                                         ActualExpiredSetOpt->end());
+  std::vector<LoanID> ActualExpiredLoans = *ActualExpiredSetOpt;
   std::vector<LoanID> ExpectedExpiredLoans;
   for (const auto &VarName : Info.LoanVars) {
-    auto LoanIDOpt = Helper.getLoanForVar(VarName);
-    if (!LoanIDOpt) {
+    auto LoanIDs = Helper.getLoansForVar(VarName);
+    if (LoanIDs.empty()) {
       *result_listener << "could not find a loan for variable '" << VarName
                        << "'";
       return false;
     }
-    ExpectedExpiredLoans.push_back(*LoanIDOpt);
+    ExpectedExpiredLoans.insert(ExpectedExpiredLoans.end(), LoanIDs.begin(),
+                                LoanIDs.end());
   }
   return ExplainMatchResult(UnorderedElementsAreArray(ExpectedExpiredLoans),
                             ActualExpiredLoans, result_listener);
@@ -723,6 +732,193 @@ TEST_F(LifetimeAnalysisTest, ReassignedPointerThenOriginalExpires) {
   EXPECT_THAT(NoLoans(), AreExpiredAt("p_has_s2"));
   EXPECT_THAT(LoansTo({"s2"}), AreExpiredAt("p_after_s2_expires"));
   EXPECT_THAT(LoansTo({"s1", "s2"}), AreExpiredAt("p_after_s1_expires"));
+}
+
+TEST_F(LifetimeAnalysisTest, NoDuplicateLoansForImplicitCastToConst) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      const MyObj* p = &a;
+      const MyObj* q = &a;
+      POINT(at_end);
+    }
+  )");
+  EXPECT_THAT(Helper->getLoansForVar("a"), SizeIs(2));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerSimpleLoan) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = a;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConstructFromOwner) {
+  SetupTest(R"(
+    void target() {
+      MyObj al, bl, cl, dl, el, fl;
+      View a = View(al);
+      View b = View{bl};
+      View c = View(View(View(cl)));
+      View d = View{View(View(dl))};
+      View e = View{View{View{el}}};
+      View f = {fl};
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("a"), HasLoansTo({"al"}, "p1"));
+  EXPECT_THAT(Origin("b"), HasLoansTo({"bl"}, "p1"));
+  EXPECT_THAT(Origin("c"), HasLoansTo({"cl"}, "p1"));
+  EXPECT_THAT(Origin("d"), HasLoansTo({"dl"}, "p1"));
+  EXPECT_THAT(Origin("e"), HasLoansTo({"el"}, "p1"));
+  EXPECT_THAT(Origin("f"), HasLoansTo({"fl"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConstructFromView) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = View(a);
+      View y = View{x};
+      View z = View(View(View(y)));
+      View p = View{View(View(x))};
+      View q = {x};
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("q"), HasLoansTo({"a"}, "p1"));
+}
+
+// FIXME: Handle loans in ternary operator!
+TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
+  SetupTest(R"(
+    void target(bool cond) {
+      MyObj a, b;
+      View v = cond ? a : b;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+}
+
+// FIXME: Handle temporaries.
+TEST_F(LifetimeAnalysisTest, ViewFromTemporary) {
+  SetupTest(R"(
+    MyObj temporary();
+    void target() {
+      View v = temporary();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerWithConstAndAuto) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      const View v1 = a;
+      auto v2 = v1;
+      const auto& v3 = v2;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerPropagation) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = a;
+      POINT(p1);
+
+      View y = x; // Propagation via copy-construction
+      POINT(p2);
+
+      View z;
+      z = x;       // Propagation via copy-assignment
+      POINT(p3);
+    }
+  )");
+
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p2"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerLoanExpiration) {
+  SetupTest(R"(
+    void target() {
+      View x;
+      {
+        MyObj a;
+        x = a;
+        POINT(before_expiry);
+      } // `a` is destroyed here.
+      POINT(after_expiry);
+    }
+  )");
+
+  EXPECT_THAT(NoLoans(), AreExpiredAt("before_expiry"));
+  EXPECT_THAT(LoansTo({"a"}), AreExpiredAt("after_expiry"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerReassignment) {
+  SetupTest(R"(
+    void target() {
+      MyObj safe;
+      View v;
+      v = safe;
+      POINT(p1);
+      {
+        MyObj unsafe;
+        v = unsafe;
+        POINT(p2);
+      } // `unsafe` expires here.
+      POINT(p3);
+    }
+  )");
+
+  EXPECT_THAT(Origin("v"), HasLoansTo({"safe"}, "p1"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p2"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p3"));
+  EXPECT_THAT(LoansTo({"unsafe"}), AreExpiredAt("p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConversionOperator) {
+  SetupTest(R"(
+    struct String;
+
+    struct [[gsl::Pointer()]] StringView {
+      StringView() = default;
+    };
+
+    struct String {
+      ~String() {}
+      operator StringView() const;
+    };
+
+    void target() {
+      String xl, yl;
+      StringView x = xl;
+      StringView y;
+      y = yl;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"xl"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"yl"}, "p1"));
 }
 
 } // anonymous namespace

@@ -52,13 +52,13 @@ const std::set<StringRef> NoFoldSet = {
 
 static bool isExplicitAlign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitAlign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().contains(InstStr);
+    return Inst->getName().contains(InstStr);
   });
 }
 
 static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitUnalign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().contains(InstStr);
+    return Inst->getName().contains(InstStr);
   });
 }
 
@@ -96,8 +96,8 @@ class X86FoldTablesEmitter {
 
     void print(raw_ostream &OS) const {
       OS.indent(2);
-      OS << "{X86::" << RegInst->TheDef->getName() << ", ";
-      OS << "X86::" << MemInst->TheDef->getName() << ", ";
+      OS << "{X86::" << RegInst->getName() << ", ";
+      OS << "X86::" << MemInst->getName() << ", ";
 
       std::string Attrs;
       if (FoldLoad)
@@ -243,18 +243,6 @@ static bool hasPtrTailcallRegClass(const CodeGenInstruction *Inst) {
   return any_of(Inst->Operands, [](const CGIOperandList::OperandInfo &OpIn) {
     return OpIn.Rec->getName() == "ptr_rc_tailcall";
   });
-}
-
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    const BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
 }
 
 static bool mayFoldFromForm(uint8_t Form) {
@@ -565,10 +553,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
       const Record *RegOpRec = RegInst->Operands[I].Rec;
       const Record *MemOpRec = MemInst->Operands[I].Rec;
-      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
+      // RegClassByHwMode: For instructions like TAILJMPr, TAILJMPr64,
       // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
-           RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
+           (RegOpRec->isSubClassOf("RegClassByHwMode"))) &&
           isMemoryOperand(MemOpRec)) {
         switch (I) {
         case 0:
@@ -673,7 +661,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   auto FixUp = [&](const CodeGenInstruction *RegInst) {
-    StringRef RegInstName = RegInst->TheDef->getName();
+    StringRef RegInstName = RegInst->getName();
     if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt"))
       if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4)))
         RegInst = &Target.getInstruction(RegAltRec);
@@ -702,7 +690,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
     }
 
     // Broadcast tables
-    StringRef MemInstName = MemInst->TheDef->getName();
+    StringRef MemInstName = MemInst->getName();
     if (!MemInstName.contains("mb") && !MemInstName.contains("mib"))
       continue;
     RegInstsIt = RegInstsForBroadcast.find(Opc);

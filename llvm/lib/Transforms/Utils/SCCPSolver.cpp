@@ -19,8 +19,10 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
@@ -282,6 +284,58 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       InsertedValues.insert(Sub);
     }
     return Sub;
+  }
+
+  // Relax range checks.
+  if (auto *ICmp = dyn_cast<ICmpInst>(&Inst)) {
+    Value *X;
+    auto MatchTwoInstructionExactRangeCheck =
+        [&]() -> std::optional<ConstantRange> {
+      const APInt *RHSC;
+      if (!match(ICmp->getOperand(1), m_APInt(RHSC)))
+        return std::nullopt;
+
+      Value *LHS = ICmp->getOperand(0);
+      ICmpInst::Predicate Pred = ICmp->getPredicate();
+      const APInt *Offset;
+      if (match(LHS, m_OneUse(m_AddLike(m_Value(X), m_APInt(Offset)))))
+        return ConstantRange::makeExactICmpRegion(Pred, *RHSC).sub(*Offset);
+      // Match icmp eq/ne X & NegPow2, C
+      if (ICmp->isEquality()) {
+        const APInt *Mask;
+        if (match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
+            RHSC->countr_zero() >= Mask->countr_zero()) {
+          ConstantRange CR(*RHSC, *RHSC - *Mask);
+          return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
+        }
+      }
+      return std::nullopt;
+    };
+
+    if (auto CR = MatchTwoInstructionExactRangeCheck()) {
+      ConstantRange LRange = GetRange(X);
+      // Early exit if we know nothing about X.
+      if (LRange.isFullSet())
+        return nullptr;
+      // We are allowed to refine the comparison to either true or false for out
+      // of range inputs. Here we refine the comparison to true, i.e. we relax
+      // the range check.
+      auto NewCR = CR->exactUnionWith(LRange.inverse());
+      // TODO: Check if we can narrow the range check to an equality test.
+      // E.g, for X in [0, 4), X - 3 u< 2 -> X == 3
+      if (!NewCR)
+        return nullptr;
+      ICmpInst::Predicate Pred;
+      APInt RHS;
+      // Check if we can represent NewCR as an icmp predicate.
+      if (NewCR->getEquivalentICmp(Pred, RHS)) {
+        IRBuilder<NoFolder> Builder(&Inst);
+        Value *NewICmp =
+            Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+        InsertedValues.insert(NewICmp);
+        return NewICmp;
+      }
+    }
   }
 
   return nullptr;
@@ -777,10 +831,10 @@ public:
 
     for (BasicBlock &BB : F) {
       for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-          if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+        if (auto *BC = dyn_cast<BitCastInst>(&Inst)) {
+          if (BC->getType() == BC->getOperand(0)->getType()) {
             if (It->second->getPredicateInfoFor(&Inst)) {
-              Value *Op = II->getOperand(0);
+              Value *Op = BC->getOperand(0);
               Inst.replaceAllUsesWith(Op);
               Inst.eraseFromParent();
             }
@@ -1413,6 +1467,15 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   if (ValueState[&I].isOverdefined())
     return;
 
+  if (auto *BC = dyn_cast<BitCastInst>(&I)) {
+    if (BC->getType() == BC->getOperand(0)->getType()) {
+      if (const PredicateBase *PI = getPredicateInfoFor(&I)) {
+        handlePredicate(&I, I.getOperand(0), PI);
+        return;
+      }
+    }
+  }
+
   ValueLatticeElement OpSt = getValueState(I.getOperand(0));
   if (OpSt.isUnknownOrUndef())
     return;
@@ -1433,8 +1496,12 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
         OpSt.asConstantRange(I.getSrcTy(), /*UndefAllowed=*/false);
 
     Type *DestTy = I.getDestTy();
-    ConstantRange Res =
-        OpRange.castOp(I.getOpcode(), DestTy->getScalarSizeInBits());
+    ConstantRange Res = ConstantRange::getEmpty(DestTy->getScalarSizeInBits());
+    if (auto *Trunc = dyn_cast<TruncInst>(&I))
+      Res = OpRange.truncate(DestTy->getScalarSizeInBits(),
+                             Trunc->getNoWrapKind());
+    else
+      Res = OpRange.castOp(I.getOpcode(), DestTy->getScalarSizeInBits());
     mergeInValue(LV, &I, ValueLatticeElement::getRange(Res));
   } else
     markOverdefined(&I);
@@ -2001,17 +2068,6 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
   Function *F = CB.getCalledFunction();
 
   if (auto *II = dyn_cast<IntrinsicInst>(&CB)) {
-    if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-      if (ValueState[&CB].isOverdefined())
-        return;
-
-      Value *CopyOf = CB.getOperand(0);
-      const PredicateBase *PI = getPredicateInfoFor(&CB);
-      assert(PI && "Missing predicate info for ssa.copy");
-      handlePredicate(&CB, CopyOf, PI);
-      return;
-    }
-
     if (II->getIntrinsicID() == Intrinsic::vscale) {
       unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);

@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -330,40 +332,135 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     return lhs_or_err;
   lldb::ValueObjectSP base = *lhs_or_err;
 
-  // Check to see if 'base' has a synthetic value; if so, try using that.
+  StreamString var_expr_path_strm;
   uint64_t child_idx = node->GetIndex();
-  if (lldb::ValueObjectSP synthetic = base->GetSyntheticValue()) {
-    llvm::Expected<uint32_t> num_children =
-        synthetic->GetNumChildren(child_idx + 1);
-    if (!num_children)
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, toString(num_children.takeError()), node->GetLocation());
-    if (child_idx >= *num_children) {
-      std::string message = llvm::formatv(
-          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+  lldb::ValueObjectSP child_valobj_sp;
+
+  bool is_incomplete_array = false;
+  CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
+  base->GetExpressionPath(var_expr_path_strm);
+
+  if (base_type.IsPointerType()) {
+    bool is_objc_pointer = true;
+
+    if (base->GetCompilerType().GetMinimumLanguage() != lldb::eLanguageTypeObjC)
+      is_objc_pointer = false;
+    else if (!base->GetCompilerType().IsPointerType())
+      is_objc_pointer = false;
+
+    if (!m_use_synthetic && is_objc_pointer) {
+      std::string err_msg = llvm::formatv(
+          "\"({0}) {1}\" is an Objective-C pointer, and cannot be subscripted",
           base->GetTypeName().AsCString("<invalid type>"),
-          base->GetName().AsCString());
-      return llvm::make_error<DILDiagnosticError>(m_expr, message,
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node->GetLocation());
     }
-    if (lldb::ValueObjectSP child_valobj_sp =
-            synthetic->GetChildAtIndex(child_idx))
+    if (is_objc_pointer) {
+      lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
+      if (!synthetic || synthetic == base) {
+        std::string err_msg =
+            llvm::formatv("\"({0}) {1}\" is not an array type",
+                          base->GetTypeName().AsCString("<invalid type>"),
+                          var_expr_path_strm.GetData());
+        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                    node->GetLocation());
+      }
+      if (static_cast<uint32_t>(child_idx) >=
+          synthetic->GetNumChildrenIgnoringErrors()) {
+        std::string err_msg = llvm::formatv(
+            "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+            base->GetTypeName().AsCString("<invalid type>"),
+            var_expr_path_strm.GetData());
+        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                    node->GetLocation());
+      }
+      child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
+      if (!child_valobj_sp) {
+        std::string err_msg = llvm::formatv(
+            "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+            base->GetTypeName().AsCString("<invalid type>"),
+            var_expr_path_strm.GetData());
+        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                    node->GetLocation());
+      }
+      if (m_use_dynamic != lldb::eNoDynamicValues) {
+        if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
+          child_valobj_sp = std::move(dynamic_sp);
+      }
       return child_valobj_sp;
+    }
+
+    child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "failed to use pointer as array for index {0} for "
+          "\"({1}) {2}\"",
+          child_idx, base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      if (base_type.IsPointerToVoid())
+        err_msg = "subscript of pointer to incomplete type 'void'";
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation());
+    }
+  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array)) {
+    child_valobj_sp = base->GetChildAtIndex(child_idx);
+    if (!child_valobj_sp && (is_incomplete_array || m_use_synthetic))
+      child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation());
+    }
+  } else if (base_type.IsScalarType()) {
+    child_valobj_sp =
+        base->GetSyntheticBitFieldChild(child_idx, child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", child_idx,
+          child_idx, base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
+  } else {
+    lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
+    if (!m_use_synthetic || !synthetic || synthetic == base) {
+      std::string err_msg =
+          llvm::formatv("\"{0}\" is not an array type",
+                        base->GetTypeName().AsCString("<invalid type>"));
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
+    if (static_cast<uint32_t>(child_idx) >=
+        synthetic->GetNumChildrenIgnoringErrors(child_idx + 1)) {
+      std::string err_msg = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
+    child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
+    if (!child_valobj_sp) {
+      std::string err_msg = llvm::formatv(
+          "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+          base->GetTypeName().AsCString("<invalid type>"),
+          var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                  node->GetLocation(), 1);
+    }
   }
 
-  auto base_type = base->GetCompilerType().GetNonReferenceType();
-  if (!base_type.IsPointerType() && !base_type.IsArrayType())
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "subscripted value is not an array or pointer",
-        node->GetLocation());
-  if (base_type.IsPointerToVoid())
-    return llvm::make_error<DILDiagnosticError>(
-        m_expr, "subscript of pointer to incomplete type 'void'",
-        node->GetLocation());
-
-  if (base_type.IsArrayType()) {
-    if (lldb::ValueObjectSP child_valobj_sp = base->GetChildAtIndex(child_idx))
-      return child_valobj_sp;
+  if (child_valobj_sp) {
+    if (m_use_dynamic != lldb::eNoDynamicValues) {
+      if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
+        child_valobj_sp = std::move(dynamic_sp);
+    }
+    return child_valobj_sp;
   }
 
   int64_t signed_child_idx = node->GetIndex();
@@ -400,6 +497,115 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
+}
+
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
+
+static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
+                                 lldb::BasicType basic_type) {
+  if (type_system)
+    return type_system.get()->GetBasicTypeFromAST(basic_type);
+
+  return CompilerType();
+}
+
+llvm::Expected<CompilerType>
+Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
+                             std::shared_ptr<ExecutionContextScope> ctx,
+                             const IntegerLiteralNode *literal) {
+  // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
+  // an unsigned integer.
+  bool unsigned_is_allowed = literal->IsUnsigned() || literal->GetRadix() != 10;
+  llvm::APInt apint = literal->GetValue();
+
+  llvm::SmallVector<std::pair<lldb::BasicType, lldb::BasicType>, 3> candidates;
+  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::None)
+    candidates.emplace_back(lldb::eBasicTypeInt,
+                            unsigned_is_allowed ? lldb::eBasicTypeUnsignedInt
+                                                : lldb::eBasicTypeInvalid);
+  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::Long)
+    candidates.emplace_back(lldb::eBasicTypeLong,
+                            unsigned_is_allowed ? lldb::eBasicTypeUnsignedLong
+                                                : lldb::eBasicTypeInvalid);
+  candidates.emplace_back(lldb::eBasicTypeLongLong,
+                          lldb::eBasicTypeUnsignedLongLong);
+  for (auto [signed_, unsigned_] : candidates) {
+    CompilerType signed_type = type_system->GetBasicTypeFromAST(signed_);
+    if (!signed_type)
+      continue;
+    llvm::Expected<uint64_t> size = signed_type.GetBitSize(ctx.get());
+    if (!size)
+      return size.takeError();
+    if (!literal->IsUnsigned() && apint.isIntN(*size - 1))
+      return signed_type;
+    if (unsigned_ != lldb::eBasicTypeInvalid && apint.isIntN(*size))
+      return type_system->GetBasicTypeFromAST(unsigned_);
+  }
+
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr,
+      "integer literal is too large to be represented in any integer type",
+      literal->GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const IntegerLiteralNode *node) {
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+
+  llvm::Expected<CompilerType> type =
+      PickIntegerType(*type_system, m_exe_ctx_scope, node);
+  if (!type)
+    return type.takeError();
+
+  Scalar scalar = node->GetValue();
+  // APInt from StringRef::getAsInteger comes with just enough bitwidth to
+  // hold the value. This adjusts APInt bitwidth to match the compiler type.
+  llvm::Expected<uint64_t> type_bitsize =
+      type->GetBitSize(m_exe_ctx_scope.get());
+  if (!type_bitsize)
+    return type_bitsize.takeError();
+  scalar.TruncOrExtendTo(*type_bitsize, false);
+  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
+                                                  "result");
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const FloatLiteralNode *node) {
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+
+  bool isFloat =
+      &node->GetValue().getSemantics() == &llvm::APFloat::IEEEsingle();
+  lldb::BasicType basic_type =
+      isFloat ? lldb::eBasicTypeFloat : lldb::eBasicTypeDouble;
+  CompilerType type = GetBasicType(*type_system, basic_type);
+
+  if (!type)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unable to create a const literal", node->GetLocation());
+
+  Scalar scalar = node->GetValue();
+  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, type,
+                                                  "result");
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BooleanLiteralNode *node) {
+  bool value = node->GetValue();
+  return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
 } // namespace lldb_private::dil

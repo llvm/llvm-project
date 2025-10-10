@@ -72,6 +72,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   // in the CompilerInvocation (as we don't explicitly set our own).
   CompilerInstance Instance(std::move(CInvok));
   Instance.setDiagnostics(Diags);
+  Instance.createVirtualFileSystem();
   Instance.createFileManager();
 
   // Check if the virtual file exists which means that our VFS is used by the
@@ -135,8 +136,9 @@ TEST(CompilerInstance, MultipleInputsCleansFileIDs) {
   ASSERT_TRUE(CInvok) << "could not create compiler invocation";
 
   CompilerInstance Instance(std::move(CInvok));
+  Instance.setVirtualFileSystem(VFS);
   Instance.setDiagnostics(Diags);
-  Instance.createFileManager(VFS);
+  Instance.createFileManager();
 
   // Run once for `a.cc` and then for `a.h`. This makes sure we get the same
   // file ID for `b.h` in the second run as `a.h` from first run.

@@ -8,6 +8,7 @@ declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
 declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
 declare <2 x float> @llvm.maximum.v2f32(<2 x float>, <2 x float>)
+declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>)
 
 ; Ternary fp
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
@@ -32,6 +33,8 @@ declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float>)
 ; Unary fp operand, int return type
 declare <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float>)
 declare <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float>)
+declare <2 x i32> @llvm.lround.v2i32.v2f32(<2 x float>)
+declare <2 x i32> @llvm.llround.v2i32.v2f32(<2 x float>)
 
 ; Bool return type, overloaded on fp operand type
 declare <2 x i1> @llvm.is.fpclass(<2 x float>, i32)
@@ -159,6 +162,22 @@ define <2 x float> @scalarize_powi_v2f32(<2 x float> %x, i32 %y) #0 {
   ret <2 x float> %powi
 }
 
+define <2 x float> @scalarize_ldexp_v2f32(<2 x float> %x, <2 x i32> %y) #0 {
+; CHECK-LABEL: @scalarize_ldexp_v2f32(
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[Y:%.*]] = extractelement <2 x i32> [[Y1:%.*]], i64 0
+; CHECK-NEXT:    [[POWI_I0:%.*]] = call float @llvm.ldexp.f32.i32(float [[X_I0]], i32 [[Y]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[Y_I1:%.*]] = extractelement <2 x i32> [[Y1]], i64 1
+; CHECK-NEXT:    [[POWI_I1:%.*]] = call float @llvm.ldexp.f32.i32(float [[X_I1]], i32 [[Y_I1]])
+; CHECK-NEXT:    [[POWI_UPTO0:%.*]] = insertelement <2 x float> poison, float [[POWI_I0]], i64 0
+; CHECK-NEXT:    [[POWI:%.*]] = insertelement <2 x float> [[POWI_UPTO0]], float [[POWI_I1]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[POWI]]
+;
+  %powi = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> %y)
+  ret <2 x float> %powi
+}
+
 define <2 x i32> @scalarize_smul_fix_sat_v2i32(<2 x i32> %x) #0 {
 ; CHECK-LABEL: @scalarize_smul_fix_sat_v2i32(
 ; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
@@ -240,6 +259,34 @@ define <2 x i32> @scalarize_llrint(<2 x float> %x) #0 {
 ; CHECK-NEXT:    ret <2 x i32> [[RND]]
 ;
   %rnd = call <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float> %x)
+  ret <2 x i32> %rnd
+}
+
+define <2 x i32> @scalarize_lround(<2 x float> %x) #0 {
+; CHECK-LABEL: @scalarize_lround(
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[RND_I0:%.*]] = call i32 @llvm.lround.i32.f32(float [[X_I0]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[RND_I1:%.*]] = call i32 @llvm.lround.i32.f32(float [[X_I1]])
+; CHECK-NEXT:    [[RND_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RND_I0]], i64 0
+; CHECK-NEXT:    [[RND:%.*]] = insertelement <2 x i32> [[RND_UPTO0]], i32 [[RND_I1]], i64 1
+; CHECK-NEXT:    ret <2 x i32> [[RND]]
+;
+  %rnd = call <2 x i32> @llvm.lround.v2i32.v2f32(<2 x float> %x)
+  ret <2 x i32> %rnd
+}
+
+define <2 x i32> @scalarize_llround(<2 x float> %x) #0 {
+; CHECK-LABEL: @scalarize_llround(
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
+; CHECK-NEXT:    [[RND_I0:%.*]] = call i32 @llvm.llround.i32.f32(float [[X_I0]])
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i64 1
+; CHECK-NEXT:    [[RND_I1:%.*]] = call i32 @llvm.llround.i32.f32(float [[X_I1]])
+; CHECK-NEXT:    [[RND_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RND_I0]], i64 0
+; CHECK-NEXT:    [[RND:%.*]] = insertelement <2 x i32> [[RND_UPTO0]], i32 [[RND_I1]], i64 1
+; CHECK-NEXT:    ret <2 x i32> [[RND]]
+;
+  %rnd = call <2 x i32> @llvm.llround.v2i32.v2f32(<2 x float> %x)
   ret <2 x i32> %rnd
 }
 

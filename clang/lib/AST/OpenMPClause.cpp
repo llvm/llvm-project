@@ -104,6 +104,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPFilterClause *>(C);
   case OMPC_ompx_dyn_cgroup_mem:
     return static_cast<const OMPXDynCGroupMemClause *>(C);
+  case OMPC_message:
+    return static_cast<const OMPMessageClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -122,6 +124,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -158,7 +161,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
-  case OMPC_message:
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
@@ -221,6 +223,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -1910,8 +1913,13 @@ void OMPClausePrinter::VisitOMPDetachClause(OMPDetachClause *Node) {
 void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   OS << "default("
      << getOpenMPSimpleClauseTypeName(OMPC_default,
-                                      unsigned(Node->getDefaultKind()))
-     << ")";
+                                      unsigned(Node->getDefaultKind()));
+  if (Version >= 60 && Node->getDefaultVC() != OMPC_DEFAULT_VC_all) {
+    OS << ":"
+       << getOpenMPDefaultVariableCategoryName(unsigned(Node->getDefaultVC()));
+  }
+
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
@@ -1963,8 +1971,10 @@ void OMPClausePrinter::VisitOMPSeverityClause(OMPSeverityClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPMessageClause(OMPMessageClause *Node) {
-  OS << "message(\""
-     << cast<StringLiteral>(Node->getMessageString())->getString() << "\")";
+  OS << "message(";
+  if (Expr *E = Node->getMessageString())
+    E->printPretty(OS, nullptr, Policy);
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
@@ -2350,17 +2360,16 @@ void OMPClausePrinter::VisitOMPReductionClause(OMPReductionClause *Node) {
     if (Node->getModifierLoc().isValid())
       OS << getOpenMPSimpleClauseTypeName(OMPC_reduction, Node->getModifier())
          << ", ";
-    NestedNameSpecifier *QualifierLoc =
+    NestedNameSpecifier Qualifier =
         Node->getQualifierLoc().getNestedNameSpecifier();
     OverloadedOperatorKind OOK =
         Node->getNameInfo().getName().getCXXOverloadedOperator();
-    if (QualifierLoc == nullptr && OOK != OO_None) {
+    if (!Qualifier && OOK != OO_None) {
       // Print reduction identifier in C format
       OS << getOperatorSpelling(OOK);
     } else {
       // Use C++ format
-      if (QualifierLoc != nullptr)
-        QualifierLoc->print(OS, Policy);
+      Qualifier.print(OS, Policy);
       OS << Node->getNameInfo();
     }
     OS << ":";
@@ -2373,17 +2382,16 @@ void OMPClausePrinter::VisitOMPTaskReductionClause(
     OMPTaskReductionClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "task_reduction(";
-    NestedNameSpecifier *QualifierLoc =
+    NestedNameSpecifier Qualifier =
         Node->getQualifierLoc().getNestedNameSpecifier();
     OverloadedOperatorKind OOK =
         Node->getNameInfo().getName().getCXXOverloadedOperator();
-    if (QualifierLoc == nullptr && OOK != OO_None) {
+    if (!Qualifier && OOK != OO_None) {
       // Print reduction identifier in C format
       OS << getOperatorSpelling(OOK);
     } else {
       // Use C++ format
-      if (QualifierLoc != nullptr)
-        QualifierLoc->print(OS, Policy);
+      Qualifier.print(OS, Policy);
       OS << Node->getNameInfo();
     }
     OS << ":";
@@ -2395,17 +2403,16 @@ void OMPClausePrinter::VisitOMPTaskReductionClause(
 void OMPClausePrinter::VisitOMPInReductionClause(OMPInReductionClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "in_reduction(";
-    NestedNameSpecifier *QualifierLoc =
+    NestedNameSpecifier Qualifier =
         Node->getQualifierLoc().getNestedNameSpecifier();
     OverloadedOperatorKind OOK =
         Node->getNameInfo().getName().getCXXOverloadedOperator();
-    if (QualifierLoc == nullptr && OOK != OO_None) {
+    if (!Qualifier && OOK != OO_None) {
       // Print reduction identifier in C format
       OS << getOperatorSpelling(OOK);
     } else {
       // Use C++ format
-      if (QualifierLoc != nullptr)
-        QualifierLoc->print(OS, Policy);
+      Qualifier.print(OS, Policy);
       OS << Node->getNameInfo();
     }
     OS << ":";
@@ -2508,10 +2515,9 @@ template <typename T>
 static void PrintMapper(raw_ostream &OS, T *Node,
                         const PrintingPolicy &Policy) {
   OS << '(';
-  NestedNameSpecifier *MapperNNS =
+  NestedNameSpecifier MapperNNS =
       Node->getMapperQualifierLoc().getNestedNameSpecifier();
-  if (MapperNNS)
-    MapperNNS->print(OS, Policy);
+  MapperNNS.print(OS, Policy);
   OS << Node->getMapperIdInfo() << ')';
 }
 

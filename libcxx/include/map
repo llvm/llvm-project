@@ -582,7 +582,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__functional/binary_function.h>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
-#  include <__fwd/map.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -590,10 +589,12 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
+#  include <__memory/compressed_pair.h>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
 #  include <__node_handle>
+#  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
@@ -603,6 +604,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
+#  include <__utility/lazy_synth_three_way_comparator.h>
 #  include <__utility/pair.h>
 #  include <__utility/piecewise_construct.h>
 #  include <__utility/swap.h>
@@ -632,47 +634,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key,
-          class _CP,
-          class _Compare,
-          bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
-class __map_value_compare : private _Compare {
-public:
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
-      : _Compare() {}
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-      : _Compare(__c) {}
-  _LIBCPP_HIDE_FROM_ABI const _Compare& key_comp() const _NOEXCEPT { return *this; }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const {
-    return static_cast<const _Compare&>(*this)(__x.first, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _Key& __y) const {
-    return static_cast<const _Compare&>(*this)(__x.first, __y);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
-    return static_cast<const _Compare&>(*this)(__x, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
-    using std::swap;
-    swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
-  }
-
-#  if _LIBCPP_STD_VER >= 14
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
-    return static_cast<const _Compare&>(*this)(__x, __y.first);
-  }
-
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
-    return static_cast<const _Compare&>(*this)(__x.first, __y);
-  }
-#  endif
-};
-
 template <class _Key, class _CP, class _Compare>
-class __map_value_compare<_Key, _CP, _Compare, false> {
-  _Compare __comp_;
+class __map_value_compare {
+  _LIBCPP_COMPRESSED_ELEMENT(_Compare, __comp_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
@@ -684,7 +648,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const { return __comp_(__x.first, __y.first); }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _Key& __y) const { return __comp_(__x.first, __y); }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const { return __comp_(__x, __y.first); }
-  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(__comp_, __y.__comp_);
   }
@@ -692,19 +656,63 @@ public:
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
-    return __comp_(__x, __y.__get_value().first);
+    return __comp_(__x, __y.first);
   }
 
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
-    return __comp_(__x.__get_value().first, __y);
+    return __comp_(__x.first, __y);
   }
 #  endif
 };
 
-template <class _Key, class _CP, class _Compare, bool __b>
+#  if _LIBCPP_STD_VER >= 14
+template <class _MapValueT, class _Key, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _MapValueT, _MapValueT> {
+  __lazy_synth_three_way_comparator<_Compare, _Key, _Key> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _MapValueT& __lhs, _LIBCPP_LIFETIMEBOUND const _MapValueT& __rhs) const {
+    return __comp_(__lhs.first, __rhs.first);
+  }
+};
+
+template <class _MapValueT, class _Key, class _TransparentKey, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _TransparentKey, _MapValueT> {
+  __lazy_synth_three_way_comparator<_Compare, _TransparentKey, _Key> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _TransparentKey& __lhs, _LIBCPP_LIFETIMEBOUND const _MapValueT& __rhs) const {
+    return __comp_(__lhs, __rhs.first);
+  }
+};
+
+template <class _MapValueT, class _Key, class _TransparentKey, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _MapValueT, _TransparentKey> {
+  __lazy_synth_three_way_comparator<_Compare, _Key, _TransparentKey> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _MapValueT& __lhs, _LIBCPP_LIFETIMEBOUND const _TransparentKey& __rhs) const {
+    return __comp_(__lhs.first, __rhs);
+  }
+};
+#  endif // _LIBCPP_STD_VER >= 14
+
+template <class _Key, class _CP, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__map_value_compare<_Key, _CP, _Compare, __b>& __x, __map_value_compare<_Key, _CP, _Compare, __b>& __y)
+swap(__map_value_compare<_Key, _CP, _Compare>& __x, __map_value_compare<_Key, _CP, _Compare>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
@@ -742,9 +750,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__second_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_.second));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().second));
     if (__first_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__value_.first));
+      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().first));
     if (__p)
       __alloc_traits::deallocate(__na_, __p, 1);
   }
@@ -861,7 +869,10 @@ public:
   friend class __tree_const_iterator;
 };
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
+template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
+class multimap;
+
+template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class map {
 public:
   // types:
@@ -976,11 +987,11 @@ public:
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI map(map&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI map(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : __tree_(__vc(__comp)) {
@@ -1052,7 +1063,7 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) {
-    return __tree_.__emplace_hint_unique(__p.__i_, std::forward<_Args>(__args)...);
+    return __tree_.__emplace_hint_unique(__p.__i_, std::forward<_Args>(__args)...).first;
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
@@ -1062,7 +1073,7 @@ public:
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) {
-    return __tree_.__emplace_hint_unique(__pos.__i_, std::forward<_Pp>(__p));
+    return __tree_.__emplace_hint_unique(__pos.__i_, std::forward<_Pp>(__p)).first;
   }
 
 #  endif // _LIBCPP_CXX03_LANG
@@ -1070,7 +1081,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__emplace_unique(__v); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
-    return __tree_.__emplace_hint_unique(__p.__i_, __v);
+    return __tree_.__emplace_hint_unique(__p.__i_, __v).first;
   }
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1079,25 +1090,21 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
-    return __tree_.__emplace_hint_unique(__p.__i_, std::move(__v));
+    return __tree_.__emplace_hint_unique(__p.__i_, std::move(__v)).first;
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 #  endif
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      insert(__e.__i_, *__f);
+  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
+    __tree_.__insert_range_unique(__first, __last);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      insert(__end.__i_, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_unique(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
@@ -1105,17 +1112,13 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args) {
-    return __tree_.__emplace_unique_key_args(
-        __k,
-        std::piecewise_construct,
-        std::forward_as_tuple(__k),
-        std::forward_as_tuple(std::forward<_Args>(__args)...));
+    return __tree_.__emplace_unique(
+        std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple(std::forward<_Args>(__args)...));
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args) {
-    return __tree_.__emplace_unique_key_args(
-        __k,
+    return __tree_.__emplace_unique(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(__k)),
         std::forward_as_tuple(std::forward<_Args>(__args)...));
@@ -1124,9 +1127,8 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args) {
     return __tree_
-        .__emplace_hint_unique_key_args(
+        .__emplace_hint_unique(
             __h.__i_,
-            __k,
             std::piecewise_construct,
             std::forward_as_tuple(__k),
             std::forward_as_tuple(std::forward<_Args>(__args)...))
@@ -1136,9 +1138,8 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __h, key_type&& __k, _Args&&... __args) {
     return __tree_
-        .__emplace_hint_unique_key_args(
+        .__emplace_hint_unique(
             __h.__i_,
-            __k,
             std::piecewise_construct,
             std::forward_as_tuple(std::move(__k)),
             std::forward_as_tuple(std::forward<_Args>(__args)...))
@@ -1147,27 +1148,25 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v) {
-    iterator __p = lower_bound(__k);
-    if (__p != end() && !key_comp()(__k, __p->first)) {
-      __p->second = std::forward<_Vp>(__v);
-      return std::make_pair(__p, false);
-    }
-    return std::make_pair(emplace_hint(__p, __k, std::forward<_Vp>(__v)), true);
+    auto __result              = __tree_.__emplace_unique(__k, std::forward<_Vp>(__v));
+    auto& [__iter, __inserted] = __result;
+    if (!__inserted)
+      __iter->second = std::forward<_Vp>(__v);
+    return __result;
   }
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v) {
-    iterator __p = lower_bound(__k);
-    if (__p != end() && !key_comp()(__k, __p->first)) {
-      __p->second = std::forward<_Vp>(__v);
-      return std::make_pair(__p, false);
-    }
-    return std::make_pair(emplace_hint(__p, std::move(__k), std::forward<_Vp>(__v)), true);
+    auto __result              = __tree_.__emplace_unique(std::move(__k), std::forward<_Vp>(__v));
+    auto& [__iter, __inserted] = __result;
+    if (!__inserted)
+      __iter->second = std::forward<_Vp>(__v);
+    return __result;
   }
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v) {
-    auto [__r, __inserted] = __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, __k, std::forward<_Vp>(__v));
+    auto [__r, __inserted] = __tree_.__emplace_hint_unique(__h.__i_, __k, std::forward<_Vp>(__v));
 
     if (!__inserted)
       __r->second = std::forward<_Vp>(__v);
@@ -1177,8 +1176,7 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v) {
-    auto [__r, __inserted] =
-        __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, std::move(__k), std::forward<_Vp>(__v));
+    auto [__r, __inserted] = __tree_.__emplace_hint_unique(__h.__i_, std::move(__k), std::forward<_Vp>(__v));
 
     if (!__inserted)
       __r->second = std::forward<_Vp>(__v);
@@ -1355,9 +1353,8 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>,
-    _Compare   = _Compare(),
-    _Allocator = _Allocator()) -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
+    -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1376,8 +1373,8 @@ map(from_range_t, _Range&&, _Allocator)
 #    endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>,
-    _Allocator) -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>, _Allocator)
+    -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1387,27 +1384,23 @@ map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty()) {
-      __tree_.__insert_unique_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+      __tree_.__insert_unique_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
     }
   }
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
-  return __tree_
-      .__emplace_unique_key_args(__k, std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
+  return __tree_.__emplace_unique(std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
       .first->second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](key_type&& __k) {
-  // TODO investigate this clang-tidy warning.
-  // NOLINTBEGIN(bugprone-use-after-move)
   return __tree_
-      .__emplace_unique_key_args(
-          __k, std::piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
+      .__emplace_unique(std::piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
       .first->second;
-  // NOLINTEND(bugprone-use-after-move)
 }
 
 #  else // _LIBCPP_CXX03_LANG
@@ -1417,44 +1410,41 @@ typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
 map<_Key, _Tp, _Compare, _Allocator>::__construct_node_with_key(const key_type& __k) {
   __node_allocator& __na = __tree_.__node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__value_.first), __k);
+  __node_traits::construct(__na, std::addressof(__h->__get_value().first), __k);
   __h.get_deleter().__first_constructed = true;
-  __node_traits::construct(__na, std::addressof(__h->__value_.second));
+  __node_traits::construct(__na, std::addressof(__h->__get_value().second));
   __h.get_deleter().__second_constructed = true;
   return __h;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
-  __parent_pointer __parent;
-  __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
+  auto [__parent, __child] = __tree_.__find_equal(__k);
+  __node_pointer __r       = static_cast<__node_pointer>(__child);
   if (__child == nullptr) {
     __node_holder __h = __construct_node_with_key(__k);
     __tree_.__insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
     __r = __h.release();
   }
-  return __r->__value_.second;
+  return __r->__get_value().second;
 }
 
 #  endif // _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
-  __parent_pointer __parent;
-  __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
+  auto [_, __child] = __tree_.__find_equal(__k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return static_cast<__node_pointer>(__child)->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
-  __parent_pointer __parent;
-  __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
+  auto [_, __child] = __tree_.__find_equal(__k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
-  return static_cast<__node_pointer>(__child)->__value_.second;
+  return static_cast<__node_pointer>(__child)->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
@@ -1643,12 +1633,11 @@ public:
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI multimap&
-  operator=(multimap&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : __tree_(__vc(__comp)) {
@@ -1747,17 +1736,13 @@ public:
 
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__emplace_hint_multi(__e.__i_, *__f);
+    __tree_.__insert_range_multi(__f, __l);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      __tree_.__emplace_hint_multi(__end.__i_, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_multi(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
@@ -1925,9 +1910,8 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>,
-         _Compare   = _Compare(),
-         _Allocator = _Allocator()) -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
+    -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1946,8 +1930,8 @@ multimap(from_range_t, _Range&&, _Allocator)
 #    endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>,
-         _Allocator) -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
+    -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1957,7 +1941,8 @@ multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const alloca
   if (__a != __m.get_allocator()) {
     const_iterator __e = cend();
     while (!__m.empty())
-      __tree_.__insert_multi_from_orphaned_node(__e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+      __tree_.__insert_multi_from_orphaned_node(
+          __e.__i_, std::move(__m.__tree_.remove(__m.begin().__i_)->__get_value()));
   }
 }
 #  endif

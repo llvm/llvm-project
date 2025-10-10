@@ -1298,7 +1298,7 @@ declare <4 x i8> @test_callee(<4 x i8> %a, <4 x i8> %b) #0
 define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-LABEL: test_call(
 ; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
+; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b32 %r2, [test_call_param_1];
@@ -1317,7 +1317,7 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ;
 ; O3-LABEL: test_call(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_call_param_0];
@@ -1340,7 +1340,7 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-LABEL: test_call_flipped(
 ; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
+; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
@@ -1359,7 +1359,7 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ;
 ; O3-LABEL: test_call_flipped(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
@@ -1382,7 +1382,7 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-LABEL: test_tailcall_flipped(
 ; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
+; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
@@ -1401,7 +1401,7 @@ define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ;
 ; O3-LABEL: test_tailcall_flipped(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];

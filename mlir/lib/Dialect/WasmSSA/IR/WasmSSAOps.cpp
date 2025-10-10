@@ -22,6 +22,47 @@
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
+using namespace mlir;
+namespace {
+ParseResult parseElseRegion(OpAsmParser &opParser, Region &elseRegion) {
+  std::string keyword;
+  std::ignore = opParser.parseOptionalKeywordOrString(&keyword);
+  if (keyword == "else")
+    return opParser.parseRegion(elseRegion);
+  return ParseResult::success();
+}
+
+void printElseRegion(OpAsmPrinter &opPrinter, Operation *op,
+                     Region &elseRegion) {
+  if (elseRegion.empty())
+    return;
+  opPrinter.printKeywordOrString("else ");
+  opPrinter.printRegion(elseRegion);
+}
+
+ParseResult parseWasmVisibility(OpAsmParser &opParser, StringAttr &visibility) {
+  std::string keyword;
+  auto initLocation = opParser.getCurrentLocation();
+  std::ignore = opParser.parseOptionalKeywordOrString(&keyword);
+  if (keyword == "nested" or keyword == "") {
+    visibility = StringAttr::get(opParser.getContext(), "nested");
+    return ParseResult::success();
+  }
+
+  if (keyword == "public" || keyword == "private") {
+    visibility = StringAttr::get(opParser.getContext(), keyword);
+    return ParseResult::success();
+  }
+  opParser.emitError(initLocation, "expecting symbol visibility");
+  return ParseResult::failure();
+}
+
+void printWasmVisibility(OpAsmPrinter &opPrinter, Operation *op,
+                         Attribute visibility) {
+  opPrinter.printKeywordOrString(cast<StringAttr>(visibility).strref());
+}
+} // namespace
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc"
 
@@ -29,7 +70,6 @@
 #include "mlir/IR/Types.h"
 #include "llvm/Support/LogicalResult.h"
 
-using namespace mlir;
 using namespace wasmssa;
 
 namespace {

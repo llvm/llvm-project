@@ -690,9 +690,9 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
       }
     }
   } else if (CK == OpenACCClauseKind::Reduction) {
-    // TODO: OpenACC:
-    // Reduction must have copyctor + dtor + operation in InnerTy I think?
-    // Need to confirm when implementing this part.
+    // TODO: Reduction needs to be an aggregate, which gets checked later, so
+    // construction here isn't a problem.  However, we need to make sure that we
+    // can compare it correctly still.
   }
 
   // All 3 things need to make sure they have a dtor.
@@ -1020,8 +1020,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   // If any part of the expression is dependent, return a dependent sub-array.
   QualType ArrayExprTy = Context.ArraySectionTy;
   if (Base->isTypeDependent() ||
-      (LowerBound && LowerBound->isInstantiationDependent()) ||
-      (Length && Length->isInstantiationDependent()))
+      (LowerBound && LowerBound->isTypeDependent()) ||
+      (Length && Length->isTypeDependent()))
     ArrayExprTy = Context.DependentTy;
 
   return new (Context)
@@ -1921,8 +1921,13 @@ void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
     return;
 
   // This cast should be safe, since a static-local can only happen in a
-  // function declaration.
-  auto *ContextDecl = cast<FunctionDecl>(getCurContext());
+  // function declaration. However, in error cases (or perhaps ObjC/C++?), this
+  // could possibly be something like a 'block' decl, so if this is NOT a
+  // function decl, just give up.
+  auto *ContextDecl = dyn_cast<FunctionDecl>(getCurContext());
+
+  if (!ContextDecl)
+      return;
 
   // OpenACC 3.3 2.15:
   // In C and C++, function static variables are not supported in functions to
@@ -2584,57 +2589,337 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
-std::pair<VarDecl *, VarDecl *>
-SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
-  // Strip off any array subscripts/array section exprs to get to the type of
-  // the variable.
+namespace {
+enum class InitKind { Invalid, Zero, One, AllOnes, Least, Largest };
+llvm::APFloat getInitFloatValue(ASTContext &Context, InitKind IK, QualType Ty) {
+  switch (IK) {
+  case InitKind::Invalid:
+    llvm_unreachable("invalid init kind");
+  case InitKind::Zero:
+    return llvm::APFloat::getZero(Context.getFloatTypeSemantics(Ty));
+  case InitKind::One:
+    return llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty));
+  case InitKind::AllOnes:
+    return llvm::APFloat::getAllOnesValue(Context.getFloatTypeSemantics(Ty));
+  case InitKind::Least:
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty),
+                                     /*Negative=*/true);
+  case InitKind::Largest:
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty));
+  }
+  llvm_unreachable("unknown init kind");
+}
+
+llvm::APInt getInitIntValue(ASTContext &Context, InitKind IK, QualType Ty) {
+  switch (IK) {
+  case InitKind::Invalid:
+    llvm_unreachable("invalid init kind");
+  case InitKind::Zero:
+    return llvm::APInt(Context.getIntWidth(Ty), 0);
+  case InitKind::One:
+    return llvm::APInt(Context.getIntWidth(Ty), 1);
+  case InitKind::AllOnes:
+    return llvm::APInt::getAllOnes(Context.getIntWidth(Ty));
+  case InitKind::Least:
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return llvm::APInt::getSignedMinValue(Context.getIntWidth(Ty));
+    return llvm::APInt::getMinValue(Context.getIntWidth(Ty));
+  case InitKind::Largest:
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return llvm::APInt::getSignedMaxValue(Context.getIntWidth(Ty));
+    return llvm::APInt::getMaxValue(Context.getIntWidth(Ty));
+  }
+  llvm_unreachable("unknown init kind");
+}
+
+/// Loops through a type and generates an appropriate InitListExpr to
+/// generate type initialization.
+Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
+                                      SourceRange ExprRange, QualType Ty,
+                                      InitKind IK) {
+  if (IK == InitKind::Invalid)
+    return nullptr;
+
+  if (IK == InitKind::Zero) {
+    Expr *InitExpr = new (Context)
+        InitListExpr(Context, ExprRange.getBegin(), {}, ExprRange.getEnd());
+    InitExpr->setType(Context.VoidTy);
+    return InitExpr;
+  }
+
+  Ty = Ty.getCanonicalType();
+  llvm::SmallVector<Expr *> Exprs;
+
+  if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    for (auto *F : RD->fields()) {
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(Context, ExprRange,
+                                                          F->getType(), IK))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+  } else if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
+    for (uint64_t Idx = 0; Idx < AT->getZExtSize(); ++Idx) {
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(
+              Context, ExprRange, AT->getElementType(), IK))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+
+  } else if (Ty->isPointerType()) {
+    // For now, we are going to punt/not initialize pointer types, as
+    // discussions/designs are ongoing on how to express this behavior,
+    // particularly since they probably need the 'bounds' passed to them
+    // correctly.  A future patch/patch set will go through all of the pointer
+    // values for all of the recipes to make sure we have a sane behavior.
+
+    // For now, this will result in a NYI during code generation for
+    // no-initializer.
+    return nullptr;
+  } else {
+    assert(Ty->isScalarType());
+
+    if (const auto *Cplx = Ty->getAs<ComplexType>()) {
+      // we can get here in error cases, so make sure we generate something that
+      // will work if we find ourselves wanting to enable this, so emit '0,0'
+      // for both ints and floats.
+
+      QualType EltTy = Cplx->getElementType();
+      if (EltTy->isFloatingType()) {
+        Exprs.push_back(FloatingLiteral::Create(
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
+            /*isExact=*/true, EltTy, ExprRange.getBegin()));
+        Exprs.push_back(FloatingLiteral::Create(
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
+            /*isExact=*/true, EltTy, ExprRange.getBegin()));
+      } else {
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+      }
+
+    } else if (Ty->isFloatingType()) {
+      Exprs.push_back(
+          FloatingLiteral::Create(Context, getInitFloatValue(Context, IK, Ty),
+                                  /*isExact=*/true, Ty, ExprRange.getBegin()));
+    } else if (Ty->isBooleanType()) {
+      Exprs.push_back(CXXBoolLiteralExpr::Create(Context,
+                                                 (IK == InitKind::One ||
+                                                  IK == InitKind::AllOnes ||
+                                                  IK == InitKind::Largest),
+                                                 Ty, ExprRange.getBegin()));
+    } else {
+      Exprs.push_back(IntegerLiteral::Create(
+          Context, getInitIntValue(Context, IK, Ty), Ty, ExprRange.getBegin()));
+    }
+  }
+
+  Expr *InitExpr = new (Context)
+      InitListExpr(Context, ExprRange.getBegin(), Exprs, ExprRange.getEnd());
+  InitExpr->setType(Ty);
+  return InitExpr;
+}
+
+const Expr *StripOffBounds(const Expr *VarExpr) {
   while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
     if (const auto *AS = dyn_cast<ArraySectionExpr>(VarExpr))
       VarExpr = AS->getBase()->IgnoreParenImpCasts();
     else if (const auto *Sub = dyn_cast<ArraySubscriptExpr>(VarExpr))
       VarExpr = Sub->getBase()->IgnoreParenImpCasts();
   }
+  return VarExpr;
+}
 
-  // If for some reason the expression is invalid, or this is dependent, just
-  // fill in with nullptr.  We'll count on TreeTransform to make this if
-  // necessary.
+VarDecl *CreateAllocaDecl(ASTContext &Ctx, DeclContext *DC,
+                          SourceLocation BeginLoc, IdentifierInfo *VarName,
+                          QualType VarTy) {
+  return VarDecl::Create(Ctx, DC, BeginLoc, BeginLoc, VarName, VarTy,
+                         Ctx.getTrivialTypeSourceInfo(VarTy), SC_Auto);
+}
+
+ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,
+                           SourceLocation Loc, QualType VarTy, Expr *InitExpr) {
+  if (!InitExpr)
+    return ExprEmpty();
+
+  InitializationKind Kind =
+      InitializationKind::CreateForInit(Loc, /*DirectInit=*/true, InitExpr);
+  InitializationSequence InitSeq(S, Entity, Kind, InitExpr,
+                                 /*TopLevelOfInitList=*/false,
+                                 /*TreatUnavailableAsInvalid=*/false);
+
+  return InitSeq.Perform(S, Entity, Kind, InitExpr, &VarTy);
+}
+
+} // namespace
+
+OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
+  VarExpr = StripOffBounds(VarExpr);
+
   if (!VarExpr || VarExpr->getType()->isDependentType())
-    return {nullptr, nullptr};
+    return OpenACCPrivateRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  VarDecl *Recipe = VarDecl::Create(
+  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
+  // different initializer, but for now we can go ahead with this.
+
+  VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
-      VarExpr->getBeginLoc(),
-      &getASTContext().Idents.get("openacc.private.init"), VarTy,
-      getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
+      &getASTContext().Idents.get("openacc.private.init"), VarTy);
 
-  ExprResult Init;
-  VarDecl *Temporary = nullptr;
+  Sema::TentativeAnalysisScope Trap{SemaRef};
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(AllocaDecl);
+  InitializationKind Kind =
+      InitializationKind::CreateDefault(AllocaDecl->getLocation());
+  InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
+  ExprResult Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
 
-  if (CK == OpenACCClauseKind::Private) {
-    // Trap errors so we don't get weird ones here. If we can't init, we'll just
-    // swallow the errors.
-    Sema::TentativeAnalysisScope Trap{SemaRef};
-    InitializedEntity Entity = InitializedEntity::InitializeVariable(Recipe);
-    InitializationKind Kind =
-        InitializationKind::CreateDefault(Recipe->getLocation());
+  return OpenACCPrivateRecipe(AllocaDecl, Init.get());
+}
 
-    InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
-    Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
-  } else if (CK == OpenACCClauseKind::FirstPrivate) {
-    // TODO: OpenACC: Implement this to do a 'copy' operation.
-  } else if (CK == OpenACCClauseKind::Reduction) {
-    // TODO: OpenACC: Implement this for whatever reduction needs.
-  } else {
-    llvm_unreachable("Unknown clause kind in CreateInitRecipe");
+OpenACCFirstPrivateRecipe
+SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
+  VarExpr = StripOffBounds(VarExpr);
+
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return OpenACCFirstPrivateRecipe::Empty();
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
+  // different initializer, but for now we can go ahead with this.
+
+  VarDecl *AllocaDecl = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.firstprivate.init"), VarTy);
+
+  VarDecl *Temporary = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.temp"), VarTy);
+
+  auto *TemporaryDRE = DeclRefExpr::Create(
+      getASTContext(), NestedNameSpecifierLoc{}, SourceLocation{}, Temporary,
+      /*ReferstoEnclosingVariableOrCapture=*/false,
+      DeclarationNameInfo{DeclarationName{Temporary->getDeclName()},
+                          VarExpr->getBeginLoc()},
+      VarTy, clang::VK_LValue, Temporary, nullptr, NOUR_None);
+
+  Sema::TentativeAnalysisScope Trap{SemaRef};
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(AllocaDecl);
+
+  const auto *ArrTy = getASTContext().getAsConstantArrayType(VarTy);
+  if (!ArrTy) {
+    ExprResult Init = FinishValueInit(
+        SemaRef.SemaRef, Entity, VarExpr->getBeginLoc(), VarTy, TemporaryDRE);
+    return OpenACCFirstPrivateRecipe(AllocaDecl, Init.get(), Temporary);
   }
 
-  if (Init.get()) {
-    Recipe->setInit(Init.get());
-    Recipe->setInitStyle(VarDecl::CallInit);
+  // Arrays need to have each individual element initialized as there
+  // isn't a normal 'equals' feature in C/C++. This section sets these up
+  // as an init list after 'initializing' each individual element.
+  llvm::SmallVector<Expr *> Args;
+  // Decay to pointer for the array subscript expression.
+  auto *CastToPtr = ImplicitCastExpr::Create(
+      getASTContext(), getASTContext().getPointerType(ArrTy->getElementType()),
+      CK_ArrayToPointerDecay, TemporaryDRE, /*BasePath=*/nullptr,
+      clang::VK_LValue, FPOptionsOverride{});
+
+  for (std::size_t I = 0; I < ArrTy->getLimitedSize(); ++I) {
+    // Each element needs to be some sort of copy initialization from an
+    // array-index of the original temporary (referenced via a
+    // DeclRefExpr).
+    auto *Idx = IntegerLiteral::Create(
+        getASTContext(),
+        llvm::APInt(getASTContext().getTypeSize(getASTContext().getSizeType()),
+                    I),
+        getASTContext().getSizeType(), VarExpr->getBeginLoc());
+
+    Expr *Subscript = new (getASTContext()) ArraySubscriptExpr(
+        CastToPtr, Idx, ArrTy->getElementType(), clang::VK_LValue, OK_Ordinary,
+        VarExpr->getBeginLoc());
+    // Generate a simple copy from the result of the subscript. This will
+    // do a bitwise copy or a copy-constructor, as necessary.
+    InitializedEntity CopyEntity =
+        InitializedEntity::InitializeElement(getASTContext(), I, Entity);
+    InitializationKind CopyKind =
+        InitializationKind::CreateCopy(VarExpr->getBeginLoc(), {});
+    InitializationSequence CopySeq(SemaRef.SemaRef, CopyEntity, CopyKind,
+                                   Subscript,
+                                   /*TopLevelOfInitList=*/true);
+    ExprResult ElemRes =
+        CopySeq.Perform(SemaRef.SemaRef, CopyEntity, CopyKind, Subscript);
+    Args.push_back(ElemRes.get());
   }
 
-  return {Recipe, Temporary};
+  Expr *InitExpr = new (getASTContext()) InitListExpr(
+      getASTContext(), VarExpr->getBeginLoc(), Args, VarExpr->getEndLoc());
+  InitExpr->setType(VarTy);
+
+  ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
+                                    VarExpr->getBeginLoc(), VarTy, InitExpr);
+
+  return OpenACCFirstPrivateRecipe(AllocaDecl, Init.get(), Temporary);
+}
+OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
+    OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
+  VarExpr = StripOffBounds(VarExpr);
+
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return OpenACCReductionRecipe::Empty();
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
+  // different initializer, but for now we can go ahead with this.
+
+  VarDecl *AllocaDecl = CreateAllocaDecl(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.reduction.init"), VarTy);
+
+  Sema::TentativeAnalysisScope Trap{SemaRef};
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(AllocaDecl);
+
+  InitKind IK = InitKind::Invalid;
+  switch (ReductionOperator) {
+  case OpenACCReductionOperator::Invalid:
+    // This can only happen when there is an error, and since these inits
+    // are used for code generation, we can just ignore/not bother doing any
+    // initialization here.
+    IK = InitKind::Invalid;
+    break;
+  case OpenACCReductionOperator::Max:
+    IK = InitKind::Least;
+    break;
+  case OpenACCReductionOperator::Min:
+    IK = InitKind::Largest;
+    break;
+  case OpenACCReductionOperator::BitwiseAnd:
+    IK = InitKind::AllOnes;
+    break;
+  case OpenACCReductionOperator::Multiplication:
+  case OpenACCReductionOperator::And:
+    IK = InitKind::One;
+    break;
+  case OpenACCReductionOperator::Addition:
+  case OpenACCReductionOperator::BitwiseOr:
+  case OpenACCReductionOperator::BitwiseXOr:
+  case OpenACCReductionOperator::Or:
+    IK = InitKind::Zero;
+    break;
+  }
+
+  Expr *InitExpr = GenerateReductionInitRecipeExpr(
+      getASTContext(), VarExpr->getSourceRange(), VarTy, IK);
+
+  ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,
+                                    VarExpr->getBeginLoc(), VarTy, InitExpr);
+  return OpenACCReductionRecipe(AllocaDecl, Init.get());
 }

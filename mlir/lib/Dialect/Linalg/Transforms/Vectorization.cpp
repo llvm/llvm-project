@@ -1776,12 +1776,6 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
         rewriter, loc,
         rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
   }
-  ReifiedRankedShapedTypeDims reifiedReturnShapes;
-  LogicalResult status =
-      cast<ReifyRankedShapedTypeOpInterface>(packOp.getOperation())
-          .reifyResultShapes(rewriter, reifiedReturnShapes);
-  (void)status; // prevent unused variable warning on non-assert builds.
-  assert(succeeded(status) && "failed to reify result shapes");
 
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
@@ -1823,11 +1817,8 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
       rewriter, loc, shapeCastOp.getResult(), destPermutation);
 
   // Create TransferWriteOp.
-  Value dest = tensor::EmptyOp::create(
-      rewriter, loc, reifiedReturnShapes[0],
-      transposeOp.getResult().getType().getElementType());
-  Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(), dest);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, transposeOp.getResult(), packOp.getDest());
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -2563,7 +2554,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
                 "vectorization";
       return failure();
     }
-    if (isa<linalg::MatmulOp>(op) || isa<linalg::MatmulTransposeAOp>(op)) {
+    if (isa<linalg::MatmulOp>(op)) {
       LDBG()
           << "Scalable vectorization of the reduction dim in Matmul-like ops "
              "is not supported";
@@ -2604,17 +2595,12 @@ vectorizeScalableVectorPrecondition(Operation *op,
       return failure();
   }
 
-  // Check to not let go the matmul with extended semantic, through this
-  // transform.
-  if (linalgOp.hasUserDefinedMaps())
-    return failure();
-
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
-                 isa<linalg::MatmulTransposeAOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
                  isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
+                 isa<linalg::BatchMmt4DOp>(op) ||
                  hasReductionIterator(linalgOp));
 }
 
