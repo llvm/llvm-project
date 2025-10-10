@@ -722,6 +722,40 @@ type.  Implementations are not required to make all bits of the result equally
 significant; in particular, some implementations are known to not leave
 meaningful data in the low bits.
 
+``ptrauth_nop_cast``
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_nop_cast(__type, __value)
+
+Cast a pointer to the given type without changing any signature.
+
+This operation can be used to convert a value from one type to another without
+attempting to re-sign the value. This makes it possible to view a signed value
+of one type as another type signed with the same schema. This can be used to
+convert implicit schemas to explicit schemas, to convert to or from opaque
+types, or simply to change the effective underlying type of a signed value.
+
+The `__type` must be a pointer sized value compatible with the `__ptrauth`
+qualifier. The authentication schema must not include address diversity.
+
+The result is a bitwise identical value with the type passed as the `__type`
+argument.
+
+``ptrauth_function_pointer_type_discriminator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_function_pointer_type_discriminator(__type)
+
+Compute the constant discriminator used by Clang to sign pointers with the
+given C function pointer type.
+
+A call to this function is an integer constant expression.
+
+
 Standard ``__ptrauth`` qualifiers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
