@@ -10624,10 +10624,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!CanOptimize)
       return false;
 
-    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
-         I != E; ++I) {
-      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
-          I->killsRegister(AMDGPU::SCC, &RI))
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI) ||
+          MI.killsRegister(AMDGPU::SCC, &RI))
         return false;
     }
 
@@ -10712,10 +10712,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
-         I != E; ++I) {
-      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
-          I->killsRegister(AMDGPU::SCC, &RI))
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI) ||
+          MI.killsRegister(AMDGPU::SCC, &RI))
         return false;
     }
 
