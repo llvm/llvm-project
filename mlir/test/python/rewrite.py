@@ -8,13 +8,8 @@ from mlir.dialects import arith
 from mlir.rewrite import *
 
 
-def log(*args):
-    print(*args, file=sys.stderr)
-    sys.stderr.flush()
-
-
 def run(f):
-    log("\nTEST:", f.__name__)
+    print("\nTEST:", f.__name__)
     f()
     gc.collect()
     assert Context._get_live_count() == 0
