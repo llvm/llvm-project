@@ -161,3 +161,27 @@ define i32 @ptrtoaddr_sub_known_offset_addrsize(ptr addrspace(1) %p) {
   %sub = sub i32 %p2.addr, %p.addr
   ret i32 %sub
 }
+
+define i64 @ptrtoaddr_of_ptradd_of_sub(i64 %x, ptr %p) {
+; CHECK-LABEL: define i64 @ptrtoaddr_of_ptradd_of_sub(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret i64 [[X]]
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %sub = sub i64 %x, %p.addr
+  %ptradd = getelementptr i8, ptr %p, i64 %sub
+  %ptradd.addr = ptrtoaddr ptr %ptradd to i64
+  ret i64 %ptradd.addr
+}
+
+define i32 @ptrtoaddr_of_ptradd_of_sub_addrsize(i32 %x, ptr addrspace(1) %p) {
+; CHECK-LABEL: define i32 @ptrtoaddr_of_ptradd_of_sub_addrsize(
+; CHECK-SAME: i32 [[X:%.*]], ptr addrspace(1) [[P:%.*]]) {
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %sub = sub i32 %x, %p.addr
+  %ptradd = getelementptr i8, ptr addrspace(1) %p, i32 %sub
+  %ptradd.addr = ptrtoaddr ptr addrspace(1) %ptradd to i32
+  ret i32 %ptradd.addr
+}
