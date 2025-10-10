@@ -75,7 +75,7 @@ TEST(ModuleUtils, AppendToUsedList3) {
   std::unique_ptr<Module> M = parseIR(C, R"(
           @x = addrspace(1) global [2 x i32] zeroinitializer, align 4
           @y = addrspace(2) global [2 x i32] zeroinitializer, align 4
-          @llvm.compiler.used = appending global [1 x ptr addrspace (3)] [ptr addrspace(3) addrspacecast (ptr addrspace (1) @x to ptr addrspace(3))]
+          @llvm.compiler.used = appending global [1 x ptr addrspace(3)] [ptr addrspace(3) addrspacecast (ptr addrspace(1) @x to ptr addrspace(3))]
       )");
   GlobalVariable *X = M->getNamedGlobal("x");
   GlobalVariable *Y = M->getNamedGlobal("y");
