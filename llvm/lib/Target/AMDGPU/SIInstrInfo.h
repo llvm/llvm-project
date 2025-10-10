@@ -416,8 +416,12 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
-  static bool isFoldableCopy(const MachineInstr &MI);
-  static unsigned getFoldableCopySrcIdx(const MachineInstr &MI);
+  bool isFoldableCopy(const MachineInstr &MI) const;
+
+  bool getFoldableImm(Register Reg, const MachineRegisterInfo &MRI,
+                      int64_t &Imm, MachineInstr **DefMI) const;
+  bool getFoldableImm(const MachineOperand *MO, int64_t &Imm,
+                      MachineInstr **DefMI) const;
 
   void removeModOperands(MachineInstr &MI) const;
 
