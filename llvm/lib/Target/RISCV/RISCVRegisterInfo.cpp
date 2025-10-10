@@ -809,19 +809,6 @@ RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return RC;
 }
 
-const TargetRegisterClass *
-RISCVRegisterInfo::getNoV0RegClass(const TargetRegisterClass *RC) const {
-  if (RC == &RISCV::VRRegClass)
-    return &RISCV::VRNoV0RegClass;
-  if (RC == &RISCV::VRM2RegClass)
-    return &RISCV::VRM2NoV0RegClass;
-  if (RC == &RISCV::VRM4RegClass)
-    return &RISCV::VRM4NoV0RegClass;
-  if (RC == &RISCV::VRM8RegClass)
-    return &RISCV::VRM8NoV0RegClass;
-  return RC;
-}
-
 void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
                                          SmallVectorImpl<uint64_t> &Ops) const {
   // VLENB is the length of a vector register in bytes. We use <vscale x 8 x i8>
