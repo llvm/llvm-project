@@ -2016,7 +2016,6 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
   if (CheckReductionVarType(VarExpr))
     return ExprError();
 
-
   // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
   // reduction 'var' must have the same reduction operator.
   if (!VarExpr->isInstantiationDependent()) {
