@@ -6,6 +6,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -228,6 +229,7 @@ cc_library(
         "lib/Support/*.cpp",
         "lib/Support/*.h",
         "lib/Support/*.inc",
+        "lib/Support/LSP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -2222,7 +2224,6 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AArch64/AArch64GenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/AArch64/AArch64GenDisassemblerTables.inc": [
                 "-gen-disassembler",
-                "-ignore-non-decodable-operands",
             ],
             "lib/Target/AArch64/AArch64GenSystemOperands.inc": ["-gen-searchable-tables"],
             "lib/Target/AArch64/AArch64GenExegesis.inc": ["-gen-exegesis"],
@@ -2307,10 +2308,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/BPF/BPFGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/BPF/BPFGenGlobalISel.inc": ["-gen-global-isel"],
-            "lib/Target/BPF/BPFGenDisassemblerTables.inc": [
-                "-gen-disassembler",
-                "-ignore-non-decodable-operands",
-            ],
+            "lib/Target/BPF/BPFGenDisassemblerTables.inc": ["-gen-disassembler"],
             "lib/Target/BPF/BPFGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
@@ -4968,6 +4966,22 @@ cc_binary(
         ":TransformUtils",
         ":config",
         ":llvm-reduce-defs-lib",
+    ],
+)
+
+cc_binary(
+    name = "llvm-remarkutil",
+    srcs = glob([
+        "tools/llvm-remarkutil/**/*.cpp",
+        "tools/llvm-remarkutil/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-remarkutil"],
+    stamp = 0,
+    deps = [
+        ":Demangle",
+        ":Remarks",
+        ":Support",
     ],
 )
 

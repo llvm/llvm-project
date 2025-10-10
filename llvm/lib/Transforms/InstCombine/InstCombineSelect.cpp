@@ -1153,6 +1153,38 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
   }
 
+  // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
+  if (Pred == CmpInst::ICMP_SGT &&
+      match(TI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+      match(FI, m_Neg(m_Specific(TI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A < B) ? (0 - (A - B)) : (A - B) --> abs(A - B)
+  if (Pred == CmpInst::ICMP_SLT &&
+      match(FI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+      match(TI, m_Neg(m_Specific(FI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A > B) ? (0 - (B - A)) : (B - A) --> abs(B - A)
+  if (Pred == CmpInst::ICMP_SGT &&
+      match(FI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+      match(TI, m_Neg(m_Specific(FI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
+                                         Builder.getFalse());
+  }
+
+  // Match: (A < B) ? (B - A) : (0 - (B - A)) --> abs(B - A)
+  if (Pred == CmpInst::ICMP_SLT &&
+      match(TI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+      match(FI, m_Neg(m_Specific(TI)))) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
+                                         Builder.getFalse());
+  }
+
   return nullptr;
 }
 
@@ -2375,7 +2407,7 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   // If the constant is the same after truncation to the smaller type and
   // extension to the original type, we can narrow the select.
   Type *SelType = Sel.getType();
-  Constant *TruncC = getLosslessTrunc(C, SmallType, ExtOpcode);
+  Constant *TruncC = getLosslessInvCast(C, SmallType, ExtOpcode, DL);
   if (TruncC && ExtInst->hasOneUse()) {
     Value *TruncCVal = cast<Value>(TruncC);
     if (ExtInst == Sel.getFalseValue())
@@ -2902,32 +2934,6 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   return nullptr;
 }
 
-static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
-  FreezeInst *FI = dyn_cast<FreezeInst>(Sel.getCondition());
-  if (!FI)
-    return nullptr;
-
-  Value *Cond = FI->getOperand(0);
-  Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
-
-  //   select (freeze(x == y)), x, y --> y
-  //   select (freeze(x != y)), x, y --> x
-  // The freeze should be only used by this select. Otherwise, remaining uses of
-  // the freeze can observe a contradictory value.
-  //   c = freeze(x == y)   ; Let's assume that y = poison & x = 42; c is 0 or 1
-  //   a = select c, x, y   ;
-  //   f(a, c)              ; f(poison, 1) cannot happen, but if a is folded
-  //                        ; to y, this can happen.
-  CmpPredicate Pred;
-  if (FI->hasOneUse() &&
-      match(Cond, m_c_ICmp(Pred, m_Specific(TrueVal), m_Specific(FalseVal))) &&
-      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE)) {
-    return Pred == ICmpInst::ICMP_EQ ? FalseVal : TrueVal;
-  }
-
-  return nullptr;
-}
-
 /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify \p SI.
 static Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI,
                                                     Value *CondVal,
@@ -3225,7 +3231,7 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
 
   // Profitability check - avoid increasing instruction count.
   if (none_of(ArrayRef<Value *>({OuterSelVal.getCondition(), InnerSelVal}),
-              [](Value *V) { return V->hasOneUse(); }))
+              match_fn(m_OneUse(m_Value()))))
     return nullptr;
 
   // The appropriate hand of the outermost `select` must be a select itself.
@@ -4414,9 +4420,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *PN = foldSelectToPhi(SI, DT, Builder))
     return replaceInstUsesWith(SI, PN);
 
-  if (Value *Fr = foldSelectWithFrozenICmp(SI, Builder))
-    return replaceInstUsesWith(SI, Fr);
-
   if (Value *V = foldRoundUpIntegerWithPow2Alignment(SI, Builder))
     return replaceInstUsesWith(SI, V);
 
@@ -4578,6 +4581,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (FalseVal == Trunc)
       return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
   }
+
+  Value *MaskedLoadPtr;
+  const APInt *MaskedLoadAlignment;
+  if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
+                                           m_APInt(MaskedLoadAlignment),
+                                           m_Specific(CondVal), m_Value()))))
+    return replaceInstUsesWith(
+        SI, Builder.CreateMaskedLoad(TrueVal->getType(), MaskedLoadPtr,
+                                     Align(MaskedLoadAlignment->getZExtValue()),
+                                     CondVal, FalseVal));
 
   return nullptr;
 }

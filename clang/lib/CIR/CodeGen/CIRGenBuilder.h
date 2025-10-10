@@ -89,6 +89,11 @@ public:
     return cir::ConstRecordAttr::get(sTy, arrayAttr);
   }
 
+  cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+    cir::ConstRecordAttr anonRecord = getAnonConstRecord(fieldsAttr);
+    return cir::TypeInfoAttr::get(anonRecord.getType(), fieldsAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {

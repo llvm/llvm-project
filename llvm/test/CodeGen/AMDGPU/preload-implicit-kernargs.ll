@@ -337,8 +337,7 @@ define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) 
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB8_0:
-; GFX942-NEXT:    s_mov_b32 s4, 8
-; GFX942-NEXT:    s_load_dword s0, s[0:1], s4 offset:0x2
+; GFX942-NEXT:    s_load_dword s0, s[0:1], 0xa
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s0
@@ -353,8 +352,7 @@ define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) 
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB8_0:
-; GFX90a-NEXT:    s_mov_b32 s0, 8
-; GFX90a-NEXT:    s_load_dword s0, s[4:5], s0 offset:0x2
+; GFX90a-NEXT:    s_load_dword s0, s[4:5], 0xa
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s0

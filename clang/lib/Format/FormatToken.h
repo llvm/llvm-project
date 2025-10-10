@@ -55,7 +55,7 @@ namespace format {
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
-  /* l_brace of if/for/while */                                                \
+  /* l_brace of if/for/while/switch/catch */                                   \
   TYPE(ControlStatementLBrace)                                                 \
   TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
@@ -136,6 +136,7 @@ namespace format {
   TYPE(PointerOrReference)                                                     \
   TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(PureVirtualSpecifier)                                                   \
+  TYPE(QtProperty)                                                             \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RecordRBrace)                                                           \
@@ -644,6 +645,9 @@ public:
     return is(K1) || isOneOf(K2, Ks...);
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
+  template <typename... Ts> bool isNoneOf(Ts... Ks) const {
+    return !isOneOf(Ks...);
+  }
 
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
@@ -703,6 +707,7 @@ public:
            isAttribute();
   }
 
+  [[nodiscard]] bool isQtProperty() const;
   [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
@@ -746,7 +751,7 @@ public:
   /// Returns \c true if this is a "." or "->" accessing a member.
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
-           !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
+           isNoneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
                     TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 

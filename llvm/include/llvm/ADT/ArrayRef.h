@@ -547,7 +547,8 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator==(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator==(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return ArrayRef<T>(LHS).equals(RHS);
   }
 
@@ -557,7 +558,8 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator!=(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return !(LHS == RHS);
   }
 

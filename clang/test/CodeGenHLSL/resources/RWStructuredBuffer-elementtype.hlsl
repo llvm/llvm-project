@@ -1,23 +1,36 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPV
 
-// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", i16, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.0" = type { target("dx.RawBuffer", i16, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.1" = type { target("dx.RawBuffer", i32, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.2" = type { target("dx.RawBuffer", i32, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.3" = type { target("dx.RawBuffer", i64, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.4" = type { target("dx.RawBuffer", i64, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.5" = type { target("dx.RawBuffer", half, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.6" = type { target("dx.RawBuffer", float, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.7" = type { target("dx.RawBuffer", double, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.8" = type { target("dx.RawBuffer", <4 x i16>, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0) }
-// CHECK: %"class.hlsl::RWStructuredBuffer.12" = type { target("dx.RawBuffer", i32, 1, 0) }
-// SPV: %"class.hlsl::RWStructuredBuffer.12" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1)
-// CHECK: %"class.hlsl::RWStructuredBuffer.13" = type { target("dx.RawBuffer", <4 x i32>, 1, 0) }
-// SPV: %"class.hlsl::RWStructuredBuffer.13" = type { target("spirv.VulkanBuffer", [0 x <4 x i32>], 12, 1)
+// CHECK: %"class.hlsl::RWStructuredBuffer" = type { target("dx.RawBuffer", i16, 1, 0), target("dx.RawBuffer", i16, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer" = type { target("spirv.VulkanBuffer", [0 x i16], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.0" = type { target("dx.RawBuffer", i16, 1, 0), target("dx.RawBuffer", i16, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.0" = type { target("spirv.VulkanBuffer", [0 x i16], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.1" = type { target("dx.RawBuffer", i32, 1, 0), target("dx.RawBuffer", i32, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.1" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.2" = type { target("dx.RawBuffer", i32, 1, 0), target("dx.RawBuffer", i32, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.2" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.3" = type { target("dx.RawBuffer", i64, 1, 0), target("dx.RawBuffer", i64, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.3" = type { target("spirv.VulkanBuffer", [0 x i64], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.4" = type { target("dx.RawBuffer", i64, 1, 0), target("dx.RawBuffer", i64, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.4" = type { target("spirv.VulkanBuffer", [0 x i64], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.5" = type { target("dx.RawBuffer", half, 1, 0), target("dx.RawBuffer", half, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.5" = type { target("spirv.VulkanBuffer", [0 x half], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.6" = type { target("dx.RawBuffer", float, 1, 0), target("dx.RawBuffer", float, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.6" = type { target("spirv.VulkanBuffer", [0 x float], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.7" = type { target("dx.RawBuffer", double, 1, 0), target("dx.RawBuffer", double, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.7" = type { target("spirv.VulkanBuffer", [0 x double], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.8" = type { target("dx.RawBuffer", <4 x i16>, 1, 0), target("dx.RawBuffer", <4 x i16>, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.8" = type { target("spirv.VulkanBuffer", [0 x <4 x i16>], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 0), target("dx.RawBuffer", <3 x i32>, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.9" = type { target("spirv.VulkanBuffer", [0 x <3 x i32>], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0), target("dx.RawBuffer", <2 x half>, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.10" = type { target("spirv.VulkanBuffer", [0 x <2 x half>], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0), target("dx.RawBuffer", <3 x float>, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.11" = type { target("spirv.VulkanBuffer", [0 x <3 x float>], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.12" = type { target("dx.RawBuffer", i32, 1, 0), target("dx.RawBuffer", i32, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.12" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
+// CHECK: %"class.hlsl::RWStructuredBuffer.13" = type { target("dx.RawBuffer", <4 x i32>, 1, 0), target("dx.RawBuffer", <4 x i32>, 1, 0) }
+// SPV: %"class.hlsl::RWStructuredBuffer.13" = type { target("spirv.VulkanBuffer", [0 x <4 x i32>], 12, 1), target("spirv.VulkanBuffer", i32, 12, 1) }
 
 RWStructuredBuffer<int16_t> BufI16;
 RWStructuredBuffer<uint16_t> BufU16;

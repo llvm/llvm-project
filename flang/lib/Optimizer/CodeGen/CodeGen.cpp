@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/LLVMInsertChainFolder.h"
@@ -132,6 +133,8 @@ addLLVMOpBundleAttrs(mlir::ConversionPatternRewriter &rewriter,
 
 namespace {
 
+// Replaces an existing operation with an AddressOfOp or an AddrSpaceCastOp
+// depending on the existing address spaces of the type.
 mlir::Value replaceWithAddrOfOrASCast(mlir::ConversionPatternRewriter &rewriter,
                                       mlir::Location loc,
                                       std::uint64_t globalAS,
@@ -329,6 +332,31 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
 } // namespace
 
 namespace {
+
+static bool isInGlobalOp(mlir::ConversionPatternRewriter &rewriter) {
+  auto *thisBlock = rewriter.getInsertionBlock();
+  return thisBlock && mlir::isa<mlir::LLVM::GlobalOp>(thisBlock->getParentOp());
+}
+
+// Inside a fir.global, the input box was produced as an llvm.struct<>
+// because objects cannot be handled in memory inside a fir.global body that
+// must be constant foldable. However, the type translation are not
+// contextual, so the fir.box<T> type of the operation that produced the
+// fir.box was translated to an llvm.ptr<llvm.struct<>> and the MLIR pass
+// manager inserted a builtin.unrealized_conversion_cast that was inserted
+// and needs to be removed here.
+// This should be called by any pattern operating on operations that are
+// accepting fir.box inputs and are used in fir.global.
+static mlir::Value
+fixBoxInputInsideGlobalOp(mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Value box) {
+  if (isInGlobalOp(rewriter))
+    if (auto unrealizedCast =
+            box.getDefiningOp<mlir::UnrealizedConversionCastOp>())
+      return unrealizedCast.getInputs()[0];
+  return box;
+}
+
 /// Lower `fir.box_addr` to the sequence of operations to extract the first
 /// element of the box.
 struct BoxAddrOpConversion : public fir::FIROpConversion<fir::BoxAddrOp> {
@@ -341,6 +369,7 @@ struct BoxAddrOpConversion : public fir::FIROpConversion<fir::BoxAddrOp> {
     auto loc = boxaddr.getLoc();
     if (auto argty =
             mlir::dyn_cast<fir::BaseBoxType>(boxaddr.getVal().getType())) {
+      a = fixBoxInputInsideGlobalOp(rewriter, a);
       TypePair boxTyPair = getBoxTypePair(argty);
       rewriter.replaceOp(boxaddr,
                          getBaseAddrFromBox(loc, boxTyPair, a, rewriter));
@@ -1737,12 +1766,6 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                        xbox.getSubcomponent().size());
   }
 
-  static bool isInGlobalOp(mlir::ConversionPatternRewriter &rewriter) {
-    auto *thisBlock = rewriter.getInsertionBlock();
-    return thisBlock &&
-           mlir::isa<mlir::LLVM::GlobalOp>(thisBlock->getParentOp());
-  }
-
   /// If the embox is not in a globalOp body, allocate storage for the box;
   /// store the value inside and return the generated alloca. Return the input
   /// value otherwise.
@@ -1824,6 +1847,18 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
+  if (val.getDefiningOp() &&
+      val.getDefiningOp()->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return false;
+  // Check if the global symbol is in the device module.
+  if (auto addr = mlir::dyn_cast_or_null<fir::AddrOfOp>(val.getDefiningOp()))
+    if (auto gpuMod =
+            addr->getParentOfType<mlir::ModuleOp>()
+                .lookupSymbol<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName))
+      if (gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol()) ||
+          gpuMod.lookupSymbol<fir::GlobalOp>(addr.getSymbol()))
+        return true;
+
   if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
     return isDeviceAllocation(loadOp.getMemref(), {});
   if (auto boxAddrOp =
@@ -2076,20 +2111,9 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = rebox.getLoc();
     mlir::Type idxTy = lowerTy().indexType();
-    mlir::Value loweredBox = adaptor.getOperands()[0];
+    mlir::Value loweredBox =
+        fixBoxInputInsideGlobalOp(rewriter, adaptor.getBox());
     mlir::ValueRange operands = adaptor.getOperands();
-
-    // Inside a fir.global, the input box was produced as an llvm.struct<>
-    // because objects cannot be handled in memory inside a fir.global body that
-    // must be constant foldable. However, the type translation are not
-    // contextual, so the fir.box<T> type of the operation that produced the
-    // fir.box was translated to an llvm.ptr<llvm.struct<>> and the MLIR pass
-    // manager inserted a builtin.unrealized_conversion_cast that was inserted
-    // and needs to be removed here.
-    if (isInGlobalOp(rewriter))
-      if (auto unrealizedCast =
-              loweredBox.getDefiningOp<mlir::UnrealizedConversionCastOp>())
-        loweredBox = unrealizedCast.getInputs()[0];
 
     TypePair inputBoxTyPair = getBoxTypePair(rebox.getBox().getType());
 
@@ -3202,7 +3226,8 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 
     if (global.getDataAttr() &&
         *global.getDataAttr() == cuf::DataAttribute::Shared)
-      g.setAddrSpace(mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+      g.setAddrSpace(
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
 
     rewriter.eraseOp(global);
     return mlir::success();

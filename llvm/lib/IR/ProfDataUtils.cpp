@@ -12,6 +12,7 @@
 
 #include "llvm/IR/ProfDataUtils.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -84,10 +86,31 @@ static void extractFromBranchWeightMD(const MDNode *ProfileData,
   }
 }
 
+/// Push the weights right to fit in uint32_t.
+static SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights) {
+  SmallVector<uint32_t> Ret;
+  Ret.reserve(Weights.size());
+  uint64_t Max = *llvm::max_element(Weights);
+  if (Max > UINT_MAX) {
+    unsigned Offset = 32 - llvm::countl_zero(Max);
+    for (const uint64_t &Value : Weights)
+      Ret.push_back(static_cast<uint32_t>(Value >> Offset));
+  } else {
+    append_range(Ret, Weights);
+  }
+  return Ret;
+}
+
 } // namespace
 
 namespace llvm {
-
+cl::opt<bool> ElideAllZeroBranchWeights("elide-all-zero-branch-weights",
+#if defined(LLVM_ENABLE_PROFCHECK)
+                                        cl::init(false)
+#else
+                                        cl::init(true)
+#endif
+);
 const char *MDProfLabels::BranchWeights = "branch_weights";
 const char *MDProfLabels::ExpectedBranchWeights = "expected";
 const char *MDProfLabels::ValueProfile = "VP";
@@ -95,6 +118,7 @@ const char *MDProfLabels::FunctionEntryCount = "function_entry_count";
 const char *MDProfLabels::SyntheticFunctionEntryCount =
     "synthetic_function_entry_count";
 const char *MDProfLabels::UnknownBranchWeightsMarker = "unknown";
+const char *LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
 
 bool hasProfMD(const Instruction &I) {
   return I.hasMetadata(LLVMContext::MD_prof);
@@ -242,24 +266,33 @@ bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalVal) {
   return extractProfTotalWeight(I.getMetadata(LLVMContext::MD_prof), TotalVal);
 }
 
-void setExplicitlyUnknownBranchWeights(Instruction &I) {
+void setExplicitlyUnknownBranchWeights(Instruction &I, StringRef PassName) {
   MDBuilder MDB(I.getContext());
   I.setMetadata(
       LLVMContext::MD_prof,
       MDNode::get(I.getContext(),
-                  MDB.createString(MDProfLabels::UnknownBranchWeightsMarker)));
+                  {MDB.createString(MDProfLabels::UnknownBranchWeightsMarker),
+                   MDB.createString(PassName)}));
 }
 
-void setExplicitlyUnknownFunctionEntryCount(Function &F) {
+void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, Function &F,
+                                                 StringRef PassName) {
+  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
+      EC && EC->getCount() > 0)
+    setExplicitlyUnknownBranchWeights(I, PassName);
+}
+
+void setExplicitlyUnknownFunctionEntryCount(Function &F, StringRef PassName) {
   MDBuilder MDB(F.getContext());
   F.setMetadata(
       LLVMContext::MD_prof,
       MDNode::get(F.getContext(),
-                  MDB.createString(MDProfLabels::UnknownBranchWeightsMarker)));
+                  {MDB.createString(MDProfLabels::UnknownBranchWeightsMarker),
+                   MDB.createString(PassName)}));
 }
 
 bool isExplicitlyUnknownProfileMetadata(const MDNode &MD) {
-  if (MD.getNumOperands() != 1)
+  if (MD.getNumOperands() != 2)
     return false;
   return MD.getOperand(0).equalsStr(MDProfLabels::UnknownBranchWeightsMarker);
 }
@@ -272,10 +305,21 @@ bool hasExplicitlyUnknownBranchWeights(const Instruction &I) {
 }
 
 void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
-                      bool IsExpected) {
+                      bool IsExpected, bool ElideAllZero) {
+  if ((ElideAllZeroBranchWeights && ElideAllZero) &&
+      llvm::all_of(Weights, [](uint32_t V) { return V == 0; })) {
+    I.setMetadata(LLVMContext::MD_prof, nullptr);
+    return;
+  }
+
   MDBuilder MDB(I.getContext());
   MDNode *BranchWeights = MDB.createBranchWeights(Weights, IsExpected);
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
+void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
+                            bool IsExpected, bool ElideAllZero) {
+  setBranchWeights(I, fitWeights(Weights), IsExpected, ElideAllZero);
 }
 
 SmallVector<uint32_t> downscaleWeights(ArrayRef<uint64_t> Weights,

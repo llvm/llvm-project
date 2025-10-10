@@ -22,6 +22,8 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memory-profile-info"
 
+namespace llvm {
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
@@ -51,6 +53,8 @@ cl::opt<unsigned> MinCallsiteColdBytePercent(
 cl::opt<unsigned> MinPercentMaxColdSize(
     "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
     cl::desc("Min percent of max cold bytes for critical cold context"));
+
+} // end namespace llvm
 
 bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
   return MemProfReportHintedSizes || MinClonedColdBytePercent < 100;
@@ -119,24 +123,6 @@ bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;
-}
-
-void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {
-  if (!CB->hasFnAttr("memprof"))
-    return;
-  assert(CB->getFnAttr("memprof").getValueAsString() == "ambiguous");
-  CB->removeFnAttr("memprof");
-}
-
-void llvm::memprof::addAmbiguousAttribute(CallBase *CB) {
-  // We may have an existing ambiguous attribute if we are reanalyzing
-  // after inlining.
-  if (CB->hasFnAttr("memprof")) {
-    assert(CB->getFnAttr("memprof").getValueAsString() == "ambiguous");
-  } else {
-    auto A = llvm::Attribute::get(CB->getContext(), "memprof", "ambiguous");
-    CB->addFnAttr(A);
-  }
 }
 
 void CallStackTrie::addCallStack(
@@ -484,9 +470,6 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
                                                 StringRef Descriptor) {
   auto AllocTypeString = getAllocTypeAttributeString(AT);
   auto A = llvm::Attribute::get(CI->getContext(), "memprof", AllocTypeString);
-  // After inlining we may be able to convert an existing ambiguous allocation
-  // to an unambiguous one.
-  removeAnyExistingAmbiguousAttribute(CI);
   CI->addFnAttr(A);
   if (MemProfReportHintedSizes) {
     std::vector<ContextTotalSize> ContextSizeInfo;
@@ -546,7 +529,6 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
-    addAmbiguousAttribute(CI);
     return true;
   }
   // If there exists corner case that CallStackTrie has one chain to leaf

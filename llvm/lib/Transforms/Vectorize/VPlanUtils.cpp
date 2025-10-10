@@ -13,6 +13,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -63,12 +64,10 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
   };
 
   VPValue *A, *B;
-  using namespace VPlanPatternMatch;
 
-  if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_SpecificInt(1))))
+  if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
-                                     m_SpecificInt(1),
+           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()), m_One(),
                                      m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
@@ -91,7 +90,6 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  using namespace VPlanPatternMatch;
   // Live-ins are uniform.
   if (V->isLiveIn())
     return true;
@@ -99,8 +97,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   VPRecipeBase *R = V->getDefiningRecipe();
   if (R && V->isDefinedOutsideLoopRegions()) {
     if (match(V->getDefiningRecipe(),
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                  m_VPValue())))
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       return false;
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
@@ -141,4 +138,115 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
     return VPBlockUtils::isHeader(VPB, VPDT);
   });
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
+}
+
+unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
+  if (!R)
+    return 1;
+  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
+    return RR->getVFScaleFactor();
+  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+    return RR->getVFScaleFactor();
+  assert(
+      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
+                                     VPInstruction::ReductionStartVector) &&
+      "getting scaling factor of reduction-start-vector not implemented yet");
+  return 1;
+}
+
+std::optional<VPValue *>
+vputils::getRecipesForUncountableExit(VPlan &Plan,
+                                      SmallVectorImpl<VPRecipeBase *> &Recipes,
+                                      SmallVectorImpl<VPRecipeBase *> &GEPs) {
+  // Given a VPlan like the following (just including the recipes contributing
+  // to loop control exiting here, not the actual work), we're looking to match
+  // the recipes contributing to the uncountable exit condition comparison
+  // (here, vp<%4>) back to either live-ins or the address nodes for the load
+  // used as part of the uncountable exit comparison so that we can copy them
+  // to a preheader and rotate the address in the loop to the next vector
+  // iteration.
+  //
+  // Currently, the address of the load is restricted to a GEP with 2 operands
+  // and a live-in base address. This constraint may be relaxed later.
+  //
+  // VPlan ' for UF>=1' {
+  // Live-in vp<%0> = VF
+  // Live-in ir<64> = original trip-count
+  //
+  // entry:
+  // Successor(s): preheader, vector.ph
+  //
+  // vector.ph:
+  // Successor(s): vector loop
+  //
+  // <x1> vector loop: {
+  //   vector.body:
+  //     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>
+  //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
+  //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
+  //     WIDEN ir<%ee.load> = load ir<%ee.addr>
+  //     WIDEN vp<%4> = icmp eq ir<%ee.load>, ir<0>
+  //     EMIT vp<%5> = any-of vp<%4>
+  //     EMIT vp<%6> = add vp<%2>, vp<%0>
+  //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
+  //     EMIT vp<%8> = or vp<%5>, vp<%7>
+  //     EMIT branch-on-cond vp<%8>
+  //   No successors
+  // }
+  // Successor(s): middle.block
+  //
+  // middle.block:
+  // Successor(s): preheader
+  //
+  // preheader:
+  // No successors
+  // }
+
+  // Find the uncountable loop exit condition.
+  auto *Region = Plan.getVectorLoopRegion();
+  VPValue *UncountableCondition = nullptr;
+  if (!match(Region->getExitingBasicBlock()->getTerminator(),
+             m_BranchOnCond(m_OneUse(m_c_BinaryOr(
+                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue())))))
+    return std::nullopt;
+
+  SmallVector<VPValue *, 4> Worklist;
+  Worklist.push_back(UncountableCondition);
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+
+    // Any value defined outside the loop does not need to be copied.
+    if (V->isDefinedOutsideLoopRegions())
+      continue;
+
+    // FIXME: Remove the single user restriction; it's here because we're
+    //        starting with the simplest set of loops we can, and multiple
+    //        users means needing to add PHI nodes in the transform.
+    if (V->getNumUsers() > 1)
+      return std::nullopt;
+
+    VPValue *Op1, *Op2;
+    // Walk back through recipes until we find at least one load from memory.
+    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
+      Worklist.push_back(Op1);
+      Worklist.push_back(Op2);
+      Recipes.push_back(V->getDefiningRecipe());
+    } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
+      // Reject masked loads for the time being; they make the exit condition
+      // more complex.
+      if (Load->isMasked())
+        return std::nullopt;
+
+      VPValue *GEP = Load->getAddr();
+      if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
+        return std::nullopt;
+
+      Recipes.push_back(Load);
+      Recipes.push_back(GEP->getDefiningRecipe());
+      GEPs.push_back(GEP->getDefiningRecipe());
+    } else
+      return std::nullopt;
+  }
+
+  return UncountableCondition;
 }

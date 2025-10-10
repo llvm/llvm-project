@@ -1521,8 +1521,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (isInteger(inType) && isFloatCompatible(outType)) ||
          (isFloatCompatible(inType) && isInteger(outType)) ||
          (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
-         (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
-         (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isInteger(inType) && isPointerCompatible(outType)) ||
+         (isPointerCompatible(inType) && isInteger(outType)) ||
          (mlir::isa<fir::BoxType>(inType) &&
           mlir::isa<fir::BoxType>(outType)) ||
          (mlir::isa<fir::BoxProcType>(inType) &&
@@ -1774,12 +1774,13 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
             return emitOpError("too many operands for len_param_index case");
         }
         if (eleTy != index.getOnType())
-          emitOpError(
+          return emitOpError(
               "len_param_index type not compatible with reference type");
         return mlir::success();
       } else if (auto index = mlir::dyn_cast<fir::FieldIndexOp>(defOp)) {
         if (eleTy != index.getOnType())
-          emitOpError("field_index type not compatible with reference type");
+          return emitOpError(
+              "field_index type not compatible with reference type");
         if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
           eleTy = recTy.getType(index.getFieldName());
           continue;
@@ -3406,26 +3407,30 @@ llvm::LogicalResult fir::SaveResultOp::verify() {
   auto eleTy = resultType;
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(resultType)) {
     if (seqTy.getDimension() != shapeTyRank)
-      emitOpError("shape operand must be provided and have the value rank "
-                  "when the value is a fir.array");
+      return emitOpError(
+          "shape operand must be provided and have the value rank "
+          "when the value is a fir.array");
     eleTy = seqTy.getEleTy();
   } else {
     if (shapeTyRank != 0)
-      emitOpError(
+      return emitOpError(
           "shape operand should only be provided if the value is a fir.array");
   }
 
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
     if (recTy.getNumLenParams() != getTypeparams().size())
-      emitOpError("length parameters number must match with the value type "
-                  "length parameters");
+      return emitOpError(
+          "length parameters number must match with the value type "
+          "length parameters");
   } else if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
     if (getTypeparams().size() > 1)
-      emitOpError("no more than one length parameter must be provided for "
-                  "character value");
+      return emitOpError(
+          "no more than one length parameter must be provided for "
+          "character value");
   } else {
     if (!getTypeparams().empty())
-      emitOpError("length parameters must not be provided for this value type");
+      return emitOpError(
+          "length parameters must not be provided for this value type");
   }
 
   return mlir::success();

@@ -70,6 +70,10 @@ static unsigned getSEWOpNum(const MachineInstr &MI) {
   return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
+static unsigned getVecPolicyOpNum(const MachineInstr &MI) {
+  return RISCVII::getVecPolicyOpNum(MI.getDesc());
+}
+
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -986,7 +990,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
     // If there is a policy operand, use it.
     if (RISCVII::hasVecPolicyOp(TSFlags)) {
-      const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
+      const MachineOperand &Op = MI.getOperand(getVecPolicyOpNum(MI));
       uint64_t Policy = Op.getImm();
       assert(Policy <=
                  (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&

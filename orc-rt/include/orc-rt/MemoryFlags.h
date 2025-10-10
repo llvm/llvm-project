@@ -42,8 +42,14 @@ enum class MemLifetime : unsigned {
   Finalize
 };
 
+namespace detail {
+struct AllocGroupInternals;
+} // namespace detail
+
 /// A pair of memory protections and lifetime policy.
 class AllocGroup {
+  friend struct detail::AllocGroupInternals;
+
 private:
   static constexpr int NumProtBits = bitmask_enum_num_bits_v<MemProt>;
   static constexpr int NumLifetimeBits = 1;
@@ -86,6 +92,20 @@ public:
 private:
   underlying_type Id = 0;
 };
+
+namespace detail {
+/// Helper for serializers that need access to the underlying representation of
+/// AllocGroup.
+struct AllocGroupInternals {
+  typedef AllocGroup::underlying_type underlying_type;
+  static underlying_type getId(const AllocGroup &AG) noexcept { return AG.Id; }
+  static AllocGroup fromId(underlying_type Id) noexcept {
+    AllocGroup AG;
+    AG.Id = Id;
+    return AG;
+  }
+};
+} // namespace detail
 
 /// A specialized small-map for AllocGroups.
 ///

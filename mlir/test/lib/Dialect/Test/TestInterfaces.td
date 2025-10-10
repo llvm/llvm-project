@@ -174,4 +174,32 @@ def TestOptionallyImplementedTypeInterface
   }];
 }
 
+// Dummy type interface "A" that requires type interface "B" to be complete.
+def TestCyclicTypeInterfaceA : TypeInterface<"TestCyclicTypeInterfaceA"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"",
+      "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceB>",
+      /*methodName=*/"returnB",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImpl=*/"return mlir::failure();"
+    >,
+  ];
+}
+
+// Dummy type interface "B" that requires type interface "A" to be complete.
+def TestCyclicTypeInterfaceB : TypeInterface<"TestCyclicTypeInterfaceB"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"",
+      "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceA>",
+      /*methodName=*/"returnA",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImpl=*/"return mlir::failure();"
+    >,
+  ];
+}
+
 #endif // MLIR_TEST_DIALECT_TEST_INTERFACES

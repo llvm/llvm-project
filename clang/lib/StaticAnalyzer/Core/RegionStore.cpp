@@ -43,10 +43,13 @@ using namespace ento;
 namespace {
 class BindingKey {
 public:
-  enum Kind { Default = 0x0, Direct = 0x1 };
-private:
-  enum { Symbolic = 0x2 };
+  enum Kind {
+    Default = 0x0,
+    Direct = 0x1,
+    Symbolic = 0x2,
+  };
 
+private:
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 
@@ -2655,13 +2658,19 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, V);
   }
 
-  // Handle lazy compound values.
+  // FIXME Single value constant should have been handled before this call to
+  // bindArray. This is only a hotfix to not crash.
+  if (Init.isConstant())
+    return bindAggregate(B, R, Init);
+
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
-
     return bindAggregate(B, R, Init);
   }
+
+  if (isa<nonloc::SymbolVal>(Init))
+    return bindAggregate(B, R, Init);
 
   if (Init.isUnknown())
     return bindAggregate(B, R, UnknownVal());

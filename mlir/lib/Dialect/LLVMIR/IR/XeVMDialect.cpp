@@ -9,6 +9,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
@@ -305,6 +306,36 @@ LogicalResult BlockPrefetch2dOp::verify() {
 
   return success();
 }
+
+template <typename OpType, typename = std::enable_if_t<llvm::is_one_of<
+                               OpType, BlockLoadOp, BlockStoreOp>::value>>
+LogicalResult verify1DBlockArg(OpType op) {
+  VectorType vTy;
+  if constexpr (std::is_same_v<OpType, BlockLoadOp>)
+    vTy = op.getResult().getType();
+  else
+    vTy = op.getVal().getType();
+  int elemTySize = vTy.getElementType().getIntOrFloatBitWidth() / 8;
+  if (elemTySize == 1) {
+    llvm::SmallSet<int, 5> validSizes{1, 2, 4, 8, 16};
+    if (validSizes.contains(vTy.getNumElements()))
+      return success();
+    else
+      return op.emitOpError(
+          "vector size must be 1, 2, 4, 8 or 16 for 8-bit element type");
+  } else {
+    llvm::SmallSet<int, 4> validSizes{1, 2, 4, 8};
+    if (validSizes.contains(vTy.getNumElements()))
+      return success();
+    else
+      return op.emitOpError(
+          "vector size must be 1, 2, 4 or 8 for element type > 8 bits");
+  }
+}
+
+LogicalResult BlockLoadOp::verify() { return verify1DBlockArg(*this); }
+
+LogicalResult BlockStoreOp::verify() { return verify1DBlockArg(*this); }
 
 LogicalResult MMAOp::verify() {
   if (getC()) {

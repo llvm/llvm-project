@@ -14,6 +14,7 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
+  CallableTraitsHelperTest.cpp
   CommonTestUtils.cpp
   ErrorTest.cpp
   ExecutorAddressTest.cpp
@@ -24,7 +25,10 @@ add_orc_rt_unittest(CoreTests
   RTTITest.cpp
   ScopeExitTest.cpp
   SimplePackedSerializationTest.cpp
+  SPSAllocActionTest.cpp
+  SPSMemoryFlagsTest.cpp
   SPSWrapperFunctionTest.cpp
+  SPSWrapperFunctionBufferTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp

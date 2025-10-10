@@ -502,14 +502,14 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
-  # Add a test for whether or not the libraries contain unresolved calls which
-  # would usually indicate a build problem. Note that we don't perform this
-  # test for all libclc targets:
+  # Add a test for whether or not the libraries contain unresolved functions
+  # which would usually indicate a build problem. Note that we don't perform
+  # this test for all libclc targets:
   # * nvptx-- targets don't include workitem builtins
   # * clspv targets don't include all OpenCL builtins
   if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
-    add_test( NAME external-calls-${obj_suffix}
-      COMMAND ./check_external_calls.sh ${libclc_builtins_lib} ${LLVM_TOOLS_BINARY_DIR}
+    add_test( NAME external-funcs-${obj_suffix}
+      COMMAND ./check_external_funcs.sh ${libclc_builtins_lib} ${LLVM_TOOLS_BINARY_DIR}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
   endif()
 

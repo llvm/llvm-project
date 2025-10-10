@@ -24,8 +24,9 @@
 define half @half_imm() nounwind {
 ; CHECK-LABEL: half_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 512
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
 ;
 ; RV32IZHINX-LABEL: half_imm:
@@ -44,8 +45,9 @@ define half @half_imm() nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: half_imm:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECKIZFHMIN-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
+; CHECKIZFHMIN-NEXT:    lui a0, 4
+; CHECKIZFHMIN-NEXT:    addi a0, a0, 512
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFHMIN-NEXT:    ret
 ;
 ; CHECKIZHINXMIN-LABEL: half_imm:
@@ -60,8 +62,9 @@ define half @half_imm() nounwind {
 define half @half_imm_op(half %a) nounwind {
 ; CHECK-LABEL: half_imm_op:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    flh fa5, %lo(.LCPI1_0)(a0)
+; CHECK-NEXT:    li a0, 15
+; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    fadd.h fa0, fa0, fa5
 ; CHECK-NEXT:    ret
 ;

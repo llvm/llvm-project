@@ -1610,7 +1610,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      int BaseOffset = -AFI->getTaggedBasePointerOffset();
      Register FrameReg;
      StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
-         MF, BaseOffset, false /*isFixed*/, false /*isSVE*/, FrameReg,
+         MF, BaseOffset, false /*isFixed*/, TargetStackID::Default /*StackID*/,
+         FrameReg,
          /*PreferFP=*/false,
          /*ForSimm=*/true);
      Register SrcReg = FrameReg;
@@ -1688,6 +1689,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    }
    case AArch64::InOutZAUsePseudo:
    case AArch64::RequiresZASavePseudo:
+   case AArch64::SMEStateAllocPseudo:
    case AArch64::COALESCER_BARRIER_FPR16:
    case AArch64::COALESCER_BARRIER_FPR32:
    case AArch64::COALESCER_BARRIER_FPR64:

@@ -2,20 +2,6 @@
 
 #include "mock-types.h"
 
-namespace std {
-
-template <typename T> struct remove_reference {
-  typedef T type;
-};
-
-template <typename T> struct remove_reference<T&> {
-  typedef T type;
-};
-
-template<typename T> typename remove_reference<T>::type&& move(T&& t);
-
-} // namespace std
-
 RefCountableAndCheckable* makeObj();
 CheckedRef<RefCountableAndCheckable> makeObjChecked();
 void someFunction(RefCountableAndCheckable*);
