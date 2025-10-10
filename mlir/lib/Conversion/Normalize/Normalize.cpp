@@ -51,7 +51,7 @@ private:
   reorderOperation(mlir::Operation *used, mlir::Operation *user,
                    llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
 
-  void RenameOperations(const SmallVector<Operation *, 16> &Outputs);
+  void renameOperations(const SmallVector<Operation *, 16> &Outputs);
   void RenameOperation(mlir::Operation *op,
                        SmallPtrSet<const mlir::Operation *, 32> &visited);
 
@@ -83,21 +83,11 @@ void NormalizePass::runOnOperation() {
         collectOutputOperations(block, Outputs);
 
     reorderOperations(Outputs);
-
-    RenameOperations(Outputs);
-
-    for (auto &region : op.getRegions()) {
-      for (auto &block : region) {
-        for (auto &innerOp : block) {
-          foldOperation(&innerOp);
-          reorderOperationOperandsByName(&innerOp);
-        }
-      }
-    }
+    renameOperations(Outputs);
   }
 }
 
-void NormalizePass::RenameOperations(
+void NormalizePass::renameOperations(
     const SmallVector<Operation *, 16> &Outputs) {
   llvm::SmallPtrSet<const mlir::Operation *, 32> visited;
 
@@ -115,6 +105,8 @@ void NormalizePass::RenameOperation(
     } else {
       nameAsRegularOperation(op, visited);
     }
+    foldOperation(op);
+    reorderOperationOperandsByName(op);
   }
 }
 
@@ -189,14 +181,18 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation *op) {
         defOp->print(Stream, state);
         std::string hash = to_string(strHash(split(Stream.str(), '=', 1)));
         Operands.push_back(StringRef(hash));
-      } else {
-        std::string TextRepresentation;
-        mlir::AsmState state(op, flags);
-        llvm::raw_string_ostream Stream(TextRepresentation);
-        operand.print(Stream, state);
-        std::string argNum = split(Stream.str(), ':', 1);
-        argNum = argNum.substr(1, argNum.size() - 1);
-        Operands.push_back(StringRef(std::string("arg" + argNum)));
+      } else if (auto ba = dyn_cast<mlir::BlockArgument>(operand)) {
+        mlir::Block *ownerBlock = ba.getOwner();
+        unsigned argIndex = ba.getArgNumber();
+        if (auto func = dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
+          if (&func.front() == ownerBlock) {
+            Operands.push_back(StringRef(std::string("funcArg" + std::to_string(argIndex))));
+          } else {
+            Operands.push_back(StringRef(std::string("blockArg" + std::to_string(argIndex))));
+          }
+        } else {
+          Operands.push_back(StringRef(std::string("blockArg" + std::to_string(argIndex))));
+        }
       }
     }
   }
@@ -228,7 +224,7 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation *op) {
     Name.append(std::string(Operands[i]));
 
     if (i < Operands.size() - 1)
-      Name.append("--");
+      Name.append("-");
   }
   Name.append("$");
 
@@ -251,14 +247,18 @@ void NormalizePass::nameAsRegularOperation(
       llvm::raw_string_ostream Stream(TextRepresentation);
       defOp->print(Stream, state);
       Operands.push_back(StringRef(split(Stream.str(), '=', 0)));
-    } else {
-      std::string TextRepresentation;
-      mlir::AsmState state(op, flags);
-      llvm::raw_string_ostream Stream(TextRepresentation);
-      operand.print(Stream, state);
-      std::string argNum = split(Stream.str(), ':', 1);
-      argNum = argNum.substr(1, argNum.size() - 1);
-      Operands.push_back(StringRef(std::string("arg" + argNum)));
+    } else if (auto ba = dyn_cast<mlir::BlockArgument>(operand)) {
+      mlir::Block *ownerBlock = ba.getOwner();
+      unsigned argIndex = ba.getArgNumber();
+      if (auto func = dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
+        if (&func.front() == ownerBlock) {
+          Operands.push_back(StringRef(std::string("funcArg" + std::to_string(argIndex))));
+        } else {
+          Operands.push_back(StringRef(std::string("blockArg" + std::to_string(argIndex))));
+        }
+      } else {
+        Operands.push_back(StringRef(std::string("blockArg" + std::to_string(argIndex))));
+      }
     }
   }
 
@@ -295,7 +295,7 @@ void NormalizePass::nameAsRegularOperation(
     Name.append(Operands[i]);
 
     if (i < Operands.size() - 1)
-      Name.append("--");
+      Name.append("-");
   }
   Name.append("$");
 
