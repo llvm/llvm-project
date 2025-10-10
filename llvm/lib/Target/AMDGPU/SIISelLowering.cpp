@@ -9148,10 +9148,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
 
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
   SmallVector<EVT, 3> ResultTypes;
-  if (BaseOpcode->NoReturn && BaseOpcode->Atomic)
-    ResultTypes.push_back(MVT::Other);
-  else
-    ResultTypes = OrigResultTypes;
+  ResultTypes = (BaseOpcode->NoReturn && BaseOpcode->Atomic)
+                    ? SmallVector<EVT, 1>{MVT::Other}
+                    : OrigResultTypes;
 
   bool IsD16 = false;
   bool IsG16 = false;

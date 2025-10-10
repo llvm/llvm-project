@@ -925,7 +925,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                         bit noRtn = 0, bit enableDisasm = 0>
   : MIMG_gfx10<op.GFX10M, !if(noRtn, (outs), (outs DataRC:$vdst)),
                !if(enableDisasm, "GFX10", "")> {
-  let Constraints = !if(noRtn, "","$vdst = $vdata");
+  let Constraints = !if(noRtn, "", "$vdst = $vdata");
   let isCodeGenOnly = noRtn;
   let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
@@ -980,7 +980,7 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterOperand DataRC,
                           int num_addrs, string renamed, bit noRtn = 0, bit enableDisasm = 0>
   : VIMAGE_gfx12<op.GFX12, !if(noRtn, (outs), (outs DataRC:$vdst)), num_addrs,
                   !if(enableDisasm, "GFX12", "")> {
-  let Constraints = !if(noRtn,"", "$vdst = $vdata");
+  let Constraints = !if(noRtn, "", "$vdst = $vdata");
   let isCodeGenOnly = noRtn;
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
@@ -1096,7 +1096,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
     }
 }
 
-multiclass MIMG_Atomic_Impl <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
+multiclass MIMG_Atomic_Base <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         bit noRtn = 0, string renamed = ""> { // 64-bit atomics
   let IsAtomicRet = !not(noRtn) in {
     def "" : MIMGBaseOpcode {
@@ -1131,8 +1131,8 @@ multiclass MIMG_Atomic_Impl <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         string renamed = ""> {
-  defm "" : MIMG_Atomic_Impl <op, asm, isCmpSwap, isFP, 0, renamed>;
-  defm "_NORTN" : MIMG_Atomic_Impl <op, asm, isCmpSwap, isFP, 1, renamed>;
+  defm "" : MIMG_Atomic_Base <op, asm, isCmpSwap, isFP, 0, renamed>;
+  defm "_NORTN" : MIMG_Atomic_Base <op, asm, isCmpSwap, isFP, 1, renamed>;
 }
 
 multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
