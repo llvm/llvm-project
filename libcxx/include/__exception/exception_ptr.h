@@ -123,8 +123,8 @@ public:
     __y.__ptr_  = __tmp;
   }
 
-  friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
-  friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
+  friend exception_ptr current_exception() _NOEXCEPT;
+  friend void rethrow_exception(exception_ptr);
 };
 
 // Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
@@ -232,7 +232,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT {
 
 #else // _LIBCPP_ABI_MICROSOFT
 
-class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
+class exception_ptr {
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-private-field")
   void* __ptr1_;
