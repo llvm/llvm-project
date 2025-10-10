@@ -3006,8 +3006,10 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
 
   // If VarTy is an array type, at the top level only, we want to do our
   // compares/decomp/etc at the element level.
-  if (VarTy->isArrayType())
-    VarTy = QualType{VarTy->getPointeeOrArrayElementType(), 0};
+  if (auto *AT = getASTContext().getAsArrayType(VarTy))
+    VarTy = AT->getElementType();
+
+  assert(!VarTy->isArrayType() && "Only 1 level of array allowed");
 
   auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,
                                bool IncludeTrap) {
