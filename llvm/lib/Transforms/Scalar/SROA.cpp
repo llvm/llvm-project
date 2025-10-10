@@ -2992,7 +2992,7 @@ public:
         // Do not handle the case if
         //   1. The store does not meet the conditions in the helper function
         //   2. The store is volatile
-        //   3. The store value type size is less than the allocated element
+        //   3. The total store size is not a multiple of the allocated element
         //   type size
         if (!IsTypeValidForTreeStructuredMerge(
                 SI->getValueOperand()->getType()) ||
