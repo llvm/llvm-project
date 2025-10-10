@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify=good -pedantic -Wall -std=c2y %s
-// RUN: %clang_cc1 -verify -pedantic -Wall -std=c23 %s
-// RUN: %clang_cc1 -verify -pedantic -Wall -std=c17 %s
+// RUN: %clang_cc1 -verify=compat,expected -pedantic -Wall -Wpre-c2y-compat -std=c2y %s
+// RUN: %clang_cc1 -verify=ped,expected -pedantic -Wall -std=c23 %s
+// RUN: %clang_cc1 -verify=ped,expected -pedantic -Wall -std=c17 %s
 // good-no-diagnostics
 
 /* WG14 N3622: Clang 22
@@ -15,6 +16,10 @@ static void static_func(void) {} // expected-note {{declared here}}
 static int static_var;           // expected-note {{declared here}}
 
 extern inline void test(void) {
-  static_func();   // expected-warning {{static function 'static_func' is used in an inline function with external linkage}}
-  static_var = 12; // expected-warning {{static variable 'static_var' is used in an inline function with external linkage}}
+  static_func();   /* ped-warning {{using static function 'static_func' in an inline function with external linkage is a C2y extension}}
+                      compat-warning {{using static function 'static_func' in an inline function with external linkage is incompatible with standards before C2y}}
+                    */
+  static_var = 12; /* ped-warning {{using static variable 'static_var' in an inline function with external linkage is a C2y extension}}
+                      compat-warning {{using static variable 'static_var' in an inline function with external linkage is incompatible with standards before C2y}}
+                    */
 }
