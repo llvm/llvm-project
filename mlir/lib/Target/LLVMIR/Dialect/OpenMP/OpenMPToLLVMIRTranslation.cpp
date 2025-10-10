@@ -6087,6 +6087,59 @@ convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Converts an OpenMP Groupprivate operation into LLVM IR.
+static LogicalResult
+convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  auto groupprivateOp = cast<omp::GroupprivateOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  Value symAddr = groupprivateOp.getSymAddr();
+  auto *symOp = symAddr.getDefiningOp();
+
+  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
+    symOp = asCast.getOperand().getDefiningOp();
+
+  if (!isa<LLVM::AddressOfOp>(symOp))
+    return opInst.emitError("Addressing symbol not found");
+  LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
+
+  LLVM::GlobalOp global =
+      addressOfOp.getGlobal(moduleTranslation.symbolTable());
+  llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+
+  // Get the size of the variable
+  llvm::Type *varType = globalValue->getValueType();
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::DataLayout DL = llvmModule->getDataLayout();
+  uint64_t typeSize = DL.getTypeAllocSize(varType);
+  // Call omp_alloc_shared to allocate memory for groupprivate variable.
+  // Need PR: https://github.com/llvm/llvm-project/pull/150923.
+  //groupPrivatePtr = ompBuilder->createOMPAllocShared(ompLoc, varType);
+  llvm::FunctionCallee allocSharedFn = ompBuilder->getOrCreateRuntimeFunction(
+      *llvmModule,
+      llvm::omp::OMPRTL___kmpc_alloc_shared);
+  uint32_t SrcLocStrSize;
+  llvm::Constant *Loc =
+        ompBuilder->getOrCreateDefaultSrcLocStr(SrcLocStrSize);
+  // Call runtime to allocate shared memory for this group
+  llvm::Value *args[] = {
+      ompBuilder->getOrCreateIdent(Loc, SrcLocStrSize),
+      builder.getInt64(typeSize)
+  };
+  llvm::Value *groupPrivatePtr = builder.CreateCall(allocSharedFn, args);
+  groupPrivatePtr = builder.CreateBitCast(groupPrivatePtr,
+                                         globalValue->getType());
+
+  moduleTranslation.mapValue(opInst.getResult(0), groupPrivatePtr);
+
+  return success();
+}
+
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR (including
 /// OpenMP runtime calls).
 static LogicalResult
@@ -6269,6 +6322,9 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::TargetFreeMemOp) {
             return convertTargetFreeMemOp(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::GroupprivateOp) {
+            return convertOmpGroupprivate(*op, builder, moduleTranslation);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()
