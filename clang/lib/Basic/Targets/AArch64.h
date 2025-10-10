@@ -351,6 +351,37 @@ public:
                     MacroBuilder &Builder) const override;
 };
 
+// aarch64 UEFI target
+class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
+    : public UEFITargetInfo<AArch64leTargetInfo> {
+public:
+  UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+    this->TheCXXABI.set(TargetCXXABI::Microsoft);
+    // This is an LLP64 platform.
+    // int:4, long:4, long long:8, long double:8.
+    IntWidth = IntAlign = 32;
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    IntMaxType = SignedLongLong;
+    Int64Type = SignedLongLong;
+    SizeType = UnsignedLongLong;
+    PtrDiffType = SignedLongLong;
+    IntPtrType = SignedLongLong;
+    this->resetDataLayout(
+        "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+        "i64:64-i128:128-n32:64-S128-Fn32");
+  }
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override;
+};
+
 } // namespace targets
 } // namespace clang
 

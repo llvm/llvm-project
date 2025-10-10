@@ -689,6 +689,9 @@ public:
   bool isWindowsMSVCEnvironment() const {
     return isKnownWindowsMSVCEnvironment() ||
            (isOSWindows() && getEnvironment() == Triple::UnknownEnvironment);
+    //   ||
+    //  (isUEFI() && isAArch64() && getEnvironment() ==
+    //  Triple::UnknownEnvironment);
   }
 
   // Checks if we're using the Windows Arm64EC ABI.

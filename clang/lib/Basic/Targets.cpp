@@ -175,6 +175,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Hurd:
       return std::make_unique<HurdTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                    Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFIAArch64TargetInfo>(Triple, Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::GNU:

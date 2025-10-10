@@ -128,6 +128,9 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
     }
   }
 
+  if (Triple.isUEFI())
+    return false;
+
   if (Triple.isOSWindows()) {
     switch (Triple.getArch()) {
     case llvm::Triple::x86:
@@ -198,7 +201,7 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
     // Arm64 Windows requires that the frame chain is valid, as there is no
     // way to indicate during a stack walk that a frame has used the frame
     // pointer as a general purpose register.
-    return Triple.isOSWindows();
+    return Triple.isOSWindows() || Triple.isUEFI();
   }
 }
 
