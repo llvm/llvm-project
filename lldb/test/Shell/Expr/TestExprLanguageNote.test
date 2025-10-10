@@ -64,6 +64,11 @@ expr -l c++17 -- x = 5
 # CHECK-TARGET:     (lldb) expr
 # CHECK-TARGET-NOT: note:
 
+expr x = 5
+
+# CHECK-TARGET:     (lldb) expr
+# CHECK-TARGET-NOT: note:
+
 #--- no-target.input
 
 expr blah
@@ -72,6 +77,11 @@ expr blah
 # CHECK-NO-TARGET:     note: Falling back to default language. Ran expression as 'Objective C++'.
 
 expr -l c++ -- 1 + 1
+
+# CHECK-NO-TARGET:     (lldb) expr
+# CHECK-NO-TARGET-NOT: note:
+
+expr 1 + 1
 
 # CHECK-NO-TARGET:     (lldb) expr
 # CHECK-NO-TARGET-NOT: note:
