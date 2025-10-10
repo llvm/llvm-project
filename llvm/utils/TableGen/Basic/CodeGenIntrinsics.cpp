@@ -13,6 +13,7 @@
 #include "CodeGenIntrinsics.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -371,7 +372,21 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
-  else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
+  else if (R->isSubClassOf("IntrRead")) {
+    MemoryEffects ReadMask = MemoryEffects::writeOnly();
+    for (const Record *RLoc : R->getValueAsListOfDefs("Loc"))
+      ReadMask = ReadMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+                                        ModRefInfo::ModRef);
+    ME &= ReadMask;
+
+  } else if (R->isSubClassOf("IntrWrite")) {
+    MemoryEffects WriteMask = MemoryEffects::readOnly();
+    for (const Record *RLoc : R->getValueAsListOfDefs("Loc"))
+      WriteMask = WriteMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+                                          ModRefInfo::ModRef);
+    ME &= WriteMask;
+
+  } else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
     isCommutative = true;
@@ -444,6 +459,26 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else {
     llvm_unreachable("Unknown property!");
   }
+}
+
+llvm::IRMemLocation
+CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
+  StringRef Name = R->getName();
+  IRMemLocation Loc =
+      StringSwitch<IRMemLocation>(Name)
+          .Case("TargetMem0", IRMemLocation::TargetMem0)
+          .Case("TargetMem1", IRMemLocation::TargetMem1)
+          .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
+          .Default(IRMemLocation::Other); // fallback enum
+
+  if (Loc == IRMemLocation::Other)
+    PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
+
+  return Loc;
+  if (Loc == IRMemLocation::Other)
+    PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
+
+  return Loc;
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
