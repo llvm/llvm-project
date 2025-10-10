@@ -3733,6 +3733,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(Result);
   }
+  case Builtin::BI__builtin_static_analysis_assume:
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     // FIXME: Technically these constants should of type 'int', yes?
