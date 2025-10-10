@@ -12,8 +12,7 @@
 
 #include "clang/AST/DeclCXX.h"
 
-namespace clang {
-namespace lifetimes {
+namespace clang ::lifetimes {
 
 /// Returns the most recent declaration of the method to ensure all
 /// lifetime-bound attributes from redeclarations are considered.
@@ -38,7 +37,7 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
-} // namespace lifetimes
-} // namespace clang
+
+} // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
