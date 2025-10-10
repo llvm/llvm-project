@@ -2915,6 +2915,138 @@ LogicalResult cir::TypeInfoAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+void cir::TryOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Location)> tryBuilder,
+    function_ref<void(OpBuilder &, Location, OperationState &)> catchBuilder) {
+  assert(tryBuilder && "expected builder callback for 'cir.try' body");
+  assert(catchBuilder && "expected builder callback for 'catch' body");
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Try body region
+  Region *tryBodyRegion = result.addRegion();
+
+  // Create try body region and set insertion point
+  builder.createBlock(tryBodyRegion);
+  tryBuilder(builder, result.location);
+  catchBuilder(builder, result.location, result);
+}
+
+void cir::TryOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // If any index all the underlying regions branch back to the parent
+  // operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // If the condition isn't constant, both regions may be executed.
+  regions.push_back(RegionSuccessor(&getTryRegion()));
+
+  // FIXME: optimize, ideas include:
+  // - If we know a target function never throws a specific type, we can
+  //   remove the catch handler.
+  for (mlir::Region &r : this->getCatchRegions())
+    regions.push_back(RegionSuccessor(&r));
+}
+
+static void printCatchRegions(OpAsmPrinter &printer, cir::TryOp op,
+                              mlir::MutableArrayRef<::mlir::Region> regions,
+                              mlir::ArrayAttr catchersAttr) {
+  if (!catchersAttr)
+    return;
+
+  int currCatchIdx = 0;
+  printer << "catch [";
+  llvm::interleaveComma(catchersAttr, printer, [&](const Attribute &a) {
+    if (mlir::isa<cir::CatchUnwindAttr>(a)) {
+      printer.printAttribute(a);
+      printer << " ";
+    } else if (!a) {
+      printer << "all";
+    } else {
+      printer << "type ";
+      printer.printAttribute(a);
+      printer << " ";
+    }
+    printer.printRegion(regions[currCatchIdx], /*printEntryBLockArgs=*/false,
+                        /*printBlockTerminators=*/true);
+    currCatchIdx++;
+  });
+
+  printer << "]";
+}
+
+static ParseResult parseCatchRegions(
+    OpAsmParser &parser,
+    llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regions,
+    ::mlir::ArrayAttr &catchersAttr) {
+  if (parser.parseKeyword("catch").failed())
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected 'catch' keyword here");
+
+  auto parseAndCheckRegion = [&]() -> ParseResult {
+    // Parse region attached to catch
+    regions.emplace_back(new Region);
+    Region &currRegion = *regions.back();
+    SMLoc parserLoc = parser.getCurrentLocation();
+    if (parser.parseRegion(currRegion)) {
+      regions.clear();
+      return failure();
+    }
+
+    if (currRegion.empty()) {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "catch region shall not be empty");
+    }
+
+    if (!(currRegion.back().mightHaveTerminator() &&
+          currRegion.back().getTerminator()))
+      return parser.emitError(
+          parserLoc, "blocks are expected to be explicitly terminated");
+
+    return success();
+  };
+
+  llvm::SmallVector<mlir::Attribute, 4> catchList;
+  auto parseCatchEntry = [&]() -> ParseResult {
+    mlir::Attribute exceptionTypeInfo;
+
+    if (parser.parseOptionalAttribute(exceptionTypeInfo).has_value()) {
+      catchList.push_back(exceptionTypeInfo);
+    } else {
+      ::llvm::StringRef attrStr;
+      if (parser.parseOptionalKeyword(&attrStr, {"all"}).succeeded()) {
+        // "all" keyword found, exceptionTypeInfo remains null
+      } else if (parser.parseOptionalKeyword("type").succeeded()) {
+        if (parser.parseAttribute(exceptionTypeInfo).failed())
+          return parser.emitError(parser.getCurrentLocation(),
+                                  "expected valid RTTI info attribute");
+      } else {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected attribute, 'all', or 'type' keyword");
+      }
+      catchList.push_back(exceptionTypeInfo);
+    }
+    return parseAndCheckRegion();
+  };
+
+  if (parser
+          .parseCommaSeparatedList(OpAsmParser::Delimiter::Square,
+                                   parseCatchEntry, " in catch list")
+          .failed())
+    return failure();
+
+  catchersAttr = parser.getBuilder().getArrayAttr(catchList);
+  return ::mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

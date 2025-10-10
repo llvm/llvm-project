@@ -968,4 +968,19 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// CatchAllAttr & CatchUnwindAttr
+//===----------------------------------------------------------------------===//
+
+// Represents the unwind region where unwind continues or
+// the program std::terminate's.
+def CIR_CatchUnwindAttr : CIR_UnitAttr<"CatchUnwind", "unwind"> {
+  let storageType = [{ CatchUnwind }];
+}
+
+// Represents the catch_all region.
+def CIR_CatchAllAttr : CIR_UnitAttr<"CatchAll", "all"> {
+  let storageType = [{ CatchAllAttr }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
