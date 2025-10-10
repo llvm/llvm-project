@@ -328,9 +328,9 @@ public:
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
-    // Using overflow ops for overflow checks only should beneficial on
-    // AArch64.
-    return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+    if (VT.isVector())
+      return false;
+    return !isOperationExpand(Opcode, VT);
   }
 
   // Return true if the target wants to optimize the mul overflow intrinsic

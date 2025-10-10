@@ -3,20 +3,18 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -O3 -global-isel < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; This used to miscompile:
-; The 16-bit -1 should not become 32-bit -1 (sub w8, w8, #1).
 
 @g = global i16 0, align 4
 define i32 @srl_and()  {
 ; CHECK-SD-LABEL: srl_and:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    adrp x8, :got:g
-; CHECK-SD-NEXT:    mov w9, #50 // =0x32
 ; CHECK-SD-NEXT:    ldr x8, [x8, :got_lo12:g]
 ; CHECK-SD-NEXT:    ldrh w8, [x8]
-; CHECK-SD-NEXT:    eor w8, w8, w9
-; CHECK-SD-NEXT:    mov w9, #65535 // =0xffff
-; CHECK-SD-NEXT:    add w8, w8, w9
-; CHECK-SD-NEXT:    and w0, w8, w8, lsr #16
+; CHECK-SD-NEXT:    cmp w8, #50
+; CHECK-SD-NEXT:    sub w8, w8, #1
+; CHECK-SD-NEXT:    cset w9, ne
+; CHECK-SD-NEXT:    and w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: srl_and:
@@ -26,12 +24,11 @@ define i32 @srl_and()  {
 ; CHECK-GI-NEXT:    ldr x8, [x8, :got_lo12:g]
 ; CHECK-GI-NEXT:    ldrh w8, [x8]
 ; CHECK-GI-NEXT:    eor w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, #65535 // =0xffff
-; CHECK-GI-NEXT:    add w8, w9, w8, uxth
-; CHECK-GI-NEXT:    and w9, w8, #0xffff
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    cset w8, ne
-; CHECK-GI-NEXT:    and w0, w9, w8
+; CHECK-GI-NEXT:    tst w8, #0xffff
+; CHECK-GI-NEXT:    sub w8, w8, #1
+; CHECK-GI-NEXT:    cset w9, ne
+; CHECK-GI-NEXT:    and w8, w8, #0xffff
+; CHECK-GI-NEXT:    and w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i16, ptr @g, align 4

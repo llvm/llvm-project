@@ -25,9 +25,9 @@ define i8 @unsigned_sat_constant_i8_using_cmp_sum(i8 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i8_using_cmp_sum:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    add w8, w8, #42
-; CHECK-NEXT:    tst w8, #0x100
-; CHECK-NEXT:    csinv w0, w8, wzr, eq
+; CHECK-NEXT:    add w9, w0, #42
+; CHECK-NEXT:    cmp w8, w9, uxtb
+; CHECK-NEXT:    csinv w0, w9, wzr, ls
 ; CHECK-NEXT:    ret
   %a = add i8 %x, 42
   %c = icmp ugt i8 %x, %a
@@ -68,9 +68,9 @@ define i16 @unsigned_sat_constant_i16_using_cmp_sum(i16 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i16_using_cmp_sum:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    add w8, w8, #42
-; CHECK-NEXT:    tst w8, #0x10000
-; CHECK-NEXT:    csinv w0, w8, wzr, eq
+; CHECK-NEXT:    add w9, w0, #42
+; CHECK-NEXT:    cmp w8, w9, uxth
+; CHECK-NEXT:    csinv w0, w9, wzr, ls
 ; CHECK-NEXT:    ret
   %a = add i16 %x, 42
   %c = icmp ugt i16 %x, %a
@@ -188,9 +188,9 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i8_using_cmp_sum:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    add w8, w8, w1, uxtb
-; CHECK-NEXT:    tst w8, #0x100
-; CHECK-NEXT:    csinv w0, w8, wzr, eq
+; CHECK-NEXT:    add w9, w0, w1
+; CHECK-NEXT:    cmp w8, w9, uxtb
+; CHECK-NEXT:    csinv w0, w9, wzr, ls
 ; CHECK-NEXT:    ret
   %a = add i8 %x, %y
   %c = icmp ugt i8 %x, %a
@@ -201,11 +201,11 @@ define i8 @unsigned_sat_variable_i8_using_cmp_sum(i8 %x, i8 %y) {
 define i8 @unsigned_sat_variable_i8_using_cmp_notval(i8 %x, i8 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i8_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    add w9, w0, w1
-; CHECK-NEXT:    add w8, w8, w0, uxtb
-; CHECK-NEXT:    tst w8, #0x100
-; CHECK-NEXT:    csinv w0, w9, wzr, eq
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:    add w10, w0, w1
+; CHECK-NEXT:    cmp w8, w9, uxtb
+; CHECK-NEXT:    csinv w0, w10, wzr, ls
 ; CHECK-NEXT:    ret
   %noty = xor i8 %y, -1
   %a = add i8 %x, %y
@@ -234,9 +234,9 @@ define i16 @unsigned_sat_variable_i16_using_cmp_sum(i16 %x, i16 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i16_using_cmp_sum:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    add w8, w8, w1, uxth
-; CHECK-NEXT:    tst w8, #0x10000
-; CHECK-NEXT:    csinv w0, w8, wzr, eq
+; CHECK-NEXT:    add w9, w0, w1
+; CHECK-NEXT:    cmp w8, w9, uxth
+; CHECK-NEXT:    csinv w0, w9, wzr, ls
 ; CHECK-NEXT:    ret
   %a = add i16 %x, %y
   %c = icmp ugt i16 %x, %a
@@ -247,11 +247,11 @@ define i16 @unsigned_sat_variable_i16_using_cmp_sum(i16 %x, i16 %y) {
 define i16 @unsigned_sat_variable_i16_using_cmp_notval(i16 %x, i16 %y) {
 ; CHECK-LABEL: unsigned_sat_variable_i16_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0xffff
-; CHECK-NEXT:    add w9, w0, w1
-; CHECK-NEXT:    add w8, w8, w0, uxth
-; CHECK-NEXT:    tst w8, #0x10000
-; CHECK-NEXT:    csinv w0, w9, wzr, eq
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:    add w10, w0, w1
+; CHECK-NEXT:    cmp w8, w9, uxth
+; CHECK-NEXT:    csinv w0, w10, wzr, ls
 ; CHECK-NEXT:    ret
   %noty = xor i16 %y, -1
   %a = add i16 %x, %y
