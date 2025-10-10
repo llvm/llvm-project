@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchLocationUsingWatchpointSetTestCase(TestBase):
@@ -34,8 +35,19 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # method.
 
     @skipIf(oslist=["linux"], archs=["aarch64", "arm$"], bugnumber="llvm.org/pr26031")
+    @expectedFailureAll(archs="^riscv.*")
     @skipIfWindows  # This test is flaky on Windows
-    def test_watchlocation_using_watchpoint_set(self):
+    def test_watchlocation_using_hw_watchpoint_set(self):
+        self.do_watchlocation_using_watchpoint_set(
+            WatchpointType.WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_watchlocation_using_sw_watchpoint_set(self):
+        self.do_watchlocation_using_watchpoint_set(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_watchlocation_using_watchpoint_set(self, wp_type, wp_mode):
         """Test watching a location with 'watchpoint set expression -w write -s size' option."""
         self.build()
         self.setTearDownCleanup()
@@ -64,9 +76,9 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # The main.cpp, by design, misbehaves by not following the agreed upon
         # protocol of only accessing the allowable index range of [0, 6].
         self.expect(
-            "watchpoint set expression -w write -s 1 -- g_char_ptr + 7",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.EXPRESSION, wp_type, wp_mode)} -s 1 -- g_char_ptr + 7",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 1", "type = w"],
+            substrs=["Watchpoint created", "size = 1", f"type = {wp_type.value[0]}"],
         )
         self.runCmd("expr unsigned val = g_char_ptr[7]; val")
         self.expect(self.res.GetOutput().splitlines()[0], exe=False, endstr=" = 0")
