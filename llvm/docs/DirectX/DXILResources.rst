@@ -776,14 +776,15 @@ for texture resources with multiple MIP levels. Their return
 struct includes an additional `i32` for the number of levels the resource has.
 
 .. code-block:: llvm
-  i32 @llvm.dx.resource.getdimensions.x( target("dx.*") handle )
-  {i32, i32} @llvm.dx.resource.getdimensions.xy( target("dx.*") handle )
-  {i32, i32, i32} @llvm.dx.resource.getdimensions.xyz( target("dx.*") handle )
-  {i32, i32} @llvm.dx.resource.getdimensions.levels.x( target("dx.*") handle, i32 mip_level )
-  {i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xy( target("dx.*") handle, i32 mip_level )
-  {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyx( target("dx.*") handle, i32 mip_level )
-  {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy( target("dx.*") handle )
-  {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xyz( target("dx.*") handle )
+
+   i32 @llvm.dx.resource.getdimensions.x( target("dx.*") handle )
+   {i32, i32} @llvm.dx.resource.getdimensions.xy( target("dx.*") handle )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.xyz( target("dx.*") handle )
+   {i32, i32} @llvm.dx.resource.getdimensions.levels.x( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xy( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyx( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy( target("dx.*") handle )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xyz( target("dx.*") handle )
 
 .. list-table:: ``@llvm.dx.resource.getdimensions.*``
    :header-rows: 1
@@ -833,5 +834,4 @@ Examples:
   %tex2dms_samples_count = extractvalue {i32, i32, i32} %2, 2
 
 .. _Dimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
-.. _getDimensions:https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions
-
+.. _getDimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions
