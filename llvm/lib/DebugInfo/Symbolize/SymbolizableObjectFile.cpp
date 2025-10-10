@@ -294,7 +294,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
   // HACK:CI This strips projectRoot in the bugsnag-expected manner.
   // HACK: Upstream doesn't have the getCompilationDirectory() function.
   std::string FullPath = LineInfo.FileName;
-  std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
+  std::string Prefix = DebugInfoContext->getCompilationDirectory(ModuleOffset.Address).str();
   if (Prefix.empty() || Prefix.back() != '/') {
     Prefix.push_back('/');
   }
@@ -332,15 +332,16 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
       LI->FileName = FileName;
   }
 
+  std::string Prefix = DebugInfoContext->getCompilationDirectory(ModuleOffset.Address).str();
+  if (Prefix.empty() || Prefix.back() != '/') {
+    Prefix.push_back('/');
+  }
+  
   // HACK:CI This strips projectRoot in the bugsnag-expected manner.
   for (int i = 0; i < InlinedContext.getNumberOfFrames(); i++) {
     DILineInfo *LI = InlinedContext.getMutableFrame(i);
     std::string FullPath = LI->FileName;
-    std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
-    if (Prefix.empty() || Prefix.back() != '/') {
-      Prefix.push_back('/');
-    }
-
+    
     if (FullPath.length() > Prefix.length() && FullPath.substr(0, Prefix.length()) == Prefix) {
       LI->FileName = FullPath.substr(Prefix.length());
     }

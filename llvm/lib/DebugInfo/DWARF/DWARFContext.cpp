@@ -698,12 +698,27 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-StringRef DWARFContext::getCompilationDirectory() {
+StringRef DWARFContext::getCompilationDirectory(uint64_t Address) {
+  // Historic logic that checks the DW_AT_comp_dir flag of the first compile unit
   DWARFCompileUnit * unitForOffset = getCompileUnitForOffset(0);
   if (unitForOffset == nullptr) {
     return StringRef("");
   }
-  return StringRef(unitForOffset->getCompilationDir());
+  
+  StringRef compDir = StringRef(unitForOffset->getCompilationDir());
+  
+  // dSYMs can be compiled with some global first CUs, detected by "/" compilation directory of the first compile unit
+  // instead of using '/' get the DW_AT_comp_dir from the compile unit of the provided address.
+  if (compDir.equals(StringRef("/"))) {
+    unitForOffset = getCompileUnitForDataAddress(Address);
+    if (unitForOffset == nullptr) {
+      return StringRef("");
+    }
+
+    compDir = StringRef(unitForOffset->getCompilationDir());
+  }
+
+  return compDir;
 }
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,

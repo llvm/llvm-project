@@ -197,7 +197,7 @@ public:
                                DWOUnits.end());
   }
 
-  StringRef getCompilationDirectory();
+  StringRef getCompilationDirectory(uint64_t Address);
 
   /// Get compile units in the DWO context.
   compile_unit_range dwo_compile_units() {

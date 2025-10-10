@@ -249,7 +249,7 @@ public:
     return true;
   }
 
-  virtual StringRef getCompilationDirectory() {
+  virtual StringRef getCompilationDirectory(uint64_t Address) {
     return StringRef("");
   }
 
