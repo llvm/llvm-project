@@ -3630,18 +3630,10 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // (unless CCMP is available). OR+EQ cannot be optimized via bitwise ops,
   // unlike OR+NE which becomes (P|Q)!=0. Similarly, don't split signed
   // comparisons (SLT, SGT) that can be optimized.
-  if (BaseCost >= 0 && !Subtarget.hasCCMP() && Opc == Instruction::Or) {
-    auto *LCmp = dyn_cast<ICmpInst>(Lhs);
-    auto *RCmp = dyn_cast<ICmpInst>(Rhs);
-    if (LCmp && RCmp) {
-      ICmpInst::Predicate LPred = LCmp->getPredicate();
-      ICmpInst::Predicate RPred = RCmp->getPredicate();
-      // Split OR+EQ patterns as they don't have clever optimizations
-      if (LPred == ICmpInst::ICMP_EQ && RPred == ICmpInst::ICMP_EQ) {
-        return {-1, -1, -1};
-      }
-    }
-  }
+  if (BaseCost >= 0 && !Subtarget.hasCCMP() && Opc == Instruction::Or &&
+      match(Lhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())) &&
+      match(Rhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())))
+    return {-1, -1, -1};
   
   return {BaseCost, BrMergingLikelyBias.getValue(),
           BrMergingUnlikelyBias.getValue()};
