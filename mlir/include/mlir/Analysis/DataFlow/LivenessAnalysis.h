@@ -24,6 +24,7 @@
 #define MLIR_ANALYSIS_DATAFLOW_LIVENESSANALYSIS_H
 
 #include <mlir/Analysis/DataFlow/SparseAnalysis.h>
+#include <mlir/Pass/AnalysisManager.h>
 #include <optional>
 
 namespace mlir::dataflow {
@@ -101,13 +102,17 @@ public:
   RunLivenessAnalysis(Operation *op);
 
   const Liveness *getLiveness(Value val);
-
+  // This only mark Liveness results are stale.
+  void invalidate() { valid = false; }
   /// Return the configuration of the solver used for this analysis.
   const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
+  /// The function is called by analysis_impl::isInvalidated.
+  bool isInvalidated(AnalysisManager::PreservedAnalyses&) const { return !valid; }
 
 private:
   /// Stores the result of the liveness analysis that was run.
   DataFlowSolver solver;
+  bool valid {true};
 };
 
 } // end namespace mlir::dataflow

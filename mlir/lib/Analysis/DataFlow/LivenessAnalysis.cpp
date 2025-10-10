@@ -325,5 +325,6 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
 }
 
 const Liveness *RunLivenessAnalysis::getLiveness(Value val) {
+  assert(valid && "getLiveness called after invalidate");
   return solver.lookupState<Liveness>(val);
 }

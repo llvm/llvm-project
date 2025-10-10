@@ -39,20 +39,6 @@ struct ForwardIterator {
   }
 };
 
-/// This iterator enumerates the elements in "backward" order.
-struct BackwardIterator {
-  template <typename T>
-  static auto makeIterable(T &range) {
-    if constexpr (std::is_same<T, Operation>()) {
-      /// Make operations iterable: return the list of regions.
-      return range.getRegions();
-    } else {
-      /// Regions and block are already iterable.
-      return llvm::reverse(range);
-    }
-  }
-};
-
 /// A utility class to encode the current walk stage for "generic" walkers.
 /// When walking an operation, we can either choose a Pre/Post order walker
 /// which invokes the callback on an operation before/after all its attached

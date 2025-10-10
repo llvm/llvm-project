@@ -33,7 +33,6 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/LivenessAnalysis.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -47,6 +46,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -119,13 +119,8 @@ struct RDVFinalCleanupList {
 /// Return true iff at least one value in `values` is live, given the liveness
 /// information in `la`.
 static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
-                    const DenseSet<Value> &liveSet, RunLivenessAnalysis &la) {
+                    RunLivenessAnalysis &la) {
   for (Value value : values) {
-    if (liveSet.contains(value)) {
-      LDBG() << "Value " << value << " is marked live by CallOp";
-      return true;
-    }
-
     if (nonLiveSet.contains(value)) {
       LDBG() << "Value " << value << " is already marked non-live (dead)";
       continue;
@@ -150,7 +145,6 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
 /// Return a BitVector of size `values.size()` where its i-th bit is 1 iff the
 /// i-th value in `values` is live, given the liveness information in `la`.
 static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
-                           const DenseSet<Value> &liveSet,
                            RunLivenessAnalysis &la) {
   BitVector lives(values.size(), true);
 
@@ -161,9 +155,7 @@ static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
              << " is already marked non-live (dead) at index " << index;
       continue;
     }
-    if (liveSet.contains(value)) {
-      continue;
-    }
+
     const Liveness *liveness = la.getLiveness(value);
     // It is important to note that when `liveness` is null, we can't tell if
     // `value` is live or not. So, the safe option is to consider it live. Also,
@@ -268,9 +260,8 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 ///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
-                            DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
-  if (!isMemoryEffectFree(op) ||
-      hasLive(op->getResults(), nonLiveSet, liveSet, la)) {
+                            RDVFinalCleanupList &cl) {
+  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
     LDBG() << "Simple op is not memory effect free or has live results, "
               "preserving it: "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
@@ -298,7 +289,7 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   (6) Marking all its results as non-live values.
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
-                          DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
+                          RDVFinalCleanupList &cl) {
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp, OpPrintingFlags().skipRegions());
   if (funcOp.isPublic() || funcOp.isExternal()) {
@@ -309,7 +300,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
-  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
+  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
   nonLiveArgs = nonLiveArgs.flip();
 
   // Do (1).
@@ -362,8 +353,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets =
-        markLives(callOp->getResults(), nonLiveSet, liveSet, la);
+    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
@@ -387,127 +377,6 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
     cl.results.push_back({callOp, nonLiveRets});
     collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
-  }
-}
-
-// Create a cheaper value with the same type of oldVal in front of CallOp.
-static Value createDummyArgument(CallOpInterface callOp, Value oldVal) {
-  OpBuilder builder(callOp.getOperation());
-  Type type = oldVal.getType();
-
-  // Create zero constant for any supported type
-  if (TypedAttr zeroAttr = builder.getZeroAttr(type)) {
-    return builder.create<arith::ConstantOp>(oldVal.getLoc(), type, zeroAttr);
-  }
-  return {};
-}
-
-// When you mark a call operand as live, also mark its definition chain, recursively.
-// We handle RegionBranchOpInterface here. I think we should handle BranchOpInterface as well.
-void propagateBackward(Value val, DenseSet<Value> &liveSet) {
-  if (liveSet.contains(val)) return;
-  liveSet.insert(val);
-
-  if (auto defOp = val.getDefiningOp()) {
-    // Mark operands of live results as live
-    for (Value operand : defOp->getOperands()) {
-      propagateBackward(operand, liveSet);
-    }
-
-    // Handle RegionBranchOpInterface specially
-    if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(defOp)) {
-      // If this is a result of a RegionBranchOpInterface, we need to trace back
-      // through the control flow to find the sources that contribute to this result
-
-      OpResult result = cast<OpResult>(val);
-      unsigned resultIndex = result.getResultNumber();
-
-      // Find all possible sources that can contribute to this result
-      // by examining all regions and their terminators
-      for (Region &region : regionBranchOp->getRegions()) {
-        if (region.empty()) continue;
-
-        // Get the successors from this region
-        SmallVector<RegionSuccessor> successors;
-        regionBranchOp.getSuccessorRegions(RegionBranchPoint(&region), successors);
-
-        // Check if any successor can produce this result
-        for (const RegionSuccessor &successor : successors) {
-          if (successor.isParent()) {
-            // This region can return to the parent operation
-            ValueRange successorInputs = successor.getSuccessorInputs();
-            if (resultIndex < successorInputs.size()) {
-              // Find the terminator that contributes to this result
-              Operation *terminator = region.back().getTerminator();
-              if (auto regionBranchTerm =
-                  dyn_cast<RegionBranchTerminatorOpInterface>(terminator)) {
-                OperandRange terminatorOperands =
-                    regionBranchTerm.getSuccessorOperands(RegionBranchPoint::parent());
-                if (resultIndex < terminatorOperands.size()) {
-                  // This terminator operand contributes to our result
-                  propagateBackward(terminatorOperands[resultIndex], liveSet);
-                }
-              }
-            }
-          }
-        }
-
-        // Also mark region arguments as live if they might contribute to this result
-        // Find which operand of the parent operation corresponds to region arguments
-        Block &entryBlock = region.front();
-        for (BlockArgument arg : entryBlock.getArguments()) {
-          // Get entry successor operands - these are the operands that flow
-          // from the parent operation to this region
-          SmallVector<RegionSuccessor> entrySuccessors;
-          regionBranchOp.getSuccessorRegions(RegionBranchPoint::parent(), entrySuccessors);
-
-          for (const RegionSuccessor &entrySuccessor : entrySuccessors) {
-            if (entrySuccessor.getSuccessor() == &region) {
-              // Get the operands that are forwarded to this region
-              OperandRange entryOperands =
-                  regionBranchOp.getEntrySuccessorOperands(RegionBranchPoint::parent());
-              unsigned argIndex = arg.getArgNumber();
-              if (argIndex < entryOperands.size()) {
-                propagateBackward(entryOperands[argIndex], liveSet);
-              }
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-static void processCallOp(CallOpInterface callOp, Operation *module,
-                          RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
-                          DenseSet<Value> &liveSet) {
-  if (!la.getSolverConfig().isInterprocedural())
-    return;
-
-  Operation *callableOp = callOp.resolveCallable();
-  auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
-  if (!funcOp || !funcOp.isPublic()) {
-    return;
-  }
-
-  LDBG() << "processCallOp to a public function: " << funcOp.getName();
-  // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
-  SmallVector<Value> arguments(funcOp.getArguments());
-  BitVector nonLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
-  nonLiveArgs = nonLiveArgs.flip();
-
-  if (nonLiveArgs.count() > 0) {
-    LDBG() << funcOp.getName() << " contains NonLive arguments";
-    // The number of operands in the call op may not match the number of
-    // arguments in the func op.
-    SmallVector<OpOperand *> callOpOperands =
-        operandsToOpOperands(callOp.getArgOperands());
-
-    for (int index : nonLiveArgs.set_bits()) {
-      OpOperand *operand = callOpOperands[index];
-      LDBG() << "mark operand " << index << " live " << operand->get();
-      propagateBackward(operand->get(), liveSet);
-    }
   }
 }
 
@@ -543,14 +412,12 @@ static void processCallOp(CallOpInterface callOp, Operation *module,
 static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   RunLivenessAnalysis &la,
                                   DenseSet<Value> &nonLiveSet,
-                                  DenseSet<Value> &liveSet,
                                   RDVFinalCleanupList &cl) {
   LDBG() << "Processing region branch op: "
          << OpWithFlags(regionBranchOp, OpPrintingFlags().skipRegions());
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
-    liveResults =
-        markLives(regionBranchOp->getResults(), nonLiveSet, liveSet, la);
+    liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, la);
   };
 
   // Mark live arguments in the regions of `regionBranchOp` in `liveArgs`.
@@ -559,7 +426,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
       if (region.empty())
         continue;
       SmallVector<Value> arguments(region.front().getArguments());
-      BitVector regionLiveArgs = markLives(arguments, nonLiveSet, liveSet, la);
+      BitVector regionLiveArgs = markLives(arguments, nonLiveSet, la);
       liveArgs[&region] = regionLiveArgs;
     }
   };
@@ -753,7 +620,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // attributed to something else.
   // Do (1') and (2').
   if (isMemoryEffectFree(regionBranchOp.getOperation()) &&
-      !hasLive(regionBranchOp->getResults(), nonLiveSet, liveSet, la)) {
+      !hasLive(regionBranchOp->getResults(), nonLiveSet, la)) {
     cl.operations.push_back(regionBranchOp.getOperation());
     return;
   }
@@ -832,7 +699,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
-                            DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
+                            RDVFinalCleanupList &cl) {
   LDBG() << "Processing branch op: " << *branchOp;
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
@@ -850,7 +717,7 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 
     // Do (2)
     BitVector successorNonLive =
-        markLives(operandValues, nonLiveSet, liveSet, la).flip();
+        markLives(operandValues, nonLiveSet, la).flip();
     collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
 
@@ -1003,36 +870,185 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 };
 } // namespace
 
+/// If the target of CallOP is a public function and at least one argument is NonLive,
+/// privatize the function.
+/// Our strategy here is separation interface and implementation. eg.
+///
+/// public void foo(int unused){...}
+/// =>
+/// public void foo(int unused) {          // old function, interface
+///   return __foo_impl(unused);
+/// }
+///
+/// private void __foo_impl(int unused) { // the new private function, or implementation.
+///  ...                                  // the function body of the original function.
+/// }
+///
+/// Returns true if any IR changes were made, false otherwise.
+static bool processCallOp(CallOpInterface callOp, Operation *module,
+                          RunLivenessAnalysis &la) {
+  Operation *callableOp = callOp.resolveCallable();
+  auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
+  if (!funcOp || !funcOp.isPublic()) {
+    return false;
+  }
+
+  LDBG() << "Processing callOp " << callOp
+         << " target is a public function: " << funcOp.getOperation()->getName();
+
+  // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
+  SmallVector<Value> arguments(callOp.getArgOperands());
+  BitVector nonLiveArgs = markLives(arguments, DenseSet<Value>(), la);
+  nonLiveArgs = nonLiveArgs.flip();
+
+  if (nonLiveArgs.count() > 0) {
+    auto moduleOp = cast<ModuleOp>(module);
+    OpBuilder rewriter(moduleOp.getContext());
+
+    // Clone function and create private version
+    FunctionOpInterface clonedFunc = cast<FunctionOpInterface>(funcOp.clone());
+
+    // Set visibility = 'private' and a new name for the cloned function
+    SymbolTable::setSymbolVisibility(clonedFunc,
+                                  SymbolTable::Visibility::Private);
+    std::string newName = "__" + funcOp.getName().str() + "_privatized";
+    clonedFunc.setName(newName);
+
+    // Insert the cloned function into the module
+    rewriter.setInsertionPointAfter(funcOp);
+    rewriter.insert(clonedFunc);
+
+    // Replace ALL callsites of the original function to call the cloned function directly
+    LogicalResult result = SymbolTable::replaceAllSymbolUses(
+        funcOp,
+        clonedFunc.getNameAttr(),
+        moduleOp
+    );
+
+    if (result.failed()) {
+      LDBG() << "Failed to replace all symbol uses for " << funcOp.getName();
+      return false;
+    }
+
+    LDBG() << "Redirected all callsites from " << funcOp.getName()
+           << " to " << newName;
+
+    // Transform the original funcOp into a wrapper that calls the cloned function
+    Region &funcBody = funcOp.getFunctionBody();
+
+    // Clean the original function body
+    funcBody.dropAllReferences();
+    funcBody.getBlocks().clear();
+
+    // Create a new entry block for the wrapper function
+    Block *wrapperBlock = rewriter.createBlock(&funcBody);
+
+    // Add block arguments that match the function signature
+    for (Type argType : funcOp.getArgumentTypes()) {
+      wrapperBlock->addArgument(argType, funcOp.getLoc());
+    }
+
+    // Set insertion point to the new block
+    rewriter.setInsertionPointToStart(wrapperBlock);
+
+    // Clone the original call operation and update its callee
+    Operation *clonedCallOp = callOp->clone();
+
+    // Update the callee symbol reference to point to the new private function
+    if (auto callableOp = dyn_cast<CallOpInterface>(clonedCallOp)) {
+      auto symbolRef = SymbolRefAttr::get(funcOp.getContext(), clonedFunc.getName());
+      callableOp.setCalleeFromCallable(symbolRef);
+    }
+
+    // Set the call arguments to use the wrapper block's arguments
+    clonedCallOp->setOperands(wrapperBlock->getArguments());
+
+    // Insert the cloned call operation
+    rewriter.insert(clonedCallOp);
+
+    // Create return operation of the same type as the original function's return
+    SmallVector<Operation*> returnOps;
+    for (Block &block : clonedFunc.getFunctionBody()) {
+      if (block.getNumSuccessors() > 0)
+        continue;
+
+      Operation *terminator = block.getTerminator();
+      if (terminator && terminator->hasTrait<OpTrait::ReturnLike>()) {
+        returnOps.push_back(terminator);
+        break; // Use first return as template
+      }
+    }
+
+    if (!returnOps.empty()) {
+      Operation *templateReturnOp = returnOps[0];
+      Operation *newReturnOp = templateReturnOp->clone();
+      newReturnOp->setOperands(clonedCallOp->getResults());
+      newReturnOp->setLoc(funcOp.getLoc());
+      rewriter.insert(newReturnOp);
+    }
+
+    LDBG() << "Created wrapper function " << funcOp.getName()
+           << " that calls " << newName;
+
+    return true; // Changes were made
+  }
+
+  return false; // No changes made
+}
+
 void RemoveDeadValues::runOnOperation() {
-  auto &la = getAnalysis<RunLivenessAnalysis>();
+  AnalysisManager am = getAnalysisManager();
+  RunLivenessAnalysis *la = &am.getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
+
+  // Only privatize public funciton if liveness analysis is inter-procedural.
+  if (la->getSolverConfig().isInterprocedural()) {
+    bool changed = false;
+    module->walk([&](CallOpInterface callOp) {
+      if (processCallOp(callOp, module, *la)) {
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      LDBG() << "IR has changed, invalidate RunLivenessAnalysis only";
+      auto & pa = getPassState().preservedAnalyses;
+      bool preserved = pa.isPreserved<RunLivenessAnalysis>();
+      la->invalidate();
+      am.invalidate(pa);
+
+      la = &am.getAnalysis<RunLivenessAnalysis>();
+      // if RunLivenessAnalysis was previously preserved, preserved the updated results.
+      if (preserved) {
+        pa.preserve<RunLivenessAnalysis>();
+      }
+    }
+  }
+
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
   DenseSet<Value> deadVals;
-  // mark outgoing arguments to a public function LIVE. We also propagate
-  // liveness backward.
-  DenseSet<Value> liveVals;
 
   // Maintains a list of Ops, values, branches, etc., slated for cleanup at the
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
-  module->walk<WalkOrder::PostOrder, BackwardIterator>([&](Operation *op) {
+  module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, liveVals, finalCleanupList);
+      processFuncOp(funcOp, module, *la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      processRegionBranchOp(regionBranchOp, la, deadVals, liveVals,
-                            finalCleanupList);
+      processRegionBranchOp(regionBranchOp, *la, deadVals, finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
-      processBranchOp(branchOp, la, deadVals, liveVals, finalCleanupList);
+      processBranchOp(branchOp, *la, deadVals, finalCleanupList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
     } else if (isa<CallOpInterface>(op)) {
-      processCallOp(cast<CallOpInterface>(op), module, la, deadVals, liveVals);
+      // Nothing to do because this op is associated with a function op and gets
+      // cleaned when the latter is cleaned.
     } else {
-      processSimpleOp(op, la, deadVals, liveVals, finalCleanupList);
+      processSimpleOp(op, *la, deadVals, finalCleanupList);
     }
   });
 
