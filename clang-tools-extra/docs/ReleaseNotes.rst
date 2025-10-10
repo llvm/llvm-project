@@ -276,7 +276,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-not-null-terminated-result
   <clang-tidy/checks/bugprone/not-null-terminated-result>` check by fixing
-  bogus fix-its for `strncmp` and `wcsncmp` on Windows.
+  bogus fix-its for ``strncmp`` and ``wcsncmp`` on Windows.
 
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
