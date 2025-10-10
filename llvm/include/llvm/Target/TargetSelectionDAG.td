@@ -301,10 +301,10 @@ def SDTVecInsert : SDTypeProfile<1, 3, [    // vector insert
   SDTCisEltOfVec<2, 1>, SDTCisSameAs<0, 1>, SDTCisPtrTy<3>
 ]>;
 def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
-  SDTCisInt<0>, SDTCisVec<1>
+  SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<1>
 ]>;
 def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
-  SDTCisFP<0>, SDTCisVec<1>
+  SDTCisFP<0>, SDTCisEltOfVec<0, 1>
 ]>;
 
 def SDTVecReverse : SDTypeProfile<1, 1, [  // vector reverse
