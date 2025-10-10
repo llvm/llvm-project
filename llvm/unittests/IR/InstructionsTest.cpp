@@ -1933,5 +1933,110 @@ TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
   EXPECT_TRUE(Offset.isZero());
 }
 
+TEST(InstructionsTest, LLVMGetSetVolatile) {
+  LLVMContext Ctx;
+  Module M("M", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "F", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  IRBuilder<> B(BB);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Value *Val = B.getInt32(1);
+  Value *Ptr = B.CreateAlloca(Int32Ty);
+
+  // LoadInst
+  {
+    LoadInst *Load = B.CreateLoad(Int32Ty, Ptr, "");
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(Load)));
+    LLVMSetVolatile(wrap(Load), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(Load)));
+    LLVMSetVolatile(wrap(Load), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(Load)));
+  }
+
+  // StoreInst
+  {
+    StoreInst *Store = B.CreateStore(Val, Ptr);
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(Store)));
+    LLVMSetVolatile(wrap(Store), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(Store)));
+    LLVMSetVolatile(wrap(Store), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(Store)));
+  }
+
+  // AtomicRMWInst
+  {
+    AtomicRMWInst *RMW = B.CreateAtomicRMW(
+        AtomicRMWInst::Add, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic);
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(RMW)));
+    LLVMSetVolatile(wrap(RMW), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(RMW)));
+    LLVMSetVolatile(wrap(RMW), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(RMW)));
+  }
+
+  // MemCpy
+  {
+    CallInst *MemCpy = B.CreateMemCpy(Ptr, MaybeAlign(), Ptr, MaybeAlign(), 4);
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemCpy)));
+    LLVMSetVolatile(wrap(MemCpy), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(MemCpy)));
+    LLVMSetVolatile(wrap(MemCpy), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemCpy)));
+  }
+
+  // MemMove
+  {
+    CallInst *MemMove =
+        B.CreateMemMove(Ptr, MaybeAlign(), Ptr, MaybeAlign(), 4);
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemMove)));
+    LLVMSetVolatile(wrap(MemMove), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(MemMove)));
+    LLVMSetVolatile(wrap(MemMove), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemMove)));
+  }
+
+  // MemSet
+  {
+    CallInst *MemSet = B.CreateMemSet(Ptr, B.getInt8(0), 1, Align(1));
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemSet)));
+    LLVMSetVolatile(wrap(MemSet), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(MemSet)));
+    LLVMSetVolatile(wrap(MemSet), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemSet)));
+  }
+
+  // MemSetInline
+  {
+    CallInst *MemSetInline =
+        B.CreateMemSetInline(Ptr, Align(1), B.getInt8(0), Val);
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemSetInline)));
+    LLVMSetVolatile(wrap(MemSetInline), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(MemSetInline)));
+    LLVMSetVolatile(wrap(MemSetInline), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemSetInline)));
+  }
+
+  // MemCpyInline
+  {
+    CallInst *MemCpyInline =
+        B.CreateMemCpyInline(Ptr, MaybeAlign(), Val, MaybeAlign(), Val);
+
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemCpyInline)));
+    LLVMSetVolatile(wrap(MemCpyInline), true);
+    EXPECT_TRUE(LLVMGetVolatile(wrap(MemCpyInline)));
+    LLVMSetVolatile(wrap(MemCpyInline), false);
+    EXPECT_FALSE(LLVMGetVolatile(wrap(MemCpyInline)));
+  }
+}
+
 } // end anonymous namespace
 } // end namespace llvm
