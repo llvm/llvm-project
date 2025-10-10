@@ -229,7 +229,9 @@ def process_attribute_definition(line, attribute_namer):
             "// CHECK: #[["
             + attribute_name
             + ":.+]] ="
-            + line[len(m.group(0)) :]
+            # The rest of the line may contain attribute references,
+            # so we have to process them.
+            + process_attribute_references(line[len(m.group(0)) :], attribute_namer)
             + "\n"
         )
     return None

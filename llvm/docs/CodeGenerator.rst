@@ -90,8 +90,8 @@ This design has two important implications.  The first is that LLVM can support
 completely non-traditional code generation targets.  For example, the C backend
 does not require register allocation, instruction selection, or any of the other
 standard components provided by the system.  As such, it only implements these
-two interfaces, and does its own thing. Note that C backend was removed from the
-trunk since LLVM 3.1 release. Another example of a code generator like this is a
+two interfaces, and does its own thing. Note that the C backend was removed from the
+trunk in the LLVM 3.1 release. Another example of a code generator like this is a
 (purely hypothetical) backend that converts LLVM to the GCC RTL form and uses
 GCC to emit machine code for a target.
 
@@ -565,7 +565,7 @@ Conceptually a MI bundle is a MI with a number of other MIs nested within:
 MI bundle support does not change the physical representations of
 MachineBasicBlock and MachineInstr. All the MIs (including top level and nested
 ones) are stored as sequential list of MIs. The "bundled" MIs are marked with
-the 'InsideBundle' flag. A top level MI with the special BUNDLE opcode is used
+the 'InsideBundle' flag. A top-level MI with the special BUNDLE opcode is used
 to represent the start of a bundle. It's legal to mix BUNDLE MIs with individual
 MIs that are not inside bundles nor represent bundles.
 
@@ -575,7 +575,7 @@ The MachineBasicBlock iterator has been modified to skip over bundled MIs to
 enforce the bundle-as-a-single-unit concept. An alternative iterator
 instr_iterator has been added to MachineBasicBlock to allow passes to iterate
 over all of the MIs in a MachineBasicBlock, including those which are nested
-inside bundles. The top level BUNDLE instruction must have the correct set of
+inside bundles. The top-level BUNDLE instruction must have the correct set of
 register MachineOperand's that represent the cumulative inputs and outputs of
 the bundled MIs.
 
@@ -602,7 +602,7 @@ level, devoid of "high level" information like "constant pools", "jump tables",
 "global variables" or anything like that.  At this level, LLVM handles things
 like label names, machine instructions, and sections in the object file.  The
 code in this layer is used for a number of important purposes: the tail end of
-the code generator uses it to write a .s or .o file, and it is also used by the
+the code generator uses it to write a ``.s`` or ``.o`` file, and it is also used by the
 llvm-mc tool to implement standalone machine code assemblers and disassemblers.
 
 This section describes some of the important classes.  There are also a number
@@ -615,8 +615,8 @@ The ``MCStreamer`` API
 ----------------------
 
 MCStreamer is best thought of as an assembler API.  It is an abstract API which
-is *implemented* in different ways (e.g. to output a .s file, output an ELF .o
-file, etc) but whose API correspond directly to what you see in a .s file.
+is *implemented* in different ways (e.g. to output a ``.s`` file, output an ELF ``.o``
+file, etc) but whose API corresponds directly to what you see in a ``.s`` file.
 MCStreamer has one method per directive, such as EmitLabel, EmitSymbolAttribute,
 switchSection, emitValue (for .byte, .word), etc, which directly correspond to
 assembly level directives.  It also has an EmitInstruction method, which is used
@@ -629,7 +629,7 @@ higher level LLVM IR and Machine* constructs down to the MC layer, emitting
 directives through MCStreamer.
 
 On the implementation side of MCStreamer, there are two major implementations:
-one for writing out a .s file (MCAsmStreamer), and one for writing out a .o
+one for writing out a ``.s`` file (MCAsmStreamer), and one for writing out a ``.o``
 file (MCObjectStreamer).  MCAsmStreamer is a straightforward implementation
 that prints out a directive for each method (e.g. ``EmitValue -> .byte``), but
 MCObjectStreamer implements a full assembler.
@@ -639,7 +639,7 @@ Each target that needs it defines a class that inherits from it and is a lot
 like MCStreamer itself: It has one method per directive and two classes that
 inherit from it, a target object streamer and a target asm streamer. The target
 asm streamer just prints it (``emitFnStart -> .fnstart``), and the object
-streamer implement the assembler logic for it.
+streamer implements the assembler logic for it.
 
 To make llvm use these classes, the target initialization must call
 TargetRegistry::RegisterAsmStreamer and TargetRegistry::RegisterMCObjectStreamer
@@ -667,7 +667,7 @@ MCSymbols are created by MCContext and uniqued there.  This means that MCSymbols
 can be compared for pointer equivalence to find out if they are the same symbol.
 Note that pointer inequality does not guarantee the labels will end up at
 different addresses though.  It's perfectly legal to output something like this
-to the .s file:
+to the ``.s`` file:
 
 ::
 
@@ -685,7 +685,7 @@ subclassed by object file specific implementations (e.g. ``MCSectionMachO``,
 ``MCSectionCOFF``, ``MCSectionELF``) and these are created and uniqued by
 MCContext.  The MCStreamer has a notion of the current section, which can be
 changed with the SwitchToSection method (which corresponds to a ".section"
-directive in a .s file).
+directive in a ``.s`` file).
 
 .. _MCInst:
 
@@ -887,7 +887,7 @@ bundled into a single scheduling-unit node, and with immediate operands and
 other nodes that aren't relevant for scheduling omitted.
 
 The option ``-filter-view-dags`` allows to select the name of the basic block
-that you are interested to visualize and filters all the previous
+that you are interested in visualizing and filters all the previous
 ``view-*-dags`` options.
 
 .. _Build initial DAG:
@@ -944,7 +944,7 @@ The Legalize phase is in charge of converting a DAG to only use the operations
 that are natively supported by the target.
 
 Targets often have weird constraints, such as not supporting every operation on
-every supported datatype (e.g. X86 does not support byte conditional moves and
+every supported data type (e.g. X86 does not support byte conditional moves and
 PowerPC does not support sign-extending loads from a 16-bit memory location).
 Legalize takes care of this by open-coding another sequence of operations to
 emulate the operation ("expansion"), by promoting one type to a larger type that
@@ -1077,7 +1077,7 @@ for your target.  It has the following strengths:
   if your patterns make sense or not.
 
 * It can handle arbitrary constraints on operands for the pattern match.  In
-  particular, it is straight-forward to say things like "match any immediate
+  particular, it is straightforward to say things like "match any immediate
   that is a 13-bit sign-extended value".  For examples, see the ``immSExt16``
   and related ``tblgen`` classes in the PowerPC backend.
 
@@ -1615,7 +1615,7 @@ Since the MC layer works at the level of abstraction of object files, it doesn't
 have a notion of functions, global variables etc.  Instead, it thinks about
 labels, directives, and instructions.  A key class used at this time is the
 MCStreamer class.  This is an abstract API that is implemented in different ways
-(e.g. to output a .s file, output an ELF .o file, etc) that is effectively an
+(e.g. to output a ``.s`` file, output an ELF ``.o`` file, etc) that is effectively an
 "assembler API".  MCStreamer has one method per directive, such as EmitLabel,
 EmitSymbolAttribute, switchSection, etc, which directly correspond to assembly
 level directives.
@@ -1648,7 +1648,7 @@ three important things that you have to implement for your target:
 
 Finally, at your choosing, you can also implement a subclass of MCCodeEmitter
 which lowers MCInst's into machine code bytes and relocations.  This is
-important if you want to support direct .o file emission, or would like to
+important if you want to support direct ``.o`` file emission, or would like to
 implement an assembler for your target.
 
 Emitting function stack size information
@@ -1678,7 +1678,7 @@ Instructions in a VLIW target can typically be mapped to multiple functional
 units. During the process of packetizing, the compiler must be able to reason
 about whether an instruction can be added to a packet. This decision can be
 complex since the compiler has to examine all possible mappings of instructions
-to functional units. Therefore to alleviate compilation-time complexity, the
+to functional units. Therefore, to alleviate compilation-time complexity, the
 VLIW packetizer parses the instruction classes of a target and generates tables
 at compiler build time. These tables can then be queried by the provided
 machine-independent API to determine if an instruction can be accommodated in a
@@ -1729,7 +1729,7 @@ Instruction Alias Processing
 ----------------------------
 
 Once the instruction is parsed, it enters the MatchInstructionImpl function.
-The MatchInstructionImpl function performs alias processing and then does actual
+The MatchInstructionImpl function performs alias processing and then performs actual
 matching.
 
 Alias processing is the phase that canonicalizes different lexical forms of the
@@ -1934,7 +1934,7 @@ following constraints are met:
 
 * Caller and callee have matching return type or the callee result is not used.
 
-* If any of the callee arguments are being passed in stack, they must be
+* If any of the callee arguments are being passed on the stack, they must be
   available in caller's own incoming argument stack and the frame offsets must
   be the same.
 
@@ -2074,7 +2074,7 @@ character per operand with an optional special size. For example:
 The PowerPC backend
 -------------------
 
-The PowerPC code generator lives in the lib/Target/PowerPC directory.  The code
+The PowerPC code generator lives in the ``lib/Target/PowerPC`` directory.  The code
 generation is retargetable to several variations or *subtargets* of the PowerPC
 ISA; including ppc32, ppc64 and altivec.
 
@@ -2140,7 +2140,7 @@ previous frame pointer (r31.)  The entries in the linkage area are the size of a
 GPR, thus the linkage area is 24 bytes long in 32-bit mode and 48 bytes in
 64-bit mode.
 
-32 bit linkage area:
+32-bit linkage area:
 
 :raw-html:`<table  border="1" cellspacing="0">`
 :raw-html:`<tr>`
@@ -2169,7 +2169,7 @@ GPR, thus the linkage area is 24 bytes long in 32-bit mode and 48 bytes in
 :raw-html:`</tr>`
 :raw-html:`</table>`
 
-64 bit linkage area:
+64-bit linkage area:
 
 :raw-html:`<table border="1" cellspacing="0">`
 :raw-html:`<tr>`

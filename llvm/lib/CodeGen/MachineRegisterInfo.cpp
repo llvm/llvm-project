@@ -83,8 +83,6 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
 
 const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
     Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
-  if (Reg.isPhysical())
-    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
@@ -430,6 +428,11 @@ bool MachineRegisterInfo::hasOneNonDBGUse(Register RegNo) const {
 
 bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
+}
+
+MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
+  auto RegNoDbgUses = use_nodbg_operands(RegNo);
+  return hasSingleElement(RegNoDbgUses) ? &*RegNoDbgUses.begin() : nullptr;
 }
 
 MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
