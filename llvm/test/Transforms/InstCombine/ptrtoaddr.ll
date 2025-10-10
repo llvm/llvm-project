@@ -130,3 +130,27 @@ define i32 @ptrtoaddr_sub_consts_offset_addrsize() {
 ;
   ret i32 sub (i32 ptrtoaddr (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g.as1, i32 42) to i32), i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32))
 }
+
+define i64 @ptrtoaddr_sub_known_offset(ptr %p) {
+; CHECK-LABEL: define i64 @ptrtoaddr_sub_known_offset(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret i64 42
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 42
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %sub = sub i64 %p2.addr, %p.addr
+  ret i64 %sub
+}
+
+define i32 @ptrtoaddr_sub_known_offset_addrsize(ptr addrspace(1) %p) {
+; CHECK-LABEL: define i32 @ptrtoaddr_sub_known_offset_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) {
+; CHECK-NEXT:    ret i32 42
+;
+  %p2 = getelementptr inbounds i8, ptr addrspace(1) %p, i32 42
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %p2.addr = ptrtoaddr ptr addrspace(1) %p2 to i32
+  %sub = sub i32 %p2.addr, %p.addr
+  ret i32 %sub
+}
