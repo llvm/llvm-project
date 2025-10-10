@@ -4375,11 +4375,27 @@ def CIR_TryOp : CIR_Op<"try",[
   }];
 
   // Everything already covered elsewhere.
-  let builders = [OpBuilder<(ins
+  let builders = [
+    OpBuilder<(ins
       "llvm::function_ref<void(mlir::OpBuilder &, "
         "mlir::Location)>":$tryBuilder,
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, "
-        "mlir::OperationState &)>":$catchBuilder)>];
+        "mlir::OperationState &)>":$catchBuilder),
+    [{
+      assert(tryBuilder && "expected builder callback for 'cir.try' body");
+      assert(catchBuilder && "expected builder callback for 'catch' body");
+
+      OpBuilder::InsertionGuard guard($_builder);
+
+      // Try body region
+      Region *tryBodyRegion = $_state.addRegion();
+
+      // Create try body region and set insertion point
+      $_builder.createBlock(tryBodyRegion);
+      tryBuilder($_builder, $_state.location);
+      catchBuilder($_builder, $_state.location, $_state);
+    }]>
+  ];
 
   let hasLLVMLowering = false;
 }

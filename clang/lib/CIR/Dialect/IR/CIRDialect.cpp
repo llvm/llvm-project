@@ -2918,24 +2918,6 @@ LogicalResult cir::TypeInfoAttr::verify(
 // TryOp
 //===----------------------------------------------------------------------===//
 
-void cir::TryOp::build(
-    OpBuilder &builder, OperationState &result,
-    function_ref<void(OpBuilder &, Location)> tryBuilder,
-    function_ref<void(OpBuilder &, Location, OperationState &)> catchBuilder) {
-  assert(tryBuilder && "expected builder callback for 'cir.try' body");
-  assert(catchBuilder && "expected builder callback for 'catch' body");
-
-  OpBuilder::InsertionGuard guard(builder);
-
-  // Try body region
-  Region *tryBodyRegion = result.addRegion();
-
-  // Create try body region and set insertion point
-  builder.createBlock(tryBodyRegion);
-  tryBuilder(builder, result.location);
-  catchBuilder(builder, result.location, result);
-}
-
 void cir::TryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
