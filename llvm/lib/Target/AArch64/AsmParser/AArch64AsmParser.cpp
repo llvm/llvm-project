@@ -4020,23 +4020,23 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     if (HasnXSQualifier) {
       Op = Op.drop_back(3);
     }
-    const AArch64TLBI::TLBI *TLBIorig = AArch64TLBI::lookupTLBIByName(Op);
-    if (!TLBIorig)
+    const AArch64TLBIP::TLBIP *TLBIPorig = AArch64TLBIP::lookupTLBIPByName(Op);
+    if (!TLBIPorig)
       return TokError("invalid operand for TLBIP instruction");
-    const AArch64TLBI::TLBI TLBI(
-        TLBIorig->Name, TLBIorig->Encoding | (HasnXSQualifier ? (1 << 7) : 0),
-        TLBIorig->NeedsReg,
+    const AArch64TLBIP::TLBIP TLBIP(
+        TLBIPorig->Name, TLBIPorig->Encoding | (HasnXSQualifier ? (1 << 7) : 0),
+        TLBIPorig->NeedsReg,
         HasnXSQualifier
-            ? TLBIorig->FeaturesRequired | FeatureBitset({AArch64::FeatureXS})
-            : TLBIorig->FeaturesRequired);
-    if (!TLBI.haveFeatures(getSTI().getFeatureBits())) {
+            ? TLBIPorig->FeaturesRequired | FeatureBitset({AArch64::FeatureXS})
+            : TLBIPorig->FeaturesRequired);
+    if (!TLBIP.haveFeatures(getSTI().getFeatureBits())) {
       std::string Name =
-          std::string(TLBI.Name) + (HasnXSQualifier ? "nXS" : "");
+          std::string(TLBIP.Name) + (HasnXSQualifier ? "nXS" : "");
       std::string Str("TLBIP " + Name + " requires: ");
-      setRequiredFeatureString(TLBI.getRequiredFeatures(), Str);
+      setRequiredFeatureString(TLBIP.getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    createSysAlias(TLBI.Encoding, Operands, S);
+    createSysAlias(TLBIP.Encoding, Operands, S);
   }
 
   Lex(); // Eat operand.

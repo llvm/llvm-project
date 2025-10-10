@@ -1087,14 +1087,14 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
 }
 
 bool OverloadCandidateSet::OperatorRewriteInfo::allowsReversed(
-    OverloadedOperatorKind Op) {
+    OverloadedOperatorKind Op) const {
   if (!AllowRewrittenCandidates)
     return false;
   return Op == OO_EqualEqual || Op == OO_Spaceship;
 }
 
 bool OverloadCandidateSet::OperatorRewriteInfo::shouldAddReversed(
-    Sema &S, ArrayRef<Expr *> OriginalArgs, FunctionDecl *FD) {
+    Sema &S, ArrayRef<Expr *> OriginalArgs, FunctionDecl *FD) const {
   auto Op = FD->getOverloadedOperator();
   if (!allowsReversed(Op))
     return false;
@@ -1892,14 +1892,7 @@ bool Sema::TryFunctionConversion(QualType FromType, QualType ToType,
   return Changed;
 }
 
-bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
-                                bool *DiscardingCFIUncheckedCallee,
-                                bool *AddingCFIUncheckedCallee) const {
-  if (DiscardingCFIUncheckedCallee)
-    *DiscardingCFIUncheckedCallee = false;
-  if (AddingCFIUncheckedCallee)
-    *AddingCFIUncheckedCallee = false;
-
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1958,25 +1951,14 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn);
 
   if (FromFPT && ToFPT) {
-    if (FromFPT->hasCFIUncheckedCallee() && !ToFPT->hasCFIUncheckedCallee()) {
+    if (FromFPT->hasCFIUncheckedCallee() != ToFPT->hasCFIUncheckedCallee()) {
       QualType NewTy = Context.getFunctionType(
           FromFPT->getReturnType(), FromFPT->getParamTypes(),
-          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(false));
+          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(
+              ToFPT->hasCFIUncheckedCallee()));
       FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
       FromFn = FromFPT;
       Changed = true;
-      if (DiscardingCFIUncheckedCallee)
-        *DiscardingCFIUncheckedCallee = true;
-    } else if (!FromFPT->hasCFIUncheckedCallee() &&
-               ToFPT->hasCFIUncheckedCallee()) {
-      QualType NewTy = Context.getFunctionType(
-          FromFPT->getReturnType(), FromFPT->getParamTypes(),
-          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(true));
-      FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
-      FromFn = FromFPT;
-      Changed = true;
-      if (AddingCFIUncheckedCallee)
-        *AddingCFIUncheckedCallee = true;
     }
   }
 
@@ -2007,11 +1989,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       Changed = true;
     }
 
-    // For C, when called from checkPointerTypesForAssignment,
-    // we need to not alter FromFn, or else even an innocuous cast
-    // like dropping effects will fail. In C++ however we do want to
-    // alter FromFn (because of the way PerformImplicitConversion works).
-    if (Context.hasAnyFunctionEffects() && getLangOpts().CPlusPlus) {
+    if (Context.hasAnyFunctionEffects()) {
       FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
@@ -4413,14 +4391,23 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
     Result = CompareStandardConversionSequences(S, Loc,
                                                 ICS1.Standard, ICS2.Standard);
   else if (ICS1.isUserDefined()) {
+    // With lazy template loading, it is possible to find non-canonical
+    // FunctionDecls, depending on when redecl chains are completed. Make sure
+    // to compare the canonical decls of conversion functions. This avoids
+    // ambiguity problems for templated conversion operators.
+    const FunctionDecl *ConvFunc1 = ICS1.UserDefined.ConversionFunction;
+    if (ConvFunc1)
+      ConvFunc1 = ConvFunc1->getCanonicalDecl();
+    const FunctionDecl *ConvFunc2 = ICS2.UserDefined.ConversionFunction;
+    if (ConvFunc2)
+      ConvFunc2 = ConvFunc2->getCanonicalDecl();
     // User-defined conversion sequence U1 is a better conversion
     // sequence than another user-defined conversion sequence U2 if
     // they contain the same user-defined conversion function or
     // constructor and if the second standard conversion sequence of
     // U1 is better than the second standard conversion sequence of
     // U2 (C++ 13.3.3.2p3).
-    if (ICS1.UserDefined.ConversionFunction ==
-          ICS2.UserDefined.ConversionFunction)
+    if (ConvFunc1 == ConvFunc2)
       Result = CompareStandardConversionSequences(S, Loc,
                                                   ICS1.UserDefined.After,
                                                   ICS2.UserDefined.After);

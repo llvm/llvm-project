@@ -153,6 +153,7 @@ public:
     clauseOps.loopLowerBounds = ops.loopLowerBounds;
     clauseOps.loopUpperBounds = ops.loopUpperBounds;
     clauseOps.loopSteps = ops.loopSteps;
+    clauseOps.collapseNumLoops = ops.collapseNumLoops;
     ivOut.append(iv);
     return true;
   }

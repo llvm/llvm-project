@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 
 using namespace clang;
@@ -74,4 +75,21 @@ void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
   /// Initialize the 'this' slot.
   assert(getThisDecl(cgf) && "no 'this' variable for function");
   cgf.cxxabiThisValue = thisPtr;
+}
+
+CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
+  if (!requiresArrayCookie(e))
+    return CharUnits::Zero();
+
+  cgm.errorNYI(e->getSourceRange(), "CIRGenCXXABI::getArrayCookieSize");
+  return CharUnits::Zero();
+}
+
+bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
+  // If the class's usual deallocation function takes two arguments,
+  // it needs a cookie.
+  if (e->doesUsualArrayDeleteWantSize())
+    return true;
+
+  return e->getAllocatedType().isDestructedType();
 }
