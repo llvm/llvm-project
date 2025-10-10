@@ -233,10 +233,10 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
               "replace_op",
               [](PyPatternRewriter &self, MlirOperation op,
                  MlirOperation newOp) { self.replaceOp(op, newOp); },
-              "Replace an operation with a new operation.",
+              "Replace an operation with a new operation.", nb::arg("op"),
+              nb::arg("new_op"),
               // clang-format off
-              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation")
-                ", new_op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
+              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", new_op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
               // clang-format on
               )
           .def(
@@ -245,13 +245,14 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
                  const std::vector<MlirValue> &values) {
                 self.replaceOp(op, values);
               },
-              "Replace an operation with a list of values.",
+              "Replace an operation with a list of values.", nb::arg("op"),
+              nb::arg("values"),
               // clang-format off
-              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation")
-                ", values: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Value") "]) -> None")
+              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", values: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Value") "]) -> None")
               // clang-format on
-              nb::arg("op"), nb::arg("values"))
+              )
           .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
+               nb::arg("op"),
                // clang-format off
                 nb::sig("def erase_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
                // clang-format on
