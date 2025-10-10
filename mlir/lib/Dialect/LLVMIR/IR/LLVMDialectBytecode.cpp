@@ -39,19 +39,21 @@ static LogicalResult writeAttribute(Attribute attribute,
 template <class EntryTy>
 static void writeOptionalArrayRef(DialectBytecodeWriter &writer,
                                   ArrayRef<EntryTy> storage) {
-  if (!storage.empty()) {
-    writer.writeOwnedBool(true);
-    writer.writeList(storage, [&](EntryTy val) {
-      if constexpr (std::is_base_of_v<Attribute, EntryTy>) {
-        (void)writer.writeOptionalAttribute(val);
-      } else if constexpr (std::is_integral_v<EntryTy>) {
-        (void)writer.writeVarInt(val);
-      } else
-        static_assert(true, "EntryTy not supported");
-    });
-  } else {
+  if (storage.empty()) {
     writer.writeOwnedBool(false);
+    return;
   }
+
+  writer.writeOwnedBool(true);
+  writer.writeList(storage, [&](EntryTy val) {
+    if constexpr (std::is_base_of_v<Attribute, EntryTy>) {
+      (void)writer.writeOptionalAttribute(val);
+    } else if constexpr (std::is_integral_v<EntryTy>) {
+      (void)writer.writeVarInt(val);
+    } else {
+      static_assert(true, "EntryTy not supported");
+    }
+  });
 }
 
 template <class EntryTy>
@@ -72,8 +74,9 @@ static LogicalResult readOptionalArrayRef(DialectBytecodeReader &reader,
     } else if constexpr (std::is_integral_v<EntryTy>) {
       if (succeeded(reader.readVarInt(temp)))
         return temp;
-    } else
+    } else {
       static_assert(true, "EntryTy not supported");
+    }
     return failure();
   };
 
