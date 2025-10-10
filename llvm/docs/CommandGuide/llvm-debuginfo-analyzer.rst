@@ -861,6 +861,73 @@ layout and given the number of matches.
   -----------------------------
   Total           26          8
 
+DEBUGGER VIEW
+"""""""""""""
+In debugger view, :program:`llvm-debuginfo-analyzer` prints out
+debug-info in a manner that emulates a debugger. For each function, each
+statement line is printed out in order, complete with the inlined
+callstack. This is useful to verify the specific orders of lines, as
+well as verifying inline callstacks.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --report=debugger
+                          test-dwarf-clang.o test-dwarf-gcc.o
+  {Function}: foo
+    {Line}:  [0x0000000000] test.cpp:2 [foo]
+    {Line}:  [0x0000000012] test.cpp:3 [foo]
+    {Line}:  [0x000000001c] test.cpp:5 [foo]
+    {Line}:  [0x0000000023] test.cpp:6 [foo]
+    {Line}:  [0x000000002f] test.cpp:8 [foo]
+    {Line}:  [0x0000000035] test.cpp:9 [foo]
+  {Function}: foo
+    {Line}:  [0x0000000000] test.cpp:2 [foo]
+    {Line}:  [0x0000000014] test.cpp:3 [foo]
+    {Line}:  [0x000000001a] test.cpp:5 [foo]
+    {Line}:  [0x0000000021] test.cpp:6 [foo]
+    {Line}:  [0x0000000028] test.cpp:8 [foo]
+    {Line}:  [0x000000002b] test.cpp:9 [foo]
+
+Optionally, by adding `--print=symbols`, live variables for each line is
+printed out.
+
+.. code-block:: none
+
+  llvm-debuginfo-analyzer --report=debugger
+                          test-dwarf-clang.o
+
+  {Function}: foo
+    {Line}:  [0x0000000000] test.cpp:2 [foo]
+      {Variable}: ParamBool: bool : fbreg -21 (line 2)
+      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}:  [0x0000000012] test.cpp:3 [foo]
+      {Variable}: ParamBool: bool : fbreg -21 (line 2)
+      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}:  [0x000000001c] test.cpp:5 [foo]
+      {Variable}: CONSTANT: const INTEGER : fbreg -28 (line 5)
+      {Variable}: ParamBool: bool : fbreg -21 (line 2)
+      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}:  [0x0000000023] test.cpp:6 [foo]
+      {Variable}: CONSTANT: const INTEGER : fbreg -28 (line 5)
+      {Variable}: ParamBool: bool : fbreg -21 (line 2)
+      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}:  [0x000000002f] test.cpp:8 [foo]
+      {Variable}: ParamBool: bool : fbreg -21 (line 2)
+      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}:  [0x0000000035] test.cpp:9 [foo]
+      {Variable}: ParamBool: bool : fbreg -21 (line 2)
+      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+
+Optionally, `--print=instructions`, the lines are interleaved with the
+instructions. Combined with the output of `--print=symbols`, tests can
+verify specific expressions for live variables.
+
 COMPARISON MODE
 ^^^^^^^^^^^^^^^
 In this mode :program:`llvm-debuginfo-analyzer` compares logical views

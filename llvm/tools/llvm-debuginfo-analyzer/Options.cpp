@@ -254,6 +254,10 @@ cl::list<LVReportKind> cmdline::ReportOptions(
            clEnumValN(LVReportKind::Children, "children",
                       "Selected elements are displayed in a tree view "
                       "(Include children)"),
+           clEnumValN(
+               LVReportKind::Debugger, "debugger",
+               "Selected elements are displayed in a simulated debugger view "
+               "(Include parents and children."),
            clEnumValN(LVReportKind::List, "list",
                       "Selected elements are displayed in a tabular format."),
            clEnumValN(LVReportKind::Parents, "parents",
@@ -261,11 +265,7 @@ cl::list<LVReportKind> cmdline::ReportOptions(
                       "(Include parents)"),
            clEnumValN(LVReportKind::View, "view",
                       "Selected elements are displayed in a tree view "
-                      "(Include parents and children."),
-           clEnumValN(
-               LVReportKind::Debugger, "debugger",
-               "Selected elements are displayed in a simulated debugger view "
-               "(Include parents and children.")));
+                      "(Include parents and children.")));
 
 //===----------------------------------------------------------------------===//
 // '--select' options

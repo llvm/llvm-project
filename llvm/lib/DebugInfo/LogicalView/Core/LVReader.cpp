@@ -517,7 +517,7 @@ Error LVReader::doPrint() {
     if (options().getReportParents() || options().getReportView())
       if (Error Err = printScopes())
         return Err;
-    // Requested debugger report
+    // Requested debugger report.
     if (options().getReportDebugger())
       if (Error Err = printDebugger())
         return Err;
@@ -538,10 +538,10 @@ struct DebuggerViewPrinter {
 
   const bool IncludeRanges = false;
 
-  void Walk(raw_ostream &OS, const LVScope *Scope) {
+  void walk(raw_ostream &OS, const LVScope *Scope) {
     if (Scope->scopeCount()) {
       for (const LVScope *ChildScope : *Scope->getScopes())
-        Walk(OS, ChildScope);
+        walk(OS, ChildScope);
     }
     if (Scope->lineCount()) {
       for (const LVLine *Line : *Scope->getLines()) {
@@ -579,7 +579,7 @@ struct DebuggerViewPrinter {
   }
 
   DebuggerViewPrinter(raw_ostream &OS, const LVScopeFunction *Fn) : OS(OS) {
-    Walk(OS, Fn);
+    walk(OS, Fn);
     std::sort(Lines.begin(), Lines.end(),
               [](const LVLine *a, const LVLine *b) -> bool {
                 if (a->getAddress() != b->getAddress())
@@ -590,12 +590,12 @@ struct DebuggerViewPrinter {
               });
   }
 
-  static void PrintIndent(raw_ostream &OS, int Indent) {
+  static void printIndent(raw_ostream &OS, int Indent) {
     for (int i = 0; i < Indent; i++)
       OS << "  ";
   }
 
-  static void PrintCallstack(raw_ostream &OS, const LVScope *Scope) {
+  static void printCallstack(raw_ostream &OS, const LVScope *Scope) {
     const LVScope *PrevScope = nullptr;
     while (Scope) {
       if (Scope->getIsFunction() || Scope->getIsInlinedFunction()) {
@@ -611,7 +611,7 @@ struct DebuggerViewPrinter {
     }
   }
 
-  static bool IsChildScopeOf(const LVScope *A, const LVScope *B) {
+  static bool isChildScopeOf(const LVScope *A, const LVScope *B) {
     while (A) {
       A = A->getParentScope();
       if (A == B)
@@ -620,7 +620,7 @@ struct DebuggerViewPrinter {
     return false;
   }
 
-  void Print() {
+  void print() {
     const bool IncludeVars = options().getPrintSymbols();
     const bool IncludeCode = options().getPrintInstructions();
     SetVector<const LVLocation *>
@@ -638,20 +638,20 @@ struct DebuggerViewPrinter {
           Line->getLineNumber() != 0) {
         auto LineDebug = cast<LVLineDebug>(Line);
 
-        PrintIndent(OS, 1);
+        printIndent(OS, 1);
         OS << "{Line}: " << " [" << hexValue(LineDebug->getAddress()) << "] "
            << LineDebug->getPathname() << ":" << LineDebug->getLineNumber()
            << " ";
-        PrintCallstack(OS, Scope);
+        printCallstack(OS, Scope);
         OS << "\n";
         if (IncludeVars) {
           for (auto SymLoc : LiveSymbols) {
             const LVSymbol *Sym = SymLoc->getParentSymbol();
             auto SymScope = Sym->getParentScope();
             auto LineScope = LineDebug->getParentScope();
-            if (SymScope != LineScope && !IsChildScopeOf(LineScope, SymScope))
+            if (SymScope != LineScope && !isChildScopeOf(LineScope, SymScope))
               continue;
-            PrintIndent(OS, 2);
+            printIndent(OS, 2);
             OS << "{Variable}: " << Sym->getName() << ": "
                << Sym->getType()->getName() << " : ";
             SymLoc->printLocations(OS);
@@ -671,24 +671,28 @@ struct DebuggerViewPrinter {
 } // namespace
 
 Error LVReader::printDebugger() {
-  auto *CU = getCompileUnit();
-  if (!CU)
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Error: No compute unit found.");
+  if (!Root || !Root->scopeCount())
+    return Error::success();
 
-  for (const LVScope *ChildScope : *CU->getScopes()) {
-    auto *Fn = dyn_cast<LVScopeFunction>(ChildScope);
-    if (Fn) {
-      const LVLines *Lines = Fn->getLines();
-      // If there's no lines, this function has no body.
-      if (!Lines)
-        continue;
-      outs() << "{Function}: " << ChildScope->getName() << "\n";
+  for (auto *Scope : *Root->getScopes()) {
+    auto *CU = dyn_cast<LVScopeCompileUnit>(Scope);
+    if (!CU)
+      continue;
+    for (const LVScope *ChildScope : *CU->getScopes()) {
+      auto *Fn = dyn_cast<LVScopeFunction>(ChildScope);
+      if (Fn) {
+        const LVLines *Lines = Fn->getLines();
+        // If there's no lines, this function has no body.
+        if (!Lines)
+          continue;
+        outs() << "{Function}: " << ChildScope->getName() << "\n";
 
-      DebuggerViewPrinter P(OS, Fn);
-      P.Print();
+        DebuggerViewPrinter P(OS, Fn);
+        P.print();
+      }
     }
   }
+
   return Error::success();
 }
 

@@ -165,10 +165,10 @@ using LVPrintKindSet = std::set<LVPrintKind>;
 enum class LVReportKind {
   All,      // --report=all
   Children, // --report=children
+  Debugger, // --report=debugger
   List,     // --report=list
   Parents,  // --report=parents
-  View,     // --report=view
-  Debugger  // --report=debugger
+  View      // --report=view
 };
 using LVReportKindSet = std::set<LVReportKind>;
 
@@ -407,9 +407,9 @@ public:
   // --report.
   REPORT_OPTION(All);
   REPORT_OPTION(Children);
+  REPORT_OPTION(Debugger);
   REPORT_OPTION(List);
   REPORT_OPTION(Parents);
-  REPORT_OPTION(Debugger);
   REPORT_OPTION(View);
   BOOL_FUNCTION(Report, AnyView);
   BOOL_FUNCTION(Report, Execute);

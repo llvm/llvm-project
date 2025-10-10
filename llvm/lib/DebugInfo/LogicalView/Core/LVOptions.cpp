@@ -194,10 +194,10 @@ void LVOptions::resolveDependencies() {
   // '--reports=all' settings.
   if (getReportAll()) {
     setReportChildren();
+    setReportDebugger();
     setReportList();
     setReportParents();
     setReportView();
-    setReportDebugger();
   }
 
   // '--report=view' is a shortcut for '--report=parents,children'.
