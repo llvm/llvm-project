@@ -479,6 +479,7 @@ add_math_entrypoint_object(nextupbf16)
 
 add_math_entrypoint_object(pow)
 add_math_entrypoint_object(powf)
+add_math_entrypoint_object(powf16)
 add_math_entrypoint_object(powi)
 add_math_entrypoint_object(powif)
 
