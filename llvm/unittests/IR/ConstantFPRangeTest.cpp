@@ -802,4 +802,20 @@ TEST_F(ConstantFPRangeTest, negate) {
             ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)));
 }
 
+TEST_F(ConstantFPRangeTest, getWithout) {
+  EXPECT_EQ(Full.getWithoutNaN(), ConstantFPRange::getNonNaN(Sem));
+  EXPECT_EQ(NaN.getWithoutNaN(), Empty);
+
+  EXPECT_EQ(NaN.getWithoutInf(), NaN);
+  EXPECT_EQ(PosInf.getWithoutInf(), Empty);
+  EXPECT_EQ(NegInf.getWithoutInf(), Empty);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(Sem).getWithoutInf(), Finite);
+  EXPECT_EQ(Zero.getWithoutInf(), Zero);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(3.0))
+                .getWithoutInf(),
+            ConstantFPRange::getNonNaN(
+                APFloat::getLargest(Sem, /*Negative=*/true), APFloat(3.0)));
+}
+
 } // anonymous namespace
