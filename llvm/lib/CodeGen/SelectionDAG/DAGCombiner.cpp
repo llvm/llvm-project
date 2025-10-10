@@ -13005,6 +13005,12 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 //
 // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
 // -> partial_reduce_*mla(acc, x, C)
+//
+// partial_reduce_fmla(acc, fmul(fpext(a), fpext(b)), splat(1.0))
+// -> partial_reduce_fmla(acc, a, b)
+//
+// partial_reduce_fmla(acc, fmul(fpext(x), splat(C)), splat(1.0))
+// -> partial_reduce_fmla(acc, x, C)
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
@@ -13041,8 +13047,12 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
         CFP->isExactlyValue(1.0)))
     return SDValue();
 
+  auto IsIntOrFPExtOpcode = [](unsigned int Opcode) {
+    return (ISD::isExtOpcode(Opcode) || Opcode == ISD::FP_EXTEND);
+  };
+
   unsigned LHSOpcode = LHS->getOpcode();
-  if (!ISD::isExtOpcode(LHSOpcode) && LHSOpcode != ISD::FP_EXTEND)
+  if (!IsIntOrFPExtOpcode(LHSOpcode))
     return SDValue();
 
   SDValue LHSExtOp = LHS->getOperand(0);
@@ -13074,7 +13084,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   }
 
   unsigned RHSOpcode = RHS->getOpcode();
-  if (!ISD::isExtOpcode(RHSOpcode) && RHSOpcode != ISD::FP_EXTEND)
+  if (!IsIntOrFPExtOpcode(RHSOpcode))
     return SDValue();
 
   SDValue RHSExtOp = RHS->getOperand(0);
@@ -13120,6 +13130,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 // -> partial.reduce.smla(acc, op, splat(trunc(1)))
 // partial.reduce.sumla(acc, sext(op), splat(1))
 // -> partial.reduce.smla(acc, op, splat(trunc(1)))
+// partial.reduce.fmla(acc, fpext(op), splat(1.0))
+// -> partial.reduce.fmla(acc, op, splat(1.0))
 SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
   SDLoc DL(N);
   SDValue Acc = N->getOperand(0);
@@ -13136,7 +13148,7 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
     return SDValue();
 
   unsigned Op1Opcode = Op1.getOpcode();
-  if (!ISD::isExtOpcode(Op1Opcode))
+  if (!ISD::isExtOpcode(Op1Opcode) && Op1Opcode != ISD::FP_EXTEND)
     return SDValue();
 
   bool Op1IsSigned = Op1Opcode == ISD::SIGN_EXTEND;
@@ -13160,8 +13172,12 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
           TLI.getTypeToTransformTo(*Context, UnextOp1VT)))
     return SDValue();
 
+  auto Constant = N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA
+                      ? DAG.getConstantFP(1, DL, UnextOp1VT)
+                      : DAG.getConstant(1, DL, UnextOp1VT);
+
   return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, UnextOp1,
-                     DAG.getConstant(1, DL, UnextOp1VT));
+                     Constant);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
