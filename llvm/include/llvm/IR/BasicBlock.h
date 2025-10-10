@@ -703,6 +703,10 @@ public:
   /// block \p New instead of to it.
   LLVM_ABI void replaceSuccessorsPhiUsesWith(BasicBlock *New);
 
+  /// Update all phi nodes in this basic block by deduplicating the references
+  /// to \p BB.
+  LLVM_ABI void deduplicatePhiUsesOf(BasicBlock *BB);
+
   /// Return true if this basic block is an exception handling block.
   bool isEHPad() const { return getFirstNonPHIIt()->isEHPad(); }
 

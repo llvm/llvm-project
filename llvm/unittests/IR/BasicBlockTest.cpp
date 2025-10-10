@@ -94,6 +94,64 @@ TEST(BasicBlockTest, PhiRange) {
   }
 }
 
+TEST(BasicBlockTest, DeduplicatePhiEntries) {
+  LLVMContext Context;
+
+  // Create the main block.
+  std::unique_ptr<BasicBlock> BB(BasicBlock::Create(Context));
+
+  // Create some predecessors of it.
+  std::unique_ptr<BasicBlock> BB1(BasicBlock::Create(Context));
+  BranchInst::Create(BB.get(), BB1.get());
+
+  // Make sure this doesn't crash if there are no phis.
+  int PhiCount = 0;
+  for (auto &PN : BB->phis()) {
+    (void)PN;
+    PhiCount++;
+  }
+  ASSERT_EQ(PhiCount, 0) << "empty block should have no phis";
+
+  // Make it a cycle.
+  auto *BI = BranchInst::Create(BB.get(), BB.get());
+
+  // Now insert some PHI nodes.
+  auto *Int32Ty = Type::getInt32Ty(Context);
+  auto *P1 = PHINode::Create(Int32Ty, /*NumReservedValues*/ 3, "phi.1", BI);
+  auto *P2 = PHINode::Create(Int32Ty, /*NumReservedValues*/ 3, "phi.2", BI);
+
+  // Some non-PHI nodes.
+  auto *Sum = BinaryOperator::CreateAdd(P1, P2, "sum", BI);
+
+  // Now wire up the incoming values that are interesting.
+  P1->addIncoming(P2, BB.get());
+  P2->addIncoming(Sum, BB.get());
+
+  // Wire up the rest of the incoming values, we want duplicate entries.
+  for (auto &PN : BB->phis()) {
+    auto *SomeValue = UndefValue::get(Int32Ty);
+    PN.addIncoming(SomeValue, BB1.get());
+    PN.addIncoming(SomeValue, BB1.get());
+  }
+
+  // Check that the phi nodes have 3 incoming values.
+  EXPECT_EQ(P1->getNumIncomingValues(), 3u);
+  EXPECT_EQ(P2->getNumIncomingValues(), 3u);
+
+  // Deduplicate the incoming values for BB1.
+  BB->deduplicatePhiUsesOf(BB1.get());
+
+  // Check that the phi nodes have 2 incoming values.
+  EXPECT_EQ(P1->getNumIncomingValues(), 2u);
+  EXPECT_EQ(P2->getNumIncomingValues(), 2u);
+
+  // Check that the incoming values are unique.
+  for (auto &PN : BB->phis()) {
+    EXPECT_EQ(BB.get(), PN.getIncomingBlock(0));
+    EXPECT_EQ(BB1.get(), PN.getIncomingBlock(1));
+  }
+}
+
 #define CHECK_ITERATORS(Range1, Range2)                                        \
   EXPECT_EQ(std::distance(Range1.begin(), Range1.end()),                       \
             std::distance(Range2.begin(), Range2.end()));                      \
