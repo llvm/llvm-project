@@ -3476,7 +3476,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_bswapg:
     if (BuiltinBswapg(*this, TheCall))
-        return ExprError();
+      return ExprError();
     break;
   case Builtin::BI__builtin_popcountg:
     if (BuiltinPopcountg(*this, TheCall))
