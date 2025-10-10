@@ -4093,6 +4093,30 @@ GlobalValue::SanitizerMetadata deserializeSanitizerMetadata(unsigned V) {
   return Meta;
 }
 
+static void deduplicatePhiUsesOf(BasicBlock *BB, BasicBlock *ToDeduplicateBB) {
+  // N.B. This might not be a complete BasicBlock, so don't assume
+  // that it ends with a non-phi instruction.
+  for (Instruction &I : *BB) {
+    PHINode *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      break;
+    // Since the order of basic blocks in a PHINode are not generally sorted we
+    // have to iterate over all indicies.
+    unsigned Idx = 0;
+    bool SkippedFirstOccurrence = false;
+    while (Idx < PN->getNumIncomingValues()) {
+      if (PN->getIncomingBlock(Idx) == ToDeduplicateBB) {
+        if (SkippedFirstOccurrence) {
+          PN->removeIncomingValue(Idx);
+          continue;
+        }
+        SkippedFirstOccurrence = true;
+      }
+      ++Idx;
+    }
+  }
+}
+
 Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   // v1: [pointer type, isconst, initid, linkage, alignment, section,
   // visibility, threadlocal, unnamed_addr, externally_initialized,
@@ -6105,18 +6129,14 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         // seen value here, to avoid expanding a constant expression multiple
         // times.
         auto It = Args.find(BB);
-        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (It != Args.end()) {
-          // If this predecessor was also replaced with a constexpr basic
-          // block, it must be de-duplicated.
-          if (!EdgeBB) {
-            PN->addIncoming(It->second, BB);
-          }
+          PN->addIncoming(It->second, BB);
           continue;
         }
 
         // If there already is a block for this edge (from a different phi),
         // use it.
+        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (!EdgeBB) {
           // Otherwise, use a temporary block (that we will discard if it
           // turns out to be unnecessary).
@@ -6944,6 +6964,7 @@ OutOfRecordLoop:
     BranchInst::Create(To, EdgeBB);
     From->getTerminator()->replaceSuccessorWith(To, EdgeBB);
     To->replacePhiUsesWith(From, EdgeBB);
+    deduplicatePhiUsesOf(To, EdgeBB);
     EdgeBB->moveBefore(To);
   }
 
