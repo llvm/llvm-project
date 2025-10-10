@@ -1591,9 +1591,9 @@ define void @f16(ptr swiftasync %ctx, <vscale x 2 x i64> %foo) {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr 8
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
-; CHECK-NEXT:    .seh_save_fplr 8
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    and x29, x29, #0xefffffffffffffff

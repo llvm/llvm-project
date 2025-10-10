@@ -1390,10 +1390,13 @@ void AArch64EpilogueEmitter::emitEpilogue() {
           Pop, DL, ProloguePopSize, EmitCFI, MachineInstr::FrameDestroy,
           ProloguePopSize);
     } else if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
+      MachineBasicBlock::iterator AfterLastPop = std::next(Pop);
+      if (AArch64InstrInfo::isSEHInstruction(*AfterLastPop))
+        ++AfterLastPop;
       // If not, and CalleeSavesAboveFrameRecord is enabled, deallocate
       // callee-save non-SVE registers to move the stack pointer to the start of
       // the SVE area.
-      emitFrameOffset(MBB, std::next(Pop), DL, AArch64::SP, AArch64::SP,
+      emitFrameOffset(MBB, AfterLastPop, DL, AArch64::SP, AArch64::SP,
                       StackOffset::getFixed(ProloguePopSize), TII,
                       MachineInstr::FrameDestroy, false, NeedsWinCFI,
                       &HasWinCFI);
