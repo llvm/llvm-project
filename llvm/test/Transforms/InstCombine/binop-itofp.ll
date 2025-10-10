@@ -1063,6 +1063,22 @@ define float @negzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g_2345) 
   ret float %mul3.i.i
 }
 
+define <2 x half> @test_ui_ui_i8_mul_vec(<2 x i8> noundef %x_in, <2 x i8> noundef %y_in) {
+; CHECK-LABEL: @test_ui_ui_i8_mul_vec(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i8> [[X_IN:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[Y_IN:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = uitofp <2 x i8> [[TMP1]] to <2 x half>
+; CHECK-NEXT:    ret <2 x half> [[R]]
+;
+  %x = and <2 x i8> %x_in, splat (i8 15)
+  %y = and <2 x i8> %y_in, splat (i8 15)
+  %xf = uitofp <2 x i8> %x to <2 x half>
+  %yf = uitofp <2 x i8> %y to <2 x half>
+  %r = fmul <2 x half> %xf, %yf
+  ret <2 x half> %r
+}
+
 define <2 x float> @nonzero_check_on_constant_for_si_fmul_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
