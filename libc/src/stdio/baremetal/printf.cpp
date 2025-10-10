@@ -54,7 +54,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
     return -1;
   }
 
-  if (retval.value >= cpp::numeric_limits<int>::max()) {
+  if (retval.value > cpp::numeric_limits<int>::max()) {
     libc_errno = EOVERFLOW;
     return -1;
   }

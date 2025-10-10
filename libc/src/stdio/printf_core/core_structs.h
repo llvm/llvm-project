@@ -31,7 +31,7 @@ struct PrintfResult {
 
   constexpr bool has_error() { return error != 0; }
 
-  // constexpr operator size_t() { return value; }
+  constexpr operator size_t() { return value; }
 };
 
 // These length modifiers match the length modifiers in the format string, which

@@ -30,10 +30,9 @@ PrintfResult printf_main(Writer<write_mode> *writer, const char *__restrict str,
        !cur_section.raw_string.empty();
        cur_section = parser.get_next_section()) {
     if (cur_section.has_conv)
-      result = convert(writer, cur_section); // look at usages
+      result = convert(writer, cur_section);
     else
-      result = writer->write(cur_section.raw_string); // look at usages
-
+      result = writer->write(cur_section.raw_string);
     if (result < 0)
       return {0, -result};
   }

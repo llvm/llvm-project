@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace {
 
 LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
-  write_to_stdout(new_str); 
+  write_to_stdout(new_str);
   return printf_core::WRITE_OK;
 }
 
@@ -53,7 +53,7 @@ LLVM_LIBC_FUNCTION(int, vprintf,
   
   }
 
-  if (retval.value >= cpp::numeric_limits<int>::max()) {
+  if (retval.value > cpp::numeric_limits<int>::max()) {
     libc_errno = EOVERFLOW;
     return -1;
   }
