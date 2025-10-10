@@ -36,10 +36,10 @@
 #ifdef _LIBCPP_EMIT_CODE_FOR_EXCEPTION_PTR
 #  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_EXPORTED_FROM_ABI
 #else
-#  if !__has_cpp_attribute(gnu::gnu_inline)
+#  if !__has_cpp_attribute(__gnu__::__gnu_inline__)
 #    error "GNU inline attribute is not supported"
 #  endif
-#  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[gnu::gnu_inline]] inline
+#  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[__gnu__::__gnu_inline__]] inline
 #endif
 
 _LIBCPP_DIAGNOSTIC_PUSH
