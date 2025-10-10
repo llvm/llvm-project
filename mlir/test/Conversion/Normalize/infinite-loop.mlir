@@ -2,18 +2,18 @@
 
 // CHECK-LABEL:   module {
 // CHECK:           func.func @test(%[[ARG0:.*]]: memref<?xi32>, %[[ARG1:.*]]: i32) {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
-// CHECK:           %vl15390$e5677-funcArg1$ = arith.addi %[[ARG1:.*]], %[[VAL_0:.*]] : i32
-// CHECK:           cf.br ^bb1(%vl15390$e5677-funcArg1$, %vl15390$e5677-funcArg1$ : i32, i32)
-// CHECK:         ^bb1(%[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32):  // 2 preds: ^bb0, ^bb1
+// CHECK:           %vl15969$e5677$ = arith.constant 1 : i32
+// CHECK:           %vl15390$funcArg1-vl15969$ = arith.addi %[[ARG1:.*]], %vl15969$e5677$ : i32
+// CHECK:           cf.br ^bb1(%vl15390$funcArg1-vl15969$, %vl15390$funcArg1-vl15969$ : i32, i32)
+// CHECK:         ^bb1(%[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32):  // 2 preds: ^bb0, ^bb1
 // CHECK:           %vl22288$20b04$ = arith.constant 0 : i32
-// CHECK:           %vl13736$20b04-blockArg0$ = arith.muli %[[VAL_1:.*]], %vl22288$20b04$ : i32
+// CHECK:           %vl13736$blockArg0-vl22288$ = arith.muli %[[VAL_0:.*]], %vl22288$20b04$ : i32
 // CHECK:           %vl22288$ded78$ = arith.constant -1 : i32
-// CHECK:           %op51214$vl13736-vl22288$ = arith.xori %vl13736$20b04-blockArg0$, %vl22288$ded78$ : i32
-// CHECK:           %op12693$op51214$ = arith.addi %[[VAL_1:.*]], %op51214$vl13736-vl22288$ : i32
-// CHECK:           %vl15894$blockArg1-ded78$ = arith.addi %[[VAL_2:.*]], %vl22288$ded78$ : i32
-// CHECK:           %op15672$op12693-vl15894$ = arith.addi %op12693$op51214$, %vl15894$blockArg1-ded78$ : i32
-// CHECK:           %op97825$op15672-vl13736$ = arith.muli %op15672$op12693-vl15894$, %vl13736$20b04-blockArg0$ : i32
+// CHECK:           %op51214$vl13736-vl22288$ = arith.xori %vl13736$blockArg0-vl22288$, %vl22288$ded78$ : i32
+// CHECK:           %op12693$blockArg0-op51214$ = arith.addi %[[VAL_0:.*]], %op51214$vl13736-vl22288$ : i32
+// CHECK:           %vl15894$blockArg1-vl22288$ = arith.addi %[[VAL_1:.*]], %vl22288$ded78$ : i32
+// CHECK:           %op15672$op12693-vl15894$ = arith.addi %op12693$blockArg0-op51214$, %vl15894$blockArg1-vl22288$ : i32
+// CHECK:           %op97825$op15672-vl13736$ = arith.muli %op15672$op12693-vl15894$, %vl13736$blockArg0-vl22288$ : i32
 // CHECK:           %op51214$op97825-vl22288$ = arith.xori %op97825$op15672-vl13736$, %vl22288$ded78$ : i32
 // CHECK:           %op12343$op15672-op51214$ = arith.addi %op15672$op12693-vl15894$, %op51214$op97825-vl22288$ : i32
 // CHECK:           %op27844$op12343-vl22288$ = arith.addi %op12343$op15672-op51214$, %vl22288$20b04$ : i32
@@ -22,6 +22,7 @@
 // CHECK:           %op12343$op27844-op51214$ = arith.addi %op27844$op12343-vl22288$, %op51214$op97825-vl22288$_0 : i32
 // CHECK:           %op27844$op12343-vl22288$_1 = arith.addi %op12343$op27844-op51214$, %vl22288$20b04$ : i32
 // CHECK:           %op27844$op27844-vl22288$ = arith.addi %op27844$op12343-vl22288$_1, %vl22288$20b04$ : i32
+// CHECK:           %op27844$op27844-vl22288$_2 = arith.addi %op27844$op27844-vl22288$, %vl22288$20b04$ : i32
 // CHECK:           %op97825$op27844-op97825$_3 = arith.muli %op27844$op12343-vl22288$_1, %op97825$op27844-op97825$ : i32
 // CHECK:           %op97825$op27844-op97825$_4 = arith.muli %op27844$op27844-vl22288$_2, %op97825$op27844-op97825$_3 : i32
 // CHECK:           %op51214$op97825-vl22288$_5 = arith.xori %op97825$op27844-op97825$_4, %vl22288$ded78$ : i32
@@ -42,62 +43,62 @@
 // CHECK:           %op97825$op27844-op97825$_20 = arith.muli %op27844$op12343-vl22288$_19, %op97825$op27844-op97825$_16 : i32
 // CHECK:           %op51214$op97825-vl22288$_21 = arith.xori %op97825$op27844-op97825$_20, %vl22288$ded78$ : i32
 // CHECK:           %op12343$op27844-op51214$_22 = arith.addi %op27844$op12343-vl22288$_19, %op51214$op97825-vl22288$_21 : i32
-// CHECK:           %[[VAL_3:.*]] = arith.constant -9 : i32
-// CHECK:           %vl15894$51850-blockArg1$ = arith.addi %[[VAL_2:.*]], %[[VAL_3:.*]] : i32
-// CHECK:           %op15672$op12343-vl15894$ = arith.addi %op12343$op27844-op51214$_22, %vl15894$51850-blockArg1$ : i32
+// CHECK:           %vl22288$51850$ = arith.constant -9 : i32
+// CHECK:           %vl15894$blockArg1-vl22288$_23 = arith.addi %[[VAL_1:.*]], %vl22288$51850$ : i32
+// CHECK:           %op15672$op12343-vl15894$ = arith.addi %op12343$op27844-op51214$_22, %vl15894$blockArg1-vl22288$_23 : i32
 // CHECK:           %op97825$op15672-op97825$ = arith.muli %op15672$op12343-vl15894$, %op97825$op27844-op97825$_20 : i32
-// CHECK:           %op51214$op97825-vl22288$_23 = arith.xori %op97825$op15672-op97825$, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op15672-op51214$_24 = arith.addi %op15672$op12343-vl15894$, %op51214$op97825-vl22288$_23 : i32
-// CHECK:           %op27844$op12343-vl22288$_25 = arith.addi %op12343$op15672-op51214$_24, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_26 = arith.muli %op27844$op12343-vl22288$_25, %op97825$op15672-op97825$ : i32
-// CHECK:           %op51214$op97825-vl22288$_27 = arith.xori %op97825$op27844-op97825$_26, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_28 = arith.addi %op27844$op12343-vl22288$_25, %op51214$op97825-vl22288$_27 : i32
-// CHECK:           %op27844$op12343-vl22288$_29 = arith.addi %op12343$op27844-op51214$_28, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_30 = arith.muli %op27844$op12343-vl22288$_29, %op97825$op27844-op97825$_26 : i32
-// CHECK:           %op51214$op97825-vl22288$_31 = arith.xori %op97825$op27844-op97825$_30, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_32 = arith.addi %op27844$op12343-vl22288$_29, %op51214$op97825-vl22288$_31 : i32
-// CHECK:           %op27844$op12343-vl22288$_33 = arith.addi %op12343$op27844-op51214$_32, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_34 = arith.muli %op27844$op12343-vl22288$_33, %op97825$op27844-op97825$_30 : i32
-// CHECK:           %op51214$op97825-vl22288$_35 = arith.xori %op97825$op27844-op97825$_34, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_36 = arith.addi %op27844$op12343-vl22288$_33, %op51214$op97825-vl22288$_35 : i32
-// CHECK:           %op27844$op12343-vl22288$_37 = arith.addi %op12343$op27844-op51214$_36, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_38 = arith.muli %op27844$op12343-vl22288$_37, %op97825$op27844-op97825$_34 : i32
-// CHECK:           %op51214$op97825-vl22288$_39 = arith.xori %op97825$op27844-op97825$_38, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_40 = arith.addi %op27844$op12343-vl22288$_37, %op51214$op97825-vl22288$_39 : i32
-// CHECK:           %[[VAL_4:.*]] = arith.constant -14 : i32
-// CHECK:           %vl15894$7b7de-blockArg1$ = arith.addi %[[VAL_2:.*]], %[[VAL_4:.*]] : i32
-// CHECK:           %op15672$op12343-vl15894$_41 = arith.addi %op12343$op27844-op51214$_40, %vl15894$7b7de-blockArg1$ : i32
-// CHECK:           %op97825$op15672-op97825$_42 = arith.muli %op15672$op12343-vl15894$_41, %op97825$op27844-op97825$_38 : i32
-// CHECK:           %op51214$op97825-vl22288$_43 = arith.xori %op97825$op15672-op97825$_42, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op15672-op51214$_44 = arith.addi %op15672$op12343-vl15894$_41, %op51214$op97825-vl22288$_43 : i32
-// CHECK:           %op27844$op12343-vl22288$_45 = arith.addi %op12343$op15672-op51214$_44, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_46 = arith.muli %op27844$op12343-vl22288$_45, %op97825$op15672-op97825$_42 : i32
-// CHECK:           %op51214$op97825-vl22288$_47 = arith.xori %op97825$op27844-op97825$_46, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_48 = arith.addi %op27844$op12343-vl22288$_45, %op51214$op97825-vl22288$_47 : i32
-// CHECK:           %op27844$op12343-vl22288$_49 = arith.addi %op12343$op27844-op51214$_48, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_50 = arith.muli %op27844$op12343-vl22288$_49, %op97825$op27844-op97825$_46 : i32
-// CHECK:           %op51214$op97825-vl22288$_51 = arith.xori %op97825$op27844-op97825$_50, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_52 = arith.addi %op27844$op12343-vl22288$_49, %op51214$op97825-vl22288$_51 : i32
-// CHECK:           %op27844$op12343-vl22288$_53 = arith.addi %op12343$op27844-op51214$_52, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_54 = arith.muli %op27844$op12343-vl22288$_53, %op97825$op27844-op97825$_50 : i32
-// CHECK:           %op51214$op97825-vl22288$_55 = arith.xori %op97825$op27844-op97825$_54, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_56 = arith.addi %op27844$op12343-vl22288$_53, %op51214$op97825-vl22288$_55 : i32
-// CHECK:           %op27844$op12343-vl22288$_57 = arith.addi %op12343$op27844-op51214$_56, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_58 = arith.muli %op27844$op12343-vl22288$_57, %op97825$op27844-op97825$_54 : i32
-// CHECK:           %op51214$op97825-vl22288$_59 = arith.xori %op97825$op27844-op97825$_58, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_60 = arith.addi %op27844$op12343-vl22288$_57, %op51214$op97825-vl22288$_59 : i32
-// CHECK:           %op27844$op12343-vl22288$_61 = arith.addi %op12343$op27844-op51214$_60, %vl22288$20b04$ : i32
-// CHECK:           %op97825$op27844-op97825$_62 = arith.muli %op27844$op12343-vl22288$_61, %op97825$op27844-op97825$_58 : i32
-// CHECK:           %op51214$op97825-vl22288$_63 = arith.xori %op97825$op27844-op97825$_62, %vl22288$ded78$ : i32
-// CHECK:           %op12343$op27844-op51214$_64 = arith.addi %op27844$op12343-vl22288$_61, %op51214$op97825-vl22288$_63 : i32
-// CHECK:           %op27844$op12343-vl22288$_65 = arith.addi %op12343$op27844-op51214$_64, %vl22288$20b04$ : i32
-// CHECK:           %op27844$op27844-vl22288$_66 = arith.addi %op27844$op12343-vl22288$_65, %vl22288$20b04$ : i32
-// CHECK:           %[[VAL_5:.*]] = arith.constant -21 : i32
-// CHECK:           %vl15894$1e72e-blockArg1$ = arith.addi %[[VAL_2:.*]], %[[VAL_5:.*]] : i32
-// CHECK:           %op15672$op27844-vl15894$ = arith.addi %op27844$op27844-vl22288$_66, %vl15894$1e72e-blockArg1$ : i32
+// CHECK:           %op51214$op97825-vl22288$_24 = arith.xori %op97825$op15672-op97825$, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op15672-op51214$_25 = arith.addi %op15672$op12343-vl15894$, %op51214$op97825-vl22288$_24 : i32
+// CHECK:           %op27844$op12343-vl22288$_26 = arith.addi %op12343$op15672-op51214$_25, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_27 = arith.muli %op27844$op12343-vl22288$_26, %op97825$op15672-op97825$ : i32
+// CHECK:           %op51214$op97825-vl22288$_28 = arith.xori %op97825$op27844-op97825$_27, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_29 = arith.addi %op27844$op12343-vl22288$_26, %op51214$op97825-vl22288$_28 : i32
+// CHECK:           %op27844$op12343-vl22288$_30 = arith.addi %op12343$op27844-op51214$_29, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_31 = arith.muli %op27844$op12343-vl22288$_30, %op97825$op27844-op97825$_27 : i32
+// CHECK:           %op51214$op97825-vl22288$_32 = arith.xori %op97825$op27844-op97825$_31, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_33 = arith.addi %op27844$op12343-vl22288$_30, %op51214$op97825-vl22288$_32 : i32
+// CHECK:           %op27844$op12343-vl22288$_34 = arith.addi %op12343$op27844-op51214$_33, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_35 = arith.muli %op27844$op12343-vl22288$_34, %op97825$op27844-op97825$_31 : i32
+// CHECK:           %op51214$op97825-vl22288$_36 = arith.xori %op97825$op27844-op97825$_35, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_37 = arith.addi %op27844$op12343-vl22288$_34, %op51214$op97825-vl22288$_36 : i32
+// CHECK:           %op27844$op12343-vl22288$_38 = arith.addi %op12343$op27844-op51214$_37, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_39 = arith.muli %op27844$op12343-vl22288$_38, %op97825$op27844-op97825$_35 : i32
+// CHECK:           %op51214$op97825-vl22288$_40 = arith.xori %op97825$op27844-op97825$_39, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_41 = arith.addi %op27844$op12343-vl22288$_38, %op51214$op97825-vl22288$_40 : i32
+// CHECK:           %vl22288$7b7de$ = arith.constant -14 : i32
+// CHECK:           %vl15894$blockArg1-vl22288$_42 = arith.addi %[[VAL_1:.*]], %vl22288$7b7de$ : i32
+// CHECK:           %op15672$op12343-vl15894$_43 = arith.addi %op12343$op27844-op51214$_41, %vl15894$blockArg1-vl22288$_42 : i32
+// CHECK:           %op97825$op15672-op97825$_44 = arith.muli %op15672$op12343-vl15894$_43, %op97825$op27844-op97825$_39 : i32
+// CHECK:           %op51214$op97825-vl22288$_45 = arith.xori %op97825$op15672-op97825$_44, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op15672-op51214$_46 = arith.addi %op15672$op12343-vl15894$_43, %op51214$op97825-vl22288$_45 : i32
+// CHECK:           %op27844$op12343-vl22288$_47 = arith.addi %op12343$op15672-op51214$_46, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_48 = arith.muli %op27844$op12343-vl22288$_47, %op97825$op15672-op97825$_44 : i32
+// CHECK:           %op51214$op97825-vl22288$_49 = arith.xori %op97825$op27844-op97825$_48, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_50 = arith.addi %op27844$op12343-vl22288$_47, %op51214$op97825-vl22288$_49 : i32
+// CHECK:           %op27844$op12343-vl22288$_51 = arith.addi %op12343$op27844-op51214$_50, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_52 = arith.muli %op27844$op12343-vl22288$_51, %op97825$op27844-op97825$_48 : i32
+// CHECK:           %op51214$op97825-vl22288$_53 = arith.xori %op97825$op27844-op97825$_52, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_54 = arith.addi %op27844$op12343-vl22288$_51, %op51214$op97825-vl22288$_53 : i32
+// CHECK:           %op27844$op12343-vl22288$_55 = arith.addi %op12343$op27844-op51214$_54, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_56 = arith.muli %op27844$op12343-vl22288$_55, %op97825$op27844-op97825$_52 : i32
+// CHECK:           %op51214$op97825-vl22288$_57 = arith.xori %op97825$op27844-op97825$_56, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_58 = arith.addi %op27844$op12343-vl22288$_55, %op51214$op97825-vl22288$_57 : i32
+// CHECK:           %op27844$op12343-vl22288$_59 = arith.addi %op12343$op27844-op51214$_58, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_60 = arith.muli %op27844$op12343-vl22288$_59, %op97825$op27844-op97825$_56 : i32
+// CHECK:           %op51214$op97825-vl22288$_61 = arith.xori %op97825$op27844-op97825$_60, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_62 = arith.addi %op27844$op12343-vl22288$_59, %op51214$op97825-vl22288$_61 : i32
+// CHECK:           %op27844$op12343-vl22288$_63 = arith.addi %op12343$op27844-op51214$_62, %vl22288$20b04$ : i32
+// CHECK:           %op97825$op27844-op97825$_64 = arith.muli %op27844$op12343-vl22288$_63, %op97825$op27844-op97825$_60 : i32
+// CHECK:           %op51214$op97825-vl22288$_65 = arith.xori %op97825$op27844-op97825$_64, %vl22288$ded78$ : i32
+// CHECK:           %op12343$op27844-op51214$_66 = arith.addi %op27844$op12343-vl22288$_63, %op51214$op97825-vl22288$_65 : i32
+// CHECK:           %op27844$op12343-vl22288$_67 = arith.addi %op12343$op27844-op51214$_66, %vl22288$20b04$ : i32
+// CHECK:           %op27844$op27844-vl22288$_68 = arith.addi %op27844$op12343-vl22288$_67, %vl22288$20b04$ : i32
+// CHECK:           %vl22288$1e72e$ = arith.constant -21 : i32
+// CHECK:           %vl15894$blockArg1-vl22288$_69 = arith.addi %[[VAL_1:.*]], %vl22288$1e72e$ : i32
+// CHECK:           %op15672$op27844-vl15894$ = arith.addi %op27844$op27844-vl22288$_68, %vl15894$blockArg1-vl22288$_69 : i32
 // CHECK:           %vl48856$e527e$ = arith.constant 0 : index
 // CHECK:           memref.store %op15672$op27844-vl15894$, %[[ARG0:.*]][%vl48856$e527e$] : memref<?xi32>
-// CHECK:           cf.br ^bb1(%op15672$op27844-vl15894$, %vl15894$1e72e-blockArg1$ : i32, i32)
+// CHECK:           cf.br ^bb1(%op15672$op27844-vl15894$, %vl15894$blockArg1-vl22288$_69 : i32, i32)
 // CHECK:         }
 // CHECK:       }
 func.func @test(%arg0: memref<?xi32>, %arg1: i32) {
