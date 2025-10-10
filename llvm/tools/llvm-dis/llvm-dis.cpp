@@ -96,6 +96,11 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
+static cl::opt<bool> PrettyPrintIntrinsicArgs(
+    "print-formatted-intrinsics",
+    cl::desc("Enable pretty print format for intrinsic arguments"),
+    cl::init(false), cl::cat(DisCategory));
+
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -255,7 +260,8 @@ int main(int argc, char **argv) {
       if (!DontPrint) {
         if (M) {
           M->removeDebugIntrinsicDeclarations();
-          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder,
+                   false, PrettyPrintIntrinsicArgs);
         }
         if (Index)
           Index->print(Out->os());

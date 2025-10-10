@@ -18,8 +18,11 @@
 #include <stdint.h>
 
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace nvvm {
@@ -657,6 +660,70 @@ inline APFloat::roundingMode GetFMARoundingMode(Intrinsic::ID IntrinsicID) {
     return APFloat::rmTowardZero;
   }
   llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM fma");
+}
+
+inline void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (static_cast<Tcgen05MMAKind>(Val)) {
+    case Tcgen05MMAKind::F16:
+      OS << "kind::f16";
+      return;
+    case Tcgen05MMAKind::TF32:
+      OS << "kind::tf32";
+      return;
+    case Tcgen05MMAKind::F8F6F4:
+      OS << "kind::f8f6f4";
+      return;
+    case Tcgen05MMAKind::I8:
+      OS << "kind::i8";
+      return;
+    }
+  }
+  llvm_unreachable(
+      "printTcgen05MMAKind called with invalid value for immediate argument");
+}
+
+inline void printTcgen05CollectorUsageOp(raw_ostream &OS,
+                                         const Constant *ImmArgVal) {
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (static_cast<Tcgen05CollectorUsageOp>(Val)) {
+    case Tcgen05CollectorUsageOp::DISCARD:
+      OS << "collector::a::discard";
+      return;
+    case Tcgen05CollectorUsageOp::LASTUSE:
+      OS << "collector::a::lastuse";
+      return;
+    case Tcgen05CollectorUsageOp::FILL:
+      OS << "collector::a::fill";
+      return;
+    case Tcgen05CollectorUsageOp::USE:
+      OS << "collector::a::use";
+      return;
+    }
+  }
+  llvm_unreachable("printTcgen05CollectorUsageOp called with invalid value for "
+                   "immediate argument");
+}
+
+inline void printCTAGroupKind(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (static_cast<CTAGroupKind>(Val)) {
+    case CTAGroupKind::CG_NONE:
+      OS << "cta_group::0";
+      return;
+    case CTAGroupKind::CG_1:
+      OS << "cta_group::1";
+      return;
+    case CTAGroupKind::CG_2:
+      OS << "cta_group::2";
+      return;
+    }
+  }
+  llvm_unreachable(
+      "printCTAGroupKind called with invalid value for immediate argument");
 }
 
 } // namespace nvvm

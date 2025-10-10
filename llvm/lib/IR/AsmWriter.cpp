@@ -53,6 +53,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -2837,6 +2838,7 @@ class AssemblyWriter {
   SetVector<const Comdat *> Comdats;
   bool IsForDebug;
   bool ShouldPreserveUseListOrder;
+  bool PrettyPrintIntrinsicArgs;
   UseListOrderMap UseListOrders;
   SmallVector<StringRef, 8> MDNames;
   /// Synchronization scope names registered with LLVMContext.
@@ -2847,7 +2849,8 @@ public:
   /// Construct an AssemblyWriter with an external SlotTracker
   AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac, const Module *M,
                  AssemblyAnnotationWriter *AAW, bool IsForDebug,
-                 bool ShouldPreserveUseListOrder = false);
+                 bool ShouldPreserveUseListOrder = false,
+                 bool PrettyPrintIntrinsicArgs = false);
 
   AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                  const ModuleSummaryIndex *Index, bool IsForDebug);
@@ -2936,10 +2939,12 @@ private:
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const Module *M, AssemblyAnnotationWriter *AAW,
-                               bool IsForDebug, bool ShouldPreserveUseListOrder)
+                               bool IsForDebug, bool ShouldPreserveUseListOrder,
+                               bool PrettyPrintIntrinsicArgs)
     : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
       IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
+      ShouldPreserveUseListOrder(ShouldPreserveUseListOrder),
+      PrettyPrintIntrinsicArgs(PrettyPrintIntrinsicArgs) {
   if (!TheModule)
     return;
   for (const GlobalObject &GO : TheModule->global_objects())
@@ -2950,7 +2955,8 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
     : Out(o), TheIndex(Index), Machine(Mac), TypePrinter(/*Module=*/nullptr),
-      IsForDebug(IsForDebug), ShouldPreserveUseListOrder(false) {}
+      IsForDebug(IsForDebug), ShouldPreserveUseListOrder(false),
+      PrettyPrintIntrinsicArgs(false) {}
 
 void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   if (!Operand) {
@@ -4567,12 +4573,40 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ';
     writeOperand(Operand, false);
     Out << '(';
-    ListSeparator LS;
-    for (unsigned op = 0, Eop = CI->arg_size(); op < Eop; ++op) {
-      Out << LS;
-      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
-    }
+    bool HasPrettyPrintedArgs =
+        PrettyPrintIntrinsicArgs && isa<IntrinsicInst>(CI) &&
+        Intrinsic::hasPrettyPrintedArgs(CI->getIntrinsicID());
 
+    ListSeparator LS;
+    if (HasPrettyPrintedArgs) {
+      Function *CalledFunc = CI->getCalledFunction();
+      auto PrintArgComment = [&](unsigned ArgNo) {
+        if (!CalledFunc->hasParamAttribute(ArgNo, Attribute::ImmArg))
+          return;
+        const Constant *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
+        if (!ConstArg)
+          return;
+        std::string ArgComment;
+        raw_string_ostream ArgCommentStream(ArgComment);
+        Intrinsic::ID IID = CalledFunc->getIntrinsicID();
+        Intrinsic::printImmArg(IID, ArgNo, ArgCommentStream, ConstArg);
+        if (ArgComment.empty())
+          return;
+        Out << "/* " << ArgComment << " */ ";
+      };
+
+      for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
+           ++ArgNo) {
+        Out << LS;
+        PrintArgComment(ArgNo);
+        writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
+      }
+    } else {
+      for (unsigned op = 0, Eop = CI->arg_size(); op < Eop; ++op) {
+        Out << LS;
+        writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
+      }
+    }
     // Emit an ellipsis if this is a musttail call in a vararg function.  This
     // is only to aid readability, musttail calls forward varargs by default.
     if (CI->isMustTailCall() && CI->getParent() &&
@@ -4996,13 +5030,12 @@ void AssemblyWriter::printUseLists(const Function *F) {
 //===----------------------------------------------------------------------===//
 
 void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
-                     bool ShouldPreserveUseListOrder,
-                     bool IsForDebug) const {
+                     bool ShouldPreserveUseListOrder, bool IsForDebug,
+                     bool PrettyPrintIntrinsicArgs) const {
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW,
-                   IsForDebug,
-                   ShouldPreserveUseListOrder);
+  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
+                   ShouldPreserveUseListOrder, PrettyPrintIntrinsicArgs);
   W.printFunction(this);
 }
 
@@ -5018,11 +5051,12 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 }
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
-                   bool ShouldPreserveUseListOrder, bool IsForDebug) const {
+                   bool ShouldPreserveUseListOrder, bool IsForDebug,
+                   bool PrettyPrintIntrinsicArgs) const {
   SlotTracker SlotTable(this);
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
-                   ShouldPreserveUseListOrder);
+                   ShouldPreserveUseListOrder, PrettyPrintIntrinsicArgs);
   W.printModule(this);
 }
 
