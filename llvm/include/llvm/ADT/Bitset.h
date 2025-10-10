@@ -38,10 +38,7 @@ class Bitset {
   static constexpr unsigned NumWords =
       (NumBits + BitwordBits - 1) / BitwordBits;
 
-protected:
   using StorageType = std::array<BitWord, NumWords>;
-
-private:
   StorageType Bits{};
 
 protected:
