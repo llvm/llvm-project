@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the MachineIDFSSAUpdater class.
+// This file implements the MachineIDFSSAUpdater class, which provides an
+// efficient SSA form maintenance utility for machine-level IR. It uses the
+// iterated dominance frontier (IDF) algorithm via MachineForwardIDFCalculator
+// to compute phi-function placement, offering better performance than the
+// incremental MachineSSAUpdater approach. The updater requires a single call
+// to calculate() after all definitions and uses have been registered.
 //
 //===----------------------------------------------------------------------===//
 
@@ -160,14 +165,14 @@ void MachineIDFSSAUpdater::calculate() {
   for (auto [BB, V] : Defines)
     BBInfos[BB].LiveOutValue = V;
 
-  for (auto *FrontierBB : IDFBlocks) {
+  for (MachineBasicBlock *FrontierBB : IDFBlocks) {
     Register NewVR =
         createInst(TargetOpcode::PHI, FrontierBB, FrontierBB->begin())
             .getReg(0);
     BBInfos[FrontierBB].LiveInValue = NewVR;
   }
 
-  for (auto *BB : IDFBlocks) {
+  for (MachineBasicBlock *BB : IDFBlocks) {
     auto *PHI = &BB->front();
     assert(PHI->isPHI());
     MachineInstrBuilder MIB(*BB->getParent(), PHI);
