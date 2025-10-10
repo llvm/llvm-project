@@ -153,8 +153,8 @@ subroutine local_poly_namelist
   ! CHECK:     %[[V_11:[0-9]+]] = fir.convert %[[V_10]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_12:[0-9]+]] = fir.insert_value %[[V_9]], %[[V_11]], [0 : index, 0 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<i8>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
   ! CHECK:     %[[V_13:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>
-  ! CHECK:     %[[V_14:[0-9]+]] = fir.convert %[[V_13]] : (!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>) -> !fir.ref<!fir.box<none>>
-  ! CHECK:     %[[V_15:[0-9]+]] = fir.insert_value %[[V_12]], %[[V_14]], [0 : index, 1 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<!fir.box<none>>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+  ! CHECK:     %[[V_14:[0-9]+]] = fir.convert %[[V_13]] : (!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>) -> !fir.box<none>
+  ! CHECK:     %[[V_15:[0-9]+]] = fir.insert_value %[[V_12]], %[[V_14]], [0 : index, 1 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.box<none>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
   ! CHECK:     fir.store %[[V_15]] to %[[V_8]] : !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>
   ! CHECK:     %[[V_16:[0-9]+]] = fir.alloca tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
   ! CHECK:     %[[V_17:[0-9]+]] = fir.undefined tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>
