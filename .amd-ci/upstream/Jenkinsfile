@@ -102,7 +102,7 @@ if (isPrBranch) {
 }
 if (postsub) {
     propsList.add(
-        pipelineTriggers([cron('TZ=Asia/Kolkata\n@midnight')])
+        pipelineTriggers([cron('TZ=Asia/Kolkata\nH 0 * * *')])
     )
 }
 properties(propsList)
