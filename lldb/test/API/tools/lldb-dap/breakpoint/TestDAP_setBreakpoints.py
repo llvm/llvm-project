@@ -398,3 +398,26 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.stepIn()
         func_name = self.get_stackFrames()[0]["name"]
         self.assertEqual(func_name, "a::fourteen(int)")
+
+    @skipIfWindows
+    def test_hit_multiple_breakpoints(self):
+        """Test that if we hit multiple breakpoints at the same address, they
+        all appear in the stop reason."""
+        breakpoint_lines = [
+            line_number("main.cpp", "// break non-breakpointable line"),
+            line_number("main.cpp", "// before loop"),
+        ]
+
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        # Set a pair of breakpoints that will both resolve to the same address.
+        breakpoint_ids = [
+            int(bp_id)
+            for bp_id in self.set_source_breakpoints(self.main_path, breakpoint_lines)
+        ]
+        self.assertEqual(len(breakpoint_ids), 2, "expected two breakpoints")
+        self.dap_server.request_continue()
+        print(breakpoint_ids)
+        # Verify we hit both of the breakpoints we just set
+        self.verify_all_breakpoints_hit(breakpoint_ids)
