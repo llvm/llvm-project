@@ -1690,6 +1690,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
 //    2) (fp_binop ({s|u}itofp x), FpC)
 //        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
 Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
+  // Don't perform the fold on vectors, as the integer operation may be much
+  // more expensive than the float operation in that case.
+  if (BO.getType()->isVectorTy())
+    return nullptr;
+
   std::array<Value *, 2> IntOps = {nullptr, nullptr};
   Constant *Op1FpC = nullptr;
   // Check for:
