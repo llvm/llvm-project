@@ -85,6 +85,7 @@ struct MissingFeatures {
   static bool opFuncReadOnly() { return false; }
   static bool opFuncSection() { return false; }
   static bool opFuncWillReturn() { return false; }
+  static bool opFuncNoReturn() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
   static bool setFunctionAttributes() { return false; }
 
@@ -256,6 +257,8 @@ struct MissingFeatures {
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
+  static bool loweringPrepareX86CXXABI() { return false; }
+  static bool loweringPrepareAArch64XXABI() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }

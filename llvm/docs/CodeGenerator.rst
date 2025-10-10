@@ -1662,6 +1662,13 @@ and stack sizes (unsigned LEB128). The stack size values only include the space
 allocated in the function prologue. Functions with dynamic stack allocations are
 not included.
 
+Emitting function call graph information
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A section containing metadata on function call graph will be emitted when
+``TargetOptions::EmitCallGraphSection`` is set (--call-graph-section). Layout of
+this section is documented in detail at :doc:`CallGraphSection`.
+
 VLIW Packetizer
 ---------------
 

@@ -319,12 +319,6 @@ public:
     return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
   }
 
-  // Creates constant nullptr for pointer type ty.
-  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return cir::ConstantOp::create(*this, loc, getConstPtrAttr(ty, 0));
-  }
-
   mlir::Value createNeg(mlir::Value value) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
