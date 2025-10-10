@@ -2731,7 +2731,24 @@ def fsanitize_skip_hot_cutoff_EQ
           "(0.0 [default] = skip none; 1.0 = skip all). "
           "Argument format: <sanitizer1>=<value1>,<sanitizer2>=<value2>,...">;
 
+defm sanitize_alloc_token_fast_abi : BoolOption<"f", "sanitize-alloc-token-fast-abi",
+  CodeGenOpts<"SanitizeAllocTokenFastABI">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Use the AllocToken fast ABI">,
+  NegFlag<SetFalse, [], [ClangOption], "Use the default AllocToken ABI">>,
+  Group<f_clang_Group>;
+defm sanitize_alloc_token_extended : BoolOption<"f", "sanitize-alloc-token-extended",
+  CodeGenOpts<"SanitizeAllocTokenExtended">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " extended coverage to custom allocation functions">>,
+  Group<f_clang_Group>;
+
 } // end -f[no-]sanitize* flags
+
+def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<N>">,
+  HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
 
 def fallow_runtime_check_skip_hot_cutoff_EQ
     : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
@@ -4715,6 +4732,10 @@ def gdwarf_4 : Flag<["-"], "gdwarf-4">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 4">;
 def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 5">;
+def gdwarf_6
+    : Flag<["-"], "gdwarf-6">,
+      Group<g_Group>,
+      HelpText<"Generate source-level debug information with dwarf version 6">;
 }
 def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
@@ -7957,6 +7978,11 @@ def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
     HelpText<"Generate instrumented code to collect execution counts into "
              "<file> (overridden by LLVM_PROFILE_FILE env var)">,
     MarshallingInfoString<CodeGenOpts<"InstrProfileOutput">>;
+def fprofile_instrument_use_EQ : Joined<["-"], "fprofile-instrument-use=">,
+    HelpText<"Enable PGO use instrumentation">, Values<"none,clang,llvm,csllvm,sample-coldcov">,
+    NormalizedValuesScope<"llvm::driver::ProfileInstrKind">,
+    NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr", "ProfileIRSampleColdCov"]>,
+    MarshallingInfoEnum<CodeGenOpts<"ProfileUse">, "ProfileNone">;
 def fprofile_instrument_use_path_EQ :
     Joined<["-"], "fprofile-instrument-use-path=">,
     HelpText<"Specify the profile path in PGO use compilation">,
@@ -8733,8 +8759,7 @@ def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
   HelpText<"Incorporate CUDA device-side binary into host object file.">,
   MarshallingInfoString<CodeGenOpts<"CudaGpuBinaryFileName">>;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
-  HelpText<"Allow variadic functions in CUDA device code.">,
-  MarshallingInfoFlag<LangOpts<"CUDAAllowVariadicFunctions">>;
+  HelpText<"Deprecated; Allow variadic functions in CUDA device code.">;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,
   HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">,
   MarshallingInfoNegativeFlag<LangOpts<"CUDAHostDeviceConstexpr">>;
