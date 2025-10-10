@@ -4108,6 +4108,14 @@ def err_features_invalid_for_decl : Error<
   "feature attributes cannot be applied to %0">;
 def err_features_invalid_name : Error<
   "cannot find definition of feature attribute '%0'">;
+def warn_deprecated_availability_domain : Warning<
+  "availability domain '%0' is deprecated">, InGroup<DiagGroup<"deprecated-availability-domain">>;
+def warn_permanently_available_domain_expr : Warning<
+  "unnecessary check for '%0'; this expression will always evaluate to true">,
+  InGroup<PermanentlyAvailableDomain>;
+def warn_permanently_available_domain_decl : Warning<
+  "%select{attribute has no effect because '%0' is always available|declaration is permanently unavailable because '%0' is always available}1">,
+  InGroup<PermanentlyAvailableDomain>;
 def err_features_invalid__arg : Error<
   "invalid argument %0: must evaluate to 0 or 1">;
 def err_feature_invalid_for_decl : Error<

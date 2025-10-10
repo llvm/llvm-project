@@ -879,6 +879,7 @@ public:
     FeatureAvailKind Kind = FeatureAvailKind::None;
     clang::Decl *Decl = nullptr;
     ImplicitCastExpr *Call = nullptr;
+    bool IsDeprecated = false;
     bool isInvalid() const { return Kind == FeatureAvailKind::None; }
   };
 

@@ -142,6 +142,7 @@ class InitializedEntity;
 enum class LangAS : unsigned int;
 class LocalInstantiationScope;
 class LookupResult;
+class MacroInfo;
 class MangleNumberingContext;
 typedef ArrayRef<IdentifierLoc> ModuleIdPath;
 class ModuleLoader;
@@ -2653,6 +2654,15 @@ public:
 
   void DiagnoseFeatureAvailabilityOfDecl(NamedDecl *D,
                                          ArrayRef<SourceLocation> Locs);
+
+  void diagnoseDeprecatedAvailabilityDomain(StringRef DomainName,
+                                            SourceLocation AvailLoc,
+                                            SourceLocation DomainLoc,
+                                            bool IsUnavailable = false,
+                                            const ParsedAttr *PA = nullptr);
+
+  /// A map that indicates whether a macro is simple.
+  llvm::SmallDenseMap<clang::MacroInfo *, bool> SimpleFeatureAvailabiltyMacros;
 
   /// Retrieve the current function, if any, that should be analyzed for
   /// potential availability violations.

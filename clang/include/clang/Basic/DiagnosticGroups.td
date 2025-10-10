@@ -287,6 +287,8 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           ]>,
                  DiagCategory<"Deprecations">;
 
+def PermanentlyAvailableDomain : DiagGroup<"permanently-available-domain">;
+
 def CXX20Designator : DiagGroup<"c++20-designator">;
 // Allow -Wno-c99-designator to be used to turn off all warnings on valid C99
 // designators (including the warning controlled by -Wc++20-designator).

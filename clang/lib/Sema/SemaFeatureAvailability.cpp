@@ -13,6 +13,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -239,4 +242,157 @@ void Sema::DiagnoseFeatureAvailabilityOfDecl(NamedDecl *D,
 
   Decl *Ctx = cast<Decl>(getCurLexicalContext());
   diagnoseDeclFeatureAvailability(D, Locs.front(), Ctx, *this);
+}
+
+static bool isSimpleFeatureAvailabiltyMacro(MacroInfo *Info) {
+  // Must match:
+  // __attribute__((availability(domain : id, id/numeric_constant)))
+  if (Info->getNumTokens() != 13)
+    return false;
+
+  if (!Info->getReplacementToken(0).is(tok::kw___attribute) ||
+      !Info->getReplacementToken(1).is(tok::l_paren) ||
+      !Info->getReplacementToken(2).is(tok::l_paren))
+    return false;
+
+  if (const Token &Tk = Info->getReplacementToken(3);
+      !Tk.is(tok::identifier) ||
+      Tk.getIdentifierInfo()->getName() != "availability")
+    return false;
+
+  if (!Info->getReplacementToken(4).is(tok::l_paren))
+    return false;
+
+  if (const Token &Tk = Info->getReplacementToken(5);
+      !Tk.is(tok::identifier) || Tk.getIdentifierInfo()->getName() != "domain")
+    return false;
+
+  if (!Info->getReplacementToken(6).is(tok::colon))
+    return false;
+
+  if (const Token &Tk = Info->getReplacementToken(7); !Tk.is(tok::identifier))
+    return false;
+
+  if (!Info->getReplacementToken(8).is(tok::comma))
+    return false;
+
+  if (const Token &Tk = Info->getReplacementToken(9);
+      !Tk.is(tok::identifier) && !Tk.is(tok::numeric_constant))
+    return false;
+
+  if (!Info->getReplacementToken(10).is(tok::r_paren) ||
+      !Info->getReplacementToken(11).is(tok::r_paren) ||
+      !Info->getReplacementToken(12).is(tok::r_paren))
+    return false;
+
+  return true;
+}
+
+void Sema::diagnoseDeprecatedAvailabilityDomain(StringRef DomainName,
+                                                SourceLocation AvailLoc,
+                                                SourceLocation DomainLoc,
+                                                bool IsUnavailable,
+                                                const ParsedAttr *PA) {
+  auto CreateFixIt = [&]() {
+    if (PA->getRange().getBegin().isMacroID()) {
+      auto *MacroII = PA->getMacroIdentifier();
+
+      // Macro identifier isn't always set.
+      if (!MacroII)
+        return FixItHint{};
+
+      MacroDefinition MD = PP.getMacroDefinition(MacroII);
+      MacroInfo *Info = MD.getMacroInfo();
+
+      bool IsSimple;
+      auto It = SimpleFeatureAvailabiltyMacros.find(Info);
+
+      if (It == SimpleFeatureAvailabiltyMacros.end()) {
+        IsSimple = isSimpleFeatureAvailabiltyMacro(Info);
+        SimpleFeatureAvailabiltyMacros[Info] = IsSimple;
+      } else {
+        IsSimple = It->second;
+      }
+
+      if (!IsSimple)
+        return FixItHint{};
+
+      FileID FID = SourceMgr.getFileID(AvailLoc);
+      const SrcMgr::ExpansionInfo *EI =
+          &SourceMgr.getSLocEntry(FID).getExpansion();
+      if (IsUnavailable)
+        return FixItHint::CreateReplacement(EI->getExpansionLocRange(),
+                                            "__attribute__((unavailable))");
+      return FixItHint::CreateRemoval(EI->getExpansionLocRange());
+    }
+
+    if (PA->getSyntax() != AttributeCommonInfo::Syntax::AS_GNU)
+      return FixItHint{};
+
+    SourceRange AttrRange = PA->getRange();
+
+    // Replace the availability attribute with "unavailable".
+    if (IsUnavailable)
+      return FixItHint::CreateReplacement(AttrRange, "unavailable");
+
+    // Remove the availability attribute.
+
+    // If there is a leading comma, there's another operand that precedes the
+    // availability attribute. In that case, remove the availability attribute
+    // and the comma.
+    Token PrevTok = *Lexer::findPreviousToken(AttrRange.getBegin(), SourceMgr,
+                                              getLangOpts(), false);
+    if (PrevTok.is(tok::comma))
+      return FixItHint::CreateRemoval(
+          SourceRange(PrevTok.getLocation(), AttrRange.getEnd()));
+
+    // If there is a trailing comma, there's another operand that follows the
+    // availability attribute. In that case, remove the availability attribute
+    // and the comma.
+    Token NextTok = *Lexer::findNextToken(AttrRange.getEnd(), SourceMgr,
+                                          getLangOpts(), false);
+    if (NextTok.is(tok::comma))
+      return FixItHint::CreateRemoval(
+          SourceRange(AttrRange.getBegin(), NextTok.getLocation()));
+
+    // If no leading or trailing commas are found, the availability attribute is
+    // the only operand. Remove the entire attribute construct.
+
+    // Look for '__attribute'.
+    for (int i = 0; i < 2; ++i)
+      PrevTok = *Lexer::findPreviousToken(PrevTok.getLocation(), SourceMgr,
+                                          getLangOpts(), false);
+    if (!PrevTok.is(tok::raw_identifier) ||
+        PrevTok.getRawIdentifier() != "__attribute__")
+      return FixItHint{};
+
+    // Look for the closing ')'.
+    NextTok = *Lexer::findNextToken(NextTok.getLocation(), SourceMgr,
+                                    getLangOpts(), false);
+    if (!NextTok.is(tok::r_paren))
+      return FixItHint{};
+
+    return FixItHint::CreateRemoval(
+        SourceRange(PrevTok.getLocation(), NextTok.getLocation()));
+  };
+
+  ASTContext::AvailabilityDomainInfo Info =
+      Context.getFeatureAvailInfo(DomainName);
+
+  if (Info.IsDeprecated) {
+    Diag(DomainLoc, diag::warn_deprecated_availability_domain) << DomainName;
+    if (Info.Kind == FeatureAvailKind::AlwaysAvailable) {
+      if (PA) {
+        auto FixitDiag =
+            Diag(AvailLoc, diag::warn_permanently_available_domain_decl)
+            << DomainName << IsUnavailable;
+
+        FixItHint Hint = CreateFixIt();
+        if (!Hint.isNull())
+          FixitDiag << Hint;
+      } else
+        Diag(AvailLoc, diag::warn_permanently_available_domain_expr)
+            << DomainName;
+    }
+  }
 }

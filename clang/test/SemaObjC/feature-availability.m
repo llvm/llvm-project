@@ -14,6 +14,10 @@ CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(feature1);
 CLANG_ENABLED_AVAILABILITY_DOMAIN(feature1);
 #endif
 CLANG_DISABLED_AVAILABILITY_DOMAIN(feature2);
+__attribute__((deprecated))
+CLANG_ALWAYS_ENABLED_AVAILABILITY_DOMAIN(deprecated_feature1);
+__attribute__((deprecated))
+CLANG_ENABLED_AVAILABILITY_DOMAIN(deprecated_feature2);
 #endif
 
 __attribute__((availability(domain:feature1, AVAIL))) int func1(void);
@@ -208,3 +212,33 @@ __attribute__((availability(domain:feature1, AVAIL)))
   [super m4]; // enabled-error {{cannot use 'm4' because feature 'feature1' is unavailable in this context}}
 }
 @end
+
+#ifdef USE_DOMAIN
+__attribute__((availability(domain:deprecated_feature1, AVAIL)))
+// expected-warning@-1 {{availability domain 'deprecated_feature1' is deprecated}}
+// expected-warning@-2 {{attribute has no effect because 'deprecated_feature1' is always available}}
+@interface DeprecatedC1
+@end
+
+__attribute__((availability(domain:deprecated_feature1, UNAVAIL)))
+// expected-warning@-1 {{availability domain 'deprecated_feature1' is deprecated}}
+// expected-warning@-2 {{declaration is permanently unavailable because 'deprecated_feature1' is always available}}
+@interface DeprecatedC2
+@end
+
+__attribute__((availability(domain:deprecated_feature2, AVAIL)))
+// expected-warning@-1 {{availability domain 'deprecated_feature2' is deprecated}}
+@interface DeprecatedC3
+@end
+
+void test_deprecated1(void) {
+  if (@available(domain:deprecated_feature1))
+    // expected-warning@-1 {{availability domain 'deprecated_feature1' is deprecated}}
+    // expected-warning@-2 {{unnecessary check for 'deprecated_feature1'; this expression will always evaluate to true}}
+    ;
+
+  if (@available(domain:deprecated_feature2))
+    // expected-warning@-1 {{availability domain 'deprecated_feature2' is deprecated}}
+    ;
+}
+#endif
