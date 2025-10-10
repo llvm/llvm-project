@@ -329,17 +329,28 @@ mlirPatternRewriterAsBase(MlirPatternRewriter rewriter);
 /// RewritePattern API
 //===----------------------------------------------------------------------===//
 
+/// PatternBenefit represents the benefit of a pattern match.
 typedef unsigned short MlirPatternBenefit;
 
+/// Callbacks to construct a rewrite pattern.
 typedef struct {
+  /// Optional constructor for the user data.
+  /// Set to nullptr to disable it.
   void (*construct)(void *userData);
+  /// Optional destructor for the user data.
+  /// Set to nullptr to disable it.
   void (*destruct)(void *userData);
+  /// The callback function to match against code rooted at the specified
+  /// operation, and perform the rewrite if the match is successful,
+  /// corresponding to RewritePattern::matchAndRewrite.
   MlirLogicalResult (*matchAndRewrite)(MlirRewritePattern pattern,
                                        MlirOperation op,
                                        MlirPatternRewriter rewriter,
                                        void *userData);
 } MlirRewritePatternCallbacks;
 
+/// Create a rewrite pattern that matches the operation
+/// with the given rootName, corresponding to mlir::OpRewritePattern.
 MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePattenCreate(
     MlirStringRef rootName, MlirPatternBenefit benefit, MlirContext context,
     MlirRewritePatternCallbacks callbacks, void *userData,
@@ -349,11 +360,14 @@ MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePattenCreate(
 /// RewritePatternSet API
 //===----------------------------------------------------------------------===//
 
+/// Create an empty MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED MlirRewritePatternSet
 mlirRewritePatternSetCreate(MlirContext context);
 
+/// Destruct the given MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED void mlirRewritePatternSetDestroy(MlirRewritePatternSet set);
 
+/// Add the given MlirRewritePattern into a MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED void mlirRewritePatternSetAdd(MlirRewritePatternSet set,
                                                  MlirRewritePattern pattern);
 
