@@ -417,3 +417,18 @@ end subroutine
 ! CHECK-DAG: func.func private @__ldcs_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
 ! CHECK-DAG: func.func private @__ldlu_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
 ! CHECK-DAG: func.func private @__ldcv_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
+
+attributes(global) subroutine test_barrier()
+  integer(8), shared :: barrier
+  call barrier_init(barrier, 256)
+end subroutine
+
+
+! CHECK-LABEL: func.func @_QPtest_barrier()
+    
+! CHECK: %[[SHARED:.*]] = cuf.shared_memory i64 {bindc_name = "barrier", uniq_name = "_QFtest_barrierEbarrier"} -> !fir.ref<i64>
+! CHECK: %[[DECL_SHARED:.*]]:2 = hlfir.declare %[[SHARED]] {data_attr = #cuf.cuda<shared>, uniq_name = "_QFtest_barrierEbarrier"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK: %[[COUNT:.*]] = arith.constant 256 : i32
+! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
+! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
+! CHECK: nvvm.mbarrier.init.shared %[[SHARED_PTR]], %[[COUNT]] : !llvm.ptr<3>, i32
