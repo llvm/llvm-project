@@ -5771,7 +5771,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
       return true;
 
     const TargetOptions &Options = getTarget().Options;
-    return Options.NoNaNsFPMath || Options.NoInfsFPMath;
+    return Options.NoNaNsFPMath || Op->getFlags().hasNoInfs();
   }
 
   case ISD::OR:
