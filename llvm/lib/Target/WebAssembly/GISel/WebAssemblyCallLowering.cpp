@@ -659,8 +659,6 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
       for (unsigned Part = 0; Part < NumParts; ++Part) {
         Arg.Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
       }
-      buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
-                        Arg.Flags[0], Arg.Ty->isFloatingPointTy());
     }
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -672,6 +670,11 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
                                ArgInst->getDesc(), ArgInst->getOperand(0), 0);
       MFI->addParam(NewVT);
       ++FinalArgIdx;
+    }
+
+    if (NumParts != 1 || OrigVT != NewVT) {
+      buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
+                        Arg.Flags[0], Arg.Ty->isFloatingPointTy());
     }
   }
 
