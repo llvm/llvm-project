@@ -1739,7 +1739,6 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
-  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
@@ -1771,6 +1770,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   }
 
   // Rewrite op.
+  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
   auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
