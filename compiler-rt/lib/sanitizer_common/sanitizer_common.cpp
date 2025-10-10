@@ -24,6 +24,7 @@ namespace __sanitizer {
 
 const char *SanitizerToolName = "SanitizerTool";
 
+const int MaxSignals = 64;
 bool signal_handler_is_from_sanitizer[MaxSignals] = {0};
 
 atomic_uint32_t current_verbosity;
@@ -111,6 +112,18 @@ const char *StripModuleName(const char *module) {
     return slash_pos + 1;
   }
   return module;
+}
+
+void SetSignalHandlerFromSanitizer(int signum, bool new_state) {
+  if (signum >= 0 && signum < MaxSignals)
+    signal_handler_is_from_sanitizer[signum] = new_state;
+}
+
+bool IsSignalHandlerFromSanitizer(int signum) {
+  if (signum >= 0 && signum < MaxSignals)
+    return signal_handler_is_from_sanitizer[signum];
+
+  return false;
 }
 
 void ReportErrorSummary(const char *error_message, const char *alt_tool_name) {

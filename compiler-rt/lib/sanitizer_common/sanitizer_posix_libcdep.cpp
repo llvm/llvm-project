@@ -225,7 +225,7 @@ static void MaybeInstallSigaction(int signum,
   VReport(1, "Installed the sigaction for signal %d\n", signum);
 
   if (common_flags()->cloak_sanitizer_signal_handlers)
-    signal_handler_is_from_sanitizer[signum] = true;
+    SetSignalHandlerFromSanitizer(signum, true);
 }
 
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {

@@ -70,12 +70,10 @@ INTERCEPTOR(uptr, signal, int signum, uptr handler) {
   uptr ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
 
-  if (signum >= 0 && signum < MaxSignals &&
-      signal_handler_is_from_sanitizer[signum] && ret != sig_err) {
+  if (IsSignalHandlerFromSanitizer(signum) && ret != sig_err) {
     // If the user sets a signal handler, it is never cloaked, even if they
     // reuse a sanitizer's signal handler.
-    signal_handler_is_from_sanitizer[signum] = false;
-
+    SetSignalHandlerFromSanitizer(signum, false);
     ret = sig_dfl;
   }
 
@@ -98,12 +96,11 @@ INTERCEPTOR(int, sigaction_symname, int signum,
   int ret;
   SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
 
-  if (signum >= 0 && signum < MaxSignals &&
-      signal_handler_is_from_sanitizer[signum] && ret == 0) {
+  if (IsSignalHandlerFromSanitizer(signum) && ret == 0) {
     if (act)
       // If the user sets a signal handler, it is never cloaked, even if they
       // reuse a sanitizer's signal handler.
-      signal_handler_is_from_sanitizer[signum] = false;
+      SetSignalHandlerFromSanitizer(signum, false);
 
     if (oldact)
       oldact->handler = reinterpret_cast<__sanitizer_sighandler_ptr>(sig_dfl);
