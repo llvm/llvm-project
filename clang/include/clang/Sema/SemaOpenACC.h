@@ -911,6 +911,7 @@ public:
   ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                OpenACCReductionOperator ReductionOp,
                                Expr *VarExpr);
+  bool CheckReductionVarType(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.

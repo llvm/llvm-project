@@ -30,6 +30,11 @@
 // Altivec transformation functions and pattern fragments.
 //
 
+// fneg is not legal, and desugared as an xor.
+def desugared_fneg : PatFrag<(ops node:$x), (v4f32 (bitconvert (xor (bitconvert $x), 
+                             (int_ppc_altivec_vslw (bitconvert (v16i8 immAllOnesV)), 
+                             (bitconvert (v16i8 immAllOnesV))))))>; 
+
 def vpkuhum_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                               (vector_shuffle node:$lhs, node:$rhs), [{
   return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 0, *CurDAG);
@@ -467,11 +472,12 @@ def VMADDFP : VAForm_1<46, (outs vrrc:$RT), (ins vrrc:$RA, vrrc:$RC, vrrc:$RB),
                        [(set v4f32:$RT,
                         (fma v4f32:$RA, v4f32:$RC, v4f32:$RB))]>;
 
-// FIXME: The fma+fneg pattern won't match because fneg is not legal.
+// fneg is not legal, hence we have to match on the desugared version. 
 def VNMSUBFP: VAForm_1<47, (outs vrrc:$RT), (ins vrrc:$RA, vrrc:$RC, vrrc:$RB),
                        "vnmsubfp $RT, $RA, $RC, $RB", IIC_VecFP,
-                       [(set v4f32:$RT, (fneg (fma v4f32:$RA, v4f32:$RC,
-                                                  (fneg v4f32:$RB))))]>;
+                       [(set v4f32:$RT, (desugared_fneg (fma v4f32:$RA, v4f32:$RC,
+                                                  (desugared_fneg v4f32:$RB))))]>;
+
 let hasSideEffects = 1 in {
   def VMHADDSHS  : VA1a_Int_Ty<32, "vmhaddshs", int_ppc_altivec_vmhaddshs, v8i16>;
   def VMHRADDSHS : VA1a_Int_Ty<33, "vmhraddshs", int_ppc_altivec_vmhraddshs,
@@ -891,6 +897,13 @@ def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;
 
 // Add
 def : Pat<(add (mul v8i16:$vA, v8i16:$vB), v8i16:$vC), (VMLADDUHM $vA, $vB, $vC)>;
+
+
+// Fused negated multiply-subtract
+def : Pat<(v4f32 (desugared_fneg
+                    (int_ppc_altivec_vmaddfp v4f32:$RA, v4f32:$RC,
+                         (desugared_fneg v4f32:$RB)))),
+          (VNMSUBFP $RA, $RC, $RB)>;
 
 // Saturating adds/subtracts.
 def : Pat<(v16i8 (saddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDSBS $vA, $vB))>;

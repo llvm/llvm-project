@@ -3,7 +3,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ;; A minimal test case. llc will crash if global variables already has a section
 ;; prefix. Subsequent PRs will expand on this test case to test the hotness
-;; reconcillation implementation.
+;; reconciliation implementation.
+
 ; RUN: not llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -data-sections=true  -unique-section-names=false \
