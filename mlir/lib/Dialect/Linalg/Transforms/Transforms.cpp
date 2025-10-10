@@ -1140,13 +1140,36 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
         packOp, "not all outer dimensions of the result are 1s");
   }
 
+  ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
+  auto outerDimsPerm = packOp.getOuterDimsPerm();
+
+  // Verify that there are no non-unit un-tiled outer dims that are permuted.
+  // Supporting such cases will require refining the logic to generate the
+  // Transpose Op.
+  if (!llvm::all_of(outerDimsPerm, [&innerDimsPos, &packOp](int64_t dim) {
+        static int prev = 0;
+        // Tiled dims are not relevant here.
+        if (llvm::is_contained(innerDimsPos, dim))
+          return true;
+        // Was this dim permuted? Note, permuting unit dims is fine.
+        if (dim < prev && (packOp.getType().getShape()[prev] != 1 ||
+                           packOp.getType().getShape()[dim] != 1))
+          return false;
+
+        prev = dim;
+        return true;
+      })) {
+    return rewriter.notifyMatchFailure(
+        packOp, "At least one non-unit and un-tiled outer dim is permuted, "
+                "this is not supported ATM!");
+  }
+
   Attribute zeroIdxAttr = rewriter.getIndexAttr(0);
   Attribute oneIdxAttr = rewriter.getIndexAttr(1);
   Location loc = packOp.getLoc();
 
   int64_t srcRank = packOp.getSourceRank();
   int64_t destRank = packOp.getDestRank();
-  ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
 
   // 1. Get the input that is going to be packed. If the input requires padding,
   // add a padding operation and return that as the input.
@@ -1185,8 +1208,10 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   ShapedType inputTy = cast<ShapedType>(input.getType());
   SmallVector<OpFoldResult> shapeForEmptyOp;
   for (int64_t i = 0; i < srcRank; i++) {
-    if (llvm::is_contained(innerDimsPos, i))
+    if (llvm::is_contained(innerDimsPos, i)) {
+      // The tiled dims are appended after this loop.
       continue;
+    }
     if (inputTy.isStaticDim(i))
       shapeForEmptyOp.push_back(rewriter.getIndexAttr(inputTy.getShape()[i]));
     else
@@ -1231,7 +1256,7 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   }
 
   for (auto tileSize : packOp.getMixedTiles()) {
-    auto [tileSizeStatic, tileSizeOfr] =
+    auto [_, tileSizeOfr] =
         getSimplifiedOfrAndStaticSizePair(tileSize, rewriter);
     writeSizes.push_back(tileSizeOfr);
   }
@@ -1239,7 +1264,7 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   SmallVector<OpFoldResult> writeStrides(destRank, oneIdxAttr);
   SmallVector<OpFoldResult> writeOffsets(destRank, zeroIdxAttr);
 
-  // TODO: A constructor that doesn't require strised nor offsets.
+  // TODO: A constructor that doesn't require strides nor offsets.
   auto insert = tensor::InsertSliceOp::create(
       rewriter, loc, transposedOp.getResult()[0], packOp.getDest(),
       writeOffsets, writeSizes, writeStrides);

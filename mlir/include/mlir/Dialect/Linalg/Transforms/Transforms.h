@@ -1651,7 +1651,7 @@ protected:
 ///   * tensor::PadOp + linalg::TransposeOp + tensor::EmptyOp +
 ///     tensor::InsertSliceOp ops.
 ///
-/// Requires that all the tile outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
 /// Note that this constraint means to effectively one tile is packed.
 ///
 /// In addition, assumes that the un-tiled outer dims are not permuted.
