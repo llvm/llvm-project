@@ -637,6 +637,30 @@ TEST(InstructionsTest, isEliminableCastPair) {
                                            Int64Ty, &DL1),
             0U);
 
+  // Destination larger than source. Pointer type same as destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy64,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination larger than source. Pointer type different from destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy32,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination smaller than source. Pointer type same as source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy64,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // Destination smaller than source. Pointer type different from source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy32,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
   // Test that we don't eliminate bitcasts between different address spaces,
   // or if we don't have available pointer size information.
   DataLayout DL2("e-p:32:32:32-p1:16:16:16-p2:64:64:64-i1:8:8-i8:8:8-i16:16:16"
