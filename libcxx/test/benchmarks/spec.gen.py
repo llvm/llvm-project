@@ -8,13 +8,13 @@
 
 # REQUIRES: enable-spec-benchmarks
 
-# RUN: mkdir -p %T
-# RUN: echo "%{cxx}" > %T/cxx.subs
-# RUN: echo "%{compile_flags}" > %T/compile_flags.subs
-# RUN: echo "%{flags}" > %T/flags.subs
-# RUN: echo "%{link_flags}" > %T/link_flags.subs
-# RUN: echo "%{spec_dir}" > %T/spec_dir.subs
-# RUN: %{python} %s %T
+# RUN: mkdir -p %{temp}
+# RUN: echo "%{cxx}" > %{temp}/cxx.subs
+# RUN: echo "%{compile_flags}" > %{temp}/compile_flags.subs
+# RUN: echo "%{flags}" > %{temp}/flags.subs
+# RUN: echo "%{link_flags}" > %{temp}/link_flags.subs
+# RUN: echo "%{spec_dir}" > %{temp}/spec_dir.subs
+# RUN: %{python} %s %{temp}
 # END.
 
 import json
@@ -66,18 +66,18 @@ spec_benchmarks &= no_fortran
 
 for benchmark in spec_benchmarks:
     print(f'#--- {benchmark}.sh.test')
-    print(f'RUN: rm -rf %T') # clean up any previous (potentially incomplete) run
-    print(f'RUN: mkdir %T')
-    print(f'RUN: cp {spec_config} %T/spec-config.cfg')
-    print(f'RUN: %{{spec_dir}}/bin/runcpu --config %T/spec-config.cfg --size train --output-root %T --rebuild {benchmark}')
-    print(f'RUN: rm -rf %T/benchspec') # remove the temporary directory, which can become quite large
+    print(f'RUN: rm -rf %{temp}') # clean up any previous (potentially incomplete) run
+    print(f'RUN: mkdir %{temp}')
+    print(f'RUN: cp {spec_config} %{temp}/spec-config.cfg')
+    print(f'RUN: %{{spec_dir}}/bin/runcpu --config %{temp}/spec-config.cfg --size train --output-root %{temp} --rebuild {benchmark}')
+    print(f'RUN: rm -rf %{temp}/benchspec') # remove the temporary directory, which can become quite large
 
     # The `runcpu` command above doesn't fail even if the benchmark fails to run. To determine failure, parse the CSV
     # results and ensure there are no compilation errors or runtime errors in the status row. Also print the logs and
     # fail if there are no CSV files at all, which implies a SPEC error.
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results --extract "Base Status" --keep-failed %T/result/*.train.csv > %T/status || ! cat %T/result/*.log')
-    print(f'RUN: ! grep -E "CE|RE" %T/status || ! cat %T/result/*.log')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results --extract "Base Status" --keep-failed %{temp}/result/*.train.csv > %{temp}/status || ! cat %{temp}/result/*.log')
+    print(f'RUN: ! grep -E "CE|RE" %{temp}/status || ! cat %{temp}/result/*.log')
 
     # If there were no errors, parse the results into LNT-compatible format and print them.
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %T/result/*.train.csv --output-format=lnt > %T/results.lnt')
-    print(f'RUN: cat %T/results.lnt')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %{temp}/result/*.train.csv --output-format=lnt > %{temp}/results.lnt')
+    print(f'RUN: cat %{temp}/results.lnt')
