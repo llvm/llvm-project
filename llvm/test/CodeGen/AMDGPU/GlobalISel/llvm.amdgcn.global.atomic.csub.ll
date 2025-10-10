@@ -8,15 +8,21 @@ define i32 @global_atomic_csub(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_atomic_csub:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: global_atomic_csub:
@@ -26,10 +32,14 @@ define i32 @global_atomic_csub(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %ptr, i32 %data)
+  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst
   ret i32 %ret
 }
 
@@ -39,8 +49,11 @@ define i32 @global_atomic_csub_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_atomic_csub_offset:
@@ -49,8 +62,11 @@ define i32 @global_atomic_csub_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: global_atomic_csub_offset:
@@ -60,11 +76,15 @@ define i32 @global_atomic_csub_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
   ret i32 %ret
 }
 
@@ -72,15 +92,21 @@ define void @global_atomic_csub_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub_nortn:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_atomic_csub_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: global_atomic_csub_nortn:
@@ -90,10 +116,14 @@ define void @global_atomic_csub_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %ptr, i32 %data)
+  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst
   ret void
 }
 
@@ -103,8 +133,11 @@ define void @global_atomic_csub_offset_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: global_atomic_csub_offset_nortn:
@@ -113,8 +146,11 @@ define void @global_atomic_csub_offset_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: global_atomic_csub_offset_nortn:
@@ -124,11 +160,15 @@ define void @global_atomic_csub_offset_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
   ret void
 }
 
@@ -143,6 +183,8 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) 
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-NEXT:    global_atomic_csub v0, v1, v0, s[0:1] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -155,6 +197,8 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) 
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x1000 :: v_dual_mov_b32 v0, s2
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v1, v0, s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -163,12 +207,15 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) 
 ; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v1, v0, s[0:1] offset:4096 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v1, v0, s[0:1] offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
   store i32 %ret, ptr addrspace(1) poison
   ret void
 }
@@ -183,6 +230,9 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspa
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-NEXT:    global_atomic_csub v0, v1, v0, s[0:1] glc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: global_atomic_csub_sgpr_base_offset_nortn:
@@ -193,6 +243,9 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspa
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x1000 :: v_dual_mov_b32 v0, s2
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v1, v0, s[0:1] glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: global_atomic_csub_sgpr_base_offset_nortn:
@@ -200,14 +253,16 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspa
 ; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v1, v0, s[0:1] offset:4096 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    global_atomic_sub_clamp_u32 v0, v1, v0, s[0:1] offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
   ret void
 }
-
-declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #1
 
 attributes #0 = { nounwind willreturn }
 attributes #1 = { argmemonly nounwind }
