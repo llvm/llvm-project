@@ -37,6 +37,9 @@ enum ActionKind {
   /// Emit FIR mlir file
   EmitFIR,
 
+  /// Emit core MLIR mlir file
+  EmitMLIR,
+
   /// Emit HLFIR mlir file
   EmitHLFIR,
 
