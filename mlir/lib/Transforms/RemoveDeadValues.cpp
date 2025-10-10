@@ -870,18 +870,20 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 };
 } // namespace
 
-/// If the target of CallOP is a public function and at least one argument is NonLive,
-/// privatize the function.
-/// Our strategy here is separation interface and implementation. eg.
+/// If the target of CallOp is a public function and at least one argument is
+/// NonLive, privatize the function. Our strategy here is separation interface
+/// and implementation. eg.
 ///
 /// public void foo(int unused){...}
 /// =>
 /// public void foo(int unused) {          // old function, interface
-///   return __foo_impl(unused);
+///   return __foo_privatized(unused);
 /// }
 ///
-/// private void __foo_impl(int unused) { // the new private function, or implementation.
-///  ...                                  // the function body of the original function.
+/// private void __foo_privatized(int unused) { // the new private function, or
+/// implementation.
+///  ...                                        // the function body of the
+///  original function.
 /// }
 ///
 /// Returns true if any IR changes were made, false otherwise.
@@ -893,8 +895,8 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
     return false;
   }
 
-  LDBG() << "Processing callOp " << callOp
-         << " target is a public function: " << funcOp.getOperation()->getName();
+  LDBG() << "Processing callOp " << callOp << " target is a public function: "
+         << funcOp.getOperation()->getName();
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(callOp.getArgOperands());
@@ -910,7 +912,7 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
 
     // Set visibility = 'private' and a new name for the cloned function
     SymbolTable::setSymbolVisibility(clonedFunc,
-                                  SymbolTable::Visibility::Private);
+                                     SymbolTable::Visibility::Private);
     std::string newName = "__" + funcOp.getName().str() + "_privatized";
     clonedFunc.setName(newName);
 
@@ -918,22 +920,21 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
     rewriter.setInsertionPointAfter(funcOp);
     rewriter.insert(clonedFunc);
 
-    // Replace ALL callsites of the original function to call the cloned function directly
+    // Replace ALL callsites of the original function to call the cloned
+    // function directly
     LogicalResult result = SymbolTable::replaceAllSymbolUses(
-        funcOp,
-        clonedFunc.getNameAttr(),
-        moduleOp
-    );
+        funcOp, clonedFunc.getNameAttr(), moduleOp);
 
     if (result.failed()) {
       LDBG() << "Failed to replace all symbol uses for " << funcOp.getName();
       return false;
     }
 
-    LDBG() << "Redirected all callsites from " << funcOp.getName()
-           << " to " << newName;
+    LDBG() << "Redirected all callsites from " << funcOp.getName() << " to "
+           << newName;
 
-    // Transform the original funcOp into a wrapper that calls the cloned function
+    // Transform the original funcOp into a wrapper that calls the cloned
+    // function
     Region &funcBody = funcOp.getFunctionBody();
 
     // Clean the original function body
@@ -952,44 +953,35 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
     rewriter.setInsertionPointToStart(wrapperBlock);
 
     // Clone the original call operation and update its callee
-    Operation *clonedCallOp = callOp->clone();
-
+    auto clonedCallOp = cast<CallOpInterface>(callOp->clone());
     // Update the callee symbol reference to point to the new private function
-    if (auto callableOp = dyn_cast<CallOpInterface>(clonedCallOp)) {
-      auto symbolRef = SymbolRefAttr::get(funcOp.getContext(), clonedFunc.getName());
-      callableOp.setCalleeFromCallable(symbolRef);
-    }
-
+    auto symbolRef =
+        SymbolRefAttr::get(funcOp.getContext(), clonedFunc.getName());
+    clonedCallOp.setCalleeFromCallable(symbolRef);
     // Set the call arguments to use the wrapper block's arguments
     clonedCallOp->setOperands(wrapperBlock->getArguments());
-
-    // Insert the cloned call operation
     rewriter.insert(clonedCallOp);
 
-    // Create return operation of the same type as the original function's return
-    SmallVector<Operation*> returnOps;
+    // Create return operation of the same type as the original function's
+    // return
+    Operation *returnOp = nullptr;
     for (Block &block : clonedFunc.getFunctionBody()) {
       if (block.getNumSuccessors() > 0)
         continue;
 
       Operation *terminator = block.getTerminator();
       if (terminator && terminator->hasTrait<OpTrait::ReturnLike>()) {
-        returnOps.push_back(terminator);
+        returnOp = terminator;
         break; // Use first return as template
       }
     }
 
-    if (!returnOps.empty()) {
-      Operation *templateReturnOp = returnOps[0];
-      Operation *newReturnOp = templateReturnOp->clone();
+    if (returnOp) {
+      Operation *newReturnOp = returnOp->clone();
       newReturnOp->setOperands(clonedCallOp->getResults());
       newReturnOp->setLoc(funcOp.getLoc());
       rewriter.insert(newReturnOp);
     }
-
-    LDBG() << "Created wrapper function " << funcOp.getName()
-           << " that calls " << newName;
-
     return true; // Changes were made
   }
 
@@ -1012,19 +1004,19 @@ void RemoveDeadValues::runOnOperation() {
 
     if (changed) {
       LDBG() << "IR has changed, invalidate RunLivenessAnalysis only";
-      auto & pa = getPassState().preservedAnalyses;
+      auto &pa = getPassState().preservedAnalyses;
       bool preserved = pa.isPreserved<RunLivenessAnalysis>();
       la->invalidate();
       am.invalidate(pa);
 
       la = &am.getAnalysis<RunLivenessAnalysis>();
-      // if RunLivenessAnalysis was previously preserved, preserved the updated results.
+      // If RunLivenessAnalysis was previously preserved, preserved the updated
+      // results.
       if (preserved) {
         pa.preserve<RunLivenessAnalysis>();
       }
     }
   }
-
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.

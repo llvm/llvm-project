@@ -102,17 +102,19 @@ public:
   RunLivenessAnalysis(Operation *op);
 
   const Liveness *getLiveness(Value val);
-  // This only mark Liveness results are stale.
+  // This only remarks that Liveness results are stale.
   void invalidate() { valid = false; }
   /// Return the configuration of the solver used for this analysis.
   const DataFlowConfig &getSolverConfig() const { return solver.getConfig(); }
   /// The function is called by analysis_impl::isInvalidated.
-  bool isInvalidated(AnalysisManager::PreservedAnalyses&) const { return !valid; }
+  bool isInvalidated(AnalysisManager::PreservedAnalyses &) const {
+    return !valid;
+  }
 
 private:
   /// Stores the result of the liveness analysis that was run.
   DataFlowSolver solver;
-  bool valid {true};
+  bool valid{true};
 };
 
 } // end namespace mlir::dataflow
