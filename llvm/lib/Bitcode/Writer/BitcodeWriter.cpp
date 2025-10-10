@@ -5863,6 +5863,12 @@ static const char *getSectionNameForCommandline(const Triple &T) {
   llvm_unreachable("Unimplemented ObjectFormatType");
 }
 
+static auto globalInUsedHasName(StringRef Name) {
+  return [Name](Constant* C) {
+    return C->getName() == Name;
+  };
+}
+
 void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
                                 bool EmbedBitcode, bool EmbedCmdline,
                                 const std::vector<uint8_t> &CmdArgs) {
@@ -5872,19 +5878,6 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   ArrayRef<uint8_t> ModuleData;
   Triple T(M.getTargetTriple());
   SmallVector<GlobalValue *, 2> NewGlobals;
-
-  auto IsCmdOrBitcode = [&](Constant *C) {
-    GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
-    StringRef Name = GV ? GV->getName() : "";
-    if (EmbedBitcode && Name == "llvm.embedded.module")
-      return true;
-    if (EmbedCmdline && Name == "llvm.cmdline")
-      return true;
-    return false;
-  };
-
-  if (EmbedBitcode || EmbedCmdline)
-    removeFromUsedLists(M, IsCmdOrBitcode);
 
   if (EmbedBitcode) {
     if (Buf.getBufferSize() == 0 ||
@@ -5913,6 +5906,7 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   NewGlobals.push_back(EmbeddedModule);
   if (llvm::GlobalVariable *Old =
           M.getGlobalVariable("llvm.embedded.module", true)) {
+    removeFromUsedLists(M, globalInUsedHasName("llvm.embedded.module"));
     assert(Old->hasZeroLiveUses() &&
            "llvm.embedded.module can only be used once in llvm.compiler.used");
     EmbeddedModule->takeName(Old);
@@ -5934,6 +5928,7 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
     CmdLine->setSection(getSectionNameForCommandline(T));
     CmdLine->setAlignment(Align(1));
     if (llvm::GlobalVariable *Old = M.getGlobalVariable("llvm.cmdline", true)) {
+      removeFromUsedLists(M, globalInUsedHasName("llvm.cmdline"));
       assert(Old->hasZeroLiveUses() &&
              "llvm.cmdline can only be used once in llvm.compiler.used");
       CmdLine->takeName(Old);
