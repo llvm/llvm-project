@@ -7,8 +7,6 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.6.0"
 
-@test_array_100x100x100 = global [100 x [100 x [100 x i64]]] zeroinitializer
-
 ;;  for (long int i = 0; i < n; i++) {
 ;;    for (long int j = 0; j < n; j++) {
 ;;      for (long int k = 0; k < n; k++) {
@@ -17,7 +15,7 @@ target triple = "x86_64-apple-macosx10.6.0"
 ;;      for (long int k = 0; k < n; k++) {
 ;;        *B++ = A[i + 3][j + 2][k + 1];
 
-define void @p2(i64 %n, ptr %B) nounwind uwtable ssp {
+define void @p2(i64 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'p2'
 ; CHECK-NEXT:  Src: store i64 %i.011, ptr %arrayidx8, align 8 --> Dst: store i64 %i.011, ptr %arrayidx8, align 8
 ; CHECK-NEXT:    da analyze - none!
@@ -47,7 +45,6 @@ define void @p2(i64 %n, ptr %B) nounwind uwtable ssp {
 ; LIN-NEXT:    da analyze - confused!
 ;
 entry:
-  %A = getelementptr inbounds [100 x [100 x [100 x i64]]], ptr @test_array_100x100x100, i32 0, i32 0
   %cmp10 = icmp sgt i64 %n, 0
   br i1 %cmp10, label %for.cond1.preheader.preheader, label %for.end26
 

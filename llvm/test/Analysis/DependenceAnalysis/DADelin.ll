@@ -139,7 +139,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 
 ;;  for (int i = 0; i < n; i++)
 ;;   for (int j = 0; j < m; j++)
-;;    for (int k = 1; k < o; k++)
+;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k - 1] =
 define void @t3(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
@@ -147,9 +147,9 @@ define void @t3(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - consistent anti [0 0 1]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -178,7 +178,7 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
   br label %for.body8
 
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
-  %k.046 = phi i32 [ 1, %for.body8.lr.ph ], [ %inc, %for.body8 ]
+  %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
   %0 = load i32, ptr %arrayidx, align 4
@@ -275,7 +275,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;   for (int j = 0; j < m; j++)
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
-;;     A[i*m*o + j*o + k + o] =
+;;     A[i*m*o + j*o + k - o] =
 define void @t5(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-LABEL: 't5'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx, align 4
@@ -317,7 +317,7 @@ for.body8:                                        ; preds = %for.body8, %for.bod
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
   %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
-  %add111 = add nsw i32 %add11, %o
+  %add111 = sub nsw i32 %add11, %o
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
   store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1

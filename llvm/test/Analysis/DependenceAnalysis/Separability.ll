@@ -5,8 +5,6 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.6.0"
 
-@test_array_100x100x100 = global [100 x [100 x [100 x i32]]] zeroinitializer
-@test_array_100x100x100x100 = global [100 x [100 x [100 x [100 x i32]]]] zeroinitializer
 
 ;;  for (long int i = 0; i < 50; i++)
 ;;    for (long int j = 0; j < 50; j++)
@@ -15,7 +13,7 @@ target triple = "x86_64-apple-macosx10.6.0"
 ;;          A[n][i][j + k] = i;
 ;;          *B++ = A[10][i + 10][2*j - l];
 
-define void @sep0(ptr %B, i32 %n) nounwind uwtable ssp {
+define void @sep0(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'sep0'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx11, align 4 --> Dst: store i32 %conv, ptr %arrayidx11, align 4
 ; CHECK-NEXT:    da analyze - output [0 * * S]!
@@ -31,7 +29,6 @@ define void @sep0(ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    da analyze - none!
 ;
 entry:
-  %A = getelementptr inbounds [100 x [100 x [100 x i32]]], ptr @test_array_100x100x100, i32 0, i32 0
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %entry, %for.inc22
@@ -98,7 +95,7 @@ for.end24:                                        ; preds = %for.inc22
 ;;          A[i][i][j + k] = i;
 ;;          *B++ = A[10][i + 10][2*j - l];
 
-define void @sep1(ptr %B, i32 %n) nounwind uwtable ssp {
+define void @sep1(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'sep1'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx11, align 4 --> Dst: store i32 %conv, ptr %arrayidx11, align 4
 ; CHECK-NEXT:    da analyze - output [0 * * S]!
@@ -114,7 +111,6 @@ define void @sep1(ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    da analyze - none!
 ;
 entry:
-  %A = getelementptr inbounds [100 x [100 x [100 x i32]]], ptr @test_array_100x100x100, i32 0, i32 0
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %entry, %for.inc22
@@ -181,7 +177,7 @@ for.end24:                                        ; preds = %for.inc22
 ;;          A[i][i][i + k][l] = i;
 ;;          *B++ = A[10][i + 10][j + k][l + 10];
 
-define void @sep2(ptr %B, i32 %n) nounwind uwtable ssp {
+define void @sep2(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'sep2'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx12, align 4 --> Dst: store i32 %conv, ptr %arrayidx12, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 S 0 0]!
@@ -197,7 +193,6 @@ define void @sep2(ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    da analyze - none!
 ;
 entry:
-  %A = getelementptr inbounds [100 x [100 x [100 x [100 x i32]]]], ptr @test_array_100x100x100x100, i32 0, i32 0
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %entry, %for.inc26
@@ -264,7 +259,7 @@ for.end28:                                        ; preds = %for.inc26
 ;;          A[i][i][i + k][l + k] = i;
 ;;          *B++ = A[10][i + 10][j + k][l + 10];
 
-define void @sep3(ptr %B, i32 %n) nounwind uwtable ssp {
+define void @sep3(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'sep3'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx13, align 4 --> Dst: store i32 %conv, ptr %arrayidx13, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 S 0 0]!
@@ -280,7 +275,6 @@ define void @sep3(ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    da analyze - none!
 ;
 entry:
-  %A = getelementptr inbounds [100 x [100 x [100 x [100 x i32]]]], ptr @test_array_100x100x100x100, i32 0, i32 0
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %entry, %for.inc27
