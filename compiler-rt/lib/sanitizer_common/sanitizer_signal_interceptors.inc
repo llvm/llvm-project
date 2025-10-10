@@ -63,8 +63,9 @@ INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
 INTERCEPTOR(uptr, signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive)
-    // A side-effect is that a user can never uncloak the sanitizer's
-    // preinstalled signal handler.
+    // The user can neither view nor change the signal handler, regardless of
+    // the cloak_sanitizer_signal_handlers setting. This differs from
+    // sigaction().
     return (uptr) nullptr;
   uptr ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
@@ -89,8 +90,10 @@ INTERCEPTOR(int, sigaction_symname, int signum,
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) {
     if (!oldact) return 0;
     act = nullptr;
-    // A side-effect is that a user can never uncloak the sanitizer's
-    // preinstalled signal handler.
+    // If cloak_sanitizer_signal_handlers=true, the user can neither view nor
+    // change the signal handle.
+    // If false, the user can view but not change the signal handler. This
+    // differs from signal().
   }
   int ret;
   SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
