@@ -349,17 +349,20 @@ bool ModuleList::ReplaceModule(const lldb::ModuleSP &old_module_sp,
   return true;
 }
 
-bool ModuleList::RemoveIfOrphaned(const Module *module_ptr) {
-  if (module_ptr) {
+bool ModuleList::RemoveIfOrphaned(const ModuleWP module_wp) {
+  if (auto module_sp = module_wp.lock()) {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     collection::iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      if (pos->get() == module_ptr) {
-        if (pos->use_count() == 1) {
+      if (pos->get() == module_sp.get()) {
+        // Since module_sp increases the refcount by 1, the use count should be
+        // the regular use count + 1.
+        constexpr long kUseCountOrphaned = kUseCountModuleListOrphaned + 1;
+        if (pos->use_count() == kUseCountOrphaned) {
           pos = RemoveImpl(pos);
           return true;
-        } else
-          return false;
+        }
+        return false;
       }
     }
   }
@@ -386,7 +389,7 @@ size_t ModuleList::RemoveOrphans(bool mandatory) {
     made_progress = false;
     collection::iterator pos = m_modules.begin();
     while (pos != m_modules.end()) {
-      if (pos->use_count() == 1) {
+      if (pos->use_count() == kUseCountModuleListOrphaned) {
         pos = RemoveImpl(pos);
         ++remove_count;
         // We did make progress.
@@ -832,7 +835,7 @@ public:
     if (!module_sp)
       return false;
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
-    RemoveFromMap(*module_sp.get());
+    RemoveFromMap(module_sp);
     return m_list.Remove(module_sp, use_notifier);
   }
 
@@ -843,10 +846,10 @@ public:
     ReplaceEquivalentInMap(module_sp);
   }
 
-  bool RemoveIfOrphaned(const Module *module_ptr) {
+  bool RemoveIfOrphaned(const ModuleWP module_wp) {
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
-    RemoveFromMap(*module_ptr, /*if_orphaned=*/true);
-    return m_list.RemoveIfOrphaned(module_ptr);
+    RemoveFromMap(module_wp, /*if_orphaned=*/true);
+    return m_list.RemoveIfOrphaned(module_wp);
   }
 
   std::recursive_mutex &GetMutex() const { return m_list.GetMutex(); }
@@ -886,16 +889,22 @@ private:
     m_name_to_modules[name].push_back(module_sp);
   }
 
-  void RemoveFromMap(const Module &module, bool if_orphaned = false) {
-    ConstString name = module.GetFileSpec().GetFilename();
-    if (!m_name_to_modules.contains(name))
-      return;
-    llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
-    for (auto *it = vec.begin(); it != vec.end(); ++it) {
-      if (it->get() == &module) {
-        if (!if_orphaned || it->use_count() == kUseCountOrphaned) {
-          vec.erase(it);
-          break;
+  void RemoveFromMap(const ModuleWP module_wp, bool if_orphaned = false) {
+    if (auto module_sp = module_wp.lock()) {
+      ConstString name = module_sp->GetFileSpec().GetFilename();
+      if (!m_name_to_modules.contains(name))
+        return;
+      llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
+      for (auto *it = vec.begin(); it != vec.end(); ++it) {
+        if (it->get() == module_sp.get()) {
+          // Since module_sp increases the refcount by 1, the use count should
+          // be the regular use count + 1.
+          constexpr long kUseCountOrphaned =
+              kUseCountSharedModuleListOrphaned + 1;
+          if (!if_orphaned || it->use_count() == kUseCountOrphaned) {
+            vec.erase(it);
+            break;
+          }
         }
       }
     }
@@ -933,7 +942,7 @@ private:
     // remove_if moves the elements that match the condition to the end of the
     // container, and returns an iterator to the first element that was moved.
     auto *to_remove_start = llvm::remove_if(vec, [](const ModuleSP &module) {
-      return module.use_count() == kUseCountOrphaned;
+      return module.use_count() == kUseCountSharedModuleListOrphaned;
     });
 
     ModuleList to_remove;
@@ -976,11 +985,11 @@ private:
   llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
 
   /// The use count of a module held only by m_list and m_name_to_modules.
-  static constexpr long kUseCountOrphaned = 2;
+  static constexpr long kUseCountSharedModuleListOrphaned = 2;
 };
 
 struct SharedModuleListInfo {
-  ModuleList module_list;
+  SharedModuleList module_list;
   ModuleListProperties module_list_properties;
 };
 }
@@ -998,7 +1007,7 @@ static SharedModuleListInfo &GetSharedModuleListInfo()
   return *g_shared_module_list_info;
 }
 
-static ModuleList &GetSharedModuleList() {
+static SharedModuleList &GetSharedModuleList() {
   return GetSharedModuleListInfo().module_list;
 }
 
@@ -1008,8 +1017,8 @@ ModuleListProperties &ModuleList::GetGlobalModuleListProperties() {
 
 bool ModuleList::ModuleIsInCache(const Module *module_ptr) {
   if (module_ptr) {
-    ModuleList &shared_module_list = GetSharedModuleList();
-    return shared_module_list.FindModule(module_ptr).get() != nullptr;
+    SharedModuleList &shared_module_list = GetSharedModuleList();
+    return shared_module_list.FindModule(*module_ptr).get() != nullptr;
   }
   return false;
 }
@@ -1032,9 +1041,8 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             const FileSpecList *module_search_paths_ptr,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                             bool *did_create_ptr, bool always_create) {
-  ModuleList &shared_module_list = GetSharedModuleList();
-  std::lock_guard<std::recursive_mutex> guard(
-      shared_module_list.m_modules_mutex);
+  SharedModuleList &shared_module_list = GetSharedModuleList();
+  std::lock_guard<std::recursive_mutex> guard(shared_module_list.GetMutex());
   char path[PATH_MAX];
 
   Status error;
@@ -1278,8 +1286,8 @@ bool ModuleList::RemoveSharedModule(lldb::ModuleSP &module_sp) {
   return GetSharedModuleList().Remove(module_sp);
 }
 
-bool ModuleList::RemoveSharedModuleIfOrphaned(const Module *module_ptr) {
-  return GetSharedModuleList().RemoveIfOrphaned(module_ptr);
+bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
+  return GetSharedModuleList().RemoveIfOrphaned(module_wp);
 }
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
