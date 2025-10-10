@@ -582,11 +582,10 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
-    FileName = I->Name;
+  } else if (I->USR == GlobalNamespaceID)
+    FileName = "index";
   else
-    FileName = I->getFileBaseName();
+    FileName = I->Name;
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
