@@ -61,11 +61,6 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
     if (Version == Distro::UnknownDistro &&
         Line.starts_with("DISTRIB_CODENAME="))
       Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(17))
-                    .Case("hardy", Distro::UbuntuHardy)
-                    .Case("intrepid", Distro::UbuntuIntrepid)
-                    .Case("jaunty", Distro::UbuntuJaunty)
-                    .Case("karmic", Distro::UbuntuKarmic)
-                    .Case("lucid", Distro::UbuntuLucid)
                     .Case("maverick", Distro::UbuntuMaverick)
                     .Case("natty", Distro::UbuntuNatty)
                     .Case("oneiric", Distro::UbuntuOneiric)

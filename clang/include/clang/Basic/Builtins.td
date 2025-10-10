@@ -4945,6 +4945,12 @@ def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_nonuniformindex"];
   let Attributes = [NoThrow];

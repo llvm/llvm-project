@@ -71,6 +71,8 @@
 
 #include "Error.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
@@ -84,10 +86,15 @@ using Lambda = std::function<llvm::json::Value()>;
 using SectionLambda = std::function<llvm::json::Value(std::string)>;
 
 class ASTNode;
-using AstPtr = std::unique_ptr<ASTNode>;
+using AstPtr = ASTNode *;
 using EscapeMap = DenseMap<char, std::string>;
+using ASTNodeList = iplist<ASTNode>;
 
 struct MustacheContext {
+  MustacheContext(BumpPtrAllocator &Allocator, StringSaver &Saver)
+      : Allocator(Allocator), Saver(Saver) {}
+  BumpPtrAllocator &Allocator;
+  StringSaver &Saver;
   StringMap<AstPtr> Partials;
   StringMap<Lambda> Lambdas;
   StringMap<SectionLambda> SectionLambdas;
@@ -98,7 +105,7 @@ struct MustacheContext {
 // and Lambdas that are registered with it.
 class Template {
 public:
-  LLVM_ABI Template(StringRef TemplateStr);
+  LLVM_ABI Template(StringRef TemplateStr, MustacheContext &Ctx);
 
   Template(const Template &) = delete;
 
@@ -110,7 +117,7 @@ public:
   // type.
   LLVM_ABI ~Template();
 
-  LLVM_ABI Template &operator=(Template &&Other) noexcept;
+  Template &operator=(Template &&) = delete;
 
   LLVM_ABI void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
 
@@ -126,7 +133,7 @@ public:
   LLVM_ABI void overrideEscapeCharacters(DenseMap<char, std::string> Escapes);
 
 private:
-  MustacheContext Ctx;
+  MustacheContext &Ctx;
   AstPtr Tree;
 };
 } // namespace llvm::mustache

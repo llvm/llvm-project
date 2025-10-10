@@ -2079,6 +2079,29 @@ CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
   return fnOp;
 }
 
+cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
+                                                StringRef name, mlir::ArrayAttr,
+                                                [[maybe_unused]] bool isLocal,
+                                                bool assumeConvergent) {
+  if (assumeConvergent)
+    errorNYI("createRuntimeFunction: assumeConvergent");
+  if (isLocal)
+    errorNYI("createRuntimeFunction: local");
+
+  cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
+                                             /*forVtable=*/false);
+
+  if (entry) {
+    // TODO(cir): set the attributes of the function.
+    assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    entry.setDSOLocal(true);
+  }
+
+  return entry;
+}
+
 mlir::SymbolTable::Visibility
 CIRGenModule::getMLIRVisibility(cir::GlobalOp op) {
   // MLIR doesn't accept public symbols declarations (only
