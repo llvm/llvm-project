@@ -87,7 +87,8 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL, G_CTLZ, G_CTLZ_ZERO_UNDEF,
-                               G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP, G_ROTL, G_ROTR})
+                               G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTPOP, G_ROTL,
+                               G_ROTR})
       .legalFor({{s32, s32}, {s64, s64}})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
@@ -110,14 +111,16 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FDIV, G_FMUL, G_FNEG, G_FABS,
                                G_FCEIL, G_FFLOOR, G_FSQRT, G_INTRINSIC_TRUNC,
                                G_FNEARBYINT, G_FRINT, G_INTRINSIC_ROUNDEVEN,
-                               G_FMINIMUM, G_FMAXIMUM})
+                               G_FMINIMUM, G_FMAXIMUM, G_STRICT_FMUL})
       .legalFor({s32, s64})
       .minScalar(0, s32);
 
-  // TODO: _IEEE not lowering correctly?
-  getActionDefinitionsBuilder(
-      {G_FMINNUM, G_FMAXNUM, G_FMINNUM_IEEE, G_FMAXNUM_IEEE})
-      .lowerFor({s32, s64})
+  getActionDefinitionsBuilder({G_FMINNUM, G_FMAXNUM})
+      .customFor({s32, s64})
+      .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_FCANONICALIZE)
+      .customFor({s32, s64})
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_FMA, G_FREM})
@@ -262,7 +265,63 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
   auto &MIRBuilder = Helper.MIRBuilder;
 
   switch (MI.getOpcode()) {
-  case WebAssembly::G_PTRTOINT: {
+  case TargetOpcode::G_FCANONICALIZE: {
+    auto One = MRI.createGenericVirtualRegister(
+        MRI.getType(MI.getOperand(0).getReg()));
+    MIRBuilder.buildFConstant(One, 1.0);
+
+    MIRBuilder.buildInstr(TargetOpcode::G_STRICT_FMUL)
+        .addDef(MI.getOperand(0).getReg())
+        .addUse(MI.getOperand(1).getReg())
+        .addUse(One)
+        .setMIFlags(MI.getFlags())
+        .setMIFlag(MachineInstr::MIFlag::NoFPExcept);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_FMINNUM: {
+    if (!MI.getFlag(MachineInstr::MIFlag::FmNoNans))
+      return false;
+
+    if (MI.getFlag(MachineInstr::MIFlag::FmNsz)) {
+      MIRBuilder.buildInstr(TargetOpcode::G_FMINIMUM)
+          .addDef(MI.getOperand(0).getReg())
+          .addUse(MI.getOperand(1).getReg())
+          .addUse(MI.getOperand(2).getReg())
+          .setMIFlags(MI.getFlags());
+    } else {
+      auto TmpReg = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OLT, TmpReg,
+                           MI.getOperand(1), MI.getOperand(2));
+      MIRBuilder.buildSelect(MI.getOperand(0), TmpReg, MI.getOperand(1),
+                             MI.getOperand(2));
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_FMAXNUM: {
+    if (!MI.getFlag(MachineInstr::MIFlag::FmNoNans))
+      return false;
+    if (MI.getFlag(MachineInstr::MIFlag::FmNsz)) {
+      MIRBuilder.buildInstr(TargetOpcode::G_FMAXIMUM)
+          .addDef(MI.getOperand(0).getReg())
+          .addUse(MI.getOperand(1).getReg())
+          .addUse(MI.getOperand(2).getReg())
+          .setMIFlags(MI.getFlags());
+    } else {
+      auto TmpReg = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OGT, TmpReg,
+                           MI.getOperand(1), MI.getOperand(2));
+      MIRBuilder.buildSelect(MI.getOperand(0), TmpReg, MI.getOperand(1),
+                             MI.getOperand(2));
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_PTRTOINT: {
     auto TmpReg = MRI.createGenericVirtualRegister(
         LLT::scalar(MIRBuilder.getDataLayout().getPointerSizeInBits(0)));
 
@@ -271,7 +330,7 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
     MI.eraseFromParent();
     return true;
   }
-  case WebAssembly::G_INTTOPTR: {
+  case TargetOpcode::G_INTTOPTR: {
     auto TmpReg = MRI.createGenericVirtualRegister(
         LLT::scalar(MIRBuilder.getDataLayout().getPointerSizeInBits(0)));
 

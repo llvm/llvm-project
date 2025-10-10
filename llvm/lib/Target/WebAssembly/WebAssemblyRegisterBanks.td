@@ -12,7 +12,7 @@
 
 def I32RegBank : RegisterBank<"I32RegBank", [I32]>;
 def I64RegBank : RegisterBank<"I64RegBank", [I64]>;
-def F32RegBank : RegisterBank<"F64RegBank", [F32]>;
+def F32RegBank : RegisterBank<"F32RegBank", [F32]>;
 def F64RegBank : RegisterBank<"F64RegBank", [F64]>;
 
 def EXTERNREFRegBank : RegisterBank<"EXTERNREFRegBank", [EXTERNREF]>;
