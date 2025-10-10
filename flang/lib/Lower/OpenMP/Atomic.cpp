@@ -19,6 +19,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/type.h"
@@ -459,6 +460,24 @@ void Fortran::lower::omp::lowerAtomic(
   } else {
     int action0 = analysis.op0.what & analysis.Action;
     int action1 = analysis.op1.what & analysis.Action;
+
+    // Check for invalid atomic capture sequence.
+    // OpenMP allows: READ+UPDATE, UPDATE+READ, READ+WRITE, or UPDATE+WRITE
+    // in any order. Ensure we have one read-like and one write-like operation.
+    if (construct.IsCapture()) {
+      using Action = parser::OpenMPAtomicConstruct::Analysis;
+      const bool hasRead = (action0 == Action::Read || action1 == Action::Read);
+      const bool hasWriteOrUpdate =
+          (action0 == Action::Write || action0 == Action::Update ||
+           action1 == Action::Write || action1 == Action::Update);
+
+      if (!(hasRead && hasWriteOrUpdate)) {
+        mlir::emitError(loc, "OpenMP atomic capture requires one read and one "
+                             "write/update operation");
+        return;
+      }
+    }
+
     mlir::Operation *captureOp = nullptr;
     fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
     fir::FirOpBuilder::InsertPoint atomicAt, postAt;
