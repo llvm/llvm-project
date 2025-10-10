@@ -375,6 +375,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case MuslSF:
     return "muslsf";
   case MuslX32: return "muslx32";
+  case MuslWALI: return "muslwali";
   case Simulator: return "simulator";
   case Pixel: return "pixel";
   case Vertex: return "vertex";

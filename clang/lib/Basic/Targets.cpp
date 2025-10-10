@@ -706,8 +706,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
           Triple, Opts);
 
       case llvm::Triple::Linux:
-      return std::make_unique<WALITargetInfo<WebAssembly32TargetInfo>>(Triple,
-                                                                       Opts);
+        return std::make_unique<WALITargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                         Opts);
       case llvm::Triple::UnknownOS:
       return std::make_unique<WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>>(
           Triple, Opts);
