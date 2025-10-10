@@ -376,6 +376,11 @@ generic-ubsan)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake"
     check-runtimes
 ;;
+generic-pfp)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-pfp.cmake"
+    check-runtimes
+;;
 #
 # Various build configurations
 #
@@ -410,42 +415,6 @@ bootstrapping-build)
     ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     ccache -s
-;;
-bootstrapping-build-pfp)
-    clean
-
-    triple="$(${CXX} --print-target-triple)"
-
-    step "Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="clang;lld" \
-          -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-          -DLLVM_RUNTIME_TARGETS="$triple" \
-          -DLLVM_HOST_TRIPLE="$triple" \
-          -DLLVM_TARGETS_TO_BUILD="host" \
-          -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
-          -DLLVM_ENABLE_ASSERTIONS=ON \
-          "-DRUNTIMES_${triple}_LIBCXXABI_ENABLE_SHARED=OFF" \
-          "-DRUNTIMES_${triple}_LIBCXX_USE_COMPILER_RT=ON" \
-          "-DRUNTIMES_${triple}_LIBCXX_PFP=tagged" \
-          "-DRUNTIMES_${triple}_LIBCXX_ENABLE_SHARED=OFF" \
-          "-DRUNTIMES_${triple}_LIBCXX_TEST_CONFIG=llvm-libc++-static.cfg.in" \
-          "-DRUNTIMES_${triple}_LIBUNWIND_ENABLE_SHARED=OFF" \
-          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
-
-    # FIXME: Currently this also runs the sanitizer tests due to compiler-rt
-    # being in LLVM_ENABLE_RUNTIMES for the emulated PAC runtime. Ideally this
-    # would only run the libc++ and libc++abi tests.
-    step "Running the libc++ and libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-runtimes
-
-    # FIXME: Debugging support for PFP is incomplete so don't run the LLDB tests
-    # as above for now.
 ;;
 generic-static)
     clean

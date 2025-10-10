@@ -209,7 +209,11 @@ set(LIBCXX_LIBRARY_VERSION "${LIBCXX_ABI_VERSION}.0" CACHE STRING
    For example, -DLIBCXX_LIBRARY_VERSION=x.y will result in the library being named
    libc++.x.y.dylib, along with the usual symlinks pointing to that. On Apple platforms,
    this also controls the linker's 'current_version' property.")
-set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
+set(default_abi_namespace "__${LIBCXX_ABI_VERSION}")
+if(NOT LIBCXX_PFP STREQUAL "none")
+  set(default_abi_namespace "${default_abi_namespace}_pfp_${LIBCXX_PFP}")
+endif()
+set(LIBCXX_ABI_NAMESPACE "${default_abi_namespace}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
