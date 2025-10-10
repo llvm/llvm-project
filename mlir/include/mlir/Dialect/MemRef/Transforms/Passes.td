@@ -164,6 +164,11 @@ def ResolveRankedShapeTypeResultDimsPass
     implement the `ReifyRankedShapedTypeOpInterface` in terms of
     shapes of its operands.
   }];
+  let options = [
+    Option<"errorOnPatternIterationLimit", "error-on-pattern-iteration-limit", "bool",
+           /*default=*/"true",
+           "Throw an error when pattern rewriter hits iteration limit">,
+  ];
   let dependentDialects = [
     "memref::MemRefDialect", "tensor::TensorDialect"
   ];
@@ -177,6 +182,11 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
     `ReifyRankedShapedTypeOpInterface` in terms of shapes of its
     operands.
   }];
+  let options = [
+    Option<"errorOnPatternIterationLimit", "error-on-pattern-iteration-limit", "bool",
+           /*default=*/"true",
+           "Throw an error when pattern rewriter hits iteration limit">,
+  ];
   let dependentDialects = [
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];

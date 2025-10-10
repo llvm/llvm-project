@@ -35,7 +35,8 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
         DestinationStyleOpInterface, LinalgRelayoutOpInterface,
         ConditionallySpeculatable, NoMemoryEffect,
-        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+          "reifyResultShapes"]>,
         TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
                    "$_self">])> {
