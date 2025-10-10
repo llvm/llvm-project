@@ -4,7 +4,7 @@
 ;; call sites annotated with !callee_type metadata.
 ;; Test if the .callgraph section contains unique direct callees.
 
-; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
+; RUN: llc -mtriple=arm-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
 declare !type !0 void @direct_foo()
 declare !type !1 i32 @direct_bar(i8)
@@ -36,24 +36,28 @@ entry:
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
 
-; CHECK: .section .callgraph,"o",@progbits,.text
+; CHECK: .section .callgraph,"o",%progbits,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
 ; CHECK-NEXT: .byte   7
 ;; Function Entry PC
-; CHECK-NEXT: .quad   [[LABEL_FUNC]]
+; CHECK-NEXT: .long   [[LABEL_FUNC]]
 ;; Function type ID -- set to 0 as no type metadata attached to function.
-; CHECK-NEXT: .quad   0
+; CHECK-NEXT: .long   0
+; CHECK-NEXT: .long   0
 ;; Number of unique direct callees.
 ; CHECK-NEXT: .byte	  3
 ;; Direct callees.
-; CHECK-NEXT: .quad	direct_foo
-; CHECK-NEXT: .quad	direct_bar
-; CHECK-NEXT: .quad	direct_baz
+; CHECK-NEXT: .long	direct_foo
+; CHECK-NEXT: .long	direct_bar
+; CHECK-NEXT: .long	direct_baz
 ;; Number of unique indirect target type IDs.
 ; CHECK-NEXT: .byte   3
 ;; Indirect type IDs.
-; CHECK-NEXT: .quad   4524972987496481828
-; CHECK-NEXT: .quad   3498816979441845844
-; CHECK-NEXT: .quad   8646233951371320954
+; CHECK-NEXT: .long 838288420
+; CHECK-NEXT: .long 1053552373
+; CHECK-NEXT: .long 1505527380
+; CHECK-NEXT: .long 814631809
+; CHECK-NEXT: .long 342417018
+; CHECK-NEXT: .long 2013108216
