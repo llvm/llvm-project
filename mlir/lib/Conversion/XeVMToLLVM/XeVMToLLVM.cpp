@@ -719,7 +719,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
 //===----------------------------------------------------------------------===//
 /*
 // Launch Config ops
-//   dimidx - x, y, x - is fixed to i32
+//   dimidx - x, y, z - is fixed to i32
 //   return type is set by XeVM type converter
 // get_local_id
 xevm::WorkitemIdXOp;
@@ -786,10 +786,8 @@ class LaunchConfigOpToOCLPattern : public OpConversionPattern<OpType> {
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    std::pair<StringRef, int64_t> config = getConfig(op);
-    std::string baseName = config.first.str();
+    auto [baseName, dim] = getConfig(op);
     Type dimTy = rewriter.getI32Type();
-    int64_t dim = config.second;
     Value dimVal = LLVM::ConstantOp::create(rewriter, loc, dimTy,
                                             static_cast<int64_t>(dim));
     std::string func = mangle(baseName, {dimTy}, {true});
