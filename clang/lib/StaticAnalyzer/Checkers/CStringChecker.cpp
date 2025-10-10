@@ -2418,15 +2418,12 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallEvent &Call,
 
   // If the two arguments might be the same buffer, we know the result is 0,
   // and we only need to check one size.
-  if (StSameBuf) {
+  if (StSameBuf && !StNotSameBuf) {
     StSameBuf =
         StSameBuf->BindExpr(Call.getOriginExpr(), LCtx,
                             svalBuilder.makeZeroVal(Call.getResultType()));
     C.addTransition(StSameBuf);
-
-    // If the two arguments are GUARANTEED to be the same, we're done!
-    if (!StNotSameBuf)
-      return;
+    return;
   }
 
   assert(StNotSameBuf);
