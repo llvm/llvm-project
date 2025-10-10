@@ -1352,6 +1352,9 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
                                               DataRC1, SubReg);
     }
 
+    if (Data0->getReg().isPhysical() || Data1->getReg().isPhysical()) {
+      return nullptr;
+    }
     bool canBeConstrainedData0 =
         MRI->constrainRegClass(Data0->getReg(), DataRC0);
     bool canBeConstrainedData1 =
