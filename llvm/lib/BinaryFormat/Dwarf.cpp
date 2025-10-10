@@ -898,6 +898,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return EnumKindString(Val);
   case DW_AT_LLVM_memory_space:
     return MemorySpaceString(Val);
+  case DW_AT_language_name:
+    return SourceLanguageNameString(static_cast<SourceLanguageName>(Val));
   }
 
   return StringRef();

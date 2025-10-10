@@ -600,9 +600,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                            !IsRISCV64 && !IsLoongArch64 &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
-  bool IsAndroidWithIfuncSupport =
-      IsAndroid && !TargetTriple.isAndroidVersionLT(21);
-  Mapping.InGlobal = ClWithIfunc && IsAndroidWithIfuncSupport && IsArmOrThumb;
+  Mapping.InGlobal = ClWithIfunc && IsAndroid && IsArmOrThumb;
 
   return Mapping;
 }

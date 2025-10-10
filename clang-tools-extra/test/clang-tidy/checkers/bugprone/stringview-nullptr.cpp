@@ -134,124 +134,124 @@ void temporary_construction() /* a */ {
   {
     (void)(std::string_view(nullptr)) /* a1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing basic_string_view from null is undefined; replace with the default constructor
-    // CHECK-FIXES: {{^}}    (void)(std::string_view()) /* a1 */;
+    // CHECK-FIXES: (void)(std::string_view()) /* a1 */;
 
     (void)(std::string_view((nullptr))) /* a2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view()) /* a2 */;
+    // CHECK-FIXES: (void)(std::string_view()) /* a2 */;
 
     (void)(std::string_view({nullptr})) /* a3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view()) /* a3 */;
+    // CHECK-FIXES: (void)(std::string_view()) /* a3 */;
 
     (void)(std::string_view({(nullptr)})) /* a4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view()) /* a4 */;
+    // CHECK-FIXES: (void)(std::string_view()) /* a4 */;
 
     (void)(std::string_view({})) /* a5 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view()) /* a5 */;
+    // CHECK-FIXES: (void)(std::string_view()) /* a5 */;
   }
 
   // Temporary Object
   {
     (void)(std::string_view{nullptr}) /* a6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view{}) /* a6 */;
+    // CHECK-FIXES: (void)(std::string_view{}) /* a6 */;
 
     (void)(std::string_view{(nullptr)}) /* a7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view{}) /* a7 */;
+    // CHECK-FIXES: (void)(std::string_view{}) /* a7 */;
 
     (void)(std::string_view{{nullptr}}) /* a8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view{}) /* a8 */;
+    // CHECK-FIXES: (void)(std::string_view{}) /* a8 */;
 
     (void)(std::string_view{{(nullptr)}}) /* a9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view{}) /* a9 */;
+    // CHECK-FIXES: (void)(std::string_view{}) /* a9 */;
 
     (void)(std::string_view{{}}) /* a10 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(std::string_view{}) /* a10 */;
+    // CHECK-FIXES: (void)(std::string_view{}) /* a10 */;
   }
 
   // C-Style Cast && Compound Literal
   {
     (void)((std::string_view) nullptr) /* a11 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view) {}) /* a11 */;
+    // CHECK-FIXES: (void)((std::string_view) {}) /* a11 */;
 
     (void)((std::string_view)(nullptr)) /* a12 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view){}) /* a12 */;
+    // CHECK-FIXES: (void)((std::string_view){}) /* a12 */;
 
     (void)((std::string_view){nullptr}) /* a13 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view){}) /* a13 */;
+    // CHECK-FIXES: (void)((std::string_view){}) /* a13 */;
 
     (void)((std::string_view){(nullptr)}) /* a14 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view){}) /* a14 */;
+    // CHECK-FIXES: (void)((std::string_view){}) /* a14 */;
 
     (void)((std::string_view){{nullptr}}) /* a15 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view){}) /* a15 */;
+    // CHECK-FIXES: (void)((std::string_view){}) /* a15 */;
 
     (void)((std::string_view){{(nullptr)}}) /* a16 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view){}) /* a16 */;
+    // CHECK-FIXES: (void)((std::string_view){}) /* a16 */;
 
     (void)((std::string_view){{}}) /* a17 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((std::string_view){}) /* a17 */;
+    // CHECK-FIXES: (void)((std::string_view){}) /* a17 */;
 
     (void)((const std::string_view) nullptr) /* a18 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view) {}) /* a18 */;
+    // CHECK-FIXES: (void)((const std::string_view) {}) /* a18 */;
 
     (void)((const std::string_view)(nullptr)) /* a19 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view){}) /* a19 */;
+    // CHECK-FIXES: (void)((const std::string_view){}) /* a19 */;
 
     (void)((const std::string_view){nullptr}) /* a20 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view){}) /* a20 */;
+    // CHECK-FIXES: (void)((const std::string_view){}) /* a20 */;
 
     (void)((const std::string_view){(nullptr)}) /* a21 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view){}) /* a21 */;
+    // CHECK-FIXES: (void)((const std::string_view){}) /* a21 */;
 
     (void)((const std::string_view){{nullptr}}) /* a22 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view){}) /* a22 */;
+    // CHECK-FIXES: (void)((const std::string_view){}) /* a22 */;
 
     (void)((const std::string_view){{(nullptr)}}) /* a23 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view){}) /* a23 */;
+    // CHECK-FIXES: (void)((const std::string_view){}) /* a23 */;
 
     (void)((const std::string_view){{}}) /* a24 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)((const std::string_view){}) /* a24 */;
+    // CHECK-FIXES: (void)((const std::string_view){}) /* a24 */;
   }
 
   // Static Cast
   {
     (void)(static_cast<std::string_view>(nullptr)) /* a25 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: casting to basic_string_view from null is undefined; replace with the empty string
-    // CHECK-FIXES: {{^}}    (void)(static_cast<std::string_view>("")) /* a25 */;
+    // CHECK-FIXES: (void)(static_cast<std::string_view>("")) /* a25 */;
 
     (void)(static_cast<std::string_view>((nullptr))) /* a26 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(static_cast<std::string_view>("")) /* a26 */;
+    // CHECK-FIXES: (void)(static_cast<std::string_view>("")) /* a26 */;
 
     (void)(static_cast<const std::string_view>(nullptr)) /* a27 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(static_cast<const std::string_view>("")) /* a27 */;
+    // CHECK-FIXES: (void)(static_cast<const std::string_view>("")) /* a27 */;
 
     (void)(static_cast<const std::string_view>((nullptr))) /* a28 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(static_cast<const std::string_view>("")) /* a28 */;
+    // CHECK-FIXES: (void)(static_cast<const std::string_view>("")) /* a28 */;
   }
 }
 
@@ -260,240 +260,240 @@ void stack_construction() /* b */ {
   {
     std::string_view b1 = nullptr;
     // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b1 = {};
+    // CHECK-FIXES: std::string_view b1 = {};
 
     std::string_view b2 = (nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b2 = {};
+    // CHECK-FIXES: std::string_view b2 = {};
 
     const std::string_view b3 = nullptr;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b3 = {};
+    // CHECK-FIXES: const std::string_view b3 = {};
 
     const std::string_view b4 = (nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b4 = {};
+    // CHECK-FIXES: const std::string_view b4 = {};
   }
 
   // Copy Initialization With Temporary
   {
     std::string_view b5 = std::string_view(nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b5 = std::string_view();
+    // CHECK-FIXES: std::string_view b5 = std::string_view();
 
     std::string_view b6 = std::string_view{nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b6 = std::string_view{};
+    // CHECK-FIXES: std::string_view b6 = std::string_view{};
 
     std::string_view b7 = (std::string_view) nullptr;
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b7 = (std::string_view) {};
+    // CHECK-FIXES: std::string_view b7 = (std::string_view) {};
 
     std::string_view b8 = (std::string_view){nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b8 = (std::string_view){};
+    // CHECK-FIXES: std::string_view b8 = (std::string_view){};
 
     std::string_view b9 = static_cast<SV>(nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view b9 = static_cast<SV>("");
+    // CHECK-FIXES: std::string_view b9 = static_cast<SV>("");
   }
 
   // Copy List Initialization
   {
     std::string_view b10 = {nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b10 = {};
+    // CHECK-FIXES: std::string_view b10 = {};
 
     std::string_view b11 = {(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b11 = {};
+    // CHECK-FIXES: std::string_view b11 = {};
 
     std::string_view b12 = {{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b12 = {};
+    // CHECK-FIXES: std::string_view b12 = {};
 
     std::string_view b13 = {{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b13 = {};
+    // CHECK-FIXES: std::string_view b13 = {};
 
     std::string_view b14 = {{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b14 = {};
+    // CHECK-FIXES: std::string_view b14 = {};
 
     const std::string_view b15 = {nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b15 = {};
+    // CHECK-FIXES: const std::string_view b15 = {};
 
     const std::string_view b16 = {(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b16 = {};
+    // CHECK-FIXES: const std::string_view b16 = {};
 
     const std::string_view b17 = {{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b17 = {};
+    // CHECK-FIXES: const std::string_view b17 = {};
 
     const std::string_view b18 = {{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b18 = {};
+    // CHECK-FIXES: const std::string_view b18 = {};
 
     const std::string_view b19 = {{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b19 = {};
+    // CHECK-FIXES: const std::string_view b19 = {};
   }
 
   // Copy List Initialization With Temporary
   {
     std::string_view b20 = {std::string_view(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b20 = {std::string_view()};
+    // CHECK-FIXES: std::string_view b20 = {std::string_view()};
 
     std::string_view b21 = {std::string_view{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b21 = {std::string_view{}};
+    // CHECK-FIXES: std::string_view b21 = {std::string_view{}};
 
     std::string_view b22 = {(std::string_view) nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b22 = {(std::string_view) {}};
+    // CHECK-FIXES: std::string_view b22 = {(std::string_view) {}};
 
     std::string_view b23 = {(std::string_view){nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b23 = {(std::string_view){}};
+    // CHECK-FIXES: std::string_view b23 = {(std::string_view){}};
 
     std::string_view b24 = {static_cast<SV>(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view b24 = {static_cast<SV>("")};
+    // CHECK-FIXES: std::string_view b24 = {static_cast<SV>("")};
   }
 
   // Direct Initialization
   {
     std::string_view b25(nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b25;
+    // CHECK-FIXES: std::string_view b25;
 
     std::string_view b26((nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b26;
+    // CHECK-FIXES: std::string_view b26;
 
     std::string_view b27({nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b27;
+    // CHECK-FIXES: std::string_view b27;
 
     std::string_view b28({(nullptr)});
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b28;
+    // CHECK-FIXES: std::string_view b28;
 
     std::string_view b29({}); // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b29;
+    // CHECK-FIXES: std::string_view b29;
 
     const std::string_view b30(nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b30;
+    // CHECK-FIXES: const std::string_view b30;
 
     const std::string_view b31((nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b31;
+    // CHECK-FIXES: const std::string_view b31;
 
     const std::string_view b32({nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b32;
+    // CHECK-FIXES: const std::string_view b32;
 
     const std::string_view b33({(nullptr)});
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b33;
+    // CHECK-FIXES: const std::string_view b33;
 
     const std::string_view b34({}); // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b34;
+    // CHECK-FIXES: const std::string_view b34;
   }
 
   // Direct Initialization With Temporary
   {
     std::string_view b35(std::string_view(nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b35(std::string_view());
+    // CHECK-FIXES: std::string_view b35(std::string_view());
 
     std::string_view b36(std::string_view{nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b36(std::string_view{});
+    // CHECK-FIXES: std::string_view b36(std::string_view{});
 
     std::string_view b37((std::string_view) nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b37((std::string_view) {});
+    // CHECK-FIXES: std::string_view b37((std::string_view) {});
 
     std::string_view b38((std::string_view){nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b38((std::string_view){});
+    // CHECK-FIXES: std::string_view b38((std::string_view){});
 
     std::string_view b39(static_cast<SV>(nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view b39(static_cast<SV>(""));
+    // CHECK-FIXES: std::string_view b39(static_cast<SV>(""));
   }
 
   // Direct List Initialization
   {
     std::string_view b40{nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b40{};
+    // CHECK-FIXES: std::string_view b40{};
 
     std::string_view b41{(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b41{};
+    // CHECK-FIXES: std::string_view b41{};
 
     std::string_view b42{{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b42{};
+    // CHECK-FIXES: std::string_view b42{};
 
     std::string_view b43{{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b43{};
+    // CHECK-FIXES: std::string_view b43{};
 
     std::string_view b44{{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b44{};
+    // CHECK-FIXES: std::string_view b44{};
 
     const std::string_view b45{nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b45{};
+    // CHECK-FIXES: const std::string_view b45{};
 
     const std::string_view b46{(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b46{};
+    // CHECK-FIXES: const std::string_view b46{};
 
     const std::string_view b47{{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b47{};
+    // CHECK-FIXES: const std::string_view b47{};
 
     const std::string_view b48{{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b48{};
+    // CHECK-FIXES: const std::string_view b48{};
 
     const std::string_view b49{{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view b49{};
+    // CHECK-FIXES: const std::string_view b49{};
   }
 
   // Direct List Initialization With Temporary
   {
     std::string_view b50{std::string_view(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b50{std::string_view()};
+    // CHECK-FIXES: std::string_view b50{std::string_view()};
 
     std::string_view b51{std::string_view{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b51{std::string_view{}};
+    // CHECK-FIXES: std::string_view b51{std::string_view{}};
 
     std::string_view b52{(std::string_view) nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b52{(std::string_view) {}};
+    // CHECK-FIXES: std::string_view b52{(std::string_view) {}};
 
     std::string_view b53{(std::string_view){nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view b53{(std::string_view){}};
+    // CHECK-FIXES: std::string_view b53{(std::string_view){}};
 
     std::string_view b54{static_cast<SV>(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view b54{static_cast<SV>("")};
+    // CHECK-FIXES: std::string_view b54{static_cast<SV>("")};
   }
 }
 
@@ -503,169 +503,169 @@ void field_construction() /* c */ {
   struct DMICopyInitialization {
     std::string_view c1 = nullptr;
     // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c1 = {};
+    // CHECK-FIXES: std::string_view c1 = {};
 
     std::string_view c2 = (nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c2 = {};
+    // CHECK-FIXES: std::string_view c2 = {};
 
     const std::string_view c3 = nullptr;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c3 = {};
+    // CHECK-FIXES: const std::string_view c3 = {};
 
     const std::string_view c4 = (nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c4 = {};
+    // CHECK-FIXES: const std::string_view c4 = {};
   };
 
   struct DMICopyInitializationWithTemporary {
     std::string_view c5 = std::string_view(nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c5 = std::string_view();
+    // CHECK-FIXES: std::string_view c5 = std::string_view();
 
     std::string_view c6 = std::string_view{nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c6 = std::string_view{};
+    // CHECK-FIXES: std::string_view c6 = std::string_view{};
 
     std::string_view c7 = (std::string_view) nullptr;
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c7 = (std::string_view) {};
+    // CHECK-FIXES: std::string_view c7 = (std::string_view) {};
 
     std::string_view c8 = (std::string_view){nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c8 = (std::string_view){};
+    // CHECK-FIXES: std::string_view c8 = (std::string_view){};
 
     std::string_view c9 = static_cast<SV>(nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view c9 = static_cast<SV>("");
+    // CHECK-FIXES: std::string_view c9 = static_cast<SV>("");
   };
 
   struct DMICopyListInitialization {
     std::string_view c10 = {nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c10 = {};
+    // CHECK-FIXES: std::string_view c10 = {};
 
     std::string_view c11 = {(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c11 = {};
+    // CHECK-FIXES: std::string_view c11 = {};
 
     std::string_view c12 = {{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c12 = {};
+    // CHECK-FIXES: std::string_view c12 = {};
 
     std::string_view c13 = {{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c13 = {};
+    // CHECK-FIXES: std::string_view c13 = {};
 
     std::string_view c14 = {{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c14 = {};
+    // CHECK-FIXES: std::string_view c14 = {};
 
     const std::string_view c15 = {nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c15 = {};
+    // CHECK-FIXES: const std::string_view c15 = {};
 
     const std::string_view c16 = {(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c16 = {};
+    // CHECK-FIXES: const std::string_view c16 = {};
 
     const std::string_view c17 = {{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c17 = {};
+    // CHECK-FIXES: const std::string_view c17 = {};
 
     const std::string_view c18 = {{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c18 = {};
+    // CHECK-FIXES: const std::string_view c18 = {};
 
     const std::string_view c19 = {{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c19 = {};
+    // CHECK-FIXES: const std::string_view c19 = {};
   };
 
   struct DMICopyListInitializationWithTemporary {
     std::string_view c20 = {std::string_view(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c20 = {std::string_view()};
+    // CHECK-FIXES: std::string_view c20 = {std::string_view()};
 
     std::string_view c21 = {std::string_view{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:46: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c21 = {std::string_view{}};
+    // CHECK-FIXES: std::string_view c21 = {std::string_view{}};
 
     std::string_view c22 = {(std::string_view) nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c22 = {(std::string_view) {}};
+    // CHECK-FIXES: std::string_view c22 = {(std::string_view) {}};
 
     std::string_view c23 = {(std::string_view){nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c23 = {(std::string_view){}};
+    // CHECK-FIXES: std::string_view c23 = {(std::string_view){}};
 
     std::string_view c24 = {static_cast<SV>(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view c24 = {static_cast<SV>("")};
+    // CHECK-FIXES: std::string_view c24 = {static_cast<SV>("")};
   };
 
   struct DMIDirectListInitialization {
     std::string_view c25{nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c25{};
+    // CHECK-FIXES: std::string_view c25{};
 
     std::string_view c26{(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c26{};
+    // CHECK-FIXES: std::string_view c26{};
 
     std::string_view c27{{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c27{};
+    // CHECK-FIXES: std::string_view c27{};
 
     std::string_view c28{{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c28{};
+    // CHECK-FIXES: std::string_view c28{};
 
     std::string_view c29{{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c29{};
+    // CHECK-FIXES: std::string_view c29{};
 
     const std::string_view c30{nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c30{};
+    // CHECK-FIXES: const std::string_view c30{};
 
     const std::string_view c31{(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c31{};
+    // CHECK-FIXES: const std::string_view c31{};
 
     const std::string_view c32{{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c32{};
+    // CHECK-FIXES: const std::string_view c32{};
 
     const std::string_view c33{{(nullptr)}};
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c33{};
+    // CHECK-FIXES: const std::string_view c33{};
 
     const std::string_view c34{{}}; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    const std::string_view c34{};
+    // CHECK-FIXES: const std::string_view c34{};
   };
 
   struct DMIDirectListInitializationWithTemporary {
     std::string_view c35{std::string_view(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c35{std::string_view()};
+    // CHECK-FIXES: std::string_view c35{std::string_view()};
 
     std::string_view c36{std::string_view{nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c36{std::string_view{}};
+    // CHECK-FIXES: std::string_view c36{std::string_view{}};
 
     std::string_view c37{(std::string_view) nullptr};
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c37{(std::string_view) {}};
+    // CHECK-FIXES: std::string_view c37{(std::string_view) {}};
 
     std::string_view c38{(std::string_view){nullptr}};
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    std::string_view c38{(std::string_view){}};
+    // CHECK-FIXES: std::string_view c38{(std::string_view){}};
 
     std::string_view c39{static_cast<SV>(nullptr)};
     // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    std::string_view c39{static_cast<SV>("")};
+    // CHECK-FIXES: std::string_view c39{static_cast<SV>("")};
   };
 
   // Constructor Initializers
@@ -680,23 +680,23 @@ void field_construction() /* c */ {
     CIDirectInitialization()
         : c40(nullptr),
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}        : c40(),
+          // CHECK-FIXES: : c40(),
 
           c41((nullptr)),
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c41(),
+          // CHECK-FIXES: c41(),
 
           c42({nullptr}),
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c42(),
+          // CHECK-FIXES: c42(),
 
           c43({(nullptr)}),
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c43(),
+          // CHECK-FIXES: c43(),
 
           c44({}) { // Default `const CharT*`
       // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-      // CHECK-FIXES: {{^}}          c44() {
+      // CHECK-FIXES: c44() {
     }
   };
 
@@ -710,23 +710,23 @@ void field_construction() /* c */ {
     CIDirectInitializationWithTemporary()
         : c45(std::string_view(nullptr)),
           // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}        : c45(std::string_view()),
+          // CHECK-FIXES: : c45(std::string_view()),
 
           c46(std::string_view{nullptr}),
           // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c46(std::string_view{}),
+          // CHECK-FIXES: c46(std::string_view{}),
 
           c47((std::string_view) nullptr),
           // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c47((std::string_view) {}),
+          // CHECK-FIXES: c47((std::string_view) {}),
 
           c48((std::string_view){nullptr}),
           // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c48((std::string_view){}),
+          // CHECK-FIXES: c48((std::string_view){}),
 
           c49(static_cast<SV>(nullptr)) {
       // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: casting{{.*}}empty string
-      // CHECK-FIXES: {{^}}          c49(static_cast<SV>("")) {
+      // CHECK-FIXES: c49(static_cast<SV>("")) {
     }
   };
 
@@ -740,23 +740,23 @@ void field_construction() /* c */ {
     CIDirectListInitialization()
         : c50{nullptr},
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}        : c50{},
+          // CHECK-FIXES: : c50{},
 
           c51{(nullptr)},
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c51{},
+          // CHECK-FIXES: c51{},
 
           c52{{nullptr}},
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c52{},
+          // CHECK-FIXES: c52{},
 
           c53{{(nullptr)}},
           // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c53{},
+          // CHECK-FIXES: c53{},
 
           c54{{}} { // Default `const CharT*`
       // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: constructing{{.*}}default
-      // CHECK-FIXES: {{^}}          c54{} {
+      // CHECK-FIXES: c54{} {
     }
   };
 
@@ -770,23 +770,23 @@ void field_construction() /* c */ {
     CIDirectListInitializationWithTemporary()
         : c55{std::string_view(nullptr)},
           // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}        : c55{std::string_view()},
+          // CHECK-FIXES: : c55{std::string_view()},
 
           c56{std::string_view{nullptr}},
           // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c56{std::string_view{}},
+          // CHECK-FIXES: c56{std::string_view{}},
 
           c57{(std::string_view) nullptr},
           // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c57{(std::string_view) {}},
+          // CHECK-FIXES: c57{(std::string_view) {}},
 
           c58{(std::string_view){nullptr}},
           // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-          // CHECK-FIXES: {{^}}          c58{(std::string_view){}},
+          // CHECK-FIXES: c58{(std::string_view){}},
 
           c59{static_cast<SV>(nullptr)} {
       // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: casting{{.*}}empty string
-      // CHECK-FIXES: {{^}}          c59{static_cast<SV>("")} {
+      // CHECK-FIXES: c59{static_cast<SV>("")} {
     }
   };
 }
@@ -796,108 +796,108 @@ void default_argument_construction() /* d */ {
   {
     void d1(std::string_view sv = nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d1(std::string_view sv = {});
+    // CHECK-FIXES: void d1(std::string_view sv = {});
 
     void d2(std::string_view sv = (nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d2(std::string_view sv = {});
+    // CHECK-FIXES: void d2(std::string_view sv = {});
 
     void d3(const std::string_view sv = nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d3(const std::string_view sv = {});
+    // CHECK-FIXES: void d3(const std::string_view sv = {});
 
     void d4(const std::string_view sv = (nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d4(const std::string_view sv = {});
+    // CHECK-FIXES: void d4(const std::string_view sv = {});
   }
 
   // Copy Initialization With Temporary
   {
     void d5(std::string_view sv = std::string_view(nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d5(std::string_view sv = std::string_view());
+    // CHECK-FIXES: void d5(std::string_view sv = std::string_view());
 
     void d6(std::string_view sv = std::string_view{nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d6(std::string_view sv = std::string_view{});
+    // CHECK-FIXES: void d6(std::string_view sv = std::string_view{});
 
     void d7(std::string_view sv = (std::string_view) nullptr);
     // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d7(std::string_view sv = (std::string_view) {});
+    // CHECK-FIXES: void d7(std::string_view sv = (std::string_view) {});
 
     void d8(std::string_view sv = (std::string_view){nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d8(std::string_view sv = (std::string_view){});
+    // CHECK-FIXES: void d8(std::string_view sv = (std::string_view){});
 
     void d9(std::string_view sv = static_cast<SV>(nullptr));
     // CHECK-MESSAGES: :[[@LINE-1]]:51: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    void d9(std::string_view sv = static_cast<SV>(""));
+    // CHECK-FIXES: void d9(std::string_view sv = static_cast<SV>(""));
   }
 
   // Copy List Initialization
   {
     void d10(std::string_view sv = {nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d10(std::string_view sv = {});
+    // CHECK-FIXES: void d10(std::string_view sv = {});
 
     void d11(std::string_view sv = {(nullptr)});
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d11(std::string_view sv = {});
+    // CHECK-FIXES: void d11(std::string_view sv = {});
 
     void d12(std::string_view sv = {{nullptr}});
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d12(std::string_view sv = {});
+    // CHECK-FIXES: void d12(std::string_view sv = {});
 
     void d13(std::string_view sv = {{(nullptr)}});
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d13(std::string_view sv = {});
+    // CHECK-FIXES: void d13(std::string_view sv = {});
 
     void d14(std::string_view sv = {{}}); // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d14(std::string_view sv = {});
+    // CHECK-FIXES: void d14(std::string_view sv = {});
 
     void d15(const std::string_view sv = {nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d15(const std::string_view sv = {});
+    // CHECK-FIXES: void d15(const std::string_view sv = {});
 
     void d16(const std::string_view sv = {(nullptr)});
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d16(const std::string_view sv = {});
+    // CHECK-FIXES: void d16(const std::string_view sv = {});
 
     void d17(const std::string_view sv = {{nullptr}});
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d17(const std::string_view sv = {});
+    // CHECK-FIXES: void d17(const std::string_view sv = {});
 
     void d18(const std::string_view sv = {{(nullptr)}});
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d18(const std::string_view sv = {});
+    // CHECK-FIXES: void d18(const std::string_view sv = {});
 
     void d19(const std::string_view sv = {{}}); // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d19(const std::string_view sv = {});
+    // CHECK-FIXES: void d19(const std::string_view sv = {});
   }
 
   // Copy List Initialization With Temporary
   {
     void d20(std::string_view sv = {std::string_view(nullptr)});
     // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d20(std::string_view sv = {std::string_view()});
+    // CHECK-FIXES: void d20(std::string_view sv = {std::string_view()});
 
     void d21(std::string_view sv = {std::string_view{nullptr}});
     // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d21(std::string_view sv = {std::string_view{}});
+    // CHECK-FIXES: void d21(std::string_view sv = {std::string_view{}});
 
     void d22(std::string_view sv = {(std::string_view) nullptr});
     // CHECK-MESSAGES: :[[@LINE-1]]:56: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d22(std::string_view sv = {(std::string_view) {}});
+    // CHECK-FIXES: void d22(std::string_view sv = {(std::string_view) {}});
 
     void d23(std::string_view sv = {(std::string_view){nullptr}});
     // CHECK-MESSAGES: :[[@LINE-1]]:56: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    void d23(std::string_view sv = {(std::string_view){}});
+    // CHECK-FIXES: void d23(std::string_view sv = {(std::string_view){}});
 
     void d24(std::string_view sv = {static_cast<SV>(nullptr)});
     // CHECK-MESSAGES: :[[@LINE-1]]:53: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    void d24(std::string_view sv = {static_cast<SV>("")});
+    // CHECK-FIXES: void d24(std::string_view sv = {static_cast<SV>("")});
   }
 }
 
@@ -906,132 +906,132 @@ void heap_construction() /* e */ {
   {
     (void)(new std::string_view(nullptr)) /* e1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view()) /* e1 */;
+    // CHECK-FIXES: (void)(new std::string_view()) /* e1 */;
 
     (void)(new std::string_view((nullptr))) /* e2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view()) /* e2 */;
+    // CHECK-FIXES: (void)(new std::string_view()) /* e2 */;
 
     (void)(new std::string_view({nullptr})) /* e3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view()) /* e3 */;
+    // CHECK-FIXES: (void)(new std::string_view()) /* e3 */;
 
     (void)(new std::string_view({(nullptr)})) /* e4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view()) /* e4 */;
+    // CHECK-FIXES: (void)(new std::string_view()) /* e4 */;
 
     (void)(new std::string_view({})) /* e5 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view()) /* e5 */;
+    // CHECK-FIXES: (void)(new std::string_view()) /* e5 */;
 
     (void)(new const std::string_view(nullptr)) /* e6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view()) /* e6 */;
+    // CHECK-FIXES: (void)(new const std::string_view()) /* e6 */;
 
     (void)(new const std::string_view((nullptr))) /* e7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view()) /* e7 */;
+    // CHECK-FIXES: (void)(new const std::string_view()) /* e7 */;
 
     (void)(new const std::string_view({nullptr})) /* e8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view()) /* e8 */;
+    // CHECK-FIXES: (void)(new const std::string_view()) /* e8 */;
 
     (void)(new const std::string_view({(nullptr)})) /* e9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view()) /* e9 */;
+    // CHECK-FIXES: (void)(new const std::string_view()) /* e9 */;
 
     (void)(new const std::string_view({})) /* e10 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view()) /* e10 */;
+    // CHECK-FIXES: (void)(new const std::string_view()) /* e10 */;
   }
 
   // Direct Initialization With Temporary
   {
     (void)(new std::string_view(std::string_view(nullptr))) /* e11 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view(std::string_view())) /* e11 */;
+    // CHECK-FIXES: (void)(new std::string_view(std::string_view())) /* e11 */;
 
     (void)(new std::string_view(std::string_view{nullptr})) /* e12 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view(std::string_view{})) /* e12 */;
+    // CHECK-FIXES: (void)(new std::string_view(std::string_view{})) /* e12 */;
 
     (void)(new std::string_view((std::string_view) nullptr)) /* e13 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view((std::string_view) {})) /* e13 */;
+    // CHECK-FIXES: (void)(new std::string_view((std::string_view) {})) /* e13 */;
 
     (void)(new std::string_view((std::string_view){nullptr})) /* e14 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view((std::string_view){})) /* e14 */;
+    // CHECK-FIXES: (void)(new std::string_view((std::string_view){})) /* e14 */;
 
     (void)(new std::string_view(static_cast<SV>(nullptr))) /* e15 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:49: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view(static_cast<SV>(""))) /* e15 */;
+    // CHECK-FIXES: (void)(new std::string_view(static_cast<SV>(""))) /* e15 */;
   }
 
   // Direct List Initialization
   {
     (void)(new std::string_view{nullptr}) /* e16 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{}) /* e16 */;
+    // CHECK-FIXES: (void)(new std::string_view{}) /* e16 */;
 
     (void)(new std::string_view{(nullptr)}) /* e17 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{}) /* e17 */;
+    // CHECK-FIXES: (void)(new std::string_view{}) /* e17 */;
 
     (void)(new std::string_view{{nullptr}}) /* e18 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{}) /* e18 */;
+    // CHECK-FIXES: (void)(new std::string_view{}) /* e18 */;
 
     (void)(new std::string_view{{(nullptr)}}) /* e19 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{}) /* e19 */;
+    // CHECK-FIXES: (void)(new std::string_view{}) /* e19 */;
 
     (void)(new std::string_view{{}}) /* e20 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{}) /* e20 */;
+    // CHECK-FIXES: (void)(new std::string_view{}) /* e20 */;
 
     (void)(new const std::string_view{nullptr}) /* e21 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view{}) /* e21 */;
+    // CHECK-FIXES: (void)(new const std::string_view{}) /* e21 */;
 
     (void)(new const std::string_view{(nullptr)}) /* e22 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view{}) /* e22 */;
+    // CHECK-FIXES: (void)(new const std::string_view{}) /* e22 */;
 
     (void)(new const std::string_view{{nullptr}}) /* e23 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view{}) /* e23 */;
+    // CHECK-FIXES: (void)(new const std::string_view{}) /* e23 */;
 
     (void)(new const std::string_view{{(nullptr)}}) /* e24 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view{}) /* e24 */;
+    // CHECK-FIXES: (void)(new const std::string_view{}) /* e24 */;
 
     (void)(new const std::string_view{{}}) /* e25 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new const std::string_view{}) /* e25 */;
+    // CHECK-FIXES: (void)(new const std::string_view{}) /* e25 */;
   }
 
   // Direct List Initialization With Temporary
   {
     (void)(new std::string_view{std::string_view(nullptr)}) /* e26 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{std::string_view()}) /* e26 */;
+    // CHECK-FIXES: (void)(new std::string_view{std::string_view()}) /* e26 */;
 
     (void)(new std::string_view{std::string_view{nullptr}}) /* e27 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{std::string_view{}}) /* e27 */;
+    // CHECK-FIXES: (void)(new std::string_view{std::string_view{}}) /* e27 */;
 
     (void)(new std::string_view{(std::string_view) nullptr}) /* e28 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{(std::string_view) {}}) /* e28 */;
+    // CHECK-FIXES: (void)(new std::string_view{(std::string_view) {}}) /* e28 */;
 
     (void)(new std::string_view{(std::string_view){nullptr}}) /* e29 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{(std::string_view){}}) /* e29 */;
+    // CHECK-FIXES: (void)(new std::string_view{(std::string_view){}}) /* e29 */;
 
     (void)(new std::string_view{static_cast<SV>(nullptr)}) /* e30 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:49: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(new std::string_view{static_cast<SV>("")}) /* e30 */;
+    // CHECK-FIXES: (void)(new std::string_view{static_cast<SV>("")}) /* e30 */;
   }
 }
 
@@ -1040,46 +1040,46 @@ void function_argument_initialization() /* f */ {
   {
     function(nullptr) /* f1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing null as basic_string_view is undefined; replace with the empty string
-    // CHECK-FIXES: {{^}}    function("") /* f1 */;
+    // CHECK-FIXES: function("") /* f1 */;
 
     function((nullptr)) /* f2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    function("") /* f2 */;
+    // CHECK-FIXES: function("") /* f2 */;
 
     function({nullptr}) /* f3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    function("") /* f3 */;
+    // CHECK-FIXES: function("") /* f3 */;
 
     function({(nullptr)}) /* f4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    function("") /* f4 */;
+    // CHECK-FIXES: function("") /* f4 */;
 
     function({{}}) /* f5 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    function("") /* f5 */;
+    // CHECK-FIXES: function("") /* f5 */;
   }
 
   // Function Argument Initialization With Temporary
   {
     function(std::string_view(nullptr)) /* f6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function(std::string_view()) /* f6 */;
+    // CHECK-FIXES: function(std::string_view()) /* f6 */;
 
     function(std::string_view{nullptr}) /* f7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function(std::string_view{}) /* f7 */;
+    // CHECK-FIXES: function(std::string_view{}) /* f7 */;
 
     function((std::string_view) nullptr) /* f8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function((std::string_view) {}) /* f8 */;
+    // CHECK-FIXES: function((std::string_view) {}) /* f8 */;
 
     function((std::string_view){nullptr}) /* f9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function((std::string_view){}) /* f9 */;
+    // CHECK-FIXES: function((std::string_view){}) /* f9 */;
 
     function(static_cast<SV>(nullptr)) /* f10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    function(static_cast<SV>("")) /* f10 */;
+    // CHECK-FIXES: function(static_cast<SV>("")) /* f10 */;
   }
 }
 
@@ -1088,46 +1088,46 @@ void assignment(std::string_view sv) /* g */ {
   {
     sv = nullptr /* g1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment to basic_string_view from null is undefined; replace with the default constructor
-    // CHECK-FIXES: {{^}}    sv = {} /* g1 */;
+    // CHECK-FIXES: sv = {} /* g1 */;
 
     sv = (nullptr) /* g2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = {} /* g2 */;
+    // CHECK-FIXES: sv = {} /* g2 */;
 
     sv = {nullptr} /* g3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = {} /* g3 */;
+    // CHECK-FIXES: sv = {} /* g3 */;
 
     sv = {(nullptr)} /* g4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = {} /* g4 */;
+    // CHECK-FIXES: sv = {} /* g4 */;
 
     sv = {{}} /* g5 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = {} /* g5 */;
+    // CHECK-FIXES: sv = {} /* g5 */;
   }
 
   // Assignment With Temporary
   {
     sv = std::string_view(nullptr) /* g6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = std::string_view() /* g6 */;
+    // CHECK-FIXES: sv = std::string_view() /* g6 */;
 
     sv = std::string_view{nullptr} /* g7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = std::string_view{} /* g7 */;
+    // CHECK-FIXES: sv = std::string_view{} /* g7 */;
 
     sv = (std::string_view) nullptr /* g8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = (std::string_view) {} /* g8 */;
+    // CHECK-FIXES: sv = (std::string_view) {} /* g8 */;
 
     sv = (std::string_view){nullptr} /* g9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    sv = (std::string_view){} /* g9 */;
+    // CHECK-FIXES: sv = (std::string_view){} /* g9 */;
 
     sv = static_cast<SV>(nullptr) /* g10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    sv = static_cast<SV>("") /* g10 */;
+    // CHECK-FIXES: sv = static_cast<SV>("") /* g10 */;
   }
 }
 
@@ -1136,46 +1136,46 @@ void pointer_assignment(std::string_view *sv_ptr) /* h */ {
   {
     *sv_ptr = nullptr /* h1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = {} /* h1 */;
+    // CHECK-FIXES: *sv_ptr = {} /* h1 */;
 
     *sv_ptr = (nullptr) /* h2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = {} /* h2 */;
+    // CHECK-FIXES: *sv_ptr = {} /* h2 */;
 
     *sv_ptr = {nullptr} /* h3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = {} /* h3 */;
+    // CHECK-FIXES: *sv_ptr = {} /* h3 */;
 
     *sv_ptr = {(nullptr)} /* h4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = {} /* h4 */;
+    // CHECK-FIXES: *sv_ptr = {} /* h4 */;
 
     *sv_ptr = {{}} /* h5 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: assignment{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = {} /* h5 */;
+    // CHECK-FIXES: *sv_ptr = {} /* h5 */;
   }
 
   // Assignment With Temporary
   {
     *sv_ptr = std::string_view(nullptr) /* h6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = std::string_view() /* h6 */;
+    // CHECK-FIXES: *sv_ptr = std::string_view() /* h6 */;
 
     *sv_ptr = std::string_view{nullptr} /* h7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = std::string_view{} /* h7 */;
+    // CHECK-FIXES: *sv_ptr = std::string_view{} /* h7 */;
 
     *sv_ptr = (std::string_view) nullptr /* h8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = (std::string_view) {} /* h8 */;
+    // CHECK-FIXES: *sv_ptr = (std::string_view) {} /* h8 */;
 
     *sv_ptr = (std::string_view){nullptr} /* h9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    *sv_ptr = (std::string_view){} /* h9 */;
+    // CHECK-FIXES: *sv_ptr = (std::string_view){} /* h9 */;
 
     *sv_ptr = static_cast<SV>(nullptr) /* h10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    *sv_ptr = static_cast<SV>("") /* h10 */;
+    // CHECK-FIXES: *sv_ptr = static_cast<SV>("") /* h10 */;
   }
 }
 
@@ -1184,38 +1184,38 @@ void lesser_comparison(std::string_view sv) /* i */ {
   {
     (void)(sv < nullptr) /* i1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: comparing basic_string_view to null is undefined; replace with the empty string
-    // CHECK-FIXES: {{^}}    (void)(sv < "") /* i1 */;
+    // CHECK-FIXES: (void)(sv < "") /* i1 */;
 
     (void)(sv < (nullptr)) /* i2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv < "") /* i2 */;
+    // CHECK-FIXES: (void)(sv < "") /* i2 */;
 
     (void)(nullptr < sv) /* i3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" < sv) /* i3 */;
+    // CHECK-FIXES: (void)("" < sv) /* i3 */;
 
     (void)((nullptr) < sv) /* i4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" < sv) /* i4 */;
+    // CHECK-FIXES: (void)("" < sv) /* i4 */;
   }
 
   // With Equality
   {
     (void)(sv <= nullptr) /* i5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv <= "") /* i5 */;
+    // CHECK-FIXES: (void)(sv <= "") /* i5 */;
 
     (void)(sv <= (nullptr)) /* i6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv <= "") /* i6 */;
+    // CHECK-FIXES: (void)(sv <= "") /* i6 */;
 
     (void)(nullptr <= sv) /* i7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" <= sv) /* i7 */;
+    // CHECK-FIXES: (void)("" <= sv) /* i7 */;
 
     (void)((nullptr) <= sv) /* i8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" <= sv) /* i8 */;
+    // CHECK-FIXES: (void)("" <= sv) /* i8 */;
   }
 }
 
@@ -1224,38 +1224,38 @@ void pointer_lesser_comparison(std::string_view *sv_ptr) /* j */ {
   {
     (void)(*sv_ptr < nullptr) /* j1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr < "") /* j1 */;
+    // CHECK-FIXES: (void)(*sv_ptr < "") /* j1 */;
 
     (void)(*sv_ptr < (nullptr)) /* j2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr < "") /* j2 */;
+    // CHECK-FIXES: (void)(*sv_ptr < "") /* j2 */;
 
     (void)(nullptr < *sv_ptr) /* j3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" < *sv_ptr) /* j3 */;
+    // CHECK-FIXES: (void)("" < *sv_ptr) /* j3 */;
 
     (void)((nullptr) < *sv_ptr) /* j4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" < *sv_ptr) /* j4 */;
+    // CHECK-FIXES: (void)("" < *sv_ptr) /* j4 */;
   }
 
   // With Equality
   {
     (void)(*sv_ptr <= nullptr) /* j5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr <= "") /* j5 */;
+    // CHECK-FIXES: (void)(*sv_ptr <= "") /* j5 */;
 
     (void)(*sv_ptr <= (nullptr)) /* j6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr <= "") /* j6 */;
+    // CHECK-FIXES: (void)(*sv_ptr <= "") /* j6 */;
 
     (void)(nullptr <= *sv_ptr) /* j7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" <= *sv_ptr) /* j7 */;
+    // CHECK-FIXES: (void)("" <= *sv_ptr) /* j7 */;
 
     (void)((nullptr) <= *sv_ptr) /* j8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" <= *sv_ptr) /* j8 */;
+    // CHECK-FIXES: (void)("" <= *sv_ptr) /* j8 */;
   }
 }
 
@@ -1264,38 +1264,38 @@ void greater_comparison(std::string_view sv) /* k */ {
   {
     (void)(sv > nullptr) /* k1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv > "") /* k1 */;
+    // CHECK-FIXES: (void)(sv > "") /* k1 */;
 
     (void)(sv > (nullptr)) /* k2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv > "") /* k2 */;
+    // CHECK-FIXES: (void)(sv > "") /* k2 */;
 
     (void)(nullptr > sv) /* k3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" > sv) /* k3 */;
+    // CHECK-FIXES: (void)("" > sv) /* k3 */;
 
     (void)((nullptr) > sv) /* k4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" > sv) /* k4 */;
+    // CHECK-FIXES: (void)("" > sv) /* k4 */;
   }
 
   // With Equality
   {
     (void)(sv >= nullptr) /* k5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv >= "") /* k5 */;
+    // CHECK-FIXES: (void)(sv >= "") /* k5 */;
 
     (void)(sv >= (nullptr)) /* k6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(sv >= "") /* k6 */;
+    // CHECK-FIXES: (void)(sv >= "") /* k6 */;
 
     (void)(nullptr >= sv) /* k7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" >= sv) /* k7 */;
+    // CHECK-FIXES: (void)("" >= sv) /* k7 */;
 
     (void)((nullptr) >= sv) /* k8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" >= sv) /* k8 */;
+    // CHECK-FIXES: (void)("" >= sv) /* k8 */;
   }
 }
 
@@ -1304,61 +1304,61 @@ void pointer_greater_comparison(std::string_view *sv_ptr) /* l */ {
   {
     (void)(*sv_ptr > nullptr) /* l1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr > "") /* l1 */;
+    // CHECK-FIXES: (void)(*sv_ptr > "") /* l1 */;
 
     (void)(*sv_ptr > (nullptr)) /* l2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr > "") /* l2 */;
+    // CHECK-FIXES: (void)(*sv_ptr > "") /* l2 */;
 
     (void)(nullptr > *sv_ptr) /* l3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" > *sv_ptr) /* l3 */;
+    // CHECK-FIXES: (void)("" > *sv_ptr) /* l3 */;
 
     (void)((nullptr) > *sv_ptr) /* l4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" > *sv_ptr) /* l4 */;
+    // CHECK-FIXES: (void)("" > *sv_ptr) /* l4 */;
   }
 
   // With Equality
   {
     (void)(*sv_ptr >= nullptr) /* l5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr >= "") /* l5 */;
+    // CHECK-FIXES: (void)(*sv_ptr >= "") /* l5 */;
 
     (void)(*sv_ptr >= (nullptr)) /* l6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)(*sv_ptr >= "") /* l6 */;
+    // CHECK-FIXES: (void)(*sv_ptr >= "") /* l6 */;
 
     (void)(nullptr >= *sv_ptr) /* l7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" >= *sv_ptr) /* l7 */;
+    // CHECK-FIXES: (void)("" >= *sv_ptr) /* l7 */;
 
     (void)((nullptr) >= *sv_ptr) /* l8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}empty string
-    // CHECK-FIXES: {{^}}    (void)("" >= *sv_ptr) /* l8 */;
+    // CHECK-FIXES: (void)("" >= *sv_ptr) /* l8 */;
   }
 }
 
 void relative_comparison_with_temporary(std::string_view sv) /* m */ {
   (void)(sv < std::string_view(nullptr)) /* m1 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv < std::string_view()) /* m1 */;
+  // CHECK-FIXES: (void)(sv < std::string_view()) /* m1 */;
 
   (void)(sv < std::string_view{nullptr}) /* m2 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv < std::string_view{}) /* m2 */;
+  // CHECK-FIXES: (void)(sv < std::string_view{}) /* m2 */;
 
   (void)(sv < (std::string_view) nullptr) /* m3 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv < (std::string_view) {}) /* m3 */;
+  // CHECK-FIXES: (void)(sv < (std::string_view) {}) /* m3 */;
 
   (void)(sv < (std::string_view){nullptr}) /* m4 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv < (std::string_view){}) /* m4 */;
+  // CHECK-FIXES: (void)(sv < (std::string_view){}) /* m4 */;
 
   (void)(sv < static_cast<SV>(nullptr)) /* m5 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: casting{{.*}}empty string
-  // CHECK-FIXES: {{^}}  (void)(sv < static_cast<SV>("")) /* m5 */;
+  // CHECK-FIXES: (void)(sv < static_cast<SV>("")) /* m5 */;
 }
 
 void equality_comparison(std::string_view sv) /* n */ {
@@ -1366,76 +1366,76 @@ void equality_comparison(std::string_view sv) /* n */ {
   {
     (void)(sv == nullptr) /* n1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing basic_string_view to null is undefined; replace with the emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n1 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n1 */;
 
     (void)(sv == (nullptr)) /* n2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n2 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n2 */;
 
     (void)(nullptr == sv) /* n3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n3 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n3 */;
 
     (void)((nullptr) == sv) /* n4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n4 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n4 */;
   }
 
   // Empty With Parens
   {
     (void)((sv) == nullptr) /* n5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing basic_string_view to null is undefined; replace with the emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n5 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n5 */;
 
     (void)((sv) == (nullptr)) /* n6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n6 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n6 */;
 
     (void)(nullptr == (sv)) /* n7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n7 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n7 */;
 
     (void)((nullptr) == (sv)) /* n8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv.empty()) /* n8 */;
+    // CHECK-FIXES: (void)(sv.empty()) /* n8 */;
   }
 
   // Non-Empty Without Parens
   {
     (void)((sv) != nullptr) /* n9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n9 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n9 */;
 
     (void)((sv) != (nullptr)) /* n10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n10 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n10 */;
 
     (void)(nullptr != (sv)) /* n11 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n11 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n11 */;
 
     (void)((nullptr) != (sv)) /* n12 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n12 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n12 */;
   }
 
   // Non-Empty With Parens
   {
     (void)((sv) != nullptr) /* n13 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n13 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n13 */;
 
     (void)((sv) != (nullptr)) /* n14 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n14 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n14 */;
 
     (void)(nullptr != (sv)) /* n15 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n15 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n15 */;
 
     (void)((nullptr) != (sv)) /* n16 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv.empty()) /* n16 */;
+    // CHECK-FIXES: (void)(!sv.empty()) /* n16 */;
   }
 }
 
@@ -1444,99 +1444,99 @@ void pointer_equality_comparison(std::string_view *sv_ptr) /* o */ {
   {
     (void)(*sv_ptr == nullptr) /* o1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o1 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o1 */;
 
     (void)(*sv_ptr == (nullptr)) /* o2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o2 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o2 */;
 
     (void)(nullptr == *sv_ptr) /* o3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o3 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o3 */;
 
     (void)((nullptr) == *sv_ptr) /* o4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o4 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o4 */;
   }
 
   // Empty With Parens
   {
     (void)((*sv_ptr) == nullptr) /* o5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o5 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o5 */;
 
     (void)((*sv_ptr) == (nullptr)) /* o6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o6 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o6 */;
 
     (void)(nullptr == (*sv_ptr)) /* o7 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o7 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o7 */;
 
     (void)((nullptr) == (*sv_ptr)) /* o8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(sv_ptr->empty()) /* o8 */;
+    // CHECK-FIXES: (void)(sv_ptr->empty()) /* o8 */;
   }
 
   // Non-Empty With Parens
   {
     (void)((*sv_ptr) != nullptr) /* o9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o9 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o9 */;
 
     (void)((*sv_ptr) != (nullptr)) /* o10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o10 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o10 */;
 
     (void)(nullptr != (*sv_ptr)) /* o11 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o11 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o11 */;
 
     (void)((nullptr) != (*sv_ptr)) /* o12 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o12 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o12 */;
   }
 
   // Non-Empty Without Parens
   {
     (void)((*sv_ptr) != nullptr) /* o13 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o13 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o13 */;
 
     (void)((*sv_ptr) != (nullptr)) /* o14 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o14 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o14 */;
 
     (void)(nullptr != (*sv_ptr)) /* o15 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o15 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o15 */;
 
     (void)((nullptr) != (*sv_ptr)) /* o16 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: comparing{{.*}}emptiness query
-    // CHECK-FIXES: {{^}}    (void)(!sv_ptr->empty()) /* o16 */;
+    // CHECK-FIXES: (void)(!sv_ptr->empty()) /* o16 */;
   }
 }
 
 void equality_comparison_with_temporary(std::string_view sv) /* p */ {
   (void)(sv == std::string_view(nullptr)) /* p1 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv == std::string_view()) /* p1 */;
+  // CHECK-FIXES: (void)(sv == std::string_view()) /* p1 */;
 
   (void)(sv == std::string_view{nullptr}) /* p2 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv == std::string_view{}) /* p2 */;
+  // CHECK-FIXES: (void)(sv == std::string_view{}) /* p2 */;
 
   (void)(sv == (std::string_view) nullptr) /* p3 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv == (std::string_view) {}) /* p3 */;
+  // CHECK-FIXES: (void)(sv == (std::string_view) {}) /* p3 */;
 
   (void)(sv == (std::string_view){nullptr}) /* p4 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: constructing{{.*}}default
-  // CHECK-FIXES: {{^}}  (void)(sv == (std::string_view){}) /* p4 */;
+  // CHECK-FIXES: (void)(sv == (std::string_view){}) /* p4 */;
 
   (void)(sv == static_cast<SV>(nullptr)) /* p5 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: casting{{.*}}empty string
-  // CHECK-FIXES: {{^}}  (void)(sv == static_cast<SV>("")) /* p5 */;
+  // CHECK-FIXES: (void)(sv == static_cast<SV>("")) /* p5 */;
 }
 
 void return_statement() /* q */ {
@@ -1544,54 +1544,54 @@ void return_statement() /* q */ {
   {
     []() -> SV { return nullptr; } /* q1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q1 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q1 */;
 
     []() -> SV { return (nullptr); } /* q2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q2 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q2 */;
 
     []() -> SV { return {nullptr}; } /* q3 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q3 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q3 */;
 
     []() -> SV { return {(nullptr)}; } /* q4 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q4 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q4 */;
 
     []() -> SV { return {{nullptr}}; } /* q5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q5 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q5 */;
 
     []() -> SV { return {{(nullptr)}}; } /* q6 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q6 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q6 */;
 
     []() -> SV { return {{}}; } /* q7 */; // Default `const CharT*`
     // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return {}; } /* q7 */;
+    // CHECK-FIXES: []() -> SV { return {}; } /* q7 */;
   }
 
   // Return Statement With Temporary
   {
     []() -> SV { return SV(nullptr); } /* q8 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return SV(); } /* q8 */;
+    // CHECK-FIXES: []() -> SV { return SV(); } /* q8 */;
 
     []() -> SV { return SV{nullptr}; } /* q9 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return SV{}; } /* q9 */;
+    // CHECK-FIXES: []() -> SV { return SV{}; } /* q9 */;
 
     []() -> SV { return (SV) nullptr; } /* q10 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return (SV) {}; } /* q10 */;
+    // CHECK-FIXES: []() -> SV { return (SV) {}; } /* q10 */;
 
     []() -> SV { return (SV){nullptr}; } /* q11 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    []() -> SV { return (SV){}; } /* q11 */;
+    // CHECK-FIXES: []() -> SV { return (SV){}; } /* q11 */;
 
     []() -> SV { return static_cast<SV>(nullptr); } /* q12 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: casting{{.*}}empty string
-    // CHECK-FIXES: {{^}}    []() -> SV { return static_cast<SV>(""); } /* q12 */;
+    // CHECK-FIXES: []() -> SV { return static_cast<SV>(""); } /* q12 */;
   }
 }
 
@@ -1600,13 +1600,13 @@ void constructor_invocation() /* r */ {
     explicit AcceptsSV(std::string_view) {}
   } r1(nullptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: passing{{.*}}empty string
-  // CHECK-FIXES: {{^}}  } r1("");
+  // CHECK-FIXES: } r1("");
 
   (void)(AcceptsSV{nullptr}) /* r2 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: passing{{.*}}empty string
-  // CHECK-FIXES: {{^}}  (void)(AcceptsSV{""}) /* r2 */;
+  // CHECK-FIXES: (void)(AcceptsSV{""}) /* r2 */;
 
   AcceptsSV r3{nullptr};
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: passing{{.*}}empty string
-  // CHECK-FIXES: {{^}}  AcceptsSV r3{""};
+  // CHECK-FIXES: AcceptsSV r3{""};
 }
