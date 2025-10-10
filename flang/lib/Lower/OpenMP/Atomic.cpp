@@ -19,6 +19,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/type.h"
@@ -459,6 +460,23 @@ void Fortran::lower::omp::lowerAtomic(
   } else {
     int action0 = analysis.op0.what & analysis.Action;
     int action1 = analysis.op1.what & analysis.Action;
+
+    // Check for invalid atomic capture sequence.
+    // Valid sequences: (READ, UPDATE) or (UPDATE, WRITE)
+    if (construct.IsCapture()) {
+      using Action = parser::OpenMPAtomicConstruct::Analysis;
+      const bool validSequence =
+          (action0 == Action::Read && action1 == Action::Update) ||
+          (action0 == Action::Update && action1 == Action::Write);
+
+      if (!validSequence) {
+        mlir::emitError(loc,
+                        "OpenMP atomic capture produced an invalid operation "
+                        "sequence (expected read+update or update+write)");
+        return;
+      }
+    }
+
     mlir::Operation *captureOp = nullptr;
     fir::FirOpBuilder::InsertPoint preAt = builder.saveInsertionPoint();
     fir::FirOpBuilder::InsertPoint atomicAt, postAt;
