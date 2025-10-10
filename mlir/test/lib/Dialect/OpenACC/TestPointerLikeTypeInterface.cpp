@@ -232,9 +232,8 @@ void TestPointerLikeTypeInterfacePass::testGenFree(Operation *op, Value result,
 
   // Call the genFree API
   auto typedResult = cast<TypedValue<PointerLikeType>>(result);
-  // In this test context, we don't have the allocation result, so pass the result itself
-  bool success =
-      pointerType.genFree(newBuilder, loc, typedResult, result, result.getType());
+  bool success = pointerType.genFree(newBuilder, loc, typedResult, result,
+                                     result.getType());
 
   if (success) {
     llvm::errs() << "Successfully generated free for operation: ";
