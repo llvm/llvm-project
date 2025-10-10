@@ -119,7 +119,7 @@ static cl::opt<bool>
                                 cl::desc(""));
 
 static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder", cl::Hidden,
+    "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
     cl::desc("Preserve use-list order when writing LLVM bitcode."));
 
 namespace llvm {

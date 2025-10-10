@@ -103,7 +103,7 @@ static cl::opt<bool> PrintProfData(
     cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
 
 static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder", cl::Hidden,
+    "preserve-ll-uselistorder", cl::Hidden, cl::init(false),
     cl::desc("Preserve use-list order when writing LLVM assembly."));
 
 // Make virtual table appear in this compilation unit.
@@ -2952,10 +2952,7 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
     : Out(o), TheIndex(Index), Machine(Mac), TypePrinter(/*Module=*/nullptr),
       IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(
-          PreserveAssemblyUseListOrder.getNumOccurrences()
-              ? PreserveAssemblyUseListOrder
-              : false) {}
+      ShouldPreserveUseListOrder(PreserveAssemblyUseListOrder) {}
 
 void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   if (!Operand) {
