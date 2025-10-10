@@ -7,7 +7,7 @@
 
 #include <arm_sve.h>
 
-// Properties: guard="sve,sve-sha3" streaming_guard="sme,sve-sha3,sme2p1" flags="feature-dependent"
+// Properties: guard="sve,sve-sha3" streaming_guard="sme,sme2p1,sve-sha3" flags="feature-dependent"
 
 void test(void) {
   svint64_t svint64_t_val;
