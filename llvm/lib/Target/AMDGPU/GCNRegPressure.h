@@ -31,6 +31,12 @@ class SlotIndex;
 struct GCNRegPressure {
   enum RegKind { SGPR, VGPR, AGPR, AVGPR, TOTAL_KINDS };
 
+  static constexpr const char *getName(RegKind Kind) {
+    const char *Names[] = {"SGPR", "VGPR", "AGPR", "AVGPR"};
+    assert(Kind < TOTAL_KINDS);
+    return Names[Kind];
+  }
+
   GCNRegPressure() {
     clear();
   }
@@ -147,12 +153,6 @@ struct GCNRegPressure {
     const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
     const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
     return (RegKind)getRegKind(MRI.getRegClass(Reg), STI);
-  }
-
-  static const char *getName(RegKind Kind) {
-    const char *Names[] = {"SGPR", "VGPR", "AGPR", "AVGPR"};
-    assert(Kind < TOTAL_KINDS);
-    return Names[Kind];
   }
 
 private:

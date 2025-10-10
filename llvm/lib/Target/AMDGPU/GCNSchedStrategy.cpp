@@ -72,13 +72,13 @@ static cl::opt<bool> GCNTrackers(
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 #define DUMP_MAX_REG_PRESSURE
 static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
-    "amdgpu-print-maxrp-regusage-before-scheduler", cl::Hidden,
+    "amdgpu-print-max-reg-pressure-regusage-before-scheduler", cl::Hidden,
     cl::desc("Print a list of live registers along with their def/uses at the "
              "point of maximum register pressure before scheduling."),
     cl::init(false));
 
 static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
-    "amdgpu-print-maxrp-regusage-after-scheduler", cl::Hidden,
+    "amdgpu-print-max-reg-pressure-regusage-after-scheduler", cl::Hidden,
     cl::desc("Print a list of live registers along with their def/uses at the "
              "point of maximum register pressure after scheduling."),
     cl::init(false));

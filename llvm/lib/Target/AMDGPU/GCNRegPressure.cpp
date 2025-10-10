@@ -1004,11 +1004,11 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   const char *RegName = GCNRegPressure::getName(Kind);
 
   unsigned MaxNumRegs = 0;
-  MachineInstr *MaxPressureMI = nullptr;
+  const MachineInstr *MaxPressureMI = nullptr;
   GCNUpwardRPTracker RPT(LIS);
-  for (auto &MBB : MF) {
+  for (const MachineBasicBlock &MBB : MF) {
     RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
-    for (auto &MI : reverse(MBB)) {
+    for (const MachineInstr &MI : reverse(MBB)) {
       RPT.recede(MI);
       unsigned NumRegs = RPT.getMaxPressure().getNumRegs(Kind);
       if (NumRegs > MaxNumRegs) {
@@ -1056,13 +1056,13 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   unsigned MDefNumRegs = MDefPressure.getNumRegs(Kind);
   assert(SDefNumRegs + MDefNumRegs == MaxNumRegs);
 
-  auto printLoc = [&](MachineBasicBlock *MBB, SlotIndex SI) {
+  auto printLoc = [&](const MachineBasicBlock *MBB, SlotIndex SI) {
     return Printable([&, MBB, SI](raw_ostream &OS) {
-      OS << SI << "@BB." << MBB->getNumber();
+      OS << SI << ':' << printMBBReference(*MBB);
       if (MLI)
         if (const MachineLoop *ML = MLI->getLoopFor(MBB))
-          OS << " (LoopHdr BB." << ML->getHeader()->getNumber() << ", Depth "
-             << ML->getLoopDepth() << ")";
+          OS << " (LoopHdr " << printMBBReference(*ML->getHeader())
+             << ", Depth " << ML->getLoopDepth() << ")";
     });
   };
 
@@ -1075,8 +1075,8 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
        << RegName << "s)\n";
 
     // Use std::map to sort def/uses by SlotIndex.
-    std::map<SlotIndex, MachineInstr *> Instrs;
-    for (auto &MI : MRI.reg_nodbg_instructions(Reg)) {
+    std::map<SlotIndex, const MachineInstr *> Instrs;
+    for (const MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
       Instrs[LIS.getInstructionIndex(MI).getRegSlot()] = &MI;
     }
 
@@ -1099,19 +1099,19 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   OS << "\nLive registers with single definition (" << SDefNumRegs << ' '
      << RegName << "s):\n";
 
-  // Sort OneDefRegs by number of uses (smallest first)
+  // Sort SDefRegs by number of uses (smallest first)
   llvm::sort(SDefRegs, [&](Register A, Register B) {
-    return std::distance(MRI.use_begin(A), MRI.use_end()) <
-           std::distance(MRI.use_begin(B), MRI.use_end());
+    return std::distance(MRI.use_nodbg_begin(A), MRI.use_nodbg_end()) <
+           std::distance(MRI.use_nodbg_begin(B), MRI.use_nodbg_end());
   });
 
-  for (const auto Reg : SDefRegs) {
+  for (const Register Reg : SDefRegs) {
     PrintRegInfo(Reg, LiveSet->lookup(Reg));
   }
 
   OS << "\nLive registers with multiple definitions (" << MDefNumRegs << ' '
      << RegName << "s):\n";
-  for (const auto Reg : MDefRegs) {
+  for (const Register Reg : MDefRegs) {
     PrintRegInfo(Reg, LiveSet->lookup(Reg));
   }
 }
