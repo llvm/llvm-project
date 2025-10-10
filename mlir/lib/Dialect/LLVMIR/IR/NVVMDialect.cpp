@@ -2025,9 +2025,21 @@ ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
-llvm::Intrinsic::ID ConvertF32x2ToF4x2Op::getIntrinsicID(bool hasRelu) {
-  return hasRelu ? llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite
-                 : llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite;
+NVVM::IDArgPair
+ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
+                                            LLVM::ModuleTranslation &mt,
+                                            llvm::IRBuilderBase &builder) {
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getA()));
+  args.push_back(mt.lookupValue(op.getB()));
+  
+  bool hasRelu = op.getRelu();
+  
+  llvm::Intrinsic::ID intId =
+      hasRelu ? llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite
+              : llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite;
+              
+  return {intId, std::move(args)};
 }
 
 #define GET_F32x2_TO_F6x2_ID(type, has_relu)                                   \

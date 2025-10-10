@@ -1677,12 +1677,14 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(bool hasRelu);
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicID($relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    auto [intId, args] = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
   }];
 }
