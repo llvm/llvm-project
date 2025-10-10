@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --normalize --mlir-use-nameloc-as-prefix 2>&1 | FileCheck %s
 
 // CHECK-LABEL:   module {
-// CHECK:           func.func @test(%[[ARG0:.*]]: memref<?xi32>, %[[ARG1:.*]]: i32) {
+// CHECK:           func.func @infinte_loop(%[[ARG0:.*]]: memref<?xi32>, %[[ARG1:.*]]: i32) {
 // CHECK:           %vl15969$e5677$ = arith.constant 1 : i32
 // CHECK:           %vl15390$funcArg1-vl15969$ = arith.addi %[[ARG1:.*]], %vl15969$e5677$ : i32
 // CHECK:           cf.br ^bb1(%vl15390$funcArg1-vl15969$, %vl15390$funcArg1-vl15969$ : i32, i32)
@@ -101,7 +101,7 @@
 // CHECK:           cf.br ^bb1(%op15672$op27844-vl15894$, %vl15894$blockArg1-vl22288$_69 : i32, i32)
 // CHECK:         }
 // CHECK:       }
-func.func @test(%arg0: memref<?xi32>, %arg1: i32) {
+func.func @infinte_loop(%arg0: memref<?xi32>, %arg1: i32) {
     %c1 = arith.constant 1 : i32
     %a = arith.addi %arg1, %c1 : i32
     cf.br ^bb1(%a, %a : i32, i32)
