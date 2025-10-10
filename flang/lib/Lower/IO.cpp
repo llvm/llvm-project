@@ -530,7 +530,9 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         mlir::Type type = descAddr.getType();
 
         // Don't need temp descriptor if the namelist item is polymorphic.
-        if (!mlir::isa<fir::ClassType>(type)) {
+        if (mlir::isa<fir::ClassType>(type)) {
+          descRefTy = fir::BoxType::get(mlir::NoneType::get(context));
+        } else {
           if (mlir::Type baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
             type = baseTy;
           fir::BoxType boxType = fir::BoxType::get(fir::PointerType::get(type));
