@@ -1616,6 +1616,11 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     }
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
+    // The addresses from FoundFns come from LC_FUNCTION_STARTS. Its contents
+    // are delta encoded addresses from the start of __TEXT, ending when zero
+    // is found. Because of this, the addresses should be unique, and even if
+    // we create fake entries on SymbolList in the second loop, SymbolAddresses
+    // should not need to be updated there.
     SmallSet<uint64_t, 32> SymbolAddresses;
     for (const auto &S : SymbolList)
       SymbolAddresses.insert(S.Address);
