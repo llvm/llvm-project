@@ -46,7 +46,7 @@ private:
 
 protected:
   constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
-    if (sizeof(BitWord) == sizeof(uint64_t)) {
+    if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
       for (size_t I = 0; I != B.size(); ++I)
         Bits[I] = B[I];
     } else {
