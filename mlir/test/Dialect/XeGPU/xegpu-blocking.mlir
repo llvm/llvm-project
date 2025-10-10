@@ -588,7 +588,6 @@ gpu.module @test_kernel {
 // -----
 gpu.module @test_kernel {
   // CHECK-LABEL: load_with_offsets
-  // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-2: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   gpu.func @load_with_offsets(%src: ui64) -> vector<32xf32> {
       %cst = arith.constant dense<[
@@ -609,7 +608,6 @@ gpu.module @test_kernel {
 // -----
 gpu.module @test_kernel {
   // CHECK-LABEL: store_with_offsets
-  // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-2: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<16xf32>, ui64, vector<16xindex>, vector<16xi1>
   gpu.func @store_with_offsets(%src: ui64) {
       %cst = arith.constant dense<[
@@ -635,7 +633,6 @@ gpu.module @test_kernel {
 // -----
 gpu.module @test_kernel {
   // CHECK-LABEL: load_with_offsets_chunk
-  // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK: [[cst:%.+]] = arith.constant dense<0.000000e+00> : vector<32x4xf32>
   // CHECK: [[cst0:%.+]] = arith.constant dense<[130, 138, 146, 154, 162, 170, 178, 186, 194, 202, 210, 218, 226, 234, 242, 250]> : vector<16xindex>
   // CHECK: [[cst1:%.+]] = arith.constant dense<[2, 10, 18, 26, 34, 42, 50, 58, 66, 74, 82, 90, 98, 106, 114, 122]> : vector<16xindex>
@@ -660,7 +657,6 @@ gpu.module @test_kernel {
 // -----
 gpu.module @test_kernel {
   // CHECK-LABEL: store_with_offsets_chunk
-  // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK: [[cst:%.+]] = arith.constant dense<1.023000e+03> : vector<16x2xf32
   // CHECK: [[cst0:%.+]] = arith.constant dense<[130, 138, 146, 154, 162, 170, 178, 186, 194, 202, 210, 218, 226, 234, 242, 250]> : vector<16xindex>
   // CHECK: [[cst1:%.+]] = arith.constant dense<[2, 10, 18, 26, 34, 42, 50, 58, 66, 74, 82, 90, 98, 106, 114, 122]> : vector<16xindex>
