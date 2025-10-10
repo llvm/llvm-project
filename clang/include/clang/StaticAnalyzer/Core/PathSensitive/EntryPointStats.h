@@ -85,7 +85,7 @@ class UnsignedEPStat : public EntryPointStat {
 
 public:
   explicit UnsignedEPStat(llvm::StringLiteral Name);
-  unsigned value() const { return Value.value_or(0); }
+  std::optional<unsigned> value() const { return Value; }
   void reset() { Value.reset(); }
   void set(unsigned V) {
     assert(!Value.has_value());

@@ -39,6 +39,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -142,7 +143,7 @@ public:
     DigestAnalyzerOptions();
 
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
-        Opts.ShouldSerializeStats) {
+        Opts.ShouldSerializeStats || !Opts.DumpEntryPointStatsToCSV.empty()) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
       SyntaxCheckTimer = std::make_unique<llvm::Timer>(
@@ -788,6 +789,8 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     ExprEngineTimer->stopTimer();
     llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
     ExprEngineEndTime -= ExprEngineStartTime;
+    PathRunningTime.set(static_cast<unsigned>(
+        std::lround(ExprEngineEndTime.getWallTime() * 1000)));
     DisplayTime(ExprEngineEndTime);
   }
 
