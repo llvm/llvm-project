@@ -31,7 +31,7 @@ public:
 
   FileExtensionsSet HeaderFileExtensions;
   FileExtensionsSet ImplementationFileExtensions;
-  std::optional<StringRef> IgnoredRegexString;
+  StringRef IgnoredRegexString;
   llvm::Regex IgnoredRegex;
 };
 
