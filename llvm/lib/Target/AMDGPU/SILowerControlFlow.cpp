@@ -48,6 +48,7 @@
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
+#include "SICustomBranchBundles.h"
 #include "SILowerControlFlow.h"
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
@@ -152,6 +153,14 @@ public:
     return "SI Lower control flow pseudo instructions";
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+  
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     // Should preserve the same set that TwoAddressInstructions does.
@@ -321,6 +330,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
           .add(MI.getOperand(1)); // Saved EXEC
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
+
+  moveInsBeforePhis(*OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
@@ -789,7 +800,7 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
     }
   }
 
-  bool Changed = false;
+  bool Changed = makeEverySuccessorBeBranchTarget(MF);
   MachineFunction::iterator NextBB;
   for (MachineFunction::iterator BI = MF.begin();
        BI != MF.end(); BI = NextBB) {
@@ -838,6 +849,12 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
   LoweredEndCf.clear();
   LoweredIf.clear();
   KillBlocks.clear();
+
+  if (Changed)
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (MI.isBundled())
+          MI.unbundleFromSucc();
 
   return Changed;
 }
