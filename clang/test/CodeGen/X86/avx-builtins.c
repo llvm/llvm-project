@@ -2027,8 +2027,8 @@ int test_mm_testc_ps(__m128 A, __m128 B) {
   // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestc.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_testc_ps(A, B);
 }
-TEST_CONSTEXPR(_mm_testc_ps((__m128)(__v4sf){-1,-1,-9001.1009,}, (__m128)(__v4sf){-1.0,-9001,9001,9000}) == 1);
-TEST_CONSTEXPR(_mm_testc_ps((__m128)(__v4sf){-1,2384.23,-9001.1009,}, (__m128)(__v4sf){-1.0,-9001,9001,9000}) == 0);
+TEST_CONSTEXPR(_mm_testc_ps((__m128)(__v4sf){-1,-1,-9001.1009,0x0FA1L}, (__m128)(__v4sf){-1.0,-9001,9001,9000}) == 1);
+TEST_CONSTEXPR(_mm_testc_ps((__m128)(__v4sf){-1,2384.23,-9001.1009,0x0FA1L}, (__m128)(__v4sf){-1.0,-9001,9001,9000}) == 0);
 TEST_CONSTEXPR(_mm_testc_ps((__m128)(__v4sf){-1,-2,-9001.1009,-93}, (__m128)(__v4sf){-1.0,-9001,-0.9001,-1000}) == 1);
 
 int test_mm256_testc_ps(__m256 A, __m256 B) {
