@@ -7501,60 +7501,43 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // Optimize (Constant XOR a) & b & ~c -> (Constant XOR a) & (b & ~c)
   // This allows the andn operation to be done in parallel with the xor
   if (TLI.hasAndNot(N1) || TLI.hasAndNot(N0)) {
-    // Look for pattern: AND(AND(XOR(Constant, a), b), NOT(c))
-    // Transform to: AND(XOR(Constant, a), AND(b, NOT(c)))
+    SDValue InnerAndOp0, InnerAndOp1, NotArg;
     
-    // Handle both operand orders: N0=AND, N1=NOT and N0=NOT, N1=AND
-    SDValue AndOp, NotOp;
-    if (N0.getOpcode() == ISD::AND && 
-        N1.getOpcode() == ISD::XOR && 
-        DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) &&
-        isAllOnesConstant(N1.getOperand(1))) {
-      AndOp = N0;
-      NotOp = N1;
-    } else if (N1.getOpcode() == ISD::AND &&
-               N0.getOpcode() == ISD::XOR && 
-               DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1)) &&
-               isAllOnesConstant(N0.getOperand(1))) {
-      AndOp = N1;
-      NotOp = N0;
-    } else {
-      // Pattern doesn't match, continue to next optimization
-    }
-    
-    // If we found a valid pattern, check if the AND node has one use
-    if (AndOp && NotOp && AndOp.hasOneUse()) {
-      SDValue AndOp0 = AndOp.getOperand(0);
-      SDValue AndOp1 = AndOp.getOperand(1);
+    // Match: AND(AND(Op0, Op1), NOT(NotArg))
+    // where NOT is represented as XOR with all-ones
+    // m_And automatically handles commutativity
+    if (sd_match(N, m_And(m_OneUse(m_And(m_Value(InnerAndOp0), 
+                                         m_Value(InnerAndOp1))),
+                          m_Xor(m_Value(NotArg), m_AllOnes())))) {
       
-      // Check if one operand of AndOp is XOR(Constant, a)
+      // Determine which operand is XOR(Constant, X) where Constant is not all-ones
       SDValue XorOp, OtherOp;
-      if (AndOp0.getOpcode() == ISD::XOR) {
-        XorOp = AndOp0;
-        OtherOp = AndOp1;
-      } else if (AndOp1.getOpcode() == ISD::XOR) {
-        XorOp = AndOp1;
-        OtherOp = AndOp0;
+      APInt XorConst;
+      
+      // Try first operand - m_Xor handles commutativity for XOR operands
+      if (sd_match(InnerAndOp0, m_Xor(m_ConstInt(XorConst), m_Value())) &&
+          !XorConst.isAllOnes()) {
+        XorOp = InnerAndOp0;
+        OtherOp = InnerAndOp1;
+      } else if (sd_match(InnerAndOp1, m_Xor(m_ConstInt(XorConst), m_Value())) &&
+                 !XorConst.isAllOnes()) {
+        XorOp = InnerAndOp1;
+        OtherOp = InnerAndOp0;
       } else {
-        // No XOR found in AND operands, continue to next optimization
+        // Pattern doesn't match - no XOR(Constant, X) found
+        XorOp = SDValue();
       }
       
-      // If we found XOR, check if it has a constant operand (and not all-ones constant to avoid NOT)
-      if (XorOp && OtherOp &&
-          ((DAG.isConstantIntBuildVectorOrConstantInt(XorOp.getOperand(0)) &&
-            !isAllOnesConstant(XorOp.getOperand(0))) ||
-           (DAG.isConstantIntBuildVectorOrConstantInt(XorOp.getOperand(1)) &&
-            !isAllOnesConstant(XorOp.getOperand(1))))) {
-        // Prevent infinite loops: only apply if OtherOp is not also a NOT
-        if (!(OtherOp.getOpcode() == ISD::XOR && 
-              DAG.isConstantIntBuildVectorOrConstantInt(OtherOp.getOperand(1)) &&
-              isAllOnesConstant(OtherOp.getOperand(1)))) {
-          // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
-          // To: AND(XOR(Constant, a), AND(b, NOT(c)))
-          // This allows the andn (b & ~c) to be done in parallel with the xor
-          SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, NotOp);
-          return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
-        }
+      // If we found the pattern, apply the transformation
+      // Prevent infinite loops by checking OtherOp is not also a NOT
+      if (XorOp && !sd_match(OtherOp, m_Xor(m_Value(), m_AllOnes()))) {
+        // Get the NOT node (either N0 or N1)
+        SDValue NotOp = sd_match(N0, m_Xor(m_Value(), m_AllOnes())) ? N0 : N1;
+        
+        // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
+        // To: AND(XOR(Constant, a), AND(b, NOT(c)))
+        SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, NotOp);
+        return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
       }
     }
   }
