@@ -1975,6 +1975,44 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
     break;
   }
+  case TargetOpcode::G_SUB: {
+    Register Src2 = MI.getOperand(2).getReg();
+    unsigned Src2NumSignBits =
+        computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if (Src2NumSignBits == 1)
+      return 1; // Early out.
+
+    // Handle NEG.
+    Register Src1 = MI.getOperand(1).getReg();
+    KnownBits Known1 = getKnownBits(Src1, DemandedElts, Depth);
+    if (Known1.isZero()) {
+      KnownBits Known2 = getKnownBits(Src2, DemandedElts, Depth);
+      // If the input is known to be 0 or 1, the output is 0/-1, which is all
+      // sign bits set.
+      if ((Known2.Zero | 1).isAllOnes())
+        return TyBits;
+
+      // If the input is known to be positive (the sign bit is known clear),
+      // the output of the NEG has, at worst, the same number of sign bits as
+      // the input.
+      if (Known2.isNonNegative()) {
+        FirstAnswer = Src2NumSignBits;
+        break;
+      }
+
+      // Otherwise, we treat this like a SUB.
+    }
+
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Src1NumSignBits == 1)
+      return 1; // Early Out.
+
+    // Sub can have at most one carry bit.  Thus we know that the output
+    // is, at worst, one more bit than the inputs.
+    FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits) - 1;
+    break;
+  }
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_ICMP: {
     bool IsFP = Opcode == TargetOpcode::G_FCMP;
