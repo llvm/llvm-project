@@ -2449,6 +2449,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
 
+    The `inline_never` keyword marks a function that should not be inlined.
+    The `inline_always` keyword marks a function that should always be inlined.
+    The `inline_hint` keyword suggests that the function should be inlined.
+
     Example:
 
     ```mlir
@@ -2483,6 +2487,7 @@ def CIR_FuncOp : CIR_Op<"func", [
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
                                          "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       OptionalAttr<CIR_InlineAttr>:$inline_kind,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
