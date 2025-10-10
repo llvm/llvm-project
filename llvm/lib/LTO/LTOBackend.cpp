@@ -178,7 +178,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 }
 
 #define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+  LLVM_ABI llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
