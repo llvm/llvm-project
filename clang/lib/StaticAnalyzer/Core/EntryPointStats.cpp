@@ -33,7 +33,15 @@ struct Registry {
 
   struct Snapshot {
     const Decl *EntryPoint;
-    std::vector<bool> BoolStatValues;
+    // Boolean statistics are always set explicitly. If they are not set, their
+    // value is absent resulting in empty CSV cells
+    std::vector<std::optional<bool>> BoolStatValues;
+    // Explicitly set statistics may not have a value set, so they are separate
+    // from other unsigned statistics
+    std::vector<std::optional<unsigned>> UnsignedExplicitlySetStatValues;
+    // These are counting and maximizing statistics that initialize to 0, which
+    // is meaningful even if they are never updated, so their value is always
+    // present.
     std::vector<unsigned> UnsignedStatValues;
 
     void dumpAsCSV(llvm::raw_ostream &OS) const;
@@ -48,10 +56,14 @@ static llvm::ManagedStatic<Registry> StatsRegistry;
 
 namespace {
 template <typename Callback> void enumerateStatVectors(const Callback &Fn) {
+  // This order is important, it matches the order of Snapshot 3 fields:
+  // - BoolStatValues
   Fn(StatsRegistry->BoolStats);
+  // - UnsignedExplicitlySetStatValues
+  Fn(StatsRegistry->UnsignedStats);
+  // - UnsignedStatValues
   Fn(StatsRegistry->CounterStats);
   Fn(StatsRegistry->UnsignedMaxStats);
-  Fn(StatsRegistry->UnsignedStats);
 }
 } // namespace
 
@@ -120,20 +132,26 @@ UnsignedEPStat::UnsignedEPStat(llvm::StringLiteral Name)
   StatsRegistry->UnsignedStats.push_back(this);
 }
 
+static std::vector<std::optional<unsigned>>
+consumeUnsignedExplicitlySetStats() {
+  std::vector<std::optional<unsigned>> Result;
+  Result.reserve(StatsRegistry->UnsignedStats.size());
+  for (auto *M : StatsRegistry->UnsignedStats) {
+    Result.push_back(M->value());
+    M->reset();
+  }
+  return Result;
+}
+
 static std::vector<unsigned> consumeUnsignedStats() {
   std::vector<unsigned> Result;
   Result.reserve(StatsRegistry->CounterStats.size() +
-                 StatsRegistry->UnsignedMaxStats.size() +
-                 StatsRegistry->UnsignedStats.size());
+                 StatsRegistry->UnsignedMaxStats.size());
   for (auto *M : StatsRegistry->CounterStats) {
     Result.push_back(M->value());
     M->reset();
   }
   for (auto *M : StatsRegistry->UnsignedMaxStats) {
-    Result.push_back(M->value());
-    M->reset();
-  }
-  for (auto *M : StatsRegistry->UnsignedStats) {
     Result.push_back(M->value());
     M->reset();
   }
@@ -159,6 +177,17 @@ static std::string getUSR(const Decl *D) {
 }
 
 void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
+  auto printAsBoolOpt = [&OS](std::optional<bool> B) {
+    OS << (B.has_value() ? (*B ? "true" : "false") : "");
+  };
+  auto printAsUnsignOpt = [&OS](std::optional<unsigned> U) {
+    OS << (U.has_value() ? std::to_string(*U) : "");
+  };
+  auto commaIfNeeded = [&OS](const auto &Vec1, const auto &Vec2) {
+    if (!Vec1.empty() && !Vec2.empty())
+      OS << ",";
+  };
+
   OS << '"';
   llvm::printEscapedString(getUSR(EntryPoint), OS);
   OS << "\",\"";
@@ -166,14 +195,15 @@ void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
   llvm::printEscapedString(
       clang::AnalysisDeclContext::getFunctionName(EntryPoint), OS);
   OS << "\",";
-  auto PrintAsBool = [&OS](bool B) { OS << (B ? "true" : "false"); };
-  llvm::interleave(BoolStatValues, OS, PrintAsBool, ",");
-  OS << ((BoolStatValues.empty() || UnsignedStatValues.empty()) ? "" : ",");
+  llvm::interleave(BoolStatValues, OS, printAsBoolOpt, ",");
+  commaIfNeeded(BoolStatValues, UnsignedExplicitlySetStatValues);
+  llvm::interleave(UnsignedExplicitlySetStatValues, OS, printAsUnsignOpt, ",");
+  commaIfNeeded(UnsignedExplicitlySetStatValues, UnsignedStatValues);
   llvm::interleave(UnsignedStatValues, OS, [&OS](unsigned U) { OS << U; }, ",");
 }
 
-static std::vector<bool> consumeBoolStats() {
-  std::vector<bool> Result;
+static std::vector<std::optional<bool>> consumeBoolStats() {
+  std::vector<std::optional<bool>> Result;
   Result.reserve(StatsRegistry->BoolStats.size());
   for (auto *M : StatsRegistry->BoolStats) {
     Result.push_back(M->value());
@@ -184,9 +214,11 @@ static std::vector<bool> consumeBoolStats() {
 
 void EntryPointStat::takeSnapshot(const Decl *EntryPoint) {
   auto BoolValues = consumeBoolStats();
+  auto UnsignedExplicitlySetValues = consumeUnsignedExplicitlySetStats();
   auto UnsignedValues = consumeUnsignedStats();
-  StatsRegistry->Snapshots.push_back(
-      {EntryPoint, std::move(BoolValues), std::move(UnsignedValues)});
+  StatsRegistry->Snapshots.push_back({EntryPoint, std::move(BoolValues),
+                                      std::move(UnsignedExplicitlySetValues),
+                                      std::move(UnsignedValues)});
 }
 
 void EntryPointStat::dumpStatsAsCSV(llvm::StringRef FileName) {
