@@ -152,6 +152,10 @@ public:
     /// FIXME: If not set, should use the current working directory.
     std::optional<std::string> WorkspaceRoot;
 
+    /// If set, fallback command uses this path as its current working directory
+    /// instead of the file's parent path.
+    std::optional<std::string> FallbackProjectRoot;
+
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
     /// If std::nullopt, ClangdServer calls
