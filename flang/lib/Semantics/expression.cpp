@@ -2329,7 +2329,7 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
               auto checked{CheckConformance(messages, *componentShape,
                   *valueShape, CheckConformanceFlags::RightIsExpandableDeferred,
                   "component", "value")};
-              if (checked && *checked && GetRank(*componentShape) > 0 &&
+              if (checked.value_or(false) && GetRank(*componentShape) > 0 &&
                   GetRank(*valueShape) == 0 &&
                   (IsDeferredShape(*symbol) ||
                       !IsExpandableScalar(*converted, foldingContext,
