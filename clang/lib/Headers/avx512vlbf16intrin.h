@@ -448,7 +448,7 @@ static __inline__ __m256 __DEFAULT_FN_ATTRS256 _mm256_cvtpbh_ps(__m128bh __A) {
 /// \returns A 128-bit vector of [4 x float] come from conversion of __A
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtpbh_ps(__mmask8 __U, __m128bh __A) {
-  return __mm_maskz_mov_ps(__U, (__m128)__builtin_convertvector(__A, __v4sf));
+  return _mm_maskz_mov_ps(__U, (__m128)__builtin_convertvector(__A, __v4sf));
 }
 
 /// Convert Packed BF16 Data to Packed float Data using zeroing mask.
@@ -463,7 +463,7 @@ _mm_maskz_cvtpbh_ps(__mmask8 __U, __m128bh __A) {
 /// \returns A 256-bit vector of [8 x float] come from conversion of __A
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtpbh_ps(__mmask8 __U, __m128bh __A) {
-  return __mm256_maskz_mov_ps(__U, (__m256)__builtin_convertvector(__A, __v8sf));
+  return _mm256_maskz_mov_ps(__U, (__m256)__builtin_convertvector(__A, __v8sf));
 }
 
 /// Convert Packed BF16 Data to Packed float Data using merging mask.
@@ -481,7 +481,7 @@ _mm256_maskz_cvtpbh_ps(__mmask8 __U, __m128bh __A) {
 /// \returns A 128-bit vector of [4 x float] come from conversion of __A
 static __inline__ __m128 __DEFAULT_FN_ATTRS128
 _mm_mask_cvtpbh_ps(__m128 __S, __mmask8 __U, __m128bh __A) {
-  return __mm_mask_mov_ps(__S, __U, (__m128)__builtin_convertvector(__A, __v4sf));
+  return _mm_mask_mov_ps(__S, __U, (__m128)__builtin_convertvector(__A, __v4sf));
 }
 
 /// Convert Packed BF16 Data to Packed float Data using merging mask.
@@ -499,7 +499,7 @@ _mm_mask_cvtpbh_ps(__m128 __S, __mmask8 __U, __m128bh __A) {
 /// \returns A 256-bit vector of [8 x float] come from conversion of __A
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtpbh_ps(__m256 __S, __mmask8 __U, __m128bh __A) {
-  return __mm256_mask_mov_ps(__S, __U, (__m256)__builtin_convertvector(__A, __v8sf));
+  return _mm256_mask_mov_ps(__S, __U, (__m256)__builtin_convertvector(__A, __v8sf));
 }
 
 #undef __DEFAULT_FN_ATTRS128
