@@ -42,7 +42,7 @@ using namespace mlir::amdgpu;
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
 namespace {
-struct AMDGPUInlinerInterface : public DialectInlinerInterface {
+struct AMDGPUInlinerInterface final : DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
   bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
