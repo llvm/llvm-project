@@ -201,8 +201,9 @@ define signext i32 @test4(i32 signext %x, i32 signext %y, i32 signext %z) {
 ;
 ; RV32IXQCI-LABEL: test4:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    li a0, 0
-; RV32IXQCI-NEXT:    qc.lieqi a0, a2, 0, 3
+; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    li a1, 3
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 0, a1, 0
 ; RV32IXQCI-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %a = select i1 %c, i32 3, i32 0
