@@ -376,6 +376,8 @@ private:
   /// index.
   bool reorderGEP(GetElementPtrInst *GEP, TargetTransformInfo &TTI);
 
+  bool decomposeBasePtr(Value *PtrOp, Value *&NewBase, APInt &BaseOffset);
+
   /// Lower a GEP with multiple indices into multiple GEPs with a single index.
   /// Function splitGEP already split the original GEP into a variadic part and
   /// a constant offset (i.e., AccumulativeByteOffset). This function lowers the
@@ -1043,6 +1045,46 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   return true;
 }
 
+bool SeparateConstOffsetFromGEP::decomposeBasePtr(Value *PtrOp, Value *&NewBase,
+                                                  APInt &BaseOffset) {
+  GEPOperator *PO = dyn_cast<GEPOperator>(PtrOp);
+  if (!PO || !PO->hasAllConstantIndices())
+    return false;
+
+  unsigned BitWidth =
+      DL->getTypeSizeInBits(cast<IntegerType>(PO->indices().begin()->get()->getType()));
+  APInt AccumulativeByteOffset(BitWidth, 0);
+  gep_type_iterator GTI = gep_type_begin(*PO);
+
+  // Iterate over all the indices to combine into a single constant.
+  for (auto &Op : PO->indices()) {
+    if (GTI.isSequential()) {
+      // Constant offsets of scalable types are not really constant.
+      if (GTI.getIndexedType()->isScalableTy())
+        return false;
+      APInt ConstantOffset = cast<ConstantInt>(Op.get())->getValue();
+      if (ConstantOffset != 0) {
+        AccumulativeByteOffset +=
+            ConstantOffset * GTI.getSequentialElementStride(*DL);
+      }
+    } else {
+      StructType *StTy = GTI.getStructType();
+      uint64_t Field = cast<ConstantInt>(Op.get())->getSExtValue();
+      // Skip field 0 as the offset is always 0.
+      if (Field != 0) {
+        AccumulativeByteOffset +=
+            DL->getStructLayout(StTy)->getElementOffset(Field);
+      }
+    }
+    ++GTI;
+  }
+
+  NewBase = PO->getPointerOperand();
+  BaseOffset = AccumulativeByteOffset;
+
+  return true;
+}
+
 bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // Skip vector GEPs.
   if (GEP->getType()->isVectorTy())
@@ -1051,13 +1093,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // If the base of this GEP is a ptradd of a constant, lets pass the constant
   // along. This ensures that when we have a chain of GEPs the constant
   // offset from each is accumulated.
-  Value *NewBase;
-  const APInt *BaseOffset;
-  const bool ExtractBase =
-      match(GEP->getPointerOperand(),
-            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  Value *NewBase = nullptr;
+  APInt BaseOffset;
+  bool ExtractBase = false;
 
-  const int64_t BaseByteOffset = ExtractBase ? BaseOffset->getSExtValue() : 0;
+  ExtractBase = decomposeBasePtr(GEP->getPointerOperand(), NewBase, BaseOffset);
+
+  const int64_t BaseByteOffset = ExtractBase ? BaseOffset.getSExtValue() : 0;
 
   // The backend can already nicely handle the case where all indices are
   // constant.
@@ -1090,7 +1132,18 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
                                    /*BaseGV=*/nullptr, AccumulativeByteOffset,
                                    /*HasBaseReg=*/true, /*Scale=*/0,
                                    AddrSpace)) {
-      return Changed;
+      if (!ExtractBase ||
+          !TTI.isLegalAddressingMode(
+              GEP->getResultElementType(),
+              /*BaseGV=*/nullptr, AccumulativeByteOffset - BaseByteOffset,
+              /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
+        return Changed;
+
+      // The extracted base has made the offset illegal. Prefer the original
+      // form with the non-extracted base.
+      AccumulativeByteOffset = AccumulativeByteOffset - BaseByteOffset;
+      ExtractBase = false;
+      NewBase = nullptr;
     }
   }
 
@@ -1141,6 +1194,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     NewGEPInBounds &= Base->isInBounds();
     NewGEPNUSW &= Base->hasNoUnsignedSignedWrap();
     AllOffsetsNonNegative &= BaseByteOffset >= 0;
+
+    bool BaseNonNeg = all_of(Base->indices(), [this](Value *V) {
+      return isKnownNonNegative(V, *DL);
+    });
+
+    NewGEPInBounds &= BaseNonNeg;
+    AllOffsetsNonNegative &= BaseNonNeg;
 
     GEP->setOperand(0, NewBase);
     RecursivelyDeleteTriviallyDeadInstructions(Base);
