@@ -32,21 +32,7 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i64 [[IV]], i32 0
-; IF-EVL-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i64 [[IV]], i32 1
-; IF-EVL-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], [[TMP12]]
-; IF-EVL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX4]], align 4
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       for.cond.cleanup:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -156,30 +142,12 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP12]])
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ADD2:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 0
-; IF-EVL-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[RDX]], [[TMP16]]
-; IF-EVL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 1
-; IF-EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[TMP17]]
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 3
-; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD2]] = add nsw i32 [[ADD1]], [[TMP18]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]]
 ; IF-EVL:       exit:
-; IF-EVL-NEXT:    [[ADD2_LCSSA:%.*]] = phi i32 [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
-; IF-EVL-NEXT:    ret i32 [[ADD2_LCSSA]]
+; IF-EVL-NEXT:    ret i32 [[TMP15]]
 ;
 ; NO-VP-LABEL: @load_factor_4_with_gap(
 ; NO-VP-NEXT:  entry:
@@ -299,22 +267,9 @@ define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT5]] = add <vscale x 4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 [[TMP15]], i32 0
-; IF-EVL-NEXT:    store i32 [[TMP15]], ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 [[TMP15]], i32 1
-; IF-EVL-NEXT:    store i32 [[TMP15]], ptr [[ARRAYIDX1]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 [[TMP15]], i32 3
-; IF-EVL-NEXT:    store i32 [[TMP15]], ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[TMP15]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -427,30 +382,12 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP12]])
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ADD2:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 0
-; IF-EVL-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[RDX]], [[TMP16]]
-; IF-EVL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 1
-; IF-EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[TMP17]]
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 2
-; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD2]] = add nsw i32 [[ADD1]], [[TMP18]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]]
 ; IF-EVL:       exit:
-; IF-EVL-NEXT:    [[ADD2_LCSSA:%.*]] = phi i32 [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
-; IF-EVL-NEXT:    ret i32 [[ADD2_LCSSA]]
+; IF-EVL-NEXT:    ret i32 [[TMP15]]
 ;
 ; NO-VP-LABEL: @load_factor_4_with_tail_gap(
 ; NO-VP-NEXT:  entry:
@@ -571,22 +508,9 @@ define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT5]] = add <vscale x 4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 [[TMP15]], i32 0
-; IF-EVL-NEXT:    store i32 [[TMP15]], ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 [[TMP15]], i32 1
-; IF-EVL-NEXT:    store i32 [[TMP15]], ptr [[ARRAYIDX1]], align 4
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 [[TMP15]], i32 2
-; IF-EVL-NEXT:    store i32 [[TMP15]], ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[TMP15]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -697,33 +621,12 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP16]])
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[N]], [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 0
-; IF-EVL-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[RDX]], [[TMP20]]
-; IF-EVL-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 1
-; IF-EVL-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[TMP21]]
-; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 2
-; IF-EVL-NEXT:    [[TMP22:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD1]], [[TMP22]]
-; IF-EVL-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[IV]], i32 3
-; IF-EVL-NEXT:    [[TMP23:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
-; IF-EVL-NEXT:    [[ADD3]] = add nsw i32 [[ADD2]], [[TMP23]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; IF-EVL-NEXT:    [[EXITCOND:%.*]] = icmp sgt i64 [[IV_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[EXIT]]
 ; IF-EVL:       exit:
-; IF-EVL-NEXT:    [[ADD3_LCSSA:%.*]] = phi i32 [ [[ADD3]], [[FOR_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
-; IF-EVL-NEXT:    ret i32 [[ADD3_LCSSA]]
+; IF-EVL-NEXT:    ret i32 [[TMP19]]
 ;
 ; NO-VP-LABEL: @load_factor_4_reverse(
 ; NO-VP-NEXT:  entry:
