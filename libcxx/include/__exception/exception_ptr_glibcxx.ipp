@@ -38,9 +38,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void exception_ptr::__decreme
     reinterpret_cast<__exception_ptr::exception_ptr*>(this)->_M_release();
 }
 
-[[noreturn]] void rethrow_exception(__exception_ptr::exception_ptr);
+[[__noreturn__]] void rethrow_exception(__exception_ptr::exception_ptr);
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[noreturn]] void rethrow_exception(exception_ptr __ptr) {
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE void rethrow_exception(exception_ptr __ptr) {
   rethrow_exception(reinterpret_cast<__exception_ptr::exception_ptr&>(__ptr));
 }
 

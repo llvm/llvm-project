@@ -31,9 +31,9 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(con
   return *this;
 }
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLEexception_ptr& exception_ptr::operator=(nullptr_t) _NOEXCEPT {
-  exception_ptr dummy;
-  __ExceptionPtrAssign(this, &dummy);
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(nullptr_t) _NOEXCEPT {
+  exception_ptr __dummy;
+  __ExceptionPtrAssign(this, &__dummy);
   return *this;
 }
 
@@ -41,7 +41,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() _NOEXCEPT {
 
 _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::operator bool() const _NOEXCEPT { return __ExceptionPtrToBool(this); }
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLEbool operator==(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE bool operator==(const exception_ptr& __x, const exception_ptr& __y) _NOEXCEPT {
   return __ExceptionPtrCompare(&__x, &__y);
 }
 
@@ -54,12 +54,12 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr __copy_exception_ptr(void* __
   return __ret;
 }
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLEexception_ptr current_exception() _NOEXCEPT {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr current_exception() _NOEXCEPT {
   exception_ptr __ret;
   __ExceptionPtrCurrentException(&__ret);
   return __ret;
 }
 
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[noreturn]] void rethrow_exception(exception_ptr __ptr) { __ExceptionPtrRethrow(&__ptr); }
+[[__noreturn__]] _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE void rethrow_exception(exception_ptr __ptr) { __ExceptionPtrRethrow(&__ptr); }
 
 } // namespace std
