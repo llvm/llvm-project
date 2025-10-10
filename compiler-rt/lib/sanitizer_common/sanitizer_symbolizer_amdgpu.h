@@ -13,15 +13,12 @@
 #if SANITIZER_AMDGPU
 #  include "sanitizer_common.h"
 #  include "sanitizer_symbolizer_internal.h"
-#  ifdef AMD_COMGR
+#  if __has_include("amd_comgr.h.in")
+#    include "amd_comgr.h.in"
+#  elif __has_include("amd_comgr.h")
 #    include "amd_comgr.h"
 #  else
-// Note: We require amd_comgr.h.in in COMgr source directory to be valid C
-// header file since we have a circular dependency between compiler-rt and COMgr
-// builds.
-// FIXME: Find a long-term solution for resolving this circular dependency and
-// avoid including amd_comgr.h.in.
-#    include "amd_comgr.h.in"
+#    error "No amd_comgr.h/amd_comgr header found!"
 #  endif
 
 namespace __sanitizer {
