@@ -12420,9 +12420,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         }
         case clang::X86::BI__builtin_ia32_phaddsw128:
         case clang::X86::BI__builtin_ia32_phaddsw256: {
-          APSInt Res(LHSA.isSigned() ? LHSA.sadd_sat(LHSB)
-                                     : LHSA.uadd_sat(LHSB),
-                     DestUnsigned);
+          APSInt Res(LHSA.sadd_sat(LHSB));
           ResultElements.push_back(APValue(Res));
           break;
         }
@@ -12436,9 +12434,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         }
         case clang::X86::BI__builtin_ia32_phsubsw128:
         case clang::X86::BI__builtin_ia32_phsubsw256: {
-          APSInt Res(LHSA.isSigned() ? LHSA.ssub_sat(LHSB)
-                                     : LHSA.usub_sat(LHSB),
-                     DestUnsigned);
+          APSInt Res(LHSA.ssub_sat(LHSB));
           ResultElements.push_back(APValue(Res));
           break;
         }
@@ -12458,9 +12454,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         }
         case clang::X86::BI__builtin_ia32_phaddsw128:
         case clang::X86::BI__builtin_ia32_phaddsw256: {
-          APSInt Res(RHSA.isSigned() ? RHSA.sadd_sat(RHSB)
-                                     : RHSA.uadd_sat(RHSB),
-                     DestUnsigned);
+          APSInt Res(RHSA.sadd_sat(RHSB));
           ResultElements.push_back(APValue(Res));
           break;
         }
@@ -12474,9 +12468,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         }
         case clang::X86::BI__builtin_ia32_phsubsw128:
         case clang::X86::BI__builtin_ia32_phsubsw256: {
-          APSInt Res(RHSA.isSigned() ? RHSA.ssub_sat(RHSB)
-                                     : RHSA.usub_sat(RHSB),
-                     DestUnsigned);
+          APSInt Res(RHSA.ssub_sat(RHSB));
           ResultElements.push_back(APValue(Res));
           break;
         }
@@ -12486,110 +12478,66 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   case clang::X86::BI__builtin_ia32_haddpd:
-  case clang::X86::BI__builtin_ia32_haddps: {
-    APValue SourceLHS, SourceRHS;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
-      return false;
-    unsigned SourceLen = SourceLHS.getVectorLength();
-    SmallVector<APValue, 4> ResultElements;
-    ResultElements.reserve(SourceLen);
-    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
-    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
-      APFloat LHSA = SourceLHS.getVectorElt(EltNum).getFloat();
-      APFloat LHSB = SourceLHS.getVectorElt(EltNum + 1).getFloat();
-      LHSA.add(LHSB, RM);
-      ResultElements.push_back(APValue(LHSA));
-    }
-    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
-      APFloat RHSA = SourceRHS.getVectorElt(EltNum).getFloat();
-      APFloat RHSB = SourceRHS.getVectorElt(EltNum + 1).getFloat();
-      RHSA.add(RHSB, RM);
-      ResultElements.push_back(APValue(RHSA));
-    }
-    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
-  }
-  case clang::X86::BI__builtin_ia32_hsubpd:
-  case clang::X86::BI__builtin_ia32_hsubps: {
-    APValue SourceLHS, SourceRHS;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
-      return false;
-    unsigned SourceLen = SourceLHS.getVectorLength();
-    SmallVector<APValue, 4> ResultElements;
-    ResultElements.reserve(SourceLen);
-    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
-    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
-      APFloat LHSA = SourceLHS.getVectorElt(EltNum).getFloat();
-      APFloat LHSB = SourceLHS.getVectorElt(EltNum + 1).getFloat();
-      LHSA.subtract(LHSB, RM);
-      ResultElements.push_back(APValue(LHSA));
-    }
-    for (unsigned EltNum = 0; EltNum < SourceLen; EltNum += 2) {
-      APFloat RHSA = SourceRHS.getVectorElt(EltNum).getFloat();
-      APFloat RHSB = SourceRHS.getVectorElt(EltNum + 1).getFloat();
-      RHSA.subtract(RHSB, RM);
-      ResultElements.push_back(APValue(RHSA));
-    }
-    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
-  }
+  case clang::X86::BI__builtin_ia32_haddps:
+  case clang::X86::BI__builtin_ia32_haddps256:
   case clang::X86::BI__builtin_ia32_haddpd256:
+  case clang::X86::BI__builtin_ia32_hsubpd:
+  case clang::X86::BI__builtin_ia32_hsubps:
+  case clang::X86::BI__builtin_ia32_hsubps256:
   case clang::X86::BI__builtin_ia32_hsubpd256: {
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
       return false;
-    SmallVector<APValue, 4> ResultElements(4);
+    unsigned NumElts = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(NumElts);
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
-    for (unsigned i = 0; i < 2; ++i) {
-      APFloat A = SourceLHS.getVectorElt(2 * i).getFloat();
-      APFloat B = SourceLHS.getVectorElt(2 * i + 1).getFloat();
-      if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddpd256)
-        A.add(B, RM);
-      else
-        A.subtract(B, RM);
-      ResultElements[2 * i] = APValue(A);
-    }
-    for (unsigned i = 0; i < 2; ++i) {
-      APFloat A = SourceRHS.getVectorElt(2 * i).getFloat();
-      APFloat B = SourceRHS.getVectorElt(2 * i + 1).getFloat();
-      if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddpd256)
-        A.add(B, RM);
-      else
-        A.subtract(B, RM);
-      ResultElements[2 * i + 1] = APValue(A);
-    }
-    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
-  }
-  case clang::X86::BI__builtin_ia32_haddps256:
-  case clang::X86::BI__builtin_ia32_hsubps256: {
-    APValue SourceLHS, SourceRHS;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
-      return false;
-    SmallVector<APValue, 4> ResultElements(8);
-    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
-    for (unsigned i = 0; i < 4; ++i) {
-      unsigned SrcIdx = 2 * i;
-      unsigned DestIdx = (i < 2) ? i : (i + 2);
-      APFloat A = SourceLHS.getVectorElt(SrcIdx).getFloat();
-      APFloat B = SourceLHS.getVectorElt(SrcIdx + 1).getFloat();
-      if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddps256)
-        A.add(B, RM);
-      else
-        A.subtract(B, RM);
-      ResultElements[DestIdx] = APValue(A);
-    }
-    for (unsigned i = 0; i < 4; ++i) {
-      unsigned SrcIdx = 2 * i;
-      unsigned DestIdx = (i < 2) ? (i + 2) : (i + 4);
-      APFloat A = SourceRHS.getVectorElt(SrcIdx).getFloat();
-      APFloat B = SourceRHS.getVectorElt(SrcIdx + 1).getFloat();
-      if (E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_haddps256)
-        A.add(B, RM);
-      else
-        A.subtract(B, RM);
-      ResultElements[DestIdx] = APValue(A);
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    unsigned EltBits = Info.Ctx.getTypeSize(DestEltTy);
+    unsigned NumLanes = NumElts * EltBits / 128;
+    unsigned NumElemsPerLane = NumElts / NumLanes;
+    unsigned HalfElemsPerLane = NumElemsPerLane / 2;
+
+    for (unsigned L = 0; L != NumElts; L += NumElemsPerLane) {
+      for (unsigned I = 0; I != HalfElemsPerLane; ++I) {
+        APFloat LHSA = SourceLHS.getVectorElt(L + (2 * I) + 0).getFloat();
+        APFloat LHSB = SourceLHS.getVectorElt(L + (2 * I) + 1).getFloat();
+        switch (E->getBuiltinCallee()) {
+        case clang::X86::BI__builtin_ia32_haddpd:
+        case clang::X86::BI__builtin_ia32_haddps:
+        case clang::X86::BI__builtin_ia32_haddps256:
+        case clang::X86::BI__builtin_ia32_haddpd256:
+          LHSA.add(LHSB, RM);
+          break;
+        case clang::X86::BI__builtin_ia32_hsubpd:
+        case clang::X86::BI__builtin_ia32_hsubps:
+        case clang::X86::BI__builtin_ia32_hsubps256:
+        case clang::X86::BI__builtin_ia32_hsubpd256:
+          LHSA.subtract(LHSB, RM);
+          break;
+        }
+        ResultElements.push_back(APValue(LHSA));
+      }
+      for (unsigned I = 0; I != HalfElemsPerLane; ++I) {
+        APFloat RHSA = SourceRHS.getVectorElt(L + (2 * I) + 0).getFloat();
+        APFloat RHSB = SourceRHS.getVectorElt(L + (2 * I) + 1).getFloat();
+        switch (E->getBuiltinCallee()) {
+        case clang::X86::BI__builtin_ia32_haddpd:
+        case clang::X86::BI__builtin_ia32_haddps:
+        case clang::X86::BI__builtin_ia32_haddps256:
+        case clang::X86::BI__builtin_ia32_haddpd256:
+          RHSA.add(RHSB, RM);
+          break;
+        case clang::X86::BI__builtin_ia32_hsubpd:
+        case clang::X86::BI__builtin_ia32_hsubps:
+        case clang::X86::BI__builtin_ia32_hsubps256:
+        case clang::X86::BI__builtin_ia32_hsubpd256:
+          RHSA.subtract(RHSB, RM);
+          break;
+        }
+        ResultElements.push_back(APValue(RHSA));
+      }
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
