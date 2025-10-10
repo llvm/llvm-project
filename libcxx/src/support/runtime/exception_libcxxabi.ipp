@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cxxabi.h>
+
 namespace std {
 
 bool uncaught_exception() noexcept { return uncaught_exceptions() > 0; }
