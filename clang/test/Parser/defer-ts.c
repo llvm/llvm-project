@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c11 -fsyntax-only -fexperimental-defer-ts -verify %s
-// RUN: %clang_cc1 -std=c23 -fsyntax-only -fexperimental-defer-ts -verify %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -fdefer-ts -verify %s
+// RUN: %clang_cc1 -std=c23 -fsyntax-only -fdefer-ts -verify %s
 
 int g(void);
 int h(int x);

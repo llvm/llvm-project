@@ -1654,9 +1654,9 @@ defm named_loops
           NegFlag<SetFalse>>;
 
 // C 'defer' TS
-defm experimental_defer_ts
+defm defer_ts
     : BoolFOption<
-          "experimental-defer-ts", LangOpts<"DeferTS">, DefaultFalse,
+          "defer-ts", LangOpts<"DeferTS">, DefaultFalse,
           PosFlag<SetTrue, [], [ClangOption, CC1Option],
                   "Enable support for the C 'defer' Technical Specification">,
           NegFlag<SetFalse>>;

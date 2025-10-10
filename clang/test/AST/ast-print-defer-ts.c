@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -fexperimental-defer-ts -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -ast-print %s | FileCheck %s
 
 void g();
 

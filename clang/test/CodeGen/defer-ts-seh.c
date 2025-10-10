@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -std=c23 -fexperimental-defer-ts -fms-compatibility -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -std=c23 -fdefer-ts -fms-compatibility -emit-llvm %s -o - | FileCheck %s
 
 void g();
 void h();

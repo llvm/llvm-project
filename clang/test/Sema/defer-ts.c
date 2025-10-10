@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -fexperimental-defer-ts -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -fsyntax-only -verify %s
 
 void a();
 

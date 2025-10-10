@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c23 -fexperimental-defer-ts -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c23 -fdefer-ts -emit-llvm %s -o - | FileCheck %s
 
 void a();
 void b();

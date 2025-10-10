@@ -1,10 +1,10 @@
 // Test without serialization:
-// RUN: %clang_cc1 -std=c23 -fexperimental-defer-ts -ast-dump %s -triple x86_64-linux-gnu \
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -ast-dump %s -triple x86_64-linux-gnu \
 // RUN: | FileCheck %s
 //
 // Test with serialization:
-// RUN: %clang_cc1 -std=c23 -fexperimental-defer-ts -triple x86_64-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -std=c23 -fexperimental-defer-ts -triple x86_64-linux-gnu -include-pch %t -ast-dump-all /dev/null \
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -triple x86_64-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -triple x86_64-linux-gnu -include-pch %t -ast-dump-all /dev/null \
 // RUN: | FileCheck %s
 
 static inline void f() {
