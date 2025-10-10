@@ -524,7 +524,14 @@ private:
       /// frequency. 0 when unknown.
       SmallVector<uint64_t> Regions;
       /// Maximum observed frequency, normalized to minimum observed frequency.
-      uint64_t MaxFreq;
+      uint64_t MaxFreq = 0;
+      /// Rescaling factor for scoring frequency differences in the range [0, 2
+      /// * (MaxFreq - 1)].
+      uint64_t RescaleFactor = 0;
+      /// Whether the rescaling factor should be used as a denominator (when the
+      /// maximum frequency is "big") or as a nominator (when the maximum
+      /// frequency is "small").
+      bool RescaleIsDenom = false;
 
       FreqInfo(MachineFunction &MF, const GCNScheduleDAGMILive &DAG);
     };
@@ -581,20 +588,29 @@ private:
     void setMaxFreqScore(ScoreTy MaxFreq) {
       MaxFreq = std::min(
           static_cast<ScoreTy>(std::numeric_limits<uint32_t>::max()), MaxFreq);
-      Score |= MaxFreq << (FreqDiffWidth + RegionImpactWidth);
+      MaxFreq <<= FreqDiffWidth + RegionImpactWidth;
+
+      ScoreTy Mask = ((ScoreTy)1 << (FreqDiffWidth + RegionImpactWidth)) - 1;
+      Score = MaxFreq | (Score & Mask);
     }
 
     void setFreqDiffScore(ScoreTy FreqDiff) {
       FreqDiff = std::min(
           static_cast<ScoreTy>(std::numeric_limits<uint16_t>::max()), FreqDiff);
-      Score |= FreqDiff << RegionImpactWidth;
+      FreqDiff <<= RegionImpactWidth;
+
+      ScoreTy Mask = ((ScoreTy)1 << (FreqDiffWidth)) - 1;
+      Mask <<= RegionImpactWidth;
+      Score = FreqDiff | (Score & ~Mask);
     }
 
     void setRegionImpactScore(ScoreTy RegionImpact) {
       RegionImpact =
           std::min(static_cast<ScoreTy>(std::numeric_limits<uint16_t>::max()),
                    RegionImpact);
-      Score |= RegionImpact;
+
+      ScoreTy Mask = ((ScoreTy)1 << (RegionImpactWidth)) - 1;
+      Score = RegionImpact | (Score & ~Mask);
     }
 
     unsigned getNumRegs(const GCNScheduleDAGMILive &DAG) const;

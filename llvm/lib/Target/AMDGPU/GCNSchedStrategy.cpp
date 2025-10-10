@@ -1386,6 +1386,18 @@ bool PreRARematStage::initGCNSchedStage() {
   });
 
   const ScoredRemat::FreqInfo FreqInfo(MF, DAG);
+  REMAT_DEBUG({
+    dbgs() << "Region frequencies\n";
+    for (auto [I, Freq] : enumerate(FreqInfo.Regions)) {
+      dbgs() << REMAT_PREFIX << "  [" << I << "] ";
+      if (Freq)
+        dbgs() << Freq;
+      else
+        dbgs() << "unknown ";
+      dbgs() << " | " << *DAG.Regions[I].first;
+    }
+  });
+
   SmallVector<ScoredRemat> ScoredRemats;
   for (const RematReg &Remat : RematRegs)
     ScoredRemats.emplace_back(&Remat, FreqInfo, DAG);
@@ -2185,7 +2197,6 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   const unsigned NumRegions = DAG.Regions.size();
   uint64_t MinFreq = MBFI.getEntryFreq().getFrequency();
   Regions.reserve(NumRegions);
-  MaxFreq = 0;
   for (unsigned I = 0; I < NumRegions; ++I) {
     MachineBasicBlock *MBB = DAG.Regions[I].first->getParent();
     uint64_t BlockFreq = MBFI.getBlockFreq(MBB).getFrequency();
@@ -2195,25 +2206,23 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
     else if (BlockFreq > MaxFreq)
       MaxFreq = BlockFreq;
   }
-  if (MinFreq) {
-    // Normalize to minimum observed frequency to avoid overflows when adding up
-    // frequencies.
-    for (uint64_t &Freq : Regions)
-      Freq /= MinFreq;
-    MaxFreq /= MinFreq;
-  }
+  if (!MinFreq)
+    return;
 
-  REMAT_DEBUG({
-    dbgs() << "Region frequencies\n";
-    for (auto [I, Freq] : enumerate(Regions)) {
-      dbgs() << REMAT_PREFIX << "  [" << I << "] ";
-      if (Freq)
-        dbgs() << Freq;
-      else
-        dbgs() << "unknown ";
-      dbgs() << " | " << *DAG.Regions[I].first;
-    }
-  });
+  // Normalize to minimum observed frequency to avoid overflows when adding up
+  // frequencies.
+  for (uint64_t &Freq : Regions)
+    Freq /= MinFreq;
+  MaxFreq /= MinFreq;
+
+  // Compute the scaling factor for scoring frequency differences.
+  const uint64_t MaxDiff = MaxFreq - 1;
+  const uint64_t MaxReprFreqValue = (1 << FreqDiffWidth) - 1;
+  RescaleIsDenom = (2 * MaxDiff) & ~MaxReprFreqValue;
+  if (RescaleIsDenom)
+    RescaleFactor = (2 * MaxDiff) >> FreqDiffWidth;
+  else
+    RescaleFactor = MaxDiff ? MaxReprFreqValue / (2 * MaxDiff) : 1;
 }
 
 PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
@@ -2223,16 +2232,20 @@ PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
 
 unsigned PreRARematStage::ScoredRemat::getNumRegs(
     const GCNScheduleDAGMILive &DAG) const {
-  // FIXME: this doesn't account for the fact that the rematerialization may be
-  // for a subregister. In that case we will overestimate the number of
-  // registers involved. This is acceptable since this is purely used for the
-  // scoring heuristic, but we should find a way to compute the number of
-  // registers actually covered by the register/subregister pair.
   const TargetRegisterClass &RC = *DAG.MRI.getRegClass(Remat->getReg());
-  return divideCeil(DAG.TRI->getRegSizeInBits(RC), 32);
+  unsigned RegSize = DAG.TRI->getRegSizeInBits(RC);
+  if (unsigned SubIdx = Remat->DefMI->getOperand(0).getSubReg()) {
+    // The following may return -1 (i.e., a large unsigned number) on indices
+    // that may be used to access subregisters of multiple sizes; in such cases
+    // fallback on the size derived from the register class.
+    unsigned SubRegSize = DAG.TRI->getSubRegIdxSize(SubIdx);
+    if (SubRegSize < RegSize)
+      RegSize = SubRegSize;
+  }
+  return divideCeil(RegSize, 32);
 }
 
-uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Info) const {
+uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
   // Get frequencies of defining and using regions. A rematerialization from the
   // least frequent region to the most frequent region will yield the greatest
   // latency penalty and therefore should get minimum score. Reciprocally, a
@@ -2240,22 +2253,22 @@ uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Info) const {
   // to values that will yield the worst possible score given known frequencies
   // in order to penalize rematerializations from or into regions whose
   // frequency is unknown.
-  uint64_t DefOrOne = Info.Regions[Remat->DefRegion];
+  uint64_t DefOrOne = Freq.Regions[Remat->DefRegion];
   if (!DefOrOne)
     DefOrOne = 1;
-  uint64_t UseOrMax = Info.Regions[Remat->UseRegion];
+  uint64_t UseOrMax = Freq.Regions[Remat->UseRegion];
   if (!UseOrMax)
-    UseOrMax = Info.MaxFreq;
+    UseOrMax = Freq.MaxFreq;
 
   // Maximum difference in frequency between defining and using regions.
-  const uint64_t MaxDiff = Info.MaxFreq - 1;
-  // This is equivalent to max( (2 * MaxDiff) / 2^NumBitsLatency , 1 ).
-  const uint64_t RescaleDenom =
-      std::max(MaxDiff >> (FreqDiffWidth - 1), (uint64_t)1);
+  const uint64_t MaxDiff = Freq.MaxFreq - 1;
   // The difference between defining and using frequency is in the range
   // [-MaxDiff, MaxDiff], shift it to [0,2 x MaxDiff] to stay in the positive
-  // range, then rescale to [0, 2^NumBitsLatency - 1]
-  return (MaxDiff + (DefOrOne - UseOrMax)) / RescaleDenom;
+  // range, then rescale to the representable range in the final score.
+  const uint64_t FreqDiff = (MaxDiff + (DefOrOne - UseOrMax));
+  if (Freq.RescaleIsDenom)
+    return FreqDiff / Freq.RescaleFactor;
+  return FreqDiff * Freq.RescaleFactor;
 }
 
 void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
