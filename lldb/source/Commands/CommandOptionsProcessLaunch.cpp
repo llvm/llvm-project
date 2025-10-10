@@ -128,7 +128,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
   }
 
   case 'M':
-    memory_tagging = true;
+    launch_info.GetFlags().Set(eLaunchFlagMemoryTagging);
     break;
 
   case 'c':
