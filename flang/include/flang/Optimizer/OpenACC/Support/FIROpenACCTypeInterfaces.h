@@ -53,15 +53,15 @@ struct OpenACCMappableModel
   mlir::acc::VariableTypeCategory getTypeCategory(mlir::Type type,
                                                   mlir::Value var) const;
 
-  bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
-                              mlir::Location loc, mlir::Value privatized) const;
-
   mlir::Value generatePrivateInit(mlir::Type type, mlir::OpBuilder &builder,
                                   mlir::Location loc,
                                   mlir::TypedValue<mlir::acc::MappableType> var,
                                   llvm::StringRef varName,
                                   mlir::ValueRange extents, mlir::Value initVal,
                                   bool &needsDestroy) const;
+
+  bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
+                              mlir::Location loc, mlir::Value privatized) const;
 };
 
 } // namespace fir::acc

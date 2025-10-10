@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -555,8 +556,20 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   mlir::ModuleOp mod = builder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
-  fir::FirOpBuilder firBuilder(builder, mod);
 
+  if (auto recType = llvm::dyn_cast<fir::RecordType>(
+          fir::getFortranElementType(unwrappedTy))) {
+    // Need to make deep copies of allocatable components.
+    if (fir::isRecordWithAllocatableMember(recType))
+      TODO(loc,
+           "OpenACC: privatizing derived type with allocatable components");
+    // Need to decide if user assignment/final routine should be called.
+    if (fir::isRecordWithFinalRoutine(recType, mod).value_or(false))
+      TODO(loc, "OpenACC: privatizing derived type with user assignment or "
+                "final routine ");
+  }
+
+  fir::FirOpBuilder firBuilder(builder, mod);
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
     return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
@@ -696,17 +709,9 @@ template <typename Ty>
 bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value privatized) const {
-  // TODO: This is only dealing with cleaning-up heap allocation of the
-  // variable when any was made. Some Fortran types may have allocatable
-  // components. Currently the init is not doing deep copies of such components,
-  // so they are not freed here either. Likewise, the copies, when any, are not
-  // made using Fortran user defined assignments, so the destructors are not
-  // called either. This deserve a standard clarification, and in the meantime,
-  // it would likely be better to reject the privatization of such types.
   mlir::Type unwrappedTy = fir::unwrapRefType(type);
   // For boxed scalars allocated with AllocMem during init, free the heap.
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
-    // Load the box, take the address and free target if it was heap allocated.
     mlir::Value boxVal = privatized;
     if (fir::isa_ref_type(boxVal.getType()))
       boxVal = fir::LoadOp::create(builder, loc, boxVal);
