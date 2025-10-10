@@ -1,5 +1,5 @@
 // REQUIRES: asserts
-// RUN: %clang_analyze_cc1 -analyzer-checker=core \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.UnsignedStatTester \
 // RUN:    -analyzer-config dump-entry-point-stats-to-csv="%t.csv" \
 // RUN:    -verify %s
 // RUN: %csv2json "%t.csv" | FileCheck --check-prefix=CHECK %s
@@ -8,6 +8,7 @@
 // CHECK-NEXT:   "c:@F@fib#i#": {
 // CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "fib(unsigned int)",
+// CHECK-NEXT:     "DemoStat": "",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxCFGSize": "{{[0-9]+}}",
@@ -42,9 +43,22 @@
 // CHECK-NEXT:     "NumZ3QueriesDone": "{{[0-9]+}}",
 // CHECK-NEXT:     "TimeSpentSolvingZ3Queries": "{{[0-9]+}}"
 // CHECK-NEXT:   },
+// CHECK-NEXT:   "c:@F@func_one#": {
+// CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
+// CHECK-NEXT:     "DebugName": "func_one()",
+// CHECK:          "DemoStat": "1",
+//             .... not interesting statistics
+// CHECK:        },
+// CHECK-NEXT:   "c:@F@func_two#": {
+// CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
+// CHECK-NEXT:     "DebugName": "func_two()",
+// CHECK:          "DemoStat": "2",
+//             .... not interesting statistics
+// CHECK:        },
 // CHECK-NEXT:   "c:@F@main#I#**C#": {
 // CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "main(int, char **)",
+// CHECK-NEXT:     "DemoStat": "",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxBugClassSize": "{{[0-9]+}}",
 // CHECK-NEXT:     "MaxCFGSize": "{{[0-9]+}}",
@@ -102,3 +116,6 @@ int main(int argc, char **argv) {
   int i = non_entry_point(argc);
   return i;
 }
+
+void func_one() {}
+void func_two() {}
