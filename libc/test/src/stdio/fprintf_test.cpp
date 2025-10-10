@@ -93,7 +93,7 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
 
 TEST(LlvmLibcFPrintfTest, CharsWrittenOverflow) {
   struct NoopStream {};
-  auto noop_write = [](void *cookie, const char *buf, size_t size) -> ssize_t {
+  auto noop_write = [](void *, const char *, size_t size) -> ssize_t {
     return size;
   };
 

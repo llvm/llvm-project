@@ -36,7 +36,7 @@ int strftime_main(printf_core::Writer<write_mode> *writer,
       return result;
   }
 
-  // TODO could work similar to printf, retval is size_t in libc outer func
+  // TODO: return result struct like printf, so that size_t can be returned
   return static_cast<int>(writer->get_chars_written());
 }
 
