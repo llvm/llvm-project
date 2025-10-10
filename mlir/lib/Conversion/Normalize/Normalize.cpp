@@ -163,51 +163,10 @@ std::string inline split(std::string_view str, const char &delimiter,
 void NormalizePass::nameAsInitialOperation(
     mlir::Operation *op,
     llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
-  SmallVector<SmallString<64>, 4> Operands;
 
-  if (op->getNumOperands() == 0) {
-    if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
-      Operands.push_back(StringRef(std::string{"void"}));
-    } else {
-      std::string TextRepresentation;
-      mlir::AsmState state(op, flags);
-      llvm::raw_string_ostream Stream(TextRepresentation);
-      op->print(Stream, state);
-      std::string hash = to_string(strHash(split(Stream.str(), '=', 1)));
-      Operands.push_back(StringRef(hash));
-    }
-  } else {
-    for (mlir::Value operand : op->getOperands()) {
-      if (mlir::Operation *defOp = operand.getDefiningOp()) {
-        RenameOperation(defOp, visited);
-
-        std::string TextRepresentation;
-        mlir::AsmState state(defOp, flags);
-        llvm::raw_string_ostream Stream(TextRepresentation);
-        defOp->print(Stream, state);
-        Operands.push_back(StringRef(split(Stream.str(), '=', 0)));
-      } else if (auto ba = dyn_cast<mlir::BlockArgument>(operand)) {
-        mlir::Block *ownerBlock = ba.getOwner();
-        unsigned argIndex = ba.getArgNumber();
-        if (auto func =
-                dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
-          if (&func.front() == ownerBlock) {
-            Operands.push_back(
-                StringRef(std::string("funcArg" + std::to_string(argIndex))));
-          } else {
-            Operands.push_back(
-                StringRef(std::string("blockArg" + std::to_string(argIndex))));
-          }
-        } else {
-          Operands.push_back(
-              StringRef(std::string("blockArg" + std::to_string(argIndex))));
-        }
-      }
-    }
-  }
-
-  if (op->hasTrait<OpTrait::IsCommutative>())
-    llvm::sort(Operands);
+  for (mlir::Value operand : op->getOperands())
+    if (mlir::Operation *defOp = operand.getDefiningOp())
+      RenameOperation(defOp, visited);
 
   uint64_t Hash = MagicHashConstant;
 
@@ -228,14 +187,20 @@ void NormalizePass::nameAsInitialOperation(
     Name.append(callee.str());
   }
 
-  Name.append("$");
-  for (unsigned long i = 0; i < Operands.size(); ++i) {
-    Name.append(std::string(Operands[i]));
-
-    if (i < Operands.size() - 1)
-      Name.append("-");
+  if (op->getNumOperands() == 0) {
+    Name.append("$");
+    if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
+      Name.append("void");
+    } else {
+      std::string TextRepresentation;
+      mlir::AsmState state(op, flags);
+      llvm::raw_string_ostream Stream(TextRepresentation);
+      op->print(Stream, state);
+      std::string hash = to_string(strHash(split(Stream.str(), '=', 1)));
+      Name.append(hash);
+    }
+    Name.append("$");
   }
-  Name.append("$");
 
   mlir::OpBuilder b(op->getContext());
   mlir::StringAttr sat = b.getStringAttr(Name);
@@ -246,36 +211,10 @@ void NormalizePass::nameAsInitialOperation(
 void NormalizePass::nameAsRegularOperation(
     mlir::Operation *op,
     llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
-  SmallVector<SmallString<64>, 4> Operands;
-  for (mlir::Value operand : op->getOperands()) {
-    if (mlir::Operation *defOp = operand.getDefiningOp()) {
+
+  for (mlir::Value operand : op->getOperands())
+    if (mlir::Operation *defOp = operand.getDefiningOp())
       RenameOperation(defOp, visited);
-
-      std::string TextRepresentation;
-      mlir::AsmState state(defOp, flags);
-      llvm::raw_string_ostream Stream(TextRepresentation);
-      defOp->print(Stream, state);
-      Operands.push_back(StringRef(split(Stream.str(), '=', 0)));
-    } else if (auto ba = dyn_cast<mlir::BlockArgument>(operand)) {
-      mlir::Block *ownerBlock = ba.getOwner();
-      unsigned argIndex = ba.getArgNumber();
-      if (auto func = dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
-        if (&func.front() == ownerBlock) {
-          Operands.push_back(
-              StringRef(std::string("funcArg" + std::to_string(argIndex))));
-        } else {
-          Operands.push_back(
-              StringRef(std::string("blockArg" + std::to_string(argIndex))));
-        }
-      } else {
-        Operands.push_back(
-            StringRef(std::string("blockArg" + std::to_string(argIndex))));
-      }
-    }
-  }
-
-  if (op->hasTrait<OpTrait::IsCommutative>())
-    llvm::sort(Operands);
 
   uint64_t Hash = MagicHashConstant;
 
@@ -302,15 +241,6 @@ void NormalizePass::nameAsRegularOperation(
     Name.append(callee.str());
   }
 
-  Name.append("$");
-  for (unsigned long i = 0; i < Operands.size(); ++i) {
-    Name.append(Operands[i]);
-
-    if (i < Operands.size() - 1)
-      Name.append("-");
-  }
-  Name.append("$");
-
   mlir::OpBuilder b(op->getContext());
   mlir::StringAttr sat = b.getStringAttr(Name);
   mlir::Location newLoc = mlir::NameLoc::get(sat, op->getLoc());
@@ -324,7 +254,7 @@ bool inline starts_with(std::string_view base,
 }
 
 void NormalizePass::foldOperation(mlir::Operation *op) {
-  if (isOutput(*op))
+  if (isOutput(*op) || op->getNumOperands() == 0)
     return;
 
   std::string TextRepresentation;
@@ -333,7 +263,7 @@ void NormalizePass::foldOperation(mlir::Operation *op) {
   op->print(Stream, state);
 
   auto opName = split(Stream.str(), '=', 0);
-  if (!starts_with(opName, "%op"))
+  if (!starts_with(opName, "%op") && !starts_with(opName, "%vl"))
     return;
 
   SmallVector<std::string, 4> Operands;
@@ -354,7 +284,20 @@ void NormalizePass::foldOperation(mlir::Operation *op) {
       } else {
         Operands.push_back(name);
       }
-    }
+    } else if (auto ba = dyn_cast<mlir::BlockArgument>(operand)) {
+        mlir::Block *ownerBlock = ba.getOwner();
+        unsigned argIndex = ba.getArgNumber();
+        if (auto func =
+                dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
+          if (&func.front() == ownerBlock) {
+            Operands.push_back(std::string("funcArg" + std::to_string(argIndex)));
+          } else {
+            Operands.push_back(std::string("blockArg" + std::to_string(argIndex)));
+          }
+        } else {
+          Operands.push_back(std::string("blockArg" + std::to_string(argIndex)));
+        }
+      }
   }
 
   if (op->hasTrait<OpTrait::IsCommutative>())
