@@ -367,9 +367,7 @@ private:
                           MachineInstr &I) const;
   bool loadHandleBeforePosition(Register &HandleReg, const SPIRVType *ResType,
                                 GIntrinsic &HandleDef, MachineInstr &Pos) const;
-  void recursivelyDecorateChildAsNonUniform(Register &NonUniformReg,
-                                            const SPIRVType *RegType,
-                                            MachineInstr &I) const;
+  void decorateUsesAsNonUniform(Register &NonUniformReg) const;
 };
 
 bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
@@ -3734,41 +3732,38 @@ bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
   // load/store/sample/atomic must be decorated, so we need to propagate the
   // decoration through access chains and copies.
   // https://docs.vulkan.org/samples/latest/samples/extensions/descriptor_indexing/README.html#_when_to_use_non_uniform_indexing_qualifier
-  recursivelyDecorateChildAsNonUniform(ResVReg, ResType, I);
+  decorateUsesAsNonUniform(ResVReg);
   return true;
 }
 
-void SPIRVInstructionSelector::recursivelyDecorateChildAsNonUniform(
-    Register &NonUniformReg, const SPIRVType *RegType, MachineInstr &I) const {
-  std::vector<std::tuple<Register, const SPIRVType *, MachineInstr *>> WorkList;
-  bool isDecorated = false;
-  for (MachineInstr &Use :
-       RegType->getMF()->getRegInfo().use_instructions(NonUniformReg)) {
-    if (Use.getOpcode() != SPIRV::OpDecorate &&
-        Use.getOpcode() != SPIRV::OpAccessChain &&
-        Use.getOpcode() != SPIRV::OpCopyObject &&
-        Use.getOpcode() != SPIRV::OpLoad)
-      continue;
+void SPIRVInstructionSelector::decorateUsesAsNonUniform(
+    Register &NonUniformReg) const {
+  std::vector<Register> WorkList = {NonUniformReg};
+  while (WorkList.size() > 0) {
+    Register CurrentReg = WorkList.at(0);
+    WorkList.erase(WorkList.begin());
 
-    if (Use.getOpcode() == SPIRV::OpDecorate &&
-        Use.getOperand(1).getImm() == SPIRV::Decoration::NonUniformEXT) {
-      isDecorated = true;
-      continue;
+    bool isDecorated = false;
+    for (MachineInstr &Use : MRI->use_instructions(CurrentReg)) {
+      if (Use.getOpcode() == SPIRV::OpDecorate &&
+          Use.getOperand(1).getImm() == SPIRV::Decoration::NonUniformEXT) {
+        isDecorated = true;
+        continue;
+      }
+      // Check if the instruction has the result register and add it to the
+      // worklist.
+      if (Use.getOperand(0).isReg() && Use.getOperand(0).isDef()) {
+        Register ResultReg = Use.getOperand(0).getReg();
+        if (ResultReg == CurrentReg)
+          continue;
+        WorkList.push_back(ResultReg);
+      }
     }
 
-    Register ResultReg = Use.getOperand(0).getReg();
-    SPIRVType *ResultType = GR.getResultType(ResultReg);
-    WorkList.push_back(std::make_tuple(ResultReg, ResultType, &Use));
-  }
-
-  if (!isDecorated) {
-    buildOpDecorate(NonUniformReg, I, TII, SPIRV::Decoration::NonUniformEXT,
-                    {});
-  }
-
-  for (auto &Item : WorkList) {
-    recursivelyDecorateChildAsNonUniform(std::get<0>(Item), std::get<1>(Item),
-                                         *std::get<2>(Item));
+    if (!isDecorated) {
+      buildOpDecorate(CurrentReg, *MRI->getVRegDef(CurrentReg), TII,
+                      SPIRV::Decoration::NonUniformEXT, {});
+    }
   }
   return;
 }
