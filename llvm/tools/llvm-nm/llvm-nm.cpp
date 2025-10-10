@@ -1617,13 +1617,12 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
     SmallSet<uint64_t, 32> SymbolAddresses;
-    for (unsigned J = 0; J < SymbolList.size(); ++J)
-      SymbolAddresses.insert(SymbolList[J].Address);
+    for (const auto &S : SymbolList)
+      SymbolAddresses.insert(S.Address);
     for (uint64_t f = 0; f < FoundFns.size(); f++) {
-      bool found = SymbolAddresses.contains(FoundFns[f] + BaseSegmentAddress);
-      // See this address is not already in the symbol table fake up an
-      // nlist for it.
-      if (!found) {
+      // See if this address is already in the symbol table, otherwise fake up
+      // an nlist for it.
+      if (!SymbolAddresses.contains(FoundFns[f] + BaseSegmentAddress)) {
         NMSymbol F = {};
         F.Name = "<redacted function X>";
         F.Address = FoundFns[f] + BaseSegmentAddress;
