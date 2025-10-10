@@ -166,7 +166,11 @@ static void diagnoseUseOfInternalDeclInInlineFunction(Sema &S,
   // This is disabled under C++; there are too many ways for this to fire in
   // contexts where the warning is a false positive, or where it is technically
   // correct but benign.
-  if (S.getLangOpts().CPlusPlus)
+  //
+  // This is also disabled in C2y because of WG14 N3622 which removed the
+  // constraint entirely. It is left enabled in earlier language modes because
+  // this is a constraint in those language modes.
+  if (S.getLangOpts().CPlusPlus || S.getLangOpts().C2y)
     return;
 
   // Check if this is an inlined function or method.
