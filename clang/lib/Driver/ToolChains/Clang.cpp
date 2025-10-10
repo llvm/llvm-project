@@ -7618,6 +7618,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // features enabled through -Xclang -target-feature flags.
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
 
+  Args.AddLastArg(CmdArgs, options::OPT_falloc_token_max_EQ);
+
 #if CLANG_ENABLE_CIR
   // Forward -mmlir arguments to to the MLIR option parser.
   for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
