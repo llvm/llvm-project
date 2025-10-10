@@ -5863,9 +5863,7 @@ static const char *getSectionNameForCommandline(const Triple &T) {
 }
 
 static auto globalInUsedHasName(StringRef Name) {
-  return [Name](Constant* C) {
-    return C->getName() == Name;
-  };
+  return [Name](Constant *C) { return C->getName() == Name; };
 }
 
 void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
