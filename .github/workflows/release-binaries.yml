@@ -158,10 +158,15 @@ jobs:
 
         build_flang="true"
 
-        #if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
-          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-        #fi
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          # LTO causes the WiX generator to crash so we need to disable it:
+          # light.exe : error LGHT0001 : Catastrophic failure (Exception from HRESULT: 0x8000FFFF (E_UNEXPECTED))
+          # Stack Trace:
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.Interop.NativeMethods.CreateCabFinish(IntPtr contextHandle, IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+        fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
