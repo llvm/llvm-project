@@ -79,15 +79,16 @@ end module
 module specific_extremums
   ! f18 accepts all type kinds for the arguments of specific extremum intrinsics
   ! instead of of only default kind (or double precision for DMAX1 and DMIN1).
-  ! This extensions is implemented by using the related generic intrinsic and
-  ! converting the result.
+  ! This extension is implemented by using the related generic intrinsic.
+  ! For MAX0/MIN0, the result type matches the argument types (preserving kind).
+  ! For AMAX0/AMIN0/MAX1/MIN1, the result is converted to the specified type.
   ! The tests below are cases where an implementation that converts the arguments to the
   ! standard required types instead would give different results than the implementation
-  ! specified for f18 (converting the result).
+  ! specified for f18.
   integer(8), parameter :: max_i32_8 = 2_8**31-1
-  integer, parameter :: expected_min0 = int(min(max_i32_8, 2_8*max_i32_8), 4)
-  !WARN: portability: Argument types do not match specific intrinsic 'min0' requirements; using 'min' generic instead and converting the result to INTEGER(4) if needed [-Wuse-generic-intrinsic-when-specific-doesnt-match]
-  integer, parameter :: result_min0 =  min0(max_i32_8, 2_8*max_i32_8)
+  integer(8), parameter :: expected_min0 = min(max_i32_8, 2_8*max_i32_8)
+  !WARN: portability: Argument types do not match specific intrinsic 'min0' requirements; using 'min' generic instead and converting the result to INTEGER(8) if needed [-Wuse-generic-intrinsic-when-specific-doesnt-match]
+  integer(8), parameter :: result_min0 =  min0(max_i32_8, 2_8*max_i32_8)
   ! result_min0 would be -2  if arguments were converted to default integer.
   logical, parameter :: test_min0 = expected_min0 .EQ. result_min0
 

@@ -287,6 +287,9 @@ end
 * Specific intrinsics AMAX0, AMAX1, AMIN0, AMIN1, DMAX1, DMIN1, MAX0, MAX1,
   MIN0, and MIN1 accept more argument types than specified. They are replaced by
   the related generics followed by conversions to the specified result types.
+  For MAX0 and MIN0, the result type matches the argument types rather than
+  being converted to default INTEGER, preserving the kind of the arguments.
+  For example, `MAX0(1_8, 2_8)` returns `INTEGER(8)`, not `INTEGER(4)`.
 * When a scalar CHARACTER actual argument of the same kind is known to
   have a length shorter than the associated dummy argument, it is extended
   on the right with blanks, similar to assignment.
