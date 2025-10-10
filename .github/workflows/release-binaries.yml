@@ -240,8 +240,10 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
-    # We will use Wix to generate the installer on Windows, because this supports
-    # installers > 2GB.
+    # We will use Wix to generate the installer on Windows, because this
+    # reportedly works better with larger installers, though, I haven't actually
+    # seen an installer > 2GB, which is the limit for default installer
+    # generator.
     - name: Install Wix
       if: runner.os == 'Windows'
       run: |
@@ -284,7 +286,7 @@ jobs:
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
     - name: Dump logs
-      if: failure()
+      if: failure() && runner.os == 'Windows'
       run: |
         cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
 
