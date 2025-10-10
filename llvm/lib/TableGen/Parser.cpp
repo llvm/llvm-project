@@ -9,6 +9,7 @@
 #include "llvm/TableGen/Parser.h"
 #include "TGParser.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
@@ -20,6 +21,7 @@ bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
   // this reliance, we could drop all of this.
   SrcMgr = SourceMgr();
   SrcMgr.takeSourceBuffersFrom(InputSrcMgr);
+  SrcMgr.setVirtualFileSystem(InputSrcMgr.getVirtualFileSystem());
   SrcMgr.setIncludeDirs(InputSrcMgr.getIncludeDirs());
   SrcMgr.setDiagHandler(InputSrcMgr.getDiagHandler(),
                         InputSrcMgr.getDiagContext());
