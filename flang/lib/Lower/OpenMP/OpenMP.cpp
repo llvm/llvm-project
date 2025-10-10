@@ -981,13 +981,11 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     auto declareTargetOp =
         llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
     if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
-      if (declareTargetOp.getDeclareTargetCaptureClause() ==
-              mlir::omp::DeclareTargetCaptureClause::link &&
-          declareTargetOp.getDeclareTargetDeviceType() !=
-              mlir::omp::DeclareTargetDeviceType::nohost) {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-      }
+      // If a variable appears in a "to" or "link" clause on a declare target
+      // directive then it is treated as if it had appeared in a map clause
+      // with a map-type of tofrom.
+      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
     } else if (fir::isa_trivial(varType) || fir::isa_char(varType)) {
       // Scalars behave as if they were "firstprivate".
       // TODO: Handle objects that are shared/lastprivate or were listed
