@@ -199,10 +199,16 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
   return needsLeadingEscapeMarkdown(C, After);
 }
 
-/// Escape a markdown text block.
+/// \brief Render text for markdown output.
+///
 /// If \p EscapeMarkdown is true it ensures the punctuation will not introduce
 /// any of the markdown constructs.
+///
 /// Else, markdown syntax is not escaped, only HTML tags and entities.
+/// HTML is escaped because usually clients do not support HTML rendering by
+/// default. Passing unescaped HTML will therefore often result in not showing
+/// the HTML at all.
+/// \note In markdown code spans, we do not escape anything.
 std::string renderText(llvm::StringRef Input, bool StartsLine,
                        bool EscapeMarkdown) {
   std::string R;
@@ -212,6 +218,10 @@ std::string renderText(llvm::StringRef Input, bool StartsLine,
   llvm::StringRef Line, Rest;
 
   bool IsFirstLine = true;
+
+  // Inside markdown code spans, we do not escape anything when EscapeMarkdown
+  // is false.
+  bool InCodeSpan = false;
 
   for (std::tie(Line, Rest) = Input.split('\n');
        !(Line.empty() && Rest.empty());
@@ -226,12 +236,27 @@ std::string renderText(llvm::StringRef Input, bool StartsLine,
       R.append(LeadingSpaces);
     }
 
+    // Handle the case where the user escaped a character themselves.
+    // This is relevant for markdown code spans if EscapeMarkdown is false,
+    // because if the user escaped a backtick, we must treat the enclosed text
+    // as normal markdown text.
+    bool UserEscape = false;
     for (unsigned I = LeadingSpaces.size(); I < Line.size(); ++I) {
-      if (needsLeadingEscape(Line[I], Line.substr(LeadingSpaces.size(), I),
+
+      if (!EscapeMarkdown && !UserEscape && Line[I] == '`')
+        InCodeSpan = !InCodeSpan;
+
+      if (!InCodeSpan &&
+          needsLeadingEscape(Line[I], Line.substr(LeadingSpaces.size(), I),
                              Line.substr(I + 1), StartsLineIntern,
                              EscapeMarkdown))
         R.push_back('\\');
       R.push_back(Line[I]);
+
+      if (Line[I] == '\\')
+        UserEscape = !UserEscape;
+      else
+        UserEscape = false;
     }
 
     IsFirstLine = false;

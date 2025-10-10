@@ -10,8 +10,18 @@ target datalayout = "pe1:64:64:64:32"
 @g.as1 = external addrspace(1) global i8
 @g2.as1 = external addrspace(1) global i8
 
-define i32 @ptrtoaddr_inttoptr_arg(i32 %a) {
-; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_arg(
+define i64 @ptrtoaddr_inttoptr_arg(i64 %a) {
+; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_arg(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  %toptr = inttoptr i64 %a to ptr
+  %toaddr = ptrtoaddr ptr %toptr to i64
+  ret i64 %toaddr
+}
+
+define i32 @ptrtoaddr_inttoptr_arg_addrsize(i32 %a) {
+; CHECK-LABEL: define i32 @ptrtoaddr_inttoptr_arg_addrsize(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TOPTR:%.*]] = inttoptr i64 [[TMP1]] to ptr addrspace(1)
@@ -108,4 +118,49 @@ define ptr @inttoptr_of_ptrtoaddr() {
 ; CHECK-NEXT:    ret ptr inttoptr (i64 ptrtoaddr (ptr @g to i64) to ptr)
 ;
   ret ptr inttoptr (i64 ptrtoaddr (ptr @g to i64) to ptr)
+}
+
+define i64 @ptrtoaddr_sub_consts_unrelated() {
+; CHECK-LABEL: define i64 @ptrtoaddr_sub_consts_unrelated() {
+; CHECK-NEXT:    ret i64 sub (i64 ptrtoaddr (ptr @g to i64), i64 ptrtoaddr (ptr @g2 to i64))
+;
+  ret i64 sub (i64 ptrtoaddr (ptr @g to i64), i64 ptrtoaddr (ptr @g2 to i64))
+}
+
+define i64 @ptrtoaddr_sub_consts_offset() {
+; CHECK-LABEL: define i64 @ptrtoaddr_sub_consts_offset() {
+; CHECK-NEXT:    ret i64 42
+;
+  ret i64 sub (i64 ptrtoaddr (ptr getelementptr (i8, ptr @g, i64 42) to i64), i64 ptrtoaddr (ptr @g to i64))
+}
+
+define i32 @ptrtoaddr_sub_consts_offset_addrsize() {
+; CHECK-LABEL: define i32 @ptrtoaddr_sub_consts_offset_addrsize() {
+; CHECK-NEXT:    ret i32 42
+;
+  ret i32 sub (i32 ptrtoaddr (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @g.as1, i32 42) to i32), i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32))
+}
+
+define i64 @ptrtoaddr_sub_known_offset(ptr %p) {
+; CHECK-LABEL: define i64 @ptrtoaddr_sub_known_offset(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret i64 42
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 42
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %sub = sub i64 %p2.addr, %p.addr
+  ret i64 %sub
+}
+
+define i32 @ptrtoaddr_sub_known_offset_addrsize(ptr addrspace(1) %p) {
+; CHECK-LABEL: define i32 @ptrtoaddr_sub_known_offset_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) {
+; CHECK-NEXT:    ret i32 42
+;
+  %p2 = getelementptr inbounds i8, ptr addrspace(1) %p, i32 42
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %p2.addr = ptrtoaddr ptr addrspace(1) %p2 to i32
+  %sub = sub i32 %p2.addr, %p.addr
+  ret i32 %sub
 }

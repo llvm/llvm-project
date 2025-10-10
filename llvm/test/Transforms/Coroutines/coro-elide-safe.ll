@@ -1,4 +1,8 @@
-; Testing elide performed its job for calls to coroutines marked safe.
+; Coroutine calls marked with `coro_elide_safe` should be elided.
+; Inside `caller`, we expect the `callee` coroutine to be elided.
+; Inside `caller_conditional`, `callee` is only called on an unlikely
+; path, hence we expect the `callee` coroutine NOT to be elided.
+;
 ; RUN: opt < %s -S -passes='cgscc(coro-annotation-elide)' | FileCheck %s
 
 %struct.Task = type { ptr }
@@ -57,7 +61,7 @@ define ptr @callee.noalloc(i8 %arg, ptr dereferenceable(32) align(8) %frame) {
 ; Function Attrs: presplitcoroutine
 define ptr @caller() #0 {
 entry:
-  %task = call ptr @callee(i8 0) #1
+  %task = call ptr @callee(i8 0) coro_elide_safe
   ret ptr %task
   ; CHECK: %[[TASK:.+]] = alloca %struct.Task, align 8
   ; CHECK-NEXT: %[[FRAME:.+]] = alloca [32 x i8], align 8
@@ -69,6 +73,25 @@ entry:
   ; CHECK-NEXT: ret ptr %[[TASK]]
 }
 
+; CHECK-LABEL: define ptr @caller_conditional(i1 %cond)
+; Function Attrs: presplitcoroutine
+define ptr @caller_conditional(i1 %cond) #0 {
+entry:
+  br i1 %cond, label %call, label %ret
+
+call:
+  ; CHECK-NOT: alloca
+  ; CHECK-NOT: @llvm.coro.id({{.*}}, ptr @callee, {{.*}})
+  ; CHECK: %task = call ptr @callee(i8 0)
+  ; CHECK-NEXT: br label %ret
+  %task = call ptr @callee(i8 0) coro_elide_safe
+  br label %ret
+
+ret:
+  %retval = phi ptr [ %task, %call ], [ null, %entry ]
+  ret ptr %retval
+}
+
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare ptr @llvm.coro.frame()
@@ -76,4 +99,3 @@ declare ptr @llvm.coro.subfn.addr(ptr, i8)
 declare i1 @llvm.coro.alloc(token)
 
 attributes #0 = { presplitcoroutine }
-attributes #1 = { coro_elide_safe }
