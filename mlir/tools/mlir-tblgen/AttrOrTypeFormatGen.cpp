@@ -141,6 +141,25 @@ public:
 
 } // namespace
 
+/// Return true if the provided parameter should always be printed in qualified
+/// form (i.e., with dialect/type prefixes). Attribute and type parameters fall
+/// into this category to avoid ambiguity when nested within structured
+/// properties.
+static bool shouldPrintQualified(ParameterElement *param) {
+  const AttrOrTypeParameter &parameter = param->getParam();
+  StringRef cppType = parameter.getCppType();
+  if (!cppType.contains("Attr") && !cppType.contains("Type"))
+    return false;
+
+  if (parameter.getPrinter())
+    return false;
+
+  if (cppType.contains("mlir::Attribute") || cppType.contains("mlir::Type"))
+    return true;
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Format Strings
 //===----------------------------------------------------------------------===//
@@ -872,6 +891,8 @@ void DefFormat::genCommaSeparatedPrinter(
     }
     os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
     os << "_firstPrinted = false;\n";
+    if (param && shouldPrintQualified(param))
+      param->setShouldBeQualified();
     extra(arg);
     shouldEmitSpace = false;
     lastWasPunctuation = true;
