@@ -2067,10 +2067,10 @@ public:
     UserProvidedConstructor& operator=(const UserProvidedConstructor&) = delete;
 };
 struct Ctr {
-    Ctr();
+  Ctr();
 };
 struct Ctr2 {
-    Ctr2();
+  Ctr2();
 private:
   NoEligibleTrivialContructor inner;
 };
@@ -2085,6 +2085,7 @@ class C {
 };
 
 static_assert(__builtin_is_implicit_lifetime(Ctr));
+static_assert(!__builtin_is_implicit_lifetime(Ctr2));
 static_assert(__builtin_is_implicit_lifetime(C));
 static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
 static_assert(__builtin_is_implicit_lifetime(NonAggregate));

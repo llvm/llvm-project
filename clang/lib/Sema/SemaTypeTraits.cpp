@@ -1167,26 +1167,20 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return true;
     if (!(RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())))
       return false;
-    if (RD->hasTrivialDefaultConstructor())
-      return true;
-    bool FoundCopyCtr = false;
-    bool FoundMoveCtr = false;
-    bool FoundDefaultCtr = false;
     for (CXXConstructorDecl *Ctr : RD->ctors()) {
       if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
         continue;
       if (Ctr->isTrivial())
         return true;
-      FoundCopyCtr = Ctr->isCopyConstructor();
-      FoundMoveCtr = Ctr->isMoveConstructor();
-      FoundDefaultCtr = Ctr->isDefaultConstructor();
     }
-    if (!FoundDefaultCtr && RD->hasTrivialDefaultConstructor())
+    if (RD->needsImplicitDefaultConstructor() &&
+        RD->hasTrivialDefaultConstructor() &&
+        !RD->hasNonTrivialDefaultConstructor())
       return true;
-    if (!FoundCopyCtr && RD->hasTrivialCopyConstructor() &&
+    if (RD->needsImplicitCopyConstructor() && RD->hasTrivialCopyConstructor() &&
         !RD->defaultedCopyConstructorIsDeleted())
       return true;
-    if (!FoundMoveCtr && RD->hasTrivialMoveConstructor() &&
+    if (RD->needsImplicitMoveConstructor() && RD->hasTrivialMoveConstructor() &&
         !RD->defaultedMoveConstructorIsDeleted())
       return true;
     return false;
