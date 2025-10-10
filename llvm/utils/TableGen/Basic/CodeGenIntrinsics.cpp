@@ -378,18 +378,20 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     ME &= MemoryEffects::argMemOnly();
   else if (R->getName() == "IntrInaccessibleMemOnly")
     ME &= MemoryEffects::inaccessibleMemOnly();
-  else if (R->isSubClassOf("IntrInaccessibleReadMemOnly")) {
-    llvm::IRMemLocation Loc = getValueAsIRMemLocation(R, "Loc");
-    if (ME.onlyAccessTargetMemoryLocation())
-      ME = ME.getWithModRef(Loc, ModRefInfo::Ref);
-    else
-      ME &= MemoryEffects::inaccessibleReadMemOnly(Loc);
-  } else if (R->isSubClassOf("IntrInaccessibleWriteMemOnly")) {
-    llvm::IRMemLocation Loc = getValueAsIRMemLocation(R, "Loc");
-    if (ME.onlyAccessTargetMemoryLocation())
-      ME = ME.getWithModRef(Loc, ModRefInfo::Mod);
-    else
-      ME &= MemoryEffects::inaccessibleWriteMemOnly(Loc);
+  else if (R->isSubClassOf("IntrRead")) {
+    MemoryEffects ReadMask = MemoryEffects::writeOnly();
+    for (const Record *RLoc : R->getValueAsListOfDefs("Loc"))
+      ReadMask = ReadMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+                                        ModRefInfo::ModRef);
+    ME &= ReadMask;
+
+  } else if (R->isSubClassOf("IntrWrite")) {
+    MemoryEffects WriteMask = MemoryEffects::readOnly();
+    for (const Record *RLoc : R->getValueAsListOfDefs("Loc"))
+      WriteMask = WriteMask.getWithModRef(getValueAsIRMemLocation(RLoc),
+                                          ModRefInfo::ModRef);
+    ME &= WriteMask;
+
   } else if (R->getName() == "IntrInaccessibleMemOrArgMemOnly")
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
   else if (R->getName() == "Commutative")
@@ -466,11 +468,8 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
 }
 
 llvm::IRMemLocation
-CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R,
-                                          StringRef FieldName) const {
-  const Record *LocRec = R->getValueAsDef(FieldName);
-  StringRef Name = LocRec->getName();
-
+CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
+  StringRef Name = R->getName();
   IRMemLocation Loc =
       StringSwitch<IRMemLocation>(Name)
           .Case("TargetMem0", IRMemLocation::TargetMem0)
@@ -478,6 +477,10 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R,
           .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
           .Default(IRMemLocation::Other); // fallback enum
 
+  if (Loc == IRMemLocation::Other)
+    PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
+
+  return Loc;
   if (Loc == IRMemLocation::Other)
     PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
 
