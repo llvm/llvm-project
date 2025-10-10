@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <flat_set>
 #include <functional>
+#include <utility>
 #include <vector>
 
 #include "operator_hijacker.h"
