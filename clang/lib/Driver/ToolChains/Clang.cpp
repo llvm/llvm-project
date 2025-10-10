@@ -9211,7 +9211,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {
       // The device C library is only available for NVPTX and AMDGPU targets
       // and we only link it by default for OpenMP currently.
-      if (!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU() ||
+      if ((!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU()) ||
           !JA.isHostOffloading(Action::OFK_OpenMP))
         return;
       bool HasLibC = TC.getStdlibIncludePath().has_value();
