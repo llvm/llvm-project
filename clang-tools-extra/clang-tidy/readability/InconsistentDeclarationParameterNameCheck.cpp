@@ -1,4 +1,4 @@
-//===--- InconsistentDeclarationParameterNameCheck.cpp - clang-tidy-------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InconsistentDeclarationParameterNameCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
-
-#include <functional>
 
 using namespace clang::ast_matchers;
 
@@ -134,8 +131,8 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
 
 InconsistentDeclarationsContainer
 findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
-                            const FunctionDecl *ParameterSourceDeclaration,
-                            SourceManager &SM, bool Strict) {
+                             const FunctionDecl *ParameterSourceDeclaration,
+                             SourceManager &SM, bool Strict) {
   InconsistentDeclarationsContainer InconsistentDeclarations;
   SourceLocation ParameterSourceLocation =
       ParameterSourceDeclaration->getLocation();
@@ -343,9 +340,7 @@ void InconsistentDeclarationParameterNameCheck::check(
 
 void InconsistentDeclarationParameterNameCheck::markRedeclarationsAsVisited(
     const FunctionDecl *OriginalDeclaration) {
-  for (const FunctionDecl *Redecl : OriginalDeclaration->redecls()) {
-    VisitedDeclarations.insert(Redecl);
-  }
+  VisitedDeclarations.insert_range(OriginalDeclaration->redecls());
 }
 
 } // namespace clang::tidy::readability

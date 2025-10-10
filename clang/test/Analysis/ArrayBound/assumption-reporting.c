@@ -39,14 +39,9 @@ int assumingBothPointerToMiddle(int arg) {
   // will speak about the "byte offset" measured from the beginning of the TenElements.
   int *p = TenElements + 2;
   int a = p[arg];
-  // FIXME: The following note does not appear:
-  //  {{Assuming byte offset is non-negative and less than 40, the extent of 'TenElements'}}
-  // It seems that the analyzer "gives up" modeling this pointer arithmetics
-  // and says that `p[arg]` is just an UnknownVal (instead of calculating that
-  // it's equivalent to `TenElements[2+arg]`).
+  // expected-note@-1 {{Assuming byte offset is non-negative and less than 40, the extent of 'TenElements'}}
 
   int b = TenElements[arg]; // This is normal access, and only the lower bound is new.
-  // expected-note@-1 {{Assuming index is non-negative}}
   int c = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
@@ -75,7 +70,7 @@ int assumingUpper(int arg) {
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -104,7 +99,7 @@ int assumingUpperUnsigned(unsigned arg) {
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[(int)arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -116,7 +111,7 @@ int assumingNothing(unsigned arg) {
   int a = TenElements[arg]; // no note here, we already know that 'arg' is in bounds
   int b = TenElements[(int)arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -150,7 +145,7 @@ int assumingConvertedToIntP(struct foo f, int arg) {
   // expected-note@-1 {{Assuming byte offset is less than 5, the extent of 'f.b'}}
   int c = TenElements[arg-2];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b + c;
 }
 

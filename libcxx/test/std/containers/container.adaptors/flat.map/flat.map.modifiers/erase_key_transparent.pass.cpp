@@ -38,9 +38,9 @@ static_assert(!CanErase<const NonTransparentMap>);
 
 template <class Key, class It>
 struct HeterogeneousKey {
-  explicit HeterogeneousKey(Key key, It it) : key_(key), it_(it) {}
-  operator It() && { return it_; }
-  auto operator<=>(Key key) const { return key_ <=> key; }
+  constexpr explicit HeterogeneousKey(Key key, It it) : key_(key), it_(it) {}
+  constexpr operator It() && { return it_; }
+  constexpr auto operator<=>(Key key) const { return key_ <=> key; }
   friend bool operator<(const HeterogeneousKey&, const HeterogeneousKey&) {
     assert(false);
     return false;
@@ -50,7 +50,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer, class ValueContainer>
-void test_simple() {
+constexpr void test_simple() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -71,7 +71,7 @@ void test_simple() {
 }
 
 template <class KeyContainer, class ValueContainer>
-void test_transparent_comparator() {
+constexpr void test_transparent_comparator() {
   using M = std::flat_map<std::string, int, TransparentComparator, KeyContainer, ValueContainer>;
   M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
   ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), typename M::size_type);
@@ -87,17 +87,23 @@ void test_transparent_comparator() {
   assert(m == expected);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test_simple<std::vector<int>, std::vector<double>>();
-  test_simple<std::deque<int>, std::vector<double>>();
   test_simple<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test_simple<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   test_transparent_comparator<std::vector<std::string>, std::vector<int>>();
-  test_transparent_comparator<std::deque<std::string>, std::vector<int>>();
   test_transparent_comparator<MinSequenceContainer<std::string>, MinSequenceContainer<int>>();
   test_transparent_comparator<std::vector<std::string, min_allocator<std::string>>,
                               std::vector<int, min_allocator<int>>>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test_simple<std::deque<int>, std::vector<double>>();
+    test_transparent_comparator<std::deque<std::string>, std::vector<int>>();
+  }
 
   {
     // P2077's HeterogeneousKey example
@@ -131,7 +137,7 @@ int main(int, char**) {
     assert(n == 1);
     assert(transparent_used);
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto erase_transparent = [](auto& m, auto key_arg) {
       using Map = std::decay_t<decltype(m)>;
       using Key = typename Map::key_type;
@@ -139,6 +145,22 @@ int main(int, char**) {
     };
     test_erase_exception_guarantee(erase_transparent);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto n = m.erase("beta");
+    assert(n == 1);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

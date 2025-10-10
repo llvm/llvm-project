@@ -66,7 +66,7 @@ static bool startsWith(std::string_view S, std::string_view PrefixA,
   return llvm::itanium_demangle::starts_with(S, Prefix);
 }
 
-static bool isMemberPointer(std::string_view MangledName, bool &Error) {
+bool Demangler::isMemberPointer(std::string_view MangledName, bool &Error) {
   Error = false;
   const char F = MangledName.front();
   MangledName.remove_prefix(1);
@@ -107,6 +107,7 @@ static bool isMemberPointer(std::string_view MangledName, bool &Error) {
   consumeFront(MangledName, 'E'); // 64-bit
   consumeFront(MangledName, 'I'); // restrict
   consumeFront(MangledName, 'F'); // unaligned
+  demanglePointerAuthQualifier(MangledName);
 
   if (MangledName.empty()) {
     Error = true;
@@ -1374,6 +1375,11 @@ Demangler::demangleStringLiteral(std::string_view &MangledName) {
       Result->IsTruncated = true;
 
     while (!consumeFront(MangledName, '@')) {
+      // For a wide string StringByteSize has to have an even length.
+      if (StringByteSize % 2 != 0)
+        goto StringLiteralError;
+      if (StringByteSize == 0)
+        goto StringLiteralError;
       if (MangledName.size() < 2)
         goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);
@@ -2094,6 +2100,8 @@ PointerTypeNode *Demangler::demanglePointerType(std::string_view &MangledName) {
   Qualifiers ExtQuals = demanglePointerExtQualifiers(MangledName);
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
+  Pointer->PointerAuthQualifier = createPointerAuthQualifier(MangledName);
+
   Pointer->Pointee = demangleType(MangledName, QualifierMangleMode::Mangle);
   return Pointer;
 }
@@ -2140,6 +2148,49 @@ Demangler::demanglePointerExtQualifiers(std::string_view &MangledName) {
     Quals = Qualifiers(Quals | Q_Unaligned);
 
   return Quals;
+}
+
+std::optional<PointerAuthQualifierNode::ArgArray>
+Demangler::demanglePointerAuthQualifier(std::string_view &MangledName) {
+  if (!consumeFront(MangledName, "__ptrauth"))
+    return std::nullopt;
+
+  constexpr unsigned NumArgs = PointerAuthQualifierNode::NumArgs;
+  PointerAuthQualifierNode::ArgArray Array;
+
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    bool IsNegative = false;
+    uint64_t Value = 0;
+    std::tie(Value, IsNegative) = demangleNumber(MangledName);
+    if (IsNegative)
+      return std::nullopt;
+
+    Array[I] = Value;
+  }
+
+  return Array;
+}
+
+PointerAuthQualifierNode *
+Demangler::createPointerAuthQualifier(std::string_view &MangledName) {
+  constexpr unsigned NumArgs = PointerAuthQualifierNode::NumArgs;
+  std::optional<PointerAuthQualifierNode::ArgArray> Vals =
+      demanglePointerAuthQualifier(MangledName);
+
+  if (!Vals)
+    return nullptr;
+
+  PointerAuthQualifierNode *PtrAuthQual =
+      Arena.alloc<PointerAuthQualifierNode>();
+  NodeArrayNode *Array = Arena.alloc<NodeArrayNode>();
+  PtrAuthQual->Components = Array;
+  Array->Count = NumArgs;
+  Array->Nodes = Arena.allocArray<Node *>(NumArgs);
+
+  for (unsigned I = 0; I < NumArgs; ++I)
+    Array->Nodes[I] = Arena.alloc<IntegerLiteralNode>((*Vals)[I], false);
+
+  return PtrAuthQual;
 }
 
 ArrayTypeNode *Demangler::demangleArrayType(std::string_view &MangledName) {

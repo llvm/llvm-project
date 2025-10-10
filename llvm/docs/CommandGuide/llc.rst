@@ -43,6 +43,11 @@ End-user Options
 
  Print a summary of command line options.
 
+.. option:: -M
+
+ Pass target-specific InstPrinter options.
+ Refer to the ``-M`` option of :manpage:`llvm-objdump(1)`.
+
 .. option:: -o <filename>
 
  Use ``<filename>`` as the output filename. See the summary above for more

@@ -9,14 +9,14 @@ define void @kernel_func(ptr %in.vec, ptr %out.vec0) nounwind {
 ; CHECK-NEXT:    .reg .b32 %r<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [kernel_func_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [kernel_func_param_0];
 ; CHECK-NEXT:    ld.v4.b32 {%r2, %r3, %r4, %r5}, [%r1];
 ; CHECK-NEXT:    ld.v4.b32 {%r6, %r7, %r8, %r9}, [%r1+16];
-; CHECK-NEXT:    ld.param.u32 %r10, [kernel_func_param_1];
+; CHECK-NEXT:    ld.param.b32 %r10, [kernel_func_param_1];
 ; CHECK-NEXT:    prmt.b32 %r11, %r6, %r8, 0x4000U;
 ; CHECK-NEXT:    prmt.b32 %r12, %r2, %r4, 0x40U;
 ; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 0x7610U;
-; CHECK-NEXT:    st.u32 [%r10], %r13;
+; CHECK-NEXT:    st.b32 [%r10], %r13;
 ; CHECK-NEXT:    ret;
   %wide.vec = load <32 x i8>, ptr %in.vec, align 64
   %vec0 = shufflevector <32 x i8> %wide.vec, <32 x i8> undef, <4 x i32> <i32 0, i32 8, i32 16, i32 24>

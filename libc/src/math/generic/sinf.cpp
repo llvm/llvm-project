@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sinf.h"
-#include "sincosf_utils.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -18,11 +17,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/sincosf_utils.h"
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
-#include "range_reduction_fma.h"
+#include "src/__support/math/range_reduction_fma.h"
 #else
-#include "range_reduction.h"
+#include "src/__support/math/range_reduction.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -136,6 +136,11 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

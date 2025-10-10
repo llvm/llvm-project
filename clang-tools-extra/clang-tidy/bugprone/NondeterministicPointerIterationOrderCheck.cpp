@@ -1,4 +1,4 @@
-//===----- NondeterministicPointerIterationOrderCheck.cpp - clang-tidy ----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NondeterministicPointerIterationOrderCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;

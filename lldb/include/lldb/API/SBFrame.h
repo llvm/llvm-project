@@ -104,6 +104,8 @@ public:
 
   bool IsArtificial() const;
 
+  bool IsSynthetic() const;
+
   /// Return whether a frame recognizer decided this frame should not
   /// be displayes in backtraces etc.
   bool IsHidden() const;
@@ -224,6 +226,7 @@ protected:
   friend class SBThread;
   friend class SBValue;
 
+  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
 
@@ -232,6 +235,10 @@ protected:
   lldb::StackFrameSP GetFrameSP() const;
 
   void SetFrameSP(const lldb::StackFrameSP &lldb_object_sp);
+
+  /// Return an SBValue containing an error message that warns the process is
+  /// not currently stopped.
+  static SBValue CreateProcessIsRunningExprEvalError();
 
   lldb::ExecutionContextRefSP m_opaque_sp;
 };

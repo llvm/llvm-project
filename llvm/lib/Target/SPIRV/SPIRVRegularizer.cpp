@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
-#include "SPIRVTargetMachine.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -25,19 +24,13 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVRegularizerPass(PassRegistry &);
-}
-
 namespace {
 struct SPIRVRegularizer : public FunctionPass, InstVisitor<SPIRVRegularizer> {
   DenseMap<Function *, Function *> Old2NewFuncs;
 
 public:
   static char ID;
-  SPIRVRegularizer() : FunctionPass(ID) {
-    initializeSPIRVRegularizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVRegularizer() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return "SPIR-V Regularizer"; }
 

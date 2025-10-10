@@ -2,7 +2,7 @@
 // CHECK: "--instrument-cold-function-only-path=default_%m.profraw" 
 // CHECK: "--pgo-instrument-cold-function-only"
 // CHECK: "--pgo-function-entry-coverage"
-// CHECK-NOT:  "-fprofile-instrument"
+// CHECK:  "-fprofile-instrument=sample-coldcov"
 // CHECK-NOT:  "-fprofile-instrument-path=
 
 // RUN: %clang -### -c -fprofile-generate-cold-function-coverage=dir %s 2>&1 | FileCheck %s --check-prefix=CHECK-EQ

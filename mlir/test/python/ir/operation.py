@@ -686,6 +686,16 @@ def testOperationPrint():
         skip_regions=True,
     )
 
+    # Test print with large_resource_limit.
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: resource1: "0x08
+    module.operation.print(large_resource_limit=2)
+
+    # Test large_elements_limit has no effect on resource string
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK: resource1: "0x08
+    module.operation.print(large_elements_limit=2)
+
 
 # CHECK-LABEL: TEST: testKnownOpView
 @run
@@ -898,7 +908,13 @@ def testCapsuleConversions():
         m_capsule = m._CAPIPtr
         assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
         m2 = Operation._CAPICreate(m_capsule)
-        assert m2 is m
+        assert m2 is not m
+        assert m2 == m
+        # Gc and verify destructed.
+        m = None
+        m_capsule = None
+        m2 = None
+        gc.collect()
 
 
 # CHECK-LABEL: TEST: testOperationErase
@@ -954,6 +970,13 @@ def testOperationLoc():
         assert op.location == loc
         assert op.operation.location == loc
 
+        another_loc = Location.name("another_loc")
+        op.location = another_loc
+        assert op.location == another_loc
+        assert op.operation.location == another_loc
+        # CHECK: loc("another_loc")
+        print(op.location)
+
 
 # CHECK-LABEL: TEST: testModuleMerge
 @run
@@ -969,8 +992,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar
@@ -1008,6 +1035,8 @@ def testDetachFromParent():
     with Context():
         m1 = Module.parse("func.func private @foo()")
         func = m1.body.operations[0].detach_from_parent()
+        # CHECK: func.attached=False
+        print(f"{func.attached=}")
 
         try:
             func.detach_from_parent()
@@ -1029,6 +1058,12 @@ def testOperationHash():
     with ctx, Location.unknown():
         op = Operation.create("custom.op1")
         assert hash(op) == hash(op.operation)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            op2 = Operation.create("custom.op2")
+            custom_op2 = module.body.operations[0]
+            assert hash(op2) == hash(custom_op2)
 
 
 # CHECK-LABEL: TEST: testOperationParse

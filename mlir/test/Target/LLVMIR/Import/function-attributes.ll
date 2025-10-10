@@ -339,18 +339,6 @@ declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_approx_func_fp_math_true
-; CHECK-SAME: attributes {approx_func_fp_math = true}
-declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_false
-; CHECK-SAME: attributes {approx_func_fp_math = false}
-declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
 declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"
@@ -378,6 +366,18 @@ declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f
 ; CHECK-LABEL: @func_attr_fp_contract_fast
 ; CHECK-SAME: attributes {fp_contract = "fast"}
 declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_entry
+; CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+declare void @func_attr_instrument_function_entry() "instrument-function-entry"="__cyg_profile_func_enter"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_exit
+; CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+declare void @func_attr_instrument_function_exit() "instrument-function-exit"="__cyg_profile_func_exit"
 
 // -----
 
@@ -414,3 +414,8 @@ declare void @nounwind_attribute() nounwind
 ; CHECK-LABEL: @willreturn_attribute
 ; CHECK-SAME: attributes {will_return}
 declare void @willreturn_attribute() willreturn
+
+// -----
+
+; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
+declare void @test() preallocated(i32)

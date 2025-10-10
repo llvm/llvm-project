@@ -70,7 +70,7 @@ func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
 //       CHECK-NO-LAYOUT-MAP:   %[[alloc_no_layout:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   memref.copy %[[subview]], %[[alloc_no_layout]]
 // TODO: %alloc should be deallocated here, but we currently do not dealloc
-// buffers that are inserted due to to_tensor/to_memref canonicalization (when
+// buffers that are inserted due to to_tensor/to_buffer canonicalization (when
 // the buffer types have different layout maps).
 //       CHECK-NO-LAYOUT-MAP:   return %[[alloc_no_layout]]
 
@@ -380,6 +380,20 @@ func.func @execute_region_test(%t1 : tensor<?xf32>)
 
 // -----
 
+// CHECK-LABEL: func @no_inline_execute_region_not_canonicalized
+func.func @no_inline_execute_region_not_canonicalized() {
+  %c = arith.constant 42 : i32
+  // CHECK: scf.execute_region
+  // CHECK-SAME: no_inline
+  %v = scf.execute_region -> i32 no_inline {
+    scf.yield %c : i32
+  }
+  // CHECK: return
+  return
+}
+
+// -----
+
 //      CHECK:  func private @some_external_func(memref<?xf32, strided<[?], offset: ?>>)
 func.func private @some_external_func(tensor<?xf32>)
 
@@ -669,17 +683,17 @@ func.func @call_llvm_func() {
 
 // -----
 
-// CHECK-LABEL: func @to_memref_op_unsupported(
+// CHECK-LABEL: func @to_buffer_op_unsupported(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
-func.func @to_memref_op_unsupported(
+func.func @to_buffer_op_unsupported(
     %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
     %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>) {
 
   // Insert a copy because we cannot analyze what happens with the result of a
-  // to_memref op.
+  // to_buffer op.
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK: memref.copy %[[arg0]], %[[alloc]]
-  %0 = bufferization.to_memref %t1 : tensor<?xf32> to memref<?xf32>
+  %0 = bufferization.to_buffer %t1 : tensor<?xf32> to memref<?xf32>
   // CHECK: "test.foo"(%[[alloc]])
   "test.foo"(%0) : (memref<?xf32>) -> ()
 
@@ -809,4 +823,60 @@ module @inner_module {
   func.func @inner_func(%t: tensor<5xf32> {bufferization.writable = false}) -> tensor<5xf32> {
     return %t : tensor<5xf32>
   }
+}
+
+// -----
+
+// CHECK:   func.func @custom_types(
+// CHECK-SAME:    %[[arg:.*]]: !test.test_memref<[4, 4], f64>
+// CHECK-SAME:  ) -> (!test.test_memref<[4, 8], f64>,
+// CHECK-SAME:        !test.test_memref<[4, 8], f64>)
+func.func @custom_types(%arg: !test.test_tensor<[4, 4], f64>)
+    -> (!test.test_tensor<[4, 8], f64>, !test.test_tensor<[4, 8], f64>) {
+  // CHECK: %[[out1:.*]] = "test.dummy_memref_op"(%[[arg]]) :
+  // CHECK-SAME: (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 8], f64>
+  %out1 = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 8], f64>
+
+  // CHECK: %[[alloc:.*]] = "test.create_memref_op"
+  // CHECK: %[[out2:.*]] = "test.dummy_memref_op"(%[[alloc]])
+  // CHECK-SAME: (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 8], f64>
+  %alloc = "test.create_tensor_op"() : () -> !test.test_tensor<[4, 4], f64>
+  %out2 = "test.dummy_tensor_op"(%alloc) : (!test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 8], f64>
+
+  // CHECK: return %[[out1]], %[[out2]]
+  return %out1, %out2 :
+    !test.test_tensor<[4, 8], f64>, !test.test_tensor<[4, 8], f64>
+}
+
+// -----
+
+// CHECK:   func.func @custom_types_foo(
+// CHECK-SAME:    %[[arg:.*]]: !test.test_memref<[4, 4], f64>
+// CHECK-SAME:  ) -> !test.test_memref<[4, 4], f64>
+func.func @custom_types_foo(%arg: !test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 4], f64> {
+  // CHECK: %[[out:.*]] = "test.dummy_memref_op"(%[[arg]])
+  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 4], f64>
+  // CHECK: return %[[out]]
+  return %out : !test.test_tensor<[4, 4], f64>
+}
+
+// CHECK:   func.func @custom_types_bar(
+// CHECK-SAME:    %[[arg:.*]]: !test.test_memref<[4, 4], f64>
+// CHECK-SAME:  ) -> !test.test_memref<[4, 8], f64>
+func.func @custom_types_bar(%arg: !test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 8], f64> {
+  // CHECK: %[[call:.*]] = call @custom_types_foo(%[[arg]])
+  %call = func.call @custom_types_foo(%arg) : (!test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 4], f64>
+
+  // CHECK: %[[out:.*]] = "test.dummy_memref_op"(%[[call]])
+  %out = "test.dummy_tensor_op"(%call) : (!test.test_tensor<[4, 4], f64>)
+    -> !test.test_tensor<[4, 8], f64>
+
+  // CHECK: return %[[out]]
+  return %out : !test.test_tensor<[4, 8], f64>
 }

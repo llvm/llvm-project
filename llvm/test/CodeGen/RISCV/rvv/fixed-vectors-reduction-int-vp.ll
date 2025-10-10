@@ -1734,19 +1734,16 @@ define signext i8 @vpreduce_mul_v64i8(i8 signext %s, <64 x i8> %v, <64 x i1> %m,
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a2, a0
 ; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    lui a3, %hi(.LCPI72_0)
-; RV32-NEXT:    addi a3, a3, %lo(.LCPI72_0)
 ; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vle8.v v12, (a3)
 ; RV32-NEXT:    vid.v v16
-; RV32-NEXT:    vmsltu.vx v14, v16, a1
-; RV32-NEXT:    li a3, 64
-; RV32-NEXT:    vsext.vf4 v16, v12
 ; RV32-NEXT:    vmsltu.vx v12, v16, a1
+; RV32-NEXT:    vadd.vx v16, v16, a0
+; RV32-NEXT:    vmsltu.vx v13, v16, a1
+; RV32-NEXT:    li a1, 64
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vslideup.vi v14, v12, 4
-; RV32-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
-; RV32-NEXT:    vmand.mm v0, v14, v0
+; RV32-NEXT:    vslideup.vi v12, v13, 4
+; RV32-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; RV32-NEXT:    vmand.mm v0, v12, v0
 ; RV32-NEXT:    vmv.v.i v12, 1
 ; RV32-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV32-NEXT:    vslidedown.vx v12, v8, a0
@@ -1780,19 +1777,16 @@ define signext i8 @vpreduce_mul_v64i8(i8 signext %s, <64 x i8> %v, <64 x i1> %m,
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a2, a0
 ; RV64-NEXT:    li a0, 32
-; RV64-NEXT:    lui a3, %hi(.LCPI72_0)
-; RV64-NEXT:    addi a3, a3, %lo(.LCPI72_0)
 ; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    vle8.v v12, (a3)
 ; RV64-NEXT:    vid.v v16
-; RV64-NEXT:    vmsltu.vx v14, v16, a1
-; RV64-NEXT:    li a3, 64
-; RV64-NEXT:    vsext.vf4 v16, v12
 ; RV64-NEXT:    vmsltu.vx v12, v16, a1
+; RV64-NEXT:    vadd.vx v16, v16, a0
+; RV64-NEXT:    vmsltu.vx v13, v16, a1
+; RV64-NEXT:    li a1, 64
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vslideup.vi v14, v12, 4
-; RV64-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
-; RV64-NEXT:    vmand.mm v0, v14, v0
+; RV64-NEXT:    vslideup.vi v12, v13, 4
+; RV64-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; RV64-NEXT:    vmand.mm v0, v12, v0
 ; RV64-NEXT:    vmv.v.i v12, 1
 ; RV64-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV64-NEXT:    vslidedown.vx v12, v8, a0
@@ -1828,7 +1822,7 @@ define zeroext i8 @front_ele_v4i8(<4 x i8> %v, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v8, v0.t
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
   %s = extractelement <4 x i8> %v, i64 0
   %r = call i8 @llvm.vp.reduce.and.v4i8(i8 %s, <4 x i8> %v, <4 x i1> %m, i32 %evl)
@@ -1843,7 +1837,7 @@ define zeroext i8 @front_ele_v32i8(<32 x i8> %v, <32 x i1> %m, i32 zeroext %evl)
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v8, v0.t
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
   %s = extractelement <32 x i8> %v, i64 0
   %r = call i8 @llvm.vp.reduce.and.v32i8(i8 %s, <32 x i8> %v, <32 x i1> %m, i32 %evl)

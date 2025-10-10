@@ -8,8 +8,8 @@
 
 #include "bolt/Core/DebugNames.h"
 #include "bolt/Core/BinaryContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include <cstdint>
@@ -440,8 +440,7 @@ void DWARF5AcceleratorTable::computeBucketCount() {
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
   array_pod_sort(Uniques.begin(), Uniques.end());
-  std::vector<uint32_t>::iterator P =
-      std::unique(Uniques.begin(), Uniques.end());
+  std::vector<uint32_t>::iterator P = llvm::unique(Uniques);
 
   UniqueHashCount = std::distance(Uniques.begin(), P);
 
@@ -649,8 +648,8 @@ void DWARF5AcceleratorTable::writeEntries() {
         if (const auto Iter = EntryRelativeOffsets.find(*ParentOffset);
             Iter != EntryRelativeOffsets.end()) {
           const uint64_t PatchOffset = Entry->getPatchOffset();
-          uint32_t *Ptr = reinterpret_cast<uint32_t *>(
-              &EntriesBuffer.get()->data()[PatchOffset]);
+          uint32_t *Ptr =
+              reinterpret_cast<uint32_t *>(&EntriesBuffer->data()[PatchOffset]);
           *Ptr = Iter->second;
         } else {
           BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "

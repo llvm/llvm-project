@@ -39,6 +39,19 @@ Or cast to char to explicitly indicate that output should be a character.
 
   std::cout << static_cast<char>(v);
 
+Options
+-------
+
+.. option:: AllowedTypes
+
+  A semicolon-separated list of type names that will be treated like the ``char``
+  type: the check will not report variables declared with with these types or
+  explicit cast expressions to these types. Note that this distinguishes type
+  aliases from the original type, so specifying e.g. ``unsigned char`` here
+  will not suppress reports about ``uint8_t`` even if it is defined as a
+  ``typedef`` alias for ``unsigned char``.
+  Default is `unsigned char;signed char`.
+
 .. option:: CastTypeName
 
   When `CastTypeName` is specified, the fix-it will use `CastTypeName` as the

@@ -1100,14 +1100,14 @@ TYPE_PARSER(construct<EquivalenceObject>(indirect(designator)))
 // R873 common-stmt ->
 //        COMMON [/ [common-block-name] /] common-block-object-list
 //        [[,] / [common-block-name] / common-block-object-list]...
-TYPE_PARSER(
+TYPE_PARSER(sourced(
     construct<CommonStmt>("COMMON" >> defaulted("/" >> maybe(name) / "/"),
         nonemptyList("expected COMMON block objects"_err_en_US,
             Parser<CommonBlockObject>{}),
         many(maybe(","_tok) >>
             construct<CommonStmt::Block>("/" >> maybe(name) / "/",
                 nonemptyList("expected COMMON block objects"_err_en_US,
-                    Parser<CommonBlockObject>{})))))
+                    Parser<CommonBlockObject>{}))))))
 
 // R874 common-block-object -> variable-name [( array-spec )]
 TYPE_PARSER(construct<CommonBlockObject>(name, maybe(arraySpec)))
@@ -1310,6 +1310,10 @@ constexpr auto unroll{
     "UNROLL" >> construct<CompilerDirective::Unroll>(maybe(digitString64))};
 constexpr auto unrollAndJam{"UNROLL_AND_JAM" >>
     construct<CompilerDirective::UnrollAndJam>(maybe(digitString64))};
+constexpr auto novector{"NOVECTOR" >> construct<CompilerDirective::NoVector>()};
+constexpr auto nounroll{"NOUNROLL" >> construct<CompilerDirective::NoUnroll>()};
+constexpr auto nounrollAndJam{
+    "NOUNROLL_AND_JAM" >> construct<CompilerDirective::NoUnrollAndJam>()};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1317,6 +1321,9 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
                 construct<CompilerDirective>(vectorAlways) ||
                 construct<CompilerDirective>(unrollAndJam) ||
                 construct<CompilerDirective>(unroll) ||
+                construct<CompilerDirective>(novector) ||
+                construct<CompilerDirective>(nounrollAndJam) ||
+                construct<CompilerDirective>(nounroll) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /

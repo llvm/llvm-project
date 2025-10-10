@@ -231,6 +231,7 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
         }
       break;
     case ISD::ADD:
+    case ISD::PTRADD:
       if (auto *C = dyn_cast<ConstantSDNode>(Base->getOperand(1))) {
         Offset += C->getSExtValue();
         Base = DAG.getTargetLoweringInfo().unwrapAddress(Base->getOperand(0));
@@ -259,7 +260,7 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
     break;
   }
 
-  if (Base->getOpcode() == ISD::ADD) {
+  if (Base->isAnyAdd()) {
     // TODO: The following code appears to be needless as it just
     //       bails on some Ptrs early, reducing the cases where we
     //       find equivalence. We should be able to remove this.
@@ -282,8 +283,7 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
     }
 
     // Check if Index Offset pattern
-    if (Index->getOpcode() != ISD::ADD ||
-        !isa<ConstantSDNode>(Index->getOperand(1)))
+    if (!Index->isAnyAdd() || !isa<ConstantSDNode>(Index->getOperand(1)))
       return BaseIndexOffset(PotentialBase, Index, Offset, IsIndexSignExt);
 
     Offset += cast<ConstantSDNode>(Index->getOperand(1))->getSExtValue();
@@ -303,10 +303,7 @@ BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
   if (const auto *LS0 = dyn_cast<LSBaseSDNode>(N))
     return matchLSNode(LS0, DAG);
   if (const auto *LN = dyn_cast<LifetimeSDNode>(N)) {
-    if (LN->hasOffset())
-      return BaseIndexOffset(LN->getOperand(1), SDValue(), LN->getOffset(),
-                             false);
-    return BaseIndexOffset(LN->getOperand(1), SDValue(), false);
+    return BaseIndexOffset(LN->getOperand(1), SDValue(), 0, false);
   }
   return BaseIndexOffset();
 }

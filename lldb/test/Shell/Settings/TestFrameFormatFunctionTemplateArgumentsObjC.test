@@ -1,0 +1,24 @@
+# Check that we have an appropriate fallback for ${function.template-arguments} in
+# languages that don't implement this frame format variable (in this case Objective-C).
+#
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.m -o %t.objc.out
+# RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.m
+
+int func() {}
+int bar() { func(); }
+
+int main() { return bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.template-arguments}'\n"
+break set -n func
+
+run
+bt
+
+# CHECK: bt
+# CHECK-NOT: custom-frame

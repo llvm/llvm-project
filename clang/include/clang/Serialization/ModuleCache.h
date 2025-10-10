@@ -12,6 +12,8 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
+#include <ctime>
+
 namespace llvm {
 class AdvisoryLock;
 } // namespace llvm
@@ -31,11 +33,27 @@ public:
   virtual std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) = 0;
 
+  // TODO: Abstract away timestamps with isUpToDate() and markUpToDate().
+  // TODO: Consider exposing a "validation lock" API to prevent multiple clients
+  // concurrently noticing an out-of-date module file and validating its inputs.
+
+  /// Returns the timestamp denoting the last time inputs of the module file
+  /// were validated.
+  virtual std::time_t getModuleTimestamp(StringRef ModuleFilename) = 0;
+
+  /// Updates the timestamp denoting the last time inputs of the module file
+  /// were validated.
+  virtual void updateModuleTimestamp(StringRef ModuleFilename) = 0;
+
+  /// Prune module files that haven't been accessed in a long time.
+  virtual void maybePrune(StringRef Path, time_t PruneInterval,
+                          time_t PruneAfter) = 0;
+
   /// Returns this process's view of the module cache.
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  // TODO: Virtualize writing/reading PCM files, timestamping, pruning, etc.
+  // TODO: Virtualize writing/reading PCM files, etc.
 
   virtual ~ModuleCache() = default;
 };
@@ -45,6 +63,9 @@ public:
 /// \c CompilerInstance instances participating in building modules for single
 /// translation unit in order to share the same \c InMemoryModuleCache.
 IntrusiveRefCntPtr<ModuleCache> createCrossProcessModuleCache();
+
+/// Shared implementation of `ModuleCache::maybePrune()`.
+void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
 } // namespace clang
 
 #endif

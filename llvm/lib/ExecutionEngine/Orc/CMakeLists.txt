@@ -8,6 +8,7 @@ endif()
 
 add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
+  COFF.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
@@ -23,9 +24,11 @@ add_llvm_component_library(LLVMOrcJIT
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
+  ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
   GetDylibInterface.cpp
   IndirectionUtils.cpp
+  InProcessMemoryAccess.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
   IRPartitionLayer.cpp
@@ -51,6 +54,7 @@ add_llvm_component_library(LLVMOrcJIT
   OrcV2CBindings.cpp
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
+  SelfExecutorProcessControl.cpp
   SimpleRemoteEPC.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp

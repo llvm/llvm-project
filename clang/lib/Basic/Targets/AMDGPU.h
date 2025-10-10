@@ -89,7 +89,8 @@ public:
 
   void setAddressSpaceMap(bool DefaultIsPrivate);
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   uint64_t getPointerWidthV(LangAS AS) const override {
     if (isR600(getTriple()))
@@ -318,6 +319,12 @@ public:
       Opts["__opencl_c_images"] = true;
       Opts["__opencl_c_3d_image_writes"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
+      Opts["__opencl_c_program_scope_global_variables"] = true;
+
+      if (GPUKind >= llvm::AMDGPU::GK_GFX700) {
+        Opts["__opencl_c_generic_address_space"] = true;
+        Opts["__opencl_c_device_enqueue"] = true;
+      }
     }
   }
 
@@ -396,15 +403,12 @@ public:
   /// in the DWARF.
   std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
-    const unsigned DWARF_Private = 1;
-    const unsigned DWARF_Local = 2;
-    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
-      return DWARF_Private;
-    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
-      return DWARF_Local;
-    } else {
+    int DWARFAS = llvm::AMDGPU::mapToDWARFAddrSpace(AddressSpace);
+    // If there is no corresponding address space identifier, or it would be
+    // the default, then don't emit the attribute.
+    if (DWARFAS == -1 || DWARFAS == llvm::AMDGPU::DWARFAS::DEFAULT)
       return std::nullopt;
-    }
+    return DWARFAS;
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
@@ -412,8 +416,7 @@ public:
     default:
       return CCCR_Warning;
     case CC_C:
-    case CC_OpenCLKernel:
-    case CC_AMDGPUKernelCall:
+    case CC_DeviceKernel:
       return CCCR_OK;
     }
   }
@@ -437,6 +440,7 @@ public:
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
+    HasFullBFloat16 = true;
     auto TargetIDFeatures =
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
     for (const auto &F : Features) {

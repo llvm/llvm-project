@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-const-correctness %t \
+// RUN: %check_clang_tidy --match-partial-fixes %s misc-const-correctness %t \
 // RUN: -config='{CheckOptions: {\
 // RUN:   misc-const-correctness.AnalyzeValues: false,\
 // RUN:   misc-const-correctness.AnalyzeReferences: false,\
@@ -48,3 +48,23 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void function_pointer_basic() {
+  void (*const fp)() = nullptr;
+  fp();
+}
+
+void takeNonConstRef(int *&r);
+
+void ignoreNonConstRefOps() {
+  // init with non-const ref
+  int* p0 {nullptr};
+  int*& r1 = p0;
+  
+  // non-const ref param
+  int* p1 {nullptr};
+  takeNonConstRef(p1);
+
+  // cast
+  int* p2 {nullptr};
+  int*& r2 = (int*&)p2;
+}

@@ -1,4 +1,4 @@
-//===--- MoveConstArgCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -78,9 +78,9 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-bool IsRValueReferenceParam(const Expr *Invocation,
-                            const QualType *InvocationParmType,
-                            const Expr *Arg) {
+static bool isRValueReferenceParam(const Expr *Invocation,
+                                   const QualType *InvocationParmType,
+                                   const Expr *Arg) {
   if (Invocation && (*InvocationParmType)->isRValueReferenceType() &&
       Arg->isLValue()) {
     if (!Invocation->getType()->isRecordType())
@@ -147,7 +147,7 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
     // std::move shouldn't be removed when an lvalue wrapped by std::move is
     // passed to the function with an rvalue reference parameter.
     bool IsRVRefParam =
-        IsRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
+        isRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;
 

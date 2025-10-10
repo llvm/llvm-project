@@ -143,12 +143,14 @@
 ; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
+; CHECK-O-NEXT: Running pass: SimplifyTypeTestsPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
+; CHECK-O-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass

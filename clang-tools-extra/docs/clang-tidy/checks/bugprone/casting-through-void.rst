@@ -26,7 +26,7 @@ Note: it is expected that, after applying the suggested fix and using
 <../cppcoreguidelines/pro-type-reinterpret-cast>` will emit a warning.
 This is intentional: ``reinterpret_cast`` is a dangerous operation that can
 easily break the strict aliasing rules when dereferencing the casted pointer,
-invoking Undefined Behavior. The warning is there to prompt users to carefuly
+invoking Undefined Behavior. The warning is there to prompt users to carefully
 analyze whether the usage of ``reinterpret_cast`` is safe, in which case the
 warning may be suppressed.
 

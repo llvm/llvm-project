@@ -196,29 +196,18 @@ static cl::opt<unsigned> SpillOptMax("spill-opt-max", cl::Hidden,
 static unsigned SpillOptCount = 0;
 #endif
 
-namespace llvm {
-
-  void initializeHexagonCallFrameInformationPass(PassRegistry&);
-  FunctionPass *createHexagonCallFrameInformation();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonCallFrameInformation : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonCallFrameInformation() : MachineFunctionPass(ID) {
-      PassRegistry &PR = *PassRegistry::getPassRegistry();
-      initializeHexagonCallFrameInformationPass(PR);
-    }
+    HexagonCallFrameInformation() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
   };
 
@@ -2207,10 +2196,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   // and collect relevant information.
   for (auto &B : MF) {
     std::map<int,IndexType> LastStore, LastLoad;
-    // Emplace appears not to be supported in gcc 4.7.2-4.
-    //auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
-    auto P = BlockIndexes.insert(
-                std::make_pair(&B, HexagonBlockRanges::InstrIndexMap(B)));
+    auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
     auto &IndexMap = P.first->second;
     LLVM_DEBUG(dbgs() << "Index map for " << printMBBReference(B) << "\n"
                       << IndexMap << '\n');
@@ -2239,7 +2225,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         if (!Bad) {
           // If the addressing mode is ok, check the register class.
           unsigned OpNum = Load ? 0 : 2;
-          auto *RC = HII.getRegClass(In.getDesc(), OpNum, &HRI, MF);
+          auto *RC = HII.getRegClass(In.getDesc(), OpNum, &HRI);
           RC = getCommonRC(SI.RC, RC);
           if (RC == nullptr)
             Bad = true;
@@ -2409,7 +2395,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
 
         HexagonBlockRanges::RegisterRef SrcRR = { SrcOp.getReg(),
                                                   SrcOp.getSubReg() };
-        auto *RC = HII.getRegClass(SI.getDesc(), 2, &HRI, MF);
+        auto *RC = HII.getRegClass(SI.getDesc(), 2, &HRI);
         // The this-> is needed to unconfuse MSVC.
         Register FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
         LLVM_DEBUG(dbgs() << "Replacement reg:" << printReg(FoundR, &HRI)

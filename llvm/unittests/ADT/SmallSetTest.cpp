@@ -24,13 +24,6 @@ TEST(SmallSetTest, ConstructorIteratorPair) {
   EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
 }
 
-TEST(SmallSet, ConstructorRange) {
-  std::initializer_list<int> L = {1, 2, 3, 4, 5};
-
-  SmallSet<int, 4> S(llvm::make_range(std::begin(L), std::end(L)));
-  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
-}
-
 TEST(SmallSet, ConstructorInitializerList) {
   std::initializer_list<int> L = {1, 2, 3, 4, 5};
   SmallSet<int, 4> S = {1, 2, 3, 4, 5};

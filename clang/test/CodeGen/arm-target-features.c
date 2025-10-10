@@ -119,4 +119,10 @@
 // RUN: %clang_cc1 -triple thumbv9.3a-linux-gnueabihf -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARCH93
 // CHECK-ARCH93: "target-features"="+armv9.3-a,+thumb-mode,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8.7a,+v8.8a,+v9.1a,+v9.2a,+v9.3a,+v9a"
 
+// RUN: %clang_cc1 -triple arm-none-eabi -target-cpu cortex-r52 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMSIMD-R52
+// CHECK-ARMSIMD-R52:  "target-features"="+armv8-r,+crc,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
+
+// RUN: %clang_cc1 -triple armv8-none-eabi -target-cpu cortex-a57 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMSIMD-A57
+// CHECK-ARMSIMD-A57:  "target-features"="+aes,+armv8-a,+crc,+d32,+dsp,+fp-armv8,+fp-armv8d16,+fp-armv8d16sp,+fp-armv8sp,+fp16,+fp64,+hwdiv,+hwdiv-arm,+neon,+sha2,+vfp2,+vfp2sp,+vfp3,+vfp3d16,+vfp3d16sp,+vfp3sp,+vfp4,+vfp4d16,+vfp4d16sp,+vfp4sp,-thumb-mode"
+
 void foo() {}

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CtxInstrProfiling.h"
+#include "RootAutoDetector.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_atomic_clang.h"
@@ -42,6 +43,12 @@ Arena *FlatCtxArena = nullptr;
 // thread collects a contextual profile for that root.
 __thread bool IsUnderContext = false;
 __sanitizer::atomic_uint8_t ProfilingStarted = {};
+
+__sanitizer::atomic_uintptr_t RootDetector = {};
+RootAutoDetector *getRootDetector() {
+  return reinterpret_cast<RootAutoDetector *>(
+      __sanitizer::atomic_load_relaxed(&RootDetector));
+}
 
 // utility to taint a pointer by setting the LSB. There is an assumption
 // throughout that the addresses of contexts are even (really, they should be
@@ -201,7 +208,7 @@ ContextNode *getCallsiteSlow(GUID Guid, ContextNode **InsertionPoint,
   return Ret;
 }
 
-ContextNode *getFlatProfile(FunctionData &Data, GUID Guid,
+ContextNode *getFlatProfile(FunctionData &Data, void *Callee, GUID Guid,
                             uint32_t NumCounters) {
   if (ContextNode *Existing = Data.FlatCtx)
     return Existing;
@@ -232,6 +239,7 @@ ContextNode *getFlatProfile(FunctionData &Data, GUID Guid,
     auto *Ret = allocContextNode(AllocBuff, Guid, NumCounters, 0);
     Data.FlatCtx = Ret;
 
+    Data.EntryAddress = Callee;
     Data.Next = reinterpret_cast<FunctionData *>(
         __sanitizer::atomic_load_relaxed(&AllFunctionsData));
     while (!__sanitizer::atomic_compare_exchange_strong(
@@ -242,95 +250,6 @@ ContextNode *getFlatProfile(FunctionData &Data, GUID Guid,
   }
 
   return Data.FlatCtx;
-}
-
-ContextNode *getUnhandledContext(FunctionData &Data, GUID Guid,
-                                 uint32_t NumCounters) {
-
-  // 1) if we are currently collecting a contextual profile, fetch a ContextNode
-  // in the `Unhandled` set. We want to do this regardless of `ProfilingStarted`
-  // to (hopefully) offset the penalty of creating these contexts to before
-  // profiling.
-  //
-  // 2) if we are under a root (regardless if this thread is collecting or not a
-  // contextual profile for that root), do not collect a flat profile. We want
-  // to keep flat profiles only for activations that can't happen under a root,
-  // to avoid confusing profiles. We can, for example, combine flattened and
-  // flat profiles meaningfully, as we wouldn't double-count anything.
-  //
-  // 3) to avoid lengthy startup, don't bother with flat profiles until the
-  // profiling has started. We would reset them anyway when profiling starts.
-  // HOWEVER. This does lose profiling for message pumps: those functions are
-  // entered once and never exit. They should be assumed to be entered before
-  // profiling starts - because profiling should start after the server is up
-  // and running (which is equivalent to "message pumps are set up").
-  ContextRoot *R = __llvm_ctx_profile_current_context_root;
-  if (!R) {
-    if (IsUnderContext || !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
-      return TheScratchContext;
-    else
-      return markAsScratch(
-          onContextEnter(*getFlatProfile(Data, Guid, NumCounters)));
-  }
-  auto [Iter, Ins] = R->Unhandled.insert({Guid, nullptr});
-  if (Ins)
-    Iter->second =
-        getCallsiteSlow(Guid, &R->FirstUnhandledCalleeNode, NumCounters, 0);
-  return markAsScratch(onContextEnter(*Iter->second));
-}
-
-ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
-                                            GUID Guid, uint32_t NumCounters,
-                                            uint32_t NumCallsites) {
-  // fast "out" if we're not even doing contextual collection.
-  if (!__llvm_ctx_profile_current_context_root)
-    return getUnhandledContext(*Data, Guid, NumCounters);
-
-  // also fast "out" if the caller is scratch. We can see if it's scratch by
-  // looking at the interior pointer into the subcontexts vector that the caller
-  // provided, which, if the context is scratch, so is that interior pointer
-  // (because all the address calculations are using even values. Or more
-  // precisely, aligned - 8 values)
-  auto **CallsiteContext = consume(__llvm_ctx_profile_callsite[0]);
-  if (!CallsiteContext || isScratch(CallsiteContext))
-    return getUnhandledContext(*Data, Guid, NumCounters);
-
-  // if the callee isn't the expected one, return scratch.
-  // Signal handler(s) could have been invoked at any point in the execution.
-  // Should that have happened, and had it (the handler) be built with
-  // instrumentation, its __llvm_ctx_profile_get_context would have failed here.
-  // Its sub call graph would have then populated
-  // __llvm_ctx_profile_{expected_callee | callsite} at index 1.
-  // The normal call graph may be impacted in that, if the signal handler
-  // happened somewhere before we read the TLS here, we'd see the TLS reset and
-  // we'd also fail here. That would just mean we would loose counter values for
-  // the normal subgraph, this time around. That should be very unlikely, but if
-  // it happens too frequently, we should be able to detect discrepancies in
-  // entry counts (caller-callee). At the moment, the design goes on the
-  // assumption that is so unfrequent, though, that it's not worth doing more
-  // for that case.
-  auto *ExpectedCallee = consume(__llvm_ctx_profile_expected_callee[0]);
-  if (ExpectedCallee != Callee)
-    return getUnhandledContext(*Data, Guid, NumCounters);
-
-  auto *Callsite = *CallsiteContext;
-  // in the case of indirect calls, we will have all seen targets forming a
-  // linked list here. Find the one corresponding to this callee.
-  while (Callsite && Callsite->guid() != Guid) {
-    Callsite = Callsite->next();
-  }
-  auto *Ret = Callsite ? Callsite
-                       : getCallsiteSlow(Guid, CallsiteContext, NumCounters,
-                                         NumCallsites);
-  if (Ret->callsites_size() != NumCallsites ||
-      Ret->counters_size() != NumCounters)
-    __sanitizer::Printf("[ctxprof] Returned ctx differs from what's asked: "
-                        "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
-                        reinterpret_cast<void *>(Ret), Guid, NumCallsites,
-                        NumCounters, Ret->guid(), Ret->callsites_size(),
-                        Ret->counters_size());
-  onContextEnter(*Ret);
-  return Ret;
 }
 
 // This should be called once for a Root. Allocate the first arena, set up the
@@ -353,6 +272,8 @@ void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
 
 ContextRoot *FunctionData::getOrAllocateContextRoot() {
   auto *Root = CtxRoot;
+  if (!canBeRoot(Root))
+    return Root;
   if (Root)
     return Root;
   __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
@@ -366,16 +287,12 @@ ContextRoot *FunctionData::getOrAllocateContextRoot() {
   return Root;
 }
 
-ContextNode *__llvm_ctx_profile_start_context(
-    FunctionData *FData, GUID Guid, uint32_t Counters,
-    uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+ContextNode *tryStartContextGivenRoot(ContextRoot *Root, GUID Guid,
+                                      uint32_t Counters, uint32_t Callsites)
+    SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   IsUnderContext = true;
-
-  auto *Root = FData->getOrAllocateContextRoot();
-
   __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
                                 __sanitizer::memory_order_relaxed);
-
   if (!Root->FirstMemBlock) {
     setupContext(Root, Guid, Counters, Callsites);
   }
@@ -389,17 +306,126 @@ ContextNode *__llvm_ctx_profile_start_context(
   return TheScratchContext;
 }
 
-void __llvm_ctx_profile_release_context(FunctionData *FData)
-    SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  IsUnderContext = false;
-  if (__llvm_ctx_profile_current_context_root) {
-    __llvm_ctx_profile_current_context_root = nullptr;
-    assert(FData->CtxRoot);
-    FData->CtxRoot->Taken.Unlock();
+ContextNode *getUnhandledContext(FunctionData &Data, void *Callee, GUID Guid,
+                                 uint32_t NumCounters, uint32_t NumCallsites,
+                                 ContextRoot *CtxRoot) {
+
+  // 1) if we are currently collecting a contextual profile, fetch a ContextNode
+  // in the `Unhandled` set. We want to do this regardless of `ProfilingStarted`
+  // to (hopefully) offset the penalty of creating these contexts to before
+  // profiling.
+  //
+  // 2) if we are under a root (regardless if this thread is collecting or not a
+  // contextual profile for that root), do not collect a flat profile. We want
+  // to keep flat profiles only for activations that can't happen under a root,
+  // to avoid confusing profiles. We can, for example, combine flattened and
+  // flat profiles meaningfully, as we wouldn't double-count anything.
+  //
+  // 3) to avoid lengthy startup, don't bother with flat profiles until the
+  // profiling has started. We would reset them anyway when profiling starts.
+  // HOWEVER. This does lose profiling for message pumps: those functions are
+  // entered once and never exit. They should be assumed to be entered before
+  // profiling starts - because profiling should start after the server is up
+  // and running (which is equivalent to "message pumps are set up").
+  if (!CtxRoot) {
+    if (auto *RAD = getRootDetector())
+      RAD->sample();
+    else if (auto *CR = Data.CtxRoot) {
+      if (canBeRoot(CR))
+        return tryStartContextGivenRoot(CR, Guid, NumCounters, NumCallsites);
+    }
+    if (IsUnderContext || !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
+      return TheScratchContext;
+    else
+      return markAsScratch(
+          onContextEnter(*getFlatProfile(Data, Callee, Guid, NumCounters)));
   }
+  auto [Iter, Ins] = CtxRoot->Unhandled.insert({Guid, nullptr});
+  if (Ins)
+    Iter->second = getCallsiteSlow(Guid, &CtxRoot->FirstUnhandledCalleeNode,
+                                   NumCounters, 0);
+  return markAsScratch(onContextEnter(*Iter->second));
 }
 
-void __llvm_ctx_profile_start_collection() {
+ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
+                                            GUID Guid, uint32_t NumCounters,
+                                            uint32_t NumCallsites) {
+  auto *CtxRoot = __llvm_ctx_profile_current_context_root;
+  // fast "out" if we're not even doing contextual collection.
+  if (!CtxRoot)
+    return getUnhandledContext(*Data, Callee, Guid, NumCounters, NumCallsites,
+                               nullptr);
+
+  // also fast "out" if the caller is scratch. We can see if it's scratch by
+  // looking at the interior pointer into the subcontexts vector that the caller
+  // provided, which, if the context is scratch, so is that interior pointer
+  // (because all the address calculations are using even values. Or more
+  // precisely, aligned - 8 values)
+  auto **CallsiteContext = consume(__llvm_ctx_profile_callsite[0]);
+  if (!CallsiteContext || isScratch(CallsiteContext))
+    return getUnhandledContext(*Data, Callee, Guid, NumCounters, NumCallsites,
+                               CtxRoot);
+
+  // if the callee isn't the expected one, return scratch.
+  // Signal handler(s) could have been invoked at any point in the execution.
+  // Should that have happened, and had it (the handler) be built with
+  // instrumentation, its __llvm_ctx_profile_get_context would have failed here.
+  // Its sub call graph would have then populated
+  // __llvm_ctx_profile_{expected_callee | callsite} at index 1.
+  // The normal call graph may be impacted in that, if the signal handler
+  // happened somewhere before we read the TLS here, we'd see the TLS reset and
+  // we'd also fail here. That would just mean we would loose counter values for
+  // the normal subgraph, this time around. That should be very unlikely, but if
+  // it happens too frequently, we should be able to detect discrepancies in
+  // entry counts (caller-callee). At the moment, the design goes on the
+  // assumption that is so unfrequent, though, that it's not worth doing more
+  // for that case.
+  auto *ExpectedCallee = consume(__llvm_ctx_profile_expected_callee[0]);
+  if (ExpectedCallee != Callee)
+    return getUnhandledContext(*Data, Callee, Guid, NumCounters, NumCallsites,
+                               CtxRoot);
+
+  auto *Callsite = *CallsiteContext;
+  // in the case of indirect calls, we will have all seen targets forming a
+  // linked list here. Find the one corresponding to this callee.
+  while (Callsite && Callsite->guid() != Guid) {
+    Callsite = Callsite->next();
+  }
+  auto *Ret = Callsite ? Callsite
+                       : getCallsiteSlow(Guid, CallsiteContext, NumCounters,
+                                         NumCallsites);
+  if (Ret->callsites_size() != NumCallsites ||
+      Ret->counters_size() != NumCounters)
+    __sanitizer::Printf("[ctxprof] Returned ctx differs from what's asked: "
+                        "Context: %p, Asked: %lu %u %u, Got: %lu %u %u \n",
+                        reinterpret_cast<void *>(Ret), Guid, NumCallsites,
+                        NumCounters, Ret->guid(), Ret->callsites_size(),
+                        Ret->counters_size());
+  onContextEnter(*Ret);
+  return Ret;
+}
+
+ContextNode *__llvm_ctx_profile_start_context(FunctionData *FData, GUID Guid,
+                                              uint32_t Counters,
+                                              uint32_t Callsites) {
+  auto *Root = FData->getOrAllocateContextRoot();
+  assert(canBeRoot(Root));
+  return tryStartContextGivenRoot(Root, Guid, Counters, Callsites);
+}
+
+void __llvm_ctx_profile_release_context(FunctionData *FData)
+    SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  const auto *CurrentRoot = __llvm_ctx_profile_current_context_root;
+  auto *CR = FData->CtxRoot;
+  if (!CurrentRoot || CR != CurrentRoot)
+    return;
+  IsUnderContext = false;
+  assert(CR && canBeRoot(CR));
+  __llvm_ctx_profile_current_context_root = nullptr;
+  CR->Taken.Unlock();
+}
+
+void __llvm_ctx_profile_start_collection(unsigned AutodetectDuration) {
   size_t NumMemUnits = 0;
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
@@ -415,12 +441,28 @@ void __llvm_ctx_profile_start_collection() {
       resetContextNode(*Root->FirstUnhandledCalleeNode);
     __sanitizer::atomic_store_relaxed(&Root->TotalEntries, 0);
   }
+  if (AutodetectDuration) {
+    // we leak RD intentionally. Knowing when to free it is tricky, there's a
+    // race condition with functions observing the `RootDectector` as non-null.
+    // This can be addressed but the alternatives have some added complexity and
+    // it's not (yet) worth it.
+    auto *RD = new (__sanitizer::InternalAlloc(sizeof(RootAutoDetector)))
+        RootAutoDetector(AllFunctionsData, RootDetector, AutodetectDuration);
+    RD->start();
+  } else {
+    __sanitizer::Printf("[ctxprof] Initial NumMemUnits: %zu \n", NumMemUnits);
+  }
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, true);
-  __sanitizer::Printf("[ctxprof] Initial NumMemUnits: %zu \n", NumMemUnits);
 }
 
 bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, false);
+  if (auto *RD = getRootDetector()) {
+    __sanitizer::Printf("[ctxprof] Expected the root autodetector to have "
+                        "finished well before attempting to fetch a context");
+    RD->join();
+  }
+
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
 
@@ -444,9 +486,13 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
   // traversing it.
   const auto *Pos = reinterpret_cast<const FunctionData *>(
       __sanitizer::atomic_load_relaxed(&AllFunctionsData));
-  for (; Pos; Pos = Pos->Next)
-    Writer.writeFlat(Pos->FlatCtx->guid(), Pos->FlatCtx->counters(),
-                     Pos->FlatCtx->counters_size());
+  for (; Pos; Pos = Pos->Next) {
+    const auto *CR = Pos->CtxRoot;
+    if (!CR && canBeRoot(CR)) {
+      const auto *FP = Pos->FlatCtx;
+      Writer.writeFlat(FP->guid(), FP->counters(), FP->counters_size());
+    }
+  }
   Writer.endFlatSection();
   return true;
 }

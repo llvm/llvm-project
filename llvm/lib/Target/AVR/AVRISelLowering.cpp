@@ -198,60 +198,8 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
     // improvements in how we treat 16-bit "registers" to be feasible.
   }
 
-  // Division and modulus rtlib functions
-  setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
-  setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
-  setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-  setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
-  setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
-  setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
-
-  // Several of the runtime library functions use a special calling conv
-  setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
-  setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
-
-  // Trigonometric rtlib functions
-  setLibcallName(RTLIB::SIN_F32, "sin");
-  setLibcallName(RTLIB::COS_F32, "cos");
-
   setMinFunctionAlignment(Align(2));
   setMinimumJumpTableEntries(UINT_MAX);
-}
-
-const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
-#define NODE(name)                                                             \
-  case AVRISD::name:                                                           \
-    return #name
-
-  switch (Opcode) {
-  default:
-    return nullptr;
-    NODE(RET_GLUE);
-    NODE(RETI_GLUE);
-    NODE(CALL);
-    NODE(WRAPPER);
-    NODE(LSL);
-    NODE(LSLW);
-    NODE(LSR);
-    NODE(LSRW);
-    NODE(ROL);
-    NODE(ROR);
-    NODE(ASR);
-    NODE(ASRW);
-    NODE(LSLLOOP);
-    NODE(LSRLOOP);
-    NODE(ROLLOOP);
-    NODE(RORLOOP);
-    NODE(ASRLOOP);
-    NODE(BRCOND);
-    NODE(CMP);
-    NODE(CMPC);
-    NODE(TST);
-    NODE(SELECT_CC);
-#undef NODE
-  }
 }
 
 EVT AVRTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
@@ -557,10 +505,9 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (SDValue const &Value : Op->op_values()) {
-    Entry.Node = Value;
-    Entry.Ty = Value.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Value, Value.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = IsSigned;
     Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);
@@ -721,7 +668,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       default: {
         // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows
         // us to  fold the constant into the cmp instruction.
-        RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+        RHS = DAG.getSignedConstant(C->getSExtValue() + 1, DL, VT);
         CC = ISD::SETGE;
         break;
       }
@@ -765,7 +712,10 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows us to
     // fold the constant into the cmp instruction.
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+      // Doing a "icmp ugt i16 65535, %0" comparison should have been converted
+      // already to something else. Assert to make sure this assumption holds.
+      assert((!C->isAllOnes()) && "integer overflow in comparison transform");
+      RHS = DAG.getConstant(C->getZExtValue() + 1, DL, VT);
       CC = ISD::SETUGE;
       break;
     }
@@ -1123,14 +1073,17 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                    ISD::MemIndexedMode &AM,
                                                    SelectionDAG &DAG) const {
   EVT VT;
+  SDValue Ptr;
   SDLoc DL(N);
 
   if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     VT = LD->getMemoryVT();
+    Ptr = LD->getBasePtr();
     if (LD->getExtensionType() != ISD::NON_EXTLOAD)
       return false;
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
+    Ptr = ST->getBasePtr();
     // We can not store to program memory.
     if (AVR::isProgramMemoryAccess(ST))
       return false;
@@ -1167,6 +1120,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
         return false;
 
     Base = Op->getOperand(0);
+
+    // Post-indexing updates the base, so it's not a valid transform
+    // if that's not the same as the load's pointer.
+    if (Ptr != Base)
+      return false;
+
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
     AM = ISD::POST_INC;
 

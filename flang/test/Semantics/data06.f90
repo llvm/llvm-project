@@ -41,7 +41,7 @@ subroutine s1
   data rp/rfunc/
   procedure(rfunc), pointer :: rpp
   real, target :: rt
-  !WARNING: Procedure pointer 'rpp' in a DATA statement is not standard
+  !WARNING: Procedure pointer 'rpp' in a DATA statement is not standard [-Wdata-stmt-extensions]
   !ERROR: Data object 'rt' may not be used to initialize 'rpp', which is a procedure pointer
   data rpp/rt/
   !ERROR: Initializer for 'rt' must not be a pointer
@@ -49,7 +49,7 @@ subroutine s1
   !ERROR: Initializer for 'rt' must not be a procedure
   data rt/rfunc/
   integer :: jx, jy
-  !WARNING: DATA statement value initializes 'jx' of type 'INTEGER(4)' with CHARACTER
+  !WARNING: DATA statement value initializes 'jx' of type 'INTEGER(4)' with CHARACTER [-Wdata-stmt-extensions]
   data jx/'abc'/
   !ERROR: DATA statement value could not be converted to the type 'INTEGER(4)' of the object 'jx'
   data jx/t1()/

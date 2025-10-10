@@ -9,7 +9,6 @@
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
@@ -113,9 +112,8 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
   if (Processor.empty())
     return std::nullopt;
 
-  llvm::SmallSet<llvm::StringRef, 4> AllFeatures;
-  for (auto &&F : getAllPossibleTargetIDFeatures(T, Processor))
-    AllFeatures.insert(F);
+  llvm::SmallSet<llvm::StringRef, 4> AllFeatures(
+      llvm::from_range, getAllPossibleTargetIDFeatures(T, Processor));
 
   for (auto &&F : *FeatureMap)
     if (!AllFeatures.count(F.first()))

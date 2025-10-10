@@ -1,4 +1,4 @@
-//===--- RedundantDeclarationCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,14 +15,18 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+
 AST_MATCHER(FunctionDecl, doesDeclarationForceExternallyVisibleDefinition) {
   return Node.doesDeclarationForceExternallyVisibleDefinition();
 }
 
+} // namespace
+
 RedundantDeclarationCheck::RedundantDeclarationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void RedundantDeclarationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

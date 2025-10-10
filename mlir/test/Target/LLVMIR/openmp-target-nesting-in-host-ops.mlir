@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
 
   omp.private {type = private} @i32_privatizer : i32
 
@@ -28,10 +28,11 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 
   llvm.func @test_nested_target_in_wsloop(%arg0: !llvm.ptr) {
     %8 = llvm.mlir.constant(1 : i64) : i64
-    %9 = llvm.alloca %8 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
+    %9 = llvm.alloca %8 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5>
+    %ascast = llvm.addrspacecast %9 : !llvm.ptr<5> to !llvm.ptr
     %16 = llvm.mlir.constant(10 : i32) : i32
     %17 = llvm.mlir.constant(1 : i32) : i32
-    omp.wsloop private(@i32_privatizer %9 -> %loop_arg : !llvm.ptr) {
+    omp.wsloop private(@i32_privatizer %ascast -> %loop_arg : !llvm.ptr) {
       omp.loop_nest (%arg1) : i32 = (%17) to (%16) inclusive step (%17) {
         llvm.store %arg1, %loop_arg : i32, !llvm.ptr
         %0 = llvm.mlir.constant(4 : index) : i64
@@ -48,7 +49,8 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
   }
 
 // CHECK-LABEL: define void @test_nested_target_in_wsloop(ptr %0) {
-// CHECK-NEXT:    %{{.*}} = alloca i32, i64 1, align 4
+// CHECK-NEXT:    %{{.*}} = alloca i32, i64 1, align 4, addrspace(5)
+// CHECK-NEXT:    %{{.*}} = addrspacecast ptr addrspace(5) %{{.*}} to ptr
 // CHECK-NEXT:    br label %omp.wsloop.fake.region
 // CHECK:       omp.wsloop.fake.region:
 // CHECK-NEXT:    br label %omp.loop_nest.fake.region
@@ -63,8 +65,9 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 
   llvm.func @test_nested_target_in_parallel_with_private(%arg0: !llvm.ptr) {
     %8 = llvm.mlir.constant(1 : i64) : i64
-    %9 = llvm.alloca %8 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-    omp.parallel private(@i32_privatizer %9 -> %i_priv_arg : !llvm.ptr) {
+    %9 = llvm.alloca %8 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5>
+    %ascast = llvm.addrspacecast %9 : !llvm.ptr<5> to !llvm.ptr
+    omp.parallel private(@i32_privatizer %ascast -> %i_priv_arg : !llvm.ptr) {
         %1 = llvm.mlir.constant(1 : index) : i64
         // Use the private clause from omp.parallel to make sure block arguments
         // are handled.
@@ -81,8 +84,9 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 
   llvm.func @test_nested_target_in_task_with_private(%arg0: !llvm.ptr) {
     %8 = llvm.mlir.constant(1 : i64) : i64
-    %9 = llvm.alloca %8 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-    omp.task private(@i32_privatizer %9 -> %i_priv_arg : !llvm.ptr) {
+    %9 = llvm.alloca %8 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5>
+    %ascast = llvm.addrspacecast %9 : !llvm.ptr<5> to !llvm.ptr
+    omp.task private(@i32_privatizer %ascast -> %i_priv_arg : !llvm.ptr) {
         %1 = llvm.mlir.constant(1 : index) : i64
         // Use the private clause from omp.task to make sure block arguments
         // are handled.

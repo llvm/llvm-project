@@ -1,0 +1,76 @@
+// RUN: cir-opt -cir-canonicalize -cir-simplify -o %t.cir %s
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_ternary(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %0 = cir.const #cir.bool<false> : !cir.bool
+    %1 = cir.ternary (%0, true {
+      cir.yield %arg0 : !s32i
+    }, false {
+      cir.yield %arg1 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @fold_ternary(%{{.+}}: !s32i, %[[ARG:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.return %[[ARG]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @simplify_ternary(%arg0 : !cir.bool, %arg1 : !s32i) -> !s32i {
+    %0 = cir.ternary (%arg0, true {
+      %1 = cir.const #cir.int<42> : !s32i
+      cir.yield %1 : !s32i
+    }, false {
+      cir.yield %arg1 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @simplify_ternary(%[[ARG0:.+]]: !cir.bool, %[[ARG1:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<42> : !s32i
+  // CHECK-NEXT:   %[[#B:]] = cir.select if %[[ARG0]] then %[[#A]] else %[[ARG1]] : (!cir.bool, !s32i, !s32i) -> !s32i
+  // CHECK-NEXT:   cir.return %[[#B]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @simplify_ternary_false_const(%arg0 : !cir.bool, %arg1 : !s32i) -> !s32i {
+    %0 = cir.ternary (%arg0, true {
+      cir.yield %arg1 : !s32i
+    }, false {
+      %1 = cir.const #cir.int<24> : !s32i
+      cir.yield %1 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @simplify_ternary_false_const(%[[ARG0:.+]]: !cir.bool, %[[ARG1:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<24> : !s32i
+  // CHECK-NEXT:   %[[#B:]] = cir.select if %[[ARG0]] then %[[ARG1]] else %[[#A]] : (!cir.bool, !s32i, !s32i) -> !s32i
+  // CHECK-NEXT:   cir.return %[[#B]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @non_simplifiable_ternary(%arg0 : !cir.bool) -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+    %1 = cir.ternary (%arg0, true {
+      %2 = cir.const #cir.int<42> : !s32i
+      cir.yield %2 : !s32i
+    }, false {
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.yield %3 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @non_simplifiable_ternary(%[[ARG0:.+]]: !cir.bool) -> !s32i {
+  // CHECK-NEXT:   %[[#A:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+  // CHECK-NEXT:   %[[#B:]] = cir.ternary(%[[ARG0]], true {
+  // CHECK-NEXT:     %[[#C:]] = cir.const #cir.int<42> : !s32i
+  // CHECK-NEXT:     cir.yield %[[#C]] : !s32i
+  // CHECK-NEXT:   }, false {
+  // CHECK-NEXT:     %[[#D:]] = cir.load %[[#A]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:     cir.yield %[[#D]] : !s32i
+  // CHECK-NEXT:   }) : (!cir.bool) -> !s32i
+  // CHECK-NEXT:   cir.return %[[#B]] : !s32i
+  // CHECK-NEXT: }
+}

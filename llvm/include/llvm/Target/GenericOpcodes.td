@@ -86,6 +86,27 @@ def G_TRUNC : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Truncate the signed operand to a signed result with saturation.
+def G_TRUNC_SSAT_S : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+// Truncate the signed operand to an unsigned result with saturation.
+def G_TRUNC_SSAT_U : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+// Truncate the unsigned operand to an unsigned result with saturation.
+def G_TRUNC_USAT_U : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_IMPLICIT_DEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
@@ -105,7 +126,7 @@ def G_FRAME_INDEX : GenericInstruction {
 }
 
 def G_GLOBAL_VALUE : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src);
   let hasSideEffects = false;
 }
@@ -885,6 +906,21 @@ def G_FMAXIMUM : GenericInstruction {
   let isCommutable = true;
 }
 
+/// G_FMINIMUMNUM/G_FMAXIMUMNUM - IEEE-754 2019 minimumNumber/maximumNumber
+def G_FMINIMUMNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+def G_FMAXIMUMNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 //------------------------------------------------------------------------------
 // Floating Point Binary ops.
 //------------------------------------------------------------------------------
@@ -942,6 +978,13 @@ def G_FDIV : GenericInstruction {
 def G_FREM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+
+/// Generic FP modf
+def G_FMODF : GenericInstruction {
+  let OutOperandList = (outs type0:$dst1, type0:$dst2);
+  let InOperandList = (ins type0:$src1);
   let hasSideEffects = false;
 }
 
@@ -1231,6 +1274,18 @@ def G_READSTEADYCOUNTER : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_GET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_SET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
@@ -1351,6 +1406,8 @@ def G_ATOMICRMW_FADD : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;

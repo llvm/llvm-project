@@ -399,7 +399,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   case 8:  VCTPID = Intrinsic::arm_mve_vctp16; break;
   case 16: VCTPID = Intrinsic::arm_mve_vctp8; break;
   }
-  Value *VCTPCall = Builder.CreateIntrinsic(VCTPID, {}, Processed);
+  Value *VCTPCall = Builder.CreateIntrinsic(VCTPID, Processed);
   ActiveLaneMask->replaceAllUsesWith(VCTPCall);
 
   // Add the incoming value to the new phi.
@@ -457,5 +457,4 @@ Pass *llvm::createMVETailPredicationPass() {
 
 char MVETailPredication::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MVETailPredication, DEBUG_TYPE, DESC, false, false)
-INITIALIZE_PASS_END(MVETailPredication, DEBUG_TYPE, DESC, false, false)
+INITIALIZE_PASS(MVETailPredication, DEBUG_TYPE, DESC, false, false)

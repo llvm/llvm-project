@@ -203,8 +203,7 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
 
 bool Localizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // Don't run the pass if the target asked so.

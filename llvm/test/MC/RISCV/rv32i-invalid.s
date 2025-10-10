@@ -150,6 +150,7 @@ add a0, tp, a0, %tprel_add(foo) # CHECK: :[[@LINE]]:13: error: the second input 
 
 # Unrecognized operand modifier
 addi t0, sp, %modifer(255) # CHECK: :[[@LINE]]:15: error: invalid relocation specifier
+addi t0, sp, %pltpcrel(255) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 # Use of operand modifier on register name
 addi t1, %lo(t2), 1 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction

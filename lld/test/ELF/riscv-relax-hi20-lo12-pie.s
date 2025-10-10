@@ -12,6 +12,8 @@
 
 # CHECK:      lui     a0, 0x200
 # CHECK-NEXT: addi    a0, a0, 0x1
+# CHECK-NEXT: lui     a0, 0x200
+# CHECK-NEXT: addi    a0, a0, 0x1
 # CHECK-NEXT: lw      a0, 0x1(a0)
 # CHECK-NEXT: sw      a0, 0x1(a0)
 
@@ -23,6 +25,11 @@ abs = 0x200001
 _start:
   lui a0, %hi(abs)
   addi a0, a0, %lo(abs)
+  .reloc ., R_RISCV_HI20, abs
+  lui a0, 0
+  .reloc ., R_RISCV_LO12_I, abs
+  addi a0, a0, 0
+
   lw a0, %lo(abs)(a0)
   sw a0, %lo(abs)(a0)
 

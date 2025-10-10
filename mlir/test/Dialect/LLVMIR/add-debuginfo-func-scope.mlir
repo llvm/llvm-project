@@ -57,7 +57,7 @@ module {
 // CHECK-DAG: #[[DI_FILE_FUNC:.+]] = #llvm.di_file<"file.mlir" in ""> 
 // CHECK-DAG: #loc[[FUNCFILELOC:[0-9]+]] = loc("file.mlir":9:8)
 // CHECK-DAG: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C, file = #[[DI_FILE_MODULE]], producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
-// CHECK-DAG: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 8, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK-DAG: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 9, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK-DAG: #loc[[MODULELOC]] = loc(fused<#di_compile_unit>[#loc])
 // CHECK-DAG: #loc[[FUNCLOC]] = loc(fused<#di_subprogram>[#loc[[FUNCFILELOC]]
 module {
@@ -83,3 +83,61 @@ module @multiple_funcs {
     llvm.return loc(unknown)
   } loc(unknown)
 } loc(unknown)
+
+// -----
+
+// CHECK-LABEL: llvm.func @func_inlined()
+// CHECK: #di_file = #llvm.di_file<"base.py" in "testing">
+// CHECK: #di_file1 = #llvm.di_file<"gpu_test.py" in "">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
+// CHECK: #loc3 = loc(callsite(#loc1 at #loc2))
+// CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file1, name = "func_inlined", linkageName = "func_inlined", file = #di_file1, line = 1150, scopeLine = 1150, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
+// CHECK: #di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram, file = #di_file, discriminator = 0>
+
+
+#loc = loc("gpu_test.py":1150:34 to :43)
+#loc1 = loc("testing/parameterized.py":321:17 to :53)
+#loc2 = loc("testing/base.py":2904:19 to :56)
+#loc_1 = loc(callsite(#loc at #loc1))
+#loc21 = loc(callsite(#loc2 at #loc_1))
+
+module {
+  llvm.func @func_inlined() {
+    llvm.return loc(#loc21)
+  } loc(#loc)
+} loc(#loc2)
+
+// -----
+
+// CHECK-LABEL: llvm.func @func_name_with_child()
+// CHECK: #di_file = #llvm.di_file<"file" in "/tmp">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "func_name_with_child", linkageName = "func_name_with_child", file = #di_file, line = 100, scopeLine = 100, subprogramFlags = Optimized, type = #di_subroutine_type>
+
+module {
+  llvm.func @func_name_with_child() loc("foo"("/tmp/file":100))
+} loc(unknown)
+
+// -----
+
+// CHECK-LABEL: llvm.func @func_fusion()
+// CHECK: #di_file = #llvm.di_file<"file" in "/tmp">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "func_fusion", linkageName = "func_fusion", file = #di_file, line = 20, scopeLine = 20, subprogramFlags = Optimized, type = #di_subroutine_type>
+
+module {
+  llvm.func @func_fusion() loc(fused<"myPass">["foo", "/tmp/file":20])
+} loc(unknown)
+
+// -----
+
+// CHECK-LABEL: llvm.func @func_callsiteloc()
+// CHECK: #di_file = #llvm.di_file<"mysource.cc" in "">
+// CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// CHECK: #di_subprogram = #llvm.di_subprogram<scope = #di_file, name = "func_callsiteloc", linkageName = "func_callsiteloc", file = #di_file, line = 10, scopeLine = 10, subprogramFlags = Optimized, type = #di_subroutine_type>
+
+module {
+  llvm.func @func_callsiteloc() loc(callsite("foo" at "mysource.cc":10:8))
+} loc(unknown)
+

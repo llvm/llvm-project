@@ -14,11 +14,13 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H
 
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/Debug.h"
+#include <set>
 
 namespace clang {
 
@@ -138,6 +140,12 @@ public:
                             FixItList &&Fixes, const Decl *D,
                             const FixitStrategy &VarTargetTypes) = 0;
 
+  // Invoked when an array subscript operator[] is used on a
+  // std::unique_ptr<T[]>.
+  virtual void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                                bool IsRelatedToDecl,
+                                                ASTContext &Ctx) = 0;
+
 #ifndef NDEBUG
 public:
   bool areDebugNotesRequested() {
@@ -186,6 +194,8 @@ namespace internal {
 bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
+
+std::set<const Expr *> findUnsafePointers(const FunctionDecl *FD);
 } // end namespace clang
 
 #endif /* LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H */

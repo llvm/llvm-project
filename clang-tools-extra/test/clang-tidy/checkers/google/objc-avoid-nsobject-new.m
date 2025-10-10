@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s google-objc-avoid-nsobject-new %t
+// RUN: %check_clang_tidy --match-partial-fixes %s google-objc-avoid-nsobject-new %t
 
 @interface NSObject
 + (instancetype)new;

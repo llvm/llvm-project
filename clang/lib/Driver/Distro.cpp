@@ -61,11 +61,6 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
     if (Version == Distro::UnknownDistro &&
         Line.starts_with("DISTRIB_CODENAME="))
       Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(17))
-                    .Case("hardy", Distro::UbuntuHardy)
-                    .Case("intrepid", Distro::UbuntuIntrepid)
-                    .Case("jaunty", Distro::UbuntuJaunty)
-                    .Case("karmic", Distro::UbuntuKarmic)
-                    .Case("lucid", Distro::UbuntuLucid)
                     .Case("maverick", Distro::UbuntuMaverick)
                     .Case("natty", Distro::UbuntuNatty)
                     .Case("oneiric", Distro::UbuntuOneiric)
@@ -96,6 +91,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("noble", Distro::UbuntuNoble)
                     .Case("oracular", Distro::UbuntuOracular)
                     .Case("plucky", Distro::UbuntuPlucky)
+                    .Case("questing", Distro::UbuntuQuesting)
                     .Default(Distro::UnknownDistro);
   return Version;
 }
@@ -160,6 +156,10 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::DebianBookworm;
       case 13:
         return Distro::DebianTrixie;
+      case 14:
+        return Distro::DebianForky;
+      case 15:
+        return Distro::DebianDuke;
       default:
         return Distro::UnknownDistro;
       }
@@ -173,6 +173,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("bullseye/sid", Distro::DebianBullseye)
         .Case("bookworm/sid", Distro::DebianBookworm)
         .Case("trixie/sid", Distro::DebianTrixie)
+        .Case("forky/sid", Distro::DebianForky)
+        .Case("duke/sid", Distro::DebianDuke)
         .Default(Distro::UnknownDistro);
   }
 

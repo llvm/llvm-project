@@ -8,9 +8,7 @@
 
 #include "MipsLinux.h"
 #include "Arch/Mips.h"
-#include "CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -118,8 +116,8 @@ void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
-                                             StringRef Component,
-                                             FileType Type) const {
+                                             StringRef Component, FileType Type,
+                                             bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, SelectedMultilibs.back().osSuffix(), "lib" + LibSuffix,
                           getOS());

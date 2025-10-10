@@ -42,11 +42,25 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
   // Update Triple with the updated triple from the target lookup.
   TripleName = TheTriple.str();
 
-  if (CpuName == "native")
+  if (CpuName == "native") {
+    // case for cross generating, when native arch and target mismatch
+    if ((Triple(sys::getProcessTriple()).getArch() !=
+         Triple(TripleName).getArch()))
+      return make_error<StringError>(
+          "A CPU must be explicitly specified when cross compiling. To see all "
+          "possible options for " +
+              TripleName + " triple use -mcpu=help",
+          inconvertibleErrorCode());
     CpuName = std::string(sys::getHostCPUName());
+  }
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, CpuName, ""));
+      TheTarget->createMCSubtargetInfo(TheTriple, CpuName, ""));
+  if (!STI) {
+    return make_error<StringError>("unable to create subtarget info",
+                                   inconvertibleErrorCode());
+  }
+
   assert(STI && "Unable to create subtarget info!");
   if (!STI->isCPUStringValid(CpuName)) {
     return make_error<StringError>(Twine("invalid CPU name (")

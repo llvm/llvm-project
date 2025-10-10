@@ -28,15 +28,22 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   switch (Port.get_opcode()) {
   case LIBC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
-          Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
+      auto PtrOrErr =
+          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE);
+      void *Ptr = nullptr;
+      if (!PtrOrErr)
+        llvm::consumeError(PtrOrErr.takeError());
+      else
+        Ptr = *PtrOrErr;
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Ptr);
     });
     break;
   }
   case LIBC_FREE: {
     Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
-      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
+      if (auto Err = Device.free(reinterpret_cast<void *>(Buffer->data[0]),
+                                 TARGET_ALLOC_DEVICE))
+        llvm::consumeError(std::move(Err));
     });
     break;
   }
@@ -171,12 +178,17 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::DeviceImageTy &Image) {
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
-  void *RPCBuffer = Device.allocate(
+  auto RPCBufferOrErr = Device.allocate(
       rpc::Server::allocation_size(Device.getWarpSize(), NumPorts), nullptr,
       TARGET_ALLOC_HOST);
+  if (!RPCBufferOrErr)
+    return RPCBufferOrErr.takeError();
+
+  void *RPCBuffer = *RPCBufferOrErr;
   if (!RPCBuffer)
     return plugin::Plugin::error(
-        "Failed to initialize RPC server for device %d", Device.getDeviceId());
+        error::ErrorCode::UNKNOWN,
+        "failed to initialize RPC server for device %d", Device.getDeviceId());
 
   // Get the address of the RPC client from the device.
   plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
@@ -197,7 +209,8 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-  Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
+  if (auto Err = Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST))
+    return Err;
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
   return Error::success();

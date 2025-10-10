@@ -39,22 +39,19 @@
 // RUN: FileCheck %s < %t/all_files.md -check-prefix=MD-ALL-FILES
 // RUN: FileCheck %s < %t/index.md -check-prefix=MD-INDEX
 
-
-
 // Anonymous Namespace
-namespace
-{
-    void anonFunction() {}
+namespace {
+void anonFunction() {}
 // MD-ANON-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-ANON-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
-    class AnonClass {};
+class AnonClass {};
 // MD-ANON-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-ANON-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // MD-ANON-CLASS: # class AnonClass
 // HTML-ANON-CLASS: <h1>class AnonClass</h1>
-}
+} // namespace
 
 // MD-ANON-INDEX: # namespace @nonymous_namespace
 // MD-ANON-INDEX:  Anonymous Namespace
@@ -72,16 +69,15 @@ namespace
 // HTML-ANON-INDEX: <h3 id="{{([0-9A-F]{40})}}">anonFunction</h3>
 // HTML-ANON-INDEX: <p>void anonFunction()</p>
 
-
 // Primary Namespace
 namespace PrimaryNamespace {
-    // Function in PrimaryNamespace
-    void functionInPrimaryNamespace() {}
+// Function in PrimaryNamespace
+void functionInPrimaryNamespace() {}
 // MD-PRIMARY-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-PRIMARY-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
-    // Class in PrimaryNamespace
-    class ClassInPrimaryNamespace {};
+// Class in PrimaryNamespace
+class ClassInPrimaryNamespace {};
 // MD-PRIMARY-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-PRIMARY-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
@@ -91,15 +87,15 @@ namespace PrimaryNamespace {
 // HTML-PRIMARY-CLASS: <h1>class ClassInPrimaryNamespace</h1>
 // HTML-PRIMARY-CLASS: <p> Class in PrimaryNamespace</p>
 
-    // Nested namespace
-    namespace NestedNamespace {
-        // Function in NestedNamespace
-        void functionInNestedNamespace() {}
+// Nested namespace
+namespace NestedNamespace {
+// Function in NestedNamespace
+void functionInNestedNamespace() {}
 // MD-NESTED-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-NESTED-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
-        // Class in NestedNamespace
-        class ClassInNestedNamespace {};
+// Class in NestedNamespace
+class ClassInNestedNamespace {};
 // MD-NESTED-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-NESTED-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
@@ -108,7 +104,7 @@ namespace PrimaryNamespace {
 
 // HTML-NESTED-CLASS: <h1>class ClassInNestedNamespace</h1>
 // HTML-NESTED-CLASS: <p> Class in NestedNamespace</p>
-    }
+} // namespace NestedNamespace
 
 // MD-NESTED-INDEX: # namespace NestedNamespace
 // MD-NESTED-INDEX: Nested namespace
@@ -127,7 +123,7 @@ namespace PrimaryNamespace {
 // HTML-NESTED-INDEX: <h3 id="{{([0-9A-F]{40})}}">functionInNestedNamespace</h3>
 // HTML-NESTED-INDEX: <p>void functionInNestedNamespace()</p>
 // HTML-NESTED-INDEX: <p> Function in NestedNamespace</p>
-}
+} // namespace PrimaryNamespace
 
 // MD-PRIMARY-INDEX: # namespace PrimaryNamespace
 // MD-PRIMARY-INDEX:  Primary Namespace
@@ -151,16 +147,15 @@ namespace PrimaryNamespace {
 // HTML-PRIMARY-INDEX: <p>void functionInPrimaryNamespace()</p>
 // HTML-PRIMARY-INDEX: <p> Function in PrimaryNamespace</p>
 
-
 // AnotherNamespace
 namespace AnotherNamespace {
-    // Function in AnotherNamespace
-    void functionInAnotherNamespace() {}
+// Function in AnotherNamespace
+void functionInAnotherNamespace() {}
 // MD-ANOTHER-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-ANOTHER-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
-    // Class in AnotherNamespace
-    class ClassInAnotherNamespace {};
+// Class in AnotherNamespace
+class ClassInAnotherNamespace {};
 // MD-ANOTHER-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
 // HTML-ANOTHER-CLASS-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
@@ -170,7 +165,7 @@ namespace AnotherNamespace {
 // HTML-ANOTHER-CLASS: <h1>class ClassInAnotherNamespace</h1>
 // HTML-ANOTHER-CLASS: <p> Class in AnotherNamespace</p>
 
-}
+} // namespace AnotherNamespace
 
 // MD-ANOTHER-INDEX: # namespace AnotherNamespace
 // MD-ANOTHER-INDEX: AnotherNamespace
@@ -275,13 +270,11 @@ namespace AnotherNamespace {
 // HTML-GLOBAL-INDEX: <li>AnotherNamespace</li>
 // HTML-GLOBAL-INDEX: <li>PrimaryNamespace</li>
 
-
 // MD-GLOBAL-INDEX: # Global Namespace
 // MD-GLOBAL-INDEX: ## Namespaces
 // MD-GLOBAL-INDEX: * [@nonymous_namespace](..{{[\/]}}@nonymous_namespace{{[\/]}}index.md)
 // MD-GLOBAL-INDEX: * [AnotherNamespace](..{{[\/]}}AnotherNamespace{{[\/]}}index.md)
 // MD-GLOBAL-INDEX: * [PrimaryNamespace](..{{[\/]}}PrimaryNamespace{{[\/]}}index.md)
-
 
 // MD-ALL-FILES: # All Files
 // MD-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)

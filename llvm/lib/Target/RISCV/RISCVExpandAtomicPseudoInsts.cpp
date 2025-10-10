@@ -34,9 +34,7 @@ public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {
-    initializeRISCVExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -168,7 +166,7 @@ static unsigned getLRForRMW32(AtomicOrdering Ordering,
       return RISCV::LR_W;
     return RISCV::LR_W_AQ;
   case AtomicOrdering::SequentiallyConsistent:
-    return RISCV::LR_W_AQ_RL;
+    return RISCV::LR_W_AQRL;
   }
 }
 
@@ -212,7 +210,7 @@ static unsigned getLRForRMW64(AtomicOrdering Ordering,
       return RISCV::LR_D;
     return RISCV::LR_D_AQ;
   case AtomicOrdering::SequentiallyConsistent:
-    return RISCV::LR_D_AQ_RL;
+    return RISCV::LR_D_AQRL;
   }
 }
 
@@ -289,8 +287,8 @@ static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
     break;
   }
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)), ScratchReg)
-      .addReg(AddrReg)
-      .addReg(ScratchReg);
+      .addReg(ScratchReg)
+      .addReg(AddrReg);
   BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
@@ -377,8 +375,8 @@ static void doMaskedAtomicBinOpExpansion(const RISCVInstrInfo *TII,
                     ScratchReg);
 
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW32(Ordering, STI)), ScratchReg)
-      .addReg(AddrReg)
-      .addReg(ScratchReg);
+      .addReg(ScratchReg)
+      .addReg(AddrReg);
   BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
@@ -537,8 +535,8 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
   //   sc.w scratch1, scratch1, (addr)
   //   bnez scratch1, loop
   BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW32(Ordering, STI)), Scratch1Reg)
-      .addReg(AddrReg)
-      .addReg(Scratch1Reg);
+      .addReg(Scratch1Reg)
+      .addReg(AddrReg);
   BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
       .addReg(Scratch1Reg)
       .addReg(RISCV::X0)
@@ -676,8 +674,8 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
     //   bnez scratch, loophead
     BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)),
             ScratchReg)
-        .addReg(AddrReg)
-        .addReg(NewValReg);
+        .addReg(NewValReg)
+        .addReg(AddrReg);
     BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
         .addReg(ScratchReg)
         .addReg(RISCV::X0)
@@ -709,8 +707,8 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
                       MaskReg, ScratchReg);
     BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)),
             ScratchReg)
-        .addReg(AddrReg)
-        .addReg(ScratchReg);
+        .addReg(ScratchReg)
+        .addReg(AddrReg);
     BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
         .addReg(ScratchReg)
         .addReg(RISCV::X0)
@@ -733,10 +731,6 @@ bool RISCVExpandAtomicPseudo::expandAtomicCmpXchg(
 INITIALIZE_PASS(RISCVExpandAtomicPseudo, "riscv-expand-atomic-pseudo",
                 RISCV_EXPAND_ATOMIC_PSEUDO_NAME, false, false)
 
-namespace llvm {
-
-FunctionPass *createRISCVExpandAtomicPseudoPass() {
+FunctionPass *llvm::createRISCVExpandAtomicPseudoPass() {
   return new RISCVExpandAtomicPseudo();
 }
-
-} // end of namespace llvm

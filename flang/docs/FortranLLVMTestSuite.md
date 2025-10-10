@@ -72,4 +72,6 @@ The tests will be run automatically if the test suite is built following the
 instructions described [above](#running-the-llvm-test-suite-with-fortran).
 There are additional configure-time options that can be used with the gfortran 
 tests. More details about those options and their purpose can be found in 
-[`Fortran/gfortran/README.md`](https://github.com/llvm/llvm-test-suite/tree/main/Fortran/gfortran/README.md)`.
+[`Fortran/gfortran/README.md`](https://github.com/llvm/llvm-test-suite/tree/main/Fortran/gfortran/README.md).
+
+ These tests are Free Software and are shared under the terms of the GNU General Public License (GPL). For more details, please see the accompanying [`LICENSE`](https://github.com/llvm/llvm-test-suite/tree/main/Fortran/gfortran/LICENSE.txt) file.

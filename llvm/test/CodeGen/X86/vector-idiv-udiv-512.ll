@@ -485,7 +485,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpbroadcastb {{.*#+}} ymm6 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX512F-NEXT:    vpand %ymm6, %ymm5, %ymm5
 ; AVX512F-NEXT:    vpaddb %ymm3, %ymm5, %ymm3
-; AVX512F-NEXT:    vpsllw $1, %ymm3, %ymm5
+; AVX512F-NEXT:    vpaddw %ymm3, %ymm3, %ymm5
 ; AVX512F-NEXT:    vpbroadcastb {{.*#+}} ymm7 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
 ; AVX512F-NEXT:    vpand %ymm7, %ymm5, %ymm5
 ; AVX512F-NEXT:    vpsrlw $2, %ymm3, %ymm3
@@ -504,7 +504,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpsrlw $1, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpand %ymm6, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm3, %ymm2
-; AVX512F-NEXT:    vpsllw $1, %ymm2, %ymm3
+; AVX512F-NEXT:    vpaddw %ymm2, %ymm2, %ymm3
 ; AVX512F-NEXT:    vpand %ymm7, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpsrlw $2, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpand %ymm2, %ymm8, %ymm2
@@ -528,7 +528,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpsrlw $1, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpsllw $1, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpaddw %zmm1, %zmm1, %zmm2
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpsrlw $2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
@@ -651,7 +651,7 @@ define <64 x i8> @test_remconstant_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm2 # [7,0,9,0,11,0,13,0,15,0,17,0,19,0,21,0,23,0,25,0,27,0,29,0,31,0,33,0,35,0,37,0,38,0,36,0,34,0,32,0,30,0,28,0,26,0,24,0,22,0,20,0,18,0,16,0,14,0,12,0,10,0,8,0]
 ; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,8,0,10,0,12,0,14,0,16,0,18,0,20,0,22,0,24,0,26,0,28,0,30,0,32,0,34,0,36,0,38,0,37,0,35,0,33,0,31,0,29,0,27,0,25,0,23,0,21,0,19,0,17,0,15,0,13,0,11,0,9,0,7]
 ; AVX512BW-NEXT:    vpsllw $8, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 | (zmm2 & mem)
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 | (zmm2 & m32bcst)
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = urem <64 x i8> %a, <i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 38, i8 37, i8 36, i8 35, i8 34, i8 33, i8 32, i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7>

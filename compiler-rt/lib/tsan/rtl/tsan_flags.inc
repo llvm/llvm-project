@@ -80,3 +80,15 @@ TSAN_FLAG(bool, shared_ptr_interceptor, true,
 TSAN_FLAG(bool, print_full_thread_history, false,
           "If set, prints thread creation stacks for the threads involved in "
           "the report and their ancestors up to the main thread.")
+
+#if SANITIZER_APPLE
+TSAN_FLAG(LockDuringWriteSetting, lock_during_write, kLockDuringAllWrites,
+          "Determines whether to obtain a lock while writing logs or error "
+          "reports. "
+          "\"on\" - [default] lock during all writes. "
+          "\"disable_for_current_process\" - don't lock during all writes in "
+          "the current process, but do lock for all writes in child "
+          "processes."
+          "\"disable_for_all_processes\" - don't lock during all writes in "
+          "the current process and it's children processes.")
+#endif

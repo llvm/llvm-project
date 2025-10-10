@@ -32,6 +32,7 @@ def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
 def pretty_print : FF<"pretty-print", "Pretty print JSON output">;
+def offloading : FF<"offloading", "Display the content of the offloading section">;
 def relocs : FF<"relocs", "Display the relocation entries in the file">;
 def section_data : FF<"section-data", "Display section data for each section shown. This option has no effect for GNU style output">;
 def section_details : FF<"section-details", "Display the section details">;
@@ -44,7 +45,7 @@ defm sort_symbols : Eq<"sort-symbols", "Specify the keys to sort the symbols bef
 def stack_sizes : FF<"stack-sizes", "Display contents of all stack sizes sections. This option has no effect for GNU style output">;
 def stackmap : FF<"stackmap", "Display contents of stackmap section">;
 defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list of strings">, MetaVarName<"<name or index>">;
-def string_table : FF<"string-table", "Display the string table (only for XCOFF now)">;
+def string_table : FF<"string-table", "Display the string table (only for XCOFF/COFF now)">;
 def symbols : FF<"symbols", "Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF">;
 def unwind : FF<"unwind", "Display unwind information">;
 
@@ -62,6 +63,8 @@ def memtag : FF<"memtag", "Display memory tagging metadata (modes, Android notes
 def needed_libs : FF<"needed-libs", "Display the needed libraries">, Group<grp_elf>;
 def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;
+def sframe_EQ : Joined<["--"], "sframe=">, HelpText<"Display SFrame section <name>">, MetaVarName<"<name>">, Group<grp_elf>;
+def sframe: FF<"sframe", "Alias for --sframe=.sframe">, Alias<sframe_EQ>, AliasArgs<[".sframe"]>, Group<grp_elf>;
 def version_info : FF<"version-info", "Display version sections">, Group<grp_elf>;
 
 // Mach-O specific options.
@@ -85,6 +88,10 @@ def coff_directives : FF<"coff-directives", "Display .drectve section">, Group<g
 def coff_exports : FF<"coff-exports", "Display export table">, Group<grp_coff>;
 def coff_imports : FF<"coff-imports", "Display import table">, Group<grp_coff>;
 def coff_load_config : FF<"coff-load-config", "Display load config">, Group<grp_coff>;
+def coff_pseudoreloc
+    : FF<"coff-pseudoreloc",
+         "Display runtime pseudo-relocations (Cygwin/MinGW specific)">,
+      Group<grp_coff>;
 def coff_resources : FF<"coff-resources", "Display .rsrc section">, Group<grp_coff>;
 def coff_tls_directory : FF<"coff-tls-directory", "Display TLS directory">, Group<grp_coff>;
 

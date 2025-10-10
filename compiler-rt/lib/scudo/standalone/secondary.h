@@ -19,6 +19,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 #include "vector.h"
 
 namespace scudo {
@@ -118,7 +119,7 @@ public:
   bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
-  void releaseToOS() {}
+  void releaseToOS(ReleaseToOS) {}
   void disableMemoryTagging() {}
   void unmapTestOnly() {}
   bool setOption(Option O, UNUSED sptr Value) {
@@ -206,11 +207,13 @@ public:
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
                       &Fractional);
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
-    Str->append(
-        "Stats: MapAllocatorCache: EntriesCount: %zu, "
-        "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsIntervalMs = %d\n",
-        LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
-        atomic_load_relaxed(&MaxEntrySize), Interval >= 0 ? Interval : -1);
+    Str->append("Stats: MapAllocatorCache: EntriesCount: %zu, "
+                "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsSkips: "
+                "%zu, ReleaseToOsIntervalMs = %d\n",
+                LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
+                atomic_load_relaxed(&MaxEntrySize),
+                atomic_load_relaxed(&ReleaseToOsSkips),
+                Interval >= 0 ? Interval : -1);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
@@ -267,7 +270,8 @@ public:
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
 
-    if (useMemoryTagging<Config>(Options)) {
+    bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
+    if (MemoryTaggingEnabled) {
       if (Interval == 0 && !SCUDO_FUCHSIA) {
         // Release the memory and make it inaccessible at the same time by
         // creating a new MAP_NOACCESS mapping on top of the existing mapping.
@@ -300,7 +304,7 @@ public:
       if (Entry.Time != 0)
         Entry.Time = Time;
 
-      if (useMemoryTagging<Config>(Options) && QuarantinePos == -1U) {
+      if (MemoryTaggingEnabled && !useMemoryTagging<Config>(Options)) {
         // If we get here then memory tagging was disabled in between when we
         // read Options and when we locked Mutex. We can't insert our entry into
         // the quarantine or the cache because the permissions would be wrong so
@@ -308,7 +312,8 @@ public:
         unmapCallBack(Entry.MemMap);
         break;
       }
-      if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
+
+      if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
         QuarantinePos =
             (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
         if (!Quarantine[QuarantinePos].isValid()) {
@@ -343,8 +348,18 @@ public:
       unmapCallBack(EvictMemMap);
 
     if (Interval >= 0) {
-      // TODO: Add ReleaseToOS logic to LRU algorithm
-      releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+      // It is very likely that multiple threads trying to do a release at the
+      // same time will not actually release any extra elements. Therefore,
+      // let any other thread continue, skipping the release.
+      if (Mutex.tryLock()) {
+        SCUDO_SCOPED_TRACE(
+            GetSecondaryReleaseToOSTraceName(ReleaseToOS::Normal));
+
+        // TODO: Add ReleaseToOS logic to LRU algorithm
+        releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+        Mutex.unlock();
+      } else
+        atomic_fetch_add(&ReleaseToOsSkips, 1U, memory_order_relaxed);
     }
   }
 
@@ -488,20 +503,30 @@ public:
     return true;
   }
 
-  void releaseToOS() { releaseOlderThan(UINT64_MAX); }
+  void releaseToOS([[maybe_unused]] ReleaseToOS ReleaseType) EXCLUDES(Mutex) {
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseToOSTraceName(ReleaseType));
+
+    // Since this is a request to release everything, always wait for the
+    // lock so that we guarantee all entries are released after this call.
+    ScopedLock L(Mutex);
+    releaseOlderThan(UINT64_MAX);
+  }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-      if (Quarantine[I].isValid()) {
-        MemMapT &MemMap = Quarantine[I].MemMap;
-        unmapCallBack(MemMap);
-        Quarantine[I].invalidate();
+    if (!Config::getQuarantineDisabled()) {
+      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+        if (Quarantine[I].isValid()) {
+          MemMapT &MemMap = Quarantine[I].MemMap;
+          unmapCallBack(MemMap);
+          Quarantine[I].invalidate();
+        }
       }
+      QuarantinePos = -1U;
     }
+
     for (CachedBlock &Entry : LRUEntries)
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
-    QuarantinePos = -1U;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -554,13 +579,15 @@ private:
     Entry.Time = 0;
   }
 
-  void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
+  void releaseOlderThan(u64 Time) REQUIRES(Mutex) {
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThanTraceName());
+
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
-    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-      releaseIfOlderThan(Quarantine[I], Time);
+    if (!Config::getQuarantineDisabled())
+      for (uptr I = 0; I < Config::getQuarantineSize(); I++)
+        releaseIfOlderThan(Quarantine[I], Time);
     for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
       releaseIfOlderThan(Entries[I], Time);
   }
@@ -573,6 +600,7 @@ private:
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
+  atomic_uptr ReleaseToOsSkips = {};
 
   CachedBlock Entries[Config::getEntriesArraySize()] GUARDED_BY(Mutex) = {};
   NonZeroLengthArray<CachedBlock, Config::getQuarantineSize()>
@@ -649,7 +677,7 @@ public:
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
-  void releaseToOS() { Cache.releaseToOS(); }
+  void releaseToOS(ReleaseToOS ReleaseType) { Cache.releaseToOS(ReleaseType); }
 
   void disableMemoryTagging() { Cache.disableMemoryTagging(); }
 

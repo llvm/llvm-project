@@ -23,11 +23,11 @@ TEST(OpenMPParsingTest, OpenMPDirectiveKind) {
 }
 
 TEST(OpenMPParsingTest, getOpenMPDirectiveName) {
-  EXPECT_EQ(getOpenMPDirectiveName(OMPD_unknown), "unknown");
+  EXPECT_EQ(getOpenMPDirectiveName(OMPD_unknown, FallbackVersion), "unknown");
 
-  EXPECT_EQ(getOpenMPDirectiveName(OMPD_for), "for");
-  EXPECT_EQ(getOpenMPDirectiveName(OMPD_simd), "simd");
-  EXPECT_EQ(getOpenMPDirectiveName(OMPD_for_simd), "for simd");
+  EXPECT_EQ(getOpenMPDirectiveName(OMPD_for, FallbackVersion), "for");
+  EXPECT_EQ(getOpenMPDirectiveName(OMPD_simd, FallbackVersion), "simd");
+  EXPECT_EQ(getOpenMPDirectiveName(OMPD_for_simd, FallbackVersion), "for simd");
 }
 
 TEST(OpenMPParsingTest, getOpenMPClauseKind) {

@@ -6,6 +6,8 @@ define amdgpu_kernel void @load_idx_idy(ptr addrspace(4) %disp, ptr %g) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x4
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_lshr_b32 s4, s6, 16

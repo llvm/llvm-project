@@ -51,9 +51,9 @@ TEST(CodeGenTest, TestNullCodeGen) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
-  Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 
   std::unique_ptr<FrontendAction> Act(new NullCodeGenAction);
@@ -69,50 +69,13 @@ TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
       FrontendInputFile(*MemBuffer, Language::LLVM_IR));
   Invocation->getFrontendOpts().ProgramAction = frontend::EmitLLVMOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
-  Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 
   EmitLLVMOnlyAction Action;
   bool Success = Compiler.ExecuteAction(Action);
   EXPECT_TRUE(Success);
-}
-
-TEST(CodeGenTest, DebugInfoCWDCodeGen) {
-  // Check that debug info is accessing the current working directory from the
-  // VFS instead of calling \p llvm::sys::fs::current_path() directly.
-
-  auto Sept = llvm::sys::path::get_separator();
-  auto VFS = std::make_unique<llvm::vfs::InMemoryFileSystem>();
-  VFS->setCurrentWorkingDirectory(
-      std::string(llvm::formatv("{0}in-memory-fs-cwd", Sept)));
-  std::string TestPath =
-      std::string(llvm::formatv("{0}in-memory-fs-cwd{0}test.cpp", Sept));
-  VFS->addFile(TestPath, 0, llvm::MemoryBuffer::getMemBuffer("int x;\n"));
-
-  auto Invocation = std::make_shared<CompilerInvocation>();
-  Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cpp", Language::CXX));
-  Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
-  Invocation->getTargetOpts().Triple = "x86_64-unknown-linux-gnu";
-  Invocation->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
-  CompilerInstance Compiler;
-
-  SmallString<256> IRBuffer;
-  Compiler.setOutputStream(std::make_unique<raw_svector_ostream>(IRBuffer));
-  Compiler.setInvocation(std::move(Invocation));
-  Compiler.createDiagnostics(*VFS);
-  Compiler.createFileManager(std::move(VFS));
-
-  EmitLLVMAction Action;
-  bool Success = Compiler.ExecuteAction(Action);
-  EXPECT_TRUE(Success);
-
-  SmallString<128> RealCWD;
-  llvm::sys::fs::current_path(RealCWD);
-  EXPECT_TRUE(!RealCWD.empty());
-  EXPECT_FALSE(IRBuffer.str().contains(RealCWD));
-  EXPECT_TRUE(IRBuffer.str().contains("in-memory-fs-cwd"));
 }
 }

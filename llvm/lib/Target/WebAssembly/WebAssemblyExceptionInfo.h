@@ -132,9 +132,7 @@ class WebAssemblyExceptionInfo final : public MachineFunctionPass {
 
 public:
   static char ID;
-  WebAssemblyExceptionInfo() : MachineFunctionPass(ID) {
-    initializeWebAssemblyExceptionInfoPass(*PassRegistry::getPassRegistry());
-  }
+  WebAssemblyExceptionInfo() : MachineFunctionPass(ID) {}
   ~WebAssemblyExceptionInfo() override { releaseMemory(); }
   WebAssemblyExceptionInfo(const WebAssemblyExceptionInfo &) = delete;
   WebAssemblyExceptionInfo &

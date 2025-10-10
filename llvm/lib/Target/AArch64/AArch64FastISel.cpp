@@ -267,7 +267,7 @@ private:
 private:
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC) const;
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
-                       unsigned &NumBytes);
+                       SmallVectorImpl<Type *> &OrigTys, unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, unsigned NumBytes);
 
 public:
@@ -508,7 +508,7 @@ Register AArch64FastISel::materializeGV(const GlobalValue *GV) {
       // also uses BuildMI for making an ADRP (+ MOVK) + ADD, but the operands
       // are not exactly 1:1 with FastISel so we cannot easily abstract this
       // out. At some point, it would be nice to find a way to not have this
-      // duplciate code.
+      // duplicate code.
       Register DstReg = createResultReg(&AArch64::GPR64commonRegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::MOVKXi),
               DstReg)
@@ -2190,6 +2190,8 @@ bool AArch64FastISel::selectStore(const Instruction *I) {
     if (isReleaseOrStronger(Ord)) {
       // The STLR addressing mode only supports a base reg; pass that directly.
       Register AddrReg = getRegForValue(PtrV);
+      if (!AddrReg)
+        return false;
       return emitStoreRelease(VT, SrcReg, AddrReg,
                               createMachineMemOperandFor(I));
     }
@@ -3009,11 +3011,13 @@ bool AArch64FastISel::fastLowerArguments() {
 
 bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
                                       SmallVectorImpl<MVT> &OutVTs,
+                                      SmallVectorImpl<Type *> &OrigTys,
                                       unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, OrigTys,
+                             CCAssignFnForCall(CC));
 
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
@@ -3192,6 +3196,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Set up the argument vectors.
   SmallVector<MVT, 16> OutVTs;
+  SmallVector<Type *, 16> OrigTys;
   OutVTs.reserve(CLI.OutVals.size());
 
   for (auto *Val : CLI.OutVals) {
@@ -3205,6 +3210,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       return false;
 
     OutVTs.push_back(VT);
+    OrigTys.push_back(Val->getType());
   }
 
   Address Addr;
@@ -3220,7 +3226,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Handle the arguments now that we've gotten them.
   unsigned NumBytes;
-  if (!processCallArgs(CLI, OutVTs, NumBytes))
+  if (!processCallArgs(CLI, OutVTs, OrigTys, NumBytes))
     return false;
 
   const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
@@ -3572,12 +3578,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Args.reserve(II->arg_size());
 
     // Populate the argument list.
-    for (auto &Arg : II->args()) {
-      ArgListEntry Entry;
-      Entry.Val = Arg;
-      Entry.Ty = Arg->getType();
-      Args.push_back(Entry);
-    }
+    for (auto &Arg : II->args())
+      Args.emplace_back(Arg);
 
     CallLoweringInfo CLI;
     MCContext &Ctx = MF->getContext();
@@ -4868,12 +4870,8 @@ bool AArch64FastISel::selectFRem(const Instruction *I) {
   Args.reserve(I->getNumOperands());
 
   // Populate the argument list.
-  for (auto &Arg : I->operands()) {
-    ArgListEntry Entry;
-    Entry.Val = Arg;
-    Entry.Ty = Arg->getType();
-    Args.push_back(Entry);
-  }
+  for (auto &Arg : I->operands())
+    Args.emplace_back(Arg);
 
   CallLoweringInfo CLI;
   MCContext &Ctx = MF->getContext();
@@ -5070,12 +5068,16 @@ bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
 
   const MCInstrDesc &II = TII.get(Opc);
 
-  const Register AddrReg = constrainOperandRegClass(
-      II, getRegForValue(I->getPointerOperand()), II.getNumDefs());
-  const Register DesiredReg = constrainOperandRegClass(
-      II, getRegForValue(I->getCompareOperand()), II.getNumDefs() + 1);
-  const Register NewReg = constrainOperandRegClass(
-      II, getRegForValue(I->getNewValOperand()), II.getNumDefs() + 2);
+  Register AddrReg = getRegForValue(I->getPointerOperand());
+  Register DesiredReg = getRegForValue(I->getCompareOperand());
+  Register NewReg = getRegForValue(I->getNewValOperand());
+
+  if (!AddrReg || !DesiredReg || !NewReg)
+    return false;
+
+  AddrReg = constrainOperandRegClass(II, AddrReg, II.getNumDefs());
+  DesiredReg = constrainOperandRegClass(II, DesiredReg, II.getNumDefs() + 1);
+  NewReg = constrainOperandRegClass(II, NewReg, II.getNumDefs() + 2);
 
   const Register ResultReg1 = createResultReg(ResRC);
   const Register ResultReg2 = createResultReg(&AArch64::GPR32RegClass);
@@ -5192,7 +5194,8 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
 FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
 
-  SMEAttrs CallerAttrs(*FuncInfo.Fn);
+  SMEAttrs CallerAttrs =
+      FuncInfo.MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   if (CallerAttrs.hasZAState() || CallerAttrs.hasZT0State() ||
       CallerAttrs.hasStreamingInterfaceOrBody() ||
       CallerAttrs.hasStreamingCompatibleInterface() ||

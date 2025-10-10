@@ -11,7 +11,7 @@ end module
 module m2
   use m1
   implicit none
-  !WARNING: 'foo' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
+  !WARNING: 'foo' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic [-Whomonymous-specific]
   interface foo
     module procedure s
   end interface
@@ -22,13 +22,17 @@ contains
 end module
 
 subroutine foo
-  !ERROR: Cannot use-associate 'foo'; it is already declared in this scope
+  !PORTABILITY: 'foo' is use-associated into a subprogram of the same name [-Wuse-association-into-same-name-subprogram]
   use m1
+  !ERROR: Reference to 'foo' is ambiguous
+  call foo
 end
 
 subroutine bar
-  !ERROR: Cannot use-associate 'bar'; it is already declared in this scope
+  !PORTABILITY: 'foo' is use-associated into a subprogram of the same name [-Wuse-association-into-same-name-subprogram]
   use m1, bar => foo
+  !ERROR: Reference to 'bar' is ambiguous
+  call bar
 end
 
 !OK to use-associate a type with the same name as a generic
@@ -344,6 +348,7 @@ subroutine s_21_23
   use m21
   use m23
   type(foo) x ! Intel and NAG error
+  !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'f1') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
   print *, foo(1.) ! Intel error
   print *, foo(1.,2.,3.) ! Intel error
   call ext(foo) ! GNU and Intel error

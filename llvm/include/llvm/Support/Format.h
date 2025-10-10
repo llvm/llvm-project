@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstdio>
@@ -36,7 +37,7 @@ namespace llvm {
 
 /// This is a helper class used for handling formatted output.  It is the
 /// abstract base class of a templated derived class.
-class format_object_base {
+class LLVM_ABI format_object_base {
 protected:
   const char *Fmt;
   ~format_object_base() = default; // Disallow polymorphic deletion.
@@ -77,16 +78,6 @@ public:
 /// printed, this synthesizes the string into a temporary buffer provided and
 /// returns whether or not it is big enough.
 
-// Helper to validate that format() parameters are scalars or pointers.
-template <typename... Args> struct validate_format_parameters;
-template <typename Arg, typename... Args>
-struct validate_format_parameters<Arg, Args...> {
-  static_assert(std::is_scalar_v<Arg>,
-                "format can't be used with non fundamental / non pointer type");
-  validate_format_parameters() { validate_format_parameters<Args...>(); }
-};
-template <> struct validate_format_parameters<> {};
-
 template <typename... Ts>
 class format_object final : public format_object_base {
   std::tuple<Ts...> Vals;
@@ -104,7 +95,9 @@ class format_object final : public format_object_base {
 public:
   format_object(const char *fmt, const Ts &... vals)
       : format_object_base(fmt), Vals(vals...) {
-    validate_format_parameters<Ts...>();
+    static_assert(
+        (std::is_scalar_v<Ts> && ...),
+        "format can't be used with non fundamental / non pointer type");
   }
 
   int snprint(char *Buffer, unsigned BufferSize) const override {

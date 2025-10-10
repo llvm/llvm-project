@@ -1,0 +1,28 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+  cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+  cir.func dso_local @_Z3foov() {
+    %0 = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init] {alignment = 16 : i64}
+    cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
+    ^bb0(%arg0: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK: cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+  // CHECK: cir.func dso_local @_Z3foov() {
+  // CHECK:   %0 = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init] {alignment = 16 : i64}
+  // CHECK:   cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
+  // CHECK:   ^bb0(%arg0: !cir.ptr<!rec_S>):
+  // CHECK:     cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+  // CHECK:     cir.yield
+  // CHECK:   }
+  // CHECK:   cir.return
+  // CHECK: }
+}

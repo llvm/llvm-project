@@ -126,10 +126,11 @@ extern "C" __attribute__((noinline)) void foo() {
   bar();
 }
 
-int main() {
+int main(int, char**) {
   // Set signal handler for SIGSEGV.
   signal(SIGSEGV, handler);
   foo();
+  return 0;
 }
 
 #else // Assembly code for abc().

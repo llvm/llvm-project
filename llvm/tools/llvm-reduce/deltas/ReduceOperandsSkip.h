@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceOperandsSkipDeltaPass(TestRunner &Test);
+void reduceOperandsSkipDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif /* LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEOPERANDSSKIP_H */

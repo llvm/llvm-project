@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCAsmInfo.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -15,15 +16,16 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOTPCREL, "gotpcrel"},
-    {MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO, "gotpcrel32@lo"},
-    {MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI, "gotpcrel32@hi"},
-    {MCSymbolRefExpr::VK_AMDGPU_REL32_LO, "rel32@lo"},
-    {MCSymbolRefExpr::VK_AMDGPU_REL32_HI, "rel32@hi"},
-    {MCSymbolRefExpr::VK_AMDGPU_REL64, "rel64"},
-    {MCSymbolRefExpr::VK_AMDGPU_ABS32_LO, "abs32@lo"},
-    {MCSymbolRefExpr::VK_AMDGPU_ABS32_HI, "abs32@hi"},
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {AMDGPUMCExpr::S_GOTPCREL, "gotpcrel"},
+    {AMDGPUMCExpr::S_GOTPCREL32_LO, "gotpcrel32@lo"},
+    {AMDGPUMCExpr::S_GOTPCREL32_HI, "gotpcrel32@hi"},
+    {AMDGPUMCExpr::S_REL32_LO, "rel32@lo"},
+    {AMDGPUMCExpr::S_REL32_HI, "rel32@hi"},
+    {AMDGPUMCExpr::S_REL64, "rel64"},
+    {AMDGPUMCExpr::S_ABS32_LO, "abs32@lo"},
+    {AMDGPUMCExpr::S_ABS32_HI, "abs32@hi"},
+    {AMDGPUMCExpr::S_ABS64, "abs64"},
 };
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
@@ -41,6 +43,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   CommentString = ";";
   InlineAsmStart = ";#ASMSTART";
   InlineAsmEnd = ";#ASMEND";
+  UsesSetToEquateSymbol = true;
 
   //===--- Data Emission Directives -------------------------------------===//
   UsesELFSectionDirectiveForBSS = true;
@@ -54,7 +57,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   DwarfRegNumForCFI = true;
 
   UseIntegratedAssembler = false;
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
@@ -72,8 +75,9 @@ unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
   if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
     return 20;
 
-  // VOP3PX encoding.
-  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts))
+  // VOP3PX/VOP3PX2 encoding.
+  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
+      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
     return 16;
 
   // 64-bit instruction with 32-bit literal.

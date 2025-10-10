@@ -1,9 +1,10 @@
 add_flang_library(FIRCodeGen
   BoxedProcedure.cpp
-  CGOps.cpp
   CodeGen.cpp
   CodeGenOpenMP.cpp
   FIROpPatterns.cpp
+  LLVMInsertChainFolder.cpp
+  LowerRepackArrays.cpp
   PreCGRewrite.cpp
   TBAABuilder.cpp
   Target.cpp
@@ -20,20 +21,23 @@ add_flang_library(FIRCodeGen
   CUFAttrs
   FIRAnalysis
   FIRBuilder
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
+  FIROpenMPSupport
   FIRSupport
 
   LINK_COMPONENTS
-  AsmParser
-  AsmPrinter
   Remarks
   TargetParser
 
   MLIR_LIBS
   MLIRComplexToLLVM
+  MLIRComplexToROCDLLibraryCalls
   MLIRComplexToStandard
   MLIRGPUDialect
+  MLIRIndexToLLVM
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
