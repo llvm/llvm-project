@@ -313,8 +313,8 @@ public:
 
   /// reset tracker to the end of the \p MBB.
   void reset(const MachineBasicBlock &MBB) {
-    reset(MBB.getParent()->getRegInfo(),
-          LIS.getSlotIndexes()->getMBBEndIdx(&MBB));
+    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
+    reset(MBB.getParent()->getRegInfo(), MBBLastSlot);
   }
 
   /// reset tracker to the point just after \p MI (in program order).
