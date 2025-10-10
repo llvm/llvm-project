@@ -48,11 +48,11 @@ Visibility Macros
   This macro works by applying `[[gnu::gnu_inline]] inline` to the funciton
   in the header, thereby suppressing code generation while still allowing the
   compiler to use the function for optimization purposes.
-  During the build of libc++, we trigger code generation by not expanding the
-  macro to `_LIBCPP_EXPORTED_FROM_ABI`. Since the function is no longer marked
-  as `inline`, it will be emitted even if not called. (For this reason its
-  paramount to not define methods in the class definition, since those definitions
-  would be implicitly `inline`.)
+  During the build of libc++, we trigger code generation by expanding the
+  macro to `/*empty*/`. Since the function is no longer marked as `inline`,
+  it will be emitted even if not called. (For this reason its paramount to
+  not define methods in the class definition, since those definitions would
+  be implicitly `inline`.)
 
 **_LIBCPP_OVERRIDABLE_FUNC_VIS**
   Mark a symbol as being exported by the libc++ library, but allow it to be
