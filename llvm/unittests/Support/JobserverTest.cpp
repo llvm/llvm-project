@@ -226,8 +226,12 @@ protected:
   std::unique_ptr<ScopedFifo> TheFifo;
   std::thread MakeThread;
   std::atomic<bool> StopMakeThread{false};
+  // Save and restore the global parallel strategy to avoid interfering with
+  // other tests in the same process.
+  ThreadPoolStrategy SavedStrategy;
 
   void SetUp() override {
+    SavedStrategy = parallel::strategy;
     TheFifo = std::make_unique<ScopedFifo>();
     ASSERT_TRUE(TheFifo->isValid());
 
@@ -243,7 +247,8 @@ protected:
     }
     unsetenv("MAKEFLAGS");
     TheFifo.reset();
-    JobserverClient::resetForTesting();
+    // Restore the original strategy to ensure subsequent tests are unaffected.
+    parallel::strategy = SavedStrategy;
   }
 
   // Starts a background thread that emulates `make`. It populates the FIFO
