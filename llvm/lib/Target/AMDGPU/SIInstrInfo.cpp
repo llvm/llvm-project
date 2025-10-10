@@ -10587,23 +10587,11 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     bool CanOptimize = false;
-    MachineOperand *SccDef =
-        Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
 
     // For S_OP that set SCC = DST!=0, do the transformation
     //
     //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
-    if (SccDef && Def->getOpcode() != AMDGPU::S_ADD_I32 &&
-        Def->getOpcode() != AMDGPU::S_ADD_U32 &&
-        Def->getOpcode() != AMDGPU::S_ADDC_U32 &&
-        Def->getOpcode() != AMDGPU::S_SUB_I32 &&
-        Def->getOpcode() != AMDGPU::S_SUB_U32 &&
-        Def->getOpcode() != AMDGPU::S_SUBB_U32 &&
-        Def->getOpcode() != AMDGPU::S_MIN_I32 &&
-        Def->getOpcode() != AMDGPU::S_MIN_U32 &&
-        Def->getOpcode() != AMDGPU::S_MAX_I32 &&
-        Def->getOpcode() != AMDGPU::S_MAX_U32 &&
-        Def->getOpcode() != AMDGPU::S_ADDK_I32)
+    if (setsSCCifResultIsNonZero(*Def))
       CanOptimize = true;
 
     // s_cmp_lg_* is redundant because the SCC input value for S_CSELECT* has
@@ -10631,7 +10619,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         return false;
     }
 
-    if (SccDef)
+    if (MachineOperand *SccDef =
+            Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
       SccDef->setIsDead(false);
 
     CmpInstr.eraseFromParent();
