@@ -808,7 +808,11 @@ public:
 
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI void append_range(_Range&& __range) {
-    insert_range(end(), std::forward<_Range>(__range));
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      __append_with_size(ranges::begin(__range), ranges::distance(__range));
+    } else {
+      __append_with_sentinel(ranges::begin(__range), ranges::end(__range));
+    }
   }
 #    endif
 
