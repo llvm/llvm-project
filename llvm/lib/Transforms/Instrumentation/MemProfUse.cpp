@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -192,6 +193,30 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
   default:
     return false;
   }
+}
+
+static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
+                                             AnnotationKind Kind) {
+  assert(Kind != llvm::memprof::AnnotationKind::AnnotationOK &&
+         "Should not handle AnnotationOK here");
+  SmallString<32> Reason;
+  switch (Kind) {
+  case llvm::memprof::AnnotationKind::ExplicitSection:
+    ++NumOfMemProfExplicitSectionGlobalVars;
+    Reason.append("explicit section name");
+    break;
+  case llvm::memprof::AnnotationKind::DeclForLinker:
+    Reason.append("linker declaration");
+    break;
+  case llvm::memprof::AnnotationKind::ReservedName:
+    Reason.append("name starts with `llvm.`");
+    break;
+  default:
+    llvm_unreachable("Unexpected annotation kind");
+  }
+  LLVM_DEBUG(dbgs() << "Skip annotation for " << GVar.getName() << " due to "
+                    << Reason << ".\n");
+  return;
 }
 
 struct AllocMatchInfo {
@@ -775,23 +800,6 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
-// Returns true iff the global variable has custom section either by
-// __attribute__((section("name")))
-// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
-// or #pragma clang section directives
-// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
-static bool hasExplicitSectionName(const GlobalVariable &GVar) {
-  if (GVar.hasSection())
-    return true;
-
-  auto Attrs = GVar.getAttributes();
-  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
-      Attrs.hasAttribute("relro-section") ||
-      Attrs.hasAttribute("rodata-section"))
-    return true;
-  return false;
-}
-
 bool MemProfUsePass::annotateGlobalVariables(
     Module &M, const memprof::DataAccessProfData *DataAccessProf) {
   if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
@@ -817,13 +825,9 @@ bool MemProfUsePass::annotateGlobalVariables(
   for (GlobalVariable &GVar : M.globals()) {
     assert(!GVar.getSectionPrefix().has_value() &&
            "GVar shouldn't have section prefix yet");
-    if (GVar.isDeclarationForLinker())
-      continue;
-
-    if (hasExplicitSectionName(GVar)) {
-      ++NumOfMemProfExplicitSectionGlobalVars;
-      LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
-                        << " has explicit section name. Skip annotating.\n");
+    auto Kind = llvm::memprof::getAnnotationKind(GVar);
+    if (Kind != llvm::memprof::AnnotationKind::AnnotationOK) {
+      HandleUnsupportedAnnotationKinds(GVar, Kind);
       continue;
     }
 
@@ -833,7 +837,6 @@ bool MemProfUsePass::annotateGlobalVariables(
     // TODO: Track string content hash in the profiles and compute it inside the
     // compiler to categeorize the hotness string literals.
     if (Name.starts_with(".str")) {
-
       LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
       continue;
     }
