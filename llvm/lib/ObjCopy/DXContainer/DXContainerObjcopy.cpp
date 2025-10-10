@@ -80,9 +80,7 @@ static Error dumpPartToFile(StringRef PartName, StringRef Filename,
 
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   for (StringRef Flag : Config.DumpSection) {
-    StringRef SecName;
-    StringRef FileName;
-    std::tie(SecName, FileName) = Flag.split("=");
+    auto [SecName, FileName] = Flag.split("=");
     if (Error E = dumpPartToFile(SecName, FileName, Config.InputFilename, Obj))
       return E;
   }
