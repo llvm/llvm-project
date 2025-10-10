@@ -58,40 +58,52 @@ MEMORY_GIGS=$(( MEMORY_KILOS / 1000000 ))
 MEMORY_COMPILE_LIMIT=$(( MEMORY_GIGS / 4 ))
 MEMORY_LINK_LIMIT=$(( MEMORY_GIGS / 12 ))
 
-set -x
-cmake \
-    -G Ninja \
-    -DCMAKE_BUILD_TYPE:STRING=Release \
-    -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${JOB_NAME}-${BUILD_NUMBER}" \
-    -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-    -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
-    -DLLVM_ENABLE_ASSERTIONS=ON \
-    -DLLVM_LIT_ARGS=-v \
-    -DCLANG_DEFAULT_LINKER=lld \
-    -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra;flang" \
-    -DLLVM_ENABLE_RUNTIMES="openmp;flang-rt;compiler-rt" \
-    -S "${WORKSPACE}/llvm-project/llvm" \
-    -B "${WORKSPACE}/BUILD" \
-    -DPython3_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python \
-    -DCMAKE_INSTALL_MESSAGE=LAZY \
-    -DCMAKE_C_COMPILER=gcc \
-    -DCMAKE_CXX_COMPILER=g++ \
-    -DLLVM_PARALLEL_COMPILE_JOBS=${MEMORY_COMPILE_LIMIT} \
-    -DLLVM_PARALLEL_LINK_JOBS=${MEMORY_LINK_LIMIT} \
-    -DBUILD_SHARED_LIBS:STRING=ON \
-    -DLIBOMP_OMP_VERSION=50 \
-    -DLIBOMP_OMPT_SUPPORT=ON \
-    -DLIBOMP_USE_DEBUGGER=ON \
-    -DLIBOMP_CFLAGS="-O2" \
-    -DLIBOMP_CPPFLAGS="-O2" \
-    -DLIBOMPTARGET_OMPD_SUPPORT=ON \
-    -DLIBOMP_OMPD_ENABLED=ON \
-    -DLIBOMP_OMPD_SUPPORT=ON \
-    -DFLANG_ENABLE_WERROR=ON \
-    -DLLVM_TARGETS_TO_BUILD:STRING="X86;AMDGPU" \
-    -DFLANG_RUNTIME_F128_MATH_LIB=libquadmath
+cmake_args=(
+  -G Ninja
+  -DCMAKE_BUILD_TYPE:STRING=Release
+  -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${JOB_NAME}-${BUILD_NUMBER}"
+  -DCMAKE_CXX_STANDARD=17
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+  -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH"
+  -DLLVM_ENABLE_ASSERTIONS=ON
+  -DLLVM_LIT_ARGS=-v
+  -DCLANG_DEFAULT_LINKER=lld
+  -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra;flang"
+  -DLLVM_ENABLE_RUNTIMES="openmp;flang-rt;compiler-rt"
+  -S "${WORKSPACE}/llvm-project/llvm"
+  -B "${WORKSPACE}/BUILD"
+  -DPython3_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python
+  -DCMAKE_INSTALL_MESSAGE=LAZY
+  -DCMAKE_C_COMPILER=gcc
+  -DCMAKE_CXX_COMPILER=g++
+  -DLLVM_PARALLEL_COMPILE_JOBS="${MEMORY_COMPILE_LIMIT}"
+  -DLLVM_PARALLEL_LINK_JOBS="${MEMORY_LINK_LIMIT}"
+  -DBUILD_SHARED_LIBS:STRING=ON
+  -DLIBOMP_OMP_VERSION=50
+  -DLIBOMP_OMPT_SUPPORT=ON
+  -DLIBOMP_USE_DEBUGGER=ON
+  -DLIBOMP_CFLAGS="-O2"
+  -DLIBOMP_CPPFLAGS="-O2"
+  -DLIBOMPTARGET_OMPD_SUPPORT=ON
+  -DLIBOMP_OMPD_ENABLED=ON
+  -DLIBOMP_OMPD_SUPPORT=ON
+  -DFLANG_ENABLE_WERROR=ON
+  -DLLVM_TARGETS_TO_BUILD:STRING="X86;AMDGPU"
+  -DFLANG_RUNTIME_F128_MATH_LIB=libquadmath
+)
 
+if test -d "${WORKSPACE}/llvm-project/aocc-essentials"
+then
+  echo "This looks like an AOCC branch; adding extra required CMake switches."
+  cmake_args+=(
+    -DCMAKE_CXX_FLAGS="-Wno-error=pedantic -pthread"
+    -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v --timeout=600 --param blacklist=${WORKSPACE}/llvm-project/prj-essentials/devo/lit.blacklist.cfg"
+    -DLLVM_ENABLE_CLASSIC_FLANG=OFF
+  )
+fi
+
+set -x
+cmake "${cmake_args[@]}"
 ninja -C "${WORKSPACE}"/BUILD install
 stat=$?
 set +x
