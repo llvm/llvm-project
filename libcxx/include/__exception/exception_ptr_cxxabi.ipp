@@ -12,9 +12,9 @@
 namespace __cxxabiv1 {
 
 extern "C" {
-_LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_increment_exception_refcount(void*) noexcept;
-_LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_decrement_exception_refcount(void*) noexcept;
-_LIBCPP_OVERRIDABLE_FUNC_VIS void* __cxa_current_primary_exception() noexcept;
+_LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_increment_exception_refcount(void*) _NOEXCEPT;
+_LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_decrement_exception_refcount(void*) _NOEXCEPT;
+_LIBCPP_OVERRIDABLE_FUNC_VIS void* __cxa_current_primary_exception() _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_rethrow_primary_exception(void*);
 }
   

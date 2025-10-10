@@ -128,7 +128,7 @@ public:
 };
 
 // Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) _NOEXCEPT {
   __increment_refcount(__e);
   exception_ptr __ptr;
   __ptr.__ptr_ = __e;
@@ -136,7 +136,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr exception_ptr::__from_native_
 }
 
 // Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) noexcept
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) _NOEXCEPT
     : __ptr_(__other.__ptr_) {
   __increment_refcount(__ptr_);
 }
@@ -146,7 +146,7 @@ _LIBCPP_HIDE_FROM_ABI inline exception_ptr::exception_ptr(exception_ptr&& __othe
 }
 
 // Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(const exception_ptr& __other) noexcept {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(const exception_ptr& __other) _NOEXCEPT {
   if (__ptr_ != __other.__ptr_) {
     __increment_refcount(__other.__ptr_);
     __decrement_refcount(__ptr_);
@@ -155,7 +155,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(con
   return *this;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) _NOEXCEPT {
   __decrement_refcount(__ptr_);
   __ptr_         = __other.__ptr_;
   __other.__ptr_ = nullptr;
@@ -163,7 +163,7 @@ _LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_p
 }
 
 // Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() noexcept { __decrement_refcount(__ptr_); }
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() _NOEXCEPT { __decrement_refcount(__ptr_); }
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
