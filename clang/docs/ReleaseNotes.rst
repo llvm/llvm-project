@@ -287,7 +287,7 @@ Improvements to Clang's diagnostics
   declarations of function pointer type and internal linkage that use a weak
   pointer authentication schema, either implicitly or by specifying a discriminator
   with no diversifiers. This warning applies only to targets supporting pointer
-  authentication.
+  authentication when the feature is enabled.
 
 Improvements to Clang's time-trace
 ----------------------------------

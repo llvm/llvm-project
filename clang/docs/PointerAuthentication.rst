@@ -1429,10 +1429,11 @@ to be trivially copyable, which means they must be copyable with ``memcpy``.
 
 The use of a uniform constant discriminator greatly simplifies the adoption of
 arm64e, but it is a significant weakness in the mitigation because it allows any
-C function pointer to be replaced with another. Clang supports
-`-fptrauth-function-pointer-type-discrimination`, which enables a variant ABI
-that uses type discrimination for function pointers. When generating the type
-based discriminator for a function type all primitive integer types are
+C function pointer to be replaced with another. The `-Wptrauth-weak-schema`
+diagnostic warns about the use of weak pointer authentication schemas. Clang
+supports `-fptrauth-function-pointer-type-discrimination`, which enables a
+variant ABI that uses type discrimination for function pointers. When generating
+the type based discriminator for a function type all primitive integer types are
 considered equivalent due to the prevalence of mismatching integer parameter
 types in real world code. Type discrimination of function pointers is
 ABI-incompatible with the standard arm64e ABI, but it can be used in constrained
