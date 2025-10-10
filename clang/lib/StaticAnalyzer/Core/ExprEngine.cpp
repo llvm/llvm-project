@@ -1064,6 +1064,8 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
       SymReaper.markLive(MR);
   }
 
+  markAllDynamicExtentLive(CleanedState, SymReaper);
+
   getCheckerManager().runCheckersForLiveSymbols(CleanedState, SymReaper);
 
   // Create a state in which dead bindings are removed from the environment
