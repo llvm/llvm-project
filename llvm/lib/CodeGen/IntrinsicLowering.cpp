@@ -388,21 +388,21 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     ReplaceFPIntrinsicWithCall(CI, #baseName "f", #baseName, #baseName "l");   \
     break;                                                                     \
   }
-    MATH_INTRINSIC_CASE(sqrt)
-    MATH_INTRINSIC_CASE(log)
-    MATH_INTRINSIC_CASE(log2)
-    MATH_INTRINSIC_CASE(log10)
+    MATH_INTRINSIC_CASE(ceil)
+    MATH_INTRINSIC_CASE(copysign)
+    MATH_INTRINSIC_CASE(cos)
     MATH_INTRINSIC_CASE(exp)
     MATH_INTRINSIC_CASE(exp2)
-    MATH_INTRINSIC_CASE(pow)
-    MATH_INTRINSIC_CASE(sin)
-    MATH_INTRINSIC_CASE(cos)
     MATH_INTRINSIC_CASE(floor)
-    MATH_INTRINSIC_CASE(ceil)
-    MATH_INTRINSIC_CASE(trunc)
+    MATH_INTRINSIC_CASE(log)
+    MATH_INTRINSIC_CASE(log10)
+    MATH_INTRINSIC_CASE(log2)
+    MATH_INTRINSIC_CASE(pow)
     MATH_INTRINSIC_CASE(round)
     MATH_INTRINSIC_CASE(roundeven)
-    MATH_INTRINSIC_CASE(copysign)
+    MATH_INTRINSIC_CASE(sin)
+    MATH_INTRINSIC_CASE(sqrt)
+    MATH_INTRINSIC_CASE(trunc)
 #undef MATH_INTRINSIC_CASE
   case Intrinsic::get_rounding:
      // Lower to "round to the nearest"
