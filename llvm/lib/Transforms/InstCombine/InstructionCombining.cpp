@@ -5032,31 +5032,27 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   // backedge values (possibly dropping poison flags along the way) until we
   // reach the phi again. In that case, we can move the freeze to the start
   // value.
-  Use *StartU = nullptr;
+  SmallVector<Use *> StartUses;
   SmallVector<Value *> Worklist;
   for (Use &U : PN->incoming_values()) {
-    if (DT.dominates(PN->getParent(), PN->getIncomingBlock(U))) {
+    BasicBlock *StartBB = PN->getIncomingBlock(U);
+    Value *StartV = U.get();
+    if (DT.dominates(PN->getParent(), StartBB)) {
       // Add backedge value to worklist.
-      Worklist.push_back(U.get());
+      Worklist.push_back(StartV);
       continue;
     }
 
-    // Don't bother handling multiple start values.
-    if (StartU)
+    bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
+    // We can't insert freeze if a start value is the result of the
+    // terminator (e.g. an invoke).
+    if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
       return nullptr;
-    StartU = &U;
+    StartUses.push_back(&U);
   }
 
-  if (!StartU || Worklist.empty())
+  if (StartUses.empty() || Worklist.empty())
     return nullptr; // Not a recurrence.
-
-  Value *StartV = StartU->get();
-  BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
-  bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
-  // We can't insert freeze if the start value is the result of the
-  // terminator (e.g. an invoke).
-  if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
-    return nullptr;
 
   SmallPtrSet<Value *, 32> Visited;
   SmallVector<Instruction *> DropFlags;
@@ -5084,7 +5080,9 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   for (Instruction *I : DropFlags)
     I->dropPoisonGeneratingAnnotations();
 
-  if (StartNeedsFreeze) {
+  for (Use *StartU : StartUses) {
+    Value *StartV = StartU->get();
+    BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
     Builder.SetInsertPoint(StartBB->getTerminator());
     Value *FrozenStartV = Builder.CreateFreeze(StartV,
                                                StartV->getName() + ".fr");
