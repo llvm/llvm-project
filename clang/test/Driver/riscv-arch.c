@@ -384,9 +384,9 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32izalasr0p7 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-BADVERS %s
 // RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32izalasr0p7'
-// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'zalasr' (this compiler supports 0.1)
+// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'zalasr' (this compiler supports 0.9)
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr0p1 -menable-experimental-extensions -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr0p9 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-GOODVERS %s
 // RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-zalasr"
 
