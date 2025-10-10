@@ -28,3 +28,7 @@ def trap_ubsan_arith_overflow : Trap<
 
 }
 }
+
+// TO_UPSTREAM(BoundsSafety) ON
+include "DiagnosticBoundsSafetyTrapKinds.td"
+// TO_UPSTREAM(BoundsSafety) OFF

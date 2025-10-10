@@ -5408,7 +5408,7 @@ public:
   /// conditional branch to it, for the -ftrapv checks.
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
                      bool NoMerge = false, const TrapReason *TR = nullptr,
-                     StringRef Annotation = "", StringRef TrapMessage = "");
+                     StringRef Annotation = "");
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
   /// Create a basic block that will call the trap intrinsic for -fbounds-safety, and
@@ -5418,7 +5418,8 @@ public:
   /// must be in scope when this method is called.
   void EmitBoundsSafetyTrapCheck(
       llvm::Value *Checked, BoundsSafetyTrapKind kind,
-      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN);
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN,
+      TrapReason *TR = nullptr);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   /// Emit a call to trap or debugtrap and attach function attribute

@@ -34,6 +34,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticTrap.h" // TO_UPSTREAM(BoundsSafety)
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
@@ -4577,8 +4578,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
                                     bool NoMerge, const TrapReason *TR,
-                                    StringRef Annotation,
-                                    StringRef BoundsSafetyTrapMessage) {
+                                    StringRef Annotation) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4592,26 +4592,24 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::StringRef TrapMessage;
   llvm::StringRef TrapCategory;
   auto DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
   if (TR && !TR->isEmpty() &&
-      DebugTrapReasonKind ==
-          CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed) {
+      (DebugTrapReasonKind ==
+           CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed ||
+       CheckHandlerID == SanitizerHandler::BoundsSafety)) {
     TrapMessage = TR->getMessage();
     TrapCategory = TR->getCategory();
   } else {
-    /* TO_UPSTREAM(BoundsSafety) ON*/
-    // FIXME: Move to using `TrapReason` (rdar://158623471).
-    if (CheckHandlerID == SanitizerHandler::BoundsSafety) {
-      TrapMessage = BoundsSafetyTrapMessage;
-      TrapCategory = GetBoundsSafetyTrapMessagePrefix();
-    } else {
-      TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
-      TrapCategory = "Undefined Behavior Sanitizer";
-    }
+    assert(CheckHandlerID != SanitizerHandler::BoundsSafety);
+    TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+    TrapCategory = "Undefined Behavior Sanitizer";
   }
 
   if (getDebugInfo() && !(TrapMessage.empty() && TrapCategory.empty()) &&
-      DebugTrapReasonKind !=
-          CodeGenOptions::SanitizeDebugTrapReasonKind::None &&
+      (DebugTrapReasonKind !=
+           CodeGenOptions::SanitizeDebugTrapReasonKind::None ||
+       CheckHandlerID == SanitizerHandler::BoundsSafety) &&
       TrapLocation) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
         TrapLocation, TrapCategory, TrapMessage);
@@ -4701,19 +4699,26 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   EmitBlock(Cont);
 }
 
-void CodeGenFunction::EmitBoundsSafetyTrapCheck(llvm::Value *Checked,
-                                             BoundsSafetyTrapKind kind,
-                                             BoundsSafetyTrapCtx::Kind TrapCtx) {
+void CodeGenFunction::EmitBoundsSafetyTrapCheck(
+    llvm::Value *Checked, BoundsSafetyTrapKind kind,
+    BoundsSafetyTrapCtx::Kind TrapCtx, TrapReason *TR) {
   auto OptRemark = GetBoundsSafetyOptRemarkForTrap(kind);
   assert(BoundsSafetyOptRemarkScope::InScope(this, OptRemark));
+
+  // Fallback: If a TrapReason object isn't provided use the legacy approach
+  // for constructing
+  TrapReason TempTR;
+  if (!TR) {
+    CGM.BuildTrapReason(diag::trap_bs_fallback, TempTR)
+        << GetBoundsSafetyTrapMessageSuffix(kind, TrapCtx);
+  }
 
   // We still need to pass `OptRemark` because not all emitted instructions
   // can be covered by BoundsSafetyOptRemarkScope. This is because EmitTrapCheck
   // caches basic blocks that contain instructions that need annotating.
   EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety,
                 /*NoMerge=*/CGM.getCodeGenOpts().BoundsSafetyUniqueTraps,
-                /*TR=*/nullptr, GetBoundsSafetyOptRemarkString(OptRemark),
-                GetBoundsSafetyTrapMessageSuffix(kind, TrapCtx));
+                TR ? TR : &TempTR, GetBoundsSafetyOptRemarkString(OptRemark));
 }
 
 llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
