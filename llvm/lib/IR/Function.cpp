@@ -784,6 +784,14 @@ uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
   return Result;
 }
 
+FastMathFlags Function::getFMFFromFnAttribute() const {
+  FastMathFlags FuncFMF;
+  FuncFMF.setNoNaNs(getFnAttribute("no-nans-fp-math").getValueAsBool());
+  FuncFMF.setNoSignedZeros(
+      getFnAttribute("no-signed-zeros-fp-math").getValueAsBool());
+  return FuncFMF;
+}
+
 /// gets the specified attribute from the list of attributes.
 Attribute Function::getParamAttribute(unsigned ArgNo,
                                       Attribute::AttrKind Kind) const {
