@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include <memory>
 #include <vector>
 
@@ -114,7 +115,7 @@ private:
 #endif
   ld_plugin_all_symbols_read_handler allSymbolsReadHandler;
   // Handle for the shared library created via dlopen().
-  void *plugin;
+  llvm::sys::DynamicLibrary plugin;
 
   void initializeTv();
 };

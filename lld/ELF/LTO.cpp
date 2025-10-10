@@ -427,8 +427,6 @@ void BitcodeCompiler::addObject(IRFile &f,
 }
 
 #if LLD_ENABLE_GNU_LTO
-#include <dlfcn.h>
-
 GccIRCompiler *GccIRCompiler::singleton = nullptr;
 
 GccIRCompiler *GccIRCompiler::getInstance() {
@@ -460,13 +458,14 @@ GccIRCompiler::~GccIRCompiler() {
 }
 
 void GccIRCompiler::loadPlugin() {
-  plugin = dlopen(ctx.arg.plugin.data(), RTLD_NOW);
-  if (plugin == NULL) {
-    error(dlerror());
+  std::string Error;
+  plugin = llvm::sys::DynamicLibrary::getPermanentLibrary(ctx.arg.plugin.data(), &Error);
+  if (!plugin.isValid()) {
+    error(Error);
     return;
   }
-  void *tmp = dlsym(plugin, "onload");
-  if (tmp == NULL) {
+  void *tmp = plugin.getAddressOfSymbol("onload");
+  if (!tmp) {
     error("Plugin does not provide onload()");
     return;
   }

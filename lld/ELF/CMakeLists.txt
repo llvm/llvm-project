@@ -21,11 +21,6 @@ endif()
 set(GNULTO_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for plugin-api.h")
 if(LLD_ENABLE_GNU_LTO)
   find_package(GNULTO REQUIRED)
-  include(CheckSymbolExists)
-  check_symbol_exists(dlopen "dlfcn.h" HAVE_DLOPEN)
-  if(NOT HAVE_DLOPEN)
-    message(FATAL_ERROR "Could not find the definition of dlopen(). Is dlfcn.h available?")
-  endif()
 endif()
 
 configure_file(
