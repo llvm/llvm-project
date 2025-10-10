@@ -14,6 +14,18 @@ entry:
   ret <vscale x 4 x float> %partial.reduce
 }
 
+define <vscale x 4 x float> @fdot_splat_vl128(<vscale x 4 x float> %acc, <vscale x 8 x half> %a) {
+; CHECK-LABEL: fdot_splat_vl128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov z2.h, #1.00000000
+; CHECK-NEXT:    fdot z0.s, z1.h, z2.h
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %a.wide)
+  ret <vscale x 4 x float> %partial.reduce
+}
+
 define void @fdot_wide_vl256(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(2,2) {
 ; CHECK-LABEL: fdot_wide_vl256:
 ; CHECK:       // %bb.0: // %entry
