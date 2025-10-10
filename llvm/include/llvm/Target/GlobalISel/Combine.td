@@ -695,6 +695,7 @@ def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
 def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -713,6 +714,7 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fsqrt,
   constant_fold_flog2,
   constant_fold_fptrunc,
+  constant_fold_fpext,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
