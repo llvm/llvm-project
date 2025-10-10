@@ -17,7 +17,7 @@
 /// debug.  That is where debug counting steps in.  You can instrument the pass
 /// with a debug counter before it does a certain thing, and depending on the
 /// counts, it will either execute that thing or not.  The debug counter itself
-/// consists of a list of chunks (inclusive numeric ranges). `shouldExecute`
+/// consists of a list of chunks (inclusive numeric intervals). `shouldExecute`
 /// returns true iff the list is empty or the current count is in one of the
 /// chunks.
 ///
@@ -48,6 +48,7 @@
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 #include <string>
 
 namespace llvm {
@@ -56,18 +57,8 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  struct Chunk {
-    int64_t Begin;
-    int64_t End;
-    LLVM_ABI void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
-  };
-
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
-
-  /// Return true on parsing error and print the error message on the
-  /// llvm::errs()
-  LLVM_ABI static bool parseChunks(StringRef Str, SmallVector<Chunk> &Res);
+  LLVM_ABI static void
+  printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
@@ -176,7 +167,7 @@ protected:
     uint64_t CurrChunkIdx = 0;
     bool IsSet = false;
     std::string Desc;
-    SmallVector<Chunk> Chunks;
+    IntegerIntervalUtils::IntervalList Chunks;
   };
 
   DenseMap<unsigned, CounterInfo> Counters;
