@@ -2031,8 +2031,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
   // Skip special artifical variables
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
-                                             "llvm.used",
-                                             "llvm.compiler.used"};
+                                             "llvm.used", "llvm.compiler.used"};
 
   if (ArtificialGlobals.contains(GV.getName()))
     return;
