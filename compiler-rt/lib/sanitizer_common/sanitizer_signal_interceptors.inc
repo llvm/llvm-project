@@ -24,8 +24,10 @@ using namespace __sanitizer;
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGNAL_IMPL
-#define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
-  { return REAL(func)(signum, handler); }
+#  define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
+    {                                                           \
+      ret = REAL(func)(signum, handler);                        \
+    }
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGACTION_IMPL
@@ -35,9 +37,9 @@ using namespace __sanitizer;
         Printf(                                                               \
             "Warning: REAL(sigaction_symname) == nullptr. This may happen "   \
             "if you link with ubsan statically. Sigaction will not work.\n"); \
-        return -1;                                                            \
+        ret = -1;                                                             \
       }                                                                       \
-      return REAL(sigaction_symname)(signum, act, oldact);                    \
+      ret = REAL(sigaction_symname)(signum, act, oldact);                     \
     }
 #endif
 
@@ -45,7 +47,10 @@ using namespace __sanitizer;
 INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return 0;
+
+  int ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(bsd_signal, signum, handler);
+  return ret;
 }
 #define INIT_BSD_SIGNAL COMMON_INTERCEPT_FUNCTION(bsd_signal)
 #else  // SANITIZER_INTERCEPT_BSD_SIGNAL
@@ -57,7 +62,10 @@ INTERCEPTOR(uptr, signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive)
     return (uptr) nullptr;
+
+  int ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
+  return ret;
 }
 #define INIT_SIGNAL COMMON_INTERCEPT_FUNCTION(signal)
 
@@ -68,7 +76,10 @@ INTERCEPTOR(int, sigaction_symname, int signum,
     if (!oldact) return 0;
     act = nullptr;
   }
+
+  uptr ret;
   SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
+  return ret;
 }
 #define INIT_SIGACTION COMMON_INTERCEPT_FUNCTION(sigaction_symname)
 
