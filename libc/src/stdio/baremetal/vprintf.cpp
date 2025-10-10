@@ -50,7 +50,6 @@ LLVM_LIBC_FUNCTION(int, vprintf,
   if (flushval != printf_core::WRITE_OK) {
     libc_errno = -flushval;
     return -1;
-  
   }
 
   if (retval.value > cpp::numeric_limits<int>::max()) {

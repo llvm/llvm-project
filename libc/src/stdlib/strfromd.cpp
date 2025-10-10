@@ -28,7 +28,8 @@ LLVM_LIBC_FUNCTION(int, strfromd,
   if (section.has_conv)
     result = internal::strfromfloat_convert<double>(&writer, section);
   else
-    result = writer.write(section.raw_string); // TODO everywhere where writer is used, set errno and ret -1
+    result = writer.write(section.raw_string); // TODO everywhere where writer
+                                               // is used, set errno and ret -1
 
   if (result < 0)
     return result;

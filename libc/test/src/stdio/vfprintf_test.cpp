@@ -14,29 +14,29 @@
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fopen.h"
-#include "src/stdio/fread.h"
 #include "src/stdio/fopencookie.h"
+#include "src/stdio/fread.h"
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 #include "src/stdio/vfprintf.h"
 
-#include "test/UnitTest/Test.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
 
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;
 using LIBC_NAMESPACE::ferror;
 using LIBC_NAMESPACE::fopen;
-using LIBC_NAMESPACE::fread;
 using LIBC_NAMESPACE::fopencookie;
+using LIBC_NAMESPACE::fread;
 #else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
 using ::fopen;
-using ::fread;
 using ::fopencookie;
+using ::fread;
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace printf_test
 

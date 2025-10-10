@@ -59,7 +59,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
     return -1;
   }
 
-  return static_cast<int>(retval.value);  
+  return static_cast<int>(retval.value);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

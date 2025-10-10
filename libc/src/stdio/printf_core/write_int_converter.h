@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_WRITE_INT_CONVERTER_H
 
+#include "hdr/errno_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
-#include "hdr/errno_macros.h"
 
 #include <inttypes.h>
 #include <stddef.h>
