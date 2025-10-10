@@ -33,14 +33,14 @@
 // the functions to be emitted and included in the library. When users of libc++
 // compile their code, the __gnu_inline__ attribute will suppress generation of
 // these functions while making their definitions available for inlining.
-#  ifdef _LIBCPP_EMIT_CODE_FOR_EXCEPTION_PTR
-#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_EXPORTED_FROM_ABI
-#  else
-#    if !__has_cpp_attribute(gnu::gnu_inline)
-#      error "GNU inline attribute is not supported"
-#    endif
-#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[gnu::gnu_inline]] inline
+#ifdef _LIBCPP_EMIT_CODE_FOR_EXCEPTION_PTR
+#  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_EXPORTED_FROM_ABI
+#else
+#  if !__has_cpp_attribute(gnu::gnu_inline)
+#    error "GNU inline attribute is not supported"
 #  endif
+#  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[gnu::gnu_inline]] inline
+#endif
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgnu-inline-cpp-without-extern")
@@ -119,8 +119,8 @@ public:
 
   friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) {
     void* __tmp = __x.__ptr_;
-    __x.__ptr_ = __y.__ptr_;
-    __y.__ptr_ = __tmp;
+    __x.__ptr_  = __y.__ptr_;
+    __y.__ptr_  = __tmp;
   }
 
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
@@ -136,7 +136,8 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr exception_ptr::__from_native_
 }
 
 // Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) noexcept : __ptr_(__other.__ptr_) {
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) noexcept
+    : __ptr_(__other.__ptr_) {
   __increment_refcount(__ptr_);
 }
 
@@ -156,7 +157,7 @@ _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(con
 
 _LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) noexcept {
   __decrement_refcount(__ptr_);
-  __ptr_ = __other.__ptr_;
+  __ptr_         = __other.__ptr_;
   __other.__ptr_ = nullptr;
   return *this;
 }
@@ -274,17 +275,17 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-#  if defined(_LIBCPP_CXX_ABI_NONE)
-#    include <__exception/exception_ptr_unimplemented.ipp>
-#  elif defined(_LIBCPP_CXX_ABI_LIBCXXABI) || defined(_LIBCPP_CXX_ABI_LIBCXXRT)
-#    include <__exception/exception_ptr_cxxabi.ipp>
-#  elif defined(_LIBCPP_CXX_ABI_LIBSTDCXX) || defined(_LIBCPP_CXX_ABI_LIBSUPCXX)
-#    include <__exception/exception_ptr_glibcxx.ipp>
-#  elif defined(_LIBCPP_CXX_ABI_VCRUNTIME)
-#    include <__exception/exception_ptr_msvc.ipp>
-#  else
-#    error "Unsupported C++ ABI library"
-#  endif
+#if defined(_LIBCPP_CXX_ABI_NONE)
+#  include <__exception/exception_ptr_unimplemented.ipp>
+#elif defined(_LIBCPP_CXX_ABI_LIBCXXABI) || defined(_LIBCPP_CXX_ABI_LIBCXXRT)
+#  include <__exception/exception_ptr_cxxabi.ipp>
+#elif defined(_LIBCPP_CXX_ABI_LIBSTDCXX) || defined(_LIBCPP_CXX_ABI_LIBSUPCXX)
+#  include <__exception/exception_ptr_glibcxx.ipp>
+#elif defined(_LIBCPP_CXX_ABI_VCRUNTIME)
+#  include <__exception/exception_ptr_msvc.ipp>
+#else
+#  error "Unsupported C++ ABI library"
+#endif
 
 _LIBCPP_DIAGNOSTIC_POP
 

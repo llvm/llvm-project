@@ -43,4 +43,4 @@ void nested_exception::rethrow_nested() const {
   rethrow_exception(__ptr_);
 }
 
-}
+} // namespace std
