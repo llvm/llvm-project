@@ -132,8 +132,8 @@ int main(void) {
   // Whatever
   P(bswapg, ((char)N));
   P(bswapg, ((short)N));
-	P(bswapg, ((int)N));
-	P(bswapg, ((unsigned long)N));
+  P(bswapg, ((int)N));
+  P(bswapg, ((unsigned long)N));
   P(bswap16, (N));
   P(bswap32, (N));
   P(bswap64, (N));
