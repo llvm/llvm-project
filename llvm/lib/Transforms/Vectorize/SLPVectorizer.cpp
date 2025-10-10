@@ -6913,8 +6913,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff, Value *Ptr0,
     Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const unsigned Sz = PointerOps.size();
-  SmallVector<int64_t> SortedOffsetsFromBase;
-  SortedOffsetsFromBase.resize(Sz);
+  SmallVector<int64_t> SortedOffsetsFromBase(Sz);
+  // Go through `PointerOps` in sorted order and record offsets from `Ptr0`.
   for (unsigned I : seq<unsigned>(Sz)) {
     Value *Ptr =
         SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
@@ -6923,10 +6923,24 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   }
   assert(SortedOffsetsFromBase.size() > 1 &&
          "Trying to generate strided load for less than 2 loads");
-  //
-  // Find where the first group ends.
+  // The code below checks that `SortedOffsetsFromBase` looks as follows:
+  // ```
+  // [
+  //   (e_{0, 0}, e_{0, 1}, ..., e_{0, GroupSize - 1}), // first group
+  //   (e_{1, 0}, e_{1, 1}, ..., e_{1, GroupSize - 1}), // secon group
+  //   ...
+  //   (e_{NumGroups - 1, 0}, e_{NumGroups - 1, 1}, ..., e_{NumGroups - 1,
+  //   GroupSize - 1}), // last group
+  // ]
+  // ```
+  // The distance between consecutive elements within each group should all be
+  // the same `StrideWithinGroup`. The distance between the first elements of
+  // consecutive groups should all be the same `StrideBetweenGroups`.
+
   int64_t StrideWithinGroup =
       SortedOffsetsFromBase[1] - SortedOffsetsFromBase[0];
+  // Determine size of the first group. Later we will check that all other
+  // groups have the same size.
   unsigned GroupSize = 1;
   for (; GroupSize != SortedOffsetsFromBase.size(); ++GroupSize) {
     if (SortedOffsetsFromBase[GroupSize] -
@@ -6939,6 +6953,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   int64_t StrideIntVal = StrideWithinGroup;
   FixedVectorType *StridedLoadTy = getWidenedType(ScalarTy, VecSz);
 
+  // Quick detour: at this point we can say what the type of strided load would
+  // be if all the checks pass. Check if this type is legal for the target.
   if (Sz != GroupSize) {
     if (Sz % GroupSize != 0)
       return false;
@@ -6955,24 +6971,21 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
         !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
       return false;
 
-    unsigned PrevGroupStartIdx = 0;
+    // Continue with checking the "shape" of `SortedOffsetsFromBase`.
+    // Check that the strides between groups are all the same.
     unsigned CurrentGroupStartIdx = GroupSize;
     int64_t StrideBetweenGroups =
         SortedOffsetsFromBase[GroupSize] - SortedOffsetsFromBase[0];
     StrideIntVal = StrideBetweenGroups;
-    while (CurrentGroupStartIdx != Sz) {
+    for (; CurrentGroupStartIdx < Sz; CurrentGroupStartIdx += GroupSize) {
       if (SortedOffsetsFromBase[CurrentGroupStartIdx] -
-              SortedOffsetsFromBase[PrevGroupStartIdx] !=
+              SortedOffsetsFromBase[CurrentGroupStartIdx - GroupSize] !=
           StrideBetweenGroups)
-        break;
-      PrevGroupStartIdx = CurrentGroupStartIdx;
-      CurrentGroupStartIdx += GroupSize;
+        return false;
     }
-    if (CurrentGroupStartIdx != Sz)
-      return false;
 
-    auto CheckGroup = [&](unsigned StartIdx, unsigned GroupSize0,
-                          int64_t StrideWithinGroup) -> bool {
+    auto CheckGroup = [&](const unsigned StartIdx, const unsigned GroupSize0,
+                          const int64_t StrideWithinGroup) -> bool {
       unsigned GroupEndIdx = StartIdx + 1;
       for (; GroupEndIdx != Sz; ++GroupEndIdx) {
         if (SortedOffsetsFromBase[GroupEndIdx] -
