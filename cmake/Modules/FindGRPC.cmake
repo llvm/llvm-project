@@ -13,7 +13,6 @@ find_package(Threads REQUIRED)
 # LLVM's BUILD_SHARED_LIBS has no effect).
 # Package managers like Homebrew will also install Config.cmake and user can
 # specify GRPC_INSTALL_PATH or CMAKE_PREFIX_PATH to locate installed package.
-message(STATUS "GRPC_INSTALL_PATH: " ${GRPC_INSTALL_PATH})
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG HINTS ${GRPC_INSTALL_PATH})
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
