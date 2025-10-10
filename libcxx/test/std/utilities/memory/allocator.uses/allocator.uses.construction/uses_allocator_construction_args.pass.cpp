@@ -18,6 +18,7 @@
 #include <memory>
 #include <ranges>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "common.h"
