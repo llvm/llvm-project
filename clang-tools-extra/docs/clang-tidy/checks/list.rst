@@ -33,8 +33,8 @@ Clang-Tidy Checks
    readability/*
    zircon/*
 
-.. csv-table::
-   :header: "Name", "Offers fixes"
+.. role:: strike
+   :class: strike
 
 .. csv-table::
    :header: "Name", "Offers fixes", "Added in", "Removed in"
@@ -176,6 +176,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,, "7.1.0",
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,, "7.1.0",
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes", "7.1.0",
+   :strike:cert-dcl21-cpp,, "7.1.0", "19.1.0"
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,, "7.1.0",
    :doc:`cert-err33-c <cert/err33-c>`,, "14.0.0",
    :doc:`cert-err60-cpp <cert/err60-cpp>`,, "7.1.0",
@@ -185,7 +186,19 @@ Clang-Tidy Checks
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`,, "7.1.0",
    :doc:`cert-oop57-cpp <cert/oop57-cpp>`,, "11.0.0",
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,, "10.0.0",
-   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType,, "10.0.0",
+   :strike:clang-analyzer-apiModeling.StdCLibraryFunctions,, "8.0.1", "17.0.1"
+   :strike:clang-analyzer-core.CallAndMessageModeling,, "11.0.0", "22.0.0"
+   :strike:clang-analyzer-core.DereferenceModeling,, "20.1.0", "22.0.0"
+   :strike:clang-analyzer-core.StackAddrEscapeBase,, "9.0.1", "22.0.0"
+   :strike:clang-analyzer-cplusplus.SmartPtr,, "9.0.1", "11.0.0"
+   :strike:clang-analyzer-cplusplus.VirtualCallModeling,, "10.0.0", "21.1.0"
+   :strike:clang-analyzer-llvm.Conventions,, "7.1.0", "8.0.1"
+   :strike:clang-analyzer-nullability.NullabilityBase,, "9.0.1", "21.1.0"
+   :strike:clang-analyzer-osx.NSOrCFErrorDerefChecker,, "9.0.1", "22.0.0"
+   :strike:clang-analyzer-valist.CopyToSelf,, "7.1.0", "22.0.0"
+   :strike:clang-analyzer-valist.Uninitialized,, "7.1.0", "22.0.0"
+   :strike:clang-analyzer-valist.Unterminated,, "7.1.0", "22.0.0"
+   :strike:clang-analyzer-valist.ValistBase,, "9.0.1", "22.0.0"
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,, "12.0.0",
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,, "13.0.0",
    :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,, "17.0.1",
@@ -221,10 +234,12 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-virtual-class-destructor <cppcoreguidelines/virtual-class-destructor>`, "Yes", "14.0.0",
    :doc:`darwin-avoid-spinlock <darwin/avoid-spinlock>`,, "10.0.0",
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes", "10.0.0",
+   :strike:fuchsia-default-arguments,, "7.1.0", "9.0.1"
    :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,, "9.0.1",
    :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes", "9.0.1",
    :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,, "7.1.0",
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,, "7.1.0",
+   :strike:fuchsia-restrict-system-includes,, "7.1.0", "11.0.0"
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,, "7.1.0",
    :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,, "22.0.0",
    :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,, "7.1.0",
@@ -245,6 +260,7 @@ Clang-Tidy Checks
    :doc:`google-runtime-float <google/runtime-float>`,, "22.0.0",
    :doc:`google-runtime-int <google/runtime-int>`,, "7.1.0",
    :doc:`google-runtime-operator <google/runtime-operator>`,, "7.1.0",
+   :strike:google-runtime-references,, "7.1.0", "12.0.0"
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes", "10.0.0",
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,, "7.1.0",
    :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,, "18.1.0",
@@ -338,6 +354,7 @@ Clang-Tidy Checks
    :doc:`mpi-type-mismatch <mpi/type-mismatch>`, "Yes", "7.1.0",
    :doc:`objc-assert-equals <objc/assert-equals>`, "Yes", "14.0.0",
    :doc:`objc-avoid-nserror-init <objc/avoid-nserror-init>`,, "7.1.0",
+   :strike:objc-avoid-spinlock,, "7.1.0", "10.0.0"
    :doc:`objc-dealloc-in-category <objc/dealloc-in-category>`,, "11.0.0",
    :doc:`objc-forbidden-subclassing <objc/forbidden-subclassing>`,, "7.1.0",
    :doc:`objc-missing-hash <objc/missing-hash>`,, "10.0.0",
@@ -383,6 +400,7 @@ Clang-Tidy Checks
    :doc:`readability-container-size-empty <readability/container-size-empty>`, "Yes", "7.1.0",
    :doc:`readability-convert-member-functions-to-static <readability/convert-member-functions-to-static>`, "Yes", "9.0.1",
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes", "7.1.0",
+   :strike:readability-deleted-default,, "7.1.0", "13.0.0"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes", "14.0.0",
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes", "7.1.0",
    :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes", "19.1.0",
