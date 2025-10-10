@@ -4433,6 +4433,14 @@ LogicalResult WorkdistributeOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// GroupprivateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupprivateOp::verify() {
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 

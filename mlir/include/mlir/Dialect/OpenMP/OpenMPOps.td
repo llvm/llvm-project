@@ -2246,6 +2246,7 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
 
   let arguments = (ins OpenMP_PointerLikeType:$sym_addr);
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
+  let hasVerifier = 1;
   let assemblyFormat = [{
     $sym_addr `:` type($sym_addr) `->` type($gp_addr) attr-dict
   }];
