@@ -1923,20 +1923,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ParamTLS+ArgOffset.
   Value *getShadowPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.ParamTLS, MS.IntptrTy);
-    if (ArgOffset)
-      Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, IRB.getPtrTy(0), "_msarg");
+    return IRB.CreatePtrAdd(MS.ParamTLS,
+                            ConstantInt::get(MS.IntptrTy, ArgOffset), "_msarg");
   }
 
   /// Compute the origin address for a given function argument.
   Value *getOriginPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
     if (!MS.TrackOrigins)
       return nullptr;
-    Value *Base = IRB.CreatePointerCast(MS.ParamOriginTLS, MS.IntptrTy);
-    if (ArgOffset)
-      Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, IRB.getPtrTy(0), "_msarg_o");
+    return IRB.CreatePtrAdd(MS.ParamOriginTLS,
+                            ConstantInt::get(MS.IntptrTy, ArgOffset),
+                            "_msarg_o");
   }
 
   /// Compute the shadow address for a retval.
@@ -5810,10 +5807,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpdpbusds_512:
     case Intrinsic::x86_avx2_vpdpbssd_128:
     case Intrinsic::x86_avx2_vpdpbssd_256:
+    case Intrinsic::x86_avx10_vpdpbssd_512:
     case Intrinsic::x86_avx2_vpdpbssds_128:
     case Intrinsic::x86_avx2_vpdpbssds_256:
-    case Intrinsic::x86_avx10_vpdpbssd_512:
     case Intrinsic::x86_avx10_vpdpbssds_512:
+    case Intrinsic::x86_avx2_vpdpbsud_128:
+    case Intrinsic::x86_avx2_vpdpbsud_256:
+    case Intrinsic::x86_avx10_vpdpbsud_512:
+    case Intrinsic::x86_avx2_vpdpbsuds_128:
+    case Intrinsic::x86_avx2_vpdpbsuds_256:
+    case Intrinsic::x86_avx10_vpdpbsuds_512:
+    case Intrinsic::x86_avx2_vpdpbuud_128:
+    case Intrinsic::x86_avx2_vpdpbuud_256:
+    case Intrinsic::x86_avx10_vpdpbuud_512:
+    case Intrinsic::x86_avx2_vpdpbuuds_128:
+    case Intrinsic::x86_avx2_vpdpbuuds_256:
+    case Intrinsic::x86_avx10_vpdpbuuds_512:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
       break;
 
@@ -6276,6 +6285,62 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_128:
       handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
+      break;
+
+    //  <32 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.512
+    //                  (<32 x half>, i32, <32 x half>, i32, i32)
+    //  <16 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.256
+    //                  (<16 x half>, i32, <16 x half>, i32, i16)
+    //  <8 x half> @llvm.x86.avx512fp16.mask.rndscale.ph.128
+    //                 (<8 x half>, i32, <8 x half>, i32, i8)
+    //
+    //  <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512
+    //                  (<16 x float>, i32, <16 x float>, i16, i32)
+    //  <8 x float> @llvm.x86.avx512.mask.rndscale.ps.256
+    //                  (<8 x float>, i32, <8 x float>, i8)
+    //  <4 x float> @llvm.x86.avx512.mask.rndscale.ps.128
+    //                  (<4 x float>, i32, <4 x float>, i8)
+    //
+    //  <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512
+    //                  (<8 x double>, i32, <8 x double>, i8,  i32)
+    //                   A             Imm  WriteThru     Mask Rounding
+    //  <4 x double> @llvm.x86.avx512.mask.rndscale.pd.256
+    //                  (<4 x double>, i32, <4 x double>, i8)
+    //  <2 x double> @llvm.x86.avx512.mask.rndscale.pd.128
+    //                  (<2 x double>, i32, <2 x double>, i8)
+    //                   A             Imm  WriteThru     Mask
+    //
+    //  <32 x bfloat> @llvm.x86.avx10.mask.rndscale.bf16.512
+    //                    (<32 x bfloat>, i32, <32 x bfloat>, i32)
+    //  <16 x bfloat> @llvm.x86.avx10.mask.rndscale.bf16.256
+    //                    (<16 x bfloat>, i32, <16 x bfloat>, i16)
+    //  <8 x bfloat> @llvm.x86.avx10.mask.rndscale.bf16.128
+    //                    (<8 x bfloat>, i32, <8 x bfloat>, i8)
+    //
+    //  Not supported: three vectors
+    //  - <8 x half> @llvm.x86.avx512fp16.mask.rndscale.sh
+    //                   (<8 x half>, <8 x half>,<8 x half>, i8, i32, i32)
+    //  - <4 x float> @llvm.x86.avx512.mask.rndscale.ss
+    //                   (<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
+    //  - <2 x double> @llvm.x86.avx512.mask.rndscale.sd
+    //                     (<2 x double>, <2 x double>, <2 x double>, i8,   i32,
+    //                      i32)
+    //                      A             B             WriteThru     Mask  Imm
+    //                      Rounding
+    case Intrinsic::x86_avx512fp16_mask_rndscale_ph_512:
+    case Intrinsic::x86_avx512fp16_mask_rndscale_ph_256:
+    case Intrinsic::x86_avx512fp16_mask_rndscale_ph_128:
+    case Intrinsic::x86_avx512_mask_rndscale_ps_512:
+    case Intrinsic::x86_avx512_mask_rndscale_ps_256:
+    case Intrinsic::x86_avx512_mask_rndscale_ps_128:
+    case Intrinsic::x86_avx512_mask_rndscale_pd_512:
+    case Intrinsic::x86_avx512_mask_rndscale_pd_256:
+    case Intrinsic::x86_avx512_mask_rndscale_pd_128:
+    case Intrinsic::x86_avx10_mask_rndscale_bf16_512:
+    case Intrinsic::x86_avx10_mask_rndscale_bf16_256:
+    case Intrinsic::x86_avx10_mask_rndscale_bf16_128:
+      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/2,
+                                        /*MaskIndex=*/3);
       break;
 
     // AVX512 FP16 Arithmetic
@@ -7151,9 +7216,8 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, MS.PtrTy, "_msarg_va_s");
+    return IRB.CreatePtrAdd(
+        MS.VAArgTLS, ConstantInt::get(MS.IntptrTy, ArgOffset), "_msarg_va_s");
   }
 
   /// Compute the shadow address for a given va_arg.
@@ -7167,12 +7231,12 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the origin address for a given va_arg.
   Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.VAArgOriginTLS, MS.IntptrTy);
     // getOriginPtrForVAArgument() is always called after
     // getShadowPtrForVAArgument(), so __msan_va_arg_origin_tls can never
     // overflow.
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, MS.PtrTy, "_msarg_va_o");
+    return IRB.CreatePtrAdd(MS.VAArgOriginTLS,
+                            ConstantInt::get(MS.IntptrTy, ArgOffset),
+                            "_msarg_va_o");
   }
 
   void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase,
@@ -7399,10 +7463,8 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
 
-      Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
-          IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                        ConstantInt::get(MS.IntptrTy, 16)),
-          MS.PtrTy);
+      Value *RegSaveAreaPtrPtr =
+          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 16));
       Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
       const Align Alignment = Align(16);
@@ -7414,10 +7476,8 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
       if (MS.TrackOrigins)
         IRB.CreateMemCpy(RegSaveAreaOriginPtr, Alignment, VAArgTLSOriginCopy,
                          Alignment, AMD64FpEndOffset);
-      Value *OverflowArgAreaPtrPtr = IRB.CreateIntToPtr(
-          IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                        ConstantInt::get(MS.IntptrTy, 8)),
-          MS.PtrTy);
+      Value *OverflowArgAreaPtrPtr =
+          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 8));
       Value *OverflowArgAreaPtr =
           IRB.CreateLoad(MS.PtrTy, OverflowArgAreaPtrPtr);
       Value *OverflowArgAreaShadowPtr, *OverflowArgAreaOriginPtr;
@@ -7547,19 +7607,15 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
 
   // Retrieve a va_list field of 'void*' size.
   Value *getVAField64(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtrPtr = IRB.CreateIntToPtr(
-        IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                      ConstantInt::get(MS.IntptrTy, offset)),
-        MS.PtrTy);
+    Value *SaveAreaPtrPtr =
+        IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, offset));
     return IRB.CreateLoad(Type::getInt64Ty(*MS.C), SaveAreaPtrPtr);
   }
 
   // Retrieve a va_list field of 'int' size.
   Value *getVAField32(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtr = IRB.CreateIntToPtr(
-        IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                      ConstantInt::get(MS.IntptrTy, offset)),
-        MS.PtrTy);
+    Value *SaveAreaPtr =
+        IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, offset));
     Value *SaveArea32 = IRB.CreateLoad(IRB.getInt32Ty(), SaveAreaPtr);
     return IRB.CreateSExt(SaveArea32, MS.IntptrTy);
   }

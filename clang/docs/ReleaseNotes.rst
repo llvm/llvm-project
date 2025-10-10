@@ -123,6 +123,11 @@ AST Dumping Potentially Breaking Changes
 
     ``__atomic_test_and_set(p, 0)``
 
+- Pretty-printing of templates with inherited (i.e. specified in a previous
+  redeclaration) default arguments has been fixed.
+
+- Default arguments of template template parameters are pretty-printed now.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -142,8 +147,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
-- A new family of builtins ``__builtin_*_synthesises_from_spaceship`` has been added. These can be queried to know
-  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesised from a
+- A new family of builtins ``__builtin_*_synthesizes_from_spaceship`` has been added. These can be queried to know
+  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesized from a
   ``<=>``. This makes it possible to optimize certain facilities by using the ``<=>`` operation directly instead of
   doing multiple comparisons.
 
@@ -159,6 +164,10 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now normalizes constraints before checking whether they are satisfied, as mandated by the standard.
+  As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
+  used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -246,10 +255,18 @@ Non-comprehensive list of changes in this release
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
 
+- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
+
+- Introduce support for :doc:`allocation tokens <AllocToken>` to enable
+  allocator-level heap organization strategies. A feature to instrument all
+  allocation functions with a token ID can be enabled via the
+  ``-fsanitize=alloc-token`` flag.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
 
 
 Lanai Support
@@ -299,7 +316,8 @@ Improvements to Clang's diagnostics
   "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
-
+- Clang now produces better diagnostics for template template parameter matching
+  involving 'auto' template parameters.
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
@@ -339,6 +357,11 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- Closed a loophole in the diagnosis of function pointer conversions changing
+  extended function type information in C mode (#GH41465). Function conversions
+  that were previously incorrectly accepted in case of other irrelevant
+  conditions are now consistently diagnosed, identical to C++ mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -360,6 +383,7 @@ Bug Fixes in This Version
   first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
+- Fix crash on CTAD for alias template. (#GH131342), (#GH131408)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
@@ -430,6 +454,13 @@ Bug Fixes to C++ Support
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
+- Fix the result of `__builtin_is_implicit_lifetime` for types with a user-provided constructor. (#GH160610)
+- Correctly deduce return types in ``decltype`` expressions. (#GH160497) (#GH56652) (#GH116319) (#GH161196)
+- Fixed a crash in the pre-C++23 warning for attributes before a lambda declarator (#GH161070).
+- Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
+- Fix for clang incorrectly rejecting the default construction of a union with
+  nontrivial member when another member has an initializer. (#GH81774)
+- Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -438,9 +469,11 @@ Bug Fixes to AST Handling
   legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
 - Fix unrecognized html tag causing undesirable comment lexing (#GH152944)
 - Fix comment lexing of special command names (#GH152943)
+- Use `extern` as a hint to continue parsing when recovering from a malformed declaration.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed missing diagnostics of ``diagnose_if`` on templates involved in initialization. (#GH160776)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -566,6 +599,7 @@ Crash and bug fixes
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
+- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
 
 Improvements
 ^^^^^^^^^^^^
@@ -577,10 +611,13 @@ Moved checkers
 
 Sanitizers
 ----------
+- Improved documentation for legacy ``no_sanitize`` attributes.
 
 Python Binding Changes
 ----------------------
-- Exposed `clang_getCursorLanguage` via `Cursor.language`.
+- Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
+- Add all missing ``CursorKind``s, ``TypeKind``s and
+  ``ExceptionSpecificationKind``s from ``Index.h``
 
 OpenMP Support
 --------------
@@ -594,6 +631,7 @@ OpenMP Support
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
 - Added parsing and semantic analysis support for ``groupprivate`` directive.
+- Added support for 'omp fuse' directive.
 
 Improvements
 ^^^^^^^^^^^^

@@ -1847,6 +1847,9 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
+  if (val.getDefiningOp() &&
+      val.getDefiningOp()->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return false;
   // Check if the global symbol is in the device module.
   if (auto addr = mlir::dyn_cast_or_null<fir::AddrOfOp>(val.getDefiningOp()))
     if (auto gpuMod =
@@ -3345,7 +3348,7 @@ struct DoConcurrentSpecifierOpConversion : public fir::FIROpConversion<OpTy> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 #ifdef EXPENSIVE_CHECKS
     auto uses = mlir::SymbolTable::getSymbolUses(
-        specifier, specifier->getParentOfType<mlir::ModuleOp>());
+        specifier, specifier->template getParentOfType<mlir::ModuleOp>());
 
     // `fir.local|fir.declare_reduction` ops are not supposed to have any uses
     // at this point (i.e. during lowering to LLVM). In case of serialization,

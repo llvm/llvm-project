@@ -64,14 +64,6 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
-static cl::opt<bool> UseSelectionDAGPTRADD(
-    "amdgpu-use-sdag-ptradd", cl::Hidden,
-    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
-             "SelectionDAG ISel"),
-    cl::init(false));
-
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -5970,9 +5962,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    unsigned SelOpc =
+        Subtarget->isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(-1).addImm(0);
 
     MI.eraseFromParent();
     return BB;
@@ -6081,9 +6073,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src0 = MI.getOperand(2);
     MachineOperand &Src1 = MI.getOperand(3);
     MachineOperand &Src2 = MI.getOperand(4);
-    unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO)
-                       ? AMDGPU::S_ADDC_U32
-                       : AMDGPU::S_SUBB_U32;
     if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
       Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
@@ -6132,11 +6121,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           .addImm(0);
     }
 
-    // clang-format off
-    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg())
-        .add(Src0)
-        .add(Src1);
-    // clang-format on
+    unsigned Opc = MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO
+                       ? AMDGPU::S_ADDC_U32
+                       : AMDGPU::S_SUBB_U32;
+
+    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg()).add(Src0).add(Src1);
 
     unsigned SelOpc =
         ST.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
@@ -11466,7 +11455,7 @@ static bool isNoUnsignedWrap(SDValue Addr) {
 
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
-  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+  return PtrVT == MVT::i64;
 }
 
 bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,
@@ -16579,6 +16568,53 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
   }
 
+  // Eliminate setcc by using carryout from add/sub instruction
+
+  // LHS = ADD i64 RHS, Z          LHSlo = UADDO       i32 RHSlo, Zlo
+  // setcc LHS ult RHS     ->      LHSHi = UADDO_CARRY i32 RHShi, Zhi
+  // similarly for subtraction
+
+  // LHS = ADD i64 Y, 1            LHSlo = UADDO       i32 Ylo, 1
+  // setcc LHS eq 0        ->      LHSHi = UADDO_CARRY i32 Yhi, 0
+
+  if (VT == MVT::i64 && ((CC == ISD::SETULT &&
+                          sd_match(LHS, m_Add(m_Specific(RHS), m_Value()))) ||
+                         (CC == ISD::SETUGT &&
+                          sd_match(LHS, m_Sub(m_Specific(RHS), m_Value()))) ||
+                         (CC == ISD::SETEQ && CRHS && CRHS->isZero() &&
+                          sd_match(LHS, m_Add(m_Value(), m_One()))))) {
+    bool IsAdd = LHS.getOpcode() == ISD::ADD;
+
+    SDValue Op0 = LHS.getOperand(0);
+    SDValue Op1 = LHS.getOperand(1);
+
+    SDValue Op0Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Op0);
+    SDValue Op1Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Op1);
+
+    SDValue Op0Hi = getHiHalf64(Op0, DAG);
+    SDValue Op1Hi = getHiHalf64(Op1, DAG);
+
+    SDValue NodeLo =
+        DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, SL,
+                    DAG.getVTList(MVT::i32, MVT::i1), {Op0Lo, Op1Lo});
+
+    SDValue CarryInHi = NodeLo.getValue(1);
+    SDValue NodeHi = DAG.getNode(IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY,
+                                 SL, DAG.getVTList(MVT::i32, MVT::i1),
+                                 {Op0Hi, Op1Hi, CarryInHi});
+
+    SDValue ResultLo = NodeLo.getValue(0);
+    SDValue ResultHi = NodeHi.getValue(0);
+
+    SDValue JoinedResult =
+        DAG.getBuildVector(MVT::v2i32, SL, {ResultLo, ResultHi});
+
+    SDValue Result = DAG.getNode(ISD::BITCAST, SL, VT, JoinedResult);
+    SDValue Overflow = NodeHi.getValue(1);
+    DCI.CombineTo(LHS.getNode(), Result);
+    return Overflow;
+  }
+
   if (VT != MVT::f32 && VT != MVT::f64 &&
       (!Subtarget->has16BitInsts() || VT != MVT::f16))
     return SDValue();
@@ -17354,74 +17390,24 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
 
-    // Prefer VGPRs over AGPRs in mAI instructions where possible.
-    // This saves a chain-copy of registers and better balance register
-    // use between vgpr and agpr as agpr tuples tend to be big.
-    if (!MI.getDesc().operands().empty()) {
-      unsigned Opc = MI.getOpcode();
-      bool HasAGPRs = Info->mayNeedAGPRs();
-      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-      int16_t Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
-      for (auto I :
-           {AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
-            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1), Src2Idx}) {
-        if (I == -1)
-          break;
-        if ((I == Src2Idx) && (HasAGPRs))
-          break;
-        MachineOperand &Op = MI.getOperand(I);
-        if (!Op.isReg() || !Op.getReg().isVirtual())
-          continue;
-        auto *RC = TRI->getRegClassForReg(MRI, Op.getReg());
-        if (!TRI->hasAGPRs(RC))
-          continue;
-        auto *Src = MRI.getUniqueVRegDef(Op.getReg());
-        if (!Src || !Src->isCopy() ||
-            !TRI->isSGPRReg(MRI, Src->getOperand(1).getReg()))
-          continue;
-        auto *NewRC = TRI->getEquivalentVGPRClass(RC);
-        // All uses of agpr64 and agpr32 can also accept vgpr except for
-        // v_accvgpr_read, but we do not produce agpr reads during selection,
-        // so no use checks are needed.
-        MRI.setRegClass(Op.getReg(), NewRC);
-      }
-
-      if (TII->isMAI(MI)) {
-        // The ordinary src0, src1, src2 were legalized above.
-        //
-        // We have to also legalize the appended v_mfma_ld_scale_b32 operands,
-        // as a separate instruction.
-        int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                                 AMDGPU::OpName::scale_src0);
-        if (Src0Idx != -1) {
-          int Src1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                                   AMDGPU::OpName::scale_src1);
-          if (TII->usesConstantBus(MRI, MI, Src0Idx) &&
-              TII->usesConstantBus(MRI, MI, Src1Idx))
-            TII->legalizeOpWithMove(MI, Src1Idx);
-        }
-      }
-
-      if (!HasAGPRs)
-        return;
-
-      // Resolve the rest of AV operands to AGPRs.
-      if (auto *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2)) {
-        if (Src2->isReg() && Src2->getReg().isVirtual()) {
-          auto *RC = TRI->getRegClassForReg(MRI, Src2->getReg());
-          if (TRI->isVectorSuperClass(RC)) {
-            auto *NewRC = TRI->getEquivalentAGPRClass(RC);
-            MRI.setRegClass(Src2->getReg(), NewRC);
-            if (Src2->isTied())
-              MRI.setRegClass(MI.getOperand(0).getReg(), NewRC);
-          }
-        }
+    if (TII->isMAI(MI)) {
+      // The ordinary src0, src1, src2 were legalized above.
+      //
+      // We have to also legalize the appended v_mfma_ld_scale_b32 operands,
+      // as a separate instruction.
+      int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                               AMDGPU::OpName::scale_src0);
+      if (Src0Idx != -1) {
+        int Src1Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                 AMDGPU::OpName::scale_src1);
+        if (TII->usesConstantBus(MRI, MI, Src0Idx) &&
+            TII->usesConstantBus(MRI, MI, Src1Idx))
+          TII->legalizeOpWithMove(MI, Src1Idx);
       }
     }
 
@@ -18866,31 +18852,6 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
   return Flags;
-}
-
-bool SITargetLowering::checkForPhysRegDependency(
-    SDNode *Def, SDNode *User, unsigned Op, const TargetRegisterInfo *TRI,
-    const TargetInstrInfo *TII, MCRegister &PhysReg, int &Cost) const {
-  if (User->getOpcode() != ISD::CopyToReg)
-    return false;
-  if (!Def->isMachineOpcode())
-    return false;
-  MachineSDNode *MDef = dyn_cast<MachineSDNode>(Def);
-  if (!MDef)
-    return false;
-
-  unsigned ResNo = User->getOperand(Op).getResNo();
-  if (User->getOperand(Op)->getValueType(ResNo) != MVT::i1)
-    return false;
-  const MCInstrDesc &II = TII->get(MDef->getMachineOpcode());
-  if (II.isCompare() && II.hasImplicitDefOfPhysReg(AMDGPU::SCC)) {
-    PhysReg = AMDGPU::SCC;
-    const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(PhysReg, Def->getSimpleValueType(ResNo));
-    Cost = RC->getCopyCost();
-    return true;
-  }
-  return false;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

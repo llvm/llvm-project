@@ -505,6 +505,11 @@ public:
   LLVM_ABI void removeLiveIn(MCRegister Reg,
                              LaneBitmask LaneMask = LaneBitmask::getAll());
 
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
+
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
@@ -1035,7 +1040,9 @@ public:
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
   /// no changes occurred in the meantime.
-  LLVM_ABI bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
+  LLVM_ABI bool
+  canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
