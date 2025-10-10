@@ -11,36 +11,36 @@
 // =============
 void a(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void a(int  /*i*/) {;}{{$}}
+// CHECK-FIXES: void a(int  /*i*/) {;}
 
 void b(int i = 1) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void b(int  /*i*/ = 1) {;}{{$}}
+// CHECK-FIXES: void b(int  /*i*/ = 1) {;}
 
 void c(int *i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void c(int * /*i*/) {;}{{$}}
+// CHECK-FIXES: void c(int * /*i*/) {;}
 
 void d(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void d(int  /*i*/[]) {;}{{$}}
+// CHECK-FIXES: void d(int  /*i*/[]) {;}
 
 void e(int i[1]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void e(int  /*i*/[1]) {;}{{$}}
+// CHECK-FIXES: void e(int  /*i*/[1]) {;}
 
 void f(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: parameter 'fn' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {;}{{$}}
+// CHECK-FIXES: void f(void (* /*fn*/)()) {;}
 
 int *k([[clang::lifetimebound]] int *i) { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) { return nullptr; }{{$}}
+// CHECK-FIXES: int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) { return nullptr; }
 
 #define ATTR_BEFORE(x) [[clang::lifetimebound]] x
 int* m(ATTR_BEFORE(const int *i)) { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}int* m(ATTR_BEFORE(const int * /*i*/)) { return nullptr; }{{$}}
+// CHECK-FIXES: int* m(ATTR_BEFORE(const int * /*i*/)) { return nullptr; }
 #undef ATTR_BEFORE
 
 // Unchanged cases
@@ -64,44 +64,44 @@ static bool static_var = useLambda([] (int a) { return a; });
 // Remove parameters of local functions
 // ====================================
 static void staticFunctionA(int i);
-// CHECK-FIXES: {{^}}static void staticFunctionA();
+// CHECK-FIXES: static void staticFunctionA();
 static void staticFunctionA(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: {{^}}static void staticFunctionA()
+// CHECK-FIXES: static void staticFunctionA()
 
 static void staticFunctionB(int i, int j) { (void)i; }
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning
-// CHECK-FIXES: {{^}}static void staticFunctionB(int i)
+// CHECK-FIXES: static void staticFunctionB(int i)
 
 static void staticFunctionC(int i, int j) { (void)j; }
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: {{^}}static void staticFunctionC(int j)
+// CHECK-FIXES: static void staticFunctionC(int j)
 
 static void staticFunctionD(int i, int j, int k) { (void)i; (void)k; }
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning
-// CHECK-FIXES: {{^}}static void staticFunctionD(int i, int k)
+// CHECK-FIXES: static void staticFunctionD(int i, int k)
 
 static void staticFunctionE(int i = 4) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: {{^}}static void staticFunctionE()
+// CHECK-FIXES: static void staticFunctionE()
 
 static void staticFunctionF(int i = 4);
-// CHECK-FIXES: {{^}}static void staticFunctionF();
+// CHECK-FIXES: static void staticFunctionF();
 static void staticFunctionF(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: {{^}}static void staticFunctionF()
+// CHECK-FIXES: static void staticFunctionF()
 
 static void staticFunctionG(int i[]);
-// CHECK-FIXES: {{^}}static void staticFunctionG();
+// CHECK-FIXES: static void staticFunctionG();
 static void staticFunctionG(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
-// CHECK-FIXES: {{^}}static void staticFunctionG()
+// CHECK-FIXES: static void staticFunctionG()
 
 static void staticFunctionH(void (*fn)());
-// CHECK-FIXES: {{^}}static void staticFunctionH();
+// CHECK-FIXES: static void staticFunctionH();
 static void staticFunctionH(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:36: warning
-// CHECK-FIXES: {{^}}static void staticFunctionH()
+// CHECK-FIXES: static void staticFunctionH()
 
 static void someCallSites() {
   staticFunctionA(1);
@@ -136,12 +136,12 @@ static void someCallSites() {
 // =======================================================
 static int variableWithLongName1(int LongName1, int LongName2) {
 // CHECK-MESSAGES: :[[@LINE-1]]:53: warning: parameter 'LongName2' is unused
-// CHECK-FIXES: {{^}}static int variableWithLongName1(int LongName1) {
+// CHECK-FIXES: static int variableWithLongName1(int LongName1) {
   return LongName1;
 }
 static int variableWithLongName2(int LongName1, int LongName2) {
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: parameter 'LongName1' is unused
-// CHECK-FIXES: {{^}}static int variableWithLongName2(int LongName2) {
+// CHECK-FIXES: static int variableWithLongName2(int LongName2) {
   return LongName2;
 }
 static void someLongNameCallSites() {
@@ -225,12 +225,12 @@ template <typename T> void someFunctionTemplate(T b, T e) { (void)b; (void)e; }
 
 template <typename T> void someFunctionTemplateOneUnusedParam(T b, T e) { (void)e; }
 // CHECK-MESSAGES: :[[@LINE-1]]:65: warning
-// CHECK-FIXES: {{^}}template <typename T> void someFunctionTemplateOneUnusedParam(T  /*b*/, T e) { (void)e; }
+// CHECK-FIXES: template <typename T> void someFunctionTemplateOneUnusedParam(T  /*b*/, T e) { (void)e; }
 
 template <typename T> void someFunctionTemplateAllUnusedParams(T b, T e) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:66: warning
 // CHECK-MESSAGES: :[[@LINE-2]]:71: warning
-// CHECK-FIXES: {{^}}template <typename T> void someFunctionTemplateAllUnusedParams(T  /*b*/, T  /*e*/) {;}
+// CHECK-FIXES: template <typename T> void someFunctionTemplateAllUnusedParams(T  /*b*/, T  /*e*/) {;}
 
 static void dontGetConfusedByParametersInFunctionTypes() { void (*F)(int i); }
 
@@ -244,7 +244,7 @@ namespace {
 struct a {
   void b(int c) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: parameter 'c' is unused
-// CHECK-FIXES: {{^}}  void b() {;}{{$}}
+// CHECK-FIXES: void b() {;}
 };
 template <class>
 class d {
@@ -262,7 +262,7 @@ void f2(int foo2) {
 }
 void f3(int foo3) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: parameter 'foo3' is unused
-// CHECK-FIXES: {{^}}void f3(int  /*foo3*/) {;}{{$}}
+// CHECK-FIXES: void f3(int  /*foo3*/) {;}
 
 class E {
   int i;
@@ -277,7 +277,7 @@ public:
   // Constructor initializer counts as a non-empty body.
   F(int j) : i() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'j' is unused
-// CHECK-FIXES: {{^}}  F(int  /*j*/) : i() {}{{$}}
+// CHECK-FIXES: F(int  /*j*/) : i() {}
 };
 
 class A {
@@ -289,7 +289,7 @@ class B : public A {
 public:
   B(int i) : A() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'i' is unused
-// CHECK-FIXES: {{^}}  B(int  /*i*/) : A() {}{{$}}
+// CHECK-FIXES: B(int  /*i*/) : A() {}
 };
 } // namespace strict_mode_off
 
@@ -298,7 +298,7 @@ using fn = void(int);
 void f(fn *);
 void test() {
   // CHECK-MESSAGES: :[[@LINE+2]]:12: warning: parameter 'I' is unused
-  // CHECK-FIXES: {{^}}  f([](int  /*I*/) {
+  // CHECK-FIXES: f([](int  /*I*/) {
   f([](int I) { return; });
 }
 } // namespace lambda

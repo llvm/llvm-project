@@ -26,22 +26,22 @@ struct StringRef {
 void f1(const std::string &s) {
   f1(s.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}f1(s);{{$}}
+  // CHECK-FIXES: f1(s);
   f1(s.data());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call to 'data' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}f1(s);{{$}}
+  // CHECK-FIXES: f1(s);
 }
 void f2(const llvm::StringRef r) {
   std::string s;
   f2(s.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call {{.*}}
-  // CHECK-FIXES: {{^  }}std::string s;{{$}}
-  // CHECK-FIXES-NEXT: {{^  }}f2(s);{{$}}
+  // CHECK-FIXES: std::string s;
+  // CHECK-FIXES-NEXT: f2(s);
 }
 void f3(const llvm::StringRef &r) {
   std::string s;
   f3(s.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant call {{.*}}
-  // CHECK-FIXES: {{^  }}std::string s;{{$}}
-  // CHECK-FIXES-NEXT: {{^  }}f3(s);{{$}}
+  // CHECK-FIXES: std::string s;
+  // CHECK-FIXES-NEXT: f3(s);
 }

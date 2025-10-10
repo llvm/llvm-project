@@ -46,20 +46,20 @@ void g(size_t s) {
   std::vector<unsigned char> b(s);
   f(&((b)[(z)]));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}f(b.data());{{$}}
+  // CHECK-FIXES: f(b.data());
 }
 
 void h() {
   std::string s;
   f(&((s).operator[]((z))));
   // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES-CLASSIC: {{^  }}f(s.data());{{$}}
+  // CHECK-FIXES-CLASSIC: f(s.data());
   // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
 
   std::wstring w;
   f(&((&(w))->operator[]((z))));
   // CHECK-MESSAGES-CLASSIC: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES-CLASSIC: {{^  }}f(w.data());{{$}}
+  // CHECK-FIXES-CLASSIC: f(w.data());
   // CHECK-MESSAGES-WITH-CONFIG-NOT: :[[@LINE-3]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
 }
 
@@ -69,7 +69,7 @@ void i(U s) {
   std::vector<T> b(s);
   f(&b[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}f(b.data());{{$}}
+  // CHECK-FIXES: f(b.data());
 }
 
 template void i<unsigned char, size_t>(size_t);
@@ -77,13 +77,13 @@ template void i<unsigned char, size_t>(size_t);
 void j(std::vector<unsigned char> * const v) {
   f(&(*v)[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}f(v->data());{{$}}
+  // CHECK-FIXES: f(v->data());
 }
 
 void k(const std::vector<unsigned char> &v) {
   f(&v[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}f(v.data());{{$}}
+  // CHECK-FIXES: f(v.data());
 }
 
 void l() {
@@ -96,7 +96,7 @@ template <typename T>
 void m(const std::vector<T> &v) {
   return &v[0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}return v.data();{{$}}
+  // CHECK-FIXES: return v.data();
 }
 
 template <typename T>
@@ -115,7 +115,7 @@ const T *n(const container_without_data<T> &c) {
 const int *o(const std::vector<std::vector<std::vector<int>>> &v, const size_t idx1, const size_t idx2) {
   return &v[idx1][idx2][0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}return v[idx1][idx2].data();{{$}}
+  // CHECK-FIXES: return v[idx1][idx2].data();
 }
 
 std::vector<int> &select(std::vector<int> &u, std::vector<int> &v) {
@@ -125,13 +125,13 @@ std::vector<int> &select(std::vector<int> &u, std::vector<int> &v) {
 int *p(std::vector<int> &v1, std::vector<int> &v2) {
   return &select(*&v1, v2)[0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}return select(*&v1, v2).data();{{$}}
+  // CHECK-FIXES: return select(*&v1, v2).data();
 }
 
 int *q(std::vector<int> ***v) {
   return &(***v)[0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}return (**v)->data();{{$}}
+  // CHECK-FIXES: return (**v)->data();
 }
 
 struct VectorHolder {
@@ -142,5 +142,5 @@ int *r() {
   VectorHolder holder;
   return &holder.v[0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
-  // CHECK-FIXES: {{^  }}return holder.v.data();{{$}}
+  // CHECK-FIXES: return holder.v.data();
 }

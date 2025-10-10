@@ -51,12 +51,12 @@ struct custom_container {
 template <typename T> void g() {
   T t;
   t.erase(std::remove(t.begin(), t.end(), 10));
-  // CHECK-FIXES: {{^  }}t.erase(std::remove(t.begin(), t.end(), 10));{{$}}
+  // CHECK-FIXES: t.erase(std::remove(t.begin(), t.end(), 10));
 
   std::vector<int> v;
   v.erase(remove(v.begin(), v.end(), 10));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
-  // CHECK-FIXES: {{^  }}v.erase(remove(v.begin(), v.end(), 10), v.end());{{$}}
+  // CHECK-FIXES: v.erase(remove(v.begin(), v.end(), 10), v.end());
 }
 
 #define ERASE(x, y) x.erase(remove(x.begin(), x.end(), y))
@@ -67,34 +67,34 @@ int main() {
 
   v.erase(remove(v.begin(), v.end(), 10));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one item even when multiple items should be removed [bugprone-inaccurate-erase]
-  // CHECK-FIXES: {{^  }}v.erase(remove(v.begin(), v.end(), 10), v.end());{{$}}
+  // CHECK-FIXES: v.erase(remove(v.begin(), v.end(), 10), v.end());
   v.erase(remove(v.begin(), v.end(), 20), v.end());
 
   auto *p = &v;
   p->erase(remove(p->begin(), p->end(), 11));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
-  // CHECK-FIXES: {{^  }}p->erase(remove(p->begin(), p->end(), 11), p->end());{{$}}
+  // CHECK-FIXES: p->erase(remove(p->begin(), p->end(), 11), p->end());
 
   std::vector_with_const_iterator<int> v2;
   v2.erase(remove(v2.begin(), v2.end(), 12));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
-  // CHECK-FIXES: {{^  }}v2.erase(remove(v2.begin(), v2.end(), 12), v2.end());{{$}}
+  // CHECK-FIXES: v2.erase(remove(v2.begin(), v2.end(), 12), v2.end());
 
   // Fix is not trivial.
   auto it = v.end();
   v.erase(remove(v.begin(), it, 10));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this call will remove at most one
-  // CHECK-FIXES: {{^  }}v.erase(remove(v.begin(), it, 10));{{$}}
+  // CHECK-FIXES: v.erase(remove(v.begin(), it, 10));
 
   g<std::vector<int>>();
   g<custom_container>();
 
   ERASE(v, 15);
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: this call will remove at most one
-  // CHECK-FIXES: {{^  }}ERASE(v, 15);{{$}}
+  // CHECK-FIXES: ERASE(v, 15);
 
   std::vector<std::unique_ptr<int>> vupi;
   auto iter = vupi.begin();
   vupi.erase(iter++);
-  // CHECK-FIXES: {{^  }}vupi.erase(iter++);{{$}}
+  // CHECK-FIXES: vupi.erase(iter++);
 }

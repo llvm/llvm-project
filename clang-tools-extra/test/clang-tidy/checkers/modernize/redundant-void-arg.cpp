@@ -19,7 +19,7 @@ int j = 1;
 
 int foo(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
-// CHECK-FIXES: {{^}}int foo() {{{$}}
+// CHECK-FIXES: int foo() {
     return 0;
 }
 
@@ -32,23 +32,23 @@ typedef void my_void;
 int (*returns_fn_void_int(void))(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: {{.*}} in function declaration
 // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: {{.*}} in function declaration
-// CHECK-FIXES: {{^}}int (*returns_fn_void_int())();{{$}}
+// CHECK-FIXES: int (*returns_fn_void_int())();
 
 typedef int (*returns_fn_void_int_t(void))(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: {{.*}} in typedef
 // CHECK-MESSAGES: :[[@LINE-2]]:44: warning: {{.*}} in typedef
-// CHECK-FIXES: {{^}}typedef int (*returns_fn_void_int_t())();{{$}}
+// CHECK-FIXES: typedef int (*returns_fn_void_int_t())();
 
 // Should work for type aliases as well as typedef.
 using returns_fn_void_int_t2 = int (*(void))(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: {{.*}} in type alias
 // CHECK-MESSAGES: :[[@LINE-2]]:46: warning: {{.*}} in type alias
-// CHECK-FIXES: {{^}}using returns_fn_void_int_t2 = int (*())();{{$}}
+// CHECK-FIXES: using returns_fn_void_int_t2 = int (*())();
 
 int (*returns_fn_void_int(void))(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: {{.*}} in function definition
 // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}int (*returns_fn_void_int())() {{{$}}
+// CHECK-FIXES: int (*returns_fn_void_int())() {
   return nullptr;
 }
 
@@ -58,25 +58,25 @@ void (*(*returns_fn_returns_fn_void_void(void))(void))(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: {{.*}} in function declaration
 // CHECK-MESSAGES: :[[@LINE-2]]:49: warning: {{.*}} in function declaration
 // CHECK-MESSAGES: :[[@LINE-3]]:56: warning: {{.*}} in function declaration
-// CHECK-FIXES: {{^}}void (*(*returns_fn_returns_fn_void_void())())();{{$}}
+// CHECK-FIXES: void (*(*returns_fn_returns_fn_void_void())())();
 
 typedef void (*(*returns_fn_returns_fn_void_void_t(void))(void))(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: {{.*}} in typedef
 // CHECK-MESSAGES: :[[@LINE-2]]:59: warning: {{.*}} in typedef
 // CHECK-MESSAGES: :[[@LINE-3]]:66: warning: {{.*}} in typedef
-// CHECK-FIXES: {{^}}typedef void (*(*returns_fn_returns_fn_void_void_t())())();{{$}}
+// CHECK-FIXES: typedef void (*(*returns_fn_returns_fn_void_void_t())())();
 
 void (*(*returns_fn_returns_fn_void_void(void))(void))(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: {{.*}} in function definition
 // CHECK-MESSAGES: :[[@LINE-2]]:49: warning: {{.*}} in function definition
 // CHECK-MESSAGES: :[[@LINE-3]]:56: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}void (*(*returns_fn_returns_fn_void_void())())() {{{$}}
+// CHECK-FIXES: void (*(*returns_fn_returns_fn_void_void())())() {
     return nullptr;
 }
 
 void bar(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}void bar() {{{$}}
+// CHECK-FIXES: void bar() {
 }
 
 void op_fn(int i) {
@@ -103,13 +103,13 @@ private:
 
     void (*f1)(void);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: {{.*}} in field declaration
-    // CHECK-FIXES: {{^    }}void (*f1)();{{$}}
+    // CHECK-FIXES: void (*f1)();
 
   void (*op)(int i);
 
   void (gronk::*p1)(void);
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}} in field declaration
-  // CHECK-FIXES: {{^  }}void (gronk::*p1)();{{$}}
+  // CHECK-FIXES: void (gronk::*p1)();
 
   int (gronk::*p_mi);
 
@@ -119,13 +119,13 @@ private:
   // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: {{.*}} in function declaration
   // CHECK-MESSAGES: :[[@LINE-2]]:51: warning: {{.*}} in function declaration
   // CHECK-MESSAGES: :[[@LINE-3]]:58: warning: {{.*}} in function declaration
-  // CHECK-FIXES: {{^}}  void (*(*returns_fn_returns_fn_void_void())())();{{$}}
+  // CHECK-FIXES: void (*(*returns_fn_returns_fn_void_void())())();
 
   void (*(*(gronk::*returns_fn_returns_fn_void_void_mem)(void))(void))(void);
   // CHECK-MESSAGES: :[[@LINE-1]]:58: warning: {{.*}} in field declaration
   // CHECK-MESSAGES: :[[@LINE-2]]:65: warning: {{.*}} in field declaration
   // CHECK-MESSAGES: :[[@LINE-3]]:72: warning: {{.*}} in field declaration
-  // CHECK-FIXES: {{^}}  void (*(*(gronk::*returns_fn_returns_fn_void_void_mem)())())();{{$}}
+  // CHECK-FIXES: void (*(*(gronk::*returns_fn_returns_fn_void_void_mem)())())();
 };
 
 int i;
@@ -138,35 +138,35 @@ double *pd;
 
 void (*f1)(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}} in variable declaration
-// CHECK-FIXES: {{^}}void (*f1)();{{$}}
+// CHECK-FIXES: void (*f1)();
 
 void (*f2)(void) = nullptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f2)() = nullptr;{{$}}
+// CHECK-FIXES: void (*f2)() = nullptr;
 
 void (*f2b)(void)(nullptr);
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f2b)()(nullptr);{{$}}
+// CHECK-FIXES: void (*f2b)()(nullptr);
 
 void (*f2c)(void){nullptr};
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f2c)(){nullptr};{{$}}
+// CHECK-FIXES: void (*f2c)(){nullptr};
 
 void (*f2d)(void) = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f2d)() = NULL;{{$}}
+// CHECK-FIXES: void (*f2d)() = NULL;
 
 void (*f2e)(void)(NULL);
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f2e)()(NULL);{{$}}
+// CHECK-FIXES: void (*f2e)()(NULL);
 
 void (*f2f)(void){NULL};
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f2f)(){NULL};{{$}}
+// CHECK-FIXES: void (*f2f)(){NULL};
 
 void (*f3)(void) = bar;
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (*f3)() = bar;{{$}}
+// CHECK-FIXES: void (*f3)() = bar;
 
 void (*o1)(int i);
 void (*o2)(int i) = nullptr;
@@ -185,7 +185,7 @@ void (*fc)() = bar;
 
 typedef void (function_ptr)(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} in typedef
-// CHECK-FIXES: {{^}}typedef void (function_ptr)();{{$}}
+// CHECK-FIXES: typedef void (function_ptr)();
 
 // intentionally not LLVM style to check preservation of whitespace
 typedef void (function_ptr2)
@@ -245,15 +245,15 @@ void
 
 void (gronk::*p1)(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: {{.*}} in variable declaration
-// CHECK-FIXES: {{^}}void (gronk::*p1)();{{$}}
+// CHECK-FIXES: void (gronk::*p1)();
 
 void (gronk::*p2)(void) = &gronk::foo;
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: {{.*}} in variable declaration with initializer
-// CHECK-FIXES: {{^}}void (gronk::*p2)() = &gronk::foo;{{$}}
+// CHECK-FIXES: void (gronk::*p2)() = &gronk::foo;
 
 typedef void (gronk::*member_function_ptr)(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: {{.*}} in typedef
-// CHECK-FIXES: {{^}}typedef void (gronk::*member_function_ptr)();{{$}}
+// CHECK-FIXES: typedef void (gronk::*member_function_ptr)();
 
 // intentionally not LLVM style to check preservation of whitespace
 typedef void (gronk::*member_function_ptr2)
@@ -269,11 +269,11 @@ typedef void (gronk::*member_function_ptr2)
 void gronk::foo() {
   void (*f1)(void) = &::bar;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in variable declaration with initializer
-  // CHECK-FIXES: {{^  }}void (*f1)() = &::bar;{{$}}
+  // CHECK-FIXES: void (*f1)() = &::bar;
 
   void (*f2)(void);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in variable declaration
-  // CHECK-FIXES: {{^  }}void (*f2)();{{$}}
+  // CHECK-FIXES: void (*f2)();
 
   // intentionally not LLVM style to check preservation of whitespace
   void (*f3)
@@ -289,14 +289,14 @@ void gronk::foo() {
 
 void gronk::bar(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}void gronk::bar() {{{$}}
+// CHECK-FIXES: void gronk::bar() {
   void (gronk::*p3)(void) = &gronk::foo;
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}} in variable declaration with initializer
-  // CHECK-FIXES: {{^  }}void (gronk::*p3)() = &gronk::foo;{{$}}
+  // CHECK-FIXES: void (gronk::*p3)() = &gronk::foo;
 
   void (gronk::*p4)(void);
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}} in variable declaration
-  // CHECK-FIXES: {{^  }}void (gronk::*p4)();{{$}}
+  // CHECK-FIXES: void (gronk::*p4)();
 
   // intentionally not LLVM style to check preservation of whitespace
   void (gronk::*p5)
@@ -325,14 +325,14 @@ void gronk::bar2
 
 gronk::gronk(void)
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}gronk::gronk(){{$}}
+// CHECK-FIXES: gronk::gronk()
   : f1(nullptr),
   p1(nullptr) {
 }
 
 gronk::~gronk(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}gronk::~gronk() {{{$}}
+// CHECK-FIXES: gronk::~gronk() {
 }
 
 class nutter {
@@ -342,21 +342,21 @@ public:
 
 nutter::nutter(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: {{.*}} in function definition
-// CHECK-FIXES: {{^}}nutter::nutter() {{{$}}
+// CHECK-FIXES: nutter::nutter() {
   void (*f3)(void) = static_cast<void (*)(void)>(0);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in variable declaration with initializer
   // CHECK-MESSAGES: :[[@LINE-2]]:43: warning: {{.*}} in named cast
-  // CHECK-FIXES: void (*f3)() = static_cast<void (*)()>(0);{{$}}
+  // CHECK-FIXES: void (*f3)() = static_cast<void (*)()>(0);
 
   void (*f4)(void) = (void (*)(void)) 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in variable declaration with initializer
   // CHECK-MESSAGES: :[[@LINE-2]]:32: warning: {{.*}} in cast expression
-  // CHECK-FIXES: void (*f4)() = (void (*)()) 0;{{$}}
+  // CHECK-FIXES: void (*f4)() = (void (*)()) 0;
 
   void (*f5)(void) = reinterpret_cast<void (*)(void)>(0);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: {{.*}} in variable declaration with initializer
   // CHECK-MESSAGES: :[[@LINE-2]]:48: warning: {{.*}} in named cast
-  // CHECK-FIXES: void (*f5)() = reinterpret_cast<void (*)()>(0);{{$}}
+  // CHECK-FIXES: void (*f5)() = reinterpret_cast<void (*)()>(0);
 
   // intentionally not LLVM style to check preservation of whitespace
   void (*f6)(void) = static_cast<void (*)
@@ -403,17 +403,17 @@ class generator {
 public:
   int operator()(void) { return 1; }
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: {{.*}} in function definition
-  // CHECK-FIXES: {{^  }}int operator()() { return 1; }{{$}}
+  // CHECK-FIXES: int operator()() { return 1; }
 };
 
 void test_lambda_functions() {
   auto lamb_duh = [](void (*fn)(void)) { (*fn)(); };
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: {{.*}} in variable declaration
-  // CHECK-FIXES: {{^  }}auto lamb_duh = [](void (*fn)()) { (*fn)(); };{{$}}
+  // CHECK-FIXES: auto lamb_duh = [](void (*fn)()) { (*fn)(); };
 
   auto lambda_generator = [](void) { return 1; };
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: {{.*}} in lambda expression
-  // CHECK-FIXES: {{^  }}auto lambda_generator = []() { return 1; };{{$}}
+  // CHECK-FIXES: auto lambda_generator = []() { return 1; };
 
   auto gen2 = []() { return 1; };
 
@@ -422,7 +422,7 @@ void test_lambda_functions() {
   auto void_returner = [](void) -> void (*)(void) { return f1; };
   // CHECK-MESSAGES: [[@LINE-1]]:27: warning: {{.*}} in lambda expression
   // CHECK-MESSAGES: [[@LINE-2]]:45: warning: {{.*}} in lambda expression
-  // CHECK-FIXES: {{^  }}auto void_returner = []() -> void (*)() { return f1; };{{$}}
+  // CHECK-FIXES: auto void_returner = []() -> void (*)() { return f1; };
 }
 
 #define M(x) x

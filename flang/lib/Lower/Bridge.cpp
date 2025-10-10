@@ -5056,8 +5056,7 @@ private:
           hlfir::Entity entity{baseValue};
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
-          auto needCleanup = fir::getIntIfConstant(cleanup);
-          if (needCleanup && *needCleanup) {
+          if (cleanup) {
             if (auto declareOp =
                     mlir::dyn_cast<hlfir::DeclareOp>(temp.getDefiningOp()))
               temps.push_back(declareOp.getMemref());

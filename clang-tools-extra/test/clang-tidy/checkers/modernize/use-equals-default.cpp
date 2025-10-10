@@ -127,7 +127,7 @@ Priv::Priv() {}
 struct SemiColon {
   SemiColon() {};
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: SemiColon() = default;{{$}}
+  // CHECK-FIXES: SemiColon() = default;
 };
 
 struct SemiColonOutOfLine {
@@ -136,16 +136,16 @@ struct SemiColonOutOfLine {
 
 SemiColonOutOfLine::SemiColonOutOfLine() {};
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use '= default'
-// CHECK-FIXES: SemiColonOutOfLine::SemiColonOutOfLine() = default;{{$}}
+// CHECK-FIXES: SemiColonOutOfLine::SemiColonOutOfLine() = default;
 
 // struct.
 struct ST {
   ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;{{$}}
+  // CHECK-FIXES: ST() = default;
   ~ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;{{$}}
+  // CHECK-FIXES: ST() = default;
 };
 
 // Deleted constructor/destructor.
@@ -238,13 +238,13 @@ struct DC : KW {
   DC() : KW() {}
   ~DC() override {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ~DC() override = default;{{$}}
+  // CHECK-FIXES: ~DC() override = default;
 };
 
 struct OverrideWithSemiColon : KW {
   ~OverrideWithSemiColon() override {};
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ~OverrideWithSemiColon() override = default;{{$}}
+  // CHECK-FIXES: ~OverrideWithSemiColon() override = default;
 };
 
 struct Comments {

@@ -148,19 +148,16 @@ public:
 
 class DFAJumpThreading {
 public:
-  DFAJumpThreading(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
+  DFAJumpThreading(AssumptionCache *AC, DomTreeUpdater *DTU, LoopInfo *LI,
                    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE)
-      : AC(AC), DT(DT), LI(LI), TTI(TTI), ORE(ORE) {}
+      : AC(AC), DTU(DTU), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
   bool LoopInfoBroken;
 
 private:
   void
-  unfoldSelectInstrs(DominatorTree *DT,
-                     const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
-    // TODO: Have everything use a single lazy DTU
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  unfoldSelectInstrs(const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
     SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
@@ -168,7 +165,7 @@ private:
 
       std::vector<SelectInstToUnfold> NewSIsToUnfold;
       std::vector<BasicBlock *> NewBBs;
-      unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
+      unfold(DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
       llvm::append_range(Stack, NewSIsToUnfold);
@@ -181,7 +178,7 @@ private:
                      std::vector<BasicBlock *> *NewBBs);
 
   AssumptionCache *AC;
-  DominatorTree *DT;
+  DomTreeUpdater *DTU;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
@@ -869,11 +866,11 @@ private:
 };
 
 struct TransformDFA {
-  TransformDFA(AllSwitchPaths *SwitchPaths, DominatorTree *DT,
+  TransformDFA(AllSwitchPaths *SwitchPaths, DomTreeUpdater *DTU,
                AssumptionCache *AC, TargetTransformInfo *TTI,
                OptimizationRemarkEmitter *ORE,
                SmallPtrSet<const Value *, 32> EphValues)
-      : SwitchPaths(SwitchPaths), DT(DT), AC(AC), TTI(TTI), ORE(ORE),
+      : SwitchPaths(SwitchPaths), DTU(DTU), AC(AC), TTI(TTI), ORE(ORE),
         EphValues(EphValues) {}
 
   bool run() {
@@ -1049,18 +1046,15 @@ private:
     SmallPtrSet<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
-    {
-      DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
-      for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
-        createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
-        NumPaths++;
-      }
-
-      // After all paths are cloned, now update the last successor of the cloned
-      // path so it skips over the switch statement
-      for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
-        updateLastSuccessor(TPath, DuplicateMap, &DTU);
+    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
+      createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, DTU);
+      NumPaths++;
     }
+
+    // After all paths are cloned, now update the last successor of the cloned
+    // path so it skips over the switch statement
+    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
+      updateLastSuccessor(TPath, DuplicateMap, DTU);
 
     // For each instruction that was cloned and used outside, update its uses
     updateSSA(NewDefs);
@@ -1165,7 +1159,7 @@ private:
     }
     // SSAUpdater handles phi placement and renaming uses with the appropriate
     // value.
-    SSAUpdate.RewriteAllUses(DT);
+    SSAUpdate.RewriteAllUses(&DTU->getDomTree());
   }
 
   /// Clones a basic block, and adds it to the CFG.
@@ -1388,7 +1382,7 @@ private:
   }
 
   AllSwitchPaths *SwitchPaths;
-  DominatorTree *DT;
+  DomTreeUpdater *DTU;
   AssumptionCache *AC;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
@@ -1431,7 +1425,7 @@ bool DFAJumpThreading::run(Function &F) {
                       << "candidate for jump threading\n");
     LLVM_DEBUG(SI->dump());
 
-    unfoldSelectInstrs(DT, Switch.getSelectInsts());
+    unfoldSelectInstrs(Switch.getSelectInsts());
     if (!Switch.getSelectInsts().empty())
       MadeChanges = true;
 
@@ -1453,7 +1447,7 @@ bool DFAJumpThreading::run(Function &F) {
   }
 
 #ifdef NDEBUG
-  LI->verify(*DT);
+  LI->verify(DTU->getDomTree());
 #endif
 
   SmallPtrSet<const Value *, 32> EphValues;
@@ -1461,13 +1455,15 @@ bool DFAJumpThreading::run(Function &F) {
     CodeMetrics::collectEphemeralValues(&F, AC, EphValues);
 
   for (AllSwitchPaths SwitchPaths : ThreadableLoops) {
-    TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
+    TransformDFA Transform(&SwitchPaths, DTU, AC, TTI, ORE, EphValues);
     if (Transform.run())
       MadeChanges = LoopInfoBroken = true;
   }
 
+  DTU->flush();
+
 #ifdef EXPENSIVE_CHECKS
-  assert(DT->verify(DominatorTree::VerificationLevel::Full));
+  assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full));
   verifyFunction(F, &dbgs());
 #endif
 
@@ -1482,7 +1478,9 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   OptimizationRemarkEmitter ORE(&F);
-  DFAJumpThreading ThreadImpl(&AC, &DT, &LI, &TTI, &ORE);
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  DFAJumpThreading ThreadImpl(&AC, &DTU, &LI, &TTI, &ORE);
   if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 

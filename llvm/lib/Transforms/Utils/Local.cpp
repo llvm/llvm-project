@@ -3246,6 +3246,13 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
   return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
+unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
+                                        DominatorTree &DT,
+                                        const Instruction *I) {
+  auto Dominates = [&](const Use &U) { return DT.dominates(I, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
+}
+
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
@@ -3260,6 +3267,15 @@ unsigned llvm::replaceDominatedUsesWithIf(
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
   auto DominatesAndShouldReplace = [&](const Use &U) {
     return DT.dominates(BB, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(I, U) && ShouldReplace(U, To);
   };
   return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }

@@ -488,11 +488,13 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt(half 
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, 0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GISEL-CI-NEXT:    v_max_f32_e32 v0, 0, v0
+; GISEL-CI-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GISEL-CI-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; GISEL-CI-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float
@@ -580,13 +582,15 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
 ; GISEL-CI-NEXT:    s_mov_b32 s7, 0xf000
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, 0
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GISEL-CI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; GISEL-CI-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-CI-NEXT:    v_max_f32_e32 v1, 0, v1
+; GISEL-CI-NEXT:    v_max_f32_e32 v1, v2, v1
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GISEL-CI-NEXT:    v_min_f32_e32 v1, 1.0, v1
+; GISEL-CI-NEXT:    v_min_f32_e32 v1, v1, v2
 ; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.ext = fpext half %src0 to float

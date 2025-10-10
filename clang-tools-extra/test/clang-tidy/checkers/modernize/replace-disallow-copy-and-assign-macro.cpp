@@ -33,8 +33,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(TestClass1);
 };
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-2]]:3: warning: prefer deleting copy constructor and assignment operator over using macro 'DISALLOW_COPY_AND_ASSIGN' [modernize-replace-disallow-copy-and-assign-macro]
-// CHECK-FIXES-DEFAULT:      {{^}}  TestClass1(const TestClass1 &) = delete;{{$}}
-// CHECK-FIXES-DEFAULT-NEXT: {{^}}  const TestClass1 &operator=(const TestClass1 &) = delete;{{$}}
+// CHECK-FIXES-DEFAULT:      TestClass1(const TestClass1 &) = delete;
+// CHECK-FIXES-DEFAULT-NEXT: const TestClass1 &operator=(const TestClass1 &) = delete;
 
 #define MY_MACRO_NAME(TypeName)
 
@@ -43,8 +43,8 @@ private:
   MY_MACRO_NAME(TestClass2);
 };
 // CHECK-MESSAGES-DIFFERENT-NAME: :[[@LINE-2]]:3: warning: prefer deleting copy constructor and assignment operator over using macro 'MY_MACRO_NAME' [modernize-replace-disallow-copy-and-assign-macro]
-// CHECK-FIXES-DIFFERENT-NAME:      {{^}}  TestClass2(const TestClass2 &) = delete;{{$}}
-// CHECK-FIXES-DIFFERENT-NAME-NEXT: {{^}}  const TestClass2 &operator=(const TestClass2 &) = delete;{{$}}
+// CHECK-FIXES-DIFFERENT-NAME:      TestClass2(const TestClass2 &) = delete;
+// CHECK-FIXES-DIFFERENT-NAME-NEXT: const TestClass2 &operator=(const TestClass2 &) = delete;
 
 #define DISALLOW_COPY_AND_ASSIGN_FINALIZE(TypeName) \
   TypeName(const TypeName &) = delete;              \
@@ -58,8 +58,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN_FINALIZE(TestClass3)
 };
 // CHECK-MESSAGES-FINALIZE: :[[@LINE-2]]:3: warning: prefer deleting copy constructor and assignment operator over using macro 'DISALLOW_COPY_AND_ASSIGN_FINALIZE' [modernize-replace-disallow-copy-and-assign-macro]
-// CHECK-FIXES-FINALIZE:      {{^}}  TestClass3(const TestClass3 &) = delete;{{$}}
-// CHECK-FIXES-FINALIZE-NEXT: {{^}}  const TestClass3 &operator=(const TestClass3 &) = delete;{{$}}
+// CHECK-FIXES-FINALIZE:      TestClass3(const TestClass3 &) = delete;
+// CHECK-FIXES-FINALIZE-NEXT: const TestClass3 &operator=(const TestClass3 &) = delete;
 
 #define DISALLOW_COPY_AND_ASSIGN_MORE_AGUMENTS(A, B)
 
