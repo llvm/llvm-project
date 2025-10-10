@@ -346,6 +346,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
+    {"barrier_init",
+     &I::genBarrierInit,
+     {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -3174,6 +3178,22 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = fir::LoadOp::create(builder, loc, pointerBoxRef);
   return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+// BARRIER_INIT (CUDA)
+void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto llvmPtr = fir::ConvertOp::create(
+      builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
+      fir::getBase(args[0]));
+  auto addrCast = mlir::LLVM::AddrSpaceCastOp::create(
+      builder, loc,
+      mlir::LLVM::LLVMPointerType::get(
+          builder.getContext(),
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared)),
+      llvmPtr);
+  mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, addrCast,
+                                           fir::getBase(args[1]), {});
 }
 
 // BESSEL_JN

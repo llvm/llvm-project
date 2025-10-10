@@ -1987,6 +1987,13 @@ implicit none
     end function
   end interface
 
+  interface 
+    attributes(device) subroutine barrier_init(barrier, count)
+      integer(8) :: barrier
+      integer(4) :: count
+    end subroutine
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()

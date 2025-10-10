@@ -86,3 +86,28 @@
 // COMPILE_STDCXX: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // COMPILE_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi"
 // COMPILE_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
+
+// RUN: %clangxx -### --target=wasm32-linux-muslwali --stdlib=libc++ %s 2>&1 \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree/usr \
+// RUN:   | FileCheck -check-prefix=COMPILE_WALI %s
+// COMPILE_WALI: "-cc1"
+// COMPILE_WALI: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
+// COMPILE_WALI: "-isysroot" "[[SYSROOT:[^"]+]]"
+// COMPILE_WALI: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-linux-muslwali/c++/v1"
+// COMPILE_WALI: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
+// COMPILE_WALI: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
+// COMPILE_WALI: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-linux-muslwali"
+// COMPILE_WALI: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
+
+// RUN: %clangxx -### --target=wasm32-linux-muslwali --stdlib=libstdc++ %s 2>&1 \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_libcxxv2_tree/usr \
+// RUN:   | FileCheck -check-prefix=COMPILE_WALI_STDCXX %s
+// COMPILE_WALI_STDCXX: "-cc1"
+// COMPILE_WALI_STDCXX: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
+// COMPILE_WALI_STDCXX: "-isysroot" "[[SYSROOT:[^"]+]]"
+// COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/4.8/wasm32-linux-muslwali"
+// COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/4.8"
+// COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/4.8/backward"
+// COMPILE_WALI_STDCXX: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
+// COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-linux-muslwali"
+// COMPILE_WALI_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
