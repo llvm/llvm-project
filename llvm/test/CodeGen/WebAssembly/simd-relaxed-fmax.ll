@@ -12,7 +12,7 @@ define <4 x float> @test_max_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.max
+; CHECK-NEXT:    f32x4.relaxed_max
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %result
@@ -25,7 +25,7 @@ define <2 x double> @test_max_f64x2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.max
+; CHECK-NEXT:    f64x2.relaxed_max
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.maximum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %result
