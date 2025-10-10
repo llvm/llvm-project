@@ -407,8 +407,35 @@ struct InnerUnnamedStruct {
     int i;
   } untagged;
 } inner_unnamed_tagged;
-
 _Static_assert(0 == _Generic(inner_unnamed_tagged.untagged, struct { int i; } : 1, default : 0));
+
+struct InnerUnnamedStruct_same {
+  struct {
+    int i;
+  } untagged;
+};
+struct InnerUnnamedStruct_differentNaming {
+  struct {
+    int i;
+  } untaggedDifferent;
+};
+struct InnerUnnamedStruct_differentShape {
+  float x;
+  struct {
+    int i;
+  } untagged;
+  int y;
+};
+void compare_unnamed_struct_from_different_outer_type(
+    struct InnerUnnamedStruct sameOuterType,
+    struct InnerUnnamedStruct_same matchingType,
+    struct InnerUnnamedStruct_differentNaming differentFieldName,
+    struct InnerUnnamedStruct_differentShape differentType) {
+  inner_unnamed_tagged.untagged = sameOuterType.untagged;
+  inner_unnamed_tagged.untagged = matchingType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentFieldName.untaggedDifferent; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+}
 
 // Test the same thing with enumerations (test for unions is omitted because
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).
