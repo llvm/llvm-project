@@ -1554,8 +1554,12 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   if (payloadOpName.has_value()) {
-    addBodyWithPayloadOp(parser, result, payloadOpName.value(), payloadOpAttrs,
-                         ArrayRef(result.operands), false, false);
+    if (!result.operands.empty())
+      addBodyWithPayloadOp(parser, result, payloadOpName.value(),
+                           payloadOpAttrs, ArrayRef(result.operands), false,
+                           false);
+    else
+      result.addRegion();
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,
@@ -1657,11 +1661,13 @@ LogicalResult MapOp::verify() {
   auto *bodyBlock = getBody();
   auto blockArgs = bodyBlock->getArguments();
 
-  // Checks if the number of `inputs` match the arity of the `mapper` region.
+  // Checks if the number of `inputs` + `init` match the arity of the `mapper`
+  // region.
   if (getInputs().size() + 1 != blockArgs.size())
     return emitOpError() << "expects number of operands to match the arity of "
                             "mapper, but got: "
-                         << getInputs().size() << " and " << blockArgs.size();
+                         << getInputs().size() + 1 << " and "
+                         << blockArgs.size();
 
   // The parameters of mapper should all match the element type of inputs.
   for (const auto &[bbArgType, inputArg] :
