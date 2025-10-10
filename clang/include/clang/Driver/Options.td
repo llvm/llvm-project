@@ -1421,18 +1421,16 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
-def hip_use_experimental_spirv_backend
-    : Flag<["-"], "hip-use-experimental-spirv-backend">,
+def use_experimental_spirv_backend
+    : Flag<["-"], "use-experimental-spirv-backend">,
       Group<hip_Group>,
       Flags<[HelpHidden]>,
-      HelpText<"Use experimental SPIRV backend for HIP compilation (HIP "
-               "only)">;
-def no_hip_use_experimental_spirv_backend
-    : Flag<["-"], "no-hip-use-experimental-spirv-backend">,
+      HelpText<"Use experimental SPIRV backend for compilation ">;
+def no_use_experimental_spirv_backend
+    : Flag<["-"], "no-use-experimental-spirv-backend">,
       Group<hip_Group>,
       Flags<[HelpHidden]>,
-      HelpText<"Do not use experimental SPIRV backend for HIP compilation "
-               "(HIP only)">;
+      HelpText<"Do not use experimental SPIRV backend for compilation ">;
 }
 
 // Clang specific/exclusive options for OpenACC.

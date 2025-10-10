@@ -176,8 +176,8 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   bool UseSPIRVBackend = Args.hasFlag(
-      options::OPT_hip_use_experimental_spirv_backend,
-      options::OPT_no_hip_use_experimental_spirv_backend, /*Default=*/false);
+      options::OPT_use_experimental_spirv_backend,
+      options::OPT_no_use_experimental_spirv_backend, /*Default=*/false);
 
   // Emit SPIR-V binary either using the SPIRV backend or the translator.
   if (UseSPIRVBackend) {
