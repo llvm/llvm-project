@@ -31,6 +31,9 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
+#if SANITIZER_APPLE
+#  include "tsan_flags.h"
+#endif
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -1665,6 +1668,14 @@ TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   SCOPED_INTERCEPTOR_RAW(pthread_once, o, f);
+#if SANITIZER_APPLE
+  if (flags()->lock_during_write != kLockDuringAllWrites &&
+      cur_thread_init()->in_internal_write_call) {
+    // This is needed to make it through process launch without hanging
+    f();
+    return 0;
+  }
+#endif
   if (o == 0 || f == 0)
     return errno_EINVAL;
   atomic_uint32_t *a;

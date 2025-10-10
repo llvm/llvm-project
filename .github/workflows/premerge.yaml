@@ -24,17 +24,45 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Build and Test Linux
+    name: Build and Test Linux${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && ' AArch64') || '' }}
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: llvm-premerge-linux-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - depot-ubuntu-24.04-arm-16
+          - llvm-premerge-linux-runners
+    runs-on: ${{ matrix.runs-on }}
+    container:
+      # The llvm-premerge agents are already containers and running the
+      # this same image, so we can't use a container for the github action
+      # job.  The depot containers are running on VMs, so we can use a
+      # container.  This helps ensure the build environment is as close
+      # as possible on both the depot runners and the llvm-premerge runners.
+      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
+      # --privileged is needed to run the lldb tests that disable aslr.
+      # The SCCACHE environment variables are need to be copied from the host
+      # to the container to make sure it is configured correctly to use the
+      # depot cache.
+      options: >-
+         --privileged
+         --env SCCACHE_WEBDAV_ENDPOINT
+         --env SCCACHE_WEBDAV_TOKEN
+    defaults:
+      run:
+        # The run step defaults to using sh as the shell when running in a
+        # container, so make bash the default to ensure consistency between
+        # container and non-container jobs.
+        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
       - name: Build and Test
+        continue-on-error: ${{ runner.arch == 'ARM64' }}
         run: |
           git config --global --add safe.directory '*'
 
@@ -54,11 +82,16 @@ jobs:
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 
-          # This environment variable is passes into the container through the
-          # runner pod definition. This differs between our two clusters which
-          # why we do not hardcode it.
-          export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
-          export SCCACHE_GCS_RW_MODE=READ_WRITE
+          # The linux-premerge runners are hosted on GCP and have a different
+          # cache setup than the depot runners.
+          if [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
+            # This environment variable is passes into the container through the
+            # runner pod definition. This differs between our two clusters which
+            # why we do not hardcode it.
+            export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
+            export SCCACHE_GCS_RW_MODE=READ_WRITE
+          fi
+          env
 
           # Set the idle timeout to zero to ensure sccache runs for the
           # entire duration of the job. Otherwise it might stop if we run
@@ -78,7 +111,7 @@ jobs:
         if: '!cancelled()'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: Premerge Artifacts (Linux)
+          name: Premerge Artifacts (Linux ${{ runner.arch }})
           path: artifacts/
           retention-days: 5
           include-hidden-files: 'true'

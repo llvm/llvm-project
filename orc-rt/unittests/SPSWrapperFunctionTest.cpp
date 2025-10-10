@@ -95,6 +95,29 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunctionPointer) {
   EXPECT_EQ(Result, 42);
 }
 
+static void
+round_trip_string_via_span_sps_wrapper(orc_rt_SessionRef Session, void *CallCtx,
+                                       orc_rt_WrapperFunctionReturn Return,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<SPSString(SPSString)>::handle(
+      Session, CallCtx, Return, ArgBytes,
+      [](move_only_function<void(std::string)> Return, span<const char> S) {
+        Return({S.data(), S.size()});
+      });
+}
+
+TEST(SPSWrapperFunctionUtilsTest, RoundTripStringViaSpan) {
+  /// Test that the SPSWrapperFunction<...>::handle call in
+  /// round_trip_string_via_span_sps_wrapper can deserialize into a usable
+  /// span<const char>.
+  std::string Result;
+  SPSWrapperFunction<SPSString(SPSString)>::call(
+      DirectCaller(nullptr, round_trip_string_via_span_sps_wrapper),
+      [&](Expected<std::string> R) { Result = cantFail(std::move(R)); },
+      std::string_view("hello, world!"));
+  EXPECT_EQ(Result, "hello, world!");
+}
+
 static void improbable_feat_sps_wrapper(orc_rt_SessionRef Session,
                                         void *CallCtx,
                                         orc_rt_WrapperFunctionReturn Return,
@@ -186,6 +209,17 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionPointers) {
   SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
       DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
       [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); }, &X);
+
+  EXPECT_EQ(P, &X);
+}
+
+TEST(SPSWrapperFunctionUtilsTest, TransparentConversionReferenceArguments) {
+  int X = 42;
+  int *P = nullptr;
+  SPSWrapperFunction<SPSExecutorAddr(SPSExecutorAddr)>::call(
+      DirectCaller(nullptr, round_trip_int_pointer_sps_wrapper),
+      [&](Expected<int32_t *> R) { P = cantFail(std::move(R)); },
+      static_cast<int *const &>(&X));
 
   EXPECT_EQ(P, &X);
 }
