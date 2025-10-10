@@ -6,7 +6,7 @@
 //
 // CHECK:      {
 // CHECK-NEXT:   "c:@F@fib#i#": {
-// CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
+// CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "fib(unsigned int)",
 // CHECK-NEXT:     "DemoStat": "",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
@@ -44,19 +44,19 @@
 // CHECK-NEXT:     "TimeSpentSolvingZ3Queries": "{{[0-9]+}}"
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "c:@F@func_one#": {
-// CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
+// CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "func_one()",
 // CHECK:          "DemoStat": "1",
 //             .... not interesting statistics
 // CHECK:        },
 // CHECK-NEXT:   "c:@F@func_two#": {
-// CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
+// CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "func_two()",
 // CHECK:          "DemoStat": "2",
 //             .... not interesting statistics
 // CHECK:        },
 // CHECK-NEXT:   "c:@F@main#I#**C#": {
-// CHECK-NEXT:     "File": "{{.*}}/entry-point-stats.cpp",
+// CHECK-NEXT:     "File": "{{.*}}entry-point-stats.cpp",
 // CHECK-NEXT:     "DebugName": "main(int, char **)",
 // CHECK-NEXT:     "DemoStat": "",
 // CHECK-NEXT:     "PathRunningTime": "{{[0-9]+}}",
