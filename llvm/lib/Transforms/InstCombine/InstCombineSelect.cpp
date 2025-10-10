@@ -548,7 +548,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
       FastMathFlags NewSelFMF = FMF;
       // We cannot propagate ninf from the original select, because OOp may be
       // inf and the flag only guarantees that FalseVal (op OOp) is never
-      // infinity. Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
+      // infinity.
+      // Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
       // Specially, if the original select has both ninf and nnan, we can safely
       // propagate the flag.
       NewSelFMF.setNoInfs(TVI->hasNoInfs() ||
