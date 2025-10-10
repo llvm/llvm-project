@@ -740,11 +740,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_fgets_unlocked);
   }
 
-  if (T.isAndroid() && T.isAndroidVersionLT(21)) {
-    TLI.setUnavailable(LibFunc_stpcpy);
-    TLI.setUnavailable(LibFunc_stpncpy);
-  }
-
   if (T.isPS()) {
     // PS4/PS5 do have memalign.
     TLI.setAvailable(LibFunc_memalign);

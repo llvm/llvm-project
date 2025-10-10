@@ -110,7 +110,7 @@ public:
   }
 
   template <typename ArgTuple>
-  std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
+  std::optional<ArgTuple> deserialize(const WrapperFunctionBuffer &ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());

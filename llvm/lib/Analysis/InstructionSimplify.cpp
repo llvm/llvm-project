@@ -671,12 +671,12 @@ Value *llvm::simplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 /// This is very similar to stripAndAccumulateConstantOffsets(), except it
 /// normalizes the offset bitwidth to the stripped pointer type, not the
 /// original pointer type.
-static APInt stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
-                                            bool AllowNonInbounds = false) {
+static APInt stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V) {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
   APInt Offset = APInt::getZero(DL.getIndexTypeSizeInBits(V->getType()));
-  V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
+  V = V->stripAndAccumulateConstantOffsets(DL, Offset,
+                                           /*AllowNonInbounds=*/true);
   // As that strip may trace through `addrspacecast`, need to sext or trunc
   // the offset calculated.
   return Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(V->getType()));
