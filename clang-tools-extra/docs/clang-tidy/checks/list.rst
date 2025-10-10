@@ -36,396 +36,397 @@ Clang-Tidy Checks
 .. csv-table::
    :header: "Name", "Offers fixes"
 
-   :doc:`abseil-cleanup-ctad <abseil/cleanup-ctad>`, "Yes"
-   :doc:`abseil-duration-addition <abseil/duration-addition>`, "Yes"
-   :doc:`abseil-duration-comparison <abseil/duration-comparison>`, "Yes"
-   :doc:`abseil-duration-conversion-cast <abseil/duration-conversion-cast>`, "Yes"
-   :doc:`abseil-duration-division <abseil/duration-division>`, "Yes"
-   :doc:`abseil-duration-factory-float <abseil/duration-factory-float>`, "Yes"
-   :doc:`abseil-duration-factory-scale <abseil/duration-factory-scale>`, "Yes"
-   :doc:`abseil-duration-subtraction <abseil/duration-subtraction>`, "Yes"
-   :doc:`abseil-duration-unnecessary-conversion <abseil/duration-unnecessary-conversion>`, "Yes"
-   :doc:`abseil-faster-strsplit-delimiter <abseil/faster-strsplit-delimiter>`, "Yes"
-   :doc:`abseil-no-internal-dependencies <abseil/no-internal-dependencies>`,
-   :doc:`abseil-no-namespace <abseil/no-namespace>`,
-   :doc:`abseil-redundant-strcat-calls <abseil/redundant-strcat-calls>`, "Yes"
-   :doc:`abseil-str-cat-append <abseil/str-cat-append>`, "Yes"
-   :doc:`abseil-string-find-startswith <abseil/string-find-startswith>`, "Yes"
-   :doc:`abseil-string-find-str-contains <abseil/string-find-str-contains>`, "Yes"
-   :doc:`abseil-time-comparison <abseil/time-comparison>`, "Yes"
-   :doc:`abseil-time-subtraction <abseil/time-subtraction>`, "Yes"
-   :doc:`abseil-upgrade-duration-conversions <abseil/upgrade-duration-conversions>`, "Yes"
-   :doc:`altera-id-dependent-backward-branch <altera/id-dependent-backward-branch>`,
-   :doc:`altera-kernel-name-restriction <altera/kernel-name-restriction>`,
-   :doc:`altera-single-work-item-barrier <altera/single-work-item-barrier>`,
-   :doc:`altera-struct-pack-align <altera/struct-pack-align>`, "Yes"
-   :doc:`altera-unroll-loops <altera/unroll-loops>`,
-   :doc:`android-cloexec-accept <android/cloexec-accept>`, "Yes"
-   :doc:`android-cloexec-accept4 <android/cloexec-accept4>`, "Yes"
-   :doc:`android-cloexec-creat <android/cloexec-creat>`, "Yes"
-   :doc:`android-cloexec-dup <android/cloexec-dup>`, "Yes"
-   :doc:`android-cloexec-epoll-create <android/cloexec-epoll-create>`, "Yes"
-   :doc:`android-cloexec-epoll-create1 <android/cloexec-epoll-create1>`, "Yes"
-   :doc:`android-cloexec-fopen <android/cloexec-fopen>`, "Yes"
-   :doc:`android-cloexec-inotify-init <android/cloexec-inotify-init>`, "Yes"
-   :doc:`android-cloexec-inotify-init1 <android/cloexec-inotify-init1>`, "Yes"
-   :doc:`android-cloexec-memfd-create <android/cloexec-memfd-create>`, "Yes"
-   :doc:`android-cloexec-open <android/cloexec-open>`, "Yes"
-   :doc:`android-cloexec-pipe <android/cloexec-pipe>`, "Yes"
-   :doc:`android-cloexec-pipe2 <android/cloexec-pipe2>`, "Yes"
-   :doc:`android-cloexec-socket <android/cloexec-socket>`, "Yes"
-   :doc:`android-comparison-in-temp-failure-retry <android/comparison-in-temp-failure-retry>`,
-   :doc:`boost-use-ranges <boost/use-ranges>`, "Yes"
-   :doc:`boost-use-to-string <boost/use-to-string>`, "Yes"
-   :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes"
-   :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
-   :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
-   :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
-   :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
-   :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
-   :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
-   :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
-   :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
-   :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
-   :doc:`bugprone-command-processor <bugprone/command-processor>`,
-   :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
-   :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
-   :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
-   :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
-   :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
-   :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
-   :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
-   :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
-   :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
-   :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
-   :doc:`bugprone-forward-declaration-namespace <bugprone/forward-declaration-namespace>`,
-   :doc:`bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload>`,
-   :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
-   :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
-   :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
-   :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes"
-   :doc:`bugprone-incorrect-enable-shared-from-this <bugprone/incorrect-enable-shared-from-this>`, "Yes"
-   :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
-   :doc:`bugprone-infinite-loop <bugprone/infinite-loop>`,
-   :doc:`bugprone-integer-division <bugprone/integer-division>`,
-   :doc:`bugprone-invalid-enum-default-initialization <bugprone/invalid-enum-default-initialization>`,
-   :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
-   :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
-   :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
-   :doc:`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>`,
-   :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes"
-   :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
-   :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,
-   :doc:`bugprone-move-forwarding-reference <bugprone/move-forwarding-reference>`, "Yes"
-   :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
-   :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
-   :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
-   :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
-   :doc:`bugprone-no-escape <bugprone/no-escape>`,
-   :doc:`bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion>`,
-   :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,
-   :doc:`bugprone-not-null-terminated-result <bugprone/not-null-terminated-result>`, "Yes"
-   :doc:`bugprone-optional-value-conversion <bugprone/optional-value-conversion>`, "Yes"
-   :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes"
-   :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,
-   :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
-   :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
-   :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
-   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
-   :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
-   :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
-   :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
-   :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
-   :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
-   :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
-   :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes"
-   :doc:`bugprone-string-constructor <bugprone/string-constructor>`, "Yes"
-   :doc:`bugprone-string-integer-assignment <bugprone/string-integer-assignment>`, "Yes"
-   :doc:`bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul>`,
-   :doc:`bugprone-stringview-nullptr <bugprone/stringview-nullptr>`, "Yes"
-   :doc:`bugprone-suspicious-enum-usage <bugprone/suspicious-enum-usage>`,
-   :doc:`bugprone-suspicious-include <bugprone/suspicious-include>`,
-   :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
-   :doc:`bugprone-suspicious-memset-usage <bugprone/suspicious-memset-usage>`, "Yes"
-   :doc:`bugprone-suspicious-missing-comma <bugprone/suspicious-missing-comma>`,
-   :doc:`bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage>`,
-   :doc:`bugprone-suspicious-semicolon <bugprone/suspicious-semicolon>`, "Yes"
-   :doc:`bugprone-suspicious-string-compare <bugprone/suspicious-string-compare>`, "Yes"
-   :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
-   :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
-   :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
-   :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,
-   :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
-   :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
-   :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
-   :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
-   :doc:`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>`,
-   :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
-   :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
-   :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
-   :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
-   :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
-   :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
-   :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
-   :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
-   :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
-   :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes"
-   :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
-   :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
-   :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
-   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
-   :doc:`cert-err33-c <cert/err33-c>`,
-   :doc:`cert-err60-cpp <cert/err60-cpp>`,
-   :doc:`cert-flp30-c <cert/flp30-c>`,
-   :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
-   :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
-   :doc:`cert-oop57-cpp <cert/oop57-cpp>`,
-   :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
-   :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
-   :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
-   :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,
-   :doc:`cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members>`,
-   :doc:`cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while>`,
-   :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines/avoid-non-const-global-variables>`,
-   :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters <cppcoreguidelines/avoid-reference-coroutine-parameters>`,
-   :doc:`cppcoreguidelines-init-variables <cppcoreguidelines/init-variables>`, "Yes"
-   :doc:`cppcoreguidelines-interfaces-global-init <cppcoreguidelines/interfaces-global-init>`,
-   :doc:`cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage>`,
-   :doc:`cppcoreguidelines-misleading-capture-default-by-value <cppcoreguidelines/misleading-capture-default-by-value>`, "Yes"
-   :doc:`cppcoreguidelines-missing-std-forward <cppcoreguidelines/missing-std-forward>`,
-   :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
-   :doc:`cppcoreguidelines-no-suspend-with-lock <cppcoreguidelines/no-suspend-with-lock>`,
-   :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
-   :doc:`cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer>`, "Yes"
-   :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
-   :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access <cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`, "Yes"
-   :doc:`cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines/pro-bounds-constant-array-index>`, "Yes"
-   :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines/pro-bounds-pointer-arithmetic>`,
-   :doc:`cppcoreguidelines-pro-type-const-cast <cppcoreguidelines/pro-type-const-cast>`,
-   :doc:`cppcoreguidelines-pro-type-cstyle-cast <cppcoreguidelines/pro-type-cstyle-cast>`, "Yes"
-   :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
-   :doc:`cppcoreguidelines-pro-type-reinterpret-cast <cppcoreguidelines/pro-type-reinterpret-cast>`,
-   :doc:`cppcoreguidelines-pro-type-static-cast-downcast <cppcoreguidelines/pro-type-static-cast-downcast>`, "Yes"
-   :doc:`cppcoreguidelines-pro-type-union-access <cppcoreguidelines/pro-type-union-access>`,
-   :doc:`cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg>`,
-   :doc:`cppcoreguidelines-rvalue-reference-param-not-moved <cppcoreguidelines/rvalue-reference-param-not-moved>`,
-   :doc:`cppcoreguidelines-slicing <cppcoreguidelines/slicing>`,
-   :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
-   :doc:`cppcoreguidelines-use-enum-class <cppcoreguidelines/use-enum-class>`,
-   :doc:`cppcoreguidelines-virtual-class-destructor <cppcoreguidelines/virtual-class-destructor>`, "Yes"
-   :doc:`darwin-avoid-spinlock <darwin/avoid-spinlock>`,
-   :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
-   :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,
-   :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes"
-   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
-   :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
-   :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
-   :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
-   :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,
-   :doc:`fuchsia-virtual-inheritance <fuchsia/virtual-inheritance>`,
-   :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
-   :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`google-build-using-namespace <google/build-using-namespace>`,
-   :doc:`google-default-arguments <google/default-arguments>`,
-   :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
-   :doc:`google-global-names-in-headers <google/global-names-in-headers>`,
-   :doc:`google-objc-avoid-nsobject-new <google/objc-avoid-nsobject-new>`,
-   :doc:`google-objc-avoid-throwing-exception <google/objc-avoid-throwing-exception>`,
-   :doc:`google-objc-function-naming <google/objc-function-naming>`,
-   :doc:`google-objc-global-variable-declaration <google/objc-global-variable-declaration>`,
-   :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,
-   :doc:`google-readability-casting <google/readability-casting>`,
-   :doc:`google-readability-todo <google/readability-todo>`,
-   :doc:`google-runtime-float <google/runtime-float>`,
-   :doc:`google-runtime-int <google/runtime-int>`,
-   :doc:`google-runtime-operator <google/runtime-operator>`,
-   :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
-   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
-   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
-   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
-   :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
-   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
-   :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
-   :doc:`llvm-header-guard <llvm/header-guard>`,
-   :doc:`llvm-include-order <llvm/include-order>`, "Yes"
-   :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
-   :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
-   :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
-   :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
-   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
-   :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
-   :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
-   :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
-   :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
-   :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
-   :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
-   :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
-   :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
-   :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
-   :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
-   :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
-   :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
-   :doc:`misc-misleading-identifier <misc/misleading-identifier>`,
-   :doc:`misc-misplaced-const <misc/misplaced-const>`,
-   :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
-   :doc:`misc-no-recursion <misc/no-recursion>`,
-   :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
-   :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
-   :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
-   :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
-   :doc:`misc-static-assert <misc/static-assert>`, "Yes"
-   :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
-   :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
-   :doc:`misc-uniqueptr-reset-release <misc/uniqueptr-reset-release>`, "Yes"
-   :doc:`misc-unused-alias-decls <misc/unused-alias-decls>`, "Yes"
-   :doc:`misc-unused-parameters <misc/unused-parameters>`, "Yes"
-   :doc:`misc-unused-using-decls <misc/unused-using-decls>`, "Yes"
-   :doc:`misc-use-anonymous-namespace <misc/use-anonymous-namespace>`,
-   :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
-   :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
-   :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
-   :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
-   :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
-   :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
-   :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
-   :doc:`modernize-deprecated-ios-base-aliases <modernize/deprecated-ios-base-aliases>`, "Yes"
-   :doc:`modernize-loop-convert <modernize/loop-convert>`, "Yes"
-   :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
-   :doc:`modernize-make-shared <modernize/make-shared>`, "Yes"
-   :doc:`modernize-make-unique <modernize/make-unique>`, "Yes"
-   :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes"
-   :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes"
-   :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
-   :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
-   :doc:`modernize-replace-auto-ptr <modernize/replace-auto-ptr>`, "Yes"
-   :doc:`modernize-replace-disallow-copy-and-assign-macro <modernize/replace-disallow-copy-and-assign-macro>`, "Yes"
-   :doc:`modernize-replace-random-shuffle <modernize/replace-random-shuffle>`, "Yes"
-   :doc:`modernize-return-braced-init-list <modernize/return-braced-init-list>`, "Yes"
-   :doc:`modernize-shrink-to-fit <modernize/shrink-to-fit>`, "Yes"
-   :doc:`modernize-type-traits <modernize/type-traits>`, "Yes"
-   :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes"
-   :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
-   :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
-   :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
-   :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
-   :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
-   :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
-   :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
-   :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
-   :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
-   :doc:`modernize-use-nodiscard <modernize/use-nodiscard>`, "Yes"
-   :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
-   :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
-   :doc:`modernize-use-override <modernize/use-override>`, "Yes"
-   :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
-   :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes"
-   :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
-   :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
-   :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
-   :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
-   :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
-   :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
-   :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
-   :doc:`modernize-use-using <modernize/use-using>`, "Yes"
-   :doc:`mpi-buffer-deref <mpi/buffer-deref>`, "Yes"
-   :doc:`mpi-type-mismatch <mpi/type-mismatch>`, "Yes"
-   :doc:`objc-assert-equals <objc/assert-equals>`, "Yes"
-   :doc:`objc-avoid-nserror-init <objc/avoid-nserror-init>`,
-   :doc:`objc-dealloc-in-category <objc/dealloc-in-category>`,
-   :doc:`objc-forbidden-subclassing <objc/forbidden-subclassing>`,
-   :doc:`objc-missing-hash <objc/missing-hash>`,
-   :doc:`objc-nsdate-formatter <objc/nsdate-formatter>`,
-   :doc:`objc-nsinvocation-argument-lifetime <objc/nsinvocation-argument-lifetime>`, "Yes"
-   :doc:`objc-property-declaration <objc/property-declaration>`, "Yes"
-   :doc:`objc-super-self <objc/super-self>`, "Yes"
-   :doc:`openmp-exception-escape <openmp/exception-escape>`,
-   :doc:`openmp-use-default-none <openmp/use-default-none>`,
-   :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
-   :doc:`performance-enum-size <performance/enum-size>`,
-   :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes"
-   :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
-   :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
-   :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
-   :doc:`performance-inefficient-string-concatenation <performance/inefficient-string-concatenation>`,
-   :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes"
-   :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
-   :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
-   :doc:`performance-no-automatic-move <performance/no-automatic-move>`,
-   :doc:`performance-no-int-to-ptr <performance/no-int-to-ptr>`,
-   :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
-   :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
-   :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
-   :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes"
-   :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
-   :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
-   :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
-   :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
-   :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
-   :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
-   :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
-   :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
-   :doc:`readability-ambiguous-smartptr-reset-call <readability/ambiguous-smartptr-reset-call>`, "Yes"
-   :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
-   :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
-   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
-   :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
-   :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
-   :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
-   :doc:`readability-container-contains <readability/container-contains>`, "Yes"
-   :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
-   :doc:`readability-container-size-empty <readability/container-size-empty>`, "Yes"
-   :doc:`readability-convert-member-functions-to-static <readability/convert-member-functions-to-static>`, "Yes"
-   :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
-   :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
-   :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
-   :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
-   :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,
-   :doc:`readability-function-size <readability/function-size>`,
-   :doc:`readability-identifier-length <readability/identifier-length>`,
-   :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes"
-   :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes"
-   :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes"
-   :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
-   :doc:`readability-magic-numbers <readability/magic-numbers>`,
-   :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
-   :doc:`readability-math-missing-parentheses <readability/math-missing-parentheses>`, "Yes"
-   :doc:`readability-misleading-indentation <readability/misleading-indentation>`,
-   :doc:`readability-misplaced-array-index <readability/misplaced-array-index>`, "Yes"
-   :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
-   :doc:`readability-non-const-parameter <readability/non-const-parameter>`, "Yes"
-   :doc:`readability-operators-representation <readability/operators-representation>`, "Yes"
-   :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
-   :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes"
-   :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes"
-   :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes"
-   :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
-   :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
-   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
-   :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
-   :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
-   :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
-   :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
-   :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
-   :doc:`readability-redundant-string-init <readability/redundant-string-init>`, "Yes"
-   :doc:`readability-reference-to-constructed-temporary <readability/reference-to-constructed-temporary>`,
-   :doc:`readability-simplify-boolean-expr <readability/simplify-boolean-expr>`, "Yes"
-   :doc:`readability-simplify-subscript-expr <readability/simplify-subscript-expr>`, "Yes"
-   :doc:`readability-static-accessed-through-instance <readability/static-accessed-through-instance>`, "Yes"
-   :doc:`readability-static-definition-in-anonymous-namespace <readability/static-definition-in-anonymous-namespace>`, "Yes"
-   :doc:`readability-string-compare <readability/string-compare>`, "Yes"
-   :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
-   :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
-   :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
-   :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
-   :doc:`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>`, "Yes"
-   :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
-   :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
+.. csv-table::
+   :header: "Name", "Offers fixes", "Added in", "Removed in"
 
-Check aliases
--------------
+   :doc:`abseil-cleanup-ctad <abseil/cleanup-ctad>`, "Yes", "14.0.0",
+   :doc:`abseil-duration-addition <abseil/duration-addition>`, "Yes", "9.0.1",
+   :doc:`abseil-duration-comparison <abseil/duration-comparison>`, "Yes", "8.0.1",
+   :doc:`abseil-duration-conversion-cast <abseil/duration-conversion-cast>`, "Yes", "9.0.1",
+   :doc:`abseil-duration-division <abseil/duration-division>`, "Yes", "8.0.1",
+   :doc:`abseil-duration-factory-float <abseil/duration-factory-float>`, "Yes", "8.0.1",
+   :doc:`abseil-duration-factory-scale <abseil/duration-factory-scale>`, "Yes", "8.0.1",
+   :doc:`abseil-duration-subtraction <abseil/duration-subtraction>`, "Yes", "8.0.1",
+   :doc:`abseil-duration-unnecessary-conversion <abseil/duration-unnecessary-conversion>`, "Yes", "9.0.1",
+   :doc:`abseil-faster-strsplit-delimiter <abseil/faster-strsplit-delimiter>`, "Yes", "8.0.1",
+   :doc:`abseil-no-internal-dependencies <abseil/no-internal-dependencies>`,, "8.0.1",
+   :doc:`abseil-no-namespace <abseil/no-namespace>`,, "8.0.1",
+   :doc:`abseil-redundant-strcat-calls <abseil/redundant-strcat-calls>`, "Yes", "8.0.1",
+   :doc:`abseil-str-cat-append <abseil/str-cat-append>`, "Yes", "8.0.1",
+   :doc:`abseil-string-find-startswith <abseil/string-find-startswith>`, "Yes", "7.1.0",
+   :doc:`abseil-string-find-str-contains <abseil/string-find-str-contains>`, "Yes", "11.0.0",
+   :doc:`abseil-time-comparison <abseil/time-comparison>`, "Yes", "9.0.1",
+   :doc:`abseil-time-subtraction <abseil/time-subtraction>`, "Yes", "9.0.1",
+   :doc:`abseil-upgrade-duration-conversions <abseil/upgrade-duration-conversions>`, "Yes", "8.0.1",
+   :doc:`altera-id-dependent-backward-branch <altera/id-dependent-backward-branch>`,, "13.0.0",
+   :doc:`altera-kernel-name-restriction <altera/kernel-name-restriction>`,, "12.0.0",
+   :doc:`altera-single-work-item-barrier <altera/single-work-item-barrier>`,, "12.0.0",
+   :doc:`altera-struct-pack-align <altera/struct-pack-align>`, "Yes", "12.0.0",
+   :doc:`altera-unroll-loops <altera/unroll-loops>`,, "13.0.0",
+   :doc:`android-cloexec-accept <android/cloexec-accept>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-accept4 <android/cloexec-accept4>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-creat <android/cloexec-creat>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-dup <android/cloexec-dup>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-epoll-create <android/cloexec-epoll-create>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-epoll-create1 <android/cloexec-epoll-create1>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-fopen <android/cloexec-fopen>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-inotify-init <android/cloexec-inotify-init>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-inotify-init1 <android/cloexec-inotify-init1>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-memfd-create <android/cloexec-memfd-create>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-open <android/cloexec-open>`, "Yes", "7.1.0",
+   :doc:`android-cloexec-pipe <android/cloexec-pipe>`, "Yes", "9.0.1",
+   :doc:`android-cloexec-pipe2 <android/cloexec-pipe2>`, "Yes", "9.0.1",
+   :doc:`android-cloexec-socket <android/cloexec-socket>`, "Yes", "7.1.0",
+   :doc:`android-comparison-in-temp-failure-retry <android/comparison-in-temp-failure-retry>`,, "7.1.0",
+   :doc:`boost-use-ranges <boost/use-ranges>`, "Yes", "19.1.0",
+   :doc:`boost-use-to-string <boost/use-to-string>`, "Yes", "7.1.0",
+   :doc:`bugprone-argument-comment <bugprone/argument-comment>`, "Yes", "7.1.0",
+   :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,, "7.1.0",
+   :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,, "15.0.0",
+   :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,, "10.0.0",
+   :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,, "20.1.0",
+   :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes", "7.1.0",
+   :doc:`bugprone-branch-clone <bugprone/branch-clone>`,, "9.0.1",
+   :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,, "21.1.0",
+   :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,, "18.1.0",
+   :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,, "18.1.0",
+   :doc:`bugprone-command-processor <bugprone/command-processor>`,, "22.0.0",
+   :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,, "18.1.0",
+   :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes", "7.1.0",
+   :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes", "19.1.0",
+   :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,, "7.1.0",
+   :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,, "22.0.0",
+   :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,, "10.0.0",
+   :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,, "13.0.0",
+   :doc:`bugprone-empty-catch <bugprone/empty-catch>`,, "17.0.1",
+   :doc:`bugprone-exception-escape <bugprone/exception-escape>`,, "7.1.0",
+   :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,, "7.1.0",
+   :doc:`bugprone-forward-declaration-namespace <bugprone/forward-declaration-namespace>`,, "7.1.0",
+   :doc:`bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload>`,, "7.1.0",
+   :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes", "13.0.0",
+   :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes", "7.1.0",
+   :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,, "18.1.0",
+   :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes", "18.1.0",
+   :doc:`bugprone-incorrect-enable-shared-from-this <bugprone/incorrect-enable-shared-from-this>`, "Yes", "20.1.0",
+   :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,, "7.1.0",
+   :doc:`bugprone-infinite-loop <bugprone/infinite-loop>`,, "10.0.0",
+   :doc:`bugprone-integer-division <bugprone/integer-division>`,, "7.1.0",
+   :doc:`bugprone-invalid-enum-default-initialization <bugprone/invalid-enum-default-initialization>`,, "22.0.0",
+   :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,, "7.1.0",
+   :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes", "7.1.0",
+   :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,, "7.1.0",
+   :doc:`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>`,, "21.1.0",
+   :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes", "7.1.0",
+   :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes", "11.0.0",
+   :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,, "7.1.0",
+   :doc:`bugprone-move-forwarding-reference <bugprone/move-forwarding-reference>`, "Yes", "7.1.0",
+   :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,, "18.1.0",
+   :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,, "17.0.1",
+   :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,, "7.1.0",
+   :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,, "7.1.0",
+   :doc:`bugprone-no-escape <bugprone/no-escape>`,, "11.0.0",
+   :doc:`bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion>`,, "17.0.1",
+   :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,, "20.1.0",
+   :doc:`bugprone-not-null-terminated-result <bugprone/not-null-terminated-result>`, "Yes", "10.0.0",
+   :doc:`bugprone-optional-value-conversion <bugprone/optional-value-conversion>`, "Yes", "18.1.0",
+   :doc:`bugprone-parent-virtual-call <bugprone/parent-virtual-call>`, "Yes", "7.1.0",
+   :doc:`bugprone-pointer-arithmetic-on-polymorphic-object <bugprone/pointer-arithmetic-on-polymorphic-object>`,, "19.1.0",
+   :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes", "9.0.1",
+   :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes", "12.0.0",
+   :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes", "11.0.0",
+   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,, "19.1.0",
+   :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes", "15.0.0",
+   :doc:`bugprone-signal-handler <bugprone/signal-handler>`,, "12.0.0",
+   :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,, "10.0.0",
+   :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,, "7.1.0",
+   :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,, "7.1.0",
+   :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,, "11.0.0",
+   :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes", "16.0.0",
+   :doc:`bugprone-string-constructor <bugprone/string-constructor>`, "Yes", "7.1.0",
+   :doc:`bugprone-string-integer-assignment <bugprone/string-integer-assignment>`, "Yes", "7.1.0",
+   :doc:`bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul>`,, "7.1.0",
+   :doc:`bugprone-stringview-nullptr <bugprone/stringview-nullptr>`, "Yes", "14.0.0",
+   :doc:`bugprone-suspicious-enum-usage <bugprone/suspicious-enum-usage>`,, "7.1.0",
+   :doc:`bugprone-suspicious-include <bugprone/suspicious-include>`,, "11.0.0",
+   :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,, "14.0.0",
+   :doc:`bugprone-suspicious-memset-usage <bugprone/suspicious-memset-usage>`, "Yes", "7.1.0",
+   :doc:`bugprone-suspicious-missing-comma <bugprone/suspicious-missing-comma>`,, "7.1.0",
+   :doc:`bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage>`,, "16.0.0",
+   :doc:`bugprone-suspicious-semicolon <bugprone/suspicious-semicolon>`, "Yes", "7.1.0",
+   :doc:`bugprone-suspicious-string-compare <bugprone/suspicious-string-compare>`, "Yes", "7.1.0",
+   :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,, "19.1.0",
+   :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes", "7.1.0",
+   :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,, "17.0.1",
+   :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,, "20.1.0",
+   :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes", "7.1.0",
+   :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,, "7.1.0",
+   :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,, "22.0.0",
+   :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,, "8.0.1",
+   :doc:`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>`,, "15.0.0",
+   :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,, "22.0.0",
+   :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,, "7.1.0",
+   :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,, "7.1.0",
+   :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,, "13.0.0",
+   :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,, "9.0.1",
+   :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes", "21.1.0",
+   :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes", "17.0.1",
+   :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,, "17.0.1",
+   :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,, "18.1.0",
+   :doc:`bugprone-unused-raii <bugprone/unused-raii>`, "Yes", "7.1.0",
+   :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,, "7.1.0",
+   :doc:`bugprone-use-after-move <bugprone/use-after-move>`,, "7.1.0",
+   :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes", "7.1.0",
+   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,, "7.1.0",
+   :doc:`cert-err33-c <cert/err33-c>`,, "14.0.0",
+   :doc:`cert-err60-cpp <cert/err60-cpp>`,, "7.1.0",
+   :doc:`cert-flp30-c <cert/flp30-c>`,, "7.1.0",
+   :doc:`cert-mem57-cpp <cert/mem57-cpp>`,, "10.0.0",
+   :doc:`cert-msc50-cpp <cert/msc50-cpp>`,, "7.1.0",
+   :doc:`cert-msc51-cpp <cert/msc51-cpp>`,, "7.1.0",
+   :doc:`cert-oop57-cpp <cert/oop57-cpp>`,, "11.0.0",
+   :doc:`cert-oop58-cpp <cert/oop58-cpp>`,, "10.0.0",
+   :doc:`clang-analyzer-security.insecureAPI.decodeValueOfObjCType <clang-analyzer/security.insecureAPI.decodeValueOfObjCType>`, Clang Static Analyzer security.insecureAPI.decodeValueOfObjCType,, "10.0.0",
+   :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,, "12.0.0",
+   :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,, "13.0.0",
+   :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,, "17.0.1",
+   :doc:`cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members>`,, "16.0.0",
+   :doc:`cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while>`,, "16.0.0",
+   :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,, "7.1.0",
+   :doc:`cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines/avoid-non-const-global-variables>`,, "11.0.0",
+   :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters <cppcoreguidelines/avoid-reference-coroutine-parameters>`,, "16.0.0",
+   :doc:`cppcoreguidelines-init-variables <cppcoreguidelines/init-variables>`, "Yes", "10.0.0",
+   :doc:`cppcoreguidelines-interfaces-global-init <cppcoreguidelines/interfaces-global-init>`,, "7.1.0",
+   :doc:`cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage>`,, "8.0.1",
+   :doc:`cppcoreguidelines-misleading-capture-default-by-value <cppcoreguidelines/misleading-capture-default-by-value>`, "Yes", "17.0.1",
+   :doc:`cppcoreguidelines-missing-std-forward <cppcoreguidelines/missing-std-forward>`,, "17.0.1",
+   :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,, "7.1.0",
+   :doc:`cppcoreguidelines-no-suspend-with-lock <cppcoreguidelines/no-suspend-with-lock>`,, "18.1.0",
+   :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,, "7.1.0",
+   :doc:`cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer>`, "Yes", "13.0.0",
+   :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,, "7.1.0",
+   :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access <cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`, "Yes", "22.0.0",
+   :doc:`cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines/pro-bounds-constant-array-index>`, "Yes", "7.1.0",
+   :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines/pro-bounds-pointer-arithmetic>`,, "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-const-cast <cppcoreguidelines/pro-type-const-cast>`,, "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-cstyle-cast <cppcoreguidelines/pro-type-cstyle-cast>`, "Yes", "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes", "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-reinterpret-cast <cppcoreguidelines/pro-type-reinterpret-cast>`,, "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-static-cast-downcast <cppcoreguidelines/pro-type-static-cast-downcast>`, "Yes", "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-union-access <cppcoreguidelines/pro-type-union-access>`,, "7.1.0",
+   :doc:`cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg>`,, "7.1.0",
+   :doc:`cppcoreguidelines-rvalue-reference-param-not-moved <cppcoreguidelines/rvalue-reference-param-not-moved>`,, "17.0.1",
+   :doc:`cppcoreguidelines-slicing <cppcoreguidelines/slicing>`,, "7.1.0",
+   :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,, "7.1.0",
+   :doc:`cppcoreguidelines-use-enum-class <cppcoreguidelines/use-enum-class>`,, "21.1.0",
+   :doc:`cppcoreguidelines-virtual-class-destructor <cppcoreguidelines/virtual-class-destructor>`, "Yes", "14.0.0",
+   :doc:`darwin-avoid-spinlock <darwin/avoid-spinlock>`,, "10.0.0",
+   :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes", "10.0.0",
+   :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,, "9.0.1",
+   :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes", "9.0.1",
+   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,, "7.1.0",
+   :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,, "7.1.0",
+   :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,, "7.1.0",
+   :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,, "22.0.0",
+   :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,, "7.1.0",
+   :doc:`fuchsia-virtual-inheritance <fuchsia/virtual-inheritance>`,, "7.1.0",
+   :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,, "7.1.0",
+   :doc:`google-build-namespaces <google/build-namespaces>`,, "7.1.0",
+   :doc:`google-build-using-namespace <google/build-using-namespace>`,, "7.1.0",
+   :doc:`google-default-arguments <google/default-arguments>`,, "7.1.0",
+   :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes", "7.1.0",
+   :doc:`google-global-names-in-headers <google/global-names-in-headers>`,, "7.1.0",
+   :doc:`google-objc-avoid-nsobject-new <google/objc-avoid-nsobject-new>`,, "9.0.1",
+   :doc:`google-objc-avoid-throwing-exception <google/objc-avoid-throwing-exception>`,, "7.1.0",
+   :doc:`google-objc-function-naming <google/objc-function-naming>`,, "8.0.1",
+   :doc:`google-objc-global-variable-declaration <google/objc-global-variable-declaration>`,, "7.1.0",
+   :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,, "9.0.1",
+   :doc:`google-readability-casting <google/readability-casting>`,, "7.1.0",
+   :doc:`google-readability-todo <google/readability-todo>`,, "7.1.0",
+   :doc:`google-runtime-float <google/runtime-float>`,, "22.0.0",
+   :doc:`google-runtime-int <google/runtime-int>`,, "7.1.0",
+   :doc:`google-runtime-operator <google/runtime-operator>`,, "7.1.0",
+   :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes", "10.0.0",
+   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,, "7.1.0",
+   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,, "18.1.0",
+   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,, "7.1.0",
+   :doc:`hicpp-no-assembler <hicpp/no-assembler>`,, "7.1.0",
+   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,, "7.1.0",
+   :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,, "10.0.0",
+   :doc:`llvm-header-guard <llvm/header-guard>`,, "7.1.0",
+   :doc:`llvm-include-order <llvm/include-order>`, "Yes", "7.1.0",
+   :doc:`llvm-namespace-comment <llvm/namespace-comment>`,, "7.1.0",
+   :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes", "9.0.1",
+   :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes", "10.0.0",
+   :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,, "21.1.0",
+   :doc:`llvm-twine-local <llvm/twine-local>`, "Yes", "7.1.0",
+   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes", "22.0.0",
+   :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes", "22.0.0",
+   :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,, "11.0.0",
+   :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,, "11.0.0",
+   :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes", "17.0.1",
+   :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes", "11.0.0",
+   :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,, "15.0.0",
+   :doc:`misc-const-correctness <misc/const-correctness>`, "Yes", "15.0.0",
+   :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,, "18.1.0",
+   :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes", "7.1.0",
+   :doc:`misc-header-include-cycle <misc/header-include-cycle>`,, "17.0.1",
+   :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes", "17.0.1",
+   :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,, "14.0.0",
+   :doc:`misc-misleading-identifier <misc/misleading-identifier>`,, "14.0.0",
+   :doc:`misc-misplaced-const <misc/misplaced-const>`,, "7.1.0",
+   :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,, "7.1.0",
+   :doc:`misc-no-recursion <misc/no-recursion>`,, "11.0.0",
+   :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,, "7.1.0",
+   :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,, "8.0.1",
+   :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,, "22.0.0",
+   :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes", "7.1.0",
+   :doc:`misc-static-assert <misc/static-assert>`, "Yes", "7.1.0",
+   :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,, "7.1.0",
+   :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,, "7.1.0",
+   :doc:`misc-uniqueptr-reset-release <misc/uniqueptr-reset-release>`, "Yes", "7.1.0",
+   :doc:`misc-unused-alias-decls <misc/unused-alias-decls>`, "Yes", "7.1.0",
+   :doc:`misc-unused-parameters <misc/unused-parameters>`, "Yes", "7.1.0",
+   :doc:`misc-unused-using-decls <misc/unused-using-decls>`, "Yes", "7.1.0",
+   :doc:`misc-use-anonymous-namespace <misc/use-anonymous-namespace>`,, "16.0.0",
+   :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes", "19.1.0",
+   :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes", "7.1.0",
+   :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,, "8.0.1",
+   :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,, "22.0.0",
+   :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,, "22.0.0",
+   :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes", "8.0.1",
+   :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes", "7.1.0",
+   :doc:`modernize-deprecated-ios-base-aliases <modernize/deprecated-ios-base-aliases>`, "Yes", "8.0.1",
+   :doc:`modernize-loop-convert <modernize/loop-convert>`, "Yes", "7.1.0",
+   :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes", "15.0.0",
+   :doc:`modernize-make-shared <modernize/make-shared>`, "Yes", "7.1.0",
+   :doc:`modernize-make-unique <modernize/make-unique>`, "Yes", "7.1.0",
+   :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes", "19.1.0",
+   :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes", "7.1.0",
+   :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes", "7.1.0",
+   :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes", "7.1.0",
+   :doc:`modernize-replace-auto-ptr <modernize/replace-auto-ptr>`, "Yes", "7.1.0",
+   :doc:`modernize-replace-disallow-copy-and-assign-macro <modernize/replace-disallow-copy-and-assign-macro>`, "Yes", "11.0.0",
+   :doc:`modernize-replace-random-shuffle <modernize/replace-random-shuffle>`, "Yes", "7.1.0",
+   :doc:`modernize-return-braced-init-list <modernize/return-braced-init-list>`, "Yes", "7.1.0",
+   :doc:`modernize-shrink-to-fit <modernize/shrink-to-fit>`, "Yes", "7.1.0",
+   :doc:`modernize-type-traits <modernize/type-traits>`, "Yes", "17.0.1",
+   :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes", "7.1.0",
+   :doc:`modernize-use-auto <modernize/use-auto>`, "Yes", "7.1.0",
+   :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes", "7.1.0",
+   :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes", "18.1.0",
+   :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes", "7.1.0",
+   :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes", "19.1.0",
+   :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes", "7.1.0",
+   :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes", "7.1.0",
+   :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes", "7.1.0",
+   :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes", "20.1.0",
+   :doc:`modernize-use-nodiscard <modernize/use-nodiscard>`, "Yes", "8.0.1",
+   :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes", "7.1.0",
+   :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes", "7.1.0",
+   :doc:`modernize-use-override <modernize/use-override>`, "Yes", "7.1.0",
+   :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes", "19.1.0",
+   :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes", "21.1.0",
+   :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes", "18.1.0",
+   :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes", "19.1.0",
+   :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes", "18.1.0",
+   :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes", "17.0.1",
+   :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes", "9.0.1",
+   :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes", "7.1.0",
+   :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes", "7.1.0",
+   :doc:`modernize-use-using <modernize/use-using>`, "Yes", "7.1.0",
+   :doc:`mpi-buffer-deref <mpi/buffer-deref>`, "Yes", "7.1.0",
+   :doc:`mpi-type-mismatch <mpi/type-mismatch>`, "Yes", "7.1.0",
+   :doc:`objc-assert-equals <objc/assert-equals>`, "Yes", "14.0.0",
+   :doc:`objc-avoid-nserror-init <objc/avoid-nserror-init>`,, "7.1.0",
+   :doc:`objc-dealloc-in-category <objc/dealloc-in-category>`,, "11.0.0",
+   :doc:`objc-forbidden-subclassing <objc/forbidden-subclassing>`,, "7.1.0",
+   :doc:`objc-missing-hash <objc/missing-hash>`,, "10.0.0",
+   :doc:`objc-nsdate-formatter <objc/nsdate-formatter>`,, "16.0.0",
+   :doc:`objc-nsinvocation-argument-lifetime <objc/nsinvocation-argument-lifetime>`, "Yes", "11.0.0",
+   :doc:`objc-property-declaration <objc/property-declaration>`, "Yes", "7.1.0",
+   :doc:`objc-super-self <objc/super-self>`, "Yes", "9.0.1",
+   :doc:`openmp-exception-escape <openmp/exception-escape>`,, "9.0.1",
+   :doc:`openmp-use-default-none <openmp/use-default-none>`,, "9.0.1",
+   :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes", "17.0.1",
+   :doc:`performance-enum-size <performance/enum-size>`,, "18.1.0",
+   :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes", "7.1.0",
+   :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes", "7.1.0",
+   :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,, "7.1.0",
+   :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes", "7.1.0",
+   :doc:`performance-inefficient-string-concatenation <performance/inefficient-string-concatenation>`,, "7.1.0",
+   :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes", "7.1.0",
+   :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes", "7.1.0",
+   :doc:`performance-move-constructor-init <performance/move-constructor-init>`,, "7.1.0",
+   :doc:`performance-no-automatic-move <performance/no-automatic-move>`,, "10.0.0",
+   :doc:`performance-no-int-to-ptr <performance/no-int-to-ptr>`,, "12.0.0",
+   :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes", "17.0.1",
+   :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes", "7.1.0",
+   :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes", "17.0.1",
+   :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes", "10.0.0",
+   :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes", "7.1.0",
+   :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes", "7.1.0",
+   :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes", "7.1.0",
+   :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,, "21.1.0",
+   :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes", "11.0.0",
+   :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,, "7.1.0",
+   :doc:`portability-std-allocator-const <portability/std-allocator-const>`,, "15.0.0",
+   :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,, "20.1.0",
+   :doc:`readability-ambiguous-smartptr-reset-call <readability/ambiguous-smartptr-reset-call>`, "Yes", "21.1.0",
+   :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes", "7.1.0",
+   :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,, "18.1.0",
+   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes", "18.1.0",
+   :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,, "17.0.1",
+   :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes", "7.1.0",
+   :doc:`readability-const-return-type <readability/const-return-type>`, "Yes", "8.0.1",
+   :doc:`readability-container-contains <readability/container-contains>`, "Yes", "14.0.0",
+   :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes", "14.0.0",
+   :doc:`readability-container-size-empty <readability/container-size-empty>`, "Yes", "7.1.0",
+   :doc:`readability-convert-member-functions-to-static <readability/convert-member-functions-to-static>`, "Yes", "9.0.1",
+   :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes", "7.1.0",
+   :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes", "14.0.0",
+   :doc:`readability-else-after-return <readability/else-after-return>`, "Yes", "7.1.0",
+   :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes", "19.1.0",
+   :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,, "12.0.0",
+   :doc:`readability-function-size <readability/function-size>`,, "7.1.0",
+   :doc:`readability-identifier-length <readability/identifier-length>`,, "14.0.0",
+   :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes", "7.1.0",
+   :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes", "7.1.0",
+   :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes", "7.1.0",
+   :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes", "8.0.1",
+   :doc:`readability-magic-numbers <readability/magic-numbers>`,, "8.0.1",
+   :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes", "10.0.0",
+   :doc:`readability-math-missing-parentheses <readability/math-missing-parentheses>`, "Yes", "19.1.0",
+   :doc:`readability-misleading-indentation <readability/misleading-indentation>`,, "7.1.0",
+   :doc:`readability-misplaced-array-index <readability/misplaced-array-index>`, "Yes", "7.1.0",
+   :doc:`readability-named-parameter <readability/named-parameter>`, "Yes", "7.1.0",
+   :doc:`readability-non-const-parameter <readability/non-const-parameter>`, "Yes", "7.1.0",
+   :doc:`readability-operators-representation <readability/operators-representation>`, "Yes", "17.0.1",
+   :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes", "10.0.0",
+   :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes", "10.0.0",
+   :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes", "18.1.0",
+   :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes", "7.1.0",
+   :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes", "7.1.0",
+   :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes", "7.1.0",
+   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes", "18.1.0",
+   :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes", "7.1.0",
+   :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes", "22.0.0",
+   :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,, "8.0.1",
+   :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes", "7.1.0",
+   :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes", "7.1.0",
+   :doc:`readability-redundant-string-init <readability/redundant-string-init>`, "Yes", "7.1.0",
+   :doc:`readability-reference-to-constructed-temporary <readability/reference-to-constructed-temporary>`,, "18.1.0",
+   :doc:`readability-simplify-boolean-expr <readability/simplify-boolean-expr>`, "Yes", "7.1.0",
+   :doc:`readability-simplify-subscript-expr <readability/simplify-subscript-expr>`, "Yes", "7.1.0",
+   :doc:`readability-static-accessed-through-instance <readability/static-accessed-through-instance>`, "Yes", "7.1.0",
+   :doc:`readability-static-definition-in-anonymous-namespace <readability/static-definition-in-anonymous-namespace>`, "Yes", "7.1.0",
+   :doc:`readability-string-compare <readability/string-compare>`, "Yes", "7.1.0",
+   :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,, "13.0.0",
+   :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes", "7.1.0",
+   :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes", "8.0.1",
+   :doc:`readability-use-anyofallof <readability/use-anyofallof>`,, "11.0.0",
+   :doc:`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>`, "Yes", "21.1.0",
+   :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes", "19.1.0",
+   :doc:`zircon-temporary-objects <zircon/temporary-objects>`,, "7.1.0",
 
 .. csv-table::
    :header: "Name", "Redirect", "Offers fixes"
