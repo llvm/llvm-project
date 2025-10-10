@@ -915,7 +915,8 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def OpWithResultShapePerDimInterfaceOp :
     TEST_Op<"op_with_result_shape_per_dim_interface",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes"]>]> {
   let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
 }
