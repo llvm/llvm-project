@@ -1,5 +1,4 @@
-
-//===-- SPIRVCombinerHelper.cpp ---------------------------------*- C++ -*-===//
+//===-- SPIRVCombinerHelper.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,11 +37,12 @@ bool SPIRVCombinerHelper::matchLengthToDistance(MachineInstr &MI) const {
   // First operand of MI is `G_INTRINSIC` so start at operand 2.
   Register SubReg = MI.getOperand(2).getReg();
   MachineInstr *SubInstr = MRI.getVRegDef(SubReg);
-  if (!SubInstr || SubInstr->getOpcode() != TargetOpcode::G_FSUB)
+  if (SubInstr->getOpcode() != TargetOpcode::G_FSUB)
     return false;
 
   return true;
 }
+
 void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
   // Extract the operands for X and Y from the match criteria.
   Register SubDestReg = MI.getOperand(2).getReg();
