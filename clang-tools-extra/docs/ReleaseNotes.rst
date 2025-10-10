@@ -307,6 +307,10 @@ Changes in existing checks
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
 
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
+  insertion location for function pointers with multiple parameters.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positives on inherited members in class templates.
@@ -328,7 +332,8 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is tranferred to non-const references.
+  positives when pointers is tranferred to non-const references 
+  and avoid false positives of function pointer.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
