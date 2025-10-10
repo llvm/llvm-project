@@ -40,20 +40,20 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
   exp_x = (int)((tmp_x & (0x7F800000)) >> 23) - 127;
   exp_y = (int)((tmp_y & (0x7F800000)) >> 23) - 127;
   // Test for NaNs, Infs, and Zeros
-  if ((exp_x == (0x00000080L)) || (exp_y == (0x00000080L)) ||
-      (tmp_x == (0x00000000L)) || (tmp_y == (0x00000000L)))
+  if ((exp_x == 0x00000080) || (exp_y == 0x00000080) || (tmp_x == 0) ||
+      (tmp_y == 0))
     special_op++;
   // Get significands
-  signif_x = (tmp_x & (0x007FFFFFL));
-  signif_y = (tmp_y & (0x007FFFFFL));
+  signif_x = (tmp_x & MANTBITS_SP32);
+  signif_y = (tmp_y & MANTBITS_SP32);
   // Process NaNs, Infs, and Zeros
   if (special_op) {
     (*q) = 0;
     // x is NaN
-    if ((signif_x != (0x00000000L)) && (exp_x == (0x00000080L)))
+    if ((signif_x != 0) && (exp_x == 0x00000080))
       result = x * 1.7f;
     // y is NaN
-    else if ((signif_y != (0x00000000L)) && (exp_y == (0x00000080L)))
+    else if ((signif_y != 0) && (exp_y == 0x00000080))
       result = y * 1.7f;
     // y is zero
     else if (abs_y == zero) {
@@ -64,7 +64,7 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
     else if (abs_x == zero)
       result = x;
     // x is Inf
-    else if ((signif_x == (0x00000000L)) && (exp_x == (0x00000080L)))
+    else if ((signif_x == 0) && (exp_x == 0x00000080))
       result = zero / zero;
     // y is Inf
     else
@@ -95,17 +95,17 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
     return nRet;
   }
   // Check for denormal x and y, adjust and normalize
-  if ((exp_x == -127) && (signif_x != (0x00000000L))) {
+  if ((exp_x == -127) && (signif_x != 0)) {
     exp_x = -126;
-    while (signif_x <= (0x007FFFFFL)) {
+    while (signif_x <= MANTBITS_SP32) {
       exp_x--;
       signif_x <<= 1;
     };
   } else
     signif_x = (signif_x | (0x00800000L));
-  if ((exp_y == -127) && (signif_y != (0x00000000L))) {
+  if ((exp_y == -127) && (signif_y != 0)) {
     exp_y = -126;
-    while (signif_y <= (0x007FFFFFL)) {
+    while (signif_y <= MANTBITS_SP32) {
       exp_y--;
       signif_y <<= 1;
     };
@@ -127,7 +127,7 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
     rem_bit <<= 1;
   }
   // Zero remquo ... return immediately with sign of x
-  if (rem_bit == (0x00000000L)) {
+  if (rem_bit == 0) {
     (*q) = ((uint)(0x7FFFFFFFL & quo_bit)) * sign;
     (*r) = (zero * x);
     return nRet;
@@ -137,14 +137,14 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
   // Set exponent base, unbiased
   j = exp_y;
   // Calculate normalization shift
-  while (rem_bit <= (0x007FFFFFL)) {
+  while (rem_bit <= MANTBITS_SP32) {
     j--;
     rem_bit <<= 1;
   };
   // Prepare normal results
   if (j >= -126) {
     // Remove explicit 1
-    rem_bit &= (0x007FFFFFL);
+    rem_bit &= MANTBITS_SP32;
     // Set final exponent ... add exponent bias
     j = j + 127;
   }
