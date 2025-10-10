@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -1615,12 +1616,11 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     }
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
+    SmallSet<uint64_t, 32> SymbolAddresses;
+    for (unsigned J = 0; J < SymbolList.size(); ++J)
+      SymbolAddresses.insert(SymbolList[J].Address);
     for (uint64_t f = 0; f < FoundFns.size(); f++) {
-      bool found = false;
-      for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-        if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-          found = true;
-      }
+      bool found = SymbolAddresses.contains(FoundFns[f] + BaseSegmentAddress);
       // See this address is not already in the symbol table fake up an
       // nlist for it.
       if (!found) {
