@@ -74,12 +74,12 @@ void P_without_assumes() {
 }
 
 #pragma omp begin assumes no_openmp
-// CHECK{LITERAL}: [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] void P_with_assumes_no_call() {
+// CHECK{LITERAL}: [[omp::assume("ompx_global_assumption")]] [[omp::assume("omp_no_openmp")]] void P_with_assumes_no_call() {
 void P_with_assumes_no_call() {
   P<int> p;
   p.a = 0;
 }
-// CHECK{LITERAL}: [[omp::assume("omp_no_openmp")]] [[omp::assume("ompx_global_assumption")]] void P_with_assumes_call() {
+// CHECK{LITERAL}: [[omp::assume("ompx_global_assumption")]] [[omp::assume("omp_no_openmp")]] void P_with_assumes_call() {
 void P_with_assumes_call() {
   P<int> p;
   p.a = 0;

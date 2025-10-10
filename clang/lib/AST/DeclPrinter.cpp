@@ -258,7 +258,23 @@ bool DeclPrinter::prettyPrintAttributes(const Decl *D,
   bool hasPrinted = false;
 
   if (D->hasAttrs()) {
-    const AttrVec &Attrs = D->getAttrs();
+    const SourceManager &SM = D->getASTContext().getSourceManager();
+    AttrVec Attrs = D->getAttrs();
+
+    // Partition the vector into Valid and !Valid.
+    auto InvLocPart =
+        std::stable_partition(Attrs.begin(), Attrs.end(), [&SM](Attr *A) {
+          return SM.getExpansionLoc(A->getLoc()).isValid();
+        });
+
+    // Sort the Valid part.
+    llvm::sort(Attrs.begin(), InvLocPart, [&SM](Attr *A, Attr *B) {
+      const SourceLocation &ALoc = SM.getExpansionLoc(A->getLoc());
+      const SourceLocation &BLoc = SM.getExpansionLoc(B->getLoc());
+
+      return SM.isBeforeInTranslationUnit(ALoc, BLoc);
+    });
+
     for (auto *A : Attrs) {
       if (A->isInherited() || A->isImplicit())
         continue;
