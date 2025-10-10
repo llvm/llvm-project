@@ -38,8 +38,9 @@ using namespace __sanitizer;
             "Warning: REAL(sigaction_symname) == nullptr. This may happen "   \
             "if you link with ubsan statically. Sigaction will not work.\n"); \
         ret = -1;                                                             \
+      } else {                                                                \
+        ret = REAL(sigaction_symname)(signum, act, oldact);                   \
       }                                                                       \
-      ret = REAL(sigaction_symname)(signum, act, oldact);                     \
     }
 #endif
 
