@@ -96,22 +96,22 @@ define amdgpu_ps i32 @ashr64(i64 inreg %val0, i64 inreg %val1) {
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @abs32(i32 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @abs32(i32 inreg %val0) {
 ; CHECK-LABEL: abs32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_abs_i32 s0, s0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %neg = sub i32 0, %val0
   %cond = icmp sgt i32 %val0, %neg
   %result = select i1 %cond, i32 %val0, i32 %neg
-  store i32 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result)
   %cmp = icmp ne i32 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
@@ -207,124 +207,121 @@ define amdgpu_ps i32 @xor64(i64 inreg %val0, i64 inreg %val1) {
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @nand32(i32 inreg %val0, i32 inreg %val1, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @nand32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: nand32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nand_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i32 %val0, %val1
   %result2 = xor i32 %result, -1
-  store i32 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result2)
   %cmp = icmp ne i32 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @nand64(i64 inreg %val0, i64 inreg %val1, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @nand64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: nand64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nand_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = and i64 %val0, %val1
   %result2 = xor i64 %result, -1
-  store i64 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result2)
   %cmp = icmp ne i64 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @nor32(i32 inreg %val0, i32 inreg %val1, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @nor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: nor32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nor_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i32 %val0, %val1
   %result2 = xor i32 %result, -1
-  store i32 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result2)
   %cmp = icmp ne i32 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @nor64(i64 inreg %val0, i64 inreg %val1, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @nor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: nor64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nor_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = or i64 %val0, %val1
   %result2 = xor i64 %result, -1
-  store i64 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result2)
   %cmp = icmp ne i64 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @xnor32(i32 inreg %val0, i32 inreg %val1, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @xnor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: xnor32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xnor_b32 s0, s0, s1
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i32 %val0, %val1
   %result2 = xor i32 %result, -1
-  store i32 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result2)
   %cmp = icmp ne i32 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @xnor64(i64 inreg %val0, i64 inreg %val1, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @xnor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: xnor64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i64 %val0, %val1
   %result2 = xor i64 %result, -1
-  store i64 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result2)
   %cmp = icmp ne i64 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
@@ -410,24 +407,23 @@ define amdgpu_ps i32 @bfe_i32(i32 inreg %val0) {
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @bfe_i64(i64 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @bfe_i64(i64 inreg %val0) {
 ; CHECK-LABEL: bfe_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bfe_i64 s[2:3], s[0:1], 0x80000
 ; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[2:3]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = shl i64 %val0, 56
   %result = ashr i64 %shl, 56
-  store i64 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result)
   %cmp = icmp ne i64 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
@@ -449,185 +445,180 @@ define amdgpu_ps i32 @bfe_u32(i32 inreg %val0) {
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @bfe_u64(i64 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @bfe_u64(i64 inreg %val0) {
 ; CHECK-LABEL: bfe_u64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %shl = shl i64 %val0, 56
   %result = lshr i64 %shl, 56
-  store i64 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result)
   %cmp = icmp ne i64 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @bcnt032(i32 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @bcnt032(i32 inreg %val0) {
 ; CHECK-LABEL: bcnt032:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; CHECK-NEXT:    s_sub_i32 s0, 32, s0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
   %result2 = sub i32 32, %result
-  store i32 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result2)
   %cmp = icmp ne i32 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @bcnt064(i64 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @bcnt064(i64 inreg %val0) {
 ; CHECK-LABEL: bcnt064:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
 ; CHECK-NEXT:    s_sub_u32 s0, 64, s0
 ; CHECK-NEXT:    s_subb_u32 s1, 0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.ctpop.i64(i64 %val0) nounwind readnone
   %result2 = sub i64 64, %result
-  store i64 %result2, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result2)
   %cmp = icmp ne i64 %result2, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @bcnt132(i32 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @bcnt132(i32 inreg %val0) {
 ; CHECK-LABEL: bcnt132:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
-  store i32 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result)
   %cmp = icmp ne i32 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @bcnt164(i64 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @bcnt164(i64 inreg %val0) {
 ; CHECK-LABEL: bcnt164:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.ctpop.i64(i64 %val0) nounwind readnone
-  store i64 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result)
   %cmp = icmp ne i64 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @quadmask32(i32 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @quadmask32(i32 inreg %val0) {
 ; CHECK-LABEL: quadmask32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_quadmask_b32 s0, s0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.s.quadmask.i32(i32 %val0) nounwind readnone
-  store i32 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result)
   %cmp = icmp ne i32 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @quadmask64(i64 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @quadmask64(i64 inreg %val0) {
 ; CHECK-LABEL: quadmask64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = call i64 @llvm.amdgcn.s.quadmask.i64(i64 %val0) nounwind readnone
-  store i64 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result)
   %cmp = icmp ne i64 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @not32(i32 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @not32(i32 inreg %val0) {
 ; CHECK-LABEL: not32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_not_b32 s0, s0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s0
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i32 %val0, -1
-  store i32 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i32 %result)
   %cmp = icmp ne i32 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
 }
 
-define amdgpu_ps i32 @not64(i64 inreg %val0, ptr addrspace(1) %ptr) {
+define amdgpu_ps i32 @not64(i64 inreg %val0) {
 ; CHECK-LABEL: not64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_not_b64 s[0:1], s[0:1]
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = xor i64 %val0, -1
-  store i64 %result, ptr addrspace(1) %ptr
+  call void asm "; use $0", "s"(i64 %result)
   %cmp = icmp ne i64 %result, 0
   %zext = zext i1 %cmp to i32
   ret i32 %zext
