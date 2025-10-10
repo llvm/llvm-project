@@ -37,7 +37,8 @@ LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
 
   unsigned long result = 0;
   for (int i = 0; i <= dot_num; ++i) {
-    unsigned max_part = i == dot_num ? (0xffffffffUL >> (8 * dot_num)) : 0xffUL;
+    unsigned long max_part =
+        i == dot_num ? (0xffffffffUL >> (8 * dot_num)) : 0xffUL;
     if (parts[i] > max_part)
       return 0;
     int shift = i == dot_num ? 0 : 8 * (3 - i);
