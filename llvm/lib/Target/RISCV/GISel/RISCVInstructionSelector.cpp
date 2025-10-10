@@ -80,9 +80,6 @@ private:
   // Returns true if the instruction was modified.
   void preISelLower(MachineInstr &MI, MachineIRBuilder &MIB);
 
-  // An early selection function that runs before the selectImpl() call.
-  bool earlySelect(MachineInstr &I, MachineIRBuilder &MIB);
-
   bool replacePtrWithInt(MachineOperand &Op, MachineIRBuilder &MIB);
 
   // Custom selection methods
@@ -703,11 +700,6 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
 
     // Result vector
     const Register DstReg = I.getOperand(0).getReg();
-    const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-        MRI->getType(DstReg), *RBI.getRegBank(DstReg, *MRI, TRI));
-    if (IsMasked)
-      DstRC = TRI.getNoV0RegClass(DstRC);
-    RBI.constrainGenericRegister(DstReg, *DstRC, *MRI);
 
     // Sources
     bool HasPassthruOperand = IntrinID != Intrinsic::riscv_vlm;
@@ -718,11 +710,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     if (HasPassthruOperand) {
       auto PassthruReg = I.getOperand(CurOp++).getReg();
       SrcOps.push_back(PassthruReg);
-      RBI.constrainGenericRegister(PassthruReg, *DstRC, *MRI);
     } else {
-      auto UndefReg = MRI->createVirtualRegister(DstRC);
-      MIB.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(UndefReg);
-      SrcOps.push_back(UndefReg);
+      SrcOps.push_back(Register(RISCV::NoRegister));
     }
 
     // Base Pointer
@@ -738,7 +727,6 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     // Mask
     if (IsMasked) {
       auto MaskReg = I.getOperand(CurOp++).getReg();
-      RBI.constrainGenericRegister(MaskReg, RISCV::VMV0RegClass, *MRI);
       SrcOps.push_back(MaskReg);
     }
 
@@ -753,8 +741,6 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
     for (auto &RenderFn : *VLOpFn)
       RenderFn(PseudoMI);
-    if (auto VLReg = PseudoMI.getReg(PseudoMI.getInstr()->getNumOperands() - 1))
-      RBI.constrainGenericRegister(VLReg, RISCV::GPRNoX0RegClass, *MRI);
 
     // SEW
     PseudoMI.addImm(Log2SEW);
@@ -769,18 +755,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     PseudoMI.cloneMemRefs(I);
 
     I.eraseFromParent();
-    return true;
+    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
   }
-  }
-}
-
-bool RISCVInstructionSelector::earlySelect(MachineInstr &MI,
-                                           MachineIRBuilder &MIB) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    return selectIntrinsicWithSideEffects(MI, MIB);
   }
 }
 
@@ -824,9 +800,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
     return true;
   }
-
-  if (earlySelect(MI, MIB))
-    return true;
 
   if (selectImpl(MI, *CoverageInfo))
     return true;
@@ -948,6 +921,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    return selectIntrinsicWithSideEffects(MI, MIB);
   default:
     return false;
   }
