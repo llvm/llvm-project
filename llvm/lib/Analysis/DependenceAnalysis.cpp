@@ -3265,7 +3265,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     return false;
 
   // Check that the two size arrays are non-empty and equal in length and
-  // value.
+  // value.  SCEV expressions are uniqued, so we can compare pointers.
   if (SrcSizes.size() != DstSizes.size() ||
       !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
     SrcSubscripts.clear();

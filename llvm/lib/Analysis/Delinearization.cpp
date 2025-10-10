@@ -824,7 +824,7 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
 bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                       const GetElementPtrInst *GEP,
                                       SmallVectorImpl<const SCEV *> &Subscripts,
-                                      SmallVectorImpl<int> &Sizes) {
+                                      SmallVectorImpl<const SCEV *> &Sizes) {
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
@@ -855,7 +855,8 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Subscripts.push_back(Expr);
     if (!(DroppedFirstDim && i == 2))
-      Sizes.push_back(ArrayTy->getNumElements());
+      Sizes.push_back(SE.getConstant(Expr->getType(),
+                                      ArrayTy->getNumElements()));
 
     Ty = ArrayTy->getElementType();
   }
