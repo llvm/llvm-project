@@ -887,7 +887,7 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 /// }
 ///
 /// Returns true if any IR changes were made, false otherwise.
-static bool processCallOp(CallOpInterface callOp, Operation *module,
+static bool processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
                           RunLivenessAnalysis &la) {
   Operation *callableOp = callOp.resolveCallable();
   auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
@@ -903,7 +903,6 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
   nonLiveArgs = nonLiveArgs.flip();
 
   if (nonLiveArgs.count() > 0) {
-    auto moduleOp = cast<ModuleOp>(module);
     OpBuilder rewriter(moduleOp.getContext());
 
     // Clone function and create private version
@@ -992,11 +991,11 @@ void RemoveDeadValues::runOnOperation() {
   RunLivenessAnalysis *la = &am.getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
 
-  // Only privatize public funciton if liveness analysis is inter-procedural.
+  // Only privatize public functions if liveness analysis is inter-procedural.
   if (la->getSolverConfig().isInterprocedural()) {
     bool changed = false;
     module->walk([&](CallOpInterface callOp) {
-      if (processCallOp(callOp, module, *la)) {
+      if (processCallOp(callOp, cast<ModuleOp>(module), *la)) {
         changed = true;
       }
     });
@@ -1007,7 +1006,6 @@ void RemoveDeadValues::runOnOperation() {
       bool preserved = pa.isPreserved<RunLivenessAnalysis>();
       la->invalidate();
       am.invalidate(pa);
-
       la = &am.getAnalysis<RunLivenessAnalysis>();
       // If RunLivenessAnalysis was previously preserved, preserved the updated
       // results.
