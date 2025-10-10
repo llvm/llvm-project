@@ -119,7 +119,7 @@ void uses(unsigned Parm) {
 
   int *IPtrArr[5];
   // expected-error@+3{{invalid type 'int *' used in OpenACC 'reduction' variable reference; type is not a scalar value, or array of scalars, or composite of scalars}}
-  // expected-note@+2{{used as element type of array type 'int *'}}
+  // expected-note@+2{{used as element type of array type 'int *[5]'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:IPtrArr)
   while (1);
