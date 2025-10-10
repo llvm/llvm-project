@@ -123,6 +123,10 @@ def : Pat<(i64 (ctlz_zero_undef I64:$src)), (CLZ_I64 I64:$src)>;
 def : Pat<(i32 (cttz_zero_undef I32:$src)), (CTZ_I32 I32:$src)>;
 def : Pat<(i64 (cttz_zero_undef I64:$src)), (CTZ_I64 I64:$src)>;
 
+
+def : Pat<(f32 (strict_fmul F32:$lhs, F32:$rhs)), (MUL_F32 F32:$lhs, F32:$rhs)>;
+def : Pat<(f64 (strict_fmul F64:$lhs, F64:$rhs)), (MUL_F64 F64:$lhs, F64:$rhs)>;
+
 //===----------------------------------------------------------------------===//
 // Complex pattern equivalents
 //===----------------------------------------------------------------------===//

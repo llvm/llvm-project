@@ -193,6 +193,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_FMA:
   case G_FREM:
   case G_FCOPYSIGN:
+  case G_FCANONICALIZE:
+  case G_STRICT_FMUL:
     OperandsMapping = &Op0FloatValueMapping;
     break;
   case G_SEXT_INREG:
