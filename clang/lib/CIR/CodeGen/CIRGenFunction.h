@@ -1312,6 +1312,8 @@ public:
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
+  mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
+
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
   /// initializer for the object, and the address is not necessarily

@@ -38,14 +38,22 @@ class Bitset {
   static constexpr unsigned NumWords =
       (NumBits + BitwordBits - 1) / BitwordBits;
 
-protected:
   using StorageType = std::array<BitWord, NumWords>;
-
-private:
   StorageType Bits{};
 
 protected:
-  constexpr Bitset(const StorageType &B) : Bits{B} {}
+  constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
+    if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
+      for (size_t I = 0; I != B.size(); ++I)
+        Bits[I] = B[I];
+    } else {
+      for (size_t I = 0; I != B.size(); ++I) {
+        uint64_t Elt = B[I];
+        Bits[2 * I] = static_cast<uint32_t>(Elt);
+        Bits[2 * I + 1] = static_cast<uint32_t>(Elt >> 32);
+      }
+    }
+  }
 
 public:
   constexpr Bitset() = default;

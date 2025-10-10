@@ -401,4 +401,27 @@ b:
   ret i32 %1
 }
 
+define i32 @else_will_be_unreachable(i1 %arg) {
+; CHECK-LABEL: @else_will_be_unreachable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I:%.*]] = select i1 [[ARG:%.*]], i32 0, i32 1
+; CHECK-NEXT:    ret i32 [[I]]
+;
+entry:
+  switch i1 %arg, label %else [
+  i1 false, label %if
+  i1 true, label %if
+  ]
+
+if:
+  br i1 %arg, label %else, label %bb
+
+bb:
+  br label %else
+
+else:
+  %i = phi i32 [ 0, %entry ], [ 0, %if ], [ 1, %bb ]
+  ret i32 %i
+}
+
 declare void @bar(ptr nonnull dereferenceable(4))
