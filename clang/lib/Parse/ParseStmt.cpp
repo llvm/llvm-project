@@ -2392,12 +2392,6 @@ StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
   if (!Res.isUsable())
     return StmtError();
 
-  // Diagnose this *after* parsing the body for better synchronisation.
-  if (getLangOpts().CPlusPlus) {
-    Diag(DeferLoc, diag::err_defer_unsupported);
-    return StmtError();
-  }
-
   // The grammar specifically calls for an unlabeled-statement here.
   if (auto *L = dyn_cast<LabelStmt>(Res.get())) {
     Diag(L->getIdentLoc(), diag::err_defer_ts_labeled_stmt);

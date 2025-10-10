@@ -1659,7 +1659,8 @@ defm defer_ts
           "defer-ts", LangOpts<"DeferTS">, DefaultFalse,
           PosFlag<SetTrue, [], [ClangOption, CC1Option],
                   "Enable support for the C 'defer' Technical Specification">,
-          NegFlag<SetFalse>>;
+          NegFlag<SetFalse>>,
+      ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
 
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",

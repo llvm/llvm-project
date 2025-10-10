@@ -349,7 +349,6 @@ def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
 def err_defer_ts_labeled_stmt
     : Error<"body of 'defer' statement cannot start with a label">;
-def err_defer_unsupported : Error<"'defer' statements are only supported in C">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
