@@ -61,9 +61,9 @@ private:
       mlir::Operation *op,
       llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
   bool hasOnlyImmediateOperands(mlir::Operation *const op) const noexcept;
-  llvm::SetVector<int>
-  getOutputFootprint(mlir::Operation *op,
-                     llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
+  llvm::SetVector<int> getOutputFootprint(
+      mlir::Operation *op,
+      llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) const;
   void foldOperation(mlir::Operation *op);
   void reorderOperationOperandsByName(mlir::Operation *op);
   mlir::OpPrintingFlags flags{};
@@ -446,7 +446,7 @@ bool NormalizePass::isOutput(Operation &op) const noexcept {
 
 llvm::SetVector<int> NormalizePass::getOutputFootprint(
     mlir::Operation *op,
-    llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
+    llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) const {
   llvm::SetVector<int> Outputs;
   if (!visited.count(op)) {
     visited.insert(op);
