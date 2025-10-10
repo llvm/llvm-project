@@ -139,6 +139,43 @@ bool mlir::emitc::isFundamentalType(Type type) {
          isa<emitc::PointerType>(type);
 }
 
+std::string mlir::emitc::getCTypeString(Type type) {
+  if (auto intType = dyn_cast<IntegerType>(type)) {
+    switch (intType.getWidth()) {
+    case 1:
+      return "bool";
+    case 8:
+      return intType.isUnsigned() ? "uint8_t" : "int8_t";
+    case 16:
+      return intType.isUnsigned() ? "uint16_t" : "int16_t";
+    case 32:
+      return intType.isUnsigned() ? "uint32_t" : "int32_t";
+    case 64:
+      return intType.isUnsigned() ? "uint64_t" : "int64_t";
+    default:
+      return "";
+    }
+  }
+  if (auto floatType = dyn_cast<FloatType>(type)) {
+    if (floatType.getWidth() == 16) {
+      if (isa<Float16Type>(type))
+        return "_Float16";
+      if (isa<BFloat16Type>(type))
+        return "__bf16";
+      return "";
+    }
+    if (floatType.getWidth() == 32)
+      return "float";
+    if (floatType.getWidth() == 64)
+      return "double";
+    return "";
+  }
+  if (auto opaqueType = dyn_cast<emitc::OpaqueType>(type))
+    return opaqueType.getValue().str();
+
+  return "";
+}
+
 /// Check that the type of the initial value is compatible with the operations
 /// result type.
 static LogicalResult verifyInitializationAttribute(Operation *op,

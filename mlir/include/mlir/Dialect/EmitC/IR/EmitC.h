@@ -27,6 +27,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitCDialect.h.inc"
 #include "mlir/Dialect/EmitC/IR/EmitCEnums.h.inc"
 
+#include <string>
 #include <variant>
 
 namespace mlir {
@@ -48,6 +49,10 @@ bool isSupportedFloatType(mlir::Type type);
 
 /// Determines whether \p type is a emitc.size_t/ssize_t type.
 bool isPointerWideType(mlir::Type type);
+
+/// Convert an MLIR type to its C type string representation.
+/// Returns an empty string if the type cannot be represented as a C type.
+std::string getCTypeString(Type type);
 
 // Either a literal string, or an placeholder for the fmtArgs.
 struct Placeholder {};

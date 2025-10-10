@@ -58,3 +58,25 @@ module @globals {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: const_global_copy
+module @const_global_copy {
+  memref.global "private" constant @const_data : memref<4xi8> = dense<[1, 2, 3, 4]>
+  // CHECK: emitc.global static const @const_data : !emitc.array<4xi8> = dense<[1, 2, 3, 4]>
+
+  func.func @copy_from_const_global() {
+    // CHECK: get_global @const_data : !emitc.array<4xi8>
+    %0 = memref.get_global @const_data : memref<4xi8>
+    // CHECK: "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi8>
+    %1 = memref.alloca() : memref<4xi8>
+
+    // Verify that pointer from const global has const qualifier
+    // CHECK: apply "&"({{.*}}) : (!emitc.lvalue<i8>) -> !emitc.ptr<!emitc.opaque<"const int8_t">>
+    // CHECK: apply "&"({{.*}}) : (!emitc.lvalue<i8>) -> !emitc.ptr<i8>
+    // CHECK: call_opaque "memcpy"({{.*}}, {{.*}}, {{.*}}) : (!emitc.ptr<i8>, !emitc.ptr<!emitc.opaque<"const int8_t">>, !emitc.size_t) -> ()
+    memref.copy %0, %1 : memref<4xi8> to memref<4xi8>
+    return
+  }
+}
