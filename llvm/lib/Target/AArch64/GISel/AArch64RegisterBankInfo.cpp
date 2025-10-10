@@ -590,6 +590,8 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
   case AArch64::G_DUP:
+  case AArch64::G_SADDLP:
+  case AArch64::G_UADDLP:
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
@@ -798,6 +800,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.isVector())
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else if (isPreISelGenericFloatingPointOpcode(Opc) ||
+             (MO.isDef() && onlyDefinesFP(MI, MRI, TRI)) ||
+             (MO.isUse() && onlyUsesFP(MI, MRI, TRI)) ||
              Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else

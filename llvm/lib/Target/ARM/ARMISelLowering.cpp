@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1353,6 +1352,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG, MVT::f16, Promote);
     setOperationAction(ISD::FLOG10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
+    setOperationAction(ISD::LRINT, MVT::f16, Expand);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
     setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
