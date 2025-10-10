@@ -545,9 +545,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
                                          Swapped ? OOp : C, "", &SI);
     if (isa<FPMathOperator>(&SI)) {
-      cast<Instruction>(NewSel)->setFastMathFlags(FMF);
-      if (!TVI->hasNoInfs() && !FMF.noNaNs())
-        cast<Instruction>(NewSel)->setHasNoInfs(false);
+      FastMathFlags NewSelFMF = FMF;
+      // We cannot propagate ninf from the original select, because OOp may be
+      // inf and the flag only guarantees that FalseVal (op OOp) is never
+      // infinity. Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
+      // Specially, if the original select has both ninf and nnan, we can safely
+      // propagate the flag.
+      NewSelFMF.setNoInfs(TVI->hasNoInfs() ||
+                          (NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
+      cast<Instruction>(NewSel)->setFastMathFlags(NewSelFMF);
     }
     NewSel->takeName(TVI);
     BinaryOperator *BO =
