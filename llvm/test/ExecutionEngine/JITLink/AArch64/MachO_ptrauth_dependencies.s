@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=arm64e-apple-macosx -filetype=obj -o %t.o %s
-# RUN: llvm-jitlink -num-threads=0 -debug-only=orc -noexec \
+# RUN: llvm-jitlink -debug-only=orc -noexec \
 # RUN:              -abs _foo=0x1 %t.o 2>&1 \
 # RUN:              | FileCheck %s
 #
