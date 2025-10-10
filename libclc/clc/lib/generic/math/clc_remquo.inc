@@ -172,7 +172,7 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
     }
   }
   // Final adjust for sign of input
-  (*q) = ((uint)(0x7FFFFFFFLL & (quo_bit))) * sign;
+  (*q) = ((uint)(0x7FFFFFFF & (quo_bit))) * sign;
   if (signbit_x)
     result = -result;
   (*r) = (result);
