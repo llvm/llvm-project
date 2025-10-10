@@ -56,14 +56,14 @@ TEST(LlvmLibcInetAton, ValidTest) {
 }
 
 TEST(LlvmLibcInetAton, InvalidTest) {
-  ASSERT_EQ(0, inet_aton("", nullptr));           // Empty.
-  ASSERT_EQ(0, inet_aton("x", nullptr));          // Leading junk.
-  ASSERT_EQ(0, inet_aton("127.0.0.1x", nullptr)); // Trailing junk.
-  ASSERT_EQ(0, inet_aton("09.0.0.1", nullptr));   // Invalid octal.
-  ASSERT_EQ(0, inet_aton("0xg.0.0.1", nullptr));  // Invalid hex.
-
-  ASSERT_EQ(0, inet_aton("1.2.3.4.5", nullptr)); // Too many dots.
-  ASSERT_EQ(0, inet_aton("1.2.3.4.", nullptr));  // Trailing dot.
+  ASSERT_EQ(0, inet_aton("", nullptr));            // Empty.
+  ASSERT_EQ(0, inet_aton("x", nullptr));           // Leading junk.
+  ASSERT_EQ(0, inet_aton("127.0.0.1x", nullptr));  // Trailing junk.
+  ASSERT_EQ(0, inet_aton("09.0.0.1", nullptr));    // Invalid octal.
+  ASSERT_EQ(0, inet_aton("0xg.0.0.1", nullptr));   // Invalid hex.
+  ASSERT_EQ(0, inet_aton("0b101.0.0.1", nullptr)); // Binary integers.
+  ASSERT_EQ(0, inet_aton("1.2.3.4.5", nullptr));   // Too many dots.
+  ASSERT_EQ(0, inet_aton("1.2.3.4.", nullptr));    // Trailing dot.
 
   // Out of range a.b.c.d form.
   ASSERT_EQ(0, inet_aton("999.0.0.1", nullptr));
