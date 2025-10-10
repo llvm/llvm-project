@@ -763,6 +763,8 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   // Add the minimum iteration check for the epilogue vector loop.
   VPValue *TC = Plan.getOrAddLiveIn(TripCount);
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
+  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
+      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
   VPValue *Count = Builder.createNaryOp(
       Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
       DebugLoc::getUnknown(), "n.vec.remaining");
@@ -770,9 +772,6 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   // Generate code to check if the loop's trip count is less than VF * UF of
   // the vector epilogue loop.
   auto P = RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
-  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
-      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
-
   auto *CheckMinIters = Builder.createICmp(
       P, Count, VFxUF, DebugLoc::getUnknown(), "min.epilog.iters.check");
   VPInstruction *Branch =
@@ -841,8 +840,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
     if (RedPhiR)
       return false;
-    if (Cur->getRecurrenceKind() != RecurKind::FMaxNum &&
-        Cur->getRecurrenceKind() != RecurKind::FMinNum) {
+    if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Cur->getRecurrenceKind())) {
       HasUnsupportedPhi = true;
       continue;
     }
@@ -862,10 +861,9 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   if (!MinMaxOp)
     return false;
 
-  RecurKind RedPhiRK = RedPhiR->getRecurrenceKind();
-  assert((RedPhiRK == RecurKind::FMaxNum || RedPhiRK == RecurKind::FMinNum) &&
+  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+             RedPhiR->getRecurrenceKind()) &&
          "unsupported reduction");
-  (void)RedPhiRK;
 
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all

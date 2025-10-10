@@ -46,8 +46,7 @@ static std::string makeIdentifier(StringRef str) {
 
 static void emitEnumClass(const Record &enumDef, StringRef enumName,
                           StringRef underlyingType, StringRef description,
-                          const std::vector<EnumCase> &enumerants,
-                          raw_ostream &os) {
+                          ArrayRef<EnumCase> enumerants, raw_ostream &os) {
   os << "// " << description << "\n";
   os << "enum class " << enumName;
 
@@ -55,14 +54,13 @@ static void emitEnumClass(const Record &enumDef, StringRef enumName,
     os << " : " << underlyingType;
   os << " {\n";
 
-  for (const auto &enumerant : enumerants) {
+  for (const EnumCase &enumerant : enumerants) {
     auto symbol = makeIdentifier(enumerant.getSymbol());
     auto value = enumerant.getValue();
-    if (value >= 0) {
+    if (value >= 0)
       os << formatv("  {0} = {1},\n", symbol, value);
-    } else {
+    else
       os << formatv("  {0},\n", symbol);
-    }
   }
   os << "};\n\n";
 }

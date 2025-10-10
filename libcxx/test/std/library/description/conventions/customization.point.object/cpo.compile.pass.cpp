@@ -89,6 +89,9 @@ static_assert(test(std::ranges::ssize, a));
 // views::empty<T> is not a CPO
 static_assert(test(std::views::iota, 1));
 static_assert(test(std::views::iota, 1, 10));
+#if TEST_STD_VER >= 26
+static_assert(test(std::views::indices, 10));
+#endif
 #ifndef TEST_HAS_NO_LOCALIZATION
 static_assert(test(std::views::istream<int>, stream));
 #endif

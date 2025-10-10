@@ -6273,6 +6273,78 @@ __m512i test_mm512_ternarylogic_epi32(__m512i __A, __m512i __B, __m512i __C) {
   // CHECK: @llvm.x86.avx512.pternlog.d.512({{.*}}, i32 240)
   return _mm512_ternarylogic_epi32(__A, __B, __C, _MM_TERNLOG_A);
 }
+TEST_CONSTEXPR(match_v16si(
+  _mm512_ternarylogic_epi32(
+    ((__m512i)((__v16si){
+      0x6AA79987, (int)0xBB91433A, 0x029A7245, (int)0xD1F6F86C,
+      (int)0xD340BBCD, (int)0xCD8778E7, 0x4C73A942, (int)0xDAEA58BA,
+      0x5E503A67, (int)0xEE897110, 0x3193CA54, 0x452EC40A,
+      (int)0x90E5E945, 0x6FACAA50, 0x29645F8B, 0x5F811CB9
+    })),
+    ((__m512i)((__v16si){
+      0x1FCFF454, (int)0xDFC9E3B1, 0x6ED4E94B, 0x42D6CB5C,
+      (int)0x8FE46024, (int)0xA091250E, 0x2CA1C789, (int)0x9C9CEA0C,
+      (int)0x8D9FE5B9, 0x2FD2B7A4, 0x5ADAD121, (int)0xBCF74D7A,
+      (int)0xF543BBCF, (int)0xBB9D58E4, 0x175F0CD2, (int)0x87F26AEE
+    })),
+    ((__m512i)((__v16si){
+      (int)0xFA882692, (int)0xBC428D42, 0x6980A81F, (int)0x95C5FB98,
+      (int)0x8101E89A, 0x2AA4857E, 0x25ECE845, 0x34A9AF41,
+      (int)0xB80E3B0D, 0x13ED748B, 0x30A1F6D5, (int)0xD64A3CE0,
+      0x57708107, 0x527122DC, 0x06057C82, 0x7576714A
+    })),
+    (unsigned char)0x11), // ~A & ~C
+  0x00300929, 0x0034100C, (int)0x902B16A0, 0x28280423,
+  0x701A1741, 0x554A5A81, (int)0xD2121032, 0x434210B2,
+  0x42600042, (int)0xC0000850, (int)0x8504080A, 0x01008205,
+  0x088C4430, 0x04028503, (int)0xE8A0832D, 0x08098411));
+TEST_CONSTEXPR(match_v16si(
+  _mm512_ternarylogic_epi32(
+    ((__m512i)((__v16si){
+      (int)0xA3B1799D, (int)0x46685257, (int)0x392456DE, (int)0xBC8960A9,
+      (int)0x6C031199, (int)0x07A0CA6E, (int)0x37F8A88B, (int)0x8B8148F6,
+      (int)0x386ECBE0, (int)0x96DA1DAC, (int)0xCE4A2BBD, (int)0xB2B9437A,
+      (int)0x571AA876, (int)0x27CD8130, (int)0x562B0F79, (int)0x17BE3111
+    })),
+    ((__m512i)((__v16si){
+      (int)0x18C26797, (int)0xD8F56413, (int)0x9A8DCA03, (int)0xCE9FF57F,
+      (int)0xBACFB3D0, (int)0x89463E85, (int)0x60E7A113, (int)0x8D5288F1,
+      (int)0xDC98D2C1, (int)0x93CD59BF, (int)0xB45ED1F0, (int)0x19DB3AD0,
+      (int)0x47294739, (int)0x5D65A441, (int)0x5EC42E08, (int)0xA5E5A5AB
+    })),
+    ((__m512i)((__v16si){
+      (int)0xBAA80DD4, (int)0x29D4BEEF, (int)0x6123FDF7, (int)0x8E944239,
+      (int)0xAF42E12F, (int)0xC6A7EE39, (int)0x50C187FC, (int)0x448AAA9E,
+      (int)0x508EBAD7, (int)0xA7CAD415, (int)0x757750A9, (int)0x43CF2FDE,
+      (int)0x95A76D79, (int)0x663F1C97, (int)0xFF5E9FF0, (int)0x827050A8
+    })),
+    (unsigned char)0x38), // (C & ~B) | (~C & A & B)
+  (int)0xBB311C08, (int)0x0E9C3644, (int)0x21219CDD, (int)0x32140090,
+  (int)0xC640A009, (int)0x86A6E46B, (int)0x57190998, (int)0x0683C006,
+  (int)0x60E61921, (int)0x05124411, (int)0x7A147A0D, (int)0xA36269AA,
+  (int)0x1033ED4F, (int)0x62A80531, (int)0x086F0171, (int)0x925A10B8));
+TEST_CONSTEXPR(match_v16si(
+  _mm512_ternarylogic_epi32(
+    ((__m512i)((__v16si){
+      (int)0x3193CA54, (int)0x90E5E945, (int)0x29645F8B, (int)0x6ED4E94B,
+      (int)0x8D9FE5B9, (int)0x8101E89A, (int)0x25ECE845, (int)0xB80E3B0D,
+      (int)0x57708107, (int)0x06057C82, (int)0x56EAA301, (int)0xBE99854A,
+      (int)0x00E266D0, (int)0xDEEA959E, (int)0x2DCAABD5, (int)0x6A1ECCDA})),
+    ((__m512i)((__v16si){
+      (int)0x93FD7234, (int)0xBC90A6EC, (int)0xD3285151, (int)0xCE9FB6A8,
+      (int)0x3B788B66, (int)0xDF8960AD, (int)0x2F927291, (int)0x96AF0DEA,
+      (int)0xF56AE7EA, (int)0x2A04F77A, (int)0xD50B612B, (int)0x3AA725CB,
+      (int)0x8A04F74F, (int)0x282FE557, (int)0x52E1FBB0, (int)0x0CA02F4D})),
+    ((__m512i)((__v16si){
+      (int)0xB6307BAD, (int)0x141CB03E, (int)0xEBAA7701, (int)0xC9F0B072,
+      (int)0x5E2503DD, (int)0xC2E1DAC4, (int)0x0FC01B11, (int)0xA0485922,
+      (int)0x339BB47E, (int)0xB2D4F32A, (int)0x8E7AE9AF, (int)0x147DE9B0,
+      (int)0xF79FCAA0, (int)0x3B0B6398, (int)0x29DDF4C7, (int)0x49CDBEC7})),
+    (unsigned char)0xC3), // ~(B ^ C)
+  (int)0x5D91479F, (int)0xD38AB056, (int)0x05B3F125, (int)0x5FB4A01C,
+  (int)0x49189120, (int)0xA17777C8, (int)0xF581652B, (int)0xD15EC918,
+  (int)0x5DE59912, (int)0xD3FE7407, (int)0x7C1E3DD5, (int)0x7BC15F7E,
+  (int)0x75196E60, (int)0x093A8F36, (int)0x80D4AF9A, (int)0x99411C68));
 
 __m512i test_mm512_mask_ternarylogic_epi32(__m512i __A, __mmask16 __U, __m512i __B, __m512i __C) {
   // CHECK-LABEL: test_mm512_mask_ternarylogic_epi32
@@ -6280,6 +6352,63 @@ __m512i test_mm512_mask_ternarylogic_epi32(__m512i __A, __mmask16 __U, __m512i _
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_ternarylogic_epi32(__A, __U, __B, __C, _MM_TERNLOG_B);
 }
+TEST_CONSTEXPR(match_v16si(
+  _mm512_mask_ternarylogic_epi32(
+    _mm512_setr_epi32(
+      (int)0xFFFFFFFF, 0x00000000, (int)0xDEADBEEF, (int)0xCAFEBABE, 0x12345678, (int)0x87654321,
+      (int)0xAAAAAAAA, 0x55555555, (int)0xF00DBEEF, (int)0xBAD2FEAF, 0x0112358D, (int)0xDEADF00D,
+      (int)0x8BADF00D, (int)0xBADDCAFE, (int)0xBAADF00D, (int)0xBAAAAAAD),
+    (__mmask16)0x9D71,
+    _mm512_setr_epi32(
+      0x11111111, 0x22222222, 0x33333333, 0x44444444, (int)0xABCDEF01, (int)0xFEDCBA98,
+      (int)0xCCCCCCCC, 0x33333333, 0x1337BEEF, 0x01010101, (int)0x81321345, (int)0xBAADF00D,
+      0x1BADB002, 0x5EE7C0DE, 0x12345678, 0x55555555),
+    _mm512_setr_epi32(
+      (int)0xF0F0F0F0, 0x0F0F0F0F, 0x1234ABCD, (int)0x9876FEDC, 0x00FF00FF, (int)0xFF00FF00,
+      (int)0xFF0000FF, 0x00FFFF00, 0x50D4CAFE, (int)0x8BADF00D, (int)0xABCDEFFF, (int)0xFEEDF00D,
+      (int)0xBEEFCAFE, (int)0xDEADC0DE, (int)0x1BADBEEF, 0x33333333),
+    (unsigned char)0xB1), // op: (~B & (A | ~C)) | (B & A & C)
+  (int)0xFEFEFEFE, 0x00000000, (int)0xDEADBEEF, (int)0xCAFEBABE, 0x54341078, (int)0x87234367,
+  (int)0xAA3333AA, 0x55555555, (int)0xFC0C8BEE, (int)0xBAD2FEAF, 0x5500258D, (int)0xDFBFFFFF,
+  (int)0xCABDC50D, (int)0xBADDCAFE, (int)0xBAADF00D, (int)0xBAAAAAA9));
+TEST_CONSTEXPR(match_v16si(
+  _mm512_mask_ternarylogic_epi32(
+    _mm512_setr_epi32(
+      0x0000FFFF, (int)0xFFFF0000, 0x01010101, (int)0xFF00FF00, (int)0xAAAAAAAA, 0x33333333,
+      (int)0xF0F0F0F0, 0x0F0F0F0F, 0x12345678, (int)0x87654321, 0x7FFFFFFF, (int)0xDEADBEEF,
+      (int)0xCAFEBABE, 0x01234567, (int)0xABCDEF01, (int)0xFEDCBA98),
+    (__mmask16)0x3C3C,
+    _mm512_setr_epi32(
+      0x1111EEEE, 0x2222DDDD, (int)0x80808080, 0x00FF00FF, 0x55555555, 0x00000000,
+      (int)0xCCCCCCCC, 0x33333333, 0x11111111, 0x22222222, (int)0x80000000, 0x12345678,
+      0x11223344, (int)0xFEDCBA98, (int)0xBAD0BAD0, (int)0xBEEFCAFE),
+    _mm512_setr_epi32(
+      0x12345678, (int)0x87654321, 0x7F7F7F7F, (int)0xFEDCBA98, (int)0xCCCCCCCC, (int)0xFFFFFFFF,
+      0x11111111, 0x22222222, (int)0xABABABAB, (int)0xCDCDCDCD, 0x00000001, (int)0xFACEB00C,
+      0x55667788, (int)0xABCDEF01, 0x12345678, (int)0xDEADBEEF),
+    (unsigned char)0xE8), // op: (A & B) | (B & C) | (C & A) (Majority)
+  0x0000FFFF, (int)0xFFFF0000, 0x01010101, (int)0xFEDCBA98, (int)0xCCCCCCCC, 0x33333333,
+  (int)0xF0F0F0F0, 0x0F0F0F0F, 0x12345678, (int)0x87654321, 0x00000001, (int)0xDAACB66C,
+  0x5166338C, (int)0xABCDEF01, (int)0xABCDEF01, (int)0xFEDCBA98));
+TEST_CONSTEXPR(match_v16si(
+  _mm512_mask_ternarylogic_epi32(
+    _mm512_setr_epi32(
+      (int)0xDEADBEEF, 0x01234567, (int)0xAAAAAAAA, 0x0F0F0F0F, (int)0xBAADF00D, 0x00000001,
+      (int)0x80000000, 0x7FFFFFFF, (int)0xCAFEBABE, 0x13579BDF, (int)0xABCDEF01, (int)0xCAFEBABE,
+      (int)0xDEADBEEF, (int)0xFF00FF00, (int)0xBEEFCAFE, 0x00000001),
+    (__mmask16)0xBEEF,
+    _mm512_setr_epi32(
+      (int)0xFACEB00C, (int)0x89ABCDEF, 0x55555555, (int)0xF0F0F0F0, 0x1337C0DE, 0x00000002,
+      0x40000000, (int)0xBFFFFFFF, 0x00000000, 0x2468ACE0, 0x10FEDCBA, 0x00000000,
+      (int)0xFEEDFACE, 0x00FF00FF, 0x12345678, 0x00000002),
+    _mm512_setr_epi32(
+      0x12345678, (int)0xFFFFFFFF, (int)0xCCCCCCCC, (int)0x88888888, (int)0xDEADC0DE, 0x00000004,
+      0x20000000, (int)0xDFFFFFFF, (int)0xFFFFFFFF, (int)0xFEDCBA98, 0x55555555, (int)0xFFFFFFFF,
+      (int)0x8BADF00D, (int)0xF0F0F0F0, (int)0xFACEB00C, 0x00000003),
+    (unsigned char)0x96), // op: A ^ B ^ C (XOR3)
+  (int)0x3657589B, 0x77777777, 0x33333333, 0x77777777, (int)0xBAADF00D, 0x00000007,
+  (int)0xE0000000, 0x1FFFFFFF, (int)0xCAFEBABE, (int)0xC9E38DA7, (int)0xEE6666EE, 0x35014541,
+  (int)0xABEDB42C, 0x0F0F0F0F, (int)0xBEEFCAFE, 0x00000000));
 
 __m512i test_mm512_maskz_ternarylogic_epi32(__mmask16 __U, __m512i __A, __m512i __B, __m512i __C) {
   // CHECK-LABEL: test_mm512_maskz_ternarylogic_epi32
@@ -6287,12 +6416,106 @@ __m512i test_mm512_maskz_ternarylogic_epi32(__mmask16 __U, __m512i __A, __m512i 
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> zeroinitializer
   return _mm512_maskz_ternarylogic_epi32(__U, __A, __B, __C, _MM_TERNLOG_C);
 }
+TEST_CONSTEXPR(match_v16si(
+  _mm512_maskz_ternarylogic_epi32(
+    (__mmask16)0x6498,
+    ((__m512i)((__v16si){
+      1393174638, 1243877629,  -826208314, 1770837977,
+     -1678093555,  -414088391, 1288769935,  703296098,
+      1428104678,   405688910,  -167788555, 1965219804,
+     -1959018749,   514303227,   754191429,  579811517})),
+    ((__m512i)((__v16si){
+     -1301280384,  -923736510,  -797648805,   475853364,
+      1247377062,   213070102,   626020209,  2037794518,
+       122183669,  1712787569, -1042441569, -1416844145,
+      1374304252, -1323427639,  1432483217,  1621706359})),
+    ((__m512i)((__v16si){
+       234227517,  -313293475,  1851213039,  -300885844,
+     -1479339544,   575183087,  -655840260, -1853668117,
+       433622095,   933629633, -1324904005,   -68434060,
+       486070655,   226865941, -1461464269,  1471789621})),
+    (unsigned char)0xAB), // (~A & ~B) | (B & C)
+   0, 0, 0, -298592082,
+  -1479042568, 0, 0, -1752969749,
+   0, 0, -1157115461, 0,
+   0, 1304818453, -1427385541, 0));
+TEST_CONSTEXPR(match_v16si(
+  _mm512_maskz_ternarylogic_epi32(
+    (__mmask16)0xA593,
+    ((__m512i)((__v16si){
+      1789368711,  -1148107974,   43676229,  -772343700,
+      -750732339,   -846759705,  1282648386,  -622176070,
+      1582316135,   -292982512,   831769172,  1160692746,
+     -1863980731,   1873586768,   694443915,  1602297017})),
+    ((__m512i)((__v16si){
+       533722196,   -540417103,  1859447115,  1121373020,
+     -1880858588,  -1601100530,   748799881, -1667438068,
+     -1918900807,    802338724,  1524289825, -1124643462,
+      -180110385,  -1147315996,   392105170, -2014156050})),
+    ((__m512i)((__v16si){
+       -91740526,  -1136489150,  1770039327, -1782187112,
+     -2130581350,    715425150,   636282949,   883535681,
+     -1207026931,    334328971,   815920853,  -699777824,
+      1466990855,   1383146204,   101022850,  1970696522})),
+    (unsigned char)0x21), // (~B) & ~(A ^ C)
+   1611661482,   539234310,          0,          0,
+    538610824,           0,          0,    18874368,
+    270539268,           0, -1543175586,          0,
+            0,  1075980051,          0,  1342738432));
+TEST_CONSTEXPR(match_v16si(
+  _mm512_maskz_ternarylogic_epi32(
+    (__mmask16)0xC3A5,
+    ((__m512i)((__v16si){
+      0x00000000, -0x1, (int)0x80000000, 0x7FFFFFFF,
+      (int)0xAAAAAAAA, 0x55555555, 0x00000001, (int)0xFFFFFFFE,
+      0x0000FFFF, (int)0xFFFF0000, (int)0xDEADBEEF, (int)0xCAFEBABE,
+      0x01234567, (int)0x89ABCDEF, 0x13579BDF, 0x2468ACE0})),
+    ((__m512i)((__v16si){
+      0x2468ACE0, 0x13579BDF, (int)0x89ABCDEF, 0x01234567,
+      (int)0xCAFEBABE, (int)0xDEADBEEF, (int)0xFFFF0000, 0x0000FFFF,
+      (int)0xFFFFFFFE, 0x00000001, 0x55555555, (int)0xAAAAAAAA,
+      0x7FFFFFFF, (int)0x80000000, -0x1, 0x00000000})),
+    ((__m512i)((__v16si){
+      -0x1, 0x00000000, -0x1, 0x00000000,
+      -0x1, 0x00000000, -0x1, 0x00000000,
+      -0x1, 0x00000000, -0x1, 0x00000000,
+      -0x1, 0x00000000, -0x1, 0x00000000})),
+    (unsigned char)0xC9), // F = (A & B) | (~A & ~(B ^ C))
+  0x2468ACE0, 0x0, (int)0x89ABCDEF, 0x0,
+  0x0, 0x74071445, 0x0, 0x0000FFFE,
+  (int)0xFFFFFFFE, 0x0000FFFE, 0x0, 0x0,
+  0x0, 0x0, (int)0xFFFFFFFF, (int)0xDB97531F));
 
 __m512i test_mm512_ternarylogic_epi64(__m512i __A, __m512i __B, __m512i __C) {
   // CHECK-LABEL: test_mm512_ternarylogic_epi64
   // CHECK: @llvm.x86.avx512.pternlog.q.512({{.*}}, i32 192)
   return _mm512_ternarylogic_epi64(__A, __B, __C, _MM_TERNLOG_A & _MM_TERNLOG_B);
 }
+TEST_CONSTEXPR(match_v8di(
+  _mm512_ternarylogic_epi64(
+    ((__m512i)((__v8di){0x1111, 0x2222, 0x3333, 0x4444, 0x5555, 0x6666, 0x7777, 0x8888})),
+    ((__m512i)((__v8di){0xAAAA, 0xBBBB, 0xCCCC, 0xDDDD, 0xEEEE, 0xFFFF, 0x1111, 0x2222})),
+    ((__m512i)((__v8di){-0x1, 0x0, -0x1, 0x0, -0x1, 0x0, -0x1, 0x0})),
+    (unsigned char)0xD8), // C ? B : A
+  0xAAAA, 0x2222, 0xCCCC, 0x4444, 0xEEEE, 0x6666, 0x1111, 0x8888));
+TEST_CONSTEXPR(match_v8di(
+  _mm512_ternarylogic_epi64(
+    ((__m512i)((__v8di){-0x1, 0x0, -0x1, 0x0, 0xF0F0, 0xFF, -0x5555555555555556, 0x5555555555555555})),
+    ((__m512i)((__v8di){0x1234, 0xFFFF, 0xFF, 0xF0F, 0x3333, 0xFF00, -0x5555555555555556, -0x0F0F0F0F0F0F0F10})),
+    ((__m512i)((__v8di){0xFFFF, 0x1234, 0xF0F, 0xFF00, 0xF0F0, 0x3333, 0x5555555555555555, 0x0F0F0F0F0F0F0F0})),
+    (unsigned char)0x8F), // ~A | (B & C)
+  0x1234, -0x1, 0xF, -0x1, -0xC0C1, -0x100, 0x5555555555555555, -0x5505050505050506));
+TEST_CONSTEXPR(match_v8di(
+  _mm512_ternarylogic_epi64(
+    ((__m512i)((__v8di){0x7FFFFFFFFFFFFFFF, 0x0, 0x00FF00FF00FF00FF, 0x0F0F0F0F0F0F0F0F,
+                        0x123456789ABCDEF0, 0x3333333333333333, 0x5555555555555555, 0x0123456789ABCDEF})),
+    ((__m512i)((__v8di){0x1111111111111111, 0x2222222222222222, 0xFFFFFFFF, -0x100000000,
+                        0x0, -0x3333333333333334, -0x0F0F0F0F0F0F0F10, -0x123456789ABCDF0})),
+    ((__m512i)((__v8di){0x2222222222222222, 0x1111111111111111, -0x1000000000000, 0xFFFFFFFF,
+                        -0x1, 0x0, 0x0F0F0F0F0F0F0F0F, 0x0})),
+    (unsigned char)0xE0), // A & (B | C)
+  0x3333333333333333, 0x0, 0x00FF000000FF00FF, 0x0F0F0F0F0F0F0F0F,
+  0x123456789ABCDEF0, 0x0, 0x5555555555555555, 0x0));
 
 __m512i test_mm512_mask_ternarylogic_epi64(__m512i __A, __mmask8 __U, __m512i __B, __m512i __C) {
   // CHECK-LABEL: test_mm512_mask_ternarylogic_epi64
@@ -6300,6 +6523,40 @@ __m512i test_mm512_mask_ternarylogic_epi64(__m512i __A, __mmask8 __U, __m512i __
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_ternarylogic_epi64(__A, __U, __B, __C, _MM_TERNLOG_B | _MM_TERNLOG_C);
 }
+TEST_CONSTEXPR(match_v8di(
+  _mm512_mask_ternarylogic_epi64(
+    ((__m512i)((__v8di){0x0LL, 0x1LL, 0x2LL, 0x3LL, 0x4LL, 0x5LL, 0x6LL, 0x7LL})),
+    (__mmask8)0xFF,
+    ((__m512i)((__v8di){0x1LL, 0x1LL, 0x1LL, 0x1LL, 0x1LL, 0x1LL, 0x1LL, 0x1LL})),
+    ((__m512i)((__v8di){0x0LL, 0x0LL, 0x0LL, 0x0LL, 0x0LL, 0x0LL, 0x0LL, 0x0LL})),
+    (unsigned char)0x96),
+  0x1, 0x0, 0x3, 0x2, 0x5, 0x4, 0x7, 0x6));
+TEST_CONSTEXPR(match_v8di(
+  _mm512_mask_ternarylogic_epi64(
+    ((__m512i)((__v8di){
+      (long long)0x9FD641D41C6A70FEULL, (long long)0xB51D9082CF18D398ULL,
+      (long long)0x730E520285F4D01BULL, (long long)0x347E72CE341FD932ULL,
+      (long long)0x438F8D9BEA5D486FULL, (long long)0xFDB554A5DEEF750DULL,
+      (long long)0x0ABAA254BFFC2308ULL, (long long)0x825FE29BF1D51FC6ULL
+    })),
+    (__mmask8)0xE4,
+    ((__m512i)((__v8di){
+      (long long)0xC1779B12FA832A6EULL, (long long)0xCF6E876B587C4762ULL,
+      (long long)0x25DC09833D4ECA24ULL, (long long)0x34E55E25691BB80AULL,
+      (long long)0x9A02450CD8F20DD7ULL, (long long)0x78B9E240FB5B77A9ULL,
+      (long long)0xE1F37F76C1162596ULL, (long long)0xDCCB561738CE2941ULL
+    })),
+    ((__m512i)((__v8di){
+      (long long)0xD13840986BC8DC3CULL, (long long)0x34CDE7E8C960187EULL,
+      (long long)0x7EE068D9D111EEB8ULL, (long long)0xAD11149DE686B811ULL,
+      (long long)0x849F38BFD9AB0DFAULL, (long long)0x5C28948ED106227BULL,
+      (long long)0xFB1918D4A18E304DULL, (long long)0x4EDE6944F84AD59FULL
+    })),
+    (unsigned char)0x67),
+  (long long)0x9FD641D41C6A70FEULL, (long long)0xB51D9082CF18D398ULL,
+  (long long)0xDB3DE57EEE5F25DCULL, (long long)0x347E72CE341FD932ULL,
+  (long long)0x438F8D9BEA5D486FULL, (long long)0x26D37FDE2A5DDDD2ULL,
+  (long long)0x1EEE67AB6099DDFBULL, (long long)0xB3353F73C6A4FCFEULL));
 
 __m512i test_mm512_maskz_ternarylogic_epi64(__mmask8 __U, __m512i __A, __m512i __B, __m512i __C) {
   // CHECK-LABEL: test_mm512_maskz_ternarylogic_epi64
@@ -6307,6 +6564,59 @@ __m512i test_mm512_maskz_ternarylogic_epi64(__mmask8 __U, __m512i __A, __m512i _
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> zeroinitializer
   return _mm512_maskz_ternarylogic_epi64(__U, __A, __B, __C, ~_MM_TERNLOG_A | (_MM_TERNLOG_B ^ _MM_TERNLOG_C));
 }
+TEST_CONSTEXPR(match_v8di(
+  _mm512_maskz_ternarylogic_epi64(
+    (__mmask8)0x6D,
+    ((__m512i)((__v8di){
+      (long long)0xFFFFFFFFFFFFFFFF, (long long)0x0000000000000000,
+      (long long)0x0000FFFF0000FFFF, (long long)0x5555555555555555,
+      (long long)0x0123456789ABCDEF, (long long)0x1122334455667788,
+      (long long)0x00000000FFFFFFFF, (long long)0x0F0F0F0F0F0F0F0F
+    })),
+    ((__m512i)((__v8di){
+      (long long)0x000000000000000B, (long long)0x000000000000000C,
+      (long long)0x00000000FFFF0000, (long long)0x3333333333333333,
+      (long long)0x0FEDCBA987654321, (long long)0x1111111111111111,
+      (long long)0x7FFFFFFFFFFFFFFF, (long long)0x2222222222222222
+    })),
+    ((__m512i)((__v8di){
+      (long long)0x000000000000000C, (long long)0x000000000000000B,
+      (long long)0x00F0F0F0F0F0F0F0, (long long)0x5555555555555555,
+      (long long)0x0000000000000000, (long long)0x7FFFFFFFFFFFFFFF,
+      (long long)0x0000000000000001, (long long)0x2222222222222222
+    })),
+    (unsigned char)0x89),
+  (long long)0x0000000000000008, (long long)0x0000000000000000,
+  (long long)0xFF0F0000F0F00000, (long long)0x9999999999999999,
+  (long long)0x0000000000000000, (long long)0x9111111111111111,
+  (long long)0x8000000000000001, (long long)0x0000000000000000));
+
+TEST_CONSTEXPR(match_v8di(
+  _mm512_maskz_ternarylogic_epi64(
+    (__mmask8)0x6D,
+    ((__m512i)((__v8di){
+      (long long)0xFFFFFFFFFFFFFFFF, (long long)0x0000000000000000,
+      (long long)0x0000FFFF0000FFFF, (long long)0x5555555555555555,
+      (long long)0x0123456789ABCDEF, (long long)0x1122334455667788,
+      (long long)0x00000000FFFFFFFF, (long long)0x0F0F0F0F0F0F0F0F
+    })),
+    ((__m512i)((__v8di){
+      (long long)0x000000000000000B, (long long)0x000000000000000C,
+      (long long)0x00000000FFFF0000, (long long)0x3333333333333333,
+      (long long)0x0FEDCBA987654321, (long long)0x1111111111111111,
+      (long long)0x7FFFFFFFFFFFFFFF, (long long)0x2222222222222222
+    })),
+    ((__m512i)((__v8di){
+      (long long)0x000000000000000C, (long long)0x000000000000000B,
+      (long long)0x00F0F0F0F0F0F0F0, (long long)0x5555555555555555,
+      (long long)0x0000000000000000, (long long)0x7FFFFFFFFFFFFFFF,
+      (long long)0x0000000000000001, (long long)0x2222222222222222
+    })),
+    (unsigned char)0x29),
+  (long long)0x0000000000000004, (long long)0x0000000000000000,
+  (long long)0xFF0FF0F0F0F0F0F0, (long long)0xCCCCCCCCCCCCCCCC,
+  (long long)0x0000000000000000, (long long)0x8033225544776699,
+  (long long)0x8000000000000000, (long long)0x0000000000000000));
 
 __m512 test_mm512_shuffle_f32x4(__m512 __A, __m512 __B) {
   // CHECK-LABEL: test_mm512_shuffle_f32x4

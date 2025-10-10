@@ -1035,10 +1035,9 @@ _mm256_hsubs_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maddubs_epi16(__m256i __a, __m256i __b)
-{
-    return (__m256i)__builtin_ia32_pmaddubsw256((__v32qi)__a, (__v32qi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_maddubs_epi16(__m256i __a, __m256i __b) {
+  return (__m256i)__builtin_ia32_pmaddubsw256((__v32qi)__a, (__v32qi)__b);
 }
 
 /// Multiplies corresponding 16-bit elements of two 256-bit vectors of
@@ -1067,9 +1066,8 @@ _mm256_maddubs_epi16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_madd_epi16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_madd_epi16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_pmaddwd256((__v16hi)__a, (__v16hi)__b);
 }
 

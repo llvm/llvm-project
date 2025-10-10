@@ -24,7 +24,9 @@ using namespace clang;
 using namespace llvm::opt;
 
 UEFI::UEFI(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : ToolChain(D, Triple, Args) {}
+    : ToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().Dir);
+}
 
 Tool *UEFI::buildLinker() const { return new tools::uefi::Linker(*this); }
 

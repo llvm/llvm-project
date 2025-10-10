@@ -38,6 +38,9 @@ using namespace lldb_private;
 using namespace lldb_private::transport;
 using namespace lldb_protocol::mcp;
 
+// Flakey, see https://github.com/llvm/llvm-project/issues/152677.
+#ifndef _WIN32
+
 namespace {
 
 template <typename T> Response make_response(T &&result, Id id = 1) {
@@ -325,3 +328,5 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   EXPECT_THAT(logged_messages,
               testing::Contains("MCP initialization complete"));
 }
+
+#endif

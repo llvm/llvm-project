@@ -810,12 +810,14 @@ __m256i test_mm256_madd_epi16(__m256i a, __m256i b) {
   // CHECK: call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_madd_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_madd_epi16((__m256i)(__v16hi){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, (__m256i)(__v16hi){10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160}), 50, 250, 610, 1130, 1810, 2650, 3650, 4810));
 
 __m256i test_mm256_maddubs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_maddubs_epi16
   // CHECK: call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_maddubs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_maddubs_epi16((__m256i)(__v32qi){1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7,8}, (__m256i)(__v32qs){2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, -1, -1, -2, -2, -3, -3, -4, -4, -5, -5, -6, -6, -7, -7, -8, -8}), 5, 18, 39, 68, 15, 42, 77, 120, -3, -14, -33, -60, -15, -42, -77, -120));
 
 __m128i test_mm_maskload_epi32(int const *a, __m128i m) {
   // CHECK-LABEL: test_mm_maskload_epi32

@@ -900,23 +900,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  /// Initialize the device info for interoperability purposes.
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    assert(Context && "Context is null");
-    assert(Device != CU_DEVICE_INVALID && "Invalid CUDA device");
-
-    if (auto Err = setContext())
-      return Err;
-
-    if (!DeviceInfo->Context)
-      DeviceInfo->Context = Context;
-
-    if (!DeviceInfo->Device)
-      DeviceInfo->Device = reinterpret_cast<void *>(Device);
-
-    return Plugin::success();
-  }
-
   interop_spec_t selectInteropPreference(int32_t InteropType,
                                          int32_t NumPrefers,
                                          interop_spec_t *Prefers) override {

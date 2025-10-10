@@ -14,6 +14,7 @@
 
 // FIXME: This should work with -flax-vector-conversions=none
 // ADDITIONAL_COMPILE_FLAGS(clang): -flax-vector-conversions=integer
+// ADDITIONAL_COMPILE_FLAGS(apple-clang): -flax-vector-conversions=integer
 
 // <experimental/simd>
 //

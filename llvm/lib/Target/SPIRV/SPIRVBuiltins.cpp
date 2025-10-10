@@ -2419,6 +2419,27 @@ static bool generatePipeInst(const SPIRV::IncomingCall *Call,
   return buildPipeInst(Call, Opcode, Scope, MIRBuilder, GR);
 }
 
+static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
+                                            MachineIRBuilder &MIRBuilder,
+                                            SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  bool IsSet = Opcode != SPIRV::OpPredicatedStoreINTEL;
+  unsigned ArgSz = Call->Arguments.size();
+  SmallVector<uint32_t, 1> ImmArgs;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  // Memory operand is optional and is literal.
+  if (ArgSz > 3)
+    ImmArgs.push_back(
+        getConstFromIntrinsic(Call->Arguments[/*Literal index*/ 3], MRI));
+
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                            IsSet ? TypeReg : Register(0), ImmArgs);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -3019,6 +3040,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generate2DBlockIOINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Pipe:
     return generatePipeInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::PredicatedLoadStore:
+    return generatePredicatedLoadStoreInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

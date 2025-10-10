@@ -71,6 +71,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << "bfi_" << bitfield.getName().str();
       return AliasResult::FinalAlias;
     }
+    if (auto dynCastInfoAttr = mlir::dyn_cast<cir::DynamicCastInfoAttr>(attr)) {
+      os << dynCastInfoAttr.getAlias();
+      return AliasResult::FinalAlias;
+    }
     return AliasResult::NoAlias;
   }
 };
@@ -2402,9 +2406,8 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult cir::ComplexRealOp::verify() {
   mlir::Type operandTy = getOperand().getType();
-  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy)) {
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
     operandTy = complexOperandTy.getElementType();
-  }
 
   if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
@@ -2431,14 +2434,22 @@ OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ComplexImagOp::verify() {
-  if (getType() != getOperand().getType().getElementType()) {
+  mlir::Type operandTy = getOperand().getType();
+  if (auto complexOperandTy = mlir::dyn_cast<cir::ComplexType>(operandTy))
+    operandTy = complexOperandTy.getElementType();
+
+  if (getType() != operandTy) {
     emitOpError() << ": result type does not match operand type";
     return failure();
   }
+
   return success();
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (!mlir::isa<cir::ComplexType>(getOperand().getType()))
+    return nullptr;
+
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(1);
 

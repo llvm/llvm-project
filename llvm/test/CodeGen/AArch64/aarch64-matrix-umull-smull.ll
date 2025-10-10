@@ -267,7 +267,7 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-SD-NEXT:    and x9, x8, #0xfffffff0
 ; CHECK-SD-NEXT:    add x10, x2, #32
 ; CHECK-SD-NEXT:    add x11, x0, #16
-; CHECK-SD-NEXT:    mov x12, x9
+; CHECK-SD-NEXT:    and x12, x8, #0xfffffff0
 ; CHECK-SD-NEXT:  .LBB3_4: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldp q1, q2, [x11, #-16]
@@ -313,7 +313,7 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    and x10, x9, #0xfffffff0
 ; CHECK-GI-NEXT:    add x11, x2, #32
 ; CHECK-GI-NEXT:    add x12, x0, #16
-; CHECK-GI-NEXT:    mov x13, x10
+; CHECK-GI-NEXT:    and x13, x9, #0xfffffff0
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:  .LBB3_3: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -428,7 +428,7 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-SD-NEXT:    and x9, x8, #0xfffffff0
 ; CHECK-SD-NEXT:    add x10, x2, #32
 ; CHECK-SD-NEXT:    add x11, x0, #16
-; CHECK-SD-NEXT:    mov x12, x9
+; CHECK-SD-NEXT:    and x12, x8, #0xfffffff0
 ; CHECK-SD-NEXT:  .LBB4_4: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldp q1, q2, [x11, #-16]
@@ -472,7 +472,7 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    and x8, x9, #0xfffffff0
 ; CHECK-GI-NEXT:    add x10, x2, #32
 ; CHECK-GI-NEXT:    add x11, x0, #16
-; CHECK-GI-NEXT:    mov x12, x8
+; CHECK-GI-NEXT:    and x12, x9, #0xfffffff0
 ; CHECK-GI-NEXT:  .LBB4_3: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    and w13, w1, #0xffff
@@ -596,7 +596,7 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    and x11, x10, #0xfffffff0
 ; CHECK-SD-NEXT:    fmov s2, w9
 ; CHECK-SD-NEXT:    add x8, x0, #8
-; CHECK-SD-NEXT:    mov x12, x11
+; CHECK-SD-NEXT:    and x12, x10, #0xfffffff0
 ; CHECK-SD-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldp d3, d4, [x8, #-8]
@@ -646,10 +646,10 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    add x10, x0, #8
+; CHECK-GI-NEXT:    and x11, x8, #0xfffffff0
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
 ; CHECK-GI-NEXT:    dup v2.8h, w9
 ; CHECK-GI-NEXT:    and x9, x8, #0xfffffff0
-; CHECK-GI-NEXT:    mov x11, x9
 ; CHECK-GI-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldp d3, d4, [x10, #-8]

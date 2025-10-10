@@ -355,12 +355,14 @@ __m64 test_mm_madd_pi16(__m64 a, __m64 b) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.pmadd.wd(
   return _mm_madd_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_madd_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-10, +8, +6, -4}), -26, 34));
 
 __m64 test_mm_maddubs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_maddubs_pi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(
   return _mm_maddubs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_maddubs_pi16((__m64)(__v8qi){16, 17, 18, 19, 20, 21, 22, 23}, (__m64)(__v8qi){1, 2, 3, 4, 5, 0, 7, 8}), 50, 130, 100, 338));
 
 void test_mm_maskmove_si64(__m64 d, __m64 n, char *p) {
   // CHECK-LABEL: test_mm_maskmove_si64

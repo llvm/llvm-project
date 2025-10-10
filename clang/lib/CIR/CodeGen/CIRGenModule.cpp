@@ -76,6 +76,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   SInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
   UInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
   UInt8PtrTy = cir::PointerType::get(UInt8Ty);
+  cirAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
   UInt16Ty = cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
   UInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
@@ -2076,6 +2077,29 @@ CIRGenModule::createCIRBuiltinFunction(mlir::Location loc, StringRef name,
   cir::FuncOp fnOp = createCIRFunction(loc, name, ty, fd);
   fnOp.setBuiltin(true);
   return fnOp;
+}
+
+cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
+                                                StringRef name, mlir::ArrayAttr,
+                                                [[maybe_unused]] bool isLocal,
+                                                bool assumeConvergent) {
+  if (assumeConvergent)
+    errorNYI("createRuntimeFunction: assumeConvergent");
+  if (isLocal)
+    errorNYI("createRuntimeFunction: local");
+
+  cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
+                                             /*forVtable=*/false);
+
+  if (entry) {
+    // TODO(cir): set the attributes of the function.
+    assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    entry.setDSOLocal(true);
+  }
+
+  return entry;
 }
 
 mlir::SymbolTable::Visibility

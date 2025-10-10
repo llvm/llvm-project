@@ -119,11 +119,13 @@ MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
+MODULE_PASS("norecurse-lto-inference", NoRecurseLTOInferencePass())
 MODULE_PASS("nsan", NumericalStabilitySanitizerPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
             OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink))
 MODULE_PASS("partial-inliner", PartialInlinerPass())
+MODULE_PASS("alloc-token", AllocTokenPass())
 MODULE_PASS("pgo-icall-prom", PGOIndirectCallPromotion())
 MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
 MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
@@ -685,8 +687,9 @@ FUNCTION_PASS_WITH_PARAMS(
     parseSimplifyCFGOptions,
     "no-speculate-blocks;speculate-blocks;no-simplify-cond-branch;"
     "simplify-cond-branch;no-forward-switch-cond;forward-switch-cond;"
-    "no-switch-range-to-icmp;switch-range-to-icmp;no-switch-to-lookup;"
-    "switch-to-lookup;no-keep-loops;keep-loops;no-hoist-common-insts;"
+    "no-switch-range-to-icmp;switch-range-to-icmp;no-switch-to-arithmetic;"
+    "switch-to-arithmetic;no-switch-to-lookup;switch-to-lookup;"
+    "no-keep-loops;keep-loops;no-hoist-common-insts;"
     "hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;"
     "hoist-loads-stores-with-cond-faulting;no-sink-common-insts;"
     "sink-common-insts;no-speculate-unpredictables;speculate-unpredictables;"

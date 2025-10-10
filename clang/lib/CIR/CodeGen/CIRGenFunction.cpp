@@ -689,7 +689,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 
   assert(!cir::MissingFeatures::sanitizers());
-  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Enter the epilogue cleanups.
+  RunCleanupsScope dtorEpilogue(*this);
 
   // If this is the complete variant, just invoke the base variant;
   // the epilogue will destruct the virtual bases.  But we can't do
@@ -708,7 +710,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     assert((body || getTarget().getCXXABI().isMicrosoft()) &&
            "can't emit a dtor without a body for non-Microsoft ABIs");
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for virtual bases.
+    enterDtorCleanups(dtor, Dtor_Complete);
 
     if (!isTryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
@@ -723,7 +726,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for fields and non-virtual bases.
+    enterDtorCleanups(dtor, Dtor_Base);
+
     assert(!cir::MissingFeatures::vtableInitialization());
 
     if (isTryBody) {
@@ -741,7 +746,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     break;
   }
 
-  assert(!cir::MissingFeatures::dtorCleanups());
+  // Jump out through the epilogue cleanups.
+  dtorEpilogue.forceCleanup();
 
   // Exit the try if applicable.
   if (isTryBody)

@@ -15,7 +15,6 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   CallableTraitsHelperTest.cpp
-  CommonTestUtils.cpp
   ErrorTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
@@ -24,6 +23,8 @@ add_orc_rt_unittest(CoreTests
   MemoryFlagsTest.cpp
   RTTITest.cpp
   ScopeExitTest.cpp
+  SessionTest.cpp
+  SimpleNativeMemoryMapTest.cpp
   SimplePackedSerializationTest.cpp
   SPSAllocActionTest.cpp
   SPSMemoryFlagsTest.cpp
