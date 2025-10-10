@@ -30,11 +30,24 @@ void func2(PRODUCT(int, SUM(float, double)) y) { // c17-warning {{declaration of
 
 struct foop { struct { int x; }; }; // c17-note {{previous definition is here}}
 struct foop { struct { int x; }; }; // c17-error {{redefinition of 'foop'}}
+// Test the field lookup compatibility isn't sufficient, the structure of types should be compatible.
+struct AnonymousStructNotMatchingFields { // c17-note {{previous definition is here}}
+  struct { // c23-note {{field has name '' here}}
+    int x;
+  };
+};
+struct AnonymousStructNotMatchingFields { // c23-error {{type 'struct AnonymousStructNotMatchingFields' has incompatible definitions}} \
+                                             c17-error {{redefinition of 'AnonymousStructNotMatchingFields'}}
+  int x; // c23-note {{field has name 'x' here}}
+};
+
 union barp { int x; float y; };     // c17-note {{previous definition is here}}
 union barp { int x; float y; };     // c17-error {{redefinition of 'barp'}}
 typedef struct q { int x; } q_t;    // c17-note 2 {{previous definition is here}}
 typedef struct q { int x; } q_t;    // c17-error {{redefinition of 'q'}} \
                                        c17-error-re {{typedef redefinition with different types ('struct (unnamed struct at {{.*}})' vs 'struct q')}}
+typedef struct { int x; } untagged_q_t; // both-note {{previous definition is here}}
+typedef struct { int x; } untagged_q_t; // both-error {{typedef redefinition with different types}}
 void func3(void) {
   struct S { int x; };       // c17-note {{previous definition is here}}
   struct T { struct S s; };  // c17-note {{previous definition is here}}
