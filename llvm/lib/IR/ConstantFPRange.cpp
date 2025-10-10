@@ -411,3 +411,17 @@ ConstantFPRange ConstantFPRange::abs() const {
 ConstantFPRange ConstantFPRange::negate() const {
   return ConstantFPRange(-Upper, -Lower, MayBeQNaN, MayBeSNaN);
 }
+
+ConstantFPRange ConstantFPRange::getWithoutInf() const {
+  if (isNaNOnly())
+    return *this;
+  APFloat NewLower = Lower;
+  APFloat NewUpper = Upper;
+  if (Lower.isNegInfinity())
+    NewLower = APFloat::getLargest(getSemantics(), /*Negative=*/true);
+  if (Upper.isPosInfinity())
+    NewUpper = APFloat::getLargest(getSemantics(), /*Negative=*/false);
+  canonicalizeRange(NewLower, NewUpper);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper), MayBeQNaN,
+                         MayBeSNaN);
+}
