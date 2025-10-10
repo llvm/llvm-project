@@ -120,8 +120,7 @@ UnsignedEPStat::UnsignedEPStat(llvm::StringLiteral Name)
   StatsRegistry->ExplicitlySetStats.push_back(this);
 }
 
-static std::vector<std::optional<unsigned>>
-consumeExplicitlySetStats() {
+static std::vector<std::optional<unsigned>> consumeExplicitlySetStats() {
   std::vector<std::optional<unsigned>> Result;
   Result.reserve(StatsRegistry->ExplicitlySetStats.size());
   for (auto *M : StatsRegistry->ExplicitlySetStats) {
