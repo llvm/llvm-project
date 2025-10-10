@@ -333,9 +333,6 @@ mlirPatternRewriterAsBase(MlirPatternRewriter rewriter);
 /// RewritePattern API
 //===----------------------------------------------------------------------===//
 
-/// PatternBenefit represents the benefit of a pattern match.
-typedef unsigned short MlirPatternBenefit;
-
 /// Callbacks to construct a rewrite pattern.
 typedef struct {
   /// Optional constructor for the user data.
@@ -356,7 +353,7 @@ typedef struct {
 /// Create a rewrite pattern that matches the operation
 /// with the given rootName, corresponding to mlir::OpRewritePattern.
 MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePattenCreate(
-    MlirStringRef rootName, MlirPatternBenefit benefit, MlirContext context,
+    MlirStringRef rootName, unsigned benefit, MlirContext context,
     MlirRewritePatternCallbacks callbacks, void *userData,
     size_t nGeneratedNames, MlirStringRef *generatedNames);
 

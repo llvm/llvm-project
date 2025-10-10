@@ -184,7 +184,7 @@ public:
       mlirRewritePatternSetDestroy(set);
   }
 
-  void add(MlirStringRef rootName, MlirPatternBenefit benefit,
+  void add(MlirStringRef rootName, unsigned benefit,
            const nb::callable &matchAndRewrite) {
     MlirRewritePatternCallbacks callbacks;
     callbacks.construct = [](void *userData) {

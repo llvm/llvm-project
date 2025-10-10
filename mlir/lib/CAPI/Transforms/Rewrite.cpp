@@ -380,7 +380,7 @@ private:
 } // namespace mlir
 
 MlirRewritePattern mlirOpRewritePattenCreate(
-    MlirStringRef rootName, MlirPatternBenefit benefit, MlirContext context,
+    MlirStringRef rootName, unsigned benefit, MlirContext context,
     MlirRewritePatternCallbacks callbacks, void *userData,
     size_t nGeneratedNames, MlirStringRef *generatedNames) {
   std::vector<mlir::StringRef> generatedNamesVec;
