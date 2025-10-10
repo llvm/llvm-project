@@ -274,6 +274,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
   false positive from analysis of a conditional expression in C.
 
+- Improved :doc:`bugprone-not-null-terminated-result
+  <clang-tidy/checks/bugprone/not-null-terminated-result>` check by fixing
+  bogus fix-its for `strncmp` and `wcsncmp` on Windows.
+
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
   declarations and macros in system headers.
