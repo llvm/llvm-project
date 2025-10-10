@@ -37,8 +37,8 @@ internal_remquo(float x, float y, float *r, __CLC_ADDRESS_SPACE uint *q) {
   abs_x = *(float *)&tmp_x;
   abs_y = *(float *)&tmp_y;
   // Remove exponent bias
-  exp_x = (int)((tmp_x & (0x7FF00000L)) >> 23) - 127;
-  exp_y = (int)((tmp_y & (0x7FF00000L)) >> 23) - 127;
+  exp_x = (int)((tmp_x & (0x7F800000)) >> 23) - 127;
+  exp_y = (int)((tmp_y & (0x7F800000)) >> 23) - 127;
   // Test for NaNs, Infs, and Zeros
   if ((exp_x == (0x00000080L)) || (exp_y == (0x00000080L)) ||
       (tmp_x == (0x00000000L)) || (tmp_y == (0x00000000L)))
