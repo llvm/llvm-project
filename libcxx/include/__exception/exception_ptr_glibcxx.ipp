@@ -13,10 +13,10 @@ namespace std {
 // it uses to implement std::exception_ptr (which it declares as an alias of
 // std::__exception_ptr::exception_ptr) is not directly exported to clients. So
 // we have little choice but to hijack std::__exception_ptr::exception_ptr's
-// (which fortunately has the same layout as our std::exception_ptr) copy
-// constructor, assignment operator and destructor (which are part of its
-// stable ABI), and its rethrow_exception(std::__exception_ptr::exception_ptr)
-// function.
+// _M_addref and _M_release (which are part of its ABI), and its
+// rethrow_exception(std::__exception_ptr::exception_ptr) function. Fortunately,
+// glibcxx's exception_ptr has the same layout as our exception_ptr and we can
+// reinterpret_cast between the two.
 namespace __exception_ptr {
 
 struct exception_ptr {
