@@ -250,7 +250,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
               nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation")
                 ", values: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Value") "]) -> None")
               // clang-format on
-              )
+              nb::arg("op"), nb::arg("values"))
           .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
                // clang-format off
                 nb::sig("def erase_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
