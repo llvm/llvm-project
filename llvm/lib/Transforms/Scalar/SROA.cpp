@@ -2997,7 +2997,7 @@ public:
         if (!IsTypeValidForTreeStructuredMerge(
                 SI->getValueOperand()->getType()) ||
             SI->isVolatile())
-        return std::nullopt;
+          return std::nullopt;
         auto *VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
         unsigned NumElts = VecTy->getNumElements();
         unsigned EltSize = DL.getTypeSizeInBits(VecTy->getElementType());
