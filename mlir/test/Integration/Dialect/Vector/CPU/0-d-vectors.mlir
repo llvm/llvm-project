@@ -21,13 +21,6 @@ func.func @print_vector_0d(%a: vector<f32>) {
   return
 }
 
-func.func @splat_0d(%a: f32) {
-  %1 = vector.splat %a : vector<f32>
-  // CHECK: ( 42 )
-  vector.print %1: vector<f32>
-  return
-}
-
 func.func @broadcast_0d(%a: f32) {
   %1 = vector.broadcast %a : f32 to vector<f32>
   // CHECK: ( 42 )

@@ -2881,53 +2881,6 @@ def Vector_PrintOp :
     }];
 }
 
-//===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-def Vector_SplatOp : Vector_Op<"splat", [
-    Pure,
-    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-    TypesMatchWith<"operand type matches element type of result",
-                   "aggregate", "input",
-                   "::llvm::cast<VectorType>($_self).getElementType()">
-  ]> {
-  let summary = "vector splat or broadcast operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.broadcast.
-
-    Broadcast the operand to all elements of the result vector. The type of the
-    operand must match the element type of the vector type.
-
-    Example:
-
-    ```mlir
-    %s = arith.constant 10.1 : f32
-    %t = vector.splat %s : vector<8x16xf32>
-    ```
-
-    This operation is deprecated, the preferred representation of the above is:
-
-    ```mlir
-    %s = arith.constant 10.1 : f32
-    %t = vector.broadcast %s : f32 to vector<8x16xf32>
-    ```
-  }];
-
-  let arguments = (ins AnyType:$input);
-  let results = (outs AnyVectorOfAnyRank:$aggregate);
-
-  let builders = [
-    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
-    [{ build($_builder, $_state, aggregateType, element); }]>];
-  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
-
-  let hasFolder = 1;
-
-  // vector.splat is deprecated, and vector.broadcast should be used instead.
-  // Canonicalize vector.splat to vector.broadcast.
-  let hasCanonicalizer = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // VectorScaleOp
