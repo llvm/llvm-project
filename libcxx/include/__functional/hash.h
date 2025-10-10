@@ -133,11 +133,13 @@ private:
   static const _Size __k2 = 0x9ae16a3b2f90404fULL;
   static const _Size __k3 = 0xc949d7c7509e6557ULL;
 
-  _LIBCPP_HIDE_FROM_ABI static _Size __rotate(_Size __val, int __shift) {
+  _LIBCPP_HIDE_FROM_ABI static _Size _LIBCPP_DISABLE_UBSAN_INTEGER_CHECK("shifting can cause unsigned overflow")
+      __rotate(_Size __val, int __shift) {
     return __shift == 0 ? __val : ((__val >> __shift) | (__val << (64 - __shift)));
   }
 
-  _LIBCPP_HIDE_FROM_ABI static _Size __rotate_by_at_least_1(_Size __val, int __shift) {
+  _LIBCPP_HIDE_FROM_ABI static _Size _LIBCPP_DISABLE_UBSAN_INTEGER_CHECK("shifting can cause unsigned overflow")
+      __rotate_by_at_least_1(_Size __val, int __shift) {
     return (__val >> __shift) | (__val << (64 - __shift));
   }
 
