@@ -62,16 +62,6 @@ class EnumClassFlag<string flag, string getter> :
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// AliasScopeAttr
-//===----------------------------------------------------------------------===//
-
-def AliasScopeAttr : DialectAttribute<(attr
-  Attr<"Attribute">:$id,
-  Attr<"AliasScopeDomainAttr">:$domain,
-  OptionalAttribute<"StringAttr">:$description
-)>;
-
-//===----------------------------------------------------------------------===//
 // DIBasicTypeAttr
 //===----------------------------------------------------------------------===//
 
@@ -330,7 +320,6 @@ def LoopAnnotationAttr : DialectAttribute<(attr
 // All the attributes with custom bytecode handling.
 def LLVMDialectAttributes : DialectAttributes<"LLVM"> {
   let elems = [
-    AliasScopeAttr,
     DIBasicTypeAttr,
     DICompileUnitAttr,
     DICompositeTypeAttr,

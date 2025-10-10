@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
-// RUN: mlir-opt %s -emit-bytecode | mlir-opt | FileCheck %s
+// RUN: mlir-opt -verify-roundtrip %s
 
 
 // CHECK-LABEL: func @baz
