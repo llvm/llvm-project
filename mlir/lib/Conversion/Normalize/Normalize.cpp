@@ -14,15 +14,15 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include "mlir/IR/AsmState.h"
-#include "llvm/ADT/Hashing.h"
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace mlir {
 #define GEN_PASS_DEF_NORMALIZE
@@ -41,22 +41,31 @@ struct NormalizePass : public impl::NormalizeBase<NormalizePass> {
 
 private:
   const uint64_t MagicHashConstant = 0x6acaa36bef8325c5ULL;
-  void collectOutputOperations(Block &block,
-                               SmallVector<Operation *, 16> &Output);
-  bool isOutput(mlir::Operation &op);
-  void reorderOperations(SmallVector<mlir::Operation *, 16> &Outputs);
+  void
+  collectOutputOperations(Block &block,
+                          SmallVector<Operation *, 16> &Output) const noexcept;
+  bool isOutput(mlir::Operation &op) const noexcept;
+
+  void reorderOperations(const SmallVector<mlir::Operation *, 16> &Outputs);
   void
   reorderOperation(mlir::Operation *used, mlir::Operation *user,
                    llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
-  void RenameOperations(SmallVector<Operation *, 16> &Outputs);
-  void RenameOperation(mlir::Operation* op, SmallPtrSet<const mlir::Operation *, 32> &visited);
-  bool isInitialOperation(mlir::Operation* op);
-  void nameAsInitialOperation(mlir::Operation* op);
-  void nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
-  bool hasOnlyImmediateOperands(mlir::Operation* op);
-  llvm::SetVector<int> getOutputFootprint(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
-  void foldOperation(mlir::Operation* op);
-  void reorderOperationOperandsByName(mlir::Operation* op);
+
+  void RenameOperations(const SmallVector<Operation *, 16> &Outputs);
+  void RenameOperation(mlir::Operation *op,
+                       SmallPtrSet<const mlir::Operation *, 32> &visited);
+
+  bool isInitialOperation(mlir::Operation *const op) const noexcept;
+  void nameAsInitialOperation(mlir::Operation *op);
+  void nameAsRegularOperation(
+      mlir::Operation *op,
+      llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
+  bool hasOnlyImmediateOperands(mlir::Operation *const op) const noexcept;
+  llvm::SetVector<int>
+  getOutputFootprint(mlir::Operation *op,
+                     llvm::SmallPtrSet<const mlir::Operation *, 32> &visited);
+  void foldOperation(mlir::Operation *op);
+  void reorderOperationOperandsByName(mlir::Operation *op);
   mlir::OpPrintingFlags flags{};
 };
 } // namespace
@@ -66,37 +75,38 @@ void NormalizePass::runOnOperation() {
 
   ModuleOp module = getOperation();
 
-  for (Operation &op : module.getOps()) {
+  for (auto &op : module.getOps()) {
     SmallVector<Operation *, 16> Outputs;
 
-    for (Region &region : op.getRegions())
-      for (Block &block : region)
+    for (auto &region : op.getRegions())
+      for (auto &block : region)
         collectOutputOperations(block, Outputs);
 
     reorderOperations(Outputs);
 
     RenameOperations(Outputs);
 
-    for (Region& region : op.getRegions())
-      for (Block &block : region)
-        for (Operation &innerOp : block)
+    for (auto &region : op.getRegions()) {
+      for (auto &block : region) {
+        for (auto &innerOp : block) {
           foldOperation(&innerOp);
-
-    for (Region& region : op.getRegions())
-      for (Block &block : region)
-        for (Operation &innerOp : block)
           reorderOperationOperandsByName(&innerOp);
+        }
+      }
+    }
   }
 }
 
-void NormalizePass::RenameOperations(SmallVector<Operation *, 16> &Outputs) {
+void NormalizePass::RenameOperations(
+    const SmallVector<Operation *, 16> &Outputs) {
   llvm::SmallPtrSet<const mlir::Operation *, 32> visited;
 
-  for(auto *op : Outputs)
+  for (auto *op : Outputs)
     RenameOperation(op, visited);
 }
 
-void NormalizePass::RenameOperation(Operation *op, SmallPtrSet<const mlir::Operation *, 32> &visited) {
+void NormalizePass::RenameOperation(
+    Operation *op, SmallPtrSet<const mlir::Operation *, 32> &visited) {
   if (!visited.count(op)) {
     visited.insert(op);
 
@@ -108,11 +118,13 @@ void NormalizePass::RenameOperation(Operation *op, SmallPtrSet<const mlir::Opera
   }
 }
 
-bool NormalizePass::isInitialOperation(mlir::Operation* op) {
+bool NormalizePass::isInitialOperation(
+    mlir::Operation *const op) const noexcept {
   return !op->use_empty() and hasOnlyImmediateOperands(op);
 }
 
-bool NormalizePass::hasOnlyImmediateOperands(mlir::Operation* op) {
+bool NormalizePass::hasOnlyImmediateOperands(
+    mlir::Operation *const op) const noexcept {
   for (mlir::Value operand : op->getOperands())
     if (mlir::Operation *defOp = operand.getDefiningOp())
       if (!(defOp->hasTrait<OpTrait::ConstantLike>()))
@@ -120,93 +132,80 @@ bool NormalizePass::hasOnlyImmediateOperands(mlir::Operation* op) {
   return true;
 }
 
-std::string to_string(uint64_t const hash)
-{
+std::string inline to_string(uint64_t const hash) noexcept {
   std::ostringstream oss;
-  oss << std::hex << std::setw(16) << std::setfill('0') << hash;
+  oss << std::hex << std::setw(5) << std::setfill('0') << hash;
   std::string tmp = oss.str();
-  return tmp.substr(11, 5);
+  return tmp.size() > 5 ? tmp.substr(tmp.size() - 5, 5) : tmp;
 }
 
-uint64_t kernel_hash(std::string_view data)
-{
-    const uint64_t FNV_OFFSET = 0xcbf29ce484222325ULL;
-    const uint64_t FNV_PRIME = 0x100000001b3ULL;
-    uint64_t hash = FNV_OFFSET;
-    for (unsigned char c : data)
-    {
-        hash ^= static_cast<uint64_t>(c);
-        hash *= FNV_PRIME;
-    }
-    return hash;
-}
-
-void replace(std::string& str, char from, char to) {
-  for(auto& it : str) {
-    if(it == from) it = to;
+uint64_t inline strHash(std::string_view data) noexcept {
+  const static uint64_t FNV_OFFSET = 0xcbf29ce484222325ULL;
+  const static uint64_t FNV_PRIME = 0x100000001b3ULL;
+  uint64_t hash = FNV_OFFSET;
+  for (const auto &c : data) {
+    hash ^= static_cast<uint64_t>(c);
+    hash *= FNV_PRIME;
   }
+  return hash;
 }
 
-std::vector<std::string> split(std::string_view str, char delimiter) {
-  std::vector<std::string> outs{};
-  std::stringstream ss{ std::string {str} };
+std::string inline split(std::string_view str, const char &delimiter,
+                         int indx = 0) noexcept {
+  std::stringstream ss{std::string{str}};
   std::string item;
-  while(std::getline(ss, item, delimiter)) {
-    replace(item, ':', '_');
-    outs.emplace_back(item);
+  int cnt = 0;
+  while (std::getline(ss, item, delimiter)) {
+    if (cnt == indx) {
+      std::replace(item.begin(), item.end(), ':', '_');
+      return item;
+    } else {
+      cnt++;
+    }
   }
-  return outs;
 }
 
-void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
+void NormalizePass::nameAsInitialOperation(mlir::Operation *op) {
   SmallVector<SmallString<64>, 4> Operands;
 
-  if(op->getNumOperands() == 0) {
-    /**
-     * INFO: Constant operations like arith.constant
-     */
-    if(auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
+  if (op->getNumOperands() == 0) {
+    if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) {
       Operands.push_back(StringRef(std::string{"void"}));
     } else {
       std::string TextRepresentation;
       mlir::AsmState state(op, flags);
       llvm::raw_string_ostream Stream(TextRepresentation);
       op->print(Stream, state);
-      std::string hash = to_string(kernel_hash(split(Stream.str(), '=')[1]));
+      std::string hash = to_string(strHash(split(Stream.str(), '=', 1)));
       Operands.push_back(StringRef(hash));
     }
   } else {
     for (mlir::Value operand : op->getOperands()) {
       if (mlir::Operation *defOp = operand.getDefiningOp()) {
-        /**
-         * INFO: Constant arguments like arith.constant
-         */
         std::string TextRepresentation;
         mlir::AsmState state(defOp, flags);
         llvm::raw_string_ostream Stream(TextRepresentation);
         defOp->print(Stream, state);
-        std::string hash = to_string(kernel_hash(split(Stream.str(), '=')[1]));
+        std::string hash = to_string(strHash(split(Stream.str(), '=', 1)));
         Operands.push_back(StringRef(hash));
       } else {
-        /**
-         * INFO: Function Arguments
-         */
         std::string TextRepresentation;
         mlir::AsmState state(op, flags);
         llvm::raw_string_ostream Stream(TextRepresentation);
         operand.print(Stream, state);
-        std::string argNum = split(Stream.str(), ':')[1];
+        std::string argNum = split(Stream.str(), ':', 1);
         argNum = argNum.substr(1, argNum.size() - 1);
         Operands.push_back(StringRef(std::string("arg" + argNum)));
       }
     }
   }
 
-  if (op->hasTrait<OpTrait::IsCommutative>()) llvm::sort(Operands);
+  if (op->hasTrait<OpTrait::IsCommutative>())
+    llvm::sort(Operands);
 
   uint64_t Hash = MagicHashConstant;
 
-  uint64_t opcodeHash = kernel_hash(op->getName().getStringRef().str());
+  uint64_t opcodeHash = strHash(op->getName().getStringRef().str());
   Hash = llvm::hashing::detail::hash_16_bytes(Hash, opcodeHash);
 
   SmallPtrSet<const mlir::Operation *, 32> Visited;
@@ -238,7 +237,9 @@ void NormalizePass::nameAsInitialOperation(mlir::Operation* op) {
   op->setLoc(newLoc);
 }
 
-void NormalizePass::nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
+void NormalizePass::nameAsRegularOperation(
+    mlir::Operation *op,
+    llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
   SmallVector<SmallString<64>, 4> Operands;
   for (mlir::Value operand : op->getOperands()) {
     if (mlir::Operation *defOp = operand.getDefiningOp()) {
@@ -248,35 +249,34 @@ void NormalizePass::nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSe
       mlir::AsmState state(defOp, flags);
       llvm::raw_string_ostream Stream(TextRepresentation);
       defOp->print(Stream, state);
-      Operands.push_back(StringRef(split(Stream.str(), '=')[0]));
+      Operands.push_back(StringRef(split(Stream.str(), '=', 0)));
     } else {
-      /**
-       * INFO: Function Arguments
-       */
       std::string TextRepresentation;
       mlir::AsmState state(op, flags);
       llvm::raw_string_ostream Stream(TextRepresentation);
       operand.print(Stream, state);
-      std::string argNum = split(Stream.str(), ':')[1];
+      std::string argNum = split(Stream.str(), ':', 1);
       argNum = argNum.substr(1, argNum.size() - 1);
       Operands.push_back(StringRef(std::string("arg" + argNum)));
     }
   }
 
-  if (op->hasTrait<OpTrait::IsCommutative>()) llvm::sort(Operands);
+  if (op->hasTrait<OpTrait::IsCommutative>())
+    llvm::sort(Operands);
 
   uint64_t Hash = MagicHashConstant;
 
-  uint64_t opcodeHash = kernel_hash(op->getName().getStringRef().str());
+  uint64_t opcodeHash = strHash(op->getName().getStringRef().str());
   Hash = llvm::hashing::detail::hash_16_bytes(Hash, opcodeHash);
 
   SmallVector<uint64_t, 4> OperandsOpcodes;
 
   for (mlir::Value operand : op->getOperands())
     if (mlir::Operation *defOp = operand.getDefiningOp())
-      OperandsOpcodes.push_back(kernel_hash(defOp->getName().getStringRef().str()));
+      OperandsOpcodes.push_back(strHash(defOp->getName().getStringRef().str()));
 
-  if (op->hasTrait<OpTrait::IsCommutative>()) llvm::sort(OperandsOpcodes.begin(), OperandsOpcodes.end());
+  if (op->hasTrait<OpTrait::IsCommutative>())
+    llvm::sort(OperandsOpcodes.begin(), OperandsOpcodes.end());
 
   for (const uint64_t Code : OperandsOpcodes)
     Hash = llvm::hashing::detail::hash_16_bytes(Hash, Code);
@@ -304,22 +304,24 @@ void NormalizePass::nameAsRegularOperation(mlir::Operation* op, llvm::SmallPtrSe
   op->setLoc(newLoc);
 }
 
-bool starts_with(std::string_view base, std::string_view check) {
-  if(base.size() < check.size()) return false;
-  for(int i = 0; i < check.size(); i++) if(base[i] != check[i]) return false;
-  return true;
+bool inline starts_with(std::string_view base,
+                        std::string_view check) noexcept {
+  return base.size() >= check.size() &&
+         std::equal(check.begin(), check.end(), base.begin());
 }
 
-void NormalizePass::foldOperation(mlir::Operation* op) {
-  if(isOutput(*op)) return;
+void NormalizePass::foldOperation(mlir::Operation *op) {
+  if (isOutput(*op))
+    return;
 
   std::string TextRepresentation;
   mlir::AsmState state(op, flags);
   llvm::raw_string_ostream Stream(TextRepresentation);
   op->print(Stream, state);
-  
-  auto opName = split(Stream.str(), '=')[0];
-  if(!starts_with(opName, "%op")) return;
+
+  auto opName = split(Stream.str(), '=', 0);
+  if (!starts_with(opName, "%op"))
+    return;
 
   SmallVector<std::string, 4> Operands;
 
@@ -329,11 +331,12 @@ void NormalizePass::foldOperation(mlir::Operation* op) {
       mlir::AsmState state(defOp, flags);
       llvm::raw_string_ostream Stream(TextRepresentation);
       defOp->print(Stream, state);
-      auto name = split(Stream.str(), '=')[0];
+      auto name = split(Stream.str(), '=', 0);
 
-      bool hasNormalName = (starts_with(name, "%op") || starts_with(name, "%vl"));
+      bool hasNormalName =
+          (starts_with(name, "%op") || starts_with(name, "%vl"));
 
-      if(hasNormalName) {
+      if (hasNormalName) {
         Operands.push_back(name.substr(1, 7));
       } else {
         Operands.push_back(name);
@@ -341,7 +344,8 @@ void NormalizePass::foldOperation(mlir::Operation* op) {
     }
   }
 
-  if (op->hasTrait<OpTrait::IsCommutative>()) llvm::sort(Operands.begin(), Operands.end());
+  if (op->hasTrait<OpTrait::IsCommutative>())
+    llvm::sort(Operands.begin(), Operands.end());
 
   SmallString<512> Name;
   Name.append(opName.substr(1, 7));
@@ -361,8 +365,9 @@ void NormalizePass::foldOperation(mlir::Operation* op) {
   op->setLoc(newLoc);
 }
 
-void NormalizePass::reorderOperationOperandsByName(mlir::Operation* op) {
-  if(op->getNumOperands() == 0) return;
+void NormalizePass::reorderOperationOperandsByName(mlir::Operation *op) {
+  if (op->getNumOperands() == 0)
+    return;
 
   SmallVector<std::pair<std::string, mlir::Value>, 4> Operands;
 
@@ -374,20 +379,21 @@ void NormalizePass::reorderOperationOperandsByName(mlir::Operation* op) {
   }
 
   if (op->hasTrait<OpTrait::IsCommutative>()) {
-    llvm::sort(Operands.begin(), Operands.end(),
-                [](const auto &a, const auto &b) {
-                  return llvm::StringRef(a.first).compare_insensitive(b.first) < 0;
-                });
+    llvm::sort(
+        Operands.begin(), Operands.end(), [](const auto &a, const auto &b) {
+          return llvm::StringRef(a.first).compare_insensitive(b.first) < 0;
+        });
   }
 
-  for(size_t i = 0; i < Operands.size(); i++) {
+  for (size_t i = 0; i < Operands.size(); i++) {
     op->setOperand(i, Operands[i].second);
   }
 }
 
-void NormalizePass::reorderOperations(SmallVector<Operation *, 16> &Outputs) {
+void NormalizePass::reorderOperations(
+    const SmallVector<Operation *, 16> &Outputs) {
   llvm::SmallPtrSet<const mlir::Operation *, 32> visited;
-  for (auto *op : Outputs)
+  for (auto *const op : Outputs)
     for (mlir::Value operand : op->getOperands())
       if (mlir::Operation *defOp = operand.getDefiningOp())
         reorderOperation(defOp, op, visited);
@@ -396,7 +402,6 @@ void NormalizePass::reorderOperations(SmallVector<Operation *, 16> &Outputs) {
 void NormalizePass::reorderOperation(
     mlir::Operation *used, mlir::Operation *user,
     llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
-
   if (!visited.count(used)) {
     visited.insert(used);
 
@@ -414,13 +419,14 @@ void NormalizePass::reorderOperation(
   }
 }
 
-void NormalizePass::collectOutputOperations(Block &block, SmallVector<Operation *, 16> &Outputs) {
-  for (Operation &innerOp : block)
+void NormalizePass::collectOutputOperations(
+    Block &block, SmallVector<Operation *, 16> &Outputs) const noexcept {
+  for (auto &innerOp : block)
     if (isOutput(innerOp))
       Outputs.emplace_back(&innerOp);
 }
 
-bool NormalizePass::isOutput(Operation &op) {
+bool NormalizePass::isOutput(Operation &op) const noexcept {
   if (op.hasTrait<OpTrait::IsTerminator>())
     return true;
 
@@ -432,12 +438,15 @@ bool NormalizePass::isOutput(Operation &op) {
         return true;
   }
 
-  if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op)) return true;
+  if (auto call = mlir::dyn_cast<mlir::func::CallOp>(op))
+    return true;
 
   return false;
 }
 
-llvm::SetVector<int> NormalizePass::getOutputFootprint(mlir::Operation* op, llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
+llvm::SetVector<int> NormalizePass::getOutputFootprint(
+    mlir::Operation *op,
+    llvm::SmallPtrSet<const mlir::Operation *, 32> &visited) {
   llvm::SetVector<int> Outputs;
   if (!visited.count(op)) {
     visited.insert(op);
@@ -446,11 +455,11 @@ llvm::SetVector<int> NormalizePass::getOutputFootprint(mlir::Operation* op, llvm
       mlir::func::FuncOp func = op->getParentOfType<mlir::func::FuncOp>();
 
       unsigned Count = 0;
-        for (Block &block : func.getRegion())
-          for(mlir::Operation &innerOp : block){
-            if(&innerOp==op)
-              Outputs.insert(Count);
-            Count++;
+      for (Block &block : func.getRegion())
+        for (mlir::Operation &innerOp : block) {
+          if (&innerOp == op)
+            Outputs.insert(Count);
+          Count++;
         }
 
       return Outputs;
@@ -459,7 +468,8 @@ llvm::SetVector<int> NormalizePass::getOutputFootprint(mlir::Operation* op, llvm
     for (mlir::OpOperand &use : op->getUses()) {
       mlir::Operation *useOp = use.getOwner();
       if (useOp) {
-        llvm::SetVector<int> OutputsUsingUop = getOutputFootprint(useOp, visited);
+        llvm::SetVector<int> OutputsUsingUop =
+            getOutputFootprint(useOp, visited);
 
         Outputs.insert(OutputsUsingUop.begin(), OutputsUsingUop.end());
       }
