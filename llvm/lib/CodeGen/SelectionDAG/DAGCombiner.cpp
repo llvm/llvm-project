@@ -1265,37 +1265,31 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
 
   // Optimize (Constant XOR a) & b & ~c -> (Constant XOR a) & (b & ~c)
   // This allows the andn operation to be done in parallel with the xor
-  if (Opc == ISD::AND && TLI.hasAndNot(N1)) {
+  if (Opc == ISD::AND && (TLI.hasAndNot(N1) || TLI.hasAndNot(N0)) &&
+      sd_match(N1, m_Xor(m_Value(), m_AllOnes()))) {
     // Look for pattern: AND(AND(XOR(Constant, a), b), NOT(c))
     // Transform to: AND(XOR(Constant, a), AND(b, NOT(c)))
 
-    // Check if N1 is NOT(c) - i.e., XOR(c, -1)
-    if (N1.getOpcode() == ISD::XOR &&
-        DAG.isConstantIntBuildVectorOrConstantInt(N1.getOperand(1)) &&
-        isAllOnesConstant(N1.getOperand(1))) {
+    SDValue XorOp, OtherOp;
+    APInt XorConst;
 
-      // Check if one operand of N0 is XOR(Constant, a)
-      SDValue XorOp, OtherOp;
-      if (N00.getOpcode() == ISD::XOR) {
-        XorOp = N00;
-        OtherOp = N01;
-      } else if (N01.getOpcode() == ISD::XOR) {
-        XorOp = N01;
-        OtherOp = N00;
-      } else {
-        return SDValue();
-      }
-
-      // Check if XOR has a constant operand
-      if (DAG.isConstantIntBuildVectorOrConstantInt(XorOp.getOperand(0)) ||
-          DAG.isConstantIntBuildVectorOrConstantInt(XorOp.getOperand(1))) {
-        // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
-        // To: AND(XOR(Constant, a), AND(b, NOT(c)))
-        // This allows the andn (b & ~c) to be done in parallel with the xor
-        SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, N1);
-        return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
-      }
+    // Check which operand of N0 is XOR(Constant, X)
+    if (sd_match(N00, m_Xor(m_ConstInt(XorConst), m_Value())) &&
+        !XorConst.isAllOnes()) {
+      XorOp = N00;
+      OtherOp = N01;
+    } else if (sd_match(N01, m_Xor(m_ConstInt(XorConst), m_Value())) &&
+               !XorConst.isAllOnes()) {
+      XorOp = N01;
+      OtherOp = N00;
+    } else {
+      return SDValue();
     }
+
+    // Transform: AND(AND(XOR(Constant, a), b), NOT(c))
+    // To: AND(XOR(Constant, a), AND(b, NOT(c)))
+    SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, OtherOp, N1);
+    return DAG.getNode(ISD::AND, DL, VT, XorOp, NewAnd);
   }
   if (Opc == ISD::XOR) {
     // (N00 ^ N01) ^ N00 --> N01
