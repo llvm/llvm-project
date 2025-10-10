@@ -285,19 +285,19 @@ void NormalizePass::foldOperation(mlir::Operation *op) {
         Operands.push_back(name);
       }
     } else if (auto ba = dyn_cast<mlir::BlockArgument>(operand)) {
-        mlir::Block *ownerBlock = ba.getOwner();
-        unsigned argIndex = ba.getArgNumber();
-        if (auto func =
-                dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
-          if (&func.front() == ownerBlock) {
-            Operands.push_back(std::string("funcArg" + std::to_string(argIndex)));
-          } else {
-            Operands.push_back(std::string("blockArg" + std::to_string(argIndex)));
-          }
+      mlir::Block *ownerBlock = ba.getOwner();
+      unsigned argIndex = ba.getArgNumber();
+      if (auto func = dyn_cast<mlir::func::FuncOp>(ownerBlock->getParentOp())) {
+        if (&func.front() == ownerBlock) {
+          Operands.push_back(std::string("funcArg" + std::to_string(argIndex)));
         } else {
-          Operands.push_back(std::string("blockArg" + std::to_string(argIndex)));
+          Operands.push_back(
+              std::string("blockArg" + std::to_string(argIndex)));
         }
+      } else {
+        Operands.push_back(std::string("blockArg" + std::to_string(argIndex)));
       }
+    }
   }
 
   if (op->hasTrait<OpTrait::IsCommutative>())
