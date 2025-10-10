@@ -819,8 +819,8 @@ private:
     TPaths = std::move(TempList);
   }
 
-  /// Fast helper to get the successor corresponding to a particular case value for
-  /// a switch statement.
+  /// Fast helper to get the successor corresponding to a particular case value
+  /// for a switch statement.
   BasicBlock *getNextCaseSuccessor(const APInt &NextState) {
     // Precompute the value => successor mapping
     if (CaseValToDest.empty()) {
