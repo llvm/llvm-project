@@ -1823,6 +1823,11 @@ def TuneConditionalCompressedMoveFusion
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
+def TuneHasSingleElementVecFP64
+    : SubtargetFeature<"single-element-vec-fp64", "HasSingleElementVectorFP64", "true",
+                       "Certain vector FP64 operations produce a single result "
+                       "element per cycle">;
+
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
                        "MIPS p8700 processor">;
