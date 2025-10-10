@@ -2946,5 +2946,5 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
     AllocaDecl->setInit(Init.get());
     AllocaDecl->setInitStyle(VarDecl::CallInit);
   }
-  return OpenACCReductionRecipe(AllocaDecl);
+  return OpenACCReductionRecipe(AllocaDecl, {});
 }

@@ -900,10 +900,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
       assert((BT->getKind() != BuiltinType::SveCount || Info.NumVectors == 1) &&
              "Unsupported number of vectors for svcount_t");
 
-      // Debuggers can't extract 1bit from a vector, so will display a
-      // bitpattern for predicates instead.
       unsigned NumElems = Info.EC.getKnownMinValue() * Info.NumVectors;
-      if (Info.ElementType == CGM.getContext().BoolTy) {
+      llvm::Metadata *BitStride = nullptr;
+      if (BT->getKind() == BuiltinType::SveBool) {
+        Info.ElementType = CGM.getContext().UnsignedCharTy;
+        BitStride = llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+            llvm::Type::getInt64Ty(CGM.getLLVMContext()), 1));
+      } else if (BT->getKind() == BuiltinType::SveCount) {
         NumElems /= 8;
         Info.ElementType = CGM.getContext().UnsignedCharTy;
       }
@@ -929,7 +932,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
           getOrCreateType(Info.ElementType, TheCU->getFile());
       auto Align = getTypeAlignIfRequired(BT, CGM.getContext());
       return DBuilder.createVectorType(/*Size*/ 0, Align, ElemTy,
-                                       SubscriptArray);
+                                       SubscriptArray, BitStride);
     }
   // It doesn't make sense to generate debug info for PowerPC MMA vector types.
   // So we return a safe type here to avoid generating an error.

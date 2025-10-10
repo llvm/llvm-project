@@ -41,6 +41,16 @@ static SmallString<128> getTransformedFileName(mlir::ModuleOp mlirModule) {
   return fileName;
 }
 
+/// Return the FuncOp called by `callOp`.
+static cir::FuncOp getCalledFunction(cir::CallOp callOp) {
+  mlir::SymbolRefAttr sym = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
+      callOp.getCallableForCallee());
+  if (!sym)
+    return nullptr;
+  return dyn_cast_or_null<cir::FuncOp>(
+      mlir::SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+}
+
 namespace {
 struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   LoweringPreparePass() = default;
@@ -69,6 +79,12 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
       cir::FuncType type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
+  cir::GlobalOp buildRuntimeVariable(
+      mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+      mlir::Type type,
+      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
+      cir::VisibilityKind visibility = cir::VisibilityKind::Default);
+
   ///
   /// AST related
   /// -----------
@@ -89,6 +105,25 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 };
 
 } // namespace
+
+cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
+    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+    mlir::Type type, cir::GlobalLinkageKind linkage,
+    cir::VisibilityKind visibility) {
+  cir::GlobalOp g = dyn_cast_or_null<cir::GlobalOp>(
+      mlir::SymbolTable::lookupNearestSymbolFrom(
+          mlirModule, mlir::StringAttr::get(mlirModule->getContext(), name)));
+  if (!g) {
+    g = cir::GlobalOp::create(builder, loc, name, type);
+    g.setLinkageAttr(
+        cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+    mlir::SymbolTable::setSymbolVisibility(
+        g, mlir::SymbolTable::Visibility::Private);
+    g.setGlobalVisibilityAttr(
+        cir::VisibilityAttr::get(builder.getContext(), visibility));
+  }
+  return g;
+}
 
 cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
@@ -640,7 +675,8 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // Create a variable initialization function.
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
-  auto fnType = cir::FuncType::get({}, builder.getVoidTy());
+  cir::VoidType voidTy = builder.getVoidTy();
+  auto fnType = cir::FuncType::get({}, voidTy);
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
 
@@ -655,8 +691,57 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // Register the destructor call with __cxa_atexit
   mlir::Region &dtorRegion = op.getDtorRegion();
   if (!dtorRegion.empty()) {
-    assert(!cir::MissingFeatures::opGlobalDtorLowering());
-    llvm_unreachable("dtor region lowering is NYI");
+    assert(!cir::MissingFeatures::astVarDeclInterface());
+    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+    // Create a variable that binds the atexit to this shared object.
+    builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+    cir::GlobalOp handle = buildRuntimeVariable(
+        builder, "__dso_handle", op.getLoc(), builder.getI8Type(),
+        cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
+
+    // Look for the destructor call in dtorBlock
+    mlir::Block &dtorBlock = dtorRegion.front();
+    cir::CallOp dtorCall;
+    for (auto op : reverse(dtorBlock.getOps<cir::CallOp>())) {
+      dtorCall = op;
+      break;
+    }
+    assert(dtorCall && "Expected a dtor call");
+    cir::FuncOp dtorFunc = getCalledFunction(dtorCall);
+    assert(dtorFunc && "Expected a dtor call");
+
+    // Create a runtime helper function:
+    //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
+    auto voidPtrTy = cir::PointerType::get(voidTy);
+    auto voidFnTy = cir::FuncType::get({voidPtrTy}, voidTy);
+    auto voidFnPtrTy = cir::PointerType::get(voidFnTy);
+    auto handlePtrTy = cir::PointerType::get(handle.getSymType());
+    auto fnAtExitType =
+        cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, voidTy);
+    const char *nameAtExit = "__cxa_atexit";
+    cir::FuncOp fnAtExit =
+        buildRuntimeFunction(builder, nameAtExit, op.getLoc(), fnAtExitType);
+
+    // Replace the dtor call with a call to __cxa_atexit(&dtor, &var,
+    // &__dso_handle)
+    builder.setInsertionPointAfter(dtorCall);
+    mlir::Value args[3];
+    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
+    // dtorPtrTy
+    args[0] = cir::GetGlobalOp::create(builder, dtorCall.getLoc(), dtorPtrTy,
+                                       dtorFunc.getSymName());
+    args[0] = cir::CastOp::create(builder, dtorCall.getLoc(), voidFnPtrTy,
+                                  cir::CastKind::bitcast, args[0]);
+    args[1] =
+        cir::CastOp::create(builder, dtorCall.getLoc(), voidPtrTy,
+                            cir::CastKind::bitcast, dtorCall.getArgOperand(0));
+    args[2] = cir::GetGlobalOp::create(builder, handle.getLoc(), handlePtrTy,
+                                       handle.getSymName());
+    builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
+    dtorCall->erase();
+    entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
+                                    dtorBlock.begin(),
+                                    std::prev(dtorBlock.end()));
   }
 
   // Replace cir.yield with cir.return
@@ -666,11 +751,12 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
     mlir::Block &block = op.getCtorRegion().front();
     yieldOp = &block.getOperations().back();
   } else {
-    assert(!cir::MissingFeatures::opGlobalDtorLowering());
-    llvm_unreachable("dtor region lowering is NYI");
+    assert(!dtorRegion.empty());
+    mlir::Block &block = dtorRegion.front();
+    yieldOp = &block.getOperations().back();
   }
 
-  assert(isa<YieldOp>(*yieldOp));
+  assert(isa<cir::YieldOp>(*yieldOp));
   cir::ReturnOp::create(builder, yieldOp->getLoc());
   return f;
 }
@@ -715,7 +801,10 @@ void LoweringPreparePass::buildGlobalCtorDtorList() {
                         mlir::ArrayAttr::get(&getContext(), globalCtors));
   }
 
-  assert(!cir::MissingFeatures::opGlobalDtorLowering());
+  // We will eventual need to populate a global_dtor list, but that's not
+  // needed for globals with destructors. It will only be needed for functions
+  // that are marked as global destructors with an attribute.
+  assert(!cir::MissingFeatures::opGlobalDtorList());
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {

@@ -70,6 +70,16 @@ static Attribute opMTest(PatternRewriter &rewriter, Value val) {
   return rewriter.getIntegerAttr(rewriter.getIntegerType(32), i);
 }
 
+static bool assertBinOpEqualArgsAndReturnTrue(Value v) {
+  Operation *operation = v.getDefiningOp();
+  if (operation->getOperand(0) != operation->getOperand(1)) {
+    // Name binding equality check must happen before user-defined constraints,
+    // thus this must not be triggered.
+    llvm::report_fatal_error("Arguments are not equal");
+  }
+  return true;
+}
+
 namespace {
 #include "TestPatterns.inc"
 } // namespace
