@@ -429,11 +429,11 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
 void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
                                   SmallVectorImpl<const SCEV *> &Subscripts,
                                   SmallVectorImpl<const SCEV *> &Sizes) {
-  // Use the element size from the last element in Sizes array (legacy behavior)
   if (Sizes.empty()) {
     Subscripts.clear();
     return;
   }
+  // Use the element size from the last element in Sizes array (legacy behavior)
   const SCEV *ElementSize = Sizes.back();
   computeAccessFunctions(SE, Expr, Subscripts, Sizes, ElementSize);
 }
