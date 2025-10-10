@@ -924,20 +924,15 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 }
 
 static void recursivelyDeleteDeadRecipes(VPValue *V) {
-  SmallVector<VPValue *> WorkList;
-  SmallPtrSet<VPValue *, 8> Seen;
-  WorkList.push_back(V);
+  SetVector<VPValue *> WorkList;
+  WorkList.insert(V);
 
-  while (!WorkList.empty()) {
-    VPValue *Cur = WorkList.pop_back_val();
-    if (!Seen.insert(Cur).second)
-      continue;
+  for (unsigned I = 0; I < WorkList.size(); ++I) {
+    VPValue *Cur = WorkList[I];
     VPRecipeBase *R = Cur->getDefiningRecipe();
-    if (!R)
+    if (!R || !isDeadRecipe(*R))
       continue;
-    if (!isDeadRecipe(*R))
-      continue;
-    WorkList.append(R->op_begin(), R->op_end());
+    WorkList.insert_range(R->operands());
     R->eraseFromParent();
   }
 }
