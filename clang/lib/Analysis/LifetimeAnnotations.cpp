@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeAnnotations.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -13,7 +13,8 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 
-namespace clang::lifetimes {
+namespace clang {
+namespace lifetimes {
 
 const FunctionDecl *
 getDeclWithMergedLifetimeBoundAttrs(const FunctionDecl *FD) {
@@ -70,4 +71,5 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
-} // namespace clang::lifetimes
+} // namespace lifetimes
+} // namespace clang

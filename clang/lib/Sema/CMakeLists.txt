@@ -119,7 +119,6 @@ add_clang_library(clangSema
   clangAPINotes
   clangAST
   clangAnalysis
-  clangAnalysisLifetimeSafety
   clangBasic
   clangEdit
   clangLex
