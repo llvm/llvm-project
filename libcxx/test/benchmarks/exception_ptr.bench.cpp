@@ -18,15 +18,14 @@ void bm_make_exception_ptr(benchmark::State& state) {
 }
 BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);
 
-
 void bm_empty_exception_ptr(benchmark::State& state) {
   for (auto _ : state) {
     // All of the following operations are no-ops because
     // the exception_ptr is empty. Hence, the compiler should
     // be able to optimize them very aggressively.
     std::exception_ptr p1;
-    std::exception_ptr p2 (p1);
-    std::exception_ptr p3 (std::move(p2));
+    std::exception_ptr p2(p1);
+    std::exception_ptr p3(std::move(p2));
     p2 = std::move(p1);
     p1 = p2;
     swap(p1, p2);
