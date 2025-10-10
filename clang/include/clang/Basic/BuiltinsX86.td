@@ -184,7 +184,8 @@ let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
   def cvttss2si : X86Builtin<"int(_Vector<4, float>)">;
 }
 
-let Features = "sse", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
+let Features = "sse",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def movmskps : X86Builtin<"int(_Vector<4, float>)">;
 }
 
@@ -210,11 +211,6 @@ let Features = "sse2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def maskmovdqu : X86Builtin<"void(_Vector<16, char>, _Vector<16, char>, char *)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def movmskpd : X86Builtin<"int(_Vector<2, double>)">;
-  def pmovmskb128 : X86Builtin<"int(_Vector<16, char>)">;
-}
-
 let Features = "sse2", Attributes = [NoThrow] in {
   def movnti : X86Builtin<"void(int *, int)">;
 }
@@ -223,6 +219,8 @@ let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def pshuflw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
   def pshufd : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
   def pshufhw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
+  def movmskpd : X86Builtin<"int(_Vector<2, double>)">;
+  def pmovmskb128 : X86Builtin<"int(_Vector<16, char>)">;
 }
 
 let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -530,6 +528,12 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
   def vtestnzcps : X86Builtin<"int(_Vector<4, float>, _Vector<4, float>)">;
 }
 
+let Features = "avx",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+  def movmskpd256 : X86Builtin<"int(_Vector<4, double>)">;
+  def movmskps256 : X86Builtin<"int(_Vector<8, float>)">;
+}
+
 let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def vtestzpd256 : X86Builtin<"int(_Vector<4, double>, _Vector<4, double>)">;
   def vtestcpd256 : X86Builtin<"int(_Vector<4, double>, _Vector<4, double>)">;
@@ -539,9 +543,8 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def vtestnzcps256 : X86Builtin<"int(_Vector<8, float>, _Vector<8, float>)">;
   def ptestz256 : X86Builtin<"int(_Vector<4, long long int>, _Vector<4, long long int>)">;
   def ptestc256 : X86Builtin<"int(_Vector<4, long long int>, _Vector<4, long long int>)">;
-  def ptestnzc256 : X86Builtin<"int(_Vector<4, long long int>, _Vector<4, long long int>)">;
-  def movmskpd256 : X86Builtin<"int(_Vector<4, double>)">;
-  def movmskps256 : X86Builtin<"int(_Vector<8, float>)">;
+  def ptestnzc256
+      : X86Builtin<"int(_Vector<4, long long int>, _Vector<4, long long int>)">;
 }
 
 let Features = "avx", Attributes = [NoThrow] in {
@@ -585,7 +588,6 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
   def phsubw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
   def phsubd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
   def phsubsw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
-  def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
   def pmulhrsw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>)">;
   def psadbw256 : X86Builtin<"_Vector<4, long long int>(_Vector<32, char>, _Vector<32, char>)">;
   def pshufb256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>)">;
@@ -626,7 +628,9 @@ let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
 
   def pmuldq256 : X86Builtin<"_Vector<4, long long int>(_Vector<8, int>, _Vector<8, int>)">;
   def pmuludq256 : X86Builtin<"_Vector<4, long long int>(_Vector<8, int>, _Vector<8, int>)">;
-
+  
+  def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
+  
   def psllwi256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, int)">;
   def pslldi256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, int)">;
   def psllqi256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, int)">;

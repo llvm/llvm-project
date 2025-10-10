@@ -13905,7 +13905,6 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
-
   auto HandleMaskBinOp =
       [&](llvm::function_ref<APSInt(const APSInt &, const APSInt &)> Fn)
       -> bool {
@@ -14932,6 +14931,44 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!handleAssignment(Info, E, ResultLValue, ResultType, APV))
       return false;
     return Success(CarryOut, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_movmskps:
+  case clang::X86::BI__builtin_ia32_movmskpd:
+  case clang::X86::BI__builtin_ia32_pmovmskb128:
+  case clang::X86::BI__builtin_ia32_pmovmskb256:
+  case clang::X86::BI__builtin_ia32_movmskps256:
+  case clang::X86::BI__builtin_ia32_movmskpd256: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ResultLen = Info.Ctx.getTypeSize(
+        E->getCallReturnType(Info.Ctx)); // Always 32-bit integer.
+    APInt Result(ResultLen, 0);
+
+    if (ElemQT->isIntegerType()) { // Get MSB of each byte of every lane.
+      unsigned BitsInAByte = 8;
+      unsigned LaneWidth = Info.Ctx.getTypeSize(ElemQT);
+      unsigned ResultIdx = 0;
+      for (unsigned I = 0; I != SourceLen; ++I) {
+        APInt Lane = Source.getVectorElt(I).getInt();
+        for (unsigned J = 0; J != LaneWidth; J += BitsInAByte) {
+          Result.setBitVal(ResultIdx++, Lane[J + 7]);
+        }
+      }
+      return Success(Result, E);
+    }
+    if (ElemQT->isRealFloatingType()) { // Get sign bit of every lane.
+      for (unsigned I = 0; I != SourceLen; ++I) {
+        APInt Lane = Source.getVectorElt(I).getFloat().bitcastToAPInt();
+        Result.setBitVal(I, Lane.isNegative());
+      }
+      return Success(Result, E);
+    }
+    return false;
   }
 
   case clang::X86::BI__builtin_ia32_bextr_u32:

@@ -4280,7 +4280,8 @@ _mm_packus_epi16(__m128i __a, __m128i __b) {
 ///    A 128-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bits from each 8-bit element in \a __a,
 ///    written to bits [15:0]. The other bits are assigned zeros.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movemask_epi8(__m128i __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__a);
 }
 
@@ -4699,7 +4700,8 @@ _mm_unpacklo_pd(__m128d __a, __m128d __b) {
 ///    be extracted.
 /// \returns The sign bits from each of the double-precision elements in \a __a,
 ///    written to bits [1:0]. The remaining bits are assigned values of zero.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_pd(__m128d __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movemask_pd(__m128d __a) {
   return __builtin_ia32_movmskpd((__v2df)__a);
 }
 
