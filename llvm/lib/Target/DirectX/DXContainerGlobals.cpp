@@ -103,7 +103,7 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
   dxbc::ShaderHash HashData = {0, {0}};
   // The Hash's IncludesSource flag gets set whenever the hashed shader includes
   // debug information.
-  if (M.debug_compile_units_begin() != M.debug_compile_units_end())
+  if (!M.debug_compile_units().empty())
     HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
@@ -158,13 +158,15 @@ void DXContainerGlobals::addRootSignature(Module &M,
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
-  assert(MMI.EntryPropertyVec.size() == 1);
-
   auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const std::optional<mcdxbc::RootSignatureDesc> &RS =
-      RSA.getDescForFunction(EntryFunction);
+  const Function *EntryFunction = nullptr;
 
+  if (MMI.ShaderProfile != llvm::Triple::RootSignature) {
+    assert(MMI.EntryPropertyVec.size() == 1);
+    EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  }
+
+  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
   if (!RS)
     return;
 
@@ -259,7 +261,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() == 1 ||
-         MMI.ShaderProfile == Triple::Library);
+         MMI.ShaderProfile == Triple::Library ||
+         MMI.ShaderProfile == Triple::RootSignature);
   PSV.BaseData.ShaderStage =
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
@@ -280,7 +283,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     break;
   }
 
-  if (MMI.ShaderProfile != Triple::Library)
+  if (MMI.ShaderProfile != Triple::Library &&
+      MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
   PSV.finalize(MMI.ShaderProfile);

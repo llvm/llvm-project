@@ -141,8 +141,7 @@ subroutine host7()
   call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
-! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i32) -> index
@@ -163,8 +162,7 @@ subroutine host8()
   call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
-! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_0]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> index
@@ -191,8 +189,7 @@ contains
   subroutine internal_proc_a()
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
-! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_0]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> index
@@ -218,8 +215,7 @@ contains
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_1:.*]] = fir.address_of(@mycom_) : !fir.ref<!fir.array<4xi8>>
-! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_0]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> index

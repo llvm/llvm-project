@@ -1,4 +1,4 @@
-//===--- InvalidEnumDefaultInitializationCheck.cpp - clang-tidy -----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InvalidEnumDefaultInitializationCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -22,11 +24,10 @@ bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
          !Definition->enumerators().empty() &&
-         std::none_of(Definition->enumerator_begin(),
-                      Definition->enumerator_end(),
-                      [](const EnumConstantDecl *Value) {
-                        return Value->getInitVal().isZero();
-                      });
+         llvm::none_of(Definition->enumerators(),
+                       [](const EnumConstantDecl *Value) {
+                         return Value->getInitVal().isZero();
+                       });
 }
 
 AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
@@ -68,15 +69,15 @@ public:
     return Visit(T->getElementType().getTypePtr());
   }
   bool VisitEnumType(const EnumType *T) {
-    if (isCompleteAndHasNoZeroValue(T->getDecl())) {
+    if (isCompleteAndHasNoZeroValue(T->getOriginalDecl())) {
       FoundEnum = T;
       return true;
     }
     return false;
   }
   bool VisitRecordType(const RecordType *T) {
-    const RecordDecl *RD = T->getDecl();
-    if (RD->isUnion())
+    const RecordDecl *RD = T->getOriginalDecl()->getDefinition();
+    if (!RD || RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
       return Visit(F->getType().getTypePtr());
@@ -89,12 +90,24 @@ public:
 
 InvalidEnumDefaultInitializationCheck::InvalidEnumDefaultInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      IgnoredEnums(
+          utils::options::parseStringList(Options.get("IgnoredEnums", ""))) {
+  IgnoredEnums.emplace_back("::std::errc");
+}
+
+void InvalidEnumDefaultInitializationCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredEnums",
+                utils::options::serializeStringList(IgnoredEnums));
+}
 
 void InvalidEnumDefaultInitializationCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto EnumWithoutZeroValue = enumType(
-      hasDeclaration(enumDecl(isCompleteAndHasNoZeroValue()).bind("enum")));
+  auto EnumWithoutZeroValue = enumType(hasDeclaration(
+      enumDecl(isCompleteAndHasNoZeroValue(),
+               unless(matchers::matchesAnyListedName(IgnoredEnums)))
+          .bind("enum")));
   auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
       anyOf(EnumWithoutZeroValue,
             arrayType(hasElementType(qualType(
@@ -126,7 +139,7 @@ void InvalidEnumDefaultInitializationCheck::check(
     if (!Finder.Visit(InitList->getArrayFiller()->getType().getTypePtr()))
       return;
     InitExpr = InitList;
-    Enum = Finder.FoundEnum->getDecl();
+    Enum = Finder.FoundEnum->getOriginalDecl();
   }
 
   if (!InitExpr || !Enum)

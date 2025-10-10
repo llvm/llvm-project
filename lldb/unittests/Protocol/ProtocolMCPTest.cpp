@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Protocol/MCP/Protocol.h"
+#include "ProtocolMCPTestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::mcp::protocol;
+using namespace lldb_protocol::mcp;
+
+// Flakey, see https://github.com/llvm/llvm-project/issues/152677.
+#ifndef _WIN32
 
 TEST(ProtocolMCPTest, Request) {
   Request request;
@@ -54,31 +58,16 @@ TEST(ProtocolMCPTest, Notification) {
   EXPECT_EQ(notification.params, deserialized_notification->params);
 }
 
-TEST(ProtocolMCPTest, ToolCapability) {
-  ToolCapability tool_capability;
-  tool_capability.listChanged = true;
+TEST(ProtocolMCPTest, ServerCapabilities) {
+  ServerCapabilities capabilities;
+  capabilities.supportsToolsList = true;
 
-  llvm::Expected<ToolCapability> deserialized_tool_capability =
-      roundtripJSON(tool_capability);
-  ASSERT_THAT_EXPECTED(deserialized_tool_capability, llvm::Succeeded());
-
-  EXPECT_EQ(tool_capability.listChanged,
-            deserialized_tool_capability->listChanged);
-}
-
-TEST(ProtocolMCPTest, Capabilities) {
-  ToolCapability tool_capability;
-  tool_capability.listChanged = true;
-
-  Capabilities capabilities;
-  capabilities.tools = tool_capability;
-
-  llvm::Expected<Capabilities> deserialized_capabilities =
+  llvm::Expected<ServerCapabilities> deserialized_capabilities =
       roundtripJSON(capabilities);
   ASSERT_THAT_EXPECTED(deserialized_capabilities, llvm::Succeeded());
 
-  EXPECT_EQ(capabilities.tools.listChanged,
-            deserialized_capabilities->tools.listChanged);
+  EXPECT_EQ(capabilities.supportsToolsList,
+            deserialized_capabilities->supportsToolsList);
 }
 
 TEST(ProtocolMCPTest, TextContent) {
@@ -92,18 +81,18 @@ TEST(ProtocolMCPTest, TextContent) {
   EXPECT_EQ(text_content.text, deserialized_text_content->text);
 }
 
-TEST(ProtocolMCPTest, TextResult) {
+TEST(ProtocolMCPTest, CallToolResult) {
   TextContent text_content1;
   text_content1.text = "Text 1";
 
   TextContent text_content2;
   text_content2.text = "Text 2";
 
-  TextResult text_result;
+  CallToolResult text_result;
   text_result.content = {text_content1, text_content2};
   text_result.isError = true;
 
-  llvm::Expected<TextResult> deserialized_text_result =
+  llvm::Expected<CallToolResult> deserialized_text_result =
       roundtripJSON(text_result);
   ASSERT_THAT_EXPECTED(deserialized_text_result, llvm::Succeeded());
 
@@ -149,9 +138,7 @@ TEST(ProtocolMCPTest, MessageWithRequest) {
   const Request &deserialized_request =
       std::get<Request>(*deserialized_message);
 
-  EXPECT_EQ(request.id, deserialized_request.id);
-  EXPECT_EQ(request.method, deserialized_request.method);
-  EXPECT_EQ(request.params, deserialized_request.params);
+  EXPECT_EQ(request, deserialized_request);
 }
 
 TEST(ProtocolMCPTest, MessageWithResponse) {
@@ -168,8 +155,7 @@ TEST(ProtocolMCPTest, MessageWithResponse) {
   const Response &deserialized_response =
       std::get<Response>(*deserialized_message);
 
-  EXPECT_EQ(response.id, deserialized_response.id);
-  EXPECT_EQ(response.result, deserialized_response.result);
+  EXPECT_EQ(response, deserialized_response);
 }
 
 TEST(ProtocolMCPTest, MessageWithNotification) {
@@ -186,49 +172,28 @@ TEST(ProtocolMCPTest, MessageWithNotification) {
   const Notification &deserialized_notification =
       std::get<Notification>(*deserialized_message);
 
-  EXPECT_EQ(notification.method, deserialized_notification.method);
-  EXPECT_EQ(notification.params, deserialized_notification.params);
+  EXPECT_EQ(notification, deserialized_notification);
 }
 
-TEST(ProtocolMCPTest, MessageWithError) {
-  ErrorInfo error_info;
-  error_info.code = -32603;
-  error_info.message = "Internal error";
-
+TEST(ProtocolMCPTest, MessageWithErrorResponse) {
   Error error;
-  error.id = 3;
-  error.error = error_info;
+  error.code = -32603;
+  error.message = "Internal error";
 
-  Message message = error;
+  Response error_response;
+  error_response.id = 3;
+  error_response.result = error;
+
+  Message message = error_response;
 
   llvm::Expected<Message> deserialized_message = roundtripJSON(message);
   ASSERT_THAT_EXPECTED(deserialized_message, llvm::Succeeded());
 
-  ASSERT_TRUE(std::holds_alternative<Error>(*deserialized_message));
-  const Error &deserialized_error = std::get<Error>(*deserialized_message);
+  ASSERT_TRUE(std::holds_alternative<Response>(*deserialized_message));
+  const Response &deserialized_error =
+      std::get<Response>(*deserialized_message);
 
-  EXPECT_EQ(error.id, deserialized_error.id);
-  EXPECT_EQ(error.error.code, deserialized_error.error.code);
-  EXPECT_EQ(error.error.message, deserialized_error.error.message);
-}
-
-TEST(ProtocolMCPTest, ResponseWithError) {
-  ErrorInfo error_info;
-  error_info.code = -32700;
-  error_info.message = "Parse error";
-
-  Response response;
-  response.id = 4;
-  response.error = error_info;
-
-  llvm::Expected<Response> deserialized_response = roundtripJSON(response);
-  ASSERT_THAT_EXPECTED(deserialized_response, llvm::Succeeded());
-
-  EXPECT_EQ(response.id, deserialized_response->id);
-  EXPECT_FALSE(deserialized_response->result.has_value());
-  ASSERT_TRUE(deserialized_response->error.has_value());
-  EXPECT_EQ(response.error->code, deserialized_response->error->code);
-  EXPECT_EQ(response.error->message, deserialized_response->error->message);
+  EXPECT_EQ(error_response, deserialized_error);
 }
 
 TEST(ProtocolMCPTest, Resource) {
@@ -261,13 +226,13 @@ TEST(ProtocolMCPTest, ResourceWithoutOptionals) {
   EXPECT_TRUE(deserialized_resource->mimeType.empty());
 }
 
-TEST(ProtocolMCPTest, ResourceContents) {
-  ResourceContents contents;
+TEST(ProtocolMCPTest, TextResourceContents) {
+  TextResourceContents contents;
   contents.uri = "resource://example/content";
   contents.text = "This is the content of the resource";
   contents.mimeType = "text/plain";
 
-  llvm::Expected<ResourceContents> deserialized_contents =
+  llvm::Expected<TextResourceContents> deserialized_contents =
       roundtripJSON(contents);
   ASSERT_THAT_EXPECTED(deserialized_contents, llvm::Succeeded());
 
@@ -276,12 +241,12 @@ TEST(ProtocolMCPTest, ResourceContents) {
   EXPECT_EQ(contents.mimeType, deserialized_contents->mimeType);
 }
 
-TEST(ProtocolMCPTest, ResourceContentsWithoutMimeType) {
-  ResourceContents contents;
+TEST(ProtocolMCPTest, TextResourceContentsWithoutMimeType) {
+  TextResourceContents contents;
   contents.uri = "resource://example/content-no-mime";
   contents.text = "Content without mime type specified";
 
-  llvm::Expected<ResourceContents> deserialized_contents =
+  llvm::Expected<TextResourceContents> deserialized_contents =
       roundtripJSON(contents);
   ASSERT_THAT_EXPECTED(deserialized_contents, llvm::Succeeded());
 
@@ -290,21 +255,22 @@ TEST(ProtocolMCPTest, ResourceContentsWithoutMimeType) {
   EXPECT_TRUE(deserialized_contents->mimeType.empty());
 }
 
-TEST(ProtocolMCPTest, ResourceResult) {
-  ResourceContents contents1;
+TEST(ProtocolMCPTest, ReadResourceResult) {
+  TextResourceContents contents1;
   contents1.uri = "resource://example/content1";
   contents1.text = "First resource content";
   contents1.mimeType = "text/plain";
 
-  ResourceContents contents2;
+  TextResourceContents contents2;
   contents2.uri = "resource://example/content2";
   contents2.text = "Second resource content";
   contents2.mimeType = "application/json";
 
-  ResourceResult result;
+  ReadResourceResult result;
   result.contents = {contents1, contents2};
 
-  llvm::Expected<ResourceResult> deserialized_result = roundtripJSON(result);
+  llvm::Expected<ReadResourceResult> deserialized_result =
+      roundtripJSON(result);
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   ASSERT_EQ(result.contents.size(), deserialized_result->contents.size());
@@ -320,11 +286,14 @@ TEST(ProtocolMCPTest, ResourceResult) {
             deserialized_result->contents[1].mimeType);
 }
 
-TEST(ProtocolMCPTest, ResourceResultEmpty) {
-  ResourceResult result;
+TEST(ProtocolMCPTest, ReadResourceResultEmpty) {
+  ReadResourceResult result;
 
-  llvm::Expected<ResourceResult> deserialized_result = roundtripJSON(result);
+  llvm::Expected<ReadResourceResult> deserialized_result =
+      roundtripJSON(result);
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   EXPECT_TRUE(deserialized_result->contents.empty());
 }
+
+#endif

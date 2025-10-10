@@ -23,7 +23,7 @@ using namespace mlir;
 namespace {
 
 struct PoisonOpLowering final : OpConversionPattern<ub::PoisonOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ub::PoisonOp op, OpAdaptor,

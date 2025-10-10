@@ -156,6 +156,9 @@ static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
       (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
+  if ((Triple.isARM() || Triple.isThumb()) && Triple.isOSBinFormatMachO())
+    return false;
+
   return true;
 }
 
@@ -2137,6 +2140,18 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   return std::make_tuple(RelocM, 0U, false);
 }
 
+bool tools::getStaticPIE(const ArgList &Args, const ToolChain &TC) {
+  bool HasStaticPIE = Args.hasArg(options::OPT_static_pie);
+  if (HasStaticPIE && Args.hasArg(options::OPT_no_pie)) {
+    const Driver &D = TC.getDriver();
+    const llvm::opt::OptTable &Opts = D.getOpts();
+    StringRef StaticPIEName = Opts.getOptionName(options::OPT_static_pie);
+    StringRef NoPIEName = Opts.getOptionName(options::OPT_nopie);
+    D.Diag(diag::err_drv_cannot_mix_options) << StaticPIEName << NoPIEName;
+  }
+  return HasStaticPIE;
+}
+
 // `-falign-functions` indicates that the functions should be aligned to the
 // backend's preferred alignment.
 //
@@ -2221,7 +2236,7 @@ static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
     return 0;
 
   unsigned Value = 0;
-  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 5 ||
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 6 ||
       Value < 2)
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
@@ -2234,13 +2249,14 @@ unsigned tools::DwarfVersionNum(StringRef ArgValue) {
       .Case("-gdwarf-3", 3)
       .Case("-gdwarf-4", 4)
       .Case("-gdwarf-5", 5)
+      .Case("-gdwarf-6", 6)
       .Default(0);
 }
 
 const Arg *tools::getDwarfNArg(const ArgList &Args) {
   return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
                          options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-                         options::OPT_gdwarf);
+                         options::OPT_gdwarf_6, options::OPT_gdwarf);
 }
 
 unsigned tools::getDwarfVersion(const ToolChain &TC,
@@ -2258,6 +2274,37 @@ unsigned tools::getDwarfVersion(const ToolChain &TC,
     assert(DwarfVersion && "toolchain default DWARF version must be nonzero");
   }
   return DwarfVersion;
+}
+
+DwarfFissionKind tools::getDebugFissionKind(const Driver &D,
+                                            const ArgList &Args, Arg *&Arg) {
+  Arg = Args.getLastArg(options::OPT_gsplit_dwarf, options::OPT_gsplit_dwarf_EQ,
+                        options::OPT_gno_split_dwarf);
+  if (!Arg || Arg->getOption().matches(options::OPT_gno_split_dwarf))
+    return DwarfFissionKind::None;
+
+  if (Arg->getOption().matches(options::OPT_gsplit_dwarf))
+    return DwarfFissionKind::Split;
+
+  StringRef Value = Arg->getValue();
+  if (Value == "split")
+    return DwarfFissionKind::Split;
+  if (Value == "single")
+    return DwarfFissionKind::Single;
+
+  D.Diag(diag::err_drv_unsupported_option_argument)
+      << Arg->getSpelling() << Arg->getValue();
+  return DwarfFissionKind::None;
+}
+
+bool tools::checkDebugInfoOption(const Arg *A, const ArgList &Args,
+                                 const Driver &D, const ToolChain &TC) {
+  assert(A && "Expected non-nullptr argument.");
+  if (TC.supportsDebugInfoOption(A))
+    return true;
+  D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+      << A->getAsString(Args) << TC.getTripleString();
+  return false;
 }
 
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
@@ -2979,13 +3026,51 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      !Args.hasArg(options::OPT_nostdlib) &&
+      (!Args.hasArg(options::OPT_nostdlib) ||
+       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
       !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
     // Claim "no HIP libraries" arguments if any
     for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
       Arg->claim();
+    }
+  }
+}
+
+void tools::addOpenCLBuiltinsLib(const Driver &D,
+                                 const llvm::opt::ArgList &DriverArgs,
+                                 llvm::opt::ArgStringList &CC1Args) {
+  // Check whether user specifies a libclc bytecode library
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (!A)
+    return;
+
+  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
+  SmallString<128> LibclcPath(D.ResourceDir);
+  llvm::sys::path::append(LibclcPath, "lib", "libclc");
+
+  // If the namespec is of the form :filename, search for that file.
+  StringRef LibclcNamespec(A->getValue());
+  bool FilenameSearch = LibclcNamespec.consume_front(":");
+  SmallString<128> LibclcTargetFile(LibclcNamespec);
+
+  if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
+  } else {
+    // Search the library paths for the file
+    if (!FilenameSearch)
+      LibclcTargetFile += ".bc";
+
+    llvm::sys::path::append(LibclcPath, LibclcTargetFile);
+    if (llvm::sys::fs::exists(LibclcPath)) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
+    } else {
+      // Since the user requested a library, if we haven't one then report an
+      // error.
+      D.Diag(diag::err_drv_libclc_not_found) << LibclcTargetFile;
     }
   }
 }
@@ -3019,12 +3104,12 @@ void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
                                    llvm::opt::ArgStringList &CmdArgs) {
   if (TCArgs.hasFlag(options::OPT_offload_compress,
                      options::OPT_no_offload_compress, false))
-    CmdArgs.push_back("-compress");
+    CmdArgs.push_back("--compress");
   if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("-verbose");
+    CmdArgs.push_back("--verbose");
   if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
     CmdArgs.push_back(
-        TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
+        TCArgs.MakeArgString(Twine("--compression-level=") + Arg->getValue()));
 }
 
 void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
@@ -3081,6 +3166,8 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       else if (CM == "medany")
         CM = "large";
       Ok = CM == "small" || CM == "medium" || CM == "large";
+    } else if (Triple.getArch() == llvm::Triple::lanai) {
+      Ok = llvm::is_contained({"small", "medium", "large"}, CM);
     }
     if (Ok) {
       CmdArgs.push_back(Args.MakeArgString("-mcmodel=" + CM));
@@ -3265,33 +3352,23 @@ bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
 void tools::handleVectorizeLoopsArgs(const ArgList &Args,
                                      ArgStringList &CmdArgs) {
   bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, EnableVec))
+  if (Args.hasFlag(options::OPT_fvectorize, options::OPT_fno_vectorize,
+                   EnableVec))
     CmdArgs.push_back("-vectorize-loops");
 }
 
 void tools::handleVectorizeSLPArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) {
   bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
-  OptSpecifier SLPVectAliasOption =
-      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
-  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
-                   options::OPT_fno_slp_vectorize, EnableSLPVec))
+  if (Args.hasFlag(options::OPT_fslp_vectorize, options::OPT_fno_slp_vectorize,
+                   EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
 }
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
-  // implement a separate function to infer loop interchange from opt level.
-  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
-  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier InterchangeAliasOption =
-      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
-  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
-                   options::OPT_fno_loop_interchange, EnableInterchange))
+  if (Args.hasFlag(options::OPT_floop_interchange,
+                   options::OPT_fno_loop_interchange, false))
     CmdArgs.push_back("-floop-interchange");
 }
 
@@ -3472,9 +3549,11 @@ std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   case LangOptions::ComplexRangeKind::CX_Promoted:
     return "promoted";
     break;
-  default:
-    return "";
+  case LangOptions::ComplexRangeKind::CX_None:
+    return "none";
+    break;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 std::string
@@ -3483,4 +3562,52 @@ tools::renderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
   if (!ComplexRangeStr.empty())
     return "-complex-range=" + ComplexRangeStr;
   return ComplexRangeStr;
+}
+
+static void emitComplexRangeDiag(const Driver &D, StringRef LastOpt,
+                                 LangOptions::ComplexRangeKind Range,
+                                 StringRef NewOpt,
+                                 LangOptions::ComplexRangeKind NewRange) {
+  //  Do not emit a warning if NewOpt overrides LastOpt in the following cases.
+  //
+  // | LastOpt               | NewOpt                |
+  // |-----------------------|-----------------------|
+  // | -fcx-limited-range    | -fno-cx-limited-range |
+  // | -fno-cx-limited-range | -fcx-limited-range    |
+  // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
+  // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
+  // | -ffast-math           | -fno-fast-math        |
+  // | -ffp-model=           | -ffast-math           |
+  // | -ffp-model=           | -fno-fast-math        |
+  // | -ffp-model=           | -ffp-model=           |
+  // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
+  if (LastOpt == NewOpt || NewOpt.empty() || LastOpt.empty() ||
+      (LastOpt == "-fcx-limited-range" && NewOpt == "-fno-cx-limited-range") ||
+      (LastOpt == "-fno-cx-limited-range" && NewOpt == "-fcx-limited-range") ||
+      (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
+      (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
+      (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") &&
+       NewOpt.starts_with("-ffp-model=")) ||
+      (LastOpt.starts_with("-fcomplex-arithmetic=") &&
+       NewOpt.starts_with("-fcomplex-arithmetic=")))
+    return;
+
+  D.Diag(clang::diag::warn_drv_overriding_complex_range)
+      << LastOpt << NewOpt << complexRangeKindToStr(Range)
+      << complexRangeKindToStr(NewRange);
+}
+
+void tools::setComplexRange(const Driver &D, StringRef NewOpt,
+                            LangOptions::ComplexRangeKind NewRange,
+                            StringRef &LastOpt,
+                            LangOptions::ComplexRangeKind &Range) {
+  // Warn if user overrides the previously set complex number
+  // multiplication/division option.
+  if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
+    emitComplexRangeDiag(D, LastOpt, Range, NewOpt, NewRange);
+  LastOpt = NewOpt;
+  Range = NewRange;
 }

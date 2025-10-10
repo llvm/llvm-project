@@ -139,7 +139,7 @@ wording a diagnostic.
       you mean %1?``.
 
 * Appropriately capitalize proper nouns like ``Clang``, ``OpenCL``, ``GCC``,
-  ``Objective-C``, etc and language standard versions like ``C11`` or ``C++11``.
+  ``Objective-C``, etc. and language standard versions like ``C11`` or ``C++11``.
 * The wording should be succinct. If necessary, use a semicolon to combine
   sentence fragments instead of using complete sentences. e.g., prefer wording
   like ``'%0' is deprecated; it will be removed in a future release of Clang``
@@ -343,7 +343,7 @@ Class:
 Description:
   This is a formatter which represents the argument number in a human-readable
   format: the value ``123`` stays ``123``, ``12345`` becomes ``12.34k``,
-  ``6666666` becomes ``6.67M``, and so on for 'G' and 'T'.
+  ``6666666`` becomes ``6.67M``, and so on for 'G' and 'T'.
 
 **"objcclass" format**
 
@@ -886,7 +886,7 @@ a string that the tablegen backend uses as a prefix to the
   LANG_OPTION_WITH_MARSHALLING([...], LangOpts->IgnoreExceptions, [...])
   #endif // LANG_OPTION_WITH_MARSHALLING
 
-Such definition can be used used in the function for parsing and generating
+Such definition can be used in the function for parsing and generating
 command line:
 
 .. code-block:: c++
@@ -1745,7 +1745,7 @@ will be found by the lookup, since it effectively replaces the first
 declaration of "``f``".
 
 (Note that because ``f`` can be redeclared at block scope, or in a friend
-declaration, etc. it is possible that the declaration of ``f`` found by name
+declaration, etc., it is possible that the declaration of ``f`` found by name
 lookup will not be the most recent one.)
 
 In the semantics-centric view, overloading of functions is represented
@@ -1945,7 +1945,7 @@ range of iterators over declarations of "``f``".
 function ``DeclContext::getPrimaryContext`` retrieves the "primary" context for
 a given ``DeclContext`` instance, which is the ``DeclContext`` responsible for
 maintaining the lookup table used for the semantics-centric view.  Given a
-DeclContext, one can obtain the set of declaration contexts that are
+``DeclContext``, one can obtain the set of declaration contexts that are
 semantically connected to this declaration context, in source order, including
 this context (which will be the only result, for non-namespace contexts) via
 ``DeclContext::collectAllContexts``. Note that these functions are used
@@ -1985,7 +1985,7 @@ broken code in the AST:
   errors, the Decl node is marked as invalid.
 - dropping invalid node: this often happens for errors that we don’t have
   graceful recovery. Prior to Recovery AST, a mismatched-argument function call
-  expression was dropped though a CallExpr was created for semantic analysis.
+  expression was dropped though a ``CallExpr`` was created for semantic analysis.
 
 With these strategies, clang surfaces better diagnostics, and provides AST
 consumers a rich AST reflecting the written source code as much as possible even
@@ -2858,6 +2858,67 @@ The Sema Library
 This library is called by the :ref:`Parser library <Parser>` during parsing to
 do semantic analysis of the input.  For valid programs, Sema builds an AST for
 parsed constructs.
+
+
+Concept Satisfaction Checking and Subsumption
+---------------------------------------------
+
+As per the C++ standard, constraints are `normalized <https://eel.is/c++draft/temp.constr.normal>`_
+and the normal form is used both for subsumption, and constraint checking.
+Both depend on a parameter mapping that substitutes lazily. In particular,
+we should not substitute in unused arguments.
+
+Clang follows the order of operations prescribed by the standard.
+
+Normalization happens prior to satisfaction and subsumption
+and is handled by ``NormalizedConstraint``.
+
+Clang preserves in the normalized form intermediate concept-ids
+(``ConceptIdConstraint``) This is used for diagnostics only and no substitution
+happens in a ConceptIdConstraint if its expression is satisfied.
+
+The normal form of the associated constraints of a declaration is cached in
+Sema::NormalizationCache such that it is only computed once.
+
+A ``NormalizedConstraint`` is a recursive data structure, where each node
+contains a parameter mapping, represented by the indexes of all parameter
+being used.
+
+Checking satisfaction is done by ``ConstraintSatisfactionChecker``, recursively
+walking ``NormalizedConstraint``. At each level, we substitute the outermost
+level of the template arguments referenced in the parameter mapping of a
+normalized expression (``MultiLevelTemplateArgumentList``).
+
+For the following example,
+
+.. code-block:: c++
+
+  template <typename T>
+  concept A = __is_same(T, int);
+
+  template <typename U>
+  concept B = A<U> && __is_same(U, int);
+
+The normal form of B is
+
+.. code-block:: c++
+
+    __is_same(T, int) /*T->U, innermost level*/
+ && __is_same(U, int) {U->U} /*T->U, outermost level*/
+
+After substitution in the mapping, we substitute in the constraint expression
+using that copy of the ``MultiLevelTemplateArgumentList``, and then evaluate it.
+
+Because this is expensive, it is cached in
+``UnsubstitutedConstraintSatisfactionCache``.
+
+Any error during satisfaction is recorded in ``ConstraintSatisfaction``.
+for nested requirements, ``ConstraintSatisfaction`` is stored (including
+diagnostics) in the AST, which is something we might want to improve.
+
+When an atomic constraint is not satified, we try to substitute into any
+enclosing concept-id using the same mechanism described above, for
+diagnostics purpose, and inject that in the ``ConstraintSatisfaction``.
 
 .. _CodeGen:
 

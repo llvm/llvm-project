@@ -72,6 +72,16 @@ struct CVTagRecord {
     return cvunion.Name;
   }
 
+  CompilerContextKind contextKind() const {
+    if (m_kind == Struct || m_kind == Class)
+      return CompilerContextKind::ClassOrStruct;
+    if (m_kind == Enum)
+      return CompilerContextKind::Enum;
+
+    assert(m_kind == Union);
+    return CompilerContextKind::Union;
+  }
+
 private:
   CVTagRecord(llvm::codeview::ClassRecord &&c);
   CVTagRecord(llvm::codeview::UnionRecord &&u);

@@ -1,4 +1,4 @@
-//===--- InitVariablesCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -108,7 +108,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
         << MatchedDecl;
     if (*InitializationString != nullptr)
       Diagnostic << FixItHint::CreateInsertion(
-          utils::lexer::findNextTerminator(MatchedDecl->getLocation(),
+          utils::lexer::findNextTerminator(MatchedDecl->getEndLoc(),
                                            *Result.SourceManager,
                                            Result.Context->getLangOpts()),
           *InitializationString);

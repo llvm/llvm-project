@@ -582,11 +582,10 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   if (I->IT == InfoType::IT_record) {
     auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
     FileName = RecordSymbolInfo->MangledName;
-  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
-    // Serialize the global namespace as index.json
-    FileName = I->Name;
+  } else if (I->USR == GlobalNamespaceID)
+    FileName = "index";
   else
-    FileName = I->getFileBaseName();
+    FileName = I->Name;
   sys::path::append(Path, FileName + ".json");
   return FileName;
 }
@@ -600,7 +599,9 @@ Error JSONGenerator::generateDocs(
     Info *Info = Group.getValue().get();
 
     SmallString<128> Path;
-    sys::path::native(RootDir, Path);
+    auto RootDirStr = RootDir.str() + "/json";
+    StringRef JSONDir = StringRef(RootDirStr);
+    sys::path::native(JSONDir, Path);
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())

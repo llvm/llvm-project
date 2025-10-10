@@ -451,6 +451,9 @@ public:
 
   const SourceManager &getSourceManager() const { return *SourceMgr; }
   SourceManager &getSourceManager() { return *SourceMgr; }
+  llvm::IntrusiveRefCntPtr<SourceManager> getSourceManagerPtr() {
+    return SourceMgr;
+  }
 
   const Preprocessor &getPreprocessor() const { return *PP; }
   Preprocessor &getPreprocessor() { return *PP; }
@@ -458,8 +461,11 @@ public:
 
   const ASTContext &getASTContext() const { return *Ctx; }
   ASTContext &getASTContext() { return *Ctx; }
+  llvm::IntrusiveRefCntPtr<ASTContext> getASTContextPtr() { return Ctx; }
 
-  void setASTContext(ASTContext *ctx) { Ctx = ctx; }
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> ctx) {
+    Ctx = std::move(ctx);
+  }
   void setPreprocessor(std::shared_ptr<Preprocessor> pp);
 
   /// Enable source-range based diagnostic messages.
@@ -495,6 +501,7 @@ public:
 
   const FileManager &getFileManager() const { return *FileMgr; }
   FileManager &getFileManager() { return *FileMgr; }
+  IntrusiveRefCntPtr<FileManager> getFileManagerPtr() { return FileMgr; }
 
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
@@ -622,6 +629,17 @@ public:
     return StoredDiagnostics.end();
   }
 
+  using diags_range = llvm::iterator_range<stored_diag_iterator>;
+  using const_diags_range = llvm::iterator_range<stored_diag_const_iterator>;
+
+  diags_range storedDiagnostics() {
+    return {stored_diag_begin(), stored_diag_end()};
+  }
+
+  const_diags_range storedDiagnostics() const {
+    return {stored_diag_begin(), stored_diag_end()};
+  }
+
   unsigned stored_diag_size() const { return StoredDiagnostics.size(); }
 
   stored_diag_iterator stored_diag_afterDriver_begin() {
@@ -711,16 +729,15 @@ public:
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
   static std::unique_ptr<ASTUnit> LoadFromASTFile(
       StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-      WhatToLoad ToLoad, std::shared_ptr<DiagnosticOptions> DiagOpts,
+      WhatToLoad ToLoad, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
       const FileSystemOptions &FileSystemOpts,
       const HeaderSearchOptions &HSOpts, const LangOptions *LangOpts = nullptr,
       bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       bool AllowASTWithCompilerErrors = false,
-      bool UserFilesAreVolatile = false,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-          llvm::vfs::getRealFileSystem());
+      bool UserFilesAreVolatile = false);
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and
@@ -803,8 +820,8 @@ public:
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       std::shared_ptr<DiagnosticOptions> DiagOpts,
-      IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
-      bool OnlyLocalDecls = false,
+      IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      IntrusiveRefCntPtr<FileManager> FileMgr, bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -922,8 +939,9 @@ public:
                     CodeCompleteConsumer &Consumer,
                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                     llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag,
-                    LangOptions &LangOpts, SourceManager &SourceMgr,
-                    FileManager &FileMgr,
+                    LangOptions &LangOpts,
+                    llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr,
+                    llvm::IntrusiveRefCntPtr<FileManager> FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
                     std::unique_ptr<SyntaxOnlyAction> Act);

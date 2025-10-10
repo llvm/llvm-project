@@ -18,6 +18,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SourceModule.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -296,7 +297,8 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        SymbolContextList &sc_list);
 
-  virtual void DumpClangAST(Stream &s, llvm::StringRef filter) {}
+  virtual void DumpClangAST(Stream &s, llvm::StringRef filter,
+                            bool show_colors) {}
   virtual void FindGlobalVariables(ConstString name,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t max_matches,
@@ -327,6 +329,18 @@ public:
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
+
+  /// Resolves the function corresponding to the specified LLDB function
+  /// call \c label.
+  ///
+  /// \param[in,out] label The FunctionCallLabel to be resolved.
+  ///
+  /// \returns An llvm::Error if the specified \c label couldn't be resolved.
+  ///          Returns the resolved function (as a SymbolContext) otherwise.
+  virtual llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(FunctionCallLabel &label) {
+    return llvm::createStringError("Not implemented");
+  }
 
   virtual void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                         lldb::TypeClass type_mask,
@@ -475,13 +489,16 @@ public:
     return false;
   };
 
-  /// Get number of loaded/parsed DWO files. This is emitted in "statistics
-  /// dump"
+  /// Retrieves statistics about DWO files associated with this symbol file.
+  /// This function returns a DWOStats struct containing:
+  ///   - The number of successfully loaded/parsed DWO files.
+  ///   - The total number of DWO files encountered.
+  ///   - The number of DWO CUs that failed to load due to errors.
+  /// If this symbol file does not support DWO files, all counts will be zero.
   ///
   /// \returns
-  ///     A pair containing (loaded_dwo_count, total_dwo_count). If this
-  ///     symbol file doesn't support DWO files, both counts will be 0.
-  virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
+  ///   A DWOStats struct with loaded, total, and error counts for DWO files.
+  virtual DWOStats GetDwoStats() { return {}; }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,

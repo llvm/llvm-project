@@ -19,14 +19,41 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 
 namespace clang::lifetimes {
 
+/// Enum to track the confidence level of a potential error.
+enum class Confidence : uint8_t {
+  None,
+  Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
+  Definite // Reported as a definite error (-Wlifetime-safety-permissive)
+};
+
+enum class LivenessKind : uint8_t {
+  Dead,  // Not alive
+  Maybe, // Live on some path but not all paths (may-be-live)
+  Must   // Live on all paths (must-be-live)
+};
+
+class LifetimeSafetyReporter {
+public:
+  LifetimeSafetyReporter() = default;
+  virtual ~LifetimeSafetyReporter() = default;
+
+  virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                                  SourceLocation FreeLoc,
+                                  Confidence Confidence) {}
+};
+
 /// The main entry point for the analysis.
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC);
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter);
 
 namespace internal {
 // Forward declarations of internal types.
@@ -34,6 +61,7 @@ class Fact;
 class FactManager;
 class LoanPropagationAnalysis;
 class ExpiredLoansAnalysis;
+class LiveOriginAnalysis;
 struct LifetimeFactory;
 
 /// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
@@ -53,19 +81,22 @@ template <typename Tag> struct ID {
     IDBuilder.AddInteger(Value);
   }
 };
-template <typename Tag>
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
-  return OS << ID.Value;
-}
 
 using LoanID = ID<struct LoanTag>;
 using OriginID = ID<struct OriginTag>;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
+  return OS << ID.Value;
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
+  return OS << ID.Value;
+}
 
 // Using LLVM's immutable collections is efficient for dataflow analysis
 // as it avoids deep copies during state transitions.
 // TODO(opt): Consider using a bitset to represent the set of loans.
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginSet = llvm::ImmutableSet<OriginID>;
+using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
 /// A `ProgramPoint` identifies a location in the CFG by pointing to a specific
 /// `Fact`. identified by a lifetime-related event (`Fact`).
@@ -78,7 +109,8 @@ using ProgramPoint = const Fact *;
 /// encapsulates the various dataflow analyses.
 class LifetimeSafetyAnalysis {
 public:
-  LifetimeSafetyAnalysis(AnalysisDeclContext &AC);
+  LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                         LifetimeSafetyReporter *Reporter);
   ~LifetimeSafetyAnalysis();
 
   void run();
@@ -86,8 +118,16 @@ public:
   /// Returns the set of loans an origin holds at a specific program point.
   LoanSet getLoansAtPoint(OriginID OID, ProgramPoint PP) const;
 
-  /// Returns the set of loans that have expired at a specific program point.
-  LoanSet getExpiredLoansAtPoint(ProgramPoint PP) const;
+  /// Returns the set of origins that are live at a specific program point,
+  /// along with the confidence level of their liveness.
+  ///
+  /// An origin is considered live if there are potential future uses of that
+  /// origin after the given program point. The confidence level indicates
+  /// whether the origin is definitely live (Definite) due to being domintated
+  /// by a set of uses or only possibly live (Maybe) only on some but not all
+  /// control flow paths.
+  std::vector<std::pair<OriginID, LivenessKind>>
+  getLiveOriginsAtPoint(ProgramPoint PP) const;
 
   /// Finds the OriginID for a given declaration.
   /// Returns a null optional if not found.
@@ -110,12 +150,34 @@ public:
 
 private:
   AnalysisDeclContext &AC;
+  LifetimeSafetyReporter *Reporter;
   std::unique_ptr<LifetimeFactory> Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
-  std::unique_ptr<ExpiredLoansAnalysis> ExpiredLoans;
+  std::unique_ptr<LiveOriginAnalysis> LiveOrigins;
 };
 } // namespace internal
 } // namespace clang::lifetimes
+
+namespace llvm {
+template <typename Tag>
+struct DenseMapInfo<clang::lifetimes::internal::ID<Tag>> {
+  using ID = clang::lifetimes::internal::ID<Tag>;
+
+  static inline ID getEmptyKey() {
+    return {DenseMapInfo<uint32_t>::getEmptyKey()};
+  }
+
+  static inline ID getTombstoneKey() {
+    return {DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const ID &Val) {
+    return DenseMapInfo<uint32_t>::getHashValue(Val.Value);
+  }
+
+  static bool isEqual(const ID &LHS, const ID &RHS) { return LHS == RHS; }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
