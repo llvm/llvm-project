@@ -303,11 +303,15 @@ MLIR_CAPI_EXPORTED void mlirIRRewriterDestroy(MlirRewriterBase rewriter);
 /// FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
+/// Freeze the given MlirRewritePatternSet to a MlirFrozenRewritePatternSet.
+/// Note that the ownership of the input set is transferred into the frozen set
+/// after this call.
 MLIR_CAPI_EXPORTED MlirFrozenRewritePatternSet
-mlirFreezeRewritePattern(MlirRewritePatternSet op);
+mlirFreezeRewritePattern(MlirRewritePatternSet set);
 
+/// Destroy the given MlirFrozenRewritePatternSet.
 MLIR_CAPI_EXPORTED void
-mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet op);
+mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet set);
 
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedilyWithOp(
     MlirOperation op, MlirFrozenRewritePatternSet patterns,
@@ -368,6 +372,8 @@ mlirRewritePatternSetCreate(MlirContext context);
 MLIR_CAPI_EXPORTED void mlirRewritePatternSetDestroy(MlirRewritePatternSet set);
 
 /// Add the given MlirRewritePattern into a MlirRewritePatternSet.
+/// Note that the ownership of the pattern is transferred to the set after this
+/// call.
 MLIR_CAPI_EXPORTED void mlirRewritePatternSetAdd(MlirRewritePatternSet set,
                                                  MlirRewritePattern pattern);
 

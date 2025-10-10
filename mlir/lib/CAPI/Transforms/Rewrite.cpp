@@ -291,15 +291,16 @@ wrap(mlir::FrozenRewritePatternSet *module) {
   return {module};
 }
 
-MlirFrozenRewritePatternSet mlirFreezeRewritePattern(MlirRewritePatternSet op) {
-  auto *m = new mlir::FrozenRewritePatternSet(std::move(*unwrap(op)));
-  op.ptr = nullptr;
+MlirFrozenRewritePatternSet
+mlirFreezeRewritePattern(MlirRewritePatternSet set) {
+  auto *m = new mlir::FrozenRewritePatternSet(std::move(*unwrap(set)));
+  set.ptr = nullptr;
   return wrap(m);
 }
 
-void mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet op) {
-  delete unwrap(op);
-  op.ptr = nullptr;
+void mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet set) {
+  delete unwrap(set);
+  set.ptr = nullptr;
 }
 
 MlirLogicalResult

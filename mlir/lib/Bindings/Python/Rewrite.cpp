@@ -202,7 +202,11 @@ public:
     mlirRewritePatternSetAdd(set, pattern);
   }
 
-  PyFrozenRewritePatternSet freeze() { return mlirFreezeRewritePattern(set); }
+  PyFrozenRewritePatternSet freeze() {
+    MlirRewritePatternSet s = set;
+    set.ptr = nullptr;
+    return mlirFreezeRewritePattern(s);
+  }
 
 private:
   MlirRewritePatternSet set;
