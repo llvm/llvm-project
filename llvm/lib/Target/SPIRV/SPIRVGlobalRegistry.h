@@ -515,10 +515,13 @@ public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
                             SPIRVType *SpvType, bool EmitIR,
                             bool ZeroAsNull = true);
+  Register getOrCreateConstInt(APInt Val, MachineInstr &I,
+                               SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                               bool ZeroAsNull = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
-  Register createConstInt(const ConstantInt *CI, MachineInstr &I,
+  Register createConstInt(const Constant *CI, MachineInstr &I,
                           SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                           bool ZeroAsNull);
   Register getOrCreateConstFP(APFloat Val, MachineInstr &I, SPIRVType *SpvType,

@@ -73,7 +73,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   // Handle float constants (OpConstantF)
   uint64_t Imm = MI->getOperand(StartIndex).getImm();
   if (NumVarOps == 2) {
-    Imm |= (MI->getOperand(StartIndex + 1).getImm()) << 32;
+    Imm |= (MI->getOperand(StartIndex + 1).getImm() << 32);
   }
 
   // For 16-bit floats, print as integer

@@ -343,6 +343,20 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
   return Res;
 }
 
+Register SPIRVGlobalRegistry::getOrCreateConstInt(APInt Val, MachineInstr &I,
+                                                  SPIRVType *SpvType,
+                                                  const SPIRVInstrInfo &TII,
+                                                  bool ZeroAsNull) {
+  const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
+  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  const MachineInstr *MI = findMI(CI, CurMF);
+  if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
+             MI->getOpcode() == SPIRV::OpConstantI))
+    return MI->getOperand(0).getReg();
+  return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
+  LLVMContext &Ctx = CurMF->getFunction().getContext();
+}
+
 Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
@@ -354,9 +368,10 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
              MI->getOpcode() == SPIRV::OpConstantI))
     return MI->getOperand(0).getReg();
   return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
+  LLVMContext &Ctx = CurMF->getFunction().getContext();
 }
 
-Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
+Register SPIRVGlobalRegistry::createConstInt(const Constant *CI,
                                              MachineInstr &I,
                                              SPIRVType *SpvType,
                                              const SPIRVInstrInfo &TII,
@@ -374,15 +389,20 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
         MachineInstrBuilder MIB;
         if (BitWidth == 1) {
           MIB = MIRBuilder
-                    .buildInstr(CI->isZero() ? SPIRV::OpConstantFalse
+                    .buildInstr(CI->isZeroValue() ? SPIRV::OpConstantFalse
                                              : SPIRV::OpConstantTrue)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-        } else if (!CI->isZero() || !ZeroAsNull) {
+        } else if (!CI->isZeroValue() || !ZeroAsNull) {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          if (BitWidth <= 64) {
+            const ConstantInt *CII = dyn_cast<ConstantInt>(CI);
+            addNumImm(APInt(BitWidth, CII->getZExtValue()), MIB);
+          } else {
+            addNumImm(CI->getUniqueInteger(), MIB);
+          }
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
