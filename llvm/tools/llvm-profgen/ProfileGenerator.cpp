@@ -708,20 +708,25 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
     if (IP.Address > RangeEnd)
       continue;
 
+    bool InBounds = true;
     do {
+      uint64_t InstStartAddr = IP.Address;
       const SampleContextFrameVector FrameVec =
-          Binary->getFrameLocationStack(IP.Address);
+          Binary->getFrameLocationStack(InstStartAddr);
+
+      InBounds = IP.advance();
       if (!FrameVec.empty()) {
+        uint64_t InstSize = IP.Address - InstStartAddr;
         // FIXME: As accumulating total count per instruction caused some
         // regression, we changed to accumulate total count per byte as a
         // workaround. Tuning hotness threshold on the compiler side might be
         // necessary in the future.
-        FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(
-            FrameVec, Count * Binary->getInstSize(IP.Address));
+        FunctionSamples &FunctionProfile =
+            getLeafProfileAndAddTotalSamples(FrameVec, Count * InstSize);
         updateBodySamplesforFunctionProfile(FunctionProfile, FrameVec.back(),
                                             Count);
       }
-    } while (IP.advance() && IP.Address <= RangeEnd);
+    } while (InBounds && IP.Address <= RangeEnd);
   }
 }
 

@@ -619,9 +619,6 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
     if (Disassembled) {
       const MCInstrDesc &MCDesc = MII->get(Inst.getOpcode());
 
-      // Record instruction size.
-      AddressToInstSizeMap[Address] = Size;
-
       // Populate address maps.
       CodeAddressVec.push_back(Address);
       if (MCDesc.isCall()) {
@@ -1135,14 +1132,16 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
   if (IP.Address >= RangeEnd)
     return;
 
+  bool InBounds;
   do {
     const SampleContextFrameVector SymbolizedCallStack =
         getFrameLocationStack(IP.Address, usePseudoProbes());
-    uint64_t Size = AddressToInstSizeMap[IP.Address];
+    uint64_t StartAddr = IP.Address;
+    InBounds = IP.advance();
+    uint64_t Size = IP.Address - StartAddr;
     // Record instruction size for the corresponding context
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
-
-  } while (IP.advance() && IP.Address < RangeEnd);
+  } while (InBounds && IP.Address < RangeEnd);
 }
 
 void ProfiledBinary::computeInlinedContextSizeForFunc(
