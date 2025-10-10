@@ -32,31 +32,16 @@ LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
       cp += (result.parsed_len + 1);
   }
 
-  unsigned long result = 0;
-  switch (dot_num) {
-  case 0:
-    if (parts[0] > 0xffffffff)
-      return 0;
-    result = parts[0];
-    break;
-  case 1:
-    if (parts[0] > 0xff || parts[1] > 0xffffff)
-      return 0;
-    result = (parts[0] << 24) | parts[1];
-    break;
-  case 2:
-    if (parts[0] > 0xff || parts[1] > 0xff || parts[2] > 0xffff)
-      return 0;
-    result = (parts[0] << 24) | (parts[1] << 16) | parts[2];
-    break;
-  case 3:
-    if (parts[0] > 0xff || parts[1] > 0xff || parts[2] > 0xff ||
-        parts[3] > 0xff)
-      return 0;
-    result = (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3];
-    break;
-  default:
+  if (dot_num > 3)
     return 0;
+
+  unsigned long result = 0;
+  for (int i = 0; i <= dot_num; ++i) {
+    unsigned max_part = i == dot_num ? (0xffffffffUL >> (8 * dot_num)) : 0xffUL;
+    if (parts[i] > max_part)
+      return 0;
+    int shift = i == dot_num ? 0 : 8 * (3 - i);
+    result |= parts[i] << shift;
   }
 
   if (inp)
