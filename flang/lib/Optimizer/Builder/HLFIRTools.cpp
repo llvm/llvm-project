@@ -1392,7 +1392,7 @@ bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {
   return false;
 }
 
-std::pair<hlfir::Entity, mlir::Value>
+std::pair<hlfir::Entity, bool>
 hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                           hlfir::Entity mold) {
   assert(!mold.isAssumedRank() &&
@@ -1425,7 +1425,7 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
       loc, mold.getElementOrSequenceType(), shape, extents, lenParams,
       genTempDeclareOp, mold.isPolymorphic() ? mold.getBase() : nullptr,
       useStack, tmpName);
-  return {hlfir::Entity{base}, builder.createBool(loc, isHeapAlloc)};
+  return {hlfir::Entity{base}, isHeapAlloc};
 }
 
 hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,

@@ -305,9 +305,6 @@ define i32 @fneg_d(double %a, double %b) nounwind {
 }
 
 define double @fsgnjn_d(double %a, double %b) nounwind {
-; TODO: fsgnjn.s isn't selected on RV64 because DAGCombiner::visitBITCAST will
-; convert (bitconvert (fneg x)) to a xor.
-;
 ; CHECKIFD-LABEL: fsgnjn_d:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fsgnjn.d fa0, fa0, fa1

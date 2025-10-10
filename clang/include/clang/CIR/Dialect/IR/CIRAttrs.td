@@ -602,6 +602,63 @@ def CIR_VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicCastInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
+  let summary = "ABI specific information about a dynamic cast";
+  let description = [{
+    Provide ABI specific information about a dynamic cast operation.
+
+    The `src_rtti` and the `dest_rtti` parameters give the RTTI of the source
+    record type and the destination record type, respectively.
+
+    The `runtime_func` parameter gives the `__dynamic_cast` function which is
+    provided by the runtime. The `bad_cast_func` parameter gives the
+    `__cxa_bad_cast` function which is also provided by the runtime.
+
+    The `offset_hint` parameter gives the hint value that should be passed to
+    the `__dynamic_cast` runtime function.
+  }];
+
+  let parameters = (ins
+    CIR_GlobalViewAttr:$src_rtti,
+    CIR_GlobalViewAttr:$dest_rtti,
+    "mlir::FlatSymbolRefAttr":$runtime_func,
+    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+    CIR_IntAttr:$offset_hint
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+                                    "GlobalViewAttr":$src_rtti,
+                                    "GlobalViewAttr":$dest_rtti,
+                                    "mlir::FlatSymbolRefAttr":$runtime_func,
+                                    "mlir::FlatSymbolRefAttr":$bad_cast_func,
+                                    "IntAttr":$offset_hint), [{
+      return $_get(src_rtti.getContext(), src_rtti, dest_rtti, runtime_func,
+                   bad_cast_func, offset_hint);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      struct(qualified($src_rtti),
+             qualified($dest_rtti),
+             $runtime_func,
+             $bad_cast_func,
+             qualified($offset_hint))
+    `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get attribute alias name for this attribute.
+    std::string getAlias() const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
@@ -709,6 +766,51 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
     bool isDefault() const { return getValue() == VisibilityKind::Default; };
     bool isHidden() const { return getValue() == VisibilityKind::Hidden; };
     bool isProtected() const { return getValue() == VisibilityKind::Protected; };
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GloblCtorAttr
+//===----------------------------------------------------------------------===//
+
+class CIR_GlobalCtorDtor<string name, string attrMnemonic>
+    : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
+  let parameters = (ins "mlir::StringAttr":$name, "int":$priority);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins
+        "llvm::StringRef":$name,
+        CArg<"int", "65535">:$priority), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
+        "mlir::StringAttr":$name,
+        CArg<"int", "65535">:$priority), [{
+      return $_get(name.getContext(), name, priority);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $name `,` $priority `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isDefaultPriority() const {
+      return getPriority() == getDefaultPriority();
+    };
+
+    static int getDefaultPriority() {
+      return 65535;
+    }
+  }];
+}
+
+def CIR_GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor"> {
+  let summary = "Marks a function as a global constructor";
+  let description = [{
+    Marks the function as a global constructor in the module's constructor list.
+    It will be executed before main() is called.
   }];
 }
 

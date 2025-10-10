@@ -8,7 +8,7 @@ define i32 @test_add_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CHECK:       [[ENTRY_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -27,28 +27,27 @@ define i32 @test_add_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    [[RES_PH_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_UNR_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
-; CHECK-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
-; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR1:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
 ; CHECK:       [[LOOP_EPIL]]:
-; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_UNR]]
+; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_EPIL_INIT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP_A_EPIL]], align 2
 ; CHECK-NEXT:    [[RDX_NEXT_EPIL:%.*]] = add nuw nsw i32 [[RDX_UNR]], [[TMP4]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[RES_PH]], %[[EXIT_UNR_LCSSA]] ], [ [[RDX_NEXT_EPIL]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ], [ [[RDX_NEXT_EPIL]], %[[LOOP_EPIL]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -76,7 +75,7 @@ define i32 @test_add_reduction_constant_op(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CHECK:       [[ENTRY_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -88,17 +87,16 @@ define i32 @test_add_reduction_constant_op(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
-; CHECK:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    [[RES_PH_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_UNR_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
-; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[RES_PH_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR1:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_UNR1]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
 ; CHECK:       [[LOOP_EPIL]]:
 ; CHECK-NEXT:    [[RDX_NEXT_EPIL:%.*]] = add nuw nsw i32 [[RDX_UNR]], 1
@@ -130,7 +128,7 @@ define i32 @test_add_reduction_8x_unroll(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CHECK:       [[ENTRY_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -172,23 +170,22 @@ define i32 @test_add_reduction_8x_unroll(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
 ; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    [[RES_PH_PH:%.*]] = phi i32 [ [[RDX_NEXT_7]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX_UNR_PH:%.*]] = phi i32 [ [[RDX_NEXT_7]], %[[LOOP]] ]
-; CHECK-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
-; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[RES_PH_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ [[RDX_NEXT_7]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ [[RDX_NEXT_7]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[RDX_EPIL_INIT:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
 ; CHECK:       [[LOOP_EPIL]]:
-; CHECK-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ [[IV_UNR]], %[[LOOP_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], %[[LOOP_EPIL]] ]
-; CHECK-NEXT:    [[RDX_EPIL:%.*]] = phi i32 [ [[RDX_UNR]], %[[LOOP_EPIL_PREHEADER]] ], [ [[RDX_NEXT_EPIL:%.*]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ [[IV_EPIL_INIT]], %[[LOOP_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    [[RDX_EPIL:%.*]] = phi i32 [ [[RDX_EPIL_INIT]], %[[LOOP_EPIL_PREHEADER]] ], [ [[RDX_NEXT_EPIL:%.*]], %[[LOOP_EPIL]] ]
 ; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[LOOP_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[LOOP_EPIL]] ]
 ; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_EPIL]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[GEP_A_EPIL]], align 2
