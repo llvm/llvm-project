@@ -157,7 +157,8 @@ DecodeMemoryReference(llvm::StringRef memoryReference);
 ///    if the key is missing.
 ///
 /// \param[in] allow_empty
-///    Interpret empty string as a valid value, don't report an error.
+///    Interpret empty string as a valid value, don't report an error (see
+///    VS Code issue https://github.com/microsoft/vscode/issues/270593).
 ///
 /// \return
 ///    Returns \b true if the address was decoded successfully.
