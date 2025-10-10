@@ -905,7 +905,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     OS << ":\n";
 
     SlotIndex MBBStartSlot = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
-    SlotIndex MBBEndSlot = LIS.getSlotIndexes()->getMBBEndIdx(&MBB);
+    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
 
     GCNRPTracker::LiveRegSet LiveIn, LiveOut;
     GCNRegPressure RPAtMBBEnd;
@@ -931,7 +931,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       }
     } else {
       GCNUpwardRPTracker RPT(LIS);
-      RPT.reset(MRI, MBBEndSlot);
+      RPT.reset(MRI, MBBLastSlot);
 
       LiveOut = RPT.getLiveRegs();
       RPAtMBBEnd = RPT.getPressure();
@@ -966,14 +966,14 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
     OS << PFX "  Live-out:" << llvm::print(LiveOut, MRI);
     if (UseDownwardTracker)
-      ReportLISMismatchIfAny(LiveOut, getLiveRegs(MBBEndSlot, LIS, MRI));
+      ReportLISMismatchIfAny(LiveOut, getLiveRegs(MBBLastSlot, LIS, MRI));
 
     GCNRPTracker::LiveRegSet LiveThrough;
     for (auto [Reg, Mask] : LiveIn) {
       LaneBitmask MaskIntersection = Mask & LiveOut.lookup(Reg);
       if (MaskIntersection.any()) {
         LaneBitmask LTMask = getRegLiveThroughMask(
-            MRI, LIS, Reg, MBBStartSlot, MBBEndSlot, MaskIntersection);
+            MRI, LIS, Reg, MBBStartSlot, MBBLastSlot, MaskIntersection);
         if (LTMask.any())
           LiveThrough[Reg] = LTMask;
       }

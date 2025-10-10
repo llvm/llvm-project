@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
@@ -132,14 +133,12 @@ private:
     struct Reg {
       Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
           : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
-      std::string Name;
+      StringRef Name;
       unsigned LineNo;
       Regex Rg;
-      Reg(Reg &&) = delete;
-      Reg() = default;
     };
 
-    std::vector<std::unique_ptr<Reg>> RegExes;
+    std::vector<Reg> RegExes;
   };
 
   class GlobMatcher {
@@ -150,17 +149,14 @@ private:
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
     struct Glob {
-      Glob(StringRef Name, unsigned LineNo) : Name(Name), LineNo(LineNo) {}
-      std::string Name;
+      Glob(StringRef Name, unsigned LineNo, GlobPattern &&Pattern)
+          : Name(Name), LineNo(LineNo), Pattern(std::move(Pattern)) {}
+      StringRef Name;
       unsigned LineNo;
       GlobPattern Pattern;
-      // neither copyable nor movable because GlobPattern contains
-      // Glob::StringRef that points to Glob::Name.
-      Glob(Glob &&) = delete;
-      Glob() = default;
     };
 
-    std::vector<std::unique_ptr<Glob>> Globs;
+    std::vector<GlobMatcher::Glob> Globs;
   };
 
   /// Represents a set of patterns and their line numbers
@@ -217,6 +213,7 @@ protected:
   ArrayRef<const Section> sections() const { return Sections; }
 
 private:
+  BumpPtrAllocator StrAlloc;
   std::vector<Section> Sections;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
