@@ -24,15 +24,21 @@ using namespace ento;
 
 namespace {
 struct Registry {
+  std::vector<UnsignedEPStat *> ExplicitlySetStats;
+  std::vector<UnsignedMaxEPStat *> MaxStats;
   std::vector<CounterEPStat *> CounterStats;
-  std::vector<UnsignedMaxEPStat *> UnsignedMaxStats;
-  std::vector<UnsignedEPStat *> UnsignedStats;
 
   bool IsLocked = false;
 
   struct Snapshot {
     const Decl *EntryPoint;
-    std::vector<unsigned> UnsignedStatValues;
+    // Explicitly set statistics may not have a value set, so they are separate
+    // from other unsigned statistics
+    std::vector<std::optional<unsigned>> ExplicitlySetStatValues;
+    // These are counting and maximizing statistics that initialize to 0, which
+    // is meaningful even if they are never updated, so their value is always
+    // present.
+    std::vector<unsigned> MaxOrCountStatValues;
 
     void dumpAsCSV(llvm::raw_ostream &OS) const;
   };
@@ -46,9 +52,12 @@ static llvm::ManagedStatic<Registry> StatsRegistry;
 
 namespace {
 template <typename Callback> void enumerateStatVectors(const Callback &Fn) {
+  // This order is important, it matches the order of the Snapshot fields:
+  // - ExplicitlySetStatValues
+  Fn(StatsRegistry->ExplicitlySetStats);
+  // - MaxOrCountStatValues
+  Fn(StatsRegistry->MaxStats);
   Fn(StatsRegistry->CounterStats);
-  Fn(StatsRegistry->UnsignedMaxStats);
-  Fn(StatsRegistry->UnsignedStats);
 }
 } // namespace
 
@@ -101,30 +110,37 @@ UnsignedMaxEPStat::UnsignedMaxEPStat(llvm::StringLiteral Name)
     : EntryPointStat(Name) {
   assert(!StatsRegistry->IsLocked);
   assert(!isRegistered(Name));
-  StatsRegistry->UnsignedMaxStats.push_back(this);
+  StatsRegistry->MaxStats.push_back(this);
 }
 
 UnsignedEPStat::UnsignedEPStat(llvm::StringLiteral Name)
     : EntryPointStat(Name) {
   assert(!StatsRegistry->IsLocked);
   assert(!isRegistered(Name));
-  StatsRegistry->UnsignedStats.push_back(this);
+  StatsRegistry->ExplicitlySetStats.push_back(this);
 }
 
-static std::vector<unsigned> consumeUnsignedStats() {
+static std::vector<std::optional<unsigned>>
+consumeExplicitlySetStats() {
+  std::vector<std::optional<unsigned>> Result;
+  Result.reserve(StatsRegistry->ExplicitlySetStats.size());
+  for (auto *M : StatsRegistry->ExplicitlySetStats) {
+    Result.push_back(M->value());
+    M->reset();
+  }
+  return Result;
+}
+
+static std::vector<unsigned> consumeMaxAndCounterStats() {
   std::vector<unsigned> Result;
   Result.reserve(StatsRegistry->CounterStats.size() +
-                 StatsRegistry->UnsignedMaxStats.size() +
-                 StatsRegistry->UnsignedStats.size());
+                 StatsRegistry->MaxStats.size());
+  // Order is important, it must match the order in enumerateStatVectors
+  for (auto *M : StatsRegistry->MaxStats) {
+    Result.push_back(M->value());
+    M->reset();
+  }
   for (auto *M : StatsRegistry->CounterStats) {
-    Result.push_back(M->value());
-    M->reset();
-  }
-  for (auto *M : StatsRegistry->UnsignedMaxStats) {
-    Result.push_back(M->value());
-    M->reset();
-  }
-  for (auto *M : StatsRegistry->UnsignedStats) {
     Result.push_back(M->value());
     M->reset();
   }
@@ -150,20 +166,33 @@ static std::string getUSR(const Decl *D) {
 }
 
 void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
+  auto printAsUnsignOpt = [&OS](std::optional<unsigned> U) {
+    OS << (U.has_value() ? std::to_string(*U) : "");
+  };
+  auto commaIfNeeded = [&OS](const auto &Vec1, const auto &Vec2) {
+    if (!Vec1.empty() && !Vec2.empty())
+      OS << ",";
+  };
+  auto printAsUnsigned = [&OS](unsigned U) { OS << U; };
+
   OS << '"';
   llvm::printEscapedString(getUSR(EntryPoint), OS);
   OS << "\",\"";
   OS << StatsRegistry->EscapedCPPFileName << "\",\"";
   llvm::printEscapedString(
       clang::AnalysisDeclContext::getFunctionName(EntryPoint), OS);
-  OS << "\"";
-  OS << (UnsignedStatValues.empty() ? "" : ",");
-  llvm::interleave(UnsignedStatValues, OS, [&OS](unsigned U) { OS << U; }, ",");
+  OS << "\",";
+  llvm::interleave(ExplicitlySetStatValues, OS, printAsUnsignOpt, ",");
+  commaIfNeeded(ExplicitlySetStatValues, MaxOrCountStatValues);
+  llvm::interleave(MaxOrCountStatValues, OS, printAsUnsigned, ",");
 }
 
 void EntryPointStat::takeSnapshot(const Decl *EntryPoint) {
-  auto UnsignedValues = consumeUnsignedStats();
-  StatsRegistry->Snapshots.push_back({EntryPoint, std::move(UnsignedValues)});
+  auto ExplicitlySetValues = consumeExplicitlySetStats();
+  auto MaxOrCounterValues = consumeMaxAndCounterStats();
+  StatsRegistry->Snapshots.push_back({EntryPoint,
+                                      std::move(ExplicitlySetValues),
+                                      std::move(MaxOrCounterValues)});
 }
 
 void EntryPointStat::dumpStatsAsCSV(llvm::StringRef FileName) {
