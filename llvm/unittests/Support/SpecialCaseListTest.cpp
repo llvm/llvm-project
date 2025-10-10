@@ -313,14 +313,14 @@ TEST_F(SpecialCaseListTest, DotSlash) {
                                                               "src:./bar\n"
                                                               "[not]\n"
                                                               "fun:foo\n"
-                                                              "src:bar\n");
+                                                              "src:bar\n",
+                                                              /*Version=*/2);
   std::unique_ptr<SpecialCaseList> SCL3 = makeSpecialCaseList("[dot]\n"
                                                               "fun:./foo\n"
                                                               "src:./bar\n"
                                                               "[not]\n"
                                                               "fun:foo\n"
-                                                              "src:bar\n",
-                                                              /*Version=*/3);
+                                                              "src:bar\n");
 
   EXPECT_TRUE(SCL2->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL3->inSection("dot", "fun", "./foo"));
@@ -329,10 +329,10 @@ TEST_F(SpecialCaseListTest, DotSlash) {
   EXPECT_FALSE(SCL3->inSection("dot", "fun", "foo"));
 
   EXPECT_TRUE(SCL2->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL3->inSection("dot", "src", "./bar"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "src", "bar"));
-  EXPECT_FALSE(SCL3->inSection("dot", "src", "bar"));
+  EXPECT_TRUE(SCL3->inSection("dot", "src", "bar"));
 
   EXPECT_FALSE(SCL2->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL3->inSection("not", "fun", "./foo"));
