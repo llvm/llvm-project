@@ -3738,16 +3738,16 @@ bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
 
 void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     Register &NonUniformReg) const {
-  std::vector<Register> WorkList = {NonUniformReg};
+  llvm::SmallVector<Register> WorkList = {NonUniformReg};
   while (WorkList.size() > 0) {
-    Register CurrentReg = WorkList.at(0);
-    WorkList.erase(WorkList.begin());
+    Register CurrentReg = WorkList.back();
+    WorkList.pop_back();
 
-    bool isDecorated = false;
+    bool IsDecorated = false;
     for (MachineInstr &Use : MRI->use_instructions(CurrentReg)) {
       if (Use.getOpcode() == SPIRV::OpDecorate &&
           Use.getOperand(1).getImm() == SPIRV::Decoration::NonUniformEXT) {
-        isDecorated = true;
+        IsDecorated = true;
         continue;
       }
       // Check if the instruction has the result register and add it to the
@@ -3760,7 +3760,7 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
       }
     }
 
-    if (!isDecorated) {
+    if (!IsDecorated) {
       buildOpDecorate(CurrentReg, *MRI->getVRegDef(CurrentReg), TII,
                       SPIRV::Decoration::NonUniformEXT, {});
     }
