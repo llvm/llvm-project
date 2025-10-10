@@ -29239,10 +29239,17 @@ void AArch64TargetLowering::ReplaceNodeResults(
 bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())
     return TargetLowering::useLoadStackGuardNode(M);
-  return false;
+  return !Subtarget->getTargetTriple().isOSMSVCRT() ||
+         Subtarget->isTargetMachO() ||
+         getTargetMachine().Options.EnableGlobalISel;
 }
 
-bool AArch64TargetLowering::useStackGuardXorFP() const { return true; }
+bool AArch64TargetLowering::useStackGuardXorFP() const {
+  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
+  return Subtarget->getTargetTriple().isOSMSVCRT() &&
+         !Subtarget->isTargetMachO() &&
+         !getTargetMachine().Options.EnableGlobalISel;
+}
 
 SDValue AArch64TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG,
                                                    SDValue Val,
