@@ -1915,51 +1915,34 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   return Result;
 }
 
-/// OpenACC 3.3 section 2.5.15:
-/// At a mininmum, the supported data types include ... the numerical data types
-/// in C, C++, and Fortran.
-///
-/// If the reduction var is a composite variable, each
-/// member of the composite variable must be a supported datatype for the
-/// reduction operation.
-ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
-                                          OpenACCReductionOperator ReductionOp,
-                                          Expr *VarExpr) {
-  // For now, we only support 'scalar' types, or composites/arrays of scalar
-  // types.
-  VarExpr = VarExpr->IgnoreParenCasts();
+bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   SourceLocation VarLoc = VarExpr->getBeginLoc();
 
   SmallVector<PartialDiagnosticAt> Notes;
-  QualType CurType = VarExpr->getType();
+  // The standard isn't clear how many levels of 'array element' or 'subarray'
+  // are permitted, but we can handle as many as we need, so we'll strip them
+  // off here. This will result in CurType being the actual 'type' of the
+  // expression, which is what we are looking to check.
+  QualType CurType = isa<ArraySectionExpr>(VarExpr)
+                         ? ArraySectionExpr::getBaseOriginalType(VarExpr)
+                         : VarExpr->getType();
 
-  // For array like things, the expression can either be an array element
-  // (subscript expr), array section, or array type. Peel those off, and add
-  // notes in case we find an illegal kind.  We'll allow scalar or composite of
-  // scalars inside of this.
-  if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr)) {
-    QualType BaseType = ArraySectionExpr::getBaseOriginalType(ASE);
+  // This can happen when we have a dependent type in an array element that the
+  // above function has tried to 'unwrap'. Since this can only happen with
+  // dependence, just let it go.
+  if (CurType.isNull())
+    return false;
 
-    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
-                           << diag::OACCReductionArray::Section << BaseType;
-    Notes.push_back({ASE->getBeginLoc(), PD});
-
-    CurType = getASTContext().getBaseElementType(BaseType);
-  } else if (auto *SubExpr = dyn_cast<ArraySubscriptExpr>(VarExpr)) {
-    // Array subscript already results in the type of the thing as its type, so
-    // there is no type to change here.
-    PartialDiagnostic PD =
-        PDiag(diag::note_acc_reduction_array)
-        << diag::OACCReductionArray::Subscript
-        << SubExpr->getBase()->IgnoreParenImpCasts()->getType();
-    Notes.push_back({SubExpr->getBeginLoc(), PD});
-  } else if (auto *AT = getASTContext().getAsArrayType(CurType)) {
+  // If we are still an array type, we allow 1 level of 'unpeeling' of the
+  // array.  The standard isn't clear here whether this is allowed, but
+  // array-of-valid-things makes sense.
+  if (auto *AT = getASTContext().getAsArrayType(CurType)) {
     // If we're already the array type, peel off the array and leave the element
     // type.
-    CurType = getASTContext().getBaseElementType(AT);
     PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
                            << diag::OACCReductionArray::ArrayTy << CurType;
     Notes.push_back({VarLoc, PD});
+    CurType = AT->getElementType();
   }
 
   auto IsValidMemberOfComposite = [](QualType Ty) {
@@ -1974,31 +1957,26 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
     for (auto [Loc, PD] : Notes)
       Diag(Loc, PD);
 
-    Diag(VarLoc, diag::note_acc_reduction_type_summary);
+    return Diag(VarLoc, diag::note_acc_reduction_type_summary);
   };
 
   // If the type is already scalar, or is dependent, just give up.
   if (IsValidMemberOfComposite(CurType)) {
     // Nothing to do here, is valid.
   } else if (auto *RD = CurType->getAsRecordDecl()) {
-    if (!RD->isStruct() && !RD->isClass()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << RD << diag::OACCReductionTy::NotClassStruct);
-      return ExprError();
-    }
+    if (!RD->isStruct() && !RD->isClass())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD
+                                   << diag::OACCReductionTy::NotClassStruct);
 
-    if (!RD->isCompleteDefinition()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << RD << diag::OACCReductionTy::NotComplete);
-      return ExprError();
-    }
+    if (!RD->isCompleteDefinition())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD << diag::OACCReductionTy::NotComplete);
 
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-        CXXRD && !CXXRD->isAggregate()) {
-      EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                            << CXXRD << diag::OACCReductionTy::NotAgg);
-      return ExprError();
-    }
+        CXXRD && !CXXRD->isAggregate())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << CXXRD << diag::OACCReductionTy::NotAgg);
 
     for (FieldDecl *FD : RD->fields()) {
       if (!IsValidMemberOfComposite(FD->getType())) {
@@ -2007,16 +1985,36 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
             << FD->getName() << RD->getName();
         Notes.push_back({FD->getBeginLoc(), PD});
         // TODO: member here.note_acc_reduction_member_of_composite
-        EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                              << FD->getType()
-                              << diag::OACCReductionTy::MemberNotScalar);
-        return ExprError();
+        return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                     << FD->getType()
+                                     << diag::OACCReductionTy::MemberNotScalar);
       }
     }
   } else {
-    EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
-                          << CurType << diag::OACCReductionTy::NotScalar);
+    return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                 << CurType
+                                 << diag::OACCReductionTy::NotScalar);
   }
+
+  return false;
+}
+
+/// OpenACC 3.3 section 2.5.15:
+/// At a mininmum, the supported data types include ... the numerical data types
+/// in C, C++, and Fortran.
+///
+/// If the reduction var is a composite variable, each
+/// member of the composite variable must be a supported datatype for the
+/// reduction operation.
+ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
+                                          OpenACCReductionOperator ReductionOp,
+                                          Expr *VarExpr) {
+  // For now, we only support 'scalar' types, or composites/arrays of scalar
+  // types.
+  VarExpr = VarExpr->IgnoreParenCasts();
+
+  if (CheckReductionVarType(VarExpr))
+    return ExprError();
 
   // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
   // reduction 'var' must have the same reduction operator.
