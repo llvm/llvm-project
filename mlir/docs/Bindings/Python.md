@@ -1204,7 +1204,7 @@ def demo_pass(op, pass_):
 
 pm = PassManager('any')
 pm.add(demo_pass)
-pm.add('some-cpp-defined-passes..')
+pm.add('some-cpp-defined-passes')
 ...
 pm.run(some_op)
 ```
