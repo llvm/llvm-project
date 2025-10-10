@@ -2269,6 +2269,12 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   define("__preinit_array_start", "__preinit_array_end", ctx.out.preinitArray);
   define("__init_array_start", "__init_array_end", ctx.out.initArray);
   define("__fini_array_start", "__fini_array_end", ctx.out.finiArray);
+  // Define __eh_frame_* symbols, libunwind needs these symbols.
+  // Define them only if the corresponding output section exists.
+  if (OutputSection *sec = findSection(ctx, ".eh_frame"))
+    define("__eh_frame_start", "__eh_frame_end", sec);
+  if (OutputSection *sec = findSection(ctx, ".eh_frame_hdr"))
+    define("__eh_frame_hdr_start", "__eh_frame_hdr_end", sec);
 
   // As a special case, don't unnecessarily retain .ARM.exidx, which would
   // create an empty PT_ARM_EXIDX.
