@@ -28,7 +28,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -3659,11 +3658,8 @@ bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   if (VT.isVector())
     return false;
 
-  // 64-bit shifts on 32-bit targets produce really bad bloated code.
-  if (VT == MVT::i64 && !Subtarget.is64Bit())
-    return false;
-
-  return true;
+  unsigned MaxWidth = Subtarget.is64Bit() ? 64 : 32;
+  return VT.getScalarSizeInBits() <= MaxWidth;
 }
 
 TargetLowering::ShiftLegalizationStrategy
@@ -13783,10 +13779,12 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // so prevents folding a load into this instruction or making a copy.
     const int UnpackLoMask[] = {0, 0, 1, 1};
     const int UnpackHiMask[] = {2, 2, 3, 3};
-    if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
-      Mask = UnpackLoMask;
-    else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
-      Mask = UnpackHiMask;
+    if (!isSingleElementRepeatedMask(Mask)) {
+      if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
+        Mask = UnpackLoMask;
+      else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
+        Mask = UnpackHiMask;
+    }
 
     return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v4i32, V1,
                        getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
@@ -45457,7 +45455,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                                   const SDLoc &DL,
                                   const X86Subtarget &Subtarget) {
   EVT SrcVT = Src.getValueType();
-  if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
+  if (Subtarget.useSoftFloat() || !SrcVT.isSimple() ||
+      SrcVT.getScalarType() != MVT::i1)
     return SDValue();
 
   // Recognize the IR pattern for the movmsk intrinsic under SSE1 before type
@@ -58133,6 +58132,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal adds from adds of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Prefer VSHLI to reduce uses, X86FixupInstTunings may revert this depending
+  // on the scheduler model. Limit multiple users to AVX+ targets to prevent
+  // introducing extra register moves.
+  if (Op0 == Op1 && supportedVectorShiftWithImm(VT, Subtarget, ISD::SHL))
+    if (Subtarget.hasAVX() || N->isOnlyUserOf(Op0.getNode()))
+      return getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT.getSimpleVT(),
+                                        Op0, 1, DAG);
 
   // Canonicalize hidden LEA pattern:
   // Fold (add (sub (shl x, c), y), z) -> (sub (add (shl x, c), z), y)

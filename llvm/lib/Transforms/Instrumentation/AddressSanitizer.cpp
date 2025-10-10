@@ -600,9 +600,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                            !IsRISCV64 && !IsLoongArch64 &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
-  bool IsAndroidWithIfuncSupport =
-      IsAndroid && !TargetTriple.isAndroidVersionLT(21);
-  Mapping.InGlobal = ClWithIfunc && IsAndroidWithIfuncSupport && IsArmOrThumb;
+  Mapping.InGlobal = ClWithIfunc && IsAndroid && IsArmOrThumb;
 
   return Mapping;
 }
@@ -2662,7 +2660,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
 
-    Constant *ODRIndicator = ConstantPointerNull::get(PtrTy);
+    Constant *ODRIndicator = Constant::getNullValue(IntptrTy);
     GlobalValue *InstrumentedGlobal = NewGlobal;
 
     bool CanUsePrivateAliases =
@@ -2677,8 +2675,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
 
     // ODR should not happen for local linkage.
     if (NewGlobal->hasLocalLinkage()) {
-      ODRIndicator =
-          ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, -1), PtrTy);
+      ODRIndicator = ConstantInt::get(IntptrTy, -1);
     } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
@@ -2692,7 +2689,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
       ODRIndicatorSym->setVisibility(NewGlobal->getVisibility());
       ODRIndicatorSym->setDLLStorageClass(NewGlobal->getDLLStorageClass());
       ODRIndicatorSym->setAlignment(Align(1));
-      ODRIndicator = ODRIndicatorSym;
+      ODRIndicator = ConstantExpr::getPtrToInt(ODRIndicatorSym, IntptrTy);
     }
 
     Constant *Initializer = ConstantStruct::get(
@@ -2703,8 +2700,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
         ConstantExpr::getPointerCast(Name, IntptrTy),
         ConstantExpr::getPointerCast(getOrCreateModuleName(), IntptrTy),
         ConstantInt::get(IntptrTy, MD.IsDynInit),
-        Constant::getNullValue(IntptrTy),
-        ConstantExpr::getPointerCast(ODRIndicator, IntptrTy));
+        Constant::getNullValue(IntptrTy), ODRIndicator);
 
     LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/expm1f.h"
-#include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FMA.h"
@@ -20,10 +19,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
+  using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 

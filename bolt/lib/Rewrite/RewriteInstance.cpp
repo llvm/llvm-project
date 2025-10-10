@@ -917,9 +917,6 @@ void RewriteInstance::discoverFileObjects() {
     bool IsData = false;
     uint64_t LastAddr = 0;
     for (const auto &SymInfo : SortedSymbols) {
-      if (LastAddr == SymInfo.Address) // don't repeat markers
-        continue;
-
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
 
       // Treat ST_Function as code.
@@ -929,8 +926,14 @@ void RewriteInstance::discoverFileObjects() {
         if (IsData) {
           Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
           consumeError(NameOrError.takeError());
-          BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
-                     << " lacks code marker\n";
+          if (LastAddr == SymInfo.Address) {
+            BC->errs() << "BOLT-WARNING: ignoring data marker conflicting with "
+                          "function symbol "
+                       << *NameOrError << '\n';
+          } else {
+            BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                       << " lacks code marker\n";
+          }
         }
         MarkerType = MarkerSymType::CODE;
       }
@@ -1511,6 +1514,12 @@ void RewriteInstance::registerFragments() {
       }
       if (BD) {
         BinaryFunction *BF = BC->getFunctionForSymbol(BD->getSymbol());
+        if (BF == &Function) {
+          BC->errs()
+              << "BOLT-WARNING: fragment maps to the same function as parent: "
+              << Function << '\n';
+          continue;
+        }
         if (BF) {
           BC->registerFragment(Function, *BF);
           continue;
@@ -2113,6 +2122,13 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (opts::SplitEH && !BC->HasRelocations) {
     BC->errs() << "BOLT-WARNING: disabling -split-eh in non-relocation mode\n";
     opts::SplitEH = false;
+  }
+
+  if (BC->isAArch64() && !opts::CompactCodeModel &&
+      opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
+    BC->errs() << "BOLT-ERROR: CDSplit is not supported with LongJmp. Try with "
+                  "'--compact-code-model'\n";
+    exit(1);
   }
 
   if (opts::StrictMode && !BC->HasRelocations) {
@@ -3331,6 +3347,8 @@ void RewriteInstance::initializeMetadataManager() {
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
+
+  MetadataManager.registerRewriter(createGNUPropertyRewriter(*BC));
 }
 
 void RewriteInstance::processSectionMetadata() {
@@ -3509,6 +3527,17 @@ void RewriteInstance::disassembleFunctions() {
                    << Function << ". Skipping.\n";
         Function.setSimple(false);
         continue;
+      }
+    }
+
+    // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
+    // function.
+    if (Function.containedNegateRAState()) {
+      if (!opts::UpdateBranchProtection) {
+        BC->errs()
+            << "BOLT-ERROR: --update-branch-protection is set to false, but "
+            << Function.getPrintName() << " contains .cfi-negate-ra-state\n";
+        exit(1);
       }
     }
 
@@ -3982,10 +4011,12 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       BC->outs() << '\n';
       AllocationDone = true;
     } else {
-      BC->errs() << "BOLT-WARNING: original .text too small to fit the new code"
-                 << " using 0x" << Twine::utohexstr(opts::AlignText)
-                 << " alignment. " << CodeSize << " bytes needed, have "
-                 << BC->OldTextSectionSize << " bytes available.\n";
+      BC->errs() << "BOLT-WARNING: --use-old-text failed. The original .text "
+                    "too small to fit the new code using 0x"
+                 << Twine::utohexstr(opts::AlignText) << " alignment. "
+                 << CodeSize << " bytes needed, have " << BC->OldTextSectionSize
+                 << " bytes available. Rebuilding without --use-old-text may "
+                    "produce a smaller binary\n";
       opts::UseOldText = false;
     }
   }
