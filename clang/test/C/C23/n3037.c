@@ -402,13 +402,13 @@ void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
   _Static_assert(0 == _Generic(__typeof__(Arg1), __typeof__(Arg2) : 1, default : 0)); // both-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
 }
 
-struct InnerAnonStruct {
+struct InnerUnnamedStruct {
   struct {
     int i;
   } untagged;
-} inner_anon_tagged;
+} inner_unnamed_tagged;
 
-_Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, default : 0));
+_Static_assert(0 == _Generic(inner_unnamed_tagged.untagged, struct { int i; } : 1, default : 0));
 
 // Test the same thing with enumerations (test for unions is omitted because
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).
