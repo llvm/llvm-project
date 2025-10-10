@@ -61,10 +61,8 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
     return static_cast<int>(xevm::AddrSpace::GLOBAL);
   case xegpu::MemorySpace::SLM:
     return static_cast<int>(xevm::AddrSpace::SHARED);
-  default:
-    llvm_unreachable("Unknown XeGPU memory space");
-    return static_cast<int>(xevm::AddrSpace::GLOBAL);
   }
+  llvm_unreachable("Unknown XeGPU memory space");
 }
 
 // Get same bitwidth flat vector type of new element type.
@@ -186,8 +184,9 @@ class CreateNdDescToXeVMPattern
     SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
     // Descriptor shape is expected to be 2D.
     int64_t rank = mixedSizes.size();
-    if (rank != 2)
+    if (rank != 2) {
       return rewriter.notifyMatchFailure(op, "Expected 2D shape.");
+    }
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
     // If source is a memref, we need to extract the aligned pointer as index.
@@ -612,8 +611,7 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
             LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
         rewriter.replaceOp(op, loadOp);
       } else {
-        auto storeOp = LLVM::StoreOp::create(rewriter, loc, adaptor.getData(),
-                                             basePtrLLVM);
+        LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
         rewriter.eraseOp(op);
       }
       return success();
@@ -680,8 +678,7 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
               LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
           rewriter.replaceOp(op, loadOp);
         } else {
-          auto storeOp = LLVM::StoreOp::create(rewriter, loc, adaptor.getData(),
-                                               basePtrLLVM);
+          LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
           rewriter.eraseOp(op);
         }
       }
