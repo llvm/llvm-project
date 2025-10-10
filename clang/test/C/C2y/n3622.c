@@ -7,7 +7,7 @@
  * Allow calling static inline within extern inline
  *
  * This verifies that a constraint from previous standards is no longer
- * triggered in C2y mode. The constraint is with calling a statric function
+ * triggered in C2y mode. The constraint is with calling a static function
  * or using a static variable from an inline function with external linkage.
  */
 
