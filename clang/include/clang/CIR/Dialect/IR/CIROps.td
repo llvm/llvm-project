@@ -4339,24 +4339,26 @@ def CIR_TryOp : CIR_Op<"try",[
     clauses are usually allocated in the same parent as `cir.try`.
 
     `synthetic`: use `cir.try` to represent try/catches not originally
-    present in the source code (e.g. `g = new Class` under `-fexceptions`).
+    present in the source code. For example, a synthetic `cir.try` region
+    is created around the constructor call when `operator new` is used
+    so that the memory allocated will be freed if the constructor throws
+    an exception.
 
-    `cleanup`: signal to targets (LLVM for now) that this try/catch, needs
-    to specially tag their landing pads as needing "cleanup".
+    `cleanup`: indicates that there are cleanups that must be performed
+    when exiting the try region via exception, even if the exception is not
+    caught.
 
     Example:
 
     ```mlir
-    %0 = cir.alloc.exception 16 -> !cir.ptr<!some_record>
-    %1 = cir.get_global @d2 : !cir.ptr<!some_record>
-    cir.try synthetic cleanup {
-      cir.call exception @_ZN7test2_DC1ERKS_(%0, %1)
-            : (!cir.ptr<!some_record>, !cir.ptr<!some_record>) -> () cleanup {
-        %2 = cir.cast bitcast %0 : !cir.ptr<!some_record> -> !cir.ptr<!void>
-        cir.free.exception %2
-        cir.yield
-      }
+    cir.try {
+      cir.call exception @function() : () -> ()
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
       ...
+      cir.yield
+    } unwind {
+      cir.resume
     }
     ```
   }];
