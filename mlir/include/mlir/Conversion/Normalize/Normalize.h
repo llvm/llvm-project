@@ -9,6 +9,8 @@
 #ifndef MLIR_CONVERSION_NORMALIZE_NORMALIZE_H
 #define MLIR_CONVERSION_NORMALIZE_NORMALIZE_H
 
+#include <memory>
+
 namespace mlir {
 class Pass;
 
