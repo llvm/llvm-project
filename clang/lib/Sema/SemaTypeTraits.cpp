@@ -1076,8 +1076,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C) || T->isObjCLifetimeType())
       return true;
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl()) {
-      if (RD->hasTrivialDefaultConstructor() &&
-          !RD->hasNonTrivialDefaultConstructor())
+      if (RD->hasTrivialDefaultConstructor())
         return true;
 
       bool FoundConstructor = false;
