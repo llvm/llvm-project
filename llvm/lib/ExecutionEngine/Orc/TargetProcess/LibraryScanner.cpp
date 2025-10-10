@@ -995,7 +995,8 @@ std::optional<std::string> LibraryScanner::shouldScan(StringRef FilePath) {
   // [4] Skip if it's not a shared library.
   if (!DylibPathValidator::isSharedLibrary(CanonicalPath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: not a shared library.\n";);
-
+    llvm::outs() << "  -> Skipped: not a shared library.\n";
+    llvm::outs().flush();
     return std::nullopt;
   }
 
