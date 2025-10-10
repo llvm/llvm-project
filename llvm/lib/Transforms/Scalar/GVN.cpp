@@ -2540,6 +2540,21 @@ bool GVNPass::propagateEquality(
       }
     }
 
+    // If "ballot(cond) == -1" or "ballot(cond) == exec_mask" then cond is true
+    // on all active lanes, so cond can be replaced with true.
+    if (IntrinsicInst *IntrCall = dyn_cast<IntrinsicInst>(LHS)) {
+      if (IntrCall->getIntrinsicID() ==
+          Intrinsic::AMDGCNIntrinsics::amdgcn_ballot) {
+        Value *BallotArg = IntrCall->getArgOperand(0);
+        if (BallotArg->getType()->isIntegerTy(1) &&
+            (match(RHS, m_AllOnes()) || !isa<Constant>(RHS))) {
+          Worklist.push_back(std::make_pair(
+              BallotArg, ConstantInt::getTrue(BallotArg->getType())));
+          continue;
+        }
+      }
+    }
+
     // Now try to deduce additional equalities from this one. For example, if
     // the known equality was "(A != B)" == "false" then it follows that A and B
     // are equal in the scope. Only boolean equalities with an explicit true or
