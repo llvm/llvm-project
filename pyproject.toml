@@ -4,3 +4,6 @@ extend-exclude = '''
   third-party/
 )
 '''
+
+[tool.pyright]
+pythonVersion = "3.8"
