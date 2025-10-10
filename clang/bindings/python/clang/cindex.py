@@ -2362,6 +2362,7 @@ class Cursor(Structure):
         """
         return conf.lib.clang_getFieldDeclBitWidth(self)  # type: ignore [no-any-return]
 
+    @cursor_null_guard
     def is_function_inlined(self) -> bool:
         """
         Check if the function is inlined
