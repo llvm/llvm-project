@@ -1169,6 +1169,11 @@ def OpP : TEST_Op<"op_p"> {
   let results = (outs I32);
 }
 
+def OpQ : TEST_Op<"op_q"> {
+  let arguments = (ins AnyType, AnyType);
+  let results = (outs AnyType);
+}
+
 // Test constant-folding a pattern that maps `(F32) -> SI32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
@@ -1206,6 +1211,14 @@ def TestNestedSameOpAndSameArgEqualityPattern :
 // Test multiple equal arguments check enforced.
 def TestMultipleEqualArgsPattern :
   Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
+
+// Test equal arguments checks are applied before user provided constraints.
+def AssertBinOpEqualArgsAndReturnTrue : Constraint<
+  CPred<"assertBinOpEqualArgsAndReturnTrue($0)">>;
+def TestEqualArgsCheckBeforeUserConstraintsPattern :
+  Pat<(OpQ:$op $x, $x),
+      (replaceWithValue $x),
+      [(AssertBinOpEqualArgsAndReturnTrue $op)]>;
 
 // Test for memrefs normalization of an op with normalizable memrefs.
 def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {

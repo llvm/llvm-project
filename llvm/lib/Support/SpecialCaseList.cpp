@@ -51,18 +51,16 @@ Error SpecialCaseList::RegexMatcher::insert(StringRef Pattern,
   if (!CheckRE.isValid(REError))
     return createStringError(errc::invalid_argument, REError);
 
-  auto Rg = std::make_unique<Reg>(Pattern, LineNumber, std::move(CheckRE));
-  RegExes.emplace_back(std::move(Rg));
-
+  RegExes.emplace_back(Pattern, LineNumber, std::move(CheckRE));
   return Error::success();
 }
 
 void SpecialCaseList::RegexMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
-  for (const auto &Regex : reverse(RegExes))
-    if (Regex->Rg.match(Query))
-      Cb(Regex->Name, Regex->LineNo);
+  for (const auto &R : reverse(RegExes))
+    if (R.Rg.match(Query))
+      Cb(R.Name, R.LineNo);
 }
 
 Error SpecialCaseList::GlobMatcher::insert(StringRef Pattern,
@@ -70,22 +68,19 @@ Error SpecialCaseList::GlobMatcher::insert(StringRef Pattern,
   if (Pattern.empty())
     return createStringError(errc::invalid_argument, "Supplied glob was blank");
 
-  auto G = std::make_unique<Glob>(Pattern, LineNumber);
-  // We must be sure to use the string in `Glob` rather than the provided
-  // reference which could be destroyed before match() is called
-  if (auto Err = GlobPattern::create(G->Name, /*MaxSubPatterns=*/1024)
-                     .moveInto(G->Pattern))
+  auto Res = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024);
+  if (auto Err = Res.takeError())
     return Err;
-  Globs.emplace_back(std::move(G));
+  Globs.emplace_back(Pattern, LineNumber, std::move(Res.get()));
   return Error::success();
 }
 
 void SpecialCaseList::GlobMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
-  for (const auto &Glob : reverse(Globs))
-    if (Glob->Pattern.match(Query))
-      Cb(Glob->Name, Glob->LineNo);
+  for (const auto &G : reverse(Globs))
+    if (G.Pattern.match(Query))
+      Cb(G.Name, G.LineNo);
 }
 
 SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
@@ -167,6 +162,7 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
   Sections.emplace_back(SectionStr, FileNo, UseGlobs);
   auto &Section = Sections.back();
 
+  SectionStr = SectionStr.copy(StrAlloc);
   if (auto Err = Section.SectionMatcher.insert(SectionStr, LineNo)) {
     return createStringError(errc::invalid_argument,
                              "malformed section at line " + Twine(LineNo) +
@@ -241,6 +237,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     auto [It, _] = CurrentSection->Entries[Prefix].try_emplace(
         Category, UseGlobs,
         RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
+    Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
           (Twine("malformed ") + (UseGlobs ? "glob" : "regex") + " in line " +
