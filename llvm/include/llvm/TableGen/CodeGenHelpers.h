@@ -38,28 +38,29 @@ private:
 // namespace (empty for anonymous namespace) or nested namespace.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef Name) : OS(OS) {
-    emitNamespaceStarts(Name);
+  NamespaceEmitter(raw_ostream &OS, StringRef Name)
+      : Name(trim(Name).str()), OS(OS) {
+    OS << "namespace " << this->Name << " {\n";
   }
 
   ~NamespaceEmitter() { close(); }
 
   // Explicit function to close the namespace scopes.
   void close() {
-    for (StringRef NS : llvm::reverse(Namespaces))
-      OS << "} // namespace " << NS << "\n";
-    Namespaces.clear();
+    if (!Closed)
+      OS << "} // namespace " << Name << "\n";
+    Closed = true;
   }
 
 private:
-  void emitNamespaceStarts(StringRef Name) {
-    llvm::SplitString(Name, Namespaces, "::");
-    for (StringRef NS : Namespaces)
-      OS << "namespace " << NS << " {\n";
+  // Trim "::" prefix.
+  static StringRef trim(StringRef Name) {
+    Name.consume_front("::");
+    return Name;
   }
-
-  SmallVector<StringRef, 2> Namespaces;
+  std::string Name;
   raw_ostream &OS;
+  bool Closed = false;
 };
 
 } // end namespace llvm
