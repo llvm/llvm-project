@@ -144,6 +144,7 @@ endif()
 # We want to generate an installer on Windows.
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set_final_stage_var(CPACK_GENERATOR "WIX" STRING)
+  set_final_stage_var(BUILD_LLVM_C_DYLIB "ON" STRING)
 else()
   set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 endif()
