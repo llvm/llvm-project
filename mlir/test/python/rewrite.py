@@ -31,7 +31,7 @@ def testRewritePattern():
     def constant_1_to_2(op, rewriter, pattern):
         c = op.attributes["value"].value
         if c != 1:
-            return True # failed to match
+            return True  # failed to match
         with rewriter.ip:
             new_op = arith.constant(op.result.type, 2, loc=op.location)
         rewriter.replace_op(op, [new_op])
