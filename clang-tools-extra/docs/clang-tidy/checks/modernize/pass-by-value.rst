@@ -155,12 +155,12 @@ Example:
 Options
 -------
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
 
-.. option:: ValuesOnly
+.. option:: ValuesOnly (added in 15.0.0)
 
    When `true`, the check only warns about copied parameters that are already
    passed by value. Default is `false`.

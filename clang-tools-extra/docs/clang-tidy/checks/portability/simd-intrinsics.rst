@@ -35,13 +35,13 @@ library.
 Options
 -------
 
-.. option:: Suggest
+.. option:: Suggest (added in 15.0.0)
 
    If this option is set to `true` (default is `false`), the check will suggest
    `P0214`_ alternatives, otherwise it only points out the intrinsic function is
    non-portable.
 
-.. option:: Std
+.. option:: Std (added in 15.0.0)
 
    The namespace used to suggest `P0214`_ alternatives. If not specified, `std::`
    for `-std=c++20` and `std::experimental::` for `-std=c++11`.

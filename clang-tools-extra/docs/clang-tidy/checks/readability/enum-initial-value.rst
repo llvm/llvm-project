@@ -59,7 +59,7 @@ This check corresponds to the CERT C Coding Standard recommendation `INT09-C. En
 Options
 -------
 
-.. option:: AllowExplicitZeroFirstInitialValue
+.. option:: AllowExplicitZeroFirstInitialValue (added in 19.1.0)
 
   If set to `false`, the first enumerator must not be explicitly initialized to
   a literal ``0``.
@@ -74,7 +74,7 @@ Options
     };
 
 
-.. option:: AllowExplicitSequentialInitialValues
+.. option:: AllowExplicitSequentialInitialValues (added in 19.1.0)
 
   If set to `false`, explicit initialization to sequential values are not
   allowed.

@@ -43,17 +43,17 @@ This check may warn incorrectly on cases like:
 Options
 -------
 
-.. option::  SizeThreshold
+.. option::  SizeThreshold (added in 15.0.0)
 
    An unsigned integer specifying the minimum size of a string literal to be
    considered by the check. Default is ``5U``.
 
-.. option::  RatioThreshold
+.. option::  RatioThreshold (added in 15.0.0)
 
    A string specifying the maximum threshold ratio [0, 1.0] of suspicious string
    literals to be considered. Default is ``".2"``.
 
-.. option::  MaxConcatenatedTokens
+.. option::  MaxConcatenatedTokens (added in 15.0.0)
 
    An unsigned integer specifying the maximum number of concatenated tokens.
    Default is ``5U``.

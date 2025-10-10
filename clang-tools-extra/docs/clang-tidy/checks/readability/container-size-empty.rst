@@ -28,7 +28,7 @@ The check issues warning if a container has ``empty()`` and ``size()`` or
 Options
 -------
 
-.. option:: ExcludedComparisonTypes
+.. option:: ExcludedComparisonTypes (added in 17.0.1)
 
     A semicolon-separated list of class names for which the check will ignore
     comparisons of objects with default-constructed objects of the same type.

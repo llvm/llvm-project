@@ -34,7 +34,7 @@ use of '= default'.
 Options
 -------
 
-.. option:: UseAssignment
+.. option:: UseAssignment (added in 15.0.0)
 
    If this option is set to `true` (default is `false`), the check will initialize
    members with an assignment. For example:
@@ -48,7 +48,7 @@ Options
     double j = 10.0;
   };
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If this option is set to `true` (default is `true`), the check will not warn
    about members declared inside macros.

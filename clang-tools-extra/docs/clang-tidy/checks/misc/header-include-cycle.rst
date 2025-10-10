@@ -63,7 +63,7 @@ when making adjustments.
 Options
 -------
 
-.. option:: IgnoredFilesList
+.. option:: IgnoredFilesList (added in 17.0.1)
 
     Provides a way to exclude specific files/headers from the warnings raised by
     a check. This can be achieved by specifying a semicolon-separated list of

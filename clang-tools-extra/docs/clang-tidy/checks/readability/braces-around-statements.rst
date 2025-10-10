@@ -27,7 +27,7 @@ After:
 Options
 -------
 
-.. option:: ShortStatementLines
+.. option:: ShortStatementLines (added in 15.0.0)
 
    Defines the minimal number of lines that the statement should have in order
    to trigger this check.

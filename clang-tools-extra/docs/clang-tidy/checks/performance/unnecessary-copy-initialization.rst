@@ -39,7 +39,7 @@ Example:
 Options
 -------
 
-.. option:: AllowedTypes
+.. option:: AllowedTypes (added in 15.0.0)
 
    A semicolon-separated list of names of types allowed to be initialized by
    copying. Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$`` matches
@@ -48,7 +48,7 @@ Options
    is matched against the qualified type name (i.e. ``namespace::Type``),
    otherwise it is matched against only the type name (i.e. ``Type``).
 
-.. option:: ExcludedContainerTypes
+.. option:: ExcludedContainerTypes (added in 15.0.0)
 
    A semicolon-separated list of names of types whose methods are allowed to
    return the const reference the variable is copied from. When an expensive to

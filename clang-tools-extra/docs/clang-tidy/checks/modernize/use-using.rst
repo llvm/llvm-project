@@ -41,12 +41,12 @@ This check requires using C++11 or higher to run.
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.
 
-.. option:: IgnoreExternC
+.. option:: IgnoreExternC (added in 18.1.0)
 
    If set to `true`, the check will not give warning inside `extern "C"`scope.
    Default is `false`

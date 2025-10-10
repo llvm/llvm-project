@@ -19,6 +19,6 @@ and depending on used options it can be superfluous to enable both checks.
 Options
 -------
 
-.. option:: AllowCastToVoid
+.. option:: AllowCastToVoid (added in 18.1.0)
 
    Controls whether casting return values to ``void`` is permitted. Default: `true`.

@@ -20,7 +20,7 @@ as not supporting subclassing.
 Options
 -------
 
-.. option:: ForbiddenSuperClassNames
+.. option:: ForbiddenSuperClassNames (added in 15.0.0)
 
    Semicolon-separated list of names of Objective-C classes which
    do not support subclassing.

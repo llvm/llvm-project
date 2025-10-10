@@ -29,7 +29,7 @@ any changes of behavior.
 Options
 -------
 
-.. option:: CheckFirstDeclaration
+.. option:: CheckFirstDeclaration (added in 15.0.0)
 
    If set to `true`, the check will also diagnose if the first access
    specifier declaration is redundant (e.g. ``private`` inside ``class``,

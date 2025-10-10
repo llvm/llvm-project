@@ -40,15 +40,15 @@ a wrong context.
 Options
 -------
 
-.. option:: WarnOnImplicitComparison
+.. option:: WarnOnImplicitComparison (added in 15.0.0)
 
    When `true`, the check will warn on implicit comparison. `true` by default.
 
-.. option:: WarnOnLogicalNotComparison
+.. option:: WarnOnLogicalNotComparison (added in 15.0.0)
 
    When `true`, the check will warn on logical not comparison. `false` by default.
 
-.. option:: StringCompareLikeFunctions
+.. option:: StringCompareLikeFunctions (added in 15.0.0)
 
    A string specifying the comma-separated names of the extra string comparison
    functions. Default is an empty string.

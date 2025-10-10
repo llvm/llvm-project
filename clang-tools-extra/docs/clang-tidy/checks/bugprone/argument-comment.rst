@@ -22,17 +22,17 @@ The check tries to detect typos and suggest automated fixes for them.
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 15.0.0)
 
    When `false`, the check will ignore leading and trailing
    underscores and case when comparing names -- otherwise they are taken into
    account. Default is `false`.
 
-.. option:: IgnoreSingleArgument
+.. option:: IgnoreSingleArgument (added in 15.0.0)
 
    When `true`, the check will ignore the single argument. Default is `false`.
 
-.. option:: CommentBoolLiterals
+.. option:: CommentBoolLiterals (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the boolean literal argument.
@@ -54,7 +54,7 @@ After:
 
   foo(/*TurnKey=*/true, /*PressButton=*/false);
 
-.. option:: CommentIntegerLiterals
+.. option:: CommentIntegerLiterals (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the integer literal argument.
@@ -76,7 +76,7 @@ After:
 
   foo(/*MeaningOfLife=*/42);
 
-.. option:: CommentFloatLiterals
+.. option:: CommentFloatLiterals (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the float/double literal argument.
@@ -98,7 +98,7 @@ After:
 
   foo(/*Pi=*/3.14159);
 
-.. option:: CommentStringLiterals
+.. option:: CommentStringLiterals (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the string literal argument.
@@ -124,7 +124,7 @@ After:
   foo(/*String=*/"Hello World");
   foo(/*WideString=*/L"Hello World");
 
-.. option:: CommentCharacterLiterals
+.. option:: CommentCharacterLiterals (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the character literal argument.
@@ -146,7 +146,7 @@ After:
 
   foo(/*Character=*/'A');
 
-.. option:: CommentUserDefinedLiterals
+.. option:: CommentUserDefinedLiterals (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the user defined literal argument.
@@ -172,7 +172,7 @@ After:
 
   foo(/*Distance=*/402.0_km);
 
-.. option:: CommentNullPtrs
+.. option:: CommentNullPtrs (added in 15.0.0)
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the nullptr literal argument.

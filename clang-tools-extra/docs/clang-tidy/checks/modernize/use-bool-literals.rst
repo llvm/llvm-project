@@ -22,7 +22,7 @@ Finds integer literals which are cast to ``bool``.
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.

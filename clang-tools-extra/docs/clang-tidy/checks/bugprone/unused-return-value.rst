@@ -10,7 +10,7 @@ Operator overloading with assignment semantics are ignored.
 Options
 -------
 
-.. option:: CheckedFunctions
+.. option:: CheckedFunctions (added in 15.0.0)
 
    Semicolon-separated list of functions to check.
    This parameter supports regexp. The function is checked if the name
@@ -53,14 +53,14 @@ Options
      return value often indicates that the programmer confused the function with
      ``clear()``.
 
-.. option:: CheckedReturnTypes
+.. option:: CheckedReturnTypes (added in 17.0.1)
 
    Semicolon-separated list of function return types to check.
    By default the following function return types are checked:
    `^::std::error_code$`, `^::std::error_condition$`, `^::std::errc$`,
    `^::std::expected$`, `^::boost::system::error_code$`
 
-.. option:: AllowCastToVoid
+.. option:: AllowCastToVoid (added in 18.1.0)
 
    Controls whether casting return values to ``void`` is permitted. Default: `false`.
 

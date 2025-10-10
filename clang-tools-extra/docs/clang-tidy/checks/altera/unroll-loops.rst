@@ -96,7 +96,7 @@ Based on the `Altera SDK for OpenCL: Best Practices Guide
 Options
 -------
 
-.. option:: MaxLoopIterations
+.. option:: MaxLoopIterations (added in 15.0.0)
 
    Defines the maximum number of loop iterations that a fully unrolled loop
    can have. By default, it is set to `100`.

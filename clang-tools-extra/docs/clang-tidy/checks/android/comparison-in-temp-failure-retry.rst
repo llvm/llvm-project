@@ -38,7 +38,7 @@ If you encounter this, the fix is simple: lift the comparison out of the
 Options
 -------
 
-.. option:: RetryMacros
+.. option:: RetryMacros (added in 15.0.0)
 
    A comma-separated list of the names of retry macros to be checked.
    Default is `TEMP_FAILURE_RETRY`.

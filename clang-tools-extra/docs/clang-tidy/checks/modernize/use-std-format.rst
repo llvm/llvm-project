@@ -29,7 +29,7 @@ documentation for that check.
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 19.1.0)
 
    When `true`, the check will add casts when converting from variadic
    functions and printing signed or unsigned integer types (including
@@ -60,7 +60,7 @@ Options
   `StrFormatLikeFunctions` since ``absl::StrFormat`` takes a function
   parameter pack and is not a variadic function.
 
-.. option:: StrFormatLikeFunctions
+.. option:: StrFormatLikeFunctions (added in 19.1.0)
 
    A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter contains the
@@ -69,7 +69,7 @@ Options
    but the replacement function name must be unqualified. The default value
    for this option is `absl::StrFormat`.
 
-.. option:: ReplacementFormatFunction
+.. option:: ReplacementFormatFunction (added in 19.1.0)
 
    The function that will be used to replace the function set by the
    `StrFormatLikeFunctions` option rather than the default
@@ -77,7 +77,7 @@ Options
    that is compatible with ``std::format``. A suitable candidate would be
    `fmt::format`.
 
-.. option:: FormatHeader
+.. option:: FormatHeader (added in 19.1.0)
 
    The header that must be included for the declaration of
    `ReplacementFormatFunction` so that a ``#include`` directive can be added if

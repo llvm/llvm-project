@@ -38,7 +38,7 @@ Examples:
 Options
 -------
 
-.. option:: HandleClasses
+.. option:: HandleClasses (added in 15.0.0)
 
    A semicolon-separated list of class names that should be treated as handles.
    By default only ``std::basic_string_view``,

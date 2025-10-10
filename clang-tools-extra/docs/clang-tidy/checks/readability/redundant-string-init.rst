@@ -31,7 +31,7 @@ Examples
 Options
 -------
 
-.. option:: StringNames
+.. option:: StringNames (added in 15.0.0)
 
     Default is `::std::basic_string;::std::basic_string_view`.
 

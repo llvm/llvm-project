@@ -46,12 +46,12 @@ identifier
 Options
 -------
 
-.. option:: Invert
+.. option:: Invert (added in 15.0.0)
 
    If `true`, inverts the check, i.e. flags names that are not reserved.
    Default is `false`.
 
-.. option:: AllowedIdentifiers
+.. option:: AllowedIdentifiers (added in 15.0.0)
 
    Semicolon-separated list of regular expressions that the check ignores. Default is an
    empty list.

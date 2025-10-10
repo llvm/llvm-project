@@ -12,19 +12,19 @@ version 1.2 (19 April 2017).
 Options
 -------
 
-.. option:: Threshold
+.. option:: Threshold (added in 15.0.0)
 
    Flag functions with Cognitive Complexity exceeding this number.
    The default is `25`.
 
-.. option:: DescribeBasicIncrements
+.. option:: DescribeBasicIncrements (added in 15.0.0)
 
    If set to `true`, then for each function exceeding the complexity threshold
    the check will issue additional diagnostics on every piece of code (loop,
    `if` statement, etc.) which contributes to that complexity. See also the
    examples below. Default is `true`.
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If set to `true`, the check will ignore code inside macros. Note, that also
    any macro arguments are ignored, even if they should count to the complexity.

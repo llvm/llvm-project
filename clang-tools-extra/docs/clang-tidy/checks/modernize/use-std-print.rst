@@ -93,7 +93,7 @@ If the call is deemed suitable for conversion then:
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 17.0.1)
 
    When `true`, the check will add casts when converting from variadic
    functions like ``printf`` and printing signed or unsigned integer types
@@ -120,7 +120,7 @@ Options
   `4294967254` and `-1` respectively.) When `false` (which is the default),
   these casts will not be added which may cause a change in the output.
 
-.. option:: PrintfLikeFunctions
+.. option:: PrintfLikeFunctions (added in 17.0.1)
 
    A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter contains the
@@ -131,7 +131,7 @@ Options
    this option is `printf; absl::PrintF`, otherwise it is empty.
 
 
-.. option:: FprintfLikeFunctions
+.. option:: FprintfLikeFunctions (added in 17.0.1)
 
    A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter is retained, the
@@ -142,7 +142,7 @@ Options
    are set then the default value for this option is `fprintf;
    absl::FPrintF`, otherwise it is empty.
 
-.. option:: ReplacementPrintFunction
+.. option:: ReplacementPrintFunction (added in 17.0.1)
 
    The function that will be used to replace ``printf``, ``fprintf`` etc.
    during conversion rather than the default ``std::print`` when the
@@ -150,7 +150,7 @@ Options
    function provides an interface that is compatible with ``std::print``. A
    suitable candidate would be ``fmt::print``.
 
-.. option:: ReplacementPrintlnFunction
+.. option:: ReplacementPrintlnFunction (added in 17.0.1)
 
    The function that will be used to replace ``printf``, ``fprintf`` etc.
    during conversion rather than the default ``std::println`` when the
@@ -158,7 +158,7 @@ Options
    function provides an interface that is compatible with ``std::println``.
    A suitable candidate would be ``fmt::println``.
 
-.. option:: PrintHeader
+.. option:: PrintHeader (added in 17.0.1)
 
    The header that must be included for the declaration of
    `ReplacementPrintFunction` so that a ``#include`` directive can be

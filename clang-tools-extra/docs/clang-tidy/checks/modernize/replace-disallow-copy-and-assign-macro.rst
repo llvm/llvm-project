@@ -45,7 +45,7 @@ Limitations
 Options
 -------
 
-.. option:: MacroName
+.. option:: MacroName (added in 15.0.0)
 
    A string specifying the macro name whose expansion will be replaced.
    Default is `DISALLOW_COPY_AND_ASSIGN`.

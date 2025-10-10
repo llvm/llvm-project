@@ -27,7 +27,7 @@ transforms to:
 Options
 -------
 
-.. option:: ReplacementString
+.. option:: ReplacementString (added in 15.0.0)
 
   Users can use :option:`ReplacementString` to specify a macro to use
   instead of ``noexcept``. This is useful when maintaining source code
@@ -52,7 +52,7 @@ transforms to:
 
 if the :option:`ReplacementString` option is set to `NOEXCEPT`.
 
-.. option:: UseNoexceptFalse
+.. option:: UseNoexceptFalse (added in 15.0.0)
 
 Enabled by default, disabling will generate fix-it hints that remove
 throwing dynamic exception specs, e.g., ``throw(<something>)``,

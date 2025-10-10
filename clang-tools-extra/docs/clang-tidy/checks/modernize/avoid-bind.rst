@@ -44,7 +44,7 @@ lambdas.
 Options
 -------
 
-.. option:: PermissiveParameterList
+.. option:: PermissiveParameterList (added in 15.0.0)
 
   If the option is set to `true`, the check will append ``auto&&...`` to the end
   of every placeholder parameter list. Without this, it is possible for a fix-it
