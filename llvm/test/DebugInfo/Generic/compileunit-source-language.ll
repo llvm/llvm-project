@@ -2,9 +2,6 @@
 
 ; CHECK: DW_AT_language (DW_LANG_C)
 
-source_filename = "cu.cpp"
-target triple = "arm64-apple-macosx"
-
 @x = global i32 0, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!2}
