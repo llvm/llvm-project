@@ -424,6 +424,9 @@ HANDLE_DW_AT(0x89, export_symbols, 5, DWARF)
 HANDLE_DW_AT(0x8a, deleted, 5, DWARF)
 HANDLE_DW_AT(0x8b, defaulted, 5, DWARF)
 HANDLE_DW_AT(0x8c, loclists_base, 5, DWARF)
+// New in Dwarf v6:
+HANDLE_DW_AT(0x90, language_name, 6, DWARF)
+HANDLE_DW_AT(0x91, language_version, 6, DWARF)
 
 // Vendor extensions:
 HANDLE_DW_AT(0x806, GHS_namespace_alias, 0, GHS)

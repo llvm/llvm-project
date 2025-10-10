@@ -11041,17 +11041,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
     }
-
-    // Variadic functions, other than a *declaration* of printf, are not allowed
-    // in device-side CUDA code, unless someone passed
-    // -fcuda-allow-variadic-functions.
-    if (!getLangOpts().CUDAAllowVariadicFunctions && NewFD->isVariadic() &&
-        (NewFD->hasAttr<CUDADeviceAttr>() ||
-         NewFD->hasAttr<CUDAGlobalAttr>()) &&
-        !(II && II->isStr("printf") && NewFD->isExternC() &&
-          !D.isFunctionDefinition())) {
-      Diag(NewFD->getLocation(), diag::err_variadic_device_fn);
-    }
   }
 
   MarkUnusedFileScopedDecl(NewFD);
@@ -14648,7 +14637,7 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 
   Declarator D(DS, ParsedAttributesView::none(), DeclaratorContext::ForInit);
   D.SetIdentifier(Ident, IdentLoc);
-  D.takeAttributes(Attrs);
+  D.takeAttributesAppending(Attrs);
 
   D.AddTypeInfo(DeclaratorChunk::getReference(0, IdentLoc, /*lvalue*/ false),
                 IdentLoc);
@@ -18909,8 +18898,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 

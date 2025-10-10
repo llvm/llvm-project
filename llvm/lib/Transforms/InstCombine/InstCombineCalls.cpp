@@ -64,6 +64,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -317,18 +318,18 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
 // * Single constant active lane -> store
 // * Narrow width by halfs excluding zero/undef lanes
 Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
+  Value *StorePtr = II.getArgOperand(1);
+  Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
   auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
   if (!ConstMask)
     return nullptr;
 
   // If the mask is all zeros, this instruction does nothing.
-  if (ConstMask->isNullValue())
+  if (maskIsAllZeroOrUndef(ConstMask))
     return eraseInstFromFunction(II);
 
   // If the mask is all ones, this is a plain vector store of the 1st argument.
-  if (ConstMask->isAllOnesValue()) {
-    Value *StorePtr = II.getArgOperand(1);
-    Align Alignment = cast<ConstantInt>(II.getArgOperand(2))->getAlignValue();
+  if (maskIsAllOneOrUndef(ConstMask)) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
     S->copyMetadata(II);
@@ -388,7 +389,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
     return nullptr;
 
   // If the mask is all zeros, a scatter does nothing.
-  if (ConstMask->isNullValue())
+  if (maskIsAllZeroOrUndef(ConstMask))
     return eraseInstFromFunction(II);
 
   // Vector splat address -> scalar store
@@ -3780,6 +3781,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               Res = Builder.CreateNeg(Res);
             return replaceInstUsesWith(CI, Res);
           }
+      }
+
+      // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
+      if (Value *Splat = getSplatValue(Arg)) {
+        ElementCount VecToReduceCount =
+            cast<VectorType>(Arg->getType())->getElementCount();
+        if (VecToReduceCount.isFixed()) {
+          unsigned VectorSize = VecToReduceCount.getFixedValue();
+          return BinaryOperator::CreateMul(
+              Splat, ConstantInt::get(Splat->getType(), VectorSize));
+        }
       }
     }
     [[fallthrough]];

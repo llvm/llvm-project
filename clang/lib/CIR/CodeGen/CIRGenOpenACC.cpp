@@ -62,7 +62,7 @@ mlir::Value CIRGenFunction::createOpenACCConstantInt(mlir::Location loc,
   auto constOp = builder.create<mlir::arith::ConstantOp>(
       loc, builder.getIntegerAttr(ty, value));
 
-  return constOp.getResult();
+  return constOp;
 }
 
 CIRGenFunction::OpenACCDataOperandInfo
@@ -87,7 +87,10 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
     if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr)) {
       QualType baseTy = ArraySectionExpr::getBaseOriginalType(
           section->getBase()->IgnoreParenImpCasts());
-      boundTypes.push_back(QualType(baseTy->getPointeeOrArrayElementType(), 0));
+      if (auto *at = getContext().getAsArrayType(baseTy))
+        boundTypes.push_back(at->getElementType());
+      else
+        boundTypes.push_back(baseTy->getPointeeType());
     } else {
       boundTypes.push_back(curVarExpr->getType());
     }
