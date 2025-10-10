@@ -46,7 +46,8 @@ public:
   /// object having no checks and we expect the user to add them.
   LoopVersioning(const LoopAccessInfo &LAI,
                  ArrayRef<RuntimePointerCheck> Checks, Loop *L, LoopInfo *LI,
-                 DominatorTree *DT, ScalarEvolution *SE);
+                 DominatorTree *DT, ScalarEvolution *SE,
+                 bool HoistRuntimeChecks = false);
 
   /// Performs the CFG manipulation part of versioning the loop including
   /// the DominatorTree and LoopInfo updates.
@@ -147,6 +148,7 @@ private:
   LoopInfo *LI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+  bool HoistRuntimeChecks;
 };
 
 /// Expose LoopVersioning as a pass.  Currently this is only used for

@@ -42,9 +42,10 @@ static cl::opt<bool>
 LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
                                ArrayRef<RuntimePointerCheck> Checks, Loop *L,
                                LoopInfo *LI, DominatorTree *DT,
-                               ScalarEvolution *SE)
+                               ScalarEvolution *SE, bool HoistRuntimeChecks)
     : VersionedLoop(L), AliasChecks(Checks), Preds(LAI.getPSE().getPredicate()),
-      LAI(LAI), LI(LI), DT(DT), SE(SE) {}
+      LAI(LAI), LI(LI), DT(DT), SE(SE), HoistRuntimeChecks(HoistRuntimeChecks) {
+}
 
 void LoopVersioning::versionLoop(
     const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
@@ -63,8 +64,9 @@ void LoopVersioning::versionLoop(
   SCEVExpander Exp2(*RtPtrChecking.getSE(),
                     VersionedLoop->getHeader()->getDataLayout(),
                     "induction");
-  MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
-                                     VersionedLoop, AliasChecks, Exp2);
+  MemRuntimeCheck =
+      addRuntimeChecks(RuntimeCheckBB->getTerminator(), VersionedLoop,
+                       AliasChecks, Exp2, HoistRuntimeChecks);
 
   SCEVExpander Exp(*SE, RuntimeCheckBB->getDataLayout(),
                    "scev.check");

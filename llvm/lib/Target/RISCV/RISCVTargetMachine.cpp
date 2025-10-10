@@ -38,7 +38,9 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
+#include "llvm/Transforms/Vectorize/StridedLoopUnroll.h"
 #include <optional>
 using namespace llvm;
 
@@ -630,6 +632,17 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                                  OptimizationLevel Level) {
     if (Level != OptimizationLevel::O0)
       LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
+  });
+
+  PB.registerScalarOptimizerLateEPCallback(
+      [=](FunctionPassManager &LPM, OptimizationLevel) {
+        LPM.addPass(StridedLoopUnrollVersioningPass());
+      });
+  PB.registerOptimizerLastEPCallback([=](ModulePassManager &MPM,
+                                         OptimizationLevel Level,
+                                         llvm::ThinOrFullLTOPhase) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        createFunctionToLoopPassAdaptor(StridedLoopUnrollPass())));
   });
 }
 
