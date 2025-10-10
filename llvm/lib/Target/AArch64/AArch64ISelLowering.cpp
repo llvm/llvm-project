@@ -19579,6 +19579,47 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
        if (ConstValue.sge(1) && ConstValue.sle(16))
          return SDValue();
 
+  // Multiplying an RDSVL value by a constant can sometimes be done cheaper by
+  // folding a power-of-two factor of the constant into the RDSVL immediate and
+  // compensating with an extra shift.
+  //
+  // We rewrite:
+  //   (mul (srl (rdsvl 1), 3), x)
+  // to one of:
+  //   (shl (rdsvl y),  z)   if z > 0
+  //   (srl (rdsvl y), abs(z))   if z < 0
+  // where integers y, z satisfy   x = y * 2^(3 + z)   and   y ∈ [-32, 31].
+  if ((N0->getOpcode() == ISD::SRL) &&
+      (N0->getOperand(0).getOpcode() == AArch64ISD::RDSVL)) {
+    unsigned AbsConstValue = ConstValue.abs().getZExtValue();
+
+    // z ≤ ctz(|x|) - 3  (largest extra shift we can take while keeping y
+    // integral)
+    int UpperBound = llvm::countr_zero(AbsConstValue) - 3;
+
+    // To keep y in range, with B = 31 for x > 0 and B = 32 for x < 0, we need:
+    // 2^(3 + z) ≥ ceil(x / B)  ⇒  z ≥ ceil_log2(ceil(x / B)) - 3  (LowerBound).
+    unsigned B = ConstValue.isNegative() ? 32 : 31;
+    unsigned CeilAxOverB = (AbsConstValue + (B - 1)) / B; // ceil(|x|/B)
+    int LowerBound = llvm::Log2_32_Ceil(CeilAxOverB) - 3;
+
+    // If solution exists, apply optimization.
+    if (LowerBound <= UpperBound) {
+
+      int Shift = std::min(std::max(/*prefer*/ 0, LowerBound), UpperBound);
+      int32_t RdsvlMul =
+          (AbsConstValue >> (3 + Shift)) * (ConstValue.isNegative() ? -1 : 1);
+      auto Rdsvl = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                               DAG.getSignedConstant(RdsvlMul, DL, MVT::i32));
+
+      if (Shift == 0)
+        return Rdsvl;
+      return DAG.getNode(Shift < 0 ? ISD::SRL : ISD::SHL, DL, VT, Rdsvl,
+                         DAG.getConstant(abs(Shift), DL, MVT::i32),
+                         SDNodeFlags::Exact);
+    }
+  }
+
   // Multiplication of a power of two plus/minus one can be done more
   // cheaply as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
