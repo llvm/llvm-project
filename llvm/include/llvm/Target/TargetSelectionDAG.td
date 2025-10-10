@@ -119,11 +119,12 @@ def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTIntShiftPairOp : SDTypeProfile<2, 3, [ // shl_parts, sra_parts, srl_parts
-  SDTCisInt<0>, SDTCisSameAs<1, 0>,
-  SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>, SDTCisInt<4>
+  SDTCisInt<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>,
+  SDTCisInt<4>, SDTCisSameNumEltsAs<0, 4>
 ]>;
 def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>,
+  SDTCisSameNumEltsAs<0, 3>
 ]>;
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
@@ -139,7 +140,7 @@ def SDTFPBinOp : SDTypeProfile<1, 2, [      // fadd, fmul, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
 ]>;
 def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
-  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisFP<2>
+  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisFP<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTFPTernaryOp : SDTypeProfile<1, 3, [  // fmadd, fnmsub, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>
@@ -148,7 +149,7 @@ def SDTIntUnaryOp : SDTypeProfile<1, 1, [ // bitreverse
   SDTCisSameAs<0, 1>, SDTCisInt<0>
 ]>;
 def SDTIntBitCountUnaryOp : SDTypeProfile<1, 1, [   // ctlz, cttz
-  SDTCisInt<0>, SDTCisInt<1>
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntExtendOp : SDTypeProfile<1, 1, [  // sext, zext, anyext
   SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
