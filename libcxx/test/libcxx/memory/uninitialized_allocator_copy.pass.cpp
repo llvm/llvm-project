@@ -11,6 +11,7 @@
 // ensure that __uninitialized_allocator_copy calls the proper construct and destruct functions
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <memory>
 
