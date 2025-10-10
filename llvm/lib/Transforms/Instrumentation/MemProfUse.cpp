@@ -826,10 +826,7 @@ bool MemProfUsePass::annotateGlobalVariables(
     assert(!GVar.getSectionPrefix().has_value() &&
            "GVar shouldn't have section prefix yet");
     auto Kind = llvm::memprof::getAnnotationKind(GVar);
-    switch (Kind) {
-    case llvm::memprof::AnnotationKind::AnnotationOK:
-      break;
-    default:
+    if (Kind != llvm::memprof::AnnotationKind::AnnotationOK) {
       HandleUnsupportedAnnotationKinds(GVar, Kind);
       continue;
     }
