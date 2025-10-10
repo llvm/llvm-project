@@ -146,6 +146,8 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -160,6 +162,7 @@ Changes to the LLVM tools
 
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
+* Support for `%T` in lit has been removed.
 
 Changes to LLDB
 ---------------------------------
@@ -175,6 +178,10 @@ Changes to Sanitizers
 
 Other Changes
 -------------
+
+* Introduces the `AllocToken` pass, an instrumentation pass providing tokens to
+  memory allocators enabling various heap organization strategies, such as heap
+  partitioning.
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================

@@ -70,6 +70,17 @@ MlirBlock mlirRewriterBaseGetBlock(MlirRewriterBase rewriter) {
   return wrap(unwrap(rewriter)->getBlock());
 }
 
+MlirOperation
+mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter) {
+  mlir::RewriterBase *base = unwrap(rewriter);
+  mlir::Block *block = base->getInsertionBlock();
+  mlir::Block::iterator it = base->getInsertionPoint();
+  if (it == block->end())
+    return {nullptr};
+
+  return wrap(std::addressof(*it));
+}
+
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 //===----------------------------------------------------------------------===//
@@ -259,22 +270,23 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
-inline mlir::RewritePatternSet &unwrap(MlirRewritePatternSet module) {
+static inline mlir::RewritePatternSet &unwrap(MlirRewritePatternSet module) {
   assert(module.ptr && "unexpected null module");
   return *(static_cast<mlir::RewritePatternSet *>(module.ptr));
 }
 
-inline MlirRewritePatternSet wrap(mlir::RewritePatternSet *module) {
+static inline MlirRewritePatternSet wrap(mlir::RewritePatternSet *module) {
   return {module};
 }
 
-inline mlir::FrozenRewritePatternSet *
+static inline mlir::FrozenRewritePatternSet *
 unwrap(MlirFrozenRewritePatternSet module) {
   assert(module.ptr && "unexpected null module");
   return static_cast<mlir::FrozenRewritePatternSet *>(module.ptr);
 }
 
-inline MlirFrozenRewritePatternSet wrap(mlir::FrozenRewritePatternSet *module) {
+static inline MlirFrozenRewritePatternSet
+wrap(mlir::FrozenRewritePatternSet *module) {
   return {module};
 }
 
@@ -316,17 +328,21 @@ inline MlirPatternRewriter wrap(mlir::PatternRewriter *rewriter) {
   return {rewriter};
 }
 
+MlirRewriterBase mlirPatternRewriterAsBase(MlirPatternRewriter rewriter) {
+  return wrap(static_cast<mlir::RewriterBase *>(unwrap(rewriter)));
+}
+
 //===----------------------------------------------------------------------===//
 /// PDLPatternModule API
 //===----------------------------------------------------------------------===//
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-inline mlir::PDLPatternModule *unwrap(MlirPDLPatternModule module) {
+static inline mlir::PDLPatternModule *unwrap(MlirPDLPatternModule module) {
   assert(module.ptr && "unexpected null module");
   return static_cast<mlir::PDLPatternModule *>(module.ptr);
 }
 
-inline MlirPDLPatternModule wrap(mlir::PDLPatternModule *module) {
+static inline MlirPDLPatternModule wrap(mlir::PDLPatternModule *module) {
   return {module};
 }
 
@@ -398,6 +414,15 @@ void mlirPDLResultListPushBackAttribute(MlirPDLResultList results,
   unwrap(results)->push_back(unwrap(value));
 }
 
+inline std::vector<MlirPDLValue> wrap(ArrayRef<PDLValue> values) {
+  std::vector<MlirPDLValue> mlirValues;
+  mlirValues.reserve(values.size());
+  for (auto &value : values) {
+    mlirValues.push_back(wrap(&value));
+  }
+  return mlirValues;
+}
+
 void mlirPDLPatternModuleRegisterRewriteFunction(
     MlirPDLPatternModule pdlModule, MlirStringRef name,
     MlirPDLRewriteFunction rewriteFn, void *userData) {
@@ -405,14 +430,25 @@ void mlirPDLPatternModuleRegisterRewriteFunction(
       unwrap(name),
       [userData, rewriteFn](PatternRewriter &rewriter, PDLResultList &results,
                             ArrayRef<PDLValue> values) -> LogicalResult {
-        std::vector<MlirPDLValue> mlirValues;
-        mlirValues.reserve(values.size());
-        for (auto &value : values) {
-          mlirValues.push_back(wrap(&value));
-        }
+        std::vector<MlirPDLValue> mlirValues = wrap(values);
         return unwrap(rewriteFn(wrap(&rewriter), wrap(&results),
                                 mlirValues.size(), mlirValues.data(),
                                 userData));
+      });
+}
+
+void mlirPDLPatternModuleRegisterConstraintFunction(
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
+    MlirPDLConstraintFunction constraintFn, void *userData) {
+  unwrap(pdlModule)->registerConstraintFunction(
+      unwrap(name),
+      [userData, constraintFn](PatternRewriter &rewriter,
+                               PDLResultList &results,
+                               ArrayRef<PDLValue> values) -> LogicalResult {
+        std::vector<MlirPDLValue> mlirValues = wrap(values);
+        return unwrap(constraintFn(wrap(&rewriter), wrap(&results),
+                                   mlirValues.size(), mlirValues.data(),
+                                   userData));
       });
 }
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH

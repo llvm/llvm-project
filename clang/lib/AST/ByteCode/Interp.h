@@ -1730,9 +1730,8 @@ inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression()) {
+  if (S.Current->isBottomFrame())
     return false;
-  }
   S.Stk.push<Pointer>(S.Current->getParamPointer(I));
   return true;
 }
@@ -2126,10 +2125,10 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Ptr.isUnknownSizeArray())
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  if (Desc->isUnknownSizeArray())
     return false;
 
-  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
   if (Idx == 0 && !Desc->isArray()) {
@@ -2160,10 +2159,10 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isUnknownSizeArray())
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  if (Desc->isUnknownSizeArray())
     return false;
 
-  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
   if (Idx == 0 && !Desc->isArray()) {
@@ -3341,6 +3340,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     return true;
   }
 
+  return false;
+}
+
+inline bool InvalidStore(InterpState &S, CodePtr OpPC, const Type *T) {
+  if (S.getLangOpts().CPlusPlus) {
+    QualType VolatileType = QualType(T, 0).withVolatile();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_volatile_type)
+        << AK_Assign << VolatileType;
+  } else {
+    S.FFDiag(S.Current->getSource(OpPC));
+  }
   return false;
 }
 

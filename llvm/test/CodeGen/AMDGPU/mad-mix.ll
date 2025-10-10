@@ -2253,9 +2253,10 @@ define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.h
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_xor_b16 v2.l, 0x8000, v0.h
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, |v2|, v1, v0 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX1100-FAKE16-LABEL: v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo:

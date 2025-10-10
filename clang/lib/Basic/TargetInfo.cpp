@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
@@ -1041,4 +1042,52 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   auto *Target = static_cast<TransferrableTargetInfo*>(this);
   auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
   *Target = *Src;
+}
+
+std::string
+TargetInfo::simplifyConstraint(StringRef Constraint,
+                               SmallVectorImpl<ConstraintInfo> *OutCons) const {
+  std::string Result;
+
+  for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
+    switch (*I) {
+    default:
+      Result += convertConstraint(I);
+      break;
+    // Ignore these
+    case '*':
+    case '?':
+    case '!':
+    case '=': // Will see this and the following in mult-alt constraints.
+    case '+':
+      break;
+    case '#': // Ignore the rest of the constraint alternative.
+      while (I + 1 != E && I[1] != ',')
+        I++;
+      break;
+    case '&':
+    case '%':
+      Result += *I;
+      while (I + 1 != E && I[1] == *I)
+        I++;
+      break;
+    case ',':
+      Result += "|";
+      break;
+    case 'g':
+      Result += "imr";
+      break;
+    case '[': {
+      assert(OutCons &&
+             "Must pass output names to constraints with a symbolic name");
+      unsigned Index;
+      bool ResolveResult = resolveSymbolicName(I, *OutCons, Index);
+      assert(ResolveResult && "Could not resolve symbolic name");
+      (void)ResolveResult;
+      Result += llvm::utostr(Index);
+      break;
+    }
+    }
+  }
+  return Result;
 }
