@@ -197,7 +197,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
         [&](DeclSpec::TQ TypeQual, StringRef PrintName, SourceLocation SL) {
           I.Fun.MethodQualifiers->SetTypeQual(TypeQual, SL);
         });
-    I.Fun.MethodQualifiers->getAttributes().takeAllFrom(attrs);
+    I.Fun.MethodQualifiers->getAttributes().takeAllPrependingFrom(attrs);
     I.Fun.MethodQualifiers->getAttributePool().takeAllFrom(attrs.getPool());
   }
 

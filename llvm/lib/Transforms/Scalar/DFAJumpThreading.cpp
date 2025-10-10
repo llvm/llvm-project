@@ -389,6 +389,22 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
   return OS;
 }
 
+/// Helper to get the successor corresponding to a particular case value for
+/// a switch statement.
+static BasicBlock *getNextCaseSuccessor(SwitchInst *Switch,
+                                        const APInt &NextState) {
+  BasicBlock *NextCase = nullptr;
+  for (auto Case : Switch->cases()) {
+    if (Case.getCaseValue()->getValue() == NextState) {
+      NextCase = Case.getCaseSuccessor();
+      break;
+    }
+  }
+  if (!NextCase)
+    NextCase = Switch->getDefaultDest();
+  return NextCase;
+}
+
 namespace {
 /// ThreadingPath is a path in the control flow of a loop that can be threaded
 /// by cloning necessary basic blocks and replacing conditional branches with
@@ -399,6 +415,10 @@ struct ThreadingPath {
   APInt getExitValue() const { return ExitVal; }
   void setExitValue(const ConstantInt *V) {
     ExitVal = V->getValue();
+    IsExitValSet = true;
+  }
+  void setExitValue(const APInt &V) {
+    ExitVal = V;
     IsExitValSet = true;
   }
   bool isExitValueSet() const { return IsExitValSet; }
@@ -583,44 +603,8 @@ struct AllSwitchPaths {
   BasicBlock *getSwitchBlock() { return SwitchBlock; }
 
   void run() {
-    StateDefMap StateDef = getStateDefMap();
-    if (StateDef.empty()) {
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "SwitchNotPredictable",
-                                        Switch)
-               << "Switch instruction is not predictable.";
-      });
-      return;
-    }
-
-    auto *SwitchPhi = cast<PHINode>(Switch->getOperand(0));
-    auto *SwitchPhiDefBB = SwitchPhi->getParent();
-    VisitedBlocks VB;
-    // Get paths from the determinator BBs to SwitchPhiDefBB
-    std::vector<ThreadingPath> PathsToPhiDef =
-        getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
-    if (SwitchPhiDefBB == SwitchBlock || PathsToPhiDef.empty()) {
-      TPaths = std::move(PathsToPhiDef);
-      return;
-    }
-
-    assert(MaxNumPaths >= PathsToPhiDef.size() && !PathsToPhiDef.empty());
-    auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
-    // Find and append paths from SwitchPhiDefBB to SwitchBlock.
-    PathsType PathsToSwitchBB =
-        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1, PathsLimit);
-    if (PathsToSwitchBB.empty())
-      return;
-
-    std::vector<ThreadingPath> TempList;
-    for (const ThreadingPath &Path : PathsToPhiDef) {
-      for (const PathType &PathToSw : PathsToSwitchBB) {
-        ThreadingPath PathCopy(Path);
-        PathCopy.appendExcludingFirst(PathToSw);
-        TempList.push_back(PathCopy);
-      }
-    }
-    TPaths = std::move(TempList);
+    findTPaths();
+    unifyTPaths();
   }
 
 private:
@@ -810,6 +794,69 @@ private:
     }
 
     return Res;
+  }
+
+  // Find all threadable paths.
+  void findTPaths() {
+    StateDefMap StateDef = getStateDefMap();
+    if (StateDef.empty()) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "SwitchNotPredictable",
+                                        Switch)
+               << "Switch instruction is not predictable.";
+      });
+      return;
+    }
+
+    auto *SwitchPhi = cast<PHINode>(Switch->getOperand(0));
+    auto *SwitchPhiDefBB = SwitchPhi->getParent();
+    VisitedBlocks VB;
+    // Get paths from the determinator BBs to SwitchPhiDefBB
+    std::vector<ThreadingPath> PathsToPhiDef =
+        getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
+    if (SwitchPhiDefBB == SwitchBlock || PathsToPhiDef.empty()) {
+      TPaths = std::move(PathsToPhiDef);
+      return;
+    }
+
+    assert(MaxNumPaths >= PathsToPhiDef.size() && !PathsToPhiDef.empty());
+    auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
+    // Find and append paths from SwitchPhiDefBB to SwitchBlock.
+    PathsType PathsToSwitchBB =
+        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1, PathsLimit);
+    if (PathsToSwitchBB.empty())
+      return;
+
+    std::vector<ThreadingPath> TempList;
+    for (const ThreadingPath &Path : PathsToPhiDef) {
+      for (const PathType &PathToSw : PathsToSwitchBB) {
+        ThreadingPath PathCopy(Path);
+        PathCopy.appendExcludingFirst(PathToSw);
+        TempList.push_back(PathCopy);
+      }
+    }
+    TPaths = std::move(TempList);
+  }
+
+  // Two states are equivalent if they have the same switch destination.
+  // Unify the states in different threading path if the states are equivalent.
+  void unifyTPaths() {
+    llvm::SmallDenseMap<BasicBlock *, APInt> DestToState;
+    for (ThreadingPath &Path : TPaths) {
+      APInt NextState = Path.getExitValue();
+      BasicBlock *Dest = getNextCaseSuccessor(Switch, NextState);
+      auto StateIt = DestToState.find(Dest);
+      if (StateIt == DestToState.end()) {
+        DestToState.insert({Dest, NextState});
+        continue;
+      }
+
+      if (NextState != StateIt->second) {
+        LLVM_DEBUG(dbgs() << "Next state in " << Path << " is equivalent to "
+                          << StateIt->second << "\n");
+        Path.setExitValue(StateIt->second);
+      }
+    }
   }
 
   unsigned NumVisited = 0;
@@ -1333,21 +1380,6 @@ private:
       return C.State == NextState;
     });
     return It != ClonedBBs.end() ? (*It).BB : nullptr;
-  }
-
-  /// Helper to get the successor corresponding to a particular case value for
-  /// a switch statement.
-  BasicBlock *getNextCaseSuccessor(SwitchInst *Switch, const APInt &NextState) {
-    BasicBlock *NextCase = nullptr;
-    for (auto Case : Switch->cases()) {
-      if (Case.getCaseValue()->getValue() == NextState) {
-        NextCase = Case.getCaseSuccessor();
-        break;
-      }
-    }
-    if (!NextCase)
-      NextCase = Switch->getDefaultDest();
-    return NextCase;
   }
 
   /// Returns true if IncomingBB is a predecessor of BB.
