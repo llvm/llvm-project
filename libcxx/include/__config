@@ -484,21 +484,8 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXCEPTIONS_SIG e
 #  endif
 
-#  if !_LIBCPP_HAS_EXCEPTIONS
-#    define _LIBCPP_EXCEPTIONS_SIG n
-#  else
-#    define _LIBCPP_EXCEPTIONS_SIG e
-#  endif
-
-#  if defined(__POINTER_FIELD_PROTECTION__)
-#    define _LIBCPP_PFP_SIG p
-#  else
-#    define _LIBCPP_PFP_SIG
-#  endif
-
 #  define _LIBCPP_ODR_SIGNATURE                                                                                        \
-    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_PFP_SIG),     \
-                   _LIBCPP_VERSION)
+    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_VERSION)
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
