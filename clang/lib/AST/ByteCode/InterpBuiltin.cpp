@@ -2549,7 +2549,7 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_pmadd(
+static bool interp__builtin_ia32_pmul(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &,
                              const APSInt &)>
@@ -2579,54 +2579,6 @@ static bool interp__builtin_ia32_pmadd(
     });
 
     INT_TYPE_SWITCH_NO_BOOL(DestElemT,
-                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
-    ++DstElem;
-  }
-
-  Dst.initializeAllElements();
-  return true;
-}
-
-static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
-                                      const CallExpr *Call,
-                                      unsigned BuiltinID) {
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
-  const Pointer &RHS = S.Stk.pop<Pointer>();
-  const Pointer &LHS = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
-  unsigned SourceLen = VT->getNumElements();
-
-  PrimType DstElemT = *S.getContext().classify(
-      Call->getType()->castAs<VectorType>()->getElementType());
-  unsigned DstElem = 0;
-  for (unsigned I = 0; I != SourceLen; I += 2) {
-    APSInt Elem1;
-    APSInt Elem2;
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = RHS.elem<T>(I).toAPSInt();
-    });
-
-    APSInt Result;
-    switch (BuiltinID) {
-    case clang::X86::BI__builtin_ia32_pmuludq128:
-    case clang::X86::BI__builtin_ia32_pmuludq256:
-    case clang::X86::BI__builtin_ia32_pmuludq512:
-      Result = APSInt(llvm::APIntOps::muluExtended(Elem1, Elem2),
-                      /*IsUnsigned=*/true);
-      break;
-    case clang::X86::BI__builtin_ia32_pmuldq128:
-    case clang::X86::BI__builtin_ia32_pmuldq256:
-    case clang::X86::BI__builtin_ia32_pmuldq512:
-      Result = APSInt(llvm::APIntOps::mulsExtended(Elem1, Elem2),
-                      /*IsUnsigned=*/false);
-      break;
-    }
-    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
                             { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
     ++DstElem;
   }
@@ -3512,7 +3464,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmaddubsw128:
   case clang::X86::BI__builtin_ia32_pmaddubsw256:
   case clang::X86::BI__builtin_ia32_pmaddubsw512:
-    return interp__builtin_ia32_pmadd(
+    return interp__builtin_ia32_pmul(
         S, OpPC, Call,
         [](const APSInt &LoLHS, const APSInt &HiLHS, const APSInt &LoRHS,
            const APSInt &HiRHS) {
@@ -3524,7 +3476,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmaddwd128:
   case clang::X86::BI__builtin_ia32_pmaddwd256:
   case clang::X86::BI__builtin_ia32_pmaddwd512:
-    return interp__builtin_ia32_pmadd(
+    return interp__builtin_ia32_pmul(
         S, OpPC, Call,
         [](const APSInt &LoLHS, const APSInt &HiLHS, const APSInt &LoRHS,
            const APSInt &HiRHS) {
@@ -3677,10 +3629,22 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
+    return interp__builtin_ia32_pmul(
+        S, OpPC, Call,
+        [](const APSInt &LoLHS, const APSInt &HiLHS, const APSInt &LoRHS,
+           const APSInt &HiRHS) {
+          return llvm::APIntOps::mulsExtended(LoLHS, LoRHS);
+        });
+
   case clang::X86::BI__builtin_ia32_pmuludq128:
   case clang::X86::BI__builtin_ia32_pmuludq256:
   case clang::X86::BI__builtin_ia32_pmuludq512:
-    return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_pmul(
+        S, OpPC, Call,
+        [](const APSInt &LoLHS, const APSInt &HiLHS, const APSInt &LoRHS,
+           const APSInt &HiRHS) {
+          return llvm::APIntOps::muluExtended(LoLHS, LoRHS);
+        });
 
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
