@@ -90,6 +90,20 @@ invocation.
 For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
 For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 
+For a standalone build, users are expected to use the LLVM runtimes directory.
+
+.. code-block:: sh
+
+  $> cd llvm-project  # The llvm-project checkout
+  $> mkdir build
+  $> cd build
+  $> cmake ../runtimes -G Ninja                                                 \
+     -DLLVM_BINARY_DIR="${PATH_TO_LLVM}"
+     -DLLVM_ENABLE_RUNTIMES="openmp;offload"
+     -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
+     -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
+  $> ninja install
+
 .. note::
   The compiler that generates the offload code should be the same (version) as
   the compiler that builds the OpenMP device runtimes. The OpenMP host runtime
