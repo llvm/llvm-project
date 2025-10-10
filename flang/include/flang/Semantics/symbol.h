@@ -30,8 +30,7 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
-struct OpenMPDeclareReductionConstruct;
-struct OmpMetadirectiveDirective;
+struct OpenMPDeclarativeConstruct;
 }
 
 namespace Fortran::semantics {
@@ -571,17 +570,21 @@ private:
 
 class CommonBlockDetails : public WithBindName {
 public:
+  explicit CommonBlockDetails(SourceName location)
+      : sourceLocation_{location} {}
+  SourceName sourceLocation() const { return sourceLocation_; }
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
   void replace_object(Symbol &object, unsigned index) {
-    CHECK(index < (unsigned)objects_.size());
+    CHECK(index < objects_.size());
     objects_[index] = object;
   }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
+  SourceName sourceLocation_;
   MutableSymbolVector objects_;
   std::size_t alignment_{0}; // required alignment in bytes
 };
@@ -736,9 +739,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 class UserReductionDetails {
 public:
   using TypeVector = std::vector<const DeclTypeSpec *>;
-  using DeclInfo = std::variant<const parser::OpenMPDeclareReductionConstruct *,
-      const parser::OmpMetadirectiveDirective *>;
-  using DeclVector = std::vector<DeclInfo>;
+  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
 
   UserReductionDetails() = default;
 
@@ -756,7 +757,9 @@ public:
     return false;
   }
 
-  void AddDecl(const DeclInfo &decl) { declList_.emplace_back(decl); }
+  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
+    declList_.emplace_back(decl);
+  }
   const DeclVector &GetDeclList() const { return declList_; }
 
 private:
@@ -802,7 +805,7 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC data-movement attribute
@@ -1122,6 +1125,9 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
           [&](const UseDetails &x) { return x.symbol().GetTypeImpl(depth); },
           [&](const HostAssocDetails &x) {
             return x.symbol().GetTypeImpl(depth);
+          },
+          [&](const GenericDetails &x) {
+            return x.specific() ? x.specific()->GetTypeImpl(depth) : nullptr;
           },
           [](const auto &) -> const DeclTypeSpec * { return nullptr; },
       },

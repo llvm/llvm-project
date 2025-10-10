@@ -26,6 +26,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -173,6 +174,26 @@ SCEVExpander::findInsertPointAfter(Instruction *I,
     ++IP;
 
   return IP;
+}
+
+void SCEVExpander::eraseDeadInstructions(Value *Root) {
+  SmallVector<Value *> WorkList;
+  SmallPtrSet<Value *, 8> DeletedValues;
+  append_range(WorkList, getAllInsertedInstructions());
+  while (!WorkList.empty()) {
+    Value *V = WorkList.pop_back_val();
+    if (DeletedValues.contains(V))
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || I == Root || !isInsertedInstruction(I) ||
+        !isInstructionTriviallyDead(I))
+      continue;
+    append_range(WorkList, I->operands());
+    InsertedValues.erase(I);
+    InsertedPostIncValues.erase(I);
+    DeletedValues.insert(I);
+    I->eraseFromParent();
+  }
 }
 
 BasicBlock::iterator
@@ -2201,20 +2222,11 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     // Get the backedge taken count and truncate or extended to the AR type.
     Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 
-    Value *MulV, *OfMul;
-    if (Step->isOne()) {
-      // Special-case Step of one. Potentially-costly `umul_with_overflow` isn't
-      // needed, there is never an overflow, so to avoid artificially inflating
-      // the cost of the check, directly emit the optimized IR.
-      MulV = TruncTripCount;
-      OfMul = ConstantInt::getFalse(MulV->getContext());
-    } else {
-      CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
-                                              {AbsStep, TruncTripCount},
-                                              /*FMFSource=*/nullptr, "mul");
-      MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
-      OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
-    }
+    CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
+                                            {AbsStep, TruncTripCount},
+                                            /*FMFSource=*/nullptr, "mul");
+    Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+    Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
 
     Value *Add = nullptr, *Sub = nullptr;
     bool NeedPosCheck = !SE.isKnownNegative(Step);

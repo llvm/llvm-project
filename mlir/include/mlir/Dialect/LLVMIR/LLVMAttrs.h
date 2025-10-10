@@ -93,6 +93,14 @@ public:
 using cconv::CConv;
 using linkage::Linkage;
 using tailcallkind::TailCallKind;
+
+namespace detail {
+/// Checks whether the given type is an LLVM type that can be loaded or stored.
+bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
+                          std::optional<int64_t> alignment,
+                          const ::mlir::DataLayout *dataLayout,
+                          function_ref<InFlightDiagnostic()> emitError);
+} // namespace detail
 } // namespace LLVM
 } // namespace mlir
 

@@ -31,6 +31,7 @@ class ModulePass;
 class Pass;
 class TargetMachine;
 class raw_ostream;
+enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
 namespace vfs {
@@ -86,6 +87,11 @@ LLVM_ABI ModulePass *createStaticDataAnnotatorPass();
 LLVM_ABI MachineFunctionPass *
 createMachineFunctionPrinterPass(raw_ostream &OS,
                                  const std::string &Banner = "");
+
+/// MIR2VecVocabPrinter pass - This pass prints out the MIR2Vec vocabulary
+/// contents to the given stream as a debugging tool.
+LLVM_ABI MachineFunctionPass *
+createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS);
 
 /// StackFramePrinter pass - This pass prints out the machine function's
 /// stack frame to the given stream as a debugging tool.
@@ -520,7 +526,7 @@ LLVM_ABI ModulePass *createGlobalMergeFuncPass();
 
 /// This pass performs outlining on machine instructions directly before
 /// printing assembly.
-LLVM_ABI ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
+LLVM_ABI ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode);
 
 /// This pass expands the reduction intrinsics into sequences of shuffles.
 LLVM_ABI FunctionPass *createExpandReductionsPass();

@@ -5,48 +5,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define i64 @cntsb() {
-; CHECK-LABEL: @cntsb(
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sme.cntsb()
-; CHECK-NEXT:    ret i64 [[OUT]]
-;
-; CHECK-STREAMING-LABEL: @cntsb(
-; CHECK-STREAMING-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-STREAMING-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 4
-; CHECK-STREAMING-NEXT:    ret i64 [[OUT]]
-;
-  %out = call i64 @llvm.aarch64.sme.cntsb()
-  ret i64 %out
-}
-
-define i64 @cntsh() {
-; CHECK-LABEL: @cntsh(
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sme.cntsh()
-; CHECK-NEXT:    ret i64 [[OUT]]
-;
-; CHECK-STREAMING-LABEL: @cntsh(
-; CHECK-STREAMING-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-STREAMING-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 3
-; CHECK-STREAMING-NEXT:    ret i64 [[OUT]]
-;
-  %out = call i64 @llvm.aarch64.sme.cntsh()
-  ret i64 %out
-}
-
-define i64 @cntsw() {
-; CHECK-LABEL: @cntsw(
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sme.cntsw()
-; CHECK-NEXT:    ret i64 [[OUT]]
-;
-; CHECK-STREAMING-LABEL: @cntsw(
-; CHECK-STREAMING-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-STREAMING-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-STREAMING-NEXT:    ret i64 [[OUT]]
-;
-  %out = call i64 @llvm.aarch64.sme.cntsw()
-  ret i64 %out
-}
-
 define i64 @cntsd() {
 ; CHECK-LABEL: @cntsd(
 ; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sme.cntsd()
@@ -61,8 +19,5 @@ define i64 @cntsd() {
   ret i64 %out
 }
 
-declare i64 @llvm.aarch64.sve.cntsb()
-declare i64 @llvm.aarch64.sve.cntsh()
-declare i64 @llvm.aarch64.sve.cntsw()
 declare i64 @llvm.aarch64.sve.cntsd()
 

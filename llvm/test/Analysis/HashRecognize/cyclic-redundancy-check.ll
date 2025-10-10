@@ -574,10 +574,10 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define i16 @not.crc.tc.limit(i16 %crc.init) {
-; CHECK-LABEL: 'not.crc.tc.limit'
+define i16 @not.crc.tc.exceeds.data.bw(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.tc.exceeds.data.bw'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find a small constant byte-multiple trip count
+; CHECK-NEXT:  Reason: Loop iterations exceed bitwidth of data
 ;
 entry:
   br label %loop
@@ -590,7 +590,7 @@ loop:                                              ; preds = %loop, %entry
   %check.sb = icmp slt i16 %crc, 0
   %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
   %iv.next = add nuw nsw i32 %iv, 1
-  %exit.cond = icmp samesign ult i32 %iv, 512
+  %exit.cond = icmp samesign ult i32 %iv, 511
   br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop

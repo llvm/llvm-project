@@ -81,12 +81,12 @@ define <4 x i32> @non_trivially_vectorizable(i32 %x, i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
 ; CHECK-NEXT:    [[Y_INSERT:%.*]] = insertelement <8 x i32> poison, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[X_INSERT]], <8 x i32> [[Y_INSERT]])
+; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[X_INSERT]], <8 x i32> [[Y_INSERT]])
 ; CHECK-NEXT:    ret <4 x i32> [[V]]
 ;
   %x.insert = insertelement <4 x i32> poison, i32 %x, i32 0
   %y.insert = insertelement <8 x i32> poison, i32 %y, i32 0
-  %v = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %x.insert, <8 x i32> %y.insert)
+  %v = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %x.insert, <8 x i32> %y.insert)
   ret <4 x i32> %v
 }
 

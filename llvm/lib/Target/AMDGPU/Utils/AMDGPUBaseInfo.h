@@ -1014,6 +1014,13 @@ bool isReadOnlySegment(const GlobalValue *GV);
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
 /// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register name. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class. Unlike
+/// parseAsmConstraintPhysReg, this does not expect the name to be wrapped in
+/// "{}".
+std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef TupleString);
+
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
 /// register constraint. Followed by the start register number, and the register
 /// width. Does not validate the number of registers exists in the class.
 std::tuple<char, unsigned, unsigned>
@@ -1568,6 +1575,11 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
+
+inline bool supportsWave32(const MCSubtargetInfo &STI) {
+  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
+}
+
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
@@ -1614,10 +1626,6 @@ unsigned getRegBitWidth(unsigned RCID);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
-
-/// Get size of register operand
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo);
 
 LLVM_READNONE
 inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
@@ -1718,6 +1726,9 @@ bool isInlinableLiteralV2F16(uint32_t Literal);
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
+LLVM_READNONE
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
@@ -1772,13 +1783,15 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+                             const MCSubtargetInfo &ST);
 
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
@@ -1812,6 +1825,50 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
 /// must be defined in terms of bytes.
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
+
+class ClusterDimsAttr {
+public:
+  enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
+
+  ClusterDimsAttr() = default;
+
+  Kind getKind() const { return AttrKind; }
+
+  bool isUnknown() const { return getKind() == Kind::Unknown; }
+
+  bool isNoCluster() const { return getKind() == Kind::NoCluster; }
+
+  bool isFixedDims() const { return getKind() == Kind::FixedDims; }
+
+  bool isVariableDims() const { return getKind() == Kind::VariableDims; }
+
+  void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
+
+  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
+
+  void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
+
+  /// \returns the dims stored. Note that this function can only be called if
+  /// the kind is \p Fixed.
+  const std::array<unsigned, 3> &getDims() const;
+
+  bool operator==(const ClusterDimsAttr &RHS) const {
+    return AttrKind == RHS.AttrKind && Dims == RHS.Dims;
+  }
+
+  std::string to_string() const;
+
+  static ClusterDimsAttr get(const Function &F);
+
+private:
+  enum Encoding { EncoNoCluster = 0, EncoVariableDims = 1024 };
+
+  ClusterDimsAttr(Kind AttrKind) : AttrKind(AttrKind) {}
+
+  std::array<unsigned, 3> Dims = {0, 0, 0};
+
+  Kind AttrKind = Kind::Unknown;
+};
 
 } // end namespace AMDGPU
 

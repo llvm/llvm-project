@@ -25,6 +25,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -58,9 +59,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-namespace llvm {
-class Argument;
-}
 
 using namespace llvm;
 
@@ -82,8 +80,6 @@ static cl::opt<bool> DisableLazyLoading(
              "loading bitcode for importing."));
 
 namespace {
-
-static int64_t unrotateSign(uint64_t U) { return (U & 1) ? ~(U >> 1) : U >> 1; }
 
 class BitcodeReaderMetadataList {
   /// Array of metadata references.
@@ -129,10 +125,7 @@ public:
   void pop_back() { MetadataPtrs.pop_back(); }
   bool empty() const { return MetadataPtrs.empty(); }
 
-  Metadata *operator[](unsigned i) const {
-    assert(i < MetadataPtrs.size());
-    return MetadataPtrs[i];
-  }
+  Metadata *operator[](unsigned i) const { return MetadataPtrs[i]; }
 
   Metadata *lookup(unsigned I) const {
     if (I < MetadataPtrs.size())
@@ -178,6 +171,9 @@ public:
 private:
   Metadata *resolveTypeRefArray(Metadata *MaybeTuple);
 };
+} // namespace
+
+static int64_t unrotateSign(uint64_t U) { return (U & 1) ? ~(U >> 1) : U >> 1; }
 
 void BitcodeReaderMetadataList::assignValue(Metadata *MD, unsigned Idx) {
   if (auto *MDN = dyn_cast<MDNode>(MD))
@@ -391,8 +387,6 @@ void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
     PHs.pop_front();
   }
 }
-
-} // anonymous namespace
 
 static Error error(const Twine &Message) {
   return make_error<StringError>(
@@ -1872,11 +1866,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // Ignore Record[0], which indicates whether this compile unit is
     // distinct.  It's always distinct.
     IsDistinct = true;
+
     auto *CU = DICompileUnit::getDistinct(
-        Context, Record[1], getMDOrNull(Record[2]), getMDString(Record[3]),
-        Record[4], getMDString(Record[5]), Record[6], getMDString(Record[7]),
-        Record[8], getMDOrNull(Record[9]), getMDOrNull(Record[10]),
-        getMDOrNull(Record[12]), getMDOrNull(Record[13]),
+        Context, DISourceLanguageName(Record[1]), getMDOrNull(Record[2]),
+        getMDString(Record[3]), Record[4], getMDString(Record[5]), Record[6],
+        getMDString(Record[7]), Record[8], getMDOrNull(Record[9]),
+        getMDOrNull(Record[10]), getMDOrNull(Record[12]),
+        getMDOrNull(Record[13]),
         Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
         Record.size() <= 14 ? 0 : Record[14],
         Record.size() <= 16 ? true : Record[16],

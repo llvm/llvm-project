@@ -123,12 +123,14 @@ __m64 test_mm_avg_pu8(__m64 a, __m64 b) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.pavg.b(
   return _mm_avg_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qu(_mm_avg_pu8((__m64)(__v8qu){0, 1, 2, 3, 18, 15, 12, 20}, (__m64)(__v8qu){0, 1, 2, 3, 16, 3, 20, 10}), 0, 1, 2, 3, 17, 9, 16, 15));
 
 __m64 test_mm_avg_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_avg_pu16
   // CHECK: call <8 x i16> @llvm.x86.sse2.pavg.w(
   return _mm_avg_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v4hu(_mm_avg_pu16((__m64)(__v4hu){18, 15, 12, 20}, (__m64)(__v4hu){16, 3, 20, 10}), 17, 9, 16, 15));
 
 __m64 test_mm_cmpeq_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpeq_pi8
@@ -290,6 +292,7 @@ int test_mm_extract_pi16(__m64 a) {
   // CHECK: extractelement <4 x i16> {{%.*}}, i64 2
   return _mm_extract_pi16(a, 2);
 }
+TEST_CONSTEXPR(_mm_extract_pi16(((__m64)(__v4hi){10, 20, 30, 40}), 7) == 40);
 
 __m64 test_m_from_int(int a) {
   // CHECK-LABEL: test_m_from_int
@@ -345,18 +348,21 @@ __m64 test_mm_insert_pi16(__m64 a, int d) {
   // CHECK: insertelement <4 x i16>
   return _mm_insert_pi16(a, d, 2);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_insert_pi16(((__m64)(__v4hi){0, 1, 2, 3}), 77, 10), 0, 1, 77, 3));
 
 __m64 test_mm_madd_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_madd_pi16
   // CHECK: call <4 x i32> @llvm.x86.sse2.pmadd.wd(
   return _mm_madd_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_madd_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-10, +8, +6, -4}), -26, 34));
 
 __m64 test_mm_maddubs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_maddubs_pi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(
   return _mm_maddubs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_maddubs_pi16((__m64)(__v8qi){16, 17, 18, 19, 20, 21, 22, 23}, (__m64)(__v8qi){1, 2, 3, 4, 5, 0, 7, 8}), 50, 130, 100, 338));
 
 void test_mm_maskmove_si64(__m64 d, __m64 n, char *p) {
   // CHECK-LABEL: test_mm_maskmove_si64
@@ -369,7 +375,6 @@ __m64 test_mm_max_pi16(__m64 a, __m64 b) {
   // CHECK: call <4 x i16> @llvm.smax.v4i16(
   return _mm_max_pi16(a, b);
 }
-
 TEST_CONSTEXPR(match_v4hi(_mm_max_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-1, 2, -3, 4}), 1, 2, 3, 4));
 
 __m64 test_mm_max_pu8(__m64 a, __m64 b) {
@@ -377,13 +382,13 @@ __m64 test_mm_max_pu8(__m64 a, __m64 b) {
   // CHECK: call <8 x i8> @llvm.umax.v8i8(
   return _mm_max_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_max_pu8((__m64)(__v8qs){ 16, 17, 18, -19, -20, 21, -22, -23}, (__m64)(__v8qs){ 1, -2, -3, 4, 5, 0, 7, -8}),  16, -2, -3, -19, -20, 21, -22, -8));
 
 __m64 test_mm_min_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_min_pi16
   // CHECK: call <4 x i16> @llvm.smin.v4i16(
   return _mm_min_pi16(a, b);
 }
-
 TEST_CONSTEXPR(match_v4hi(_mm_min_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-1, 2, -3, 4}), -1, -2, -3, -4));
 
 __m64 test_mm_min_pu8(__m64 a, __m64 b) {
@@ -391,6 +396,7 @@ __m64 test_mm_min_pu8(__m64 a, __m64 b) {
   // CHECK: call <8 x i8> @llvm.umin.v8i8(
   return _mm_min_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_min_pu8((__m64)(__v8qs){ 16, 17, 18, -19, -20, 21, -22, -23}, (__m64)(__v8qs){ 1, -2, -3, 4, 5, 0, 7, -8}),  1, 17, 18, 4, 5, 0, 7, -23));
 
 int test_mm_movemask_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_movemask_pi8
@@ -446,18 +452,21 @@ __m64 test_mm_packs_pi16(__m64 a, __m64 b) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.packsswb.128(
   return _mm_packs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_packs_pi16((__m64)(__v4hi){130, -200, 127, -128}, (__m64)(__v4hi){0, 1, -1, 255}), 127, -128, 127, -128, 0, 1, -1, 127));
 
 __m64 test_mm_packs_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_packs_pi32
   // CHECK: call <8 x i16> @llvm.x86.sse2.packssdw.128(
   return _mm_packs_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_packs_pi32((__m64)(__v2si){40000, -50000}, (__m64)(__v2si){0, 70000}), 32767, -32768, 0, 32767));
 
 __m64 test_mm_packs_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_packs_pu16
   // CHECK: call <16 x i8> @llvm.x86.sse2.packuswb.128(
   return _mm_packs_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_packs_pu16((__m64)(__v4hi){-1, 0, 128, 300}, (__m64)(__v4hi){255, -200, 42, -42}), 0, 0, -128, -1, -1, 0, 42, 0));
 
 __m64 test_mm_sad_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sad_pu8
@@ -579,7 +588,7 @@ __m64 test_mm_shuffle_pi16(__m64 a) {
   // CHECK: shufflevector <4 x i16> {{%.*}}, <4 x i16> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 0, i32 0>
   return _mm_shuffle_pi16(a, 3);
 }
-
+TEST_CONSTEXPR(match_v4hi(_mm_shuffle_pi16(((__m64)(__v4hi){0,1,2,3}), 3), 3,0,0,0));
 __m64 test_mm_sign_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sign_pi8
   // CHECK: call <16 x i8> @llvm.x86.ssse3.psign.b.128(
