@@ -891,9 +891,8 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
                           RunLivenessAnalysis &la) {
   Operation *callableOp = callOp.resolveCallable();
   auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
-  if (!funcOp || !funcOp.isPublic()) {
+  if (!funcOp || !funcOp.isPublic())
     return false;
-  }
 
   LDBG() << "Processing callOp " << callOp << " target is a public function: "
          << funcOp.getOperation()->getName();
@@ -985,7 +984,7 @@ static bool processCallOp(CallOpInterface callOp, Operation *module,
     return true; // Changes were made
   }
 
-  return false; // No changes made
+  return false;
 }
 
 void RemoveDeadValues::runOnOperation() {
