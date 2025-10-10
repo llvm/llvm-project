@@ -19,8 +19,7 @@ module m
       integer :: x
       integer :: y
     end type
-  
-  
+
     integer :: i
     real :: r
     type(t1) :: x1, y1
@@ -32,7 +31,6 @@ module m
     class(t1), allocatable :: a1
     class(t3), allocatable :: a3
 
-  
     logical :: t1_1 = same_type_as(x1, x1)
     logical :: t1_2 = same_type_as(x1, y1)
     logical :: t1_3 = same_type_as(x24, x24)
@@ -52,7 +50,7 @@ module m
     logical :: t1_12 = same_type_as(r, r)
     !ERROR: Actual argument for 'a=' has bad type 'INTEGER(4)', expected extensible derived or unlimited polymorphic type
     logical :: t1_13 = same_type_as(i, t)
-    
+
     logical :: t2_1 = extends_type_of(x1, y1)
     logical :: t2_2 = extends_type_of(x24, x24)
     logical :: t2_3 = extends_type_of(x24, y24)
@@ -68,4 +66,3 @@ module m
     !ERROR: Actual argument for 'mold=' has bad type 't5', expected extensible derived or unlimited polymorphic type
     logical :: t2_11 = extends_type_of(x1, x5)
 end module
-  
