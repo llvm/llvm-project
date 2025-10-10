@@ -7608,20 +7608,24 @@ namespace {
 ///
 /// For example, rewrite the 'greater than' comparison below,
 ///
+/// ```mlir
 /// %cst = arith.constant dense<7> : vector<3xindex>
 /// %stp = vector.step : vector<3xindex>
 /// %out = arith.cmpi ugt, %stp, %cst : vector<3xindex>
+/// ```
 ///
 /// as,
 ///
+/// ```mlir
 /// %out = arith.constant dense<false> : vector<3xi1>.
+/// ```
 ///
 /// Above [0, 1, 2] > [7, 7, 7] => [false, false, false]. Because the result is
 /// false at ALL indices we fold. If the constant was 1, then
 /// [0, 1, 2] > [1, 1, 1] => [false, false, true] and we do fold, conservatively
 /// preferring the 'compact' vector.step representation.
 struct StepCompareFolder : public OpRewritePattern<StepOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(StepOp stepOp,
                                 PatternRewriter &rewriter) const override {
@@ -7679,8 +7683,7 @@ struct StepCompareFolder : public OpRewritePattern<StepOp> {
       if (!type)
         continue;
 
-      DenseElementsAttr boolAttr =
-          DenseElementsAttr::get(type, maybeSplat.value());
+      auto boolAttr = DenseElementsAttr::get(type, maybeSplat.value());
       Value splat = mlir::arith::ConstantOp::create(rewriter, cmpiOp.getLoc(),
                                                     type, boolAttr);
 
