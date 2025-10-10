@@ -661,6 +661,15 @@ declare i32 @ilogbf(float)
 ; CHECK: declare i32 @ilogbl(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @ilogbl(x86_fp80)
 
+; CHECK: declare noundef i64 @llrint(double) [[MATH_NOACCESS:#[0-9]+]]
+declare i64 @llrint(double)
+
+; CHECK: declare noundef i64 @llrintf(float) [[MATH_NOACCESS:#[0-9]+]]
+declare i64 @llrintf(float)
+
+; CHECK: declare noundef i64 @llrintl(x86_fp80) [[MATH_NOACCESS:#[0-9]+]]
+declare i64 @llrintl(x86_fp80)
+
 ; CHECK: declare double @logb(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare double @logb(double)
 
@@ -1196,6 +1205,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(read) }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
+; CHECK-DAG: attributes [[MATH_NOACCESS]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
