@@ -186,7 +186,8 @@ private:
   // Helper: Create PHI in a specific block with per-edge lane analysis
   Register createPHIInBlock(MachineBasicBlock &JoinMBB,
                            Register OrigVReg,
-                           Register NewVReg);
+                           Register NewVReg,
+                           LaneBitmask DefMask);
 
   // Rewrite dominated uses of OrigVReg to NewSSA according to the
   // exact/subset/super policy; create REG_SEQUENCE only when needed.
