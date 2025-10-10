@@ -816,9 +816,8 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
       "Convert supported Arith ops (e.g. arith.divf) as well.">];
   let dependentDialects = [
     "arith::ArithDialect",
-    "func::FuncDialect",
     "xevm::XeVMDialect",
-    "vector::VectorDialect",
+    "LLVM::LLVMDialect",
   ];
 }
 

@@ -22,8 +22,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
-#include "../GPUCommon/GPUOpsLowering.h"
-
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOXEVM
 #include "mlir/Conversion/Passes.h.inc"
@@ -48,8 +46,7 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       return failure();
 
     arith::FastMathFlags fastFlags = op.getFastmath();
-    if (!(static_cast<uint32_t>(fastFlags) &
-          static_cast<uint32_t>(arith::FastMathFlags::afn)))
+    if (!arith::bitEnumContainsAll(fastFlags, arith::FastMathFlags::afn))
       return rewriter.notifyMatchFailure(op, "not a fastmath `afn` operation");
 
     SmallVector<Type, 1> operandTypes;
@@ -83,9 +80,9 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   }
 
   inline bool isSPIRVCompatibleFloatOrVec(Type type) const {
-    if (type.isFloat()) {
+    if (type.isFloat())
       return true;
-    } else if (auto vecType = dyn_cast<VectorType>(type)) {
+    if (auto vecType = dyn_cast<VectorType>(type)) {
       if (!vecType.getElementType().isFloat())
         return false;
       // SPIRV distinguishes between vectors and matrices: OpenCL native math
@@ -170,8 +167,7 @@ void ConvertMathToXeVMPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMathToXeVMConversionPatterns(patterns, convertArith);
   ConversionTarget target(getContext());
-  target.addLegalDialect<BuiltinDialect, func::FuncDialect,
-                         vector::VectorDialect, LLVM::LLVMDialect>();
+  target.addLegalDialect<BuiltinDialect, LLVM::LLVMDialect>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
