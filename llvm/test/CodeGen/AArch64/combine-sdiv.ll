@@ -1855,7 +1855,7 @@ define <16 x i16> @combine_vec_sdiv_by_one_obfuscated(<16 x i16> %x) "target-fea
 ; CHECK-GI-NEXT:    mov v2.h[7], w10
 ; CHECK-GI-NEXT:    mov v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
-  %1 = shufflevector <16 x i16> zeroinitializer, <16 x i16> splat (i16 1), <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %2 = sdiv <16 x i16> %x, %1
-  ret <16 x i16> %2
+  %zero_and_ones = shufflevector <16 x i16> zeroinitializer, <16 x i16> splat (i16 1), <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %div = sdiv <16 x i16> %x, %zero_and_ones
+  ret <16 x i16> %div
 }
