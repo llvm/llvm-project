@@ -579,11 +579,6 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def vec_set_v8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, int, _Constant int)">;
 }
 
-let Features = "avx2",
-    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
-  def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
-}
-
 let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
   def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant int)">;
