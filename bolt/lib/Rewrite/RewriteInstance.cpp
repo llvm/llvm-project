@@ -1514,6 +1514,12 @@ void RewriteInstance::registerFragments() {
       }
       if (BD) {
         BinaryFunction *BF = BC->getFunctionForSymbol(BD->getSymbol());
+        if (BF == &Function) {
+          BC->errs()
+              << "BOLT-WARNING: fragment maps to the same function as parent: "
+              << Function << '\n';
+          continue;
+        }
         if (BF) {
           BC->registerFragment(Function, *BF);
           continue;

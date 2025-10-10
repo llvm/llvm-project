@@ -767,4 +767,39 @@ TEST_F(ConstantFPRangeTest, makeExactFCmpRegion) {
   }
 }
 
+TEST_F(ConstantFPRangeTest, abs) {
+  EXPECT_EQ(Full.abs(),
+            ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/false),
+                            APFloat::getInf(Sem, /*Negative=*/false),
+                            /*MayBeQNaN=*/true,
+                            /*MayBeSNaN=*/true));
+  EXPECT_EQ(Empty.abs(), Empty);
+  EXPECT_EQ(Zero.abs(), PosZero);
+  EXPECT_EQ(PosInf.abs(), PosInf);
+  EXPECT_EQ(NegInf.abs(), PosInf);
+  EXPECT_EQ(Some.abs(), SomePos);
+  EXPECT_EQ(SomeNeg.abs(), SomePos);
+  EXPECT_EQ(NaN.abs(), NaN);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)).abs(),
+            ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(3.0)));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)).abs(),
+            ConstantFPRange::getNonNaN(APFloat(0.0), APFloat(3.0)));
+}
+
+TEST_F(ConstantFPRangeTest, negate) {
+  EXPECT_EQ(Full.negate(), Full);
+  EXPECT_EQ(Empty.negate(), Empty);
+  EXPECT_EQ(Zero.negate(), Zero);
+  EXPECT_EQ(PosInf.negate(), NegInf);
+  EXPECT_EQ(NegInf.negate(), PosInf);
+  EXPECT_EQ(Some.negate(), Some);
+  EXPECT_EQ(SomePos.negate(), SomeNeg);
+  EXPECT_EQ(SomeNeg.negate(), SomePos);
+  EXPECT_EQ(NaN.negate(), NaN);
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)).negate(),
+            ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)));
+  EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat(-3.0), APFloat(2.0)).negate(),
+            ConstantFPRange::getNonNaN(APFloat(-2.0), APFloat(3.0)));
+}
+
 } // anonymous namespace
