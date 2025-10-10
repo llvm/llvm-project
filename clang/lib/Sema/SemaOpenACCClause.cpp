@@ -1939,10 +1939,10 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
   if (auto *AT = getASTContext().getAsArrayType(CurType)) {
     // If we're already the array type, peel off the array and leave the element
     // type.
-    CurType = AT->getElementType();
     PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
                            << diag::OACCReductionArray::ArrayTy << CurType;
     Notes.push_back({VarLoc, PD});
+    CurType = AT->getElementType();
   }
 
   auto IsValidMemberOfComposite = [](QualType Ty) {
