@@ -180,6 +180,9 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- No longer triggering ``-Wstatic-in-inline`` in C2y mode; use of a static
+  function or variable within an extern inline function is no longer a
+  constraint per `WG14 N3622 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3622.txt>`_.
 - Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
 
 C23 Feature Support

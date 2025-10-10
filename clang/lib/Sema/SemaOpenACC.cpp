@@ -2759,7 +2759,7 @@ OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
   // Array sections are special, and we have to treat them that way.
   if (const auto *ASE =
           dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
-    VarTy = ArraySectionExpr::getBaseOriginalType(ASE);
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2795,7 +2795,7 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   // Array sections are special, and we have to treat them that way.
   if (const auto *ASE =
           dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
-    VarTy = ArraySectionExpr::getBaseOriginalType(ASE);
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2896,7 +2896,7 @@ OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
   // Array sections are special, and we have to treat them that way.
   if (const auto *ASE =
           dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
-    VarTy = ArraySectionExpr::getBaseOriginalType(ASE);
+    VarTy = ASE->getElementType();
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),

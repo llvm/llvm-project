@@ -72,8 +72,7 @@ void uses(unsigned Parm) {
   while (1);
 
   struct CompositeHasComposite ChCArray[5];
-  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+3{{used as element type of sub-array type 'struct CompositeHasComposite'}}
+  // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
   // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(&: CoS, Array[I], ChCArray[0:I])

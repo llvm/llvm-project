@@ -7160,6 +7160,18 @@ public:
   /// Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
 
+  /// Return the effective 'element' type of this array section. As the array
+  /// section itself returns a collection of elements (closer to its `getBase`
+  /// type), this is only useful for figuring out the effective type of this if
+  /// it were a normal Array subscript expr.
+  QualType getElementType() const;
+
+  /// Returns the effective 'type' of the base of this array section.  This
+  /// should be the array/pointer type that this operates on.  Just
+  /// getBase->getType isn't sufficient, since it doesn't look through existing
+  /// Array sections to figure out the actual 'base' of this.
+  QualType getBaseType() const;
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ArraySectionExprClass;
   }

@@ -788,6 +788,10 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
+        if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
+            return False, "API tests require a locally built libc++."
+
+        # Make sure -stdlib=libc++ works since that's how the tests will be built.
         with temp_file.OnDiskTempFile() as f:
             cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.path, "-"]
             p = subprocess.Popen(
