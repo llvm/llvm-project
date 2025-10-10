@@ -4697,7 +4697,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, Lambdas) {
   )cc");
 }
 
-// TODO(sgatev): Ensure the following test cases are covered.
 TEST_P(UncheckedStatusOrAccessModelTest, Status) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_use_test_defs.h"

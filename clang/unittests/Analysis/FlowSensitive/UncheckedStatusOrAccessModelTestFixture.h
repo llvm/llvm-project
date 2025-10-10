@@ -85,8 +85,6 @@ public:
       std::string SourceCode,
       UncheckedStatusOrAccessModelTestAliasKind AliasKind) const override {
     using namespace ::clang::ast_matchers; // NOLINT: Too many names
-    // TODO(sgatev): Investigate why we need to specify the operator name to
-    // avoid matching the lambda destructor here and not in other similar tests.
     ExpectDiagnosticsFor(SourceCode,
                          allOf(hasOverloadedOperatorName("()"),
                                hasDeclContext(cxxRecordDecl(isLambda()))),
