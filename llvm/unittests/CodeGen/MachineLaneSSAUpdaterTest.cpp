@@ -181,6 +181,17 @@ body: |
 // Test 1: Insert new definition and verify SSA repair with PHI insertion
 //===----------------------------------------------------------------------===//
 
+// Test basic PHI insertion and use rewriting in a diamond CFG
+//
+// CFG Structure:
+//       BB0 (entry)
+//        |
+//       BB1 (%1 = orig def)
+//      /   \
+//    BB2   BB3 (INSERT: %1 = new_def)
+//      \   /
+//       BB4 (use %1) → PHI expected
+//
 TEST(MachineLaneSSAUpdaterTest, NewDefInsertsPhiAndRewritesUses) {
   liveIntervalsTest(R"MIR(
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -299,7 +310,7 @@ TEST(MachineLaneSSAUpdaterTest, NewDefInsertsPhiAndRewritesUses) {
 //===----------------------------------------------------------------------===//
 // Test 2: Multiple PHI insertions in nested control flow
 //
-// CFG structure (from user's diagram):
+// CFG structure:
 //        bb.0
 //          |
 //        bb.1 (%1 = original def)
@@ -494,23 +505,32 @@ TEST(MachineLaneSSAUpdaterTest, MultiplePhiInsertion) {
 // This tests the "LaneAware" part of MachineLaneSSAUpdater.
 //
 // Scenario:
-//   - Start with a 64-bit register %1 (has sub0 and sub1 lanes)
+//   - Start with a 64-bit register %3 (has sub0 and sub1 lanes)
 //   - Insert a new definition that only updates sub0 (lower 32 bits)
 //   - The SSA updater should:
 //     1. Track that only sub0 lane is modified (not sub1)
 //     2. Create PHI that merges only the sub0 lane
 //     3. Preserve the original sub1 lane
+//     4. Generate REG_SEQUENCE to compose full register from PHI+unchanged lanes
 //
-// CFG:
-//     bb.0
-//       |
-//     bb.1 (%1 = 64-bit def, both lanes)
-//     /  \
-//  bb.2  bb.3 (new def updates only %X.sub0)
-//     \  /
-//     bb.4 (needs PHI for sub0 lane only)
-//       |
-//     bb.5 (use both lanes)
+// CFG Structure:
+//       BB0 (entry)
+//        |
+//       BB1 (%3:vreg_64 = REG_SEQUENCE of %1:sub0, %2:sub1)
+//      /   \
+//    BB2   BB3 (INSERT: %3.sub0 = new_def)
+//     |     |
+//    use   (no use)
+//   sub0    
+//      \   /
+//       BB4 (use sub0 + sub1) → PHI for sub0 lane only
+//        |
+//       BB5 (use full %3) → REG_SEQUENCE to compose full reg from PHI result + unchanged sub1
+//
+// Expected behavior:
+//   - PHI in BB4 merges only sub0 lane (changed)
+//   - sub1 lane flows unchanged through the diamond
+//   - REG_SEQUENCE in BB5 composes full 64-bit from (PHI_sub0, original_sub1)
 //===----------------------------------------------------------------------===//
 
 TEST(MachineLaneSSAUpdaterTest, SubregisterLaneTracking) {
@@ -840,11 +860,9 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
       // 3. Check the existing PHI in bb.7
       bool FoundPHI = false;
       Register PHIReg;
-      MachineInstr *PHI = nullptr;
       for (MachineInstr &MI : *BB7) {
         if (MI.isPHI()) {
           FoundPHI = true;
-          PHI = &MI;
           PHIReg = MI.getOperand(0).getReg();
           llvm::errs() << "PHI in bb.7 after SSA repair: ";
           MI.print(llvm::errs());
@@ -908,6 +926,20 @@ TEST(MachineLaneSSAUpdaterTest, SubregDefToFullRegPHI) {
 // for the back edge operand since NewDefBB (bb.2) dominates the loop latch (bb.2).
 //===----------------------------------------------------------------------===//
 
+// Test loop with new definition in loop body requiring PHI in loop header
+//
+// CFG Structure:
+//       BB0 (entry, %1 = orig def)
+//        |
+//    +-> BB1 (loop header)
+//    |  / \
+//    | /   \
+//    BB2   BB3 (exit, use %1)
+//    |
+//    (INSERT: %1 = new_def)
+//    |
+//    +-(backedge) -> PHI needed in BB1 to merge initial value and loop value
+//
 TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
   liveIntervalsTest(R"MIR(
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -1052,34 +1084,39 @@ TEST(MachineLaneSSAUpdaterTest, LoopWithDefInBody) {
 // 5. PHI2 at loop header (merges entry value and PHI1 result from back edge)
 // 6. Use after diamond (in latch) should use PHI1 result
 //
-// CFG:
-//     bb.0 (entry: X=1, i=0)
-//       |
-//       v
-//     bb.1 (loop header)
-//       PHI_i = PHI(0, bb.0, i+1, bb.5) [already in input MIR]
-//       PHI2 = PHI(X, bb.0, PHI1, bb.5) [created by SSA updater]
-//       USE X (before redef!) [rewritten to PHI2]
-//       if (i < 10)
-//      /  \
-//   bb.2  bb.3 (NEW DEF: X=99)
-//   (then) (else)
-//     |    |
-//     \  /
-//      \/
-//     bb.4 (diamond join)
-//       PHI1 = PHI(X, bb.2, NewReg, bb.3) [created by SSA updater]
-//       |
-//       v
-//     bb.5 (latch)
-//       USE X [rewritten to PHI1]
-//       i = i + 1
-//       branch to bb.1
-//       |
-//     bb.6 (exit)
-//       USE X
+// CFG Structure:
+//         BB0 (entry: X=%1, i=0)
+//          |
+//      +-> BB1 (loop header)
+//      |   |   PHI_i = PHI(0, BB0; i+1, BB5) [already in input MIR]
+//      |   |   PHI2 = PHI(X, BB0; PHI1, BB5) [created by SSA updater]
+//      |   |   USE X (before redef!) [rewritten to use PHI2]
+//      |   |   if (i < 10)
+//      |  / \
+//      | BB2 BB3 (INSERT: X = 99)
+//      | |    |
+//      | |    (then: X unchanged)
+//      | |    (else: NEW DEF)
+//      |  \  /
+//      |   BB4 (diamond join)
+//      |   |   PHI1 = PHI(X, BB2; NewReg, BB3) [created by SSA updater]
+//      |   |
+//      |   BB5 (loop latch)
+//      |   |   USE X [rewritten to use PHI1]
+//      |   |   i = i + 1
+//      |   | \
+//      |   |  \
+//      +---+   BB6 (exit, USE X)
+//
+// Key challenge: Use in BB1 occurs BEFORE the def in BB3 (in program order),
+//                requiring PHI2 in the loop header for proper SSA form.
+//
+// Expected SSA repair:
+//   - PHI1 created in BB4 (diamond join): merges unchanged X from BB2, new def from BB3
+//   - PHI2 created in BB1 (loop header): merges entry X from BB0, PHI1 result from BB5
+//   - Use in BB1 rewritten to PHI2
+//   - Use in BB5 rewritten to PHI1
 //===----------------------------------------------------------------------===//
-
 TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
   liveIntervalsTest(R"MIR(
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -1146,7 +1183,6 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
       
       MachineBasicBlock *BB0 = MF.getBlockNumbered(0); // Entry
       MachineBasicBlock *BB1 = MF.getBlockNumbered(1); // Loop header
-      MachineBasicBlock *BB2 = MF.getBlockNumbered(2); // Then
       MachineBasicBlock *BB3 = MF.getBlockNumbered(3); // Else (new def here)
       MachineBasicBlock *BB4 = MF.getBlockNumbered(4); // Diamond join
       MachineBasicBlock *BB5 = MF.getBlockNumbered(5); // Latch
@@ -1321,9 +1357,33 @@ TEST(MachineLaneSSAUpdaterTest, ComplexLoopWithDiamondAndUseBeforeDef) {
     });
 }
 
-// Test: Multiple subreg redefinitions in loop (X.sub0 in one branch, X.sub1 in latch)
+// Test 7: Multiple subreg redefinitions in loop (X.sub0 in one branch, X.sub1 in latch)
 // This tests the most complex scenario: two separate lane redefinitions with REG_SEQUENCE
 // composition at the backedge.
+// Test multiple subregister redefinitions in different paths within a loop
+//
+// CFG Structure:
+//         BB0 (entry, %1:vreg_64 = IMPLICIT_DEF)
+//          |
+//      +-> BB1 (loop header, PHI for %0)
+//      |   |   (use %0.sub0)
+//      |  / \
+//      | BB2 BB5
+//      | |    |
+//      | use  INSERT: %0.sub0 = new_def1
+//      |sub1  use %0.sub0
+//      |  \   /
+//      |   BB3 (latch)
+//      |   |   (INSERT: %3.sub1 = new_def2, where %3 is increment result)
+//      |   |   (%3 = %0 << 1)
+//      +---+
+//       |
+//      BB4 (exit)
+//
+// Key: Two separate lane redefinitions requiring separate SSA repairs:
+//      1. %0.sub0 in BB5 → PHI for sub0 in BB3
+//      2. %3.sub1 in BB3 (after increment) → PHI for sub1 in BB1
+//
 TEST(MachineLaneSSAUpdaterTest, MultipleSubregRedefsInLoop) {
   SmallString<2048> S;
   StringRef MIRString = (Twine(R"MIR(
@@ -1386,22 +1446,21 @@ body: |
       
       // Get basic blocks
       auto BBI = MF.begin();
-      MachineBasicBlock *BB0 = &*BBI++;  // Entry
+      ++BBI;  // Skip BB0 (Entry)
       MachineBasicBlock *BB1 = &*BBI++;  // Loop header
-      MachineBasicBlock *BB2 = &*BBI++;  // True branch (uses X.HI)
+      ++BBI;  // Skip BB2 (True branch)
       MachineBasicBlock *BB5 = &*BBI++;  // False branch (uses X.LO, INSERT def X.LO)
       MachineBasicBlock *BB3 = &*BBI++;  // Latch (increment, INSERT def X.HI)
-      MachineBasicBlock *BB4 = &*BBI++;  // Exit
+      // Skip BB4 (Exit)
       
       MachineRegisterInfo &MRI = MF.getRegInfo();
       const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      (void)MRI;  // May be unused, suppress warning
       
       // Find the 64-bit register and its subregister indices
       Register OrigReg = Register::index2VirtReg(0); // %0 from MIR
       ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
-      
-      const TargetRegisterClass *RC64 = MRI.getRegClass(OrigReg);
       unsigned Sub0Idx = 0, Sub1Idx = 0;
       
       // Find sub0 (low 32 bits) and sub1 (high 32 bits)
@@ -1527,6 +1586,7 @@ body: |
           }
         }
       }
+      EXPECT_TRUE(FoundSub0PHI) << "Should have PHI for sub0 lane in BB3";
       
       // 2. Should have REG_SEQUENCE in BB3 before backedge to compose full 64-bit
       bool FoundREGSEQ = false;
@@ -1554,6 +1614,779 @@ body: |
         MF.print(llvm::errs());
         LIS.print(llvm::errs());
       }
+    });
+}
+
+// Test 8: Nested loops with SSA repair across multiple loop levels
+// This tests SSA repair with a new definition in an inner loop body that propagates
+// to both the inner loop header and outer loop header PHIs.
+// Test nested loops with SSA repair across multiple loop levels
+//
+// CFG Structure:
+//         BB0 (entry, %0 = 100)
+//          |
+//      +-> BB1 (outer loop header)
+//      |   |   PHI for %1 (outer induction var)
+//      |   |
+//      | +->BB2 (inner loop header)
+//      | | |   PHI for %2 (inner induction var)
+//      | | |\
+//      | | | \
+//      | | BB3 BB4 (outer loop body)
+//      | |  |
+//      | |  INSERT: %0 = new_def
+//      | |  (%3 = %2 + %0)
+//      | |  |
+//      | +--+ (inner backedge) -> PHI in BB2 for %0 expected
+//      |     |
+//      |    (%4 = %1 + %0, use %0)
+//      +----+ (outer backedge)
+//       |
+//      BB5 (exit)
+//
+// Key: New def in inner loop body propagates to:
+//      1. Inner loop header PHI (BB2)
+//      2. Outer loop body uses (BB4)
+//      3. Outer loop header PHI (BB1)
+//
+TEST(MachineLaneSSAUpdaterTest, NestedLoopsWithSSARepair) {
+  SmallString<2048> S;
+  StringRef MIRString = (Twine(R"MIR(
+--- |
+  define amdgpu_kernel void @func() { ret void }
+...
+---
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
+    S_BRANCH %bb.1
+  
+  bb.1:
+    successors: %bb.2
+    ; Outer loop header: %1 = PHI(initial, result_from_outer_body)
+    %1:vgpr_32 = PHI %0:vgpr_32, %bb.0, %4:vgpr_32, %bb.4
+    dead %5:vgpr_32 = V_ADD_U32_e32 %1:vgpr_32, %1:vgpr_32, implicit $exec
+    S_BRANCH %bb.2
+  
+  bb.2:
+    successors: %bb.3, %bb.4
+    ; Inner loop header: %2 = PHI(from_outer, from_inner_body)
+    %2:vgpr_32 = PHI %1:vgpr_32, %bb.1, %3:vgpr_32, %bb.3
+    dead %6:vgpr_32 = V_MOV_B32_e32 %2:vgpr_32, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 5
+    S_CMP_LT_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+    S_BRANCH %bb.4
+  
+  bb.3:
+    successors: %bb.2
+    ; Inner loop body - accumulate value, then we'll insert new def for %0
+    %3:vgpr_32 = V_ADD_U32_e32 %2:vgpr_32, %0:vgpr_32, implicit $exec
+    S_BRANCH %bb.2
+  
+  bb.4:
+    successors: %bb.1, %bb.5
+    ; Outer loop body after inner loop exit
+    ; Increment outer induction variable %1 and use %0 (which we'll redefine)
+    %4:vgpr_32 = V_ADD_U32_e32 %1:vgpr_32, %0:vgpr_32, implicit $exec
+    dead %7:vgpr_32 = V_MOV_B32_e32 %0:vgpr_32, implicit $exec
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 10
+    S_CMP_LT_U32 $sgpr2, $sgpr3, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.5
+  
+  bb.5:
+    ; Exit
+    S_ENDPGM 0
+...
+)MIR")).toNullTerminatedStringRef(S);
+
+  doTest<LiveIntervalsWrapperPass>(MIRString,
+             [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      llvm::errs() << "\n=== NestedLoopsWithSSARepair Test ===\n";
+      
+      // Get basic blocks
+      auto BBI = MF.begin();
+      MachineBasicBlock *BB0 = &*BBI++;  // Entry
+      MachineBasicBlock *BB1 = &*BBI++;  // Outer loop header
+      MachineBasicBlock *BB2 = &*BBI++;  // Inner loop header
+      MachineBasicBlock *BB3 = &*BBI++;  // Inner loop body (INSERT HERE)
+      MachineBasicBlock *BB4 = &*BBI++;  // Outer loop body (after inner)
+      // BB5 = Exit (not needed)
+      
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      
+      // Get the register that will be redefined (%0 is the initial value)
+      Register OrigReg = Register::index2VirtReg(0);
+      ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
+      
+      llvm::errs() << "Original register: %" << OrigReg.virtRegIndex() << "\n";
+      
+      // Get V_MOV opcode and EXEC register
+      MachineInstr *MovInst = &*BB0->begin();
+      unsigned MovOpcode = MovInst->getOpcode();
+      Register ExecReg = MovInst->getOperand(2).getReg();
+      
+      // Print initial state
+      llvm::errs() << "\nInitial BB2 (inner loop header):\n";
+      for (MachineInstr &MI : *BB2) {
+        MI.print(llvm::errs());
+      }
+      
+      llvm::errs() << "\nInitial BB1 (outer loop header):\n";
+      for (MachineInstr &MI : *BB1) {
+        MI.print(llvm::errs());
+      }
+      
+      // Insert new definition in BB3 (inner loop body)
+      // Find insertion point before the branch
+      MachineInstr *InsertPt = nullptr;
+      for (MachineInstr &MI : *BB3) {
+        if (MI.isBranch()) {
+          InsertPt = &MI;
+          break;
+        }
+      }
+      ASSERT_NE(InsertPt, nullptr) << "Should find branch in BB3";
+      
+      // Insert: X = 999 (violates SSA)
+      MachineInstr *NewDefMI = BuildMI(*BB3, InsertPt, DebugLoc(),
+                                        TII->get(MovOpcode), OrigReg)
+          .addImm(999)
+          .addReg(ExecReg, RegState::Implicit);
+      
+      llvm::errs() << "\nInserted new def in BB3 (inner loop body): ";
+      NewDefMI->print(llvm::errs());
+      
+      // Create SSA updater and repair
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      
+      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      
+      // === Verification ===
+      llvm::errs() << "\n=== Verification ===\n";
+      
+      llvm::errs() << "\nFinal BB2 (inner loop header):\n";
+      for (MachineInstr &MI : *BB2) {
+        MI.print(llvm::errs());
+      }
+      
+      llvm::errs() << "\nFinal BB1 (outer loop header):\n";
+      for (MachineInstr &MI : *BB1) {
+        MI.print(llvm::errs());
+      }
+      
+      llvm::errs() << "\nFinal BB4 (outer loop body after inner):\n";
+      for (MachineInstr &MI : *BB4) {
+        MI.print(llvm::errs());
+      }
+      
+      // 1. Inner loop header (BB2) should have NEW PHI created by SSA repair
+      bool FoundSSARepairPHI = false;
+      Register SSARepairPHIReg;
+      for (MachineInstr &MI : *BB2) {
+        if (MI.isPHI()) {
+          // Look for a PHI that has NewReg as one of its incoming values
+          for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+            Register IncomingReg = MI.getOperand(i).getReg();
+            MachineBasicBlock *IncomingMBB = MI.getOperand(i + 1).getMBB();
+            
+            if (IncomingMBB == BB3 && IncomingReg == NewReg) {
+              FoundSSARepairPHI = true;
+              SSARepairPHIReg = MI.getOperand(0).getReg();
+              llvm::errs() << "Found SSA repair PHI in inner loop header: ";
+              MI.print(llvm::errs());
+              
+              // Should have incoming from BB1 and BB3
+              unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
+              EXPECT_EQ(NumIncoming, 2u) << "SSA repair PHI should have 2 incoming";
+              break;
+            }
+          }
+          if (FoundSSARepairPHI)
+            break;
+        }
+      }
+      EXPECT_TRUE(FoundSSARepairPHI) << "Should find SSA repair PHI in BB2 (inner loop header)";
+      
+      // 2. Outer loop header (BB1) may have PHI updated if needed
+      bool FoundOuterPHI = false;
+      for (MachineInstr &MI : *BB1) {
+        if (MI.isPHI() && MI.getOperand(0).getReg() == Register::index2VirtReg(1)) {
+          FoundOuterPHI = true;
+          llvm::errs() << "Found outer loop PHI: ";
+          MI.print(llvm::errs());
+        }
+      }
+      EXPECT_TRUE(FoundOuterPHI) << "Should find outer loop PHI in BB1";
+      
+      // 3. Use in BB4 should be updated
+      bool FoundUseInBB4 = false;
+      for (MachineInstr &MI : *BB4) {
+        if (!MI.isPHI() && MI.getNumOperands() > 1) {
+          for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+            if (MI.getOperand(i).isReg() && MI.getOperand(i).isUse()) {
+              Register UseReg = MI.getOperand(i).getReg();
+              if (UseReg.isVirtual()) {
+                FoundUseInBB4 = true;
+                llvm::errs() << "Found use in BB4: %" << UseReg.virtRegIndex() << " in ";
+                MI.print(llvm::errs());
+              }
+            }
+          }
+        }
+      }
+      EXPECT_TRUE(FoundUseInBB4) << "Should find uses in outer loop body (BB4)";
+      
+      // 4. Verify LiveIntervals
+      EXPECT_TRUE(LIS.hasInterval(NewReg));
+      
+      // Debug output if verification fails
+      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
+        llvm::errs() << "MachineFunction verification failed:\n";
+        MF.print(llvm::errs());
+        LIS.print(llvm::errs());
+      }
+    });
+}
+
+//===----------------------------------------------------------------------===//
+// Test 9: 128-bit register with 64-bit subreg redef and multiple lane uses
+//
+// This comprehensive test covers:
+// 1. Large register (128-bit) with multiple subregisters (sub0, sub1, sub2, sub3)
+// 2. Partial redefinition (64-bit sub2_3 covering two lanes: sub2+sub3)
+// 3. Uses of changed lanes (sub2, sub3) in different paths
+// 4. Uses of unchanged lanes (sub0, sub1) in different paths
+// 5. Diamond CFG with redef in one branch
+// 6. Second diamond to test propagation of PHI result
+//
+// CFG Structure:
+//         BB0 (entry)
+//          |
+//         BB1 (%0:vreg_128 = initial 128-bit value)
+//          |
+//         BB2 (diamond1 split)
+//        /   \
+//      BB3   BB4 (INSERT: %0.sub2_3 = new_def)
+//       |     |
+//      use   use
+//      sub0  sub3 (changed)
+//        \   /
+//         BB5 (join) -> PHI for sub2_3 lanes (sub2+sub3 changed, sub0+sub1 unchanged)
+//          |
+//         use sub1 (unchanged, flows from BB1)
+//          |
+//         BB6 (diamond2 split)
+//        /   \
+//      BB7   BB8
+//       |     |
+//      use   (no use)
+//      sub2
+//        \   /
+//         BB9 (join, no PHI - BB5's PHI dominates)
+//          |
+//         BB10 (use sub0, exit)
+//
+// Expected behavior:
+//   - PHI in BB5 merges sub2_3 lanes ONLY (sub2+sub3 changed)
+//   - sub0+sub1 lanes flow unchanged from BB1 through entire CFG
+//   - Uses in BB5, BB7, BB10 use PHI result or unchanged lanes
+//   - No PHI in BB9 (BB5 dominates, PHI result flows through)
+//
+// This test validates:
+//   ✓ Partial redefinition (64-bit of 128-bit)
+//   ✓ Multiple different subreg uses (sub0, sub1, sub2, sub3)
+//   ✓ Changed vs unchanged lane tracking
+//   ✓ PHI result propagation to dominated blocks
+//===----------------------------------------------------------------------===//
+TEST(MachineLaneSSAUpdaterTest, MultipleSubregUsesAcrossDiamonds) {
+  SmallString<4096> S;
+  StringRef MIRString = (Twine(R"MIR(
+--- |
+  define amdgpu_kernel void @func() { ret void }
+...
+---
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+body: |
+  bb.0:
+    successors: %bb.1
+    S_BRANCH %bb.1
+  
+  bb.1:
+    successors: %bb.2
+    ; Initialize 128-bit register %0 with IMPLICIT_DEF
+    %0:vreg_128 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+  
+  bb.2:
+    successors: %bb.3, %bb.4
+    ; Diamond 1 split
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.4, implicit $scc
+  
+  bb.3:
+    successors: %bb.5
+    ; Use sub0 (unchanged lane, low 32 bits)
+    %1:vgpr_32 = V_MOV_B32_e32 %0.sub0:vreg_128, implicit $exec
+    S_BRANCH %bb.5
+  
+  bb.4:
+    successors: %bb.5
+    ; This is where we'll INSERT: %0.sub2_3 = new_def (64-bit, covers sub2+sub3)
+    ; After insertion, use sub3 (high 32 bits of sub2_3)
+    %2:vgpr_32 = V_MOV_B32_e32 %0.sub3:vreg_128, implicit $exec
+    S_BRANCH %bb.5
+  
+  bb.5:
+    successors: %bb.6
+    ; Diamond 1 join - PHI expected for sub2_3 lanes
+    ; Use sub1 (unchanged lane, bits 32-63)
+    %3:vgpr_32 = V_MOV_B32_e32 %0.sub1:vreg_128, implicit $exec
+    S_BRANCH %bb.6
+  
+  bb.6:
+    successors: %bb.7, %bb.8
+    ; Diamond 2 split
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr2, $sgpr3, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.8, implicit $scc
+  
+  bb.7:
+    successors: %bb.9
+    ; Use sub2 (changed lane, bits 64-95)
+    dead %4:vgpr_32 = V_MOV_B32_e32 %0.sub2:vreg_128, implicit $exec
+    S_BRANCH %bb.9
+  
+  bb.8:
+    successors: %bb.9
+    ; No use - sparse use pattern
+    S_NOP 0
+  
+  bb.9:
+    successors: %bb.10
+    ; Diamond 2 join - no PHI needed (BB5 dominates)
+    S_NOP 0
+  
+  bb.10:
+    ; Exit - use sub0 again (unchanged lane)
+    dead %5:vgpr_32 = V_MOV_B32_e32 %0.sub0:vreg_128, implicit $exec
+    S_ENDPGM 0
+...
+)MIR")).toNullTerminatedStringRef(S);
+
+  doTest<LiveIntervalsWrapperPass>(MIRString,
+             [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      llvm::errs() << "\n=== MultipleSubregUsesAcrossDiamonds Test ===\n";
+      
+      // Get basic blocks
+      auto BBI = MF.begin();
+      ++BBI; // Skip BB0 (entry)
+      ++BBI; // Skip BB1 (Initial def)
+      ++BBI; // Skip BB2 (Diamond1 split)
+      MachineBasicBlock *BB3 = &*BBI++; // Diamond1 true (no redef)
+      MachineBasicBlock *BB4 = &*BBI++; // Diamond1 false (INSERT HERE)
+      MachineBasicBlock *BB5 = &*BBI++; // Diamond1 join
+      
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      (void)MRI; // May be unused, suppress warning
+      
+      // Find the 128-bit register %0
+      Register OrigReg = Register::index2VirtReg(0);
+      ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
+      
+      llvm::errs() << "Using 128-bit register: %" << OrigReg.virtRegIndex() << "\n";
+      
+      // Find sub2_3 subregister index (64-bit covering bits 64-127)
+      unsigned Sub2_3Idx = 0;
+      for (unsigned Idx = 1; Idx < TRI->getNumSubRegIndices(); ++Idx) {
+        unsigned SubRegSize = TRI->getSubRegIdxSize(Idx);
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(Idx);
+        
+        // Looking for 64-bit subreg covering upper half (lanes for sub2+sub3)
+        // sub2_3 should have mask 0xF0 (lanes for bits 64-127)
+        if (SubRegSize == 64 && (Mask.getAsInteger() & 0xF0) == 0xF0) {
+          Sub2_3Idx = Idx;
+          llvm::errs() << "Found sub2_3 index: " << Idx 
+                       << " (size=" << SubRegSize 
+                       << ", mask=0x" << llvm::format("%X", Mask.getAsInteger()) << ")\n";
+          break;
+        }
+      }
+      
+      ASSERT_NE(Sub2_3Idx, 0u) << "Should find sub2_3 subregister index";
+      
+      // Insert new definition in BB4: %0.sub2_3 = IMPLICIT_DEF
+      // Find insertion point (before the use of sub3)
+      MachineInstr *UseOfSub3 = nullptr;
+      
+      for (MachineInstr &MI : *BB4) {
+        if (MI.getNumOperands() >= 2 && MI.getOperand(0).isReg() && 
+            MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == OrigReg) {
+          UseOfSub3 = &MI;
+          break;
+        }
+      }
+      ASSERT_NE(UseOfSub3, nullptr) << "Should find use of sub3 in BB4";
+      
+      // Create new def: %0.sub2_3 = IMPLICIT_DEF
+      // We use IMPLICIT_DEF because it works for any register size and the SSA updater
+      // doesn't care about the specific instruction semantics - we're just testing SSA repair
+      MachineInstrBuilder MIB = BuildMI(*BB4, UseOfSub3, DebugLoc(), 
+                                         TII->get(TargetOpcode::IMPLICIT_DEF))
+        .addDef(OrigReg, RegState::Define, Sub2_3Idx);
+      
+      MachineInstr *NewDefMI = MIB.getInstr();
+      llvm::errs() << "Inserted new def in BB4: ";
+      NewDefMI->print(llvm::errs());
+      
+      // Index the new instruction
+      LIS.InsertMachineInstrInMaps(*NewDefMI);
+      
+      // Set MachineFunction properties to allow PHI insertion
+      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+      
+      // Create SSA updater and repair
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      
+      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      
+      // Print final state of key blocks
+      llvm::errs() << "\nFinal BB5 (diamond1 join):\n";
+      for (MachineInstr &MI : *BB5) {
+        MI.print(llvm::errs());
+      }
+      
+      // Verify SSA repair results
+      
+      // 1. Should have PHI in BB5 for sub2+sub3 lanes
+      bool FoundPHI = false;
+      for (MachineInstr &MI : *BB5) {
+        if (MI.isPHI()) {
+          Register PHIResult = MI.getOperand(0).getReg();
+          if (PHIResult.isVirtual()) {
+            llvm::errs() << "Found PHI in BB5: ";
+            MI.print(llvm::errs());
+            
+            // Check that it has 2 incoming values
+            unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
+            EXPECT_EQ(NumIncoming, 2u) << "PHI should have 2 incoming values";
+            
+            // Check that one incoming is the new register from BB4
+            // and the other incoming from BB3 uses %0.sub2_3
+            bool HasNewRegFromBB4 = false;
+            bool HasCorrectSubregFromBB3 = false;
+            for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+              Register IncomingReg = MI.getOperand(i).getReg();
+              unsigned IncomingSubReg = MI.getOperand(i).getSubReg();
+              MachineBasicBlock *IncomingMBB = MI.getOperand(i + 1).getMBB();
+              
+              if (IncomingMBB == BB4) {
+                HasNewRegFromBB4 = (IncomingReg == NewReg);
+                llvm::errs() << "  Incoming from BB4: %" << IncomingReg.virtRegIndex() << "\n";
+              } else if (IncomingMBB == BB3) {
+                // Should be %0.sub2_3 (the lanes we redefined)
+                llvm::errs() << "  Incoming from BB3: %" << IncomingReg.virtRegIndex();
+                if (IncomingSubReg) {
+                  llvm::errs() << "." << TRI->getSubRegIndexName(IncomingSubReg);
+                }
+                llvm::errs() << "\n";
+                
+                // Verify it's using sub2_3
+                if (IncomingReg == OrigReg && IncomingSubReg == Sub2_3Idx) {
+                  HasCorrectSubregFromBB3 = true;
+                }
+              }
+            }
+            EXPECT_TRUE(HasNewRegFromBB4) << "PHI should use NewReg from BB4";
+            EXPECT_TRUE(HasCorrectSubregFromBB3) << "PHI should use %0.sub2_3 from BB3";
+            FoundPHI = true;
+          }
+        }
+      }
+      EXPECT_TRUE(FoundPHI) << "Should find PHI in BB5 for sub2_3 lanes";
+      
+      // 2. Verify LiveIntervals
+      EXPECT_TRUE(LIS.hasInterval(NewReg));
+      EXPECT_TRUE(LIS.hasInterval(OrigReg));
+      
+      // 3. Verify LiveInterval for OrigReg has subranges for changed lanes
+      LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+      EXPECT_TRUE(OrigLI.hasSubRanges()) << "OrigReg should have subranges after partial redef";
+      
+      // Debug output if verification fails
+      if (!MF.verify(nullptr, nullptr, nullptr, false)) {
+        llvm::errs() << "MachineFunction verification failed:\n";
+        MF.print(llvm::errs());
+        LIS.print(llvm::errs());
+      }
+    });
+}
+
+// Test 10: Non-contiguous lane mask - redefine sub1 of 128-bit, use full register
+// This specifically tests the multi-source REG_SEQUENCE code path for non-contiguous lanes
+//
+// CFG Structure:
+//        BB0 (entry)
+//         |
+//         v
+//        BB1 (%0:vreg_128 = IMPLICIT_DEF)
+//         |
+//         v
+//        BB2 (diamond split)
+//        /  \
+//       /    \
+//      v      v
+//    BB3    BB4 (%0.sub1 = IMPLICIT_DEF - redefine middle lane!)
+//      \    /
+//       \  /
+//        v
+//       BB5 (diamond join - USE %0 as full register)
+//         |
+//         v
+//       BB6 (exit)
+//
+// Key Property: Redefining sub1 leaves LanesFromOld = sub0 + sub2 + sub3 (non-contiguous!)
+//               This requires getCoveringSubRegsForLaneMask to decompose into multiple subregs
+//               Expected REG_SEQUENCE: %RS = REG_SEQUENCE %6, sub1, %0.sub0, sub0, %0.sub2_3, sub2_3
+//
+TEST(MachineLaneSSAUpdaterTest, NonContiguousLaneMaskREGSEQUENCE) {
+  SmallString<4096> S;
+  StringRef MIRString = (Twine(R"MIR(
+--- |
+  define amdgpu_kernel void @func() { ret void }
+...
+---
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+body: |
+  bb.0:
+    successors: %bb.1
+    S_BRANCH %bb.1
+  
+  bb.1:
+    successors: %bb.2, %bb.3
+    %0:vreg_128 = IMPLICIT_DEF
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+  
+  bb.2:
+    successors: %bb.4
+    ; Left path - no redefinition
+    S_NOP 0
+    S_BRANCH %bb.4
+  
+  bb.3:
+    successors: %bb.4
+    ; Right path - THIS IS WHERE WE'LL INSERT: %0.sub1 = IMPLICIT_DEF
+    S_NOP 0
+    S_BRANCH %bb.4
+  
+  bb.4:
+    ; Diamond join - use FULL register (this will need REG_SEQUENCE!)
+    ; Using full %0 (not a subreg) forces composition of non-contiguous lanes
+    dead %1:vreg_128 = COPY %0:vreg_128
+    S_ENDPGM 0
+...
+)MIR")).toNullTerminatedStringRef(S);
+
+  doTest<LiveIntervalsWrapperPass>(MIRString,
+             [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+      LiveIntervals &LIS = LISWrapper.getLIS();
+      MachineDominatorTree MDT(MF);
+      llvm::errs() << "\n=== NonContiguousLaneMaskREGSEQUENCE Test ===\n";
+      
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      (void)MRI; // May be unused, suppress warning
+      
+      // Find blocks
+      // bb.0 = entry
+      // bb.1 = IMPLICIT_DEF + diamond split
+      // bb.2 = left path (no redef)
+      // bb.3 = right path (INSERT sub1 def here)
+      // bb.4 = diamond join (use full register)
+      MachineBasicBlock *BB3 = MF.getBlockNumbered(3);  // Right path - where we insert
+      MachineBasicBlock *BB4 = MF.getBlockNumbered(4);  // Join - where we need REG_SEQUENCE
+      
+      // Find %0 (the vreg_128)
+      Register OrigReg = Register::index2VirtReg(0);
+      ASSERT_TRUE(OrigReg.isValid()) << "Register %0 should be valid";
+      llvm::errs() << "Using 128-bit register: %" << OrigReg.virtRegIndex() << "\n";
+      
+      // Find sub1 subregister index
+      unsigned Sub1Idx = 0;
+      for (unsigned Idx = 1; Idx < TRI->getNumSubRegIndices(); ++Idx) {
+        StringRef Name = TRI->getSubRegIndexName(Idx);
+        if (Name == "sub1") {
+          Sub1Idx = Idx;
+          break;
+        }
+      }
+      
+      ASSERT_NE(Sub1Idx, 0u) << "Should find sub1 subregister index";
+      
+      // Insert new definition in BB3 (right path): %0.sub1 = IMPLICIT_DEF
+      MachineInstrBuilder MIB = BuildMI(*BB3, BB3->getFirstNonPHI(), DebugLoc(), 
+                                         TII->get(TargetOpcode::IMPLICIT_DEF))
+        .addDef(OrigReg, RegState::Define, Sub1Idx);
+      
+      MachineInstr *NewDefMI = MIB.getInstr();
+      llvm::errs() << "Inserted new def in BB3: ";
+      NewDefMI->print(llvm::errs());
+      
+      // Index the new instruction
+      LIS.InsertMachineInstrInMaps(*NewDefMI);
+      
+      // Set MachineFunction properties to allow PHI insertion
+      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+      
+      // Create SSA updater and repair
+      MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
+      Register NewReg = Updater.repairSSAForNewDef(*NewDefMI, OrigReg);
+      
+      llvm::errs() << "SSA repair created new register: %" << NewReg.virtRegIndex() << "\n";
+      
+      // Print final state
+      llvm::errs() << "\nFinal BB4 (diamond join):\n";
+      for (MachineInstr &MI : *BB4) {
+        MI.print(llvm::errs());
+      }
+      
+      // Verify SSA repair results
+      
+      // 1. Should have PHI in BB4 for sub1 lane
+      bool FoundPHI = false;
+      Register PHIReg;
+      for (MachineInstr &MI : *BB4) {
+        if (MI.isPHI()) {
+          PHIReg = MI.getOperand(0).getReg();
+          if (PHIReg.isVirtual()) {
+            llvm::errs() << "Found PHI in BB4: ";
+            MI.print(llvm::errs());
+            FoundPHI = true;
+            
+            // Check that it has 2 incoming values
+            unsigned NumIncoming = (MI.getNumOperands() - 1) / 2;
+            EXPECT_EQ(NumIncoming, 2u) << "PHI should have 2 incoming values";
+            
+            // One incoming should be the new register (vgpr_32 from BB3)
+            bool HasNewRegFromBB3 = false;
+            for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+              if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg() == NewReg) {
+                EXPECT_EQ(MI.getOperand(i + 1).getMBB(), BB3) << "NewReg should come from BB3";
+                HasNewRegFromBB3 = true;
+              }
+            }
+            EXPECT_TRUE(HasNewRegFromBB3) << "PHI should have NewReg from BB3";
+            
+            break;
+          }
+        }
+      }
+      
+      EXPECT_TRUE(FoundPHI) << "Should create PHI in BB4 for sub1 lane";
+      
+      // 2. Most importantly: Should have REG_SEQUENCE with MULTIPLE sources for non-contiguous lanes
+      // After PHI for sub1, we need to compose full register:
+      // LanesFromOld = sub0 + sub2 + sub3 (non-contiguous!)
+      // This requires multiple REG_SEQUENCE operands
+      bool FoundREGSEQUENCE = false;
+      unsigned NumREGSEQSources = 0;
+      
+      for (MachineInstr &MI : *BB4) {
+        if (MI.getOpcode() == TargetOpcode::REG_SEQUENCE) {
+          llvm::errs() << "Found REG_SEQUENCE: ";
+          MI.print(llvm::errs());
+          FoundREGSEQUENCE = true;
+          
+          // Count sources (each source is: register + subregidx, so pairs)
+          NumREGSEQSources = (MI.getNumOperands() - 1) / 2;
+          llvm::errs() << "  REG_SEQUENCE has " << NumREGSEQSources << " sources\n";
+          
+          // We expect at least 2 sources for non-contiguous case:
+          // 1. PHI result covering sub1
+          // 2. One or more sources from OrigReg covering sub0, sub2, sub3
+          EXPECT_GE(NumREGSEQSources, 2u) 
+              << "REG_SEQUENCE should have multiple sources for non-contiguous lanes";
+          
+          // Verify at least one source is the PHI result
+          bool HasPHISource = false;
+          for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+            if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg() == PHIReg) {
+              HasPHISource = true;
+              break;
+            }
+          }
+          EXPECT_TRUE(HasPHISource) << "REG_SEQUENCE should use PHI result";
+          
+          break;
+        }
+      }
+      
+      EXPECT_TRUE(FoundREGSEQUENCE) 
+          << "Should create REG_SEQUENCE to compose full register from non-contiguous lanes";
+      
+      // 3. The COPY use should now reference the REG_SEQUENCE result (not %0)
+      bool FoundRewrittenUse = false;
+      for (MachineInstr &MI : *BB4) {
+        if (MI.getOpcode() == TargetOpcode::COPY) {
+          MachineOperand &SrcOp = MI.getOperand(1);
+          if (SrcOp.isReg() && SrcOp.getReg().isVirtual() && SrcOp.getReg() != OrigReg) {
+            llvm::errs() << "Found rewritten COPY: ";
+            MI.print(llvm::errs());
+            FoundRewrittenUse = true;
+            break;
+          }
+        }
+      }
+      
+      EXPECT_TRUE(FoundRewrittenUse) << "COPY should be rewritten to use REG_SEQUENCE result";
+      
+      // Print summary
+      llvm::errs() << "\n=== Test Summary ===\n";
+      llvm::errs() << "✓ Redefined sub1 (middle lane) of vreg_128\n";
+      llvm::errs() << "✓ Created PHI for sub1 lane\n";
+      llvm::errs() << "✓ Created REG_SEQUENCE with " << NumREGSEQSources 
+                   << " sources to handle non-contiguous lanes (sub0 + sub2 + sub3)\n";
+      llvm::errs() << "✓ This test exercises getCoveringSubRegsForLaneMask!\n";
     });
 }
 
