@@ -7910,6 +7910,29 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
         (!Chain.ExtendB || ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
       ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
   }
+
+  // Check that all partial reductions in a chain are only used by other partial
+  // reductions with the same scale factor. Otherwise we end up creating users
+  // of scaled reductions where the types of the other operands don't match.
+  auto AllUsersPartialRdx = [this](Instruction *I, unsigned Scale) {
+    return all_of(I->users(), [Scale, this](const User *U) {
+      auto *UI = cast<Instruction>(U);
+
+      if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
+        return all_of(UI->users(), [Scale, this](const User *U) {
+          auto *UI = cast<Instruction>(U);
+          return ScaledReductionMap.lookup_or(UI, 0) == Scale;
+        });
+      }
+
+      return ScaledReductionMap.lookup_or(UI, 0) == Scale ||
+             !OrigLoop->contains(UI->getParent());
+    });
+  };
+  for (const auto &[Chain, Scale] : PartialReductionChains) {
+    if (!AllUsersPartialRdx(Chain.Reduction, Scale))
+      ScaledReductionMap.erase(Chain.Reduction);
+  }
 }
 
 bool VPRecipeBuilder::getScaledReductions(
@@ -8093,11 +8116,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr)) {
-    if (auto PartialRed =
-            tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value()))
-      return PartialRed;
-  }
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
+    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8131,9 +8151,9 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  if (ScaleFactor !=
-      vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()))
-    return nullptr;
+  assert(ScaleFactor ==
+             vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
+         "all accumulators in chain must have same scale factor");
 
   unsigned ReductionOpcode = Reduction->getOpcode();
   if (ReductionOpcode == Instruction::Sub) {
