@@ -2038,4 +2038,42 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByConditionOperator) {
   EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByReturn) {
+  {
+    const std::string Code = R"(
+    int * f() {
+      int *const x = nullptr;
+      return x;
+    })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = R"(
+    int * f() {
+      int *const x = nullptr;
+      return x;
+    })";
+    // in C++23, AST will have NoOp cast.
+    auto AST =
+        buildASTFromCodeWithArgs(Code, {"-Wno-everything", "-std=c++23"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = R"(
+    int const* f() {
+      int *const x = nullptr;
+      return x;
+    })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
 } // namespace clang
