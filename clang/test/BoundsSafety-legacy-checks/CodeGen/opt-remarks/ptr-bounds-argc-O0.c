@@ -63,9 +63,9 @@ int main(int argc, char **argv) {
 
 // IR-DAG: ![[LOC_10_16]] = !DILocation(line: 10, column: 16{{.*}})
 // IR-DAG: ![[LT_TRAP_LOC_10_16]] = !DILocation(line: 0, scope: ![[LT_TRAP_INFO_10_16:[0-9]+]], inlinedAt: ![[LOC_10_16]])
-// IR-DAG: ![[LT_TRAP_INFO_10_16]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$Dereferencing above bounds"
+// IR-DAG: ![[LT_TRAP_INFO_10_16]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$indexing above upper bound in 'array[idx]'"
 // IR-DAG: ![[GE_TRAP_LOC_10_16]] = !DILocation(line: 0, scope: ![[GE_TRAP_INFO_10_16:[0-9]+]], inlinedAt: ![[LOC_10_16]])
-// IR-DAG: ![[GE_TRAP_INFO_10_16]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$Dereferencing below bounds"
+// IR-DAG: ![[GE_TRAP_INFO_10_16]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$indexing below lower bound in 'array[idx]'"
 //
 // IR-DAG: ![[LOC_16_5]] = !DILocation(line: 16, column: 5
 // IR-DAG: ![[TRAP_LOC_16_5]] = !DILocation(line: 0, scope: ![[TRAP_INFO_16_5:[0-9]+]], inlinedAt: ![[LOC_16_5]])

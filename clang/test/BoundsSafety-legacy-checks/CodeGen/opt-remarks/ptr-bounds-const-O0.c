@@ -63,9 +63,9 @@ int main() {
 
 // IR-DAG: ![[LOC_10_14]] = !DILocation(line: 10, column: 14{{.*}})
 // IR-DAG: ![[LT_TRAP_LOC_10_14]] = !DILocation(line: 0, scope: ![[LT_TRAP_INFO_10_14:[0-9]+]], inlinedAt: ![[LOC_10_14]])
-// IR-DAG: ![[LT_TRAP_INFO_10_14]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$Dereferencing above bounds"
+// IR-DAG: ![[LT_TRAP_INFO_10_14]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$indexing above upper bound in 'array[6]'"
 // IR-DAG: ![[GT_TRAP_LOC_10_14]] = !DILocation(line: 0, scope: ![[GT_TRAP_INFO_10_14:[0-9]+]], inlinedAt: ![[LOC_10_14]])
-// IR-DAG: ![[GT_TRAP_INFO_10_14]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$Dereferencing below bounds"
+// IR-DAG: ![[GT_TRAP_INFO_10_14]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$indexing below lower bound in 'array[6]'"
 // IR-DAG: ![[LOC_16_5]] = !DILocation(line: 16, column: 5
 // IR-DAG: ![[TRAP_LOC_16_5]] = !DILocation(line: 0, scope: ![[TRAP_INFO_16_5:[0-9]+]], inlinedAt: ![[LOC_16_5]])
 // IR-DAG: ![[TRAP_INFO_16_5]] = distinct !DISubprogram(name: "__clang_trap_msg$Bounds check failed$"

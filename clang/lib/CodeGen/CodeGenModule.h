@@ -1839,6 +1839,15 @@ public:
     return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  PartialDiagnostic BuildPartialTrapReason() {
+    // When building trap reasons we sometimes don't know exactly
+    // which diagnostic is going to be emitted so we just specify
+    // `0` as place holder.
+    return PartialDiagnostic(0, getContext().getDiagAllocator());
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 

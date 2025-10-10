@@ -121,8 +121,8 @@ void CodeGenFunction::EmitPtrCastLECheck(llvm::Value *LHS, llvm::Value *RHS,
 
 void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
     llvm::Type *ElemTy, llvm::Value *Ptr, llvm::Value *Upper,
-    llvm::Value *Lower, bool AcceptNullPtr,
-    BoundsSafetyTrapCtx::Kind TrapCtx) {
+    llvm::Value *Lower, bool AcceptNullPtr, BoundsSafetyTrapCtx::Kind TrapCtx,
+    PartialDiagnostic *PD) {
   if (!Upper && !Lower)
     return;
   assert(TrapCtx != BoundsSafetyTrapCtx::UNKNOWN);
@@ -157,6 +157,18 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
       BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_GT_UPPER_BOUND);
       llvm::Value *OnePastTheEndPtr =
           Builder.CreateGEP(ElemTy, Ptr, llvm::ConstantInt::get(SizeTy, 1));
+
+      TrapReason OverflowTR;
+      TrapReason UpperBoundTR;
+      if (PD) {
+        CGM.BuildTrapReason(diag::trap_bs_upper_lower_overflow_bound,
+                            UpperBoundTR)
+            << *PD << diag::BoundsSafetyPtrCheckKind::Upper;
+        CGM.BuildTrapReason(diag::trap_bs_upper_lower_overflow_bound,
+                            OverflowTR)
+            << *PD << diag::BoundsSafetyPtrCheckKind::Overflow;
+      }
+
       // Emitting the upper bound check first since it's more
       // optimization-friendly. This is because the upper bound calculation (ptr
       // + size) is often marked 'inbounds' if 'ptr' is '__counted_by' or an
@@ -164,9 +176,11 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
       // this information to infer subsequent pointer arithmetic (ptr + i; where
       // 'i <= size') doesn't wrap.
       EmitBoundsSafetyTrapCheck(Builder.CreateICmpULE(OnePastTheEndPtr, Upper),
-                              BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx);
+                                BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx,
+                                PD ? &UpperBoundTR : nullptr);
       EmitBoundsSafetyTrapCheck(Builder.CreateICmpULE(Ptr, OnePastTheEndPtr),
-                              BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx);
+                                BNS_TRAP_PTR_GT_UPPER_BOUND, TrapCtx,
+                                PD ? &OverflowTR : nullptr);
     } else {
       // Path where the size of the access is assumed to be 1 byte. This is used
       // for
@@ -188,14 +202,31 @@ void CodeGenFunction::EmitBoundsSafetyBoundsCheck(
       //
       BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_GE_UPPER_BOUND);
       llvm::Value *Check = Builder.CreateICmpULT(Ptr, Upper);
-      EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_GE_UPPER_BOUND, TrapCtx);
+
+      TrapReason UpperTR;
+      if (PD) {
+        CGM.BuildTrapReason(diag::trap_bs_upper_lower_overflow_bound, UpperTR)
+            << *PD << diag::BoundsSafetyPtrCheckKind::Upper;
+      }
+
+      EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_GE_UPPER_BOUND, TrapCtx,
+                                PD ? &UpperTR : nullptr);
     }
   }
 
   if (Lower) {
     BoundsSafetyOptRemarkScope Scope(this, BNS_OR_PTR_LT_LOWER_BOUND);
     llvm::Value *Check = Builder.CreateICmpUGE(Ptr, Lower);
-    EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_LT_LOWER_BOUND, TrapCtx);
+
+    TrapReason LowerBoundTR;
+    if (PD) {
+      CGM.BuildTrapReason(diag::trap_bs_upper_lower_overflow_bound,
+                          LowerBoundTR)
+          << *PD << diag::BoundsSafetyPtrCheckKind::Lower;
+    }
+
+    EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_PTR_LT_LOWER_BOUND, TrapCtx,
+                              PD ? &LowerBoundTR : nullptr);
   }
   if (NullCheckBranch)
     NullCheckBranch->setSuccessor(1, Builder.GetInsertBlock());
@@ -4591,9 +4622,15 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
   llvm::StringRef TrapMessage;
   llvm::StringRef TrapCategory;
-  auto DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
-
   /* TO_UPSTREAM(BoundsSafety) ON*/
+  CodeGenOptions::SanitizeDebugTrapReasonKind DebugTrapReasonKind;
+  if (CheckHandlerID == SanitizerHandler::BoundsSafety) {
+    DebugTrapReasonKind =
+        CGM.getCodeGenOpts().getBoundsSafetyDebugTrapReasons();
+  } else {
+    DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
+  }
+
   if (TR && !TR->isEmpty() &&
       (DebugTrapReasonKind ==
            CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed ||
@@ -4607,9 +4644,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   }
 
   if (getDebugInfo() && !(TrapMessage.empty() && TrapCategory.empty()) &&
-      (DebugTrapReasonKind !=
-           CodeGenOptions::SanitizeDebugTrapReasonKind::None ||
-       CheckHandlerID == SanitizerHandler::BoundsSafety) &&
+      DebugTrapReasonKind !=
+          CodeGenOptions::SanitizeDebugTrapReasonKind::None &&
       TrapLocation) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
         TrapLocation, TrapCategory, TrapMessage);
@@ -4705,10 +4741,11 @@ void CodeGenFunction::EmitBoundsSafetyTrapCheck(
   auto OptRemark = GetBoundsSafetyOptRemarkForTrap(kind);
   assert(BoundsSafetyOptRemarkScope::InScope(this, OptRemark));
 
-  // Fallback: If a TrapReason object isn't provided use the legacy approach
-  // for constructing
+  // Fallback: If a TrapReason object isn't provided or we are asked to provide
+  // a "basic" description.
   TrapReason TempTR;
-  if (!TR) {
+  if (!TR || CGM.getCodeGenOpts().getBoundsSafetyDebugTrapReasons() ==
+                 CodeGenOptions::SanitizeDebugTrapReasonKind::Basic) {
     CGM.BuildTrapReason(diag::trap_bs_fallback, TempTR)
         << GetBoundsSafetyTrapMessageSuffix(kind, TrapCtx);
   }
@@ -4718,7 +4755,8 @@ void CodeGenFunction::EmitBoundsSafetyTrapCheck(
   // caches basic blocks that contain instructions that need annotating.
   EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety,
                 /*NoMerge=*/CGM.getCodeGenOpts().BoundsSafetyUniqueTraps,
-                TR ? TR : &TempTR, GetBoundsSafetyOptRemarkString(OptRemark));
+                TempTR.isEmpty() ? TR : &TempTR,
+                GetBoundsSafetyOptRemarkString(OptRemark));
 }
 
 llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
@@ -5065,9 +5103,11 @@ CodeGenFunction::EmitWidePtrArraySubscriptExpr(const ArraySubscriptExpr *E,
     }
     assert(!!Upper && !!Lower);
     llvm::Type *ElemTy = ConvertTypeForMem(E->getType());
+    auto PD = CGM.BuildPartialTrapReason();
+    PD << diag::BoundsCheckContextKind::Indexing << E;
     EmitBoundsSafetyBoundsCheck(ElemTy, Addr.getBasePointer(), Upper, Lower,
-                             /*AcceptNullPtr=*/false,
-                             /*TrapCtx=*/BoundsSafetyTrapCtx::DEREF);
+                                /*AcceptNullPtr=*/false,
+                                /*TrapCtx=*/BoundsSafetyTrapCtx::DEREF, &PD);
   }
   return MakeAddrLValue(Addr, E->getType(), BaseInfo, TBAAInfo);
 }

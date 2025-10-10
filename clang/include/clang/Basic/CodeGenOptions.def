@@ -337,6 +337,8 @@ CODEGENOPT(BoundsSafetyUniqueTraps, 1, 0, Benign) ///< When true, merging of
                                                   /// -fbounds-safety trap
                                                   /// instructions will be
                                                   /// prevented.
+
+ENUM_CODEGENOPT(BoundsSafetyDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
 /// Treat loops as finite: language, always, never.

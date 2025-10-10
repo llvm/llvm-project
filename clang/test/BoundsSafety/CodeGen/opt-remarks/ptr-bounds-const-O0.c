@@ -158,7 +158,7 @@ int main() {
 // OPT-REM-NEXT: Function:        foo
 // OPT-REM-NEXT: Args:
 // OPT-REM-NEXT:   - String:          'Inserted '
-// OPT-REM-NEXT:   - count:           '4'
+// OPT-REM-NEXT:   - count:           '2'
 // OPT-REM-NEXT:   - String:          ' LLVM IR instruction'
 // OPT-REM-NEXT:   - String:          s
 // OPT-REM-NEXT:   - String:          "\n"
@@ -168,11 +168,28 @@ int main() {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
+// OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
+// OPT-REM-NEXT: ...
+
+// OPT-REM-NEXT: --- !Analysis
+// OPT-REM-NEXT: Pass:            annotation-remarks
+// OPT-REM-NEXT: Name:            BoundsSafetyCheck
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-const-O0.c', 
+// OPT-REM-NEXT:                    Line: 0, Column: 0 }
+// OPT-REM-NEXT: Function:        foo
+// OPT-REM-NEXT: Args:
+// OPT-REM-NEXT:   - String:          'Inserted '
+// OPT-REM-NEXT:   - count:           '2'
+// OPT-REM-NEXT:   - String:          ' LLVM IR instruction'
+// OPT-REM-NEXT:   - String:          s
+// OPT-REM-NEXT:   - String:          "\n"
+// OPT-REM-NEXT:   - String:          "used for:\n"
+// OPT-REM-NEXT:   - String:          bounds-safety-check-ptr-le-upper-bound
 // OPT-REM-NEXT:   - String:           |
-// OPT-REM-NEXT:       trap (LLVM IR 'call')
-// OPT-REM-NEXT:       other (LLVM IR 'unreachable')
-// OPT-REM-NEXT:       trap (LLVM IR 'call')
-// OPT-REM-NEXT:       other (LLVM IR 'unreachable')
+// OPT-REM-NEXT: {{^[ 	]+$}}
+// OPT-REM-NEXT: {{^[ 	]+$}}
+// OPT-REM-NEXT:       instructions:
+// OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis

@@ -2966,7 +2966,8 @@ public:
   void EmitBoundsSafetyBoundsCheck(
       llvm::Type *ElemTy, llvm::Value *Ptr, llvm::Value *Upper,
       llvm::Value *Lower, bool AcceptNullPt = false,
-      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN);
+      BoundsSafetyTrapCtx::Kind TrapCtx = BoundsSafetyTrapCtx::UNKNOWN,
+      PartialDiagnostic *PD = nullptr);
   void EmitBoundsSafetyRangeCheck(
       llvm::Value *LowerBound, llvm::Value *LowerAccess,
       llvm::Value *UpperAccess, llvm::Value *UpperBound,

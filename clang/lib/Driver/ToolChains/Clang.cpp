@@ -7136,6 +7136,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       CmdArgs.push_back("-fbounds-safety-unique-traps");
     }
   }
+
+  Args.AddLastArg(CmdArgs, options::OPT_fbounds_safety_debug_trap_reasons_EQ);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both

@@ -15,5 +15,18 @@ let CategoryName = "Bounds check failed" in {
 // trap reason strings.
 def trap_bs_fallback : Trap<"%0">;
 
+// TODO: Split these up once we know what the diagnostics strings needs to be.
+// Ideally we want to be able to generate trap codes and opt-remark strings
+// from these definitions too so we'll need to split them up when we do that.
+def trap_bs_upper_lower_overflow_bound : Trap<
+  "%enum_select<BoundsCheckContextKind>{"
+    "%Indexing{indexing}|"
+    "%TODO{TODO}"
+  "}0 %enum_select<BoundsSafetyPtrCheckKind>{"
+    "%Upper{above upper bound}|"
+    "%Overflow{overflows address space}|"
+    "%Lower{below lower bound"
+  "}}2 in %1">;
+
 }
 }

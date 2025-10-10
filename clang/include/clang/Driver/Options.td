@@ -2045,6 +2045,20 @@ defm bounds_safety_legacy_unique_traps : BoolOptionWithoutMarshalling<"f", "uniq
   NegFlag<SetFalse, [], [ClangOption],
     "legacy alias for -fno-bounds-safety-unique-traps">>;
 
+def fbounds_safety_debug_trap_reasons_EQ
+  : Joined<["-"], "fbounds-safety-debug-trap-reasons=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Set how trap reasons are emitted. "
+      "`none` - Not emitted. This gives the smallest debug info; "
+      "`basic` - Emit a fixed trap message per check type. This increases the "
+      "debug info size but not as much as `detailed`; "
+      "`detailed` - Emit a more detailed trap message. This increases the "
+      "debug info size the most. Default is `detailed`.">,
+    Values<"none,basic,detailed">,
+    NormalizedValuesScope<"CodeGenOptions::SanitizeDebugTrapReasonKind">,
+    NormalizedValues<["None", "Basic", "Detailed"]>,
+    MarshallingInfoEnum<CodeGenOpts<"BoundsSafetyDebugTrapReasons">, "Detailed">;
+
 // TO_UPSTREAM(BoundsSafety) OFF
 
 defm lifetime_safety : BoolFOption<
