@@ -116,7 +116,7 @@ def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>
 ]>;
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
-  SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
+  SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTIntShiftPairOp : SDTypeProfile<2, 3, [ // shl_parts, sra_parts, srl_parts
   SDTCisInt<0>, SDTCisSameAs<1, 0>,
