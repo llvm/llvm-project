@@ -569,7 +569,40 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
-static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
+static SourceLanguage
+MapDWARFLanguageToCVLang(dwarf::SourceLanguageName DWLName) {
+  switch (DWLName) {
+  case dwarf::DW_LNAME_C:
+    return SourceLanguage::C;
+  case dwarf::DW_LNAME_C_plus_plus:
+    return SourceLanguage::Cpp;
+  case dwarf::DW_LNAME_Fortran:
+    return SourceLanguage::Fortran;
+  case dwarf::DW_LNAME_Pascal:
+    return SourceLanguage::Pascal;
+  case dwarf::DW_LNAME_Cobol:
+    return SourceLanguage::Cobol;
+  case dwarf::DW_LNAME_Java:
+    return SourceLanguage::Java;
+  case dwarf::DW_LNAME_D:
+    return SourceLanguage::D;
+  case dwarf::DW_LNAME_Swift:
+    return SourceLanguage::Swift;
+  case dwarf::DW_LNAME_Rust:
+    return SourceLanguage::Rust;
+  case dwarf::DW_LNAME_ObjC:
+    return SourceLanguage::ObjC;
+  case dwarf::DW_LNAME_ObjC_plus_plus:
+    return SourceLanguage::ObjCpp;
+  default:
+    // There's no CodeView representation for this language, and CV doesn't
+    // have an "unknown" option for the language field, so we'll use MASM,
+    // as it's very low level.
+    return SourceLanguage::Masm;
+  }
+}
+
+static SourceLanguage MapDWARFLanguageToCVLang(dwarf::SourceLanguage DWLang) {
   switch (DWLang) {
   case dwarf::DW_LANG_C:
   case dwarf::DW_LANG_C89:
@@ -633,8 +666,13 @@ void CodeViewDebug::beginModule(Module *M) {
     Node = *CUs->operands().begin();
   }
   const auto *CU = cast<DICompileUnit>(Node);
+  DISourceLanguageName Lang = CU->getSourceLanguage();
   CurrentSourceLanguage =
-      MapDWLangToCVLang(CU->getSourceLanguage().getUnversionedName());
+      Lang.hasVersionedName()
+          ? MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguageName>(Lang.getName()))
+          : MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguage>(Lang.getName()));
   if (!M->getCodeViewFlag() ||
       CU->getEmissionKind() == DICompileUnit::NoDebug) {
     Asm = nullptr;
