@@ -50,6 +50,22 @@ constexpr void test_compare() {
 template <template <class...> class KeyContainer>
 constexpr void test_compare_alloc() {
   {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<container_type, Alloc> is true
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using V1 = KeyContainer<int, A1>;
+    using V2 = KeyContainer<int, A2>;
+    using M1 = std::flat_multiset<int, C, V1>;
+    using M2 = std::flat_multiset<int, C, V2>;
+    static_assert(std::is_constructible_v<M1, const C&, const A1&>);
+    static_assert(std::is_constructible_v<M2, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M1, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, const C&, const A1&>);
+  }
+  {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
     auto m   = std::flat_multiset<int, C, KeyContainer<int, A1>>(C(4), A1(5));
@@ -71,23 +87,6 @@ constexpr void test_compare_alloc() {
 }
 
 constexpr bool test() {
-  {
-    // The constructors in this subclause shall not participate in overload
-    // resolution unless uses_allocator_v<container_type, Alloc> is true
-
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using A2 = other_allocator<int>;
-    using V1 = std::vector<int, A1>;
-    using V2 = std::vector<int, A2>;
-    using M1 = std::flat_multiset<int, C, V1>;
-    using M2 = std::flat_multiset<int, C, V2>;
-    static_assert(std::is_constructible_v<M1, const C&, const A1&>);
-    static_assert(std::is_constructible_v<M2, const C&, const A2&>);
-    static_assert(!std::is_constructible_v<M1, const C&, const A2&>);
-    static_assert(!std::is_constructible_v<M2, const C&, const A1&>);
-  }
-
   test_compare<std::vector<int>>();
   test_compare<MinSequenceContainer<int>>();
   test_compare<std::vector<int, min_allocator<int>>>();

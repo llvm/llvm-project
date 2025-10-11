@@ -31,6 +31,30 @@
 template <template <class...> class KeyContainer>
 constexpr void test() {
   {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<container_type, Alloc> is true.
+
+    using C     = test_less<int>;
+    using A1    = test_allocator<int>;
+    using A2    = other_allocator<int>;
+    using V1    = KeyContainer<int, A1>;
+    using V2    = KeyContainer<int, A2>;
+    using M1    = std::flat_multiset<int, C, V1>;
+    using M2    = std::flat_multiset<int, C, V2>;
+    using Iter1 = typename M1::iterator;
+    using Iter2 = typename M2::iterator;
+    static_assert(std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const A1&>);
+    static_assert(std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const A2&>);
+    static_assert(!std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const A2&>);
+    static_assert(!std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const A1&>);
+
+    static_assert(std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const C&, const A1&>);
+    static_assert(std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const C&, const A1&>);
+  }
+
+  {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator);
     // cpp17_input_iterator
     using M = std::flat_multiset<int, std::less<int>, KeyContainer<int>>;
@@ -133,30 +157,6 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-  {
-    // The constructors in this subclause shall not participate in overload
-    // resolution unless uses_allocator_v<container_type, Alloc> is true.
-
-    using C     = test_less<int>;
-    using A1    = test_allocator<int>;
-    using A2    = other_allocator<int>;
-    using V1    = std::vector<int, A1>;
-    using V2    = std::vector<int, A2>;
-    using M1    = std::flat_multiset<int, C, V1>;
-    using M2    = std::flat_multiset<int, C, V2>;
-    using Iter1 = typename M1::iterator;
-    using Iter2 = typename M2::iterator;
-    static_assert(std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const A1&>);
-    static_assert(std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const A2&>);
-    static_assert(!std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const A2&>);
-    static_assert(!std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const A1&>);
-
-    static_assert(std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const C&, const A1&>);
-    static_assert(std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const C&, const A2&>);
-    static_assert(!std::is_constructible_v<M1, std::sorted_equivalent_t, Iter1, Iter1, const C&, const A2&>);
-    static_assert(!std::is_constructible_v<M2, std::sorted_equivalent_t, Iter2, Iter2, const C&, const A1&>);
-  }
-
   test<std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque

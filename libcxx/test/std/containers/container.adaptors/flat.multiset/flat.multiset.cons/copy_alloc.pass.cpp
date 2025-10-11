@@ -25,25 +25,6 @@
 
 template <template <class...> class KeyContainer>
 constexpr void test() {
-  using C = test_less<int>;
-  KeyContainer<int, test_allocator<int>> ks({1, 3, 5, 5}, test_allocator<int>(6));
-  using M = std::flat_multiset<int, C, decltype(ks)>;
-  auto mo = M(ks, C(5));
-  auto m  = M(mo, test_allocator<int>(3));
-
-  assert(m.key_comp() == C(5));
-  assert(std::ranges::equal(m, ks));
-  auto keys = std::move(m).extract();
-  assert(keys.get_allocator() == test_allocator<int>(3));
-
-  // mo is unchanged
-  assert(mo.key_comp() == C(5));
-  assert(std::ranges::equal(mo, ks));
-  auto keys2 = std::move(mo).extract();
-  assert(keys2.get_allocator() == test_allocator<int>(6));
-}
-
-constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -51,8 +32,8 @@ constexpr bool test() {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
     using A2 = other_allocator<int>;
-    using V1 = std::vector<int, A1>;
-    using V2 = std::vector<int, A2>;
+    using V1 = KeyContainer<int, A1>;
+    using V2 = KeyContainer<int, A2>;
     using M1 = std::flat_multiset<int, C, V1>;
     using M2 = std::flat_multiset<int, C, V2>;
     static_assert(std::is_constructible_v<M1, const M1&, const A1&>);
@@ -60,7 +41,27 @@ constexpr bool test() {
     static_assert(!std::is_constructible_v<M1, const M1&, const A2&>);
     static_assert(!std::is_constructible_v<M2, const M2&, const A1&>);
   }
+  {
+    using C = test_less<int>;
+    KeyContainer<int, test_allocator<int>> ks({1, 3, 5, 5}, test_allocator<int>(6));
+    using M = std::flat_multiset<int, C, decltype(ks)>;
+    auto mo = M(ks, C(5));
+    auto m  = M(mo, test_allocator<int>(3));
 
+    assert(m.key_comp() == C(5));
+    assert(std::ranges::equal(m, ks));
+    auto keys = std::move(m).extract();
+    assert(keys.get_allocator() == test_allocator<int>(3));
+
+    // mo is unchanged
+    assert(mo.key_comp() == C(5));
+    assert(std::ranges::equal(mo, ks));
+    auto keys2 = std::move(mo).extract();
+    assert(keys2.get_allocator() == test_allocator<int>(6));
+  }
+}
+
+constexpr bool test() {
   test<std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque

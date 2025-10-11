@@ -38,6 +38,27 @@ concept ImplicitlyConstructible = requires(Args&&... args) { conversion_test<T>(
 template <template <class...> class KeyContainer>
 constexpr void test() {
   {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<container_type, Alloc> is true
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using V1 = KeyContainer<int, A1>;
+    using V2 = KeyContainer<int, A2>;
+    using M1 = std::flat_multiset<int, C, V1>;
+    using M2 = std::flat_multiset<int, C, V2>;
+    static_assert(std::is_constructible_v<M1, const V1&, const A1&>);
+    static_assert(std::is_constructible_v<M2, const V2&, const A2&>);
+    static_assert(!std::is_constructible_v<M1, const V1&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, const V2&, const A1&>);
+
+    static_assert(std::is_constructible_v<M1, const V1&, const C&, const A1&>);
+    static_assert(std::is_constructible_v<M2, const V2&, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M1, const V1&, const C&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, const V2&, const C&, const A1&>);
+  }
+  {
     // flat_multiset(container_type)
     using M              = std::flat_multiset<int, std::less<int>, KeyContainer<int>>;
     KeyContainer<int> ks = {1, 1, 1, 2, 2, 3, 2, 3, 3};
@@ -136,27 +157,6 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-  {
-    // The constructors in this subclause shall not participate in overload
-    // resolution unless uses_allocator_v<container_type, Alloc> is true
-
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using A2 = other_allocator<int>;
-    using V1 = std::vector<int, A1>;
-    using V2 = std::vector<int, A2>;
-    using M1 = std::flat_multiset<int, C, V1>;
-    using M2 = std::flat_multiset<int, C, V2>;
-    static_assert(std::is_constructible_v<M1, const V1&, const A1&>);
-    static_assert(std::is_constructible_v<M2, const V2&, const A2&>);
-    static_assert(!std::is_constructible_v<M1, const V1&, const A2&>);
-    static_assert(!std::is_constructible_v<M2, const V2&, const A1&>);
-
-    static_assert(std::is_constructible_v<M1, const V1&, const C&, const A1&>);
-    static_assert(std::is_constructible_v<M2, const V2&, const C&, const A2&>);
-    static_assert(!std::is_constructible_v<M1, const V1&, const C&, const A2&>);
-    static_assert(!std::is_constructible_v<M2, const V2&, const C&, const A1&>);
-  }
 
   test<std::vector>();
 

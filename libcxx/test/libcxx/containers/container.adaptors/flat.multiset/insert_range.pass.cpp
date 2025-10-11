@@ -20,7 +20,6 @@
 #include <cassert>
 #include <flat_set>
 #include <ranges>
-#include <sstream>
 #include <vector>
 
 #include "../flat_helpers.h"

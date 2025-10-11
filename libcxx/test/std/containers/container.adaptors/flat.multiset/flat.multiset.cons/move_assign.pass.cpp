@@ -215,13 +215,10 @@ constexpr void test() {
     assert(ks.get_allocator() == A());
     assert(mo.empty());
   }
-}
-
-constexpr bool test() {
   {
     using C                           = test_less<int>;
     using A1                          = test_allocator<int>;
-    using M                           = std::flat_multiset<int, C, std::vector<int, A1>>;
+    using M                           = std::flat_multiset<int, C, KeyContainer<int, A1>>;
     M mo                              = M({1, 1, 2, 3}, C(5), A1(7));
     M m                               = M({}, C(3), A1(7));
     std::same_as<M&> decltype(auto) r = m = std::move(mo);
@@ -232,7 +229,9 @@ constexpr bool test() {
     assert(ks.get_allocator() == A1(7));
     assert(mo.empty());
   }
+}
 
+constexpr bool test() {
   test<std::vector>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)
