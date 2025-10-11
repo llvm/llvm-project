@@ -374,11 +374,11 @@ mlir::composeReassociationIndices(
   if (consumerReassociations.empty())
     return composedIndices;
 
-  size_t consumerDims = std::accumulate(
-      consumerReassociations.begin(), consumerReassociations.end(), 0,
-      [](size_t all, ReassociationIndicesRef indices) {
-        return all + indices.size();
-      });
+  size_t consumerDims =
+      llvm::accumulate(consumerReassociations, size_t(0),
+                       [](size_t all, ReassociationIndicesRef indices) {
+                         return all + indices.size();
+                       });
   if (producerReassociations.size() != consumerDims)
     return std::nullopt;
 

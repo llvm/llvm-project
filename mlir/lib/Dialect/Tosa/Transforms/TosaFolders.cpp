@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Matchers.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -375,8 +376,7 @@ llvm::APInt calculateReducedValue(const mlir::ElementsAttr &oldTensorAttr,
   for (int64_t reductionAxisVal = 1; reductionAxisVal < oldShape[reductionAxis];
        ++reductionAxisVal) {
 
-    int64_t stride = std::accumulate(oldShape.begin() + reductionAxis + 1,
-                                     oldShape.end(), 1, std::multiplies<int>());
+    int64_t stride = llvm::product_of(oldShape.drop_front(reductionAxis + 1));
     int64_t index = indexAtOldTensor + stride * reductionAxisVal;
     reducedValue =
         OperationType::calcOneElement(reducedValue, oldTensor[index]);
@@ -424,8 +424,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     auto oldShape = shapedOldElementsValues.getShape();
     auto newShape = resultType.getShape();
 
-    auto newNumOfElements = std::accumulate(newShape.begin(), newShape.end(), 1,
-                                            std::multiplies<int>());
+    int64_t newNumOfElements = llvm::product_of(newShape);
     llvm::SmallVector<APInt> newReducedTensor(newNumOfElements);
 
     for (int64_t reductionIndex = 0; reductionIndex < newNumOfElements;

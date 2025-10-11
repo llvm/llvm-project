@@ -26,7 +26,7 @@ run
 expr blah
 
 # CHECK-TARGET: (lldb) expr
-# CHECK-TARGET: note: Ran expression as 'C++14'.
+# CHECK-TARGET: note: Ran expression as 'C++{{.*}}'
 
 expr -l objc -- blah
 

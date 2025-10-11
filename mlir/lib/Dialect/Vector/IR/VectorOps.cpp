@@ -2496,8 +2496,7 @@ struct ToElementsOfBroadcast final : OpRewritePattern<ToElementsOp> {
     auto srcElems = vector::ToElementsOp::create(
         rewriter, toElementsOp.getLoc(), bcastOp.getSource());
 
-    int64_t dstCount = std::accumulate(dstShape.begin(), dstShape.end(), 1,
-                                       std::multiplies<int64_t>());
+    int64_t dstCount = llvm::product_of(dstShape);
 
     SmallVector<Value> replacements;
     replacements.reserve(dstCount);

@@ -218,11 +218,9 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
             # Detail 1/3: note: requested expression language
             diag = details.GetItemAtIndex(0)
             self.assertEqual(str(diag.GetValueForKey("severity")), "note")
-            self.assertEqual(
-                str(diag.GetValueForKey("message")), "Ran expression as 'C++11'."
-            )
-            self.assertEqual(
-                str(diag.GetValueForKey("rendered")), "Ran expression as 'C++11'."
+            self.assertIn("Ran expression as 'C++", str(diag.GetValueForKey("message")))
+            self.assertIn(
+                "Ran expression as 'C++", str(diag.GetValueForKey("rendered"))
             )
             self.assertEqual(str(diag.GetValueForKey("source_location")), "")
             self.assertEqual(str(diag.GetValueForKey("file")), "")

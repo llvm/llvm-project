@@ -131,7 +131,7 @@ def FPR32INX : RegisterOperand<GPRF32> {
 // The DAGOperand can be unset if the predicates are not enough to define it.
 class ExtInfo<string suffix, string space, list<Predicate> predicates,
               ValueType primaryvt, DAGOperand primaryty, DAGOperand f32ty,
-              DAGOperand f64ty, DAGOperand f16ty> {
+              DAGOperand f64ty, DAGOperand f16ty, ValueType intvt = XLenVT> {
   list<Predicate> Predicates = predicates;
   string Suffix = suffix;
   string Space = space;
@@ -140,6 +140,7 @@ class ExtInfo<string suffix, string space, list<Predicate> predicates,
   DAGOperand F32Ty = f32ty;
   DAGOperand F64Ty = f64ty;
   ValueType PrimaryVT = primaryvt;
+  ValueType IntVT = intvt;
 }
 
 def FExt       : ExtInfo<"", "", [HasStdExtF], f32, FPR32, FPR32, ?, ?>;
@@ -314,9 +315,9 @@ multiclass FPCmp_rr_m<bits<7> funct7, bits<3> funct3, string opcodestr,
   def Ext.Suffix : FPCmp_rr<funct7, funct3, opcodestr, Ext.PrimaryTy, Commutable>;
 }
 
-class PseudoFROUND<DAGOperand Ty, ValueType vt>
+class PseudoFROUND<DAGOperand Ty, ValueType vt, ValueType intvt = XLenVT>
     : Pseudo<(outs Ty:$rd), (ins Ty:$rs1, Ty:$rs2, ixlenimm:$rm),
-      [(set Ty:$rd, (vt (riscv_fround Ty:$rs1, Ty:$rs2, timm:$rm)))]> {
+      [(set Ty:$rd, (vt (riscv_fround Ty:$rs1, Ty:$rs2, (intvt timm:$rm))))]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -529,13 +530,14 @@ def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 
 /// Generic pattern classes
 class PatSetCC<DAGOperand Ty, SDPatternOperator OpNode, CondCode Cond,
-               RVInstCommon Inst, ValueType vt>
-    : Pat<(XLenVT (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
+               RVInstCommon Inst, ValueType vt, ValueType intvt = XLenVT>
+    : Pat<(intvt (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
 multiclass PatSetCC_m<SDPatternOperator OpNode, CondCode Cond,
                       RVInstCommon Inst, ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatSetCC<Ext.PrimaryTy, OpNode, Cond,
-                            !cast<RVInstCommon>(Inst#Ext.Suffix), Ext.PrimaryVT>;
+                            !cast<RVInstCommon>(Inst#Ext.Suffix),
+                            Ext.PrimaryVT, Ext.IntVT>;
 }
 
 class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
@@ -549,14 +551,15 @@ multiclass PatFprFpr_m<SDPatternOperator OpNode, RVInstR Inst,
 }
 
 class PatFprFprDynFrm<SDPatternOperator OpNode, RVInstRFrm Inst,
-                      DAGOperand RegTy, ValueType vt>
-    : Pat<(OpNode (vt RegTy:$rs1), (vt RegTy:$rs2)), (Inst $rs1, $rs2, FRM_DYN)>;
+                      DAGOperand RegTy, ValueType vt, ValueType intvt>
+    : Pat<(OpNode (vt RegTy:$rs1), (vt RegTy:$rs2)),
+          (Inst $rs1, $rs2,(intvt FRM_DYN))>;
 multiclass PatFprFprDynFrm_m<SDPatternOperator OpNode, RVInstRFrm Inst,
                              ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatFprFprDynFrm<OpNode,
                                    !cast<RVInstRFrm>(Inst#Ext.Suffix),
-                                   Ext.PrimaryTy, Ext.PrimaryVT>;
+                                   Ext.PrimaryTy, Ext.PrimaryVT, Ext.IntVT>;
 }
 
 /// Float conversion operations

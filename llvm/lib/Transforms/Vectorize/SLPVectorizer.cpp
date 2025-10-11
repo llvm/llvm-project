@@ -10664,7 +10664,9 @@ class InstructionsCompatibilityAnalysis {
   void findAndSetMainInstruction(ArrayRef<Value *> VL, const BoUpSLP &R) {
     BasicBlock *Parent = nullptr;
     // Checks if the instruction has supported opcode.
-    auto IsSupportedInstruction = [&](Instruction *I) {
+    auto IsSupportedInstruction = [&](Instruction *I, bool AnyUndef) {
+      if (AnyUndef && (I->isIntDivRem() || I->isFPDivRem() || isa<CallInst>(I)))
+        return false;
       return I && isSupportedOpcode(I->getOpcode()) &&
              (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
     };
@@ -10672,10 +10674,13 @@ class InstructionsCompatibilityAnalysis {
     // will be unable to schedule anyway.
     SmallDenseSet<Value *, 8> Operands;
     SmallMapVector<unsigned, SmallVector<Instruction *>, 4> Candidates;
+    bool AnyUndef = false;
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
-      if (!I)
+      if (!I) {
+        AnyUndef |= isa<UndefValue>(V);
         continue;
+      }
       if (!DT.isReachableFromEntry(I->getParent()))
         continue;
       if (Candidates.empty()) {
@@ -10710,7 +10715,7 @@ class InstructionsCompatibilityAnalysis {
       if (P.second.size() < BestOpcodeNum)
         continue;
       for (Instruction *I : P.second) {
-        if (IsSupportedInstruction(I) && !Operands.contains(I)) {
+        if (IsSupportedInstruction(I, AnyUndef) && !Operands.contains(I)) {
           MainOp = I;
           BestOpcodeNum = P.second.size();
           break;

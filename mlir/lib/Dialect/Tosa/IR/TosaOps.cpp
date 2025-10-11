@@ -2368,9 +2368,10 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
       }
     }
 
-    int64_t newShapeElementsNum = std::accumulate(
-        shapeValues.begin(), shapeValues.end(), 1LL,
-        [](int64_t acc, int64_t dim) { return (dim > 0) ? acc * dim : acc; });
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
+          return (dim > 0) ? acc * dim : acc;
+        });
     bool isStaticNewShape =
         llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
     if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||

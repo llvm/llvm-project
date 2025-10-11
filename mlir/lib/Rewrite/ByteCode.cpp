@@ -1835,8 +1835,7 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
       return nullptr;
 
     ArrayRef<int32_t> segments = segmentAttr;
-    unsigned startIndex =
-        std::accumulate(segments.begin(), segments.begin() + index, 0);
+    unsigned startIndex = llvm::sum_of(segments.take_front(index));
     values = values.slice(startIndex, *std::next(segments.begin(), index));
 
     LDBG() << "  * Extracting range[" << startIndex << ", "

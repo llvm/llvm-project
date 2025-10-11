@@ -1188,6 +1188,26 @@ which can be `import`ed  from the main dialect file, i.e.
 `python/mlir/dialects/<dialect-namespace>/passes.py` if it is undesirable to
 make the passes available along with the dialect.
 
+Passes can be defined as Python callables via the `PassManager.add` API.
+In such case, the callable is wrapped as an `mlir::Pass` internally and
+executed as part of the pass pipeline when `PassManager.run` is invoked.
+In the callable, the `op` parameter represents the current operation being transformed,
+while the `pass_` parameter provides access to the current `Pass` object,
+allowing actions such as `signalPassFailure()`.
+The lifetime of the callable is extended at least until the `PassManager` is destroyed.
+The following example code demonstrates how to define Python passes.
+
+```python
+def demo_pass(op, pass_):
+    # do something with the given op
+    pass
+
+pm = PassManager('any')
+pm.add(demo_pass)
+pm.add('some-cpp-defined-passes')
+...
+pm.run(some_op)
+```
 
 ### Other functionality
 

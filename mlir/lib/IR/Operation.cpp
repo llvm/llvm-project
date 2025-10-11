@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -1274,10 +1275,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
     return op->emitOpError("'")
            << attrName << "' attribute cannot have negative elements";
 
-  size_t totalCount =
-      std::accumulate(sizes.begin(), sizes.end(), 0,
-                      [](unsigned all, int32_t one) { return all + one; });
-
+  size_t totalCount = llvm::sum_of(sizes, size_t(0));
   if (totalCount != expectedCount)
     return op->emitOpError()
            << valueGroupName << " count (" << expectedCount

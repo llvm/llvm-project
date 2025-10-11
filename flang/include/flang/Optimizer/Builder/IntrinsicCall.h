@@ -208,6 +208,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genBarrierArrive(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genBarrierArriveCnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genBarrierInit(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genBesselJn(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);

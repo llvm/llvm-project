@@ -20,6 +20,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DebugLog.h"
 
 #include <numeric>
@@ -265,8 +266,7 @@ loadStoreFromTransfer(PatternRewriter &rewriter,
   if (isPacked)
     src = collapseLastDim(rewriter, src);
   int64_t rows = vecShape[0];
-  int64_t cols = std::accumulate(vecShape.begin() + 1, vecShape.end(), 1,
-                                 std::multiplies<int64_t>());
+  int64_t cols = llvm::product_of(vecShape.drop_front());
   auto tileType = amx::TileType::get({rows, cols}, vecTy.getElementType());
 
   Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
@@ -336,8 +336,7 @@ static TypedValue<amx::TileType> loadTile(PatternRewriter &rewriter,
 
   ArrayRef<int64_t> shape = vecTy.getShape();
   int64_t rows = shape[0];
-  int64_t cols = std::accumulate(shape.begin() + 1, shape.end(), 1,
-                                 std::multiplies<int64_t>());
+  int64_t cols = llvm::product_of(shape.drop_front());
   auto tileType = amx::TileType::get({rows, cols}, vecTy.getElementType());
 
   return amx::TileLoadOp::create(rewriter, loc, tileType, buf,

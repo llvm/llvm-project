@@ -31,36 +31,22 @@ struct SPSSimpleNativeMemoryMapSegment;
 template <>
 class SPSSerializationTraits<SPSSimpleNativeMemoryMapSegment,
                              SimpleNativeMemoryMap::FinalizeRequest::Segment> {
-  using SPSType = SPSTuple<SPSExecutorAddr, uint64_t, SPSAllocGroup, uint8_t>;
+  using SPSType =
+      SPSTuple<SPSAllocGroup, SPSExecutorAddr, uint64_t, SPSSequence<char>>;
 
 public:
   static bool deserialize(SPSInputBuffer &IB,
                           SimpleNativeMemoryMap::FinalizeRequest::Segment &S) {
-    using ContentType =
-        SimpleNativeMemoryMap::FinalizeRequest::Segment::ContentType;
-
+    AllocGroup AG;
     ExecutorAddr Address;
     uint64_t Size;
-    AllocGroup G;
-    uint8_t C;
-    if (!SPSType::AsArgList::deserialize(IB, Address, Size, G, C))
+    span<const char> Content;
+    if (!SPSType::AsArgList::deserialize(IB, AG, Address, Size, Content))
       return false;
-    if (Size >= std::numeric_limits<size_t>::max())
+    if (Size > std::numeric_limits<size_t>::max())
       return false;
-    S.Address = Address.toPtr<void *>();
-    S.Size = Size;
-    S.G = G;
-    S.C = static_cast<ContentType>(C);
-    switch (S.C) {
-    case ContentType::Uninitialized:
-      return true;
-    case ContentType::ZeroFill:
-      memset(reinterpret_cast<char *>(S.Address), 0, S.Size);
-      return true;
-    case ContentType::Regular:
-      // Read content directly into target address.
-      return IB.read(reinterpret_cast<char *>(S.Address), S.Size);
-    }
+    S = {AG, Address.toPtr<char *>(), static_cast<size_t>(Size), Content};
+    return true;
   }
 };
 
@@ -138,10 +124,31 @@ void SimpleNativeMemoryMap::finalize(OnFinalizeCompleteFn &&OnComplete,
   // TODO: Record finalize segments for release.
   // std::vector<std::pair<void*, size_t>> FinalizeSegments;
 
+  // Check segment validity before proceeding.
   for (auto &S : FR.Segments) {
-    if (auto Err = hostOSMemoryProtect(S.Address, S.Size, S.G.getMemProt()))
+
+    if (S.Content.size() > S.Size) {
+      return OnComplete(make_error<StringError>(
+          (std::ostringstream()
+           << "For segment [" << (void *)S.Address << ".."
+           << (void *)(S.Address + S.Size) << "), "
+           << " content size (" << std::hex << S.Content.size()
+           << ") exceeds segment size (" << S.Size << ")")
+              .str()));
+    }
+
+    // Copy any requested content.
+    if (!S.Content.empty())
+      memcpy(S.Address, S.Content.data(), S.Content.size());
+
+    // Zero-fill the rest of the section.
+    if (size_t ZeroFillSize = S.Size - S.Content.size())
+      memset(S.Address + S.Content.size(), 0, ZeroFillSize);
+
+    if (auto Err = hostOSMemoryProtect(S.Address, S.Size, S.AG.getMemProt()))
       return OnComplete(std::move(Err));
-    switch (S.G.getMemLifetime()) {
+
+    switch (S.AG.getMemLifetime()) {
     case MemLifetime::Standard:
       if (!Base || S.Address < Base)
         Base = S.Address;

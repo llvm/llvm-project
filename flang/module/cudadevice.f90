@@ -1987,11 +1987,25 @@ implicit none
     end function
   end interface
 
+  ! TMA Operations
+
   interface 
     attributes(device) subroutine barrier_init(barrier, count)
-      integer(8) :: barrier
+      integer(8), shared :: barrier
       integer(4) :: count
     end subroutine
+  end interface
+
+  interface barrier_arrive
+    attributes(device) function barrier_arrive(barrier) result(token)
+      integer(8), shared :: barrier
+      integer(8) :: token
+    end function
+    attributes(device) function barrier_arrive_cnt(barrier, count) result(token)
+      integer(8), shared :: barrier
+      integer(4) :: count
+      integer(8) :: token
+    end function
   end interface
 
 contains
