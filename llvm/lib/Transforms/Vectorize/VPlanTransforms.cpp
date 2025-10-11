@@ -30,6 +30,7 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -128,6 +129,24 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     }
   }
   return true;
+}
+
+// Return true if we do not know how to (mechanically) hoist or sink a given
+// recipe out of a loop region. Does not address legality concerns such as
+// aliasing or speculation safety.
+static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R) {
+  // Assumes don't alias anything or throw.
+  if (match(&R, m_Intrinsic<Intrinsic::assume>()))
+    return false;
+
+  // TODO: Relax checks in the future, e.g. we could also hoist or sink reads,
+  // if their memory location is not modified in the vector loop.
+  if (R.mayReadOrWriteMemory() || R.isPhi())
+    return true;
+
+  // Allocas cannot be hoisted or sunk.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+  return RepR && RepR->getOpcode() == Instruction::Alloca;
 }
 
 static bool sinkScalarOperands(VPlan &Plan) {
@@ -1764,7 +1783,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
         VPDT.properlyDominates(Previous, SinkCandidate))
       return true;
 
-    if (SinkCandidate->mayHaveSideEffects())
+    if (cannotHoistOrSinkRecipe(*SinkCandidate))
       return false;
 
     WorkList.push_back(SinkCandidate);
@@ -1804,7 +1823,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
                                         VPRecipeBase *Previous,
                                         VPDominatorTree &VPDT) {
-  if (Previous->mayHaveSideEffects() || Previous->mayReadFromMemory())
+  if (cannotHoistOrSinkRecipe(*Previous))
     return false;
 
   // Collect recipes that need hoisting.
@@ -1851,11 +1870,6 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       return nullptr;
     return HoistCandidate;
   };
-  auto CanHoist = [&](VPRecipeBase *HoistCandidate) {
-    // Avoid hoisting candidates with side-effects, as we do not yet analyze
-    // associated dependencies.
-    return !HoistCandidate->mayHaveSideEffects();
-  };
 
   if (!NeedsHoisting(Previous->getVPSingleValue()))
     return true;
@@ -1867,7 +1881,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     VPRecipeBase *Current = HoistCandidates[I];
     assert(Current->getNumDefinedValues() == 1 &&
            "only recipes with a single defined value expected");
-    if (!CanHoist(Current))
+    if (cannotHoistOrSinkRecipe(*Current))
       return false;
 
     for (VPValue *Op : Current->operands()) {
@@ -2087,31 +2101,31 @@ void VPlanTransforms::cse(VPlan &Plan) {
   }
 }
 
+static bool isSafeToSpeculativelyExecute(VPRecipeBase *R) {
+  if (auto *WC = dyn_cast<VPWidenCallRecipe>(R))
+    return WC->getCalledScalarFunction()->isSpeculatable();
+  if (auto *WI = dyn_cast<VPWidenIntrinsicRecipe>(R))
+    return WI->isSafeToSpeculativelyExecute();
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R))
+    return isSafeToSpeculativelyExecute(RepR->getUnderlyingInstr());
+  return !R->mayHaveSideEffects();
+}
+
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
   VPBasicBlock *Preheader = Plan.getVectorPreheader();
-
-  // Return true if we do not know how to (mechanically) hoist a given recipe
-  // out of a loop region. Does not address legality concerns such as aliasing
-  // or speculation safety.
-  auto CannotHoistRecipe = [](VPRecipeBase &R) {
-    // Allocas cannot be hoisted.
-    auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-    return RepR && RepR->getOpcode() == Instruction::Alloca;
-  };
 
   // Hoist any loop invariant recipes from the vector loop region to the
   // preheader. Preform a shallow traversal of the vector loop region, to
   // exclude recipes in replicate regions.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  bool GuaranteedToExecute = Preheader->getSingleSuccessor() == LoopRegion;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (CannotHoistRecipe(R))
+      if (cannotHoistOrSinkRecipe(R))
         continue;
-      // TODO: Relax checks in the future, e.g. we could also hoist reads, if
-      // their memory location is not modified in the vector loop.
-      if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
+      if ((!GuaranteedToExecute && !isSafeToSpeculativelyExecute(&R)) ||
           any_of(R.operands(), [](VPValue *Op) {
             return !Op->isDefinedOutsideLoopRegions();
           }))
