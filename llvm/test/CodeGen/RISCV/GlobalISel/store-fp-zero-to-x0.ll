@@ -7,14 +7,12 @@
 define void @zero_f32(ptr %i) {
 ; RV32-LABEL: zero_f32:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    fmv.w.x fa5, zero
-; RV32-NEXT:    fsw fa5, 0(a0)
+; RV32-NEXT:    sw zero, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: zero_f32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.w.x fa5, zero
-; RV64-NEXT:    fsw fa5, 0(a0)
+; RV64-NEXT:    sw zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store float 0.000000e+00, ptr %i, align 4
@@ -35,8 +33,7 @@ define void @zero_f64(ptr %i) {
 ;
 ; RV64-LABEL: zero_f64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    fmv.d.x fa5, zero
-; RV64-NEXT:    fsd fa5, 0(a0)
+; RV64-NEXT:    sd zero, 0(a0)
 ; RV64-NEXT:    ret
 entry:
   store double 0.000000e+00, ptr %i, align 8
