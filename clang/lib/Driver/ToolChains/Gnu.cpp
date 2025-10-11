@@ -3207,6 +3207,9 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   case ToolChain::CST_Libstdcxx:
     addLibStdCxxIncludePaths(DriverArgs, CC1Args);
     break;
+
+  default:
+    break;
   }
 }
 
