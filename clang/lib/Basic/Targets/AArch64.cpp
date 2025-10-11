@@ -1772,6 +1772,35 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
+TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+void UEFIAArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
+                                             MacroBuilder &Builder) const {
+  AArch64leTargetInfo::getTargetDefines(Opts, Builder);
+  Builder.defineMacro("_M_ARM64", "1");
+}
+
+TargetInfo::CallingConvCheckResult
+UEFIAArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_C:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+TargetInfo::CallingConvKind
+UEFIAArch64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
+  return CCK_MicrosoftWin64;
+}
+
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
     const llvm::Triple &Triple, const TargetOptions &Opts)
     : AppleMachOTargetInfo<AArch64leTargetInfo>(Triple, Opts) {}
