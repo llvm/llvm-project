@@ -1404,6 +1404,18 @@ static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
 
 }
 
+namespace case7 {
+
+template <class _Tp, class _Up>
+concept __same_as_impl = __is_same(_Tp, _Up);
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up>;
+template <typename>
+concept IsEntitySpec =
+  requires { requires same_as<void, void>; };
+
+}
+
 }
 
 namespace GH162125 {
