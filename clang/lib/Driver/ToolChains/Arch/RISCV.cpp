@@ -142,6 +142,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
   }
 
+  // -mfence-tso is default, unless -mno-fence-tso is specified.
+  if (Args.hasFlag(options::OPT_mno_fence_tso, options::OPT_mfence_tso, false))
+    Features.push_back("+no-fence-tso");
+
   // If -mstrict-align, -mno-strict-align, -mscalar-strict-align, or
   // -mno-scalar-strict-align is passed, use it. Otherwise, the
   // unaligned-scalar-mem is enabled if the CPU supports it or the target is

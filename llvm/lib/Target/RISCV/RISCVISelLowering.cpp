@@ -6800,6 +6800,16 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
     return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
 
+  if (!Subtarget.enableFenceTso() &&
+      FenceOrdering == AtomicOrdering::AcquireRelease) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    SDValue Op1 =
+        DAG.getTargetConstant((unsigned)AtomicOrdering::SequentiallyConsistent,
+                              dl, TLI.getFenceOperandTy(DAG.getDataLayout()));
+    return DAG.getNode(ISD::ATOMIC_FENCE, dl, MVT::Other, Op.getOperand(0), Op1,
+                       Op.getOperand(2));
+  }
+
   return Op;
 }
 

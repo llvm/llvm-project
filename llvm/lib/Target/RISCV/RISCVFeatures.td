@@ -1726,6 +1726,9 @@ foreach i = {1-31} in
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
                                           "true", "Enable save/restore.">;
 
+def FeatureNoFenceTso : SubtargetFeature<"no-fence-tso", "EnableFenceTso",
+                                         "false", "Don't use fence.tso.">;
+
 def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
                                           "EnableTrailingSeqCstFence",
                                           "false",
