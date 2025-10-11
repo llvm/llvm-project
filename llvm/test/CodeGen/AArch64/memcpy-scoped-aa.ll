@@ -9,8 +9,8 @@
 ; MIR-DAG: ![[SET1:[0-9]+]] = !{![[SCOPE1]]}
 
 ; MIR-LABEL: name: test_memcpy
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (dereferenceable load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (dereferenceable store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy:
 ; CHECK:       // %bb.0:
@@ -32,8 +32,8 @@ define i32 @test_memcpy(ptr nocapture %p, ptr nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memcpy_inline
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (dereferenceable load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (dereferenceable store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy_inline(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memcpy_inline:
 ; CHECK:       // %bb.0:
@@ -55,8 +55,8 @@ define i32 @test_memcpy_inline(ptr nocapture %p, ptr nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memmove
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (dereferenceable load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (dereferenceable store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memmove(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memmove:
 ; CHECK:       // %bb.0:
@@ -79,8 +79,8 @@ define i32 @test_memmove(ptr nocapture %p, ptr nocapture readonly %q) {
 
 ; MIR-LABEL: name: test_memset
 ; MIR:      %2:gpr64 = MOVi64imm -6148914691236517206
-; MIR-NEXT: STRXui %2, %0, 1 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRXui %2, %0, 0 :: (store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRXui %2, %0, 1 :: (dereferenceable store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRXui %2, %0, 0 :: (dereferenceable store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memset(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_memset:
 ; CHECK:       // %bb.0:
@@ -100,8 +100,8 @@ define i32 @test_memset(ptr nocapture %p, ptr nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_mempcpy
-; MIR:      %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:fpr128 = LDRQui %0, 1 :: (dereferenceable load (s128) from %ir.p1, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: STRQui killed %2, %0, 0 :: (dereferenceable store (s128) into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_mempcpy(ptr nocapture %p, ptr nocapture readonly %q) {
 ; CHECK-LABEL: test_mempcpy:
 ; CHECK:       // %bb.0:
