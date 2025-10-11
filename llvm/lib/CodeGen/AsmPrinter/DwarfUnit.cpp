@@ -704,6 +704,7 @@ void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
   addDIEEntry(Entity, Attribute, DIEEntry(*getOrCreateTypeDIE(Ty)));
 }
 
+// FIXME: change callsites to use the new DW_LNAME_ language codes.
 llvm::dwarf::SourceLanguage DwarfUnit::getSourceLanguage() const {
   const auto &Lang = getLanguage();
 
