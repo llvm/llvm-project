@@ -1667,7 +1667,7 @@ bool DevirtModule::tryUniformRetValOpt(
     if (Target.RetVal != TheRetVal)
       return false;
 
-  if (CSInfo.isExported()) {
+  if (Res && CSInfo.isExported()) {
     Res->TheKind = WholeProgramDevirtResolution::ByArg::UniformRetVal;
     Res->Info = TheRetVal;
   }
