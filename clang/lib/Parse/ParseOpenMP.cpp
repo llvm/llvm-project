@@ -3311,7 +3311,11 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
-    Clause = ParseOpenMPClause(CKind, WrongDirective);
+    if (CKind == OMPC_nowait && PP.LookAhead(/*N=*/0).is(tok::l_paren) &&
+        getLangOpts().OpenMP >= 60)
+      Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
+    else
+      Clause = ParseOpenMPClause(CKind, WrongDirective);
     break;
   case OMPC_self_maps:
     // OpenMP [6.0, self_maps clause]
