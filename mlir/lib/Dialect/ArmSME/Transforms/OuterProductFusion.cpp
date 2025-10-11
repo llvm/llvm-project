@@ -170,7 +170,7 @@ public:
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Default([&](auto) { llvm_unreachable("unexpected extend op!"); });
+          .DefaultUnreachable("unexpected extend op!");
     } else if (kind == arm_sme::CombiningKind::Sub) {
       TypeSwitch<Operation *>(extOp)
           .Case<arith::ExtFOp>([&](auto) {
@@ -188,7 +188,7 @@ public:
                 op2, op.getResultType(), lhs, rhs, lhsMask, rhsMask,
                 op1.getAcc());
           })
-          .Default([&](auto) { llvm_unreachable("unexpected extend op!"); });
+          .DefaultUnreachable("unexpected extend op!");
     } else {
       llvm_unreachable("unexpected arm_sme::CombiningKind!");
     }
