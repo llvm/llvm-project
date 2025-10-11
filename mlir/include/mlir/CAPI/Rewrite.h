@@ -31,6 +31,6 @@ DEFINE_C_API_PTR_METHODS(MlirPatternRewriter, mlir::PatternRewriter)
 DEFINE_C_API_PTR_METHODS(MlirPDLPatternModule, mlir::PDLPatternModule)
 DEFINE_C_API_PTR_METHODS(MlirPDLResultList, mlir::PDLResultList)
 DEFINE_C_API_PTR_METHODS(MlirPDLValue, const mlir::PDLValue)
-#endif
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 #endif // MLIR_CAPIREWRITER_H
