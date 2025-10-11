@@ -125,10 +125,6 @@ public:
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
-  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(32, 32);
-  }
-
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
   bool supportsCpuIs() const override { return getTriple().isOSLinux(); }
   bool supportsCpuInit() const override { return getTriple().isOSLinux(); }
@@ -178,6 +174,10 @@ public:
     resetDataLayout("e-m:e-p:32:32-i64:64-n32-S128");
   }
 
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
+
   bool setABI(const std::string &Name) override {
     if (Name == "ilp32e") {
       ABI = Name;
@@ -207,6 +207,10 @@ public:
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = Int64Type = SignedLong;
     resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(64, 64);
   }
 
   bool setABI(const std::string &Name) override {
