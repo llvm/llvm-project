@@ -26973,6 +26973,12 @@ TEST_F(FormatTest, RequiresExpressionIndentation) {
                Style);
 }
 
+TEST_F(FormatTest, RequiresExpressionInBracedInitializer) {
+  verifyFormat("bool foo{requires { 0; }};");
+  verifyFormat("int bar{requires(T t) { t.f(); }};");
+  verifyFormat("auto baz{requires { typename T::type; } && true};");
+}
+
 TEST_F(FormatTest, StatementAttributeLikeMacros) {
   FormatStyle Style = getLLVMStyle();
   StringRef Source = "void Foo::slot() {\n"
