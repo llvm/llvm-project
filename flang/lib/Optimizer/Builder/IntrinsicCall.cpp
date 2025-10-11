@@ -1016,6 +1016,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"tma_bulk_commit_group",
+     &I::genTMABulkCommitGroup,
+     {{}},
+     /*isElemental=*/false},
+    {"tma_bulk_wait_group",
+     &I::genTMABulkWaitGroup,
+     {{}},
+     /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -9182,6 +9190,21 @@ mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
   assert(args.size() == 0);
   return builder.createConvert(loc, resultType,
                                fir::runtime::genTime(builder, loc));
+}
+
+// TMA_BULK_COMMIT_GROUP (CUDA)
+void IntrinsicLibrary::genTMABulkCommitGroup(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  mlir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
+}
+
+// TMA_BULK_WAIT_GROUP (CUDA)
+void IntrinsicLibrary::genTMABulkWaitGroup(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  auto group = builder.getIntegerAttr(builder.getI32Type(), 0);
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc, group, {});
 }
 
 // TRIM

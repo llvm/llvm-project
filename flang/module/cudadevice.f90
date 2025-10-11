@@ -2013,6 +2013,16 @@ implicit none
     end subroutine
   end interface
 
+  interface
+    attributes(device) subroutine tma_bulk_commit_group()
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) subroutine tma_bulk_wait_group()
+    end subroutine
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()
