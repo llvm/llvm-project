@@ -780,21 +780,18 @@ def SB : Store_rri<0b000, "sb">, Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
 def SH : Store_rri<0b001, "sh">, Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 def SW : Store_rri<0b010, "sw">, Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 
-// ADDI isn't always rematerializable, but isReMaterializable will be used as
-// a hint which is verified in isReMaterializableImpl.
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def ADDI  : ALU_ri<0b000, "addi">;
-
-let IsSignExtendingOpW = 1 in {
-def SLTI  : ALU_ri<0b010, "slti">;
-def SLTIU : ALU_ri<0b011, "sltiu">;
-}
-
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+def ADDI  : ALU_ri<0b000, "addi">;
 def XORI  : ALU_ri<0b100, "xori">;
 def ORI   : ALU_ri<0b110, "ori">;
 }
 
+let IsSignExtendingOpW = 1, isReMaterializable = 1 in {
+def SLTI  : ALU_ri<0b010, "slti">;
+def SLTIU : ALU_ri<0b011, "sltiu">;
+}
+
+let isReMaterializable = 1 in {
 def ANDI  : ALU_ri<0b111, "andi">;
 
 def SLLI : Shift_ri<0b00000, 0b001, "slli">,
@@ -826,6 +823,7 @@ def OR   : ALU_rr<0b0000000, 0b110, "or", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def AND  : ALU_rr<0b0000000, 0b111, "and", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+}
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 def FENCE : RVInstI<0b000, OPC_MISC_MEM, (outs),
@@ -893,7 +891,7 @@ def LWU   : Load_ri<0b110, "lwu">, Sched<[WriteLDW, ReadMemBase]>;
 def LD    : Load_ri<0b011, "ld">, Sched<[WriteLDD, ReadMemBase]>;
 def SD    : Store_rri<0b011, "sd">, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
 
-let IsSignExtendingOpW = 1 in {
+let IsSignExtendingOpW = 1, isReMaterializable = 1 in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def ADDIW : RVInstI<0b000, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, simm12_lo:$imm12),
@@ -917,7 +915,7 @@ def SRLW  : ALUW_rr<0b0000000, 0b101, "srlw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
-} // IsSignExtendingOpW = 1
+} // IsSignExtendingOpW = 1, isReMaterializable = 1
 } // Predicates = [IsRV64]
 
 //===----------------------------------------------------------------------===//
