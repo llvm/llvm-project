@@ -40,7 +40,7 @@ class VPUser;
 class VPRecipeBase;
 class VPInterleaveBase;
 class VPPhiAccessors;
-class VPRegionValue;
+struct VPRegionValue;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -52,7 +52,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   friend class VPInterleaveBase;
   friend class VPlan;
   friend class VPExpressionRecipe;
-  friend class VPRegionValue;
+  friend struct VPRegionValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 

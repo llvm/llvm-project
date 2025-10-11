@@ -62,4 +62,7 @@ __attribute__((noinline)) void foo() {
   // smstop sm
 }
 
-int main() { foo(); }
+int main(int, char **) {
+  foo();
+  return 0;
+}

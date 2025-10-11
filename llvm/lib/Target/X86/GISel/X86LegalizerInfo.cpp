@@ -89,9 +89,29 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // 32/64-bits needs support for s64/s128 to handle cases:
   // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
   // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+  getActionDefinitionsBuilder(
+      {G_IMPLICIT_DEF, G_PHI, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s1, s8, s16, s32, s64})
-      .legalFor(Is64Bit, {s128});
+      .legalFor(UseX87, {s80})
+      .legalFor(Is64Bit, {s128})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
+      .widenScalarOrEltToNextPow2(0, /*Min=*/8)
+      .clampScalarOrElt(0, s8, sMaxScalar)
+      .moreElementsToNextPow2(0)
+      .clampMinNumElements(0, s8, 16)
+      .clampMinNumElements(0, s16, 8)
+      .clampMinNumElements(0, s32, 4)
+      .clampMinNumElements(0, s64, 2)
+      .clampMaxNumElements(0, s8, HasAVX512 ? 64 : (HasAVX ? 32 : 16))
+      .clampMaxNumElements(0, s16, HasAVX512 ? 32 : (HasAVX ? 16 : 8))
+      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX ? 8 : 4))
+      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX ? 4 : 2))
+      .clampMaxNumElements(0, p0,
+                           Is64Bit ? s64MaxVector.getNumElements()
+                                   : s32MaxVector.getNumElements())
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({p0, s8, s16, s32})
@@ -288,26 +308,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
-
-  // control flow
-  getActionDefinitionsBuilder(G_PHI)
-      .legalFor({s8, s16, s32, p0})
-      .legalFor(UseX87, {s80})
-      .legalFor(Is64Bit, {s64})
-      .legalFor(HasSSE1, {v16s8, v8s16, v4s32, v2s64})
-      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
-      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
-      .clampMinNumElements(0, s8, 16)
-      .clampMinNumElements(0, s16, 8)
-      .clampMinNumElements(0, s32, 4)
-      .clampMinNumElements(0, s64, 2)
-      .clampMaxNumElements(0, s8, HasAVX512 ? 64 : (HasAVX ? 32 : 16))
-      .clampMaxNumElements(0, s16, HasAVX512 ? 32 : (HasAVX ? 16 : 8))
-      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX ? 8 : 4))
-      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX ? 4 : 2))
-      .widenScalarToNextPow2(0, /*Min=*/32)
-      .clampScalar(0, s8, sMaxScalar)
-      .scalarize(0);
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
@@ -591,11 +591,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
-
-  getActionDefinitionsBuilder({G_FREEZE, G_CONSTANT_FOLD_BARRIER})
-      .legalFor({s8, s16, s32, s64, p0})
-      .widenScalarToNextPow2(0, /*Min=*/8)
-      .clampScalar(0, s8, sMaxScalar);
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
