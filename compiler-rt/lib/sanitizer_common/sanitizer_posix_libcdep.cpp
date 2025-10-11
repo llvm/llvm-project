@@ -47,6 +47,8 @@ typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
 namespace __sanitizer {
 
+static atomic_uint8_t signal_handler_is_from_sanitizer[64];
+
 u32 GetUid() {
   return getuid();
 }
@@ -208,6 +210,21 @@ void UnsetAlternateSignalStack() {
   altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
   UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+}
+
+bool IsSignalHandlerFromSanitizer(int signum) {
+  return atomic_load(&signal_handler_is_from_sanitizer[signum],
+                     memory_order_relaxed);
+}
+
+bool SetSignalHandlerFromSanitizer(int signum, bool new_state) {
+  bool old_state = false;
+  if (signum >= 0 && static_cast<unsigned>(signum) <
+                         ARRAY_SIZE(signal_handler_is_from_sanitizer))
+    old_state = atomic_exchange(&signal_handler_is_from_sanitizer[signum],
+                                new_state, memory_order_relaxed);
+
+  return old_state;
 }
 
 static void MaybeInstallSigaction(int signum,

@@ -24,8 +24,6 @@ namespace __sanitizer {
 
 const char *SanitizerToolName = "SanitizerTool";
 
-bool signal_handler_is_from_sanitizer[64] = {0};
-
 atomic_uint32_t current_verbosity;
 uptr PageSizeCached;
 u32 NumberOfCPUsCached;
@@ -111,20 +109,6 @@ const char *StripModuleName(const char *module) {
     return slash_pos + 1;
   }
   return module;
-}
-
-void SetSignalHandlerFromSanitizer(int signum, bool new_state) {
-  if (signum >= 0 && static_cast<unsigned>(signum) <
-                         ARRAY_SIZE(signal_handler_is_from_sanitizer))
-    signal_handler_is_from_sanitizer[signum] = new_state;
-}
-
-bool IsSignalHandlerFromSanitizer(int signum) {
-  if (signum >= 0 && static_cast<unsigned>(signum) <
-                         ARRAY_SIZE(signal_handler_is_from_sanitizer))
-    return signal_handler_is_from_sanitizer[signum];
-
-  return false;
 }
 
 void ReportErrorSummary(const char *error_message, const char *alt_tool_name) {

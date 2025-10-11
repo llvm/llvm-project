@@ -390,8 +390,8 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
 
-void SetSignalHandlerFromSanitizer(int signum, bool new_state);
 bool IsSignalHandlerFromSanitizer(int signum);
+bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
 
 // Construct a one-line string:
 //   SUMMARY: SanitizerToolName: error_message
