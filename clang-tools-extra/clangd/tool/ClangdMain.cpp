@@ -13,6 +13,7 @@
 #include "Config.h"
 #include "ConfigProvider.h"
 #include "Feature.h"
+#include "FeatureModule.h"
 #include "IncludeCleaner.h"
 #include "PathMapping.h"
 #include "Protocol.h"
@@ -577,7 +578,7 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallString<16> Path(Body);
     path::native(Path);
-    fs::make_absolute(TestScheme::TestDir, Path);
+    path::make_absolute(TestScheme::TestDir, Path);
     return std::string(Path);
   }
 
@@ -775,8 +776,8 @@ It should be used via an editor plugin rather than invoked directly. For more in
 clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment variable.
 )";
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
-  llvm::cl::ParseCommandLineOptions(argc, argv, Overview,
-                                    /*Errs=*/nullptr, FlagsEnvVar);
+  llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
+                                    /*VFS=*/nullptr, FlagsEnvVar);
   if (Test) {
     if (!Sync.getNumOccurrences())
       Sync = true;
@@ -1016,6 +1017,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
+
+  FeatureModuleSet ModuleSet = FeatureModuleSet::fromRegistry();
+  if (ModuleSet.begin() != ModuleSet.end())
+    Opts.FeatureModules = &ModuleSet;
 
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.

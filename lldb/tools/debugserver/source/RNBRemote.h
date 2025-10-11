@@ -121,6 +121,7 @@ public:
     set_list_threads_in_stop_reply,     // 'QListThreadsInStopReply:'
     sync_thread_state,                  // 'QSyncThreadState:'
     memory_region_info,                 // 'qMemoryRegionInfo:'
+    get_memory_tags,                    // 'qMemTags:'
     get_profile_data,                   // 'qGetProfileData'
     set_enable_profiling,               // 'QSetEnableAsyncProfiling'
     enable_compression,                 // 'QEnableCompression:'
@@ -237,6 +238,7 @@ public:
   rnb_err_t HandlePacket_SaveRegisterState(const char *p);
   rnb_err_t HandlePacket_RestoreRegisterState(const char *p);
   rnb_err_t HandlePacket_MemoryRegionInfo(const char *p);
+  rnb_err_t HandlePacket_qMemTags(const char *p);
   rnb_err_t HandlePacket_GetProfileData(const char *p);
   rnb_err_t HandlePacket_SetEnableAsyncProfiling(const char *p);
   rnb_err_t HandlePacket_QEnableCompression(const char *p);

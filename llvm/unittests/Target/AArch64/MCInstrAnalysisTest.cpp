@@ -34,8 +34,8 @@ protected:
 
   InstrAnalysisTest() {
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(Triple::normalize(GetParam()), Error);
+    Triple TT(Triple::normalize(GetParam()));
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     Info = std::unique_ptr<const MCInstrInfo>(TheTarget->createMCInstrInfo());
     Analysis = std::unique_ptr<const MCInstrAnalysis>(
         TheTarget->createMCInstrAnalysis(Info.get()));

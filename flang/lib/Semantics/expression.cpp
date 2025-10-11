@@ -2171,17 +2171,29 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
       // T(1) or T(PT=PT(1)).  There may be multiple parent components.
       if (nextAnonymous == components.begin() && parentComponent && valueType &&
           context().IsEnabled(LanguageFeature::AnonymousParents)) {
-        for (auto parent{components.begin()};
-             parent != afterLastParentComponentIter; ++parent) {
-          if (auto parentType{DynamicType::From(*parent)}; parentType &&
-              parent->test(Symbol::Flag::ParentComp) &&
-              valueType->IsEquivalentTo(*parentType)) {
-            symbol = &*parent;
-            nextAnonymous = ++parent;
-            Warn(LanguageFeature::AnonymousParents, source,
-                "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
-                symbol->name());
-            break;
+        auto parent{components.begin()};
+        if (!parent->test(Symbol::Flag::ParentComp)) {
+          // Ensure that the first value can't initialize the first actual
+          // component.
+          if (auto firstComponentType{DynamicType::From(*parent)}) {
+            if (firstComponentType->IsTkCompatibleWith(*valueType) &&
+                value.Rank() == parent->Rank()) {
+              parent = afterLastParentComponentIter; // skip next loop
+            }
+          }
+        }
+        for (; parent != afterLastParentComponentIter; ++parent) {
+          if (auto parentType{DynamicType::From(*parent)}) {
+            if (parent->test(Symbol::Flag::ParentComp) &&
+                valueType->IsEquivalentTo(*parentType) &&
+                value.Rank() == 0 /* scalar only */) {
+              symbol = &*parent;
+              nextAnonymous = ++parent;
+              Warn(LanguageFeature::AnonymousParents, source,
+                  "Whole parent component '%s' in structure constructor should not be anonymous"_port_en_US,
+                  symbol->name());
+              break;
+            }
           }
         }
       }
@@ -2198,7 +2210,8 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     }
     if (symbol) {
       const semantics::Scope &innermost{context_.FindScope(exprSource)};
-      if (auto msg{CheckAccessibleSymbol(innermost, *symbol)}) {
+      if (auto msg{CheckAccessibleSymbol(
+              innermost, *symbol, /*inStructureConstructor=*/true)}) {
         Say(exprSource, std::move(*msg));
       }
       if (checkConflicts) {
@@ -2316,7 +2329,7 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
               auto checked{CheckConformance(messages, *componentShape,
                   *valueShape, CheckConformanceFlags::RightIsExpandableDeferred,
                   "component", "value")};
-              if (checked && *checked && GetRank(*componentShape) > 0 &&
+              if (checked.value_or(false) && GetRank(*componentShape) > 0 &&
                   GetRank(*valueShape) == 0 &&
                   (IsDeferredShape(*symbol) ||
                       !IsExpandableScalar(*converted, foldingContext,
@@ -3627,7 +3640,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   if (chars) {
     std::string whyNot;
     if (treatExternalAsImplicit &&
-        !chars->CanBeCalledViaImplicitInterface(&whyNot)) {
+        !chars->CanBeCalledViaImplicitInterface(&whyNot, /*checkCUDA=*/false)) {
       if (auto *msg{Say(callSite,
               "References to the procedure '%s' require an explicit interface"_err_en_US,
               DEREF(procSymbol).name())};
@@ -3643,18 +3656,23 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       Say(callSite,
           "Assumed-length character function must be defined with a length to be called"_err_en_US);
     }
+    if (!chars->IsPure()) {
+      if (const semantics::Scope *pure{semantics::FindPureProcedureContaining(
+              context_.FindScope(callSite))}) {
+        std::string name;
+        if (procSymbol) {
+          name = "'"s + procSymbol->name().ToString() + "'";
+        } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
+          name = "'"s + intrinsic->name + "'";
+        }
+        Say(callSite,
+            "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
+            name, DEREF(pure->symbol()).name());
+      }
+    }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
         context_.FindScope(callSite), treatExternalAsImplicit,
         /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
-  }
-  if (procSymbol && !IsPureProcedure(*procSymbol)) {
-    if (const semantics::Scope *
-        pure{semantics::FindPureProcedureContaining(
-            context_.FindScope(callSite))}) {
-      Say(callSite,
-          "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-          procSymbol->name(), DEREF(pure->symbol()).name());
-    }
   }
   if (ok && !treatExternalAsImplicit && procSymbol &&
       !(chars && chars->HasExplicitInterface())) {
@@ -3699,7 +3717,10 @@ static MaybeExpr NumericUnaryHelper(ExpressionAnalyzer &context,
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       if (opr == NumericOperator::Add) {
-        return analyzer.MoveExpr(0);
+        // +x -> (x), not a bare x, because the bounds of the argument must
+        // not be exposed to allocatable assignments or structure constructor
+        // components.
+        return Parenthesize(analyzer.MoveExpr(0));
       } else {
         return Negation(context.GetContextualMessages(), analyzer.MoveExpr(0));
       }
@@ -3783,10 +3804,9 @@ MaybeExpr NumericBinaryHelper(
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
-      constexpr bool canBeUnsigned{opr != NumericOperator::Power};
-      return NumericOperation<OPR, canBeUnsigned>(
-          context.GetContextualMessages(), analyzer.MoveExpr(0),
-          analyzer.MoveExpr(1), context.GetDefaultKind(TypeCategory::Real));
+      return NumericOperation<OPR>(context.GetContextualMessages(),
+          analyzer.MoveExpr(0), analyzer.MoveExpr(1),
+          context.GetDefaultKind(TypeCategory::Real));
     } else {
       return analyzer.TryDefinedOp(AsFortran(opr),
           "Operands of %s must be numeric; have %s and %s"_err_en_US);

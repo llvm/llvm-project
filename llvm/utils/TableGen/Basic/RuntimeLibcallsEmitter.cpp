@@ -178,7 +178,7 @@ public:
   bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
 
   void emitEnumEntry(raw_ostream &OS) const {
-    OS << "RTLIB::" << TheDef->getName();
+    OS << "RTLIB::impl_" << this->getName();
   }
 
   void emitSetImplCall(raw_ostream &OS) const {
@@ -305,14 +305,15 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
         "enum LibcallImpl : unsigned short {\n"
         "  Unsupported = 0,\n";
 
-  // FIXME: Emit this in a different namespace. And maybe use enum class.
   for (const RuntimeLibcallImpl &LibCall : RuntimeLibcallImplDefList) {
-    OS << "  " << LibCall.getName() << " = " << LibCall.getEnumVal() << ", // "
-       << LibCall.getLibcallFuncName() << '\n';
+    OS << "  impl_" << LibCall.getName() << " = " << LibCall.getEnumVal()
+       << ", // " << LibCall.getLibcallFuncName() << '\n';
   }
 
-  OS << "  NumLibcallImpls = " << RuntimeLibcallImplDefList.size() + 1
-     << "\n};\n"
+  OS << "};\n"
+     << "constexpr size_t NumLibcallImpls = "
+     << RuntimeLibcallImplDefList.size() + 1
+     << ";\n"
         "} // End namespace RTLIB\n"
         "} // End namespace llvm\n"
         "#endif\n\n";
@@ -546,16 +547,6 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         "  struct LibcallImplPair {\n"
         "    RTLIB::Libcall Func;\n"
         "    RTLIB::LibcallImpl Impl;\n"
-        "  };\n"
-        "  auto setLibcallsImpl = [this](\n"
-        "    ArrayRef<LibcallImplPair> Libcalls,\n"
-        "    std::optional<llvm::CallingConv::ID> CC = {})\n"
-        "  {\n"
-        "    for (const auto [Func, Impl] : Libcalls) {\n"
-        "      setLibcallImpl(Func, Impl);\n"
-        "      if (CC)\n"
-        "        setLibcallImplCallingConv(Impl, *CC);\n"
-        "    }\n"
         "  };\n";
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
@@ -597,7 +588,12 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     PredicateSorter.insert(
         PredicateWithCC()); // No predicate or CC override first.
 
+    constexpr unsigned BitsPerStorageElt = 64;
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
+
+    SmallVector<uint64_t, 32> BitsetValues(
+        divideCeil(RuntimeLibcallImplDefList.size(), BitsPerStorageElt));
+
     for (const Record *Elt : *Elements) {
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
       if (!LibCallImpl) {
@@ -606,22 +602,46 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         continue;
       }
 
+      size_t BitIdx = LibCallImpl->getEnumVal();
+      uint64_t BitmaskVal = uint64_t(1) << (BitIdx % BitsPerStorageElt);
+      size_t BitsetIdx = BitIdx / BitsPerStorageElt;
+
       auto It = Func2Preds.find(LibCallImpl);
       if (It == Func2Preds.end()) {
+        BitsetValues[BitsetIdx] |= BitmaskVal;
         Pred2Funcs[PredicateWithCC()].LibcallImpls.push_back(LibCallImpl);
         continue;
       }
 
       for (const Record *Pred : It->second.first) {
         const Record *CC = It->second.second;
-        PredicateWithCC Key(Pred, CC);
+        AvailabilityPredicate SubsetPredicate(Pred);
+        if (SubsetPredicate.isAlwaysAvailable())
+          BitsetValues[BitsetIdx] |= BitmaskVal;
 
+        PredicateWithCC Key(Pred, CC);
         auto &Entry = Pred2Funcs[Key];
         Entry.LibcallImpls.push_back(LibCallImpl);
         Entry.CallingConv = It->second.second;
         PredicateSorter.insert(Key);
       }
     }
+
+    OS << "    static constexpr LibcallImplBitset SystemAvailableImpls({\n"
+       << indent(6);
+
+    ListSeparator LS;
+    unsigned EntryCount = 0;
+    for (uint64_t Bits : BitsetValues) {
+      if (EntryCount++ == 4) {
+        EntryCount = 1;
+        OS << ",\n" << indent(6);
+      } else
+        OS << LS;
+      OS << format_hex(Bits, 16);
+    }
+    OS << "\n    });\n"
+          "    AvailableLibcallImpls = SystemAvailableImpls;\n\n";
 
     SmallVector<PredicateWithCC, 0> SortedPredicates =
         PredicateSorter.takeVector();
@@ -681,18 +701,37 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       Funcs.erase(UniqueI, Funcs.end());
 
-      OS << indent(IndentDepth + 2) << "setLibcallsImpl({\n";
+      OS << indent(IndentDepth + 2)
+         << "static const LibcallImplPair LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 4);
+        OS << indent(IndentDepth + 6);
         LibCallImpl->emitTableEntry(OS);
       }
-      OS << indent(IndentDepth + 2) << "}";
+
+      OS << indent(IndentDepth + 2) << "};\n\n"
+         << indent(IndentDepth + 2)
+         << "for (const auto [Func, Impl] : LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << ") {\n"
+         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
             FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << ", " << CCEnum;
+        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+           << CCEnum << ");\n";
       }
-      OS << ");\n\n";
+
+      OS << indent(IndentDepth + 2) << "}\n";
+      OS << '\n';
 
       if (!SubsetPredicate.isAlwaysAvailable()) {
         OS << indent(IndentDepth);

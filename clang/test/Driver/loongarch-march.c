@@ -21,39 +21,39 @@
 
 // CC1-LOONGARCH64: "-target-cpu" "loongarch64"
 // CC1-LOONGARCH64-NOT: "-target-feature"
-// CC1-LOONGARCH64: "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"
+// CC1-LOONGARCH64: "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"
 // CC1-LOONGARCH64-NOT: "-target-feature"
 // CC1-LOONGARCH64: "-target-abi" "lp64d"
 
 // CC1-LA464: "-target-cpu" "la464"
 // CC1-LA464-NOT: "-target-feature"
-// CC1-LA464: "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+lasx" "-target-feature" "+ual"
+// CC1-LA464: "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+lasx" "-target-feature" "+ual"
 // CC1-LA464-NOT: "-target-feature"
 // CC1-LA464: "-target-abi" "lp64d"
 
 // CC1-LA64V1P0: "-target-cpu" "loongarch64"
 // CC1-LA64V1P0-NOT: "-target-feature"
-// CC1-LA64V1P0: "-target-feature" "+64bit" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+ual"
+// CC1-LA64V1P0: "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+ual"
 // CC1-LA64V1P0-NOT: "-target-feature"
 // CC1-LA64V1P0: "-target-abi" "lp64d"
 
 // CC1-LA64V1P1: "-target-cpu" "loongarch64"
 // CC1-LA64V1P1-NOT: "-target-feature"
-// CC1-LA64V1P1: "-target-feature" "+64bit" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+ual" "-target-feature" "+frecipe" "-target-feature" "+lam-bh" "-target-feature" "+lamcas" "-target-feature" "+ld-seq-sa" "-target-feature" "+div32" "-target-feature" "+scq"
+// CC1-LA64V1P1: "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+ual" "-target-feature" "+frecipe" "-target-feature" "+lam-bh" "-target-feature" "+lamcas" "-target-feature" "+ld-seq-sa" "-target-feature" "+div32" "-target-feature" "+scq"
 // CC1-LA64V1P1-NOT: "-target-feature"
 // CC1-LA64V1P1: "-target-abi" "lp64d"
 
 // CC1-LA664: "-target-cpu" "la664"
 // CC1-LA664-NOT: "-target-feature"
-// CC1-LA664: "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+lasx" "-target-feature" "+ual" "-target-feature" "+frecipe" "-target-feature" "+lam-bh" "-target-feature" "+lamcas" "-target-feature" "+ld-seq-sa" "-target-feature" "+div32" "-target-feature" "+scq"
+// CC1-LA664: "-target-feature" "+relax" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+lsx" "-target-feature" "+lasx" "-target-feature" "+ual" "-target-feature" "+frecipe" "-target-feature" "+lam-bh" "-target-feature" "+lamcas" "-target-feature" "+ld-seq-sa" "-target-feature" "+div32" "-target-feature" "+scq"
 // CC1-LA664-NOT: "-target-feature"
 // CC1-LA664: "-target-abi" "lp64d"
 
-// IR-LOONGARCH64: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+f,+ual"
-// IR-LA464: attributes #[[#]] ={{.*}}"target-cpu"="la464" {{.*}}"target-features"="+64bit,+d,+f,+lasx,+lsx,+ual"
-// IR-LA64V1P0: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+lsx,+ual"
-// IR-LA64V1P1: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+div32,+frecipe,+lam-bh,+lamcas,+ld-seq-sa,+lsx,+scq,+ual"
-// IR-LA664: attributes #[[#]] ={{.*}}"target-cpu"="la664" {{.*}}"target-features"="+64bit,+d,+div32,+f,+frecipe,+lam-bh,+lamcas,+lasx,+ld-seq-sa,+lsx,+scq,+ual"
+// IR-LOONGARCH64: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+f,+relax,+ual"
+// IR-LA464: attributes #[[#]] ={{.*}}"target-cpu"="la464" {{.*}}"target-features"="+64bit,+d,+f,+lasx,+lsx,+relax,+ual"
+// IR-LA64V1P0: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+lsx,+relax,+ual"
+// IR-LA64V1P1: attributes #[[#]] ={{.*}}"target-cpu"="loongarch64" {{.*}}"target-features"="+64bit,+d,+div32,+frecipe,+lam-bh,+lamcas,+ld-seq-sa,+lsx,+relax,+scq,+ual"
+// IR-LA664: attributes #[[#]] ={{.*}}"target-cpu"="la664" {{.*}}"target-features"="+64bit,+d,+div32,+f,+frecipe,+lam-bh,+lamcas,+lasx,+ld-seq-sa,+lsx,+relax,+scq,+ual"
 
 int foo(void) {
   return 3;

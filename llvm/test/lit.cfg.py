@@ -17,18 +17,27 @@ from lit.llvm.subst import ToolSubst
 # name: The name of this test suite.
 config.name = "LLVM"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"\| not FileCheck .*", "> /dev/null"),
-        (r"\| FileCheck .*", "> /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
+        (r"not FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
 )
-config.test_format = lit.formats.ShTest(
-    not llvm_config.use_lit_shell, extra_substitutions
-)
+config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -38,6 +47,18 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
+
+if config.enable_profcheck:
+    # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+    # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+    # commands of the form llvm-reduce --test FileCheck, which explode if we
+    # substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+    # It's not really possible to exclude these tests from the command substitution,
+    # so we just exclude llvm-reduce tests from this config altogether. This should
+    # be fine though as profcheck config tests are mostly concerned with opt.
+    config.excludes.append("llvm-reduce")
+    # (Issue #161235) Temporarily exclude LoopVectorize.
+    config.excludes.append("LoopVectorize")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -137,7 +158,7 @@ if re.search(r"windows-msvc", config.target_triple):
 ld64_cmd = config.ld64_executable
 asan_rtlib = get_asan_rtlib()
 if asan_rtlib:
-    ld64_cmd = "DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
+    ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
 
@@ -377,14 +398,9 @@ def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
 
 
 def ptxas_supported_sms(ptxas_executable):
-    result = subprocess.run(
-        [ptxas_executable, "--help"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    output = subprocess.check_output([ptxas_executable, "--help"], text=True)
 
-    gpu_arch_section = re.search(r"--gpu-name(.*?)--", result.stdout, re.DOTALL)
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", output, re.DOTALL)
     allowed_values = gpu_arch_section.group(1)
     supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
 
@@ -394,17 +410,19 @@ def ptxas_supported_sms(ptxas_executable):
 
 
 def ptxas_supports_address_size_32(ptxas_executable):
+    # Linux outputs the error message to stderr, while Windows outputs to stdout.
+    # Pipe both to stdout to make sure we get the error message.
     result = subprocess.run(
         [ptxas_executable, "-m 32"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        check=False,
     )
-    if "is not defined for option 'machine'" in result.stderr:
+    if "is not defined for option 'machine'" in result.stdout:
         return False
-    if "Missing .version directive at start of file" in result.stderr:
+    if "Missing .version directive at start of file" in result.stdout:
         return True
-    raise RuntimeError(f"Unexpected ptxas output: {result.stderr}")
+    raise RuntimeError(f"Unexpected ptxas output: {result.stdout}")
 
 
 def enable_ptxas(ptxas_executable):

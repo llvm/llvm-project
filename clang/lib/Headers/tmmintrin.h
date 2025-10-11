@@ -17,18 +17,15 @@
 #include <pmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("ssse3,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("ssse3"),          \
                  __min_vector_width__(128)))
-#endif
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __zext128(x)                                                           \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, 2, 3)
 #define __anyext128(x)                                                         \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, -1, -1)
@@ -181,11 +178,12 @@ _mm_abs_epi32(__m128i __a) {
 ///    An immediate operand specifying how many bytes to right-shift the result.
 /// \returns A 64-bit integer vector containing the concatenated right-shifted
 ///    value.
-#define _mm_alignr_pi8(a, b, n) \
-  ((__m64)__builtin_shufflevector(                                       \
-       __builtin_ia32_psrldqi128_byteshift(                              \
-           __builtin_shufflevector((__v1di)(a), (__v1di)(b), 1, 0),      \
-           (n)), __extension__ (__v2di){}, 0))
+#define _mm_alignr_pi8(a, b, n)                                                \
+  ((__m64)__builtin_shufflevector(                                             \
+      (__v2di)__builtin_ia32_psrldqi128_byteshift(                             \
+          (__v16qi)__builtin_shufflevector((__v1di)(a), (__v1di)(b), 1, 0),    \
+          (n)),                                                                \
+      __extension__(__v2di){}, 0))
 
 /// Horizontally adds the adjacent pairs of values contained in 2 packed
 ///    128-bit vectors of [8 x i16].
@@ -509,10 +507,9 @@ _mm_hsubs_pi16(__m64 __a, __m64 __b)
 ///    \a R5 := (\a __a10 * \a __b10) + (\a __a11 * \a __b11) \n
 ///    \a R6 := (\a __a12 * \a __b12) + (\a __a13 * \a __b13) \n
 ///    \a R7 := (\a __a14 * \a __b14) + (\a __a15 * \a __b15)
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_maddubs_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_maddubs_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pmaddubsw128((__v16qi)__a, (__v16qi)__b);
 }
 
 /// Multiplies corresponding pairs of packed 8-bit unsigned integer
@@ -539,11 +536,10 @@ _mm_maddubs_epi16(__m128i __a, __m128i __b)
 ///    \a R1 := (\a __a2 * \a __b2) + (\a __a3 * \a __b3) \n
 ///    \a R2 := (\a __a4 * \a __b4) + (\a __a5 * \a __b5) \n
 ///    \a R3 := (\a __a6 * \a __b6) + (\a __a7 * \a __b7)
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_maddubs_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__anyext128(__a),
-                                                 (__v16qi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_maddubs_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmaddubsw128((__v16qi)__zext128(__a),
+                                               (__v16qi)__zext128(__b)));
 }
 
 /// Multiplies packed 16-bit signed integer values, truncates the 32-bit
@@ -801,6 +797,7 @@ _mm_sign_pi32(__m64 __a, __m64 __b)
 }
 
 #undef __anyext128
+#undef __zext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_CONSTEXPR

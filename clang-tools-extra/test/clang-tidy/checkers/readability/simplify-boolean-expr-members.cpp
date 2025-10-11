@@ -42,7 +42,7 @@ void S::operator_equals() {
   m_b1 = (i > 2);
   if (m_b1 == true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b1\) {$}}
+    // CHECK-FIXES: if (m_b1) {
     i = 5;
   } else {
     i = 6;
@@ -50,7 +50,7 @@ void S::operator_equals() {
   m_b2 = (i > 4);
   if (m_b2 == false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(!m_b2\) {$}}
+    // CHECK-FIXES: if (!m_b2) {
     i = 7;
   } else {
     i = 9;
@@ -58,7 +58,7 @@ void S::operator_equals() {
   m_b3 = (i > 6);
   if (true == m_b3) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b3\) {$}}
+    // CHECK-FIXES: if (m_b3) {
     i = 10;
   } else {
     i = 11;
@@ -66,7 +66,7 @@ void S::operator_equals() {
   m_b4 = (i > 8);
   if (false == m_b4) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(!m_b4\) {$}}
+    // CHECK-FIXES: if (!m_b4) {
     i = 12;
   } else {
     i = 13;
@@ -78,7 +78,7 @@ void S::operator_or() {
   m_b1 = (i > 10);
   if (m_b1 || false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b1\) {$}}
+    // CHECK-FIXES: if (m_b1) {
     i = 14;
   } else {
     i = 15;
@@ -86,7 +86,7 @@ void S::operator_or() {
   m_b2 = (i > 10);
   if (m_b2 || true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(true\) {$}}
+    // CHECK-FIXES: if (true) {
     i = 16;
   } else {
     i = 17;
@@ -94,7 +94,7 @@ void S::operator_or() {
   m_b3 = (i > 10);
   if (false || m_b3) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b3\) {$}}
+    // CHECK-FIXES: if (m_b3) {
     i = 18;
   } else {
     i = 19;
@@ -102,7 +102,7 @@ void S::operator_or() {
   m_b4 = (i > 10);
   if (true || m_b4) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(true\) {$}}
+    // CHECK-FIXES: if (true) {
     i = 20;
   } else {
     i = 21;
@@ -114,7 +114,7 @@ void S::operator_and() {
   m_b1 = (i > 20);
   if (m_b1 && false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(false\) {$}}
+    // CHECK-FIXES: if (false) {
     i = 22;
   } else {
     i = 23;
@@ -122,7 +122,7 @@ void S::operator_and() {
   m_b2 = (i > 20);
   if (m_b2 && true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b2\) {$}}
+    // CHECK-FIXES: if (m_b2) {
     i = 24;
   } else {
     i = 25;
@@ -130,7 +130,7 @@ void S::operator_and() {
   m_b3 = (i > 20);
   if (false && m_b3) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(false\) {$}}
+    // CHECK-FIXES: if (false) {
     i = 26;
   } else {
     i = 27;
@@ -138,7 +138,7 @@ void S::operator_and() {
   m_b4 = (i > 20);
   if (true && m_b4) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b4\) {$}}
+    // CHECK-FIXES: if (m_b4) {
     i = 28;
   } else {
     i = 29;
@@ -149,15 +149,15 @@ void S::ternary_operator() {
   int i = 0;
   m_b1 = (i > 20) ? true : false;
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}} in ternary expression result
-  // CHECK-FIXES: {{^  m_b1 = i > 20;$}}
+  // CHECK-FIXES: m_b1 = i > 20;
 
   m_b2 = (i > 20) ? false : true;
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}} in ternary expression result
-  // CHECK-FIXES: {{^  m_b2 = i <= 20;$}}
+  // CHECK-FIXES: m_b2 = i <= 20;
 
   m_b3 = ((i > 20)) ? false : true;
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: {{.*}} in ternary expression result
-  // CHECK-FIXES: {{^  m_b3 = i <= 20;$}}
+  // CHECK-FIXES: m_b3 = i <= 20;
 }
 
 void S::operator_not_equal() {
@@ -165,7 +165,7 @@ void S::operator_not_equal() {
   m_b1 = (i > 20);
   if (false != m_b1) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b1\) {$}}
+    // CHECK-FIXES: if (m_b1) {
     i = 30;
   } else {
     i = 31;
@@ -173,7 +173,7 @@ void S::operator_not_equal() {
   m_b2 = (i > 20);
   if (true != m_b2) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(!m_b2\) {$}}
+    // CHECK-FIXES: if (!m_b2) {
     i = 32;
   } else {
     i = 33;
@@ -181,7 +181,7 @@ void S::operator_not_equal() {
   m_b3 = (i > 20);
   if (m_b3 != false) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(m_b3\) {$}}
+    // CHECK-FIXES: if (m_b3) {
     i = 34;
   } else {
     i = 35;
@@ -189,7 +189,7 @@ void S::operator_not_equal() {
   m_b4 = (i > 20);
   if (m_b4 != true) {
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: {{.*}} to boolean operator
-    // CHECK-FIXES: {{^  if \(!m_b4\) {$}}
+    // CHECK-FIXES: if (!m_b4) {
     i = 36;
   } else {
     i = 37;
@@ -203,7 +203,7 @@ void S::simple_conditional_assignment_statements() {
     m_b1 = false;
   bool bb = false;
   // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional assignment
-  // CHECK-FIXES: {{^  }}m_b1 = m_i > 10;{{$}}
+  // CHECK-FIXES: m_b1 = m_i > 10;
   // CHECK-FIXES: bool bb = false;
 
   if (m_i > 20)
@@ -212,7 +212,7 @@ void S::simple_conditional_assignment_statements() {
     m_b2 = true;
   bool c2 = false;
   // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional assignment
-  // CHECK-FIXES: {{^  }}m_b2 = m_i <= 20;{{$}}
+  // CHECK-FIXES: m_b2 = m_i <= 20;
   // CHECK-FIXES: bool c2 = false;
 
   // Unchanged: different variables.
@@ -249,7 +249,7 @@ void S::complex_conditional_assignment_statements() {
   }
   m_b1 = false;
   // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional assignment
-  // CHECK-FIXES: {{^  }}m_b1 = m_i > 30;{{$}}
+  // CHECK-FIXES: m_b1 = m_i > 30;
   // CHECK-FIXES: m_b1 = false;
 
   if (m_i > 40) {
@@ -259,7 +259,7 @@ void S::complex_conditional_assignment_statements() {
   }
   m_b2 = false;
   // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional assignment
-  // CHECK-FIXES: {{^  }}m_b2 = m_i <= 40;{{$}}
+  // CHECK-FIXES: m_b2 = m_i <= 40;
   // CHECK-FIXES: m_b2 = false;
 }
 
@@ -283,7 +283,7 @@ bool S::non_null_pointer_condition() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return m_p != nullptr;{{$}}
+// CHECK-FIXES: return m_p != nullptr;
 
 bool S::null_pointer_condition() {
   if (!m_p) {
@@ -293,7 +293,7 @@ bool S::null_pointer_condition() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return m_p == nullptr;{{$}}
+// CHECK-FIXES: return m_p == nullptr;
 
 bool S::negated_non_null_pointer_condition() {
   if (m_p) {
@@ -303,7 +303,7 @@ bool S::negated_non_null_pointer_condition() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return m_p == nullptr;{{$}}
+// CHECK-FIXES: return m_p == nullptr;
 
 bool S::negated_null_pointer_condition() {
   if (!m_p) {
@@ -313,7 +313,7 @@ bool S::negated_null_pointer_condition() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return m_p != nullptr;{{$}}
+// CHECK-FIXES: return m_p != nullptr;
 
 bool S::integer_not_zero() {
   if (m_i) {
@@ -323,7 +323,7 @@ bool S::integer_not_zero() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return m_i == 0;{{$}}
+// CHECK-FIXES: return m_i == 0;
 
 bool S::member_pointer_nullptr() {
   if (m_m) {
@@ -333,7 +333,7 @@ bool S::member_pointer_nullptr() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return m_m != nullptr;{{$}}
+// CHECK-FIXES: return m_m != nullptr;
 
 bool S::integer_member_implicit_cast() {
   if (m_a->m) {
@@ -343,7 +343,7 @@ bool S::integer_member_implicit_cast() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return m_a->m != 0;{{$}}
+// CHECK-FIXES: return m_a->m != 0;
 
 bool operator!=(const A &, const A &) { return false; }
 bool S::expr_with_cleanups() {
@@ -353,4 +353,4 @@ bool S::expr_with_cleanups() {
   return true;
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: m_ar == (A)m_ar;{{$}}
+// CHECK-FIXES: m_ar == (A)m_ar;
