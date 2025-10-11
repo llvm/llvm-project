@@ -544,8 +544,8 @@ def PseudoRV32ZdinxSD : Pseudo<(outs), (ins GPRPair:$rs2, GPRNoX0:$rs1, simm12_l
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
 let Predicates = [HasStdExtZdinx, HasStdExtZilsd, IsRV32] in {
-def : LdPat<load, LD_RV32, f64>;
-def : StPat<store, SD_RV32, GPRPair, f64>;
+def : LdPat<load, LD_RV32, f64, i32>;
+def : StPat<store, SD_RV32, GPRPair, f64, i32>;
 }
 
 let Predicates = [HasStdExtD, IsRV32] in {
