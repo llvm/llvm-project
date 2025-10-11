@@ -14,19 +14,32 @@ gpu.func @load_gather_i64_src_value_offset(%src: i64, %offset: vector<1xindex>) 
   // CHECK: %[[VAR4:.*]] = arith.addi %[[ARG0]], %[[VAR3]] : i64
   // CHECK: %[[VAR5:.*]] = llvm.inttoptr %[[VAR4]] : i64 to !llvm.ptr<1>
   // CHECK: %[[VAR6:.*]] = scf.if %[[VAR2]] -> (f16) {
-  // CHECK:   %[[VAR7:.*]] = llvm.load %[[VAR5]] {cache_control = #xevm.load_cache_control<L1c_L2uc_L3uc>} : !llvm.ptr<1> -> vector<1xf16>
-  // CHECK:   %[[VAR8:.*]] = vector.extract %[[VAR7]][0] : f16 from vector<1xf16>
-  // CHECK:   scf.yield %[[VAR8]] : f16
-  // CHECK: } else {
-  // CHECK:   %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<1xf16>
-  // CHECK:   %[[VAR7:.*]] = vector.extract %[[CST_0]][0] : f16 from vector<1xf16>
+  // CHECK:   %[[VAR7:.*]] = llvm.load %[[VAR5]] {cache_control = #xevm.load_cache_control<L1c_L2uc_L3uc>} : !llvm.ptr<1> -> f16
   // CHECK:   scf.yield %[[VAR7]] : f16
+  // CHECK: } else {
+  // CHECK:   %[[CST_0:.*]] = arith.constant 0.000000e+00 : f16
+  // CHECK:   scf.yield %[[CST_0]] : f16
   // CHECK: }
   %3 = xegpu.load %src[%offset], %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
       : i64, vector<1xindex>, vector<1xi1> -> vector<1xf16>
   gpu.return
 }
 }
+
+// -----
+module @test {
+// CHECK-LABEL: @source_materialize_single_elem_vec
+func.func @source_materialize_single_elem_vec(%src: i64, %offset: vector<1xindex>) -> vector<1xf16> {
+  %1 = arith.constant dense<1>: vector<1xi1>
+  %3 = xegpu.load %src[%offset], %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
+      : i64, vector<1xindex>, vector<1xi1> -> vector<1xf16>
+  // CHECK: %[[VAR_IF:.*]] = scf.if
+  // CHECK: %[[VAR_RET:.*]] = vector.broadcast %[[VAR_IF]] : f16 to vector<1xf16>
+  // CHECK: return %[[VAR_RET]] : vector<1xf16>
+  return %3 : vector<1xf16>
+}
+}
+
 // -----
 
 gpu.module @test {
