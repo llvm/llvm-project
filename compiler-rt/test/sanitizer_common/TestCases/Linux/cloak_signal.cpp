@@ -1,6 +1,3 @@
-// XFAIL: msan
-// XFAIL: tsan
-
 // UNSUPPORTED: android
 // UNSUPPORTED: hwasan
 
