@@ -163,6 +163,10 @@ def OMPC_Device : Clause<[Spelling<"device">]> {
   let clangClass = "OMPDeviceClause";
   let flangClass = "OmpDeviceClause";
 }
+def OMPC_DeviceSafesync : Clause<[Spelling<"device_safesync">]> {
+  let flangClass = "OmpDeviceSafesyncClause";
+  let isValueOptional = true;
+}
 def OMPC_DeviceType : Clause<[Spelling<"device_type">]> {
   let flangClass = "OmpDeviceTypeClause";
 }
