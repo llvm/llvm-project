@@ -86,7 +86,7 @@ namespace test7 {
 
 namespace test8 {
   template<typename T> struct A {
-    int n = A{}.n; // expected-error {{default member initializer for 'n' uses itself}} expected-note {{instantiation of default member init}}
+    int n = A{}.n; // expected-error {{default member initializer for 'n' uses itself}}
   };
   A<int> ai = {}; // expected-note {{instantiation of default member init}}
 }
@@ -100,7 +100,7 @@ namespace test9 {
 
 namespace test10 {
   template<typename T> struct A {
-    void f() noexcept(noexcept(f())); // expected-error {{exception specification of 'f' uses itself}} expected-note {{instantiation of}}
+    void f() noexcept(noexcept(f())); // expected-error {{exception specification of 'f' uses itself}}
   };
   bool b = noexcept(A<int>().f()); // expected-note {{instantiation of}}
 }
@@ -125,7 +125,7 @@ namespace test11 {
 }
 
 namespace test12 {
-  template<typename T> int f(T t, int = f(T())) {} // expected-error {{recursive evaluation of default argument}} expected-note {{instantiation of}}
+  template<typename T> int f(T t, int = f(T())) {} // expected-error {{recursive evaluation of default argument}}
   struct X {};
   int q = f(X()); // expected-note {{instantiation of}}
 }
