@@ -26,7 +26,8 @@ static bool parseAssemblyInto(MemoryBufferRef F, Module *M,
                               SlotMapping *Slots, bool UpgradeDebugInfo,
                               DataLayoutCallbackTy DataLayoutCallback) {
   SourceMgr SM;
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(F);
+  std::unique_ptr<MemoryBuffer> Buf =
+      MemoryBuffer::getMemBuffer(F, /*RequiresNullTerminator*/ false);
   SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
 
   std::optional<LLVMContext> OptContext;
