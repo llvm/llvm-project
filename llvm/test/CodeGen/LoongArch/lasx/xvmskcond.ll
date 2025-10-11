@@ -888,15 +888,16 @@ define i8 @xvmsk_ogt_v4f64_concat_poison(<4 x double> %vec) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvrepli.b $xr1, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 0
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a3, 0
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a2, 1
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a0, 3
-; LA32-NEXT:    vslli.h $vr0, $vr0, 15
+; LA32-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 0
+; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
+; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 1
+; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
+; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 2
+; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 2
+; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 3
+; LA32-NEXT:    vslli.h $vr0, $vr2, 15
 ; LA32-NEXT:    vmskltz.h $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; LA32-NEXT:    ret
