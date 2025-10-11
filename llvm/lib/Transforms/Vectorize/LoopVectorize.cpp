@@ -8242,12 +8242,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // count is >= increment and a multiple of the increment.
   bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
   if (!HasNUW) {
-    auto *IVInc = Plan->getVectorLoopRegion()
-                      ->getExitingBasicBlock()
-                      ->getTerminator()
-                      ->getOperand(0);
-    assert(match(IVInc, m_VPInstruction<Instruction::Add>(
-                            m_Specific(Plan->getCanonicalIV()), m_VPValue())) &&
+    VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
+    auto *IVInc =
+        LoopRegion->getExitingBasicBlock()->getTerminator()->getOperand(0);
+    assert(match(IVInc,
+                 m_VPInstruction<Instruction::Add>(
+                     m_Specific(LoopRegion->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
     cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
   }
@@ -8377,8 +8377,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   for (VPValue *Old : Old2New.keys())
     Old->getDefiningRecipe()->eraseFromParent();
 
-  assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
-         !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
+  assert(isa<VPRegionBlock>(LoopRegion) &&
+         !LoopRegion->getEntryBasicBlock()->empty() &&
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
@@ -9320,8 +9320,9 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   if (ResumePhiIter == MainScalarPH->phis().end()) {
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
-        "vec.epilog.resume.val");
+        {VectorTC,
+         MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue()},
+        {}, "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     if (MainScalarPH->begin() == MainScalarPH->end())
@@ -9348,7 +9349,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  VPCanonicalIVPHIRecipe *IV = Plan.getCanonicalIV();
+  VPCanonicalIVPHIRecipe *IV = VectorLoop->getCanonicalIV();
   // When vectorizing the epilogue loop, the canonical induction needs to be
   // adjusted by the value after the main vector loop. Find the resume value
   // created during execution of the main VPlan. It must be the first phi in the

@@ -4066,6 +4066,16 @@ public:
   /// Remove the current region from its VPlan, connecting its predecessor to
   /// its entry, and its exiting block to its successor.
   void dissolveToCFGLoop();
+
+  /// Returns the canonical induction recipe of the region.
+  VPCanonicalIVPHIRecipe *getCanonicalIV() {
+    VPBasicBlock *EntryVPBB = getEntryBasicBlock();
+    if (EntryVPBB->empty()) {
+      // VPlan native path.
+      EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
+    }
+    return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
+  }
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take
@@ -4376,16 +4386,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Returns the canonical induction recipe of the vector loop.
-  VPCanonicalIVPHIRecipe *getCanonicalIV() {
-    VPBasicBlock *EntryVPBB = getVectorLoopRegion()->getEntryBasicBlock();
-    if (EntryVPBB->empty()) {
-      // VPlan native path.
-      EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
-    }
-    return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
-  }
 
   VPValue *getSCEVExpansion(const SCEV *S) const {
     return SCEVToExpansion.lookup(S);
