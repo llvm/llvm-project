@@ -8,7 +8,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: echo "-fsyntax-only -fmodules -fmodules-cache-path=%t/module-cache" > %t/ctx.rsp
-// RUN: echo "-fbuild-session-file=%t/module-cache/session.timestamp"      >> %t/ctx.rsp
+// RUN: echo "-fbuild-session-file=%/t/module-cache/session.timestamp"     >> %t/ctx.rsp
 // RUN: echo "-fmodules-validate-once-per-build-session"                   >> %t/ctx.rsp
 // RUN: echo "-Rmodule-build -Rmodule-validation"                          >> %t/ctx.rsp
 
