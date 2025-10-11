@@ -73,7 +73,7 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
   // Array sections are special, and we have to treat them that way.
   if (const auto *section =
           dyn_cast<ArraySectionExpr>(curVarExpr->IgnoreParenImpCasts()))
-    origType = ArraySectionExpr::getBaseOriginalType(section);
+    origType = section->getElementType();
 
   mlir::Location exprLoc = cgm.getLoc(curVarExpr->getBeginLoc());
   llvm::SmallVector<mlir::Value> bounds;
@@ -84,16 +84,10 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
   e->printPretty(os, nullptr, getContext().getPrintingPolicy());
 
   auto addBoundType = [&](const Expr *e) {
-    if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr)) {
-      QualType baseTy = ArraySectionExpr::getBaseOriginalType(
-          section->getBase()->IgnoreParenImpCasts());
-      if (auto *at = getContext().getAsArrayType(baseTy))
-        boundTypes.push_back(at->getElementType());
-      else
-        boundTypes.push_back(baseTy->getPointeeType());
-    } else {
+    if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr))
+      boundTypes.push_back(section->getElementType());
+    else
       boundTypes.push_back(curVarExpr->getType());
-    }
   };
 
   addBoundType(curVarExpr);
@@ -113,8 +107,7 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
       if (const Expr *len = section->getLength()) {
         extent = emitOpenACCIntExpr(len);
       } else {
-        QualType baseTy = ArraySectionExpr::getBaseOriginalType(
-            section->getBase()->IgnoreParenImpCasts());
+        QualType baseTy = section->getBaseType();
         // We know this is the case as implicit lengths are only allowed for
         // array types with a constant size, or a dependent size.  AND since
         // we are codegen we know we're not dependent.

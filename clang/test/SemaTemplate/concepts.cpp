@@ -1476,3 +1476,20 @@ static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overl
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
 
 }
+
+namespace GH162770 {
+  enum e {};
+  template<e> struct s {};
+
+  template<typename> struct specialized;
+  template<e x> struct specialized<s<x>> {
+    static auto make(auto) -> s<x>;
+  };
+
+  template<e x> struct check {
+    static constexpr auto m = requires { specialized<s<x>>::make(0); };
+  };
+
+  template<typename... Ts> auto comma = (..., Ts());
+  auto b = comma<check<e{}>>;
+} // namespace GH162770

@@ -10,7 +10,7 @@ CodeGen/AArch64/llvm-masked-gather-legal-for-sve.ll
 CodeGen/AArch64/llvm-masked-scatter-legal-for-sve.ll
 CodeGen/AArch64/selectopt-cast.ll
 CodeGen/AArch64/selectopt.ll
-CodeGen/AMDGPU/amdgpu-attributor-no-agpr.ll
+CodeGen/AMDGPU/amdgpu-attributor-min-agpr-alloc.ll
 CodeGen/AMDGPU/amdgpu-codegenprepare-fdiv.ll
 CodeGen/AMDGPU/amdgpu-codegenprepare-sqrt.ll
 CodeGen/AMDGPU/amdgpu-sw-lower-lds-dynamic-indirect-access-asan.ll
@@ -75,6 +75,7 @@ CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/RISCV/zmmul.ll
 CodeGen/SPIRV/hlsl-resources/UniqueImplicitBindingNumber.ll
 CodeGen/WebAssembly/memory-interleave.ll
+CodeGen/X86/global-variable-partition-with-dap.ll
 CodeGen/X86/masked_gather_scatter.ll
 CodeGen/X86/nocfivalue.ll
 DebugInfo/AArch64/ir-outliner.ll
@@ -84,7 +85,6 @@ DebugInfo/KeyInstructions/Generic/loop-unswitch.ll
 DebugInfo/X86/asan_debug_info.ll
 Instrumentation/AddressSanitizer/aarch64be.ll
 Instrumentation/AddressSanitizer/adaptive_global_redzones.ll
-Instrumentation/AddressSanitizer/alloca-offset-lifetime.ll
 Instrumentation/AddressSanitizer/AMDGPU/adaptive_constant_global_redzones.ll
 Instrumentation/AddressSanitizer/AMDGPU/adaptive_global_redzones.ll
 Instrumentation/AddressSanitizer/AMDGPU/asan_do_not_instrument_lds.ll
@@ -548,12 +548,6 @@ tools/UpdateTestChecks/update_test_checks/stable_ir_values_funcs.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values.test
 tools/UpdateTestChecks/update_test_checks/tbaa-semantics-checks.test
 tools/UpdateTestChecks/update_test_checks/various_ir_values_dbgrecords.test
-Transforms/AggressiveInstCombine/lower-table-based-cttz-basics.ll
-Transforms/AggressiveInstCombine/lower-table-based-cttz-dereferencing-pointer.ll
-Transforms/AggressiveInstCombine/lower-table-based-cttz-non-argument-value.ll
-Transforms/AggressiveInstCombine/lower-table-based-cttz-zero-element.ll
-Transforms/AggressiveInstCombine/trunc_select_cmp.ll
-Transforms/AggressiveInstCombine/trunc_select.ll
 Transforms/AtomicExpand/AArch64/atomicrmw-fp.ll
 Transforms/AtomicExpand/AArch64/expand-atomicrmw-xchg-fp.ll
 Transforms/AtomicExpand/AArch64/pcsections.ll
@@ -818,7 +812,6 @@ Transforms/InstCombine/AMDGPU/addrspacecast.ll
 Transforms/InstCombine/and2.ll
 Transforms/InstCombine/and-fcmp.ll
 Transforms/InstCombine/and.ll
-Transforms/InstCombine/and-or-icmp-nullptr.ll
 Transforms/InstCombine/and-or-icmps.ll
 Transforms/InstCombine/and-or-implied-cond-not.ll
 Transforms/InstCombine/apint-div1.ll
@@ -1259,7 +1252,6 @@ Transforms/PhaseOrdering/AArch64/hoisting-sinking-required-for-vectorization.ll
 Transforms/PhaseOrdering/AArch64/predicated-reduction.ll
 Transforms/PhaseOrdering/AArch64/quant_4x4.ll
 Transforms/PhaseOrdering/ARM/arm_mean_q7.ll
-Transforms/PhaseOrdering/lower-table-based-cttz.ll
 Transforms/PhaseOrdering/vector-select.ll
 Transforms/PhaseOrdering/X86/blendv-select.ll
 Transforms/PhaseOrdering/X86/merge-functions2.ll
