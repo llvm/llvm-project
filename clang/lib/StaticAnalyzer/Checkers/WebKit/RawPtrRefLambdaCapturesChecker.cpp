@@ -253,6 +253,16 @@ public:
         auto *Callee = CE->getCallee();
         if (!Callee)
           return;
+        Callee = Callee->IgnoreParenCasts();
+        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Callee))
+          Callee = MTE->getSubExpr();
+        if (!Callee)
+          return;
+        Callee = Callee->IgnoreParenCasts();
+        if (auto* L = dyn_cast_or_null<LambdaExpr>(Callee)) {
+          LambdasToIgnore.insert(L); // Calling a lambda upon creation is safe.
+          return;
+        }
         auto *DRE = dyn_cast<DeclRefExpr>(Callee->IgnoreParenCasts());
         if (!DRE)
           return;
