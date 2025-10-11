@@ -36,11 +36,12 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   gnutools::Assembler::ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
 }
 
-bool solaris::isLinkerGnuLd(const ToolChain &TC, const ArgList &Args) {
-  // Only used if targetting Solaris.
-  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
-  return UseLinker == "bfd" || UseLinker == "gld";
+bool solaris::isLinkerSolarisLinkEditor(const ToolChain &TC,
+                                        const ArgList &Args) {
+  auto Determination =
+      solaris::LinkerDetermination::make(TC, Args, /* EmitDiagnostics */ false);
+  return Determination.Expectations ==
+         solaris::LinkerExpectations::SolarisLinkEditor;
 }
 
 static bool getPIE(const ArgList &Args, const ToolChain &TC) {
@@ -52,30 +53,11 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
                       TC.isPIEDefault(Args));
 }
 
-// FIXME: Need to handle PreferredLinker here?
 std::string solaris::Linker::getLinkerPath(const ArgList &Args) const {
-  const ToolChain &ToolChain = getToolChain();
-  if (const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
-    StringRef UseLinker = A->getValue();
-    if (!UseLinker.empty()) {
-      if (llvm::sys::path::is_absolute(UseLinker) &&
-          llvm::sys::fs::can_execute(UseLinker))
-        return std::string(UseLinker);
+  auto Determination =
+      solaris::LinkerDetermination::make(getToolChain(), Args, true);
 
-      // Accept 'bfd' and 'gld' as aliases for the GNU linker.
-      if (UseLinker == "bfd" || UseLinker == "gld")
-        // FIXME: Could also use /usr/bin/gld here.
-        return "/usr/gnu/bin/ld";
-
-      // Accept 'ld' as alias for the default linker
-      if (UseLinker != "ld")
-        ToolChain.getDriver().Diag(diag::err_drv_invalid_linker_name)
-            << A->getAsString(Args);
-    }
-  }
-
-  // getDefaultLinker() always returns an absolute path.
-  return ToolChain.getDefaultLinker();
+  return Determination.Linker;
 }
 
 void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -87,11 +69,11 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool IsPIE = getPIE(Args, ToolChain);
-  const bool LinkerIsGnuLd = isLinkerGnuLd(ToolChain, Args);
+  const bool LinkerIsSolarisLd = isLinkerSolarisLinkEditor(ToolChain, Args);
   ArgStringList CmdArgs;
 
   // Demangle C++ names in errors.  GNU ld already defaults to --demangle.
-  if (!LinkerIsGnuLd)
+  if (LinkerIsSolarisLd)
     CmdArgs.push_back("-C");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared,
@@ -101,7 +83,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsPIE) {
-    if (LinkerIsGnuLd) {
+    if (!LinkerIsSolarisLd) {
       CmdArgs.push_back("-pie");
     } else {
       CmdArgs.push_back("-z");
@@ -122,7 +104,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_pthreads);
   }
 
-  if (LinkerIsGnuLd) {
+  if (!LinkerIsSolarisLd) {
     // Set the correct linker emulation for 32- and 64-bit Solaris.
     switch (Arch) {
     case llvm::Triple::x86:
@@ -256,7 +238,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Arch == llvm::Triple::x86_64 &&
           (SA.needsAsanRt() || SA.needsStatsRt() ||
            (SA.needsUbsanRt() && !SA.requiresMinimalRuntime())) &&
-          !LinkerIsGnuLd) {
+          LinkerIsSolarisLd) {
         CmdArgs.push_back("-z");
         CmdArgs.push_back("relax=transtls");
       }
@@ -344,10 +326,10 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
 }
 
 const char *Solaris::getDefaultLinker() const {
-  // FIXME: Only handle Solaris ld and GNU ld here.
-  return llvm::StringSwitch<const char *>(getDriver().getPreferredLinker())
-      .Cases("bfd", "gld", "/usr/gnu/bin/ld")
-      .Default("/usr/bin/ld");
+  // The default linker on Solaris is _always_ the Solaris Link Editor.
+  // Recall that the driver's _default_ linker is distinct from the compile-time
+  // _preferred_ linker setting CLANG_DEFAULT_LINKER, which may even be empty.
+  return "/usr/bin/ld";
 }
 
 Tool *Solaris::buildAssembler() const {
@@ -422,4 +404,69 @@ void Solaris::addLibStdCxxIncludePaths(
   addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
                            TripleStr, Multilib.includeSuffix(), DriverArgs,
                            CC1Args);
+}
+
+solaris::LinkerDetermination
+solaris::LinkerDetermination::make(const ToolChain &TC, const ArgList &Args,
+                                   bool EmitDiagnostics) {
+  // First, check --ld-path, then -fuse-ld, then the compile-time
+  // preferred linker (CLANG_DEFAULT_LINKER), then finally fall back to the
+  // platform's default - the Solaris Link Editor. This behavior is consonant
+  // with the other platforms' drivers.
+
+  auto InferExpectations =
+      [](const std::string &s) -> solaris::LinkerExpectations {
+    if (s == "ld" || s == "/bin/ld" || s == "/usr/bin/ld")
+      return solaris::LinkerExpectations::SolarisLinkEditor;
+    return solaris::LinkerExpectations::GnuLdCompatibleArgParser;
+  };
+
+  if (const Arg *A = Args.getLastArg(options::OPT_ld_path_EQ)) {
+    StringRef UseLinker = A->getValue();
+    if (!UseLinker.empty()) {
+      auto LinkerPath = std::string(UseLinker);
+      if (llvm::sys::fs::can_execute(LinkerPath))
+        return solaris::LinkerDetermination(LinkerPath,
+                                            InferExpectations(LinkerPath));
+    }
+    if (EmitDiagnostics)
+      TC.getDriver().Diag(diag::err_drv_invalid_linker_name)
+          << A->getAsString(Args);
+  } else if (const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
+    StringRef UseLinker = A->getValue();
+    if (!UseLinker.empty()) {
+      if (llvm::sys::path::is_absolute(UseLinker) &&
+          llvm::sys::fs::can_execute(UseLinker)) {
+        auto LinkerPath = std::string(UseLinker);
+        return solaris::LinkerDetermination(LinkerPath,
+                                            InferExpectations(LinkerPath));
+      }
+
+      // Accept 'bfd' and 'gld' as aliases for the GNU linker.
+      if (UseLinker == "bfd" || UseLinker == "gld")
+        return solaris::LinkerDetermination(
+            "/usr/gnu/bin/ld",
+            solaris::LinkerExpectations::GnuLdCompatibleArgParser);
+
+      // Accept 'ld' as an alias for the default linker
+      if (UseLinker == "ld")
+        return solaris::LinkerDetermination(
+            "/usr/bin/ld", solaris::LinkerExpectations::SolarisLinkEditor);
+
+      if (EmitDiagnostics)
+        TC.getDriver().Diag(diag::err_drv_invalid_linker_name)
+            << A->getAsString(Args);
+    }
+  }
+
+  auto CompileTimePreferredLinker = TC.getDriver().getPreferredLinker();
+  if (!CompileTimePreferredLinker.empty()) {
+    auto LinkerPath = std::string(CompileTimePreferredLinker);
+    return solaris::LinkerDetermination(LinkerPath,
+                                        InferExpectations(LinkerPath));
+  }
+
+  return solaris::LinkerDetermination(
+      std::string("/usr/bin/ld"),
+      solaris::LinkerExpectations::SolarisLinkEditor);
 }

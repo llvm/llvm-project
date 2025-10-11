@@ -31,7 +31,8 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-bool isLinkerGnuLd(const ToolChain &TC, const llvm::opt::ArgList &Args);
+bool isLinkerSolarisLinkEditor(const ToolChain &TC,
+                               const llvm::opt::ArgList &Args);
 
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
@@ -46,6 +47,34 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+enum class LinkerExpectations {
+  GnuLdCompatibleArgParser,
+  /// The formal name for the built-in ld on Solaris.
+  SolarisLinkEditor,
+};
+
+/// We use Solaris's built-in linker by default. It has a unique command line
+/// syntax and specific limitations. By contrast, other linkers such as lld,
+/// Mold, and Wild are compatible with GNU ld's command line syntax. Knowing
+/// _which_ linker to use is sufficient to determine the expectations of that
+/// linker. Rather than spread ad-hoc string comparisons all over the driver, we
+/// encapsulate the details of differences in the chosen linker here.
+class LinkerDetermination final {
+  LinkerDetermination(std::string Linker, LinkerExpectations Expectations)
+      : Linker(Linker), Expectations(Expectations) {}
+
+public:
+  std::string Linker;
+  LinkerExpectations Expectations;
+
+  /// Choose the correct linker based on arguments and compile-time options
+  /// recorded in the ToolChain.
+  static LinkerDetermination make(const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  bool EmitDiagnostics);
+};
+
 } // end namespace solaris
 } // end namespace tools
 
