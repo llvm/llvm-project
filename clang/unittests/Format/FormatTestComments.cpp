@@ -332,6 +332,53 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
   verifyNoCrash(StringRef("/*\\\0\n/", 6));
 }
 
+TEST_F(FormatTestComments, InsertsSpaceBeforeClosingBlockComment) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeClosingBlockComment = true;
+
+  verifyFormat("foo(/* comment */);", "foo(/* comment*/);", Style);
+  verifyFormat("foo(/*Logger= */nullptr);", "foo(/*Logger=*/nullptr);", Style);
+  verifyFormat("/* comment */", Style);
+  verifyFormat("/* comment before code */\nint x;",
+               "/* comment before code*/\nint x;", Style);
+  verifyFormat("/* comment\n */", "/* comment\n*/", Style);
+  verifyFormat("/* comment\n */\nint x;", "/* comment\n*/\nint x;", Style);
+  verifyFormat("/*\ncomment line\n */", "/*\ncomment line\n*/", Style);
+  verifyFormat("/*\n * comment star\n */", "/*\n * comment star\n*/", Style);
+  verifyFormat("/* comment line\nnext */", "/* comment line\nnext*/", Style);
+  verifyFormat("/*\n*/", Style);
+  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/*This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line. */",
+               "/*This is a multi line comment\n"
+               "this is the next line\n"
+               "and this is the 3th line.*/",
+               Style);
+  verifyFormat(
+      "/*\n * Another multi line comment\n * this is the next line. */",
+      "/*\n * Another multi line comment\n * this is the next line.*/", Style);
+}
+
+TEST_F(FormatTestComments, BlockCommentDoesNotForceBreakBeforeFollowingToken) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeClosingBlockComment = true;
+
+  verifyFormat("switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "/*FALLTHROUGH */ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               "switch (n) {\n"
+               "case 1:\n"
+               "  foo();\n"
+               "  /*FALLTHROUGH*/ case 2:\n"
+               "  bar();\n"
+               "}\n",
+               Style);
+}
+
 TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
   EXPECT_EQ("SomeFunction(a,\n"
             "             b, // comment\n"

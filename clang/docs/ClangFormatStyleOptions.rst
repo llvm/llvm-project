@@ -6343,6 +6343,17 @@ the configuration (without a prefix: ``Auto``).
       case 1 : break;                         case 1: break;
     }                                       }
 
+.. _SpaceBeforeClosingBlockComment:
+
+**SpaceBeforeClosingBlockComment** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <SpaceBeforeClosingBlockComment>`
+  If ``true``, a space is inserted immediately before the closing ``*/`` in
+  block comments that contain content.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     /* comment */                  vs.     /* comment*/
+
 .. _SpaceBeforeCpp11BracedList:
 
 **SpaceBeforeCpp11BracedList** (``Boolean``) :versionbadge:`clang-format 7` :ref:`¶ <SpaceBeforeCpp11BracedList>`

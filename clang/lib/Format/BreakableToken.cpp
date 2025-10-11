@@ -776,6 +776,30 @@ void BreakableBlockComment::reflow(unsigned LineIndex,
 void BreakableBlockComment::adaptStartOfLine(
     unsigned LineIndex, WhitespaceManager &Whitespaces) const {
   if (LineIndex == 0) {
+    if (Style.SpaceBeforeClosingBlockComment) {
+      const StringRef Content = Tok.TokenText;
+      if (Content.size() >= 4 && Content.starts_with("/*") &&
+          Content.ends_with("*/")) {
+        const StringRef Body = Content.drop_front(2).drop_back(2);
+        const bool IsEffectivelyEmpty = Body.trim(" \t").empty();
+        const bool IsSingleLine = !Content.contains('\n');
+
+        if (IsEffectivelyEmpty && IsSingleLine) {
+          const unsigned WhitespaceLength = Body.size();
+          Whitespaces.replaceWhitespaceInToken(
+              Tok, /*Offset=*/2, WhitespaceLength, /*PreviousPostfix=*/"",
+              /*CurrentPrefix=*/"", InPPDirective, /*Newlines=*/1,
+              /*Spaces=*/0);
+        } else if (Tok.NeedsSpaceBeforeClosingBlockComment &&
+                   Tok.SpaceBeforeClosingBlockCommentOffset <
+                       Tok.TokenText.size()) {
+          Whitespaces.replaceWhitespaceInToken(
+              Tok, Tok.SpaceBeforeClosingBlockCommentOffset,
+              /*ReplaceChars=*/0, /*PreviousPostfix=*/"", /*CurrentPrefix=*/" ",
+              InPPDirective, /*Newlines=*/0, /*Spaces=*/0);
+        }
+      }
+    }
     if (DelimitersOnNewline) {
       // Since we're breaking at index 1 below, the break position and the
       // break length are the same.
@@ -816,9 +840,34 @@ void BreakableBlockComment::adaptStartOfLine(
   unsigned WhitespaceLength = Content[LineIndex].data() -
                               tokenAt(LineIndex).TokenText.data() -
                               WhitespaceOffsetInToken;
+  int Spaces = ContentColumn[LineIndex] - Prefix.size();
+  const bool IsTerminatorOnSeparateLine =
+      Content[LineIndex].ltrim(Blanks).empty();
+  const bool IsLastLineOfBlock = (LineIndex + 1 == Lines.size());
+
+  if (IsTerminatorOnSeparateLine && IsLastLineOfBlock) {
+    if (Style.SpaceBeforeClosingBlockComment &&
+        !Tok.NeedsSpaceBeforeClosingBlockComment) {
+      if (std::all_of(Content.begin(), Content.begin() + LineIndex,
+                      [](StringRef Line) { return Line.trim().empty(); })) {
+        // This case handles empty or whitespace-only comments like `/*\n*/`.
+        // The user wants a space before `*/`, but the lexer correctly
+        // identifies no space is needed for the token itself. We must avoid
+        // indenting the　`*/` on its new line, which would result in an
+        // unwanted leading space.
+        Spaces = 0;
+      }
+    } else if (Tok.NeedsSpaceBeforeClosingBlockComment && Spaces > 0) {
+      // The token text itself will contain the leading space (e.g., " */").
+      // The calculated `Spaces` is for alignment relative to the star column.
+      // Decrement to prevent adding a second, redundant space.
+      --Spaces;
+    }
+  }
+
   Whitespaces.replaceWhitespaceInToken(
       tokenAt(LineIndex), WhitespaceOffsetInToken, WhitespaceLength, "", Prefix,
-      InPPDirective, /*Newlines=*/1, ContentColumn[LineIndex] - Prefix.size());
+      InPPDirective, /*Newlines=*/1, Spaces);
 }
 
 BreakableToken::Split

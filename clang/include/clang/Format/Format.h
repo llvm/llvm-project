@@ -4684,6 +4684,15 @@ struct FormatStyle {
   /// \version 17
   bool SpaceBeforeJsonColon;
 
+  /// If ``true``, a space is inserted immediately before the closing ``*/`` in
+  /// block comments that contain content.
+  /// \code
+  ///    true:                                  false:
+  ///    /* comment */                  vs.     /* comment*/
+  /// \endcode
+  /// \version 21
+  bool SpaceBeforeClosingBlockComment;
+
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
     /// This is **deprecated** and replaced by ``Custom`` below, with all
@@ -5611,6 +5620,7 @@ struct FormatStyle {
            SpaceAroundPointerQualifiers == R.SpaceAroundPointerQualifiers &&
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
+           SpaceBeforeClosingBlockComment == R.SpaceBeforeClosingBlockComment &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
