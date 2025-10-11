@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYREGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYREGISTERBANKINFO_H
 
+#include "WebAssemblyRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 
 #define GET_REGBANK_DECLARATIONS
@@ -35,6 +36,33 @@ public:
 
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
+
+  /// Maximum recursion depth for hasFPConstraints.
+  const unsigned MaxFPRSearchDepth = 2;
+
+  /// \returns true if \p MI is a PHI that its def is used by
+  /// any instruction that onlyUsesFP.
+  bool isPHIWithFPConstraints(const MachineInstr &MI,
+                              const MachineRegisterInfo &MRI,
+                              const WebAssemblyRegisterInfo &TRI,
+                              unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only uses and defines FPRs.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                        const WebAssemblyRegisterInfo &TRI,
+                        unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only uses FPRs.
+  bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  const WebAssemblyRegisterInfo &TRI, unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only defines FPRs.
+  bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const WebAssemblyRegisterInfo &TRI, unsigned Depth = 0) const;
+
+  /// \returns true if \p MI can take both fpr and gpr uses, but prefers fp.
+  bool prefersFPUse(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const WebAssemblyRegisterInfo &TRI, unsigned Depth = 0) const;
 };
 } // end namespace llvm
 #endif

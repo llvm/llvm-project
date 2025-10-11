@@ -38,6 +38,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s32, s64})
+      .scalarize(0)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64);
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
