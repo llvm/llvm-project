@@ -23,8 +23,26 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-export CC=cl
-export CXX=cl
+
+mkdir /tmp/xz-download
+pushd /tmp/xz-download
+curl -L -o xz-5.8.1-windows.zip http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip
+unzip xz-5.8.1-windows.zip
+ls -l /tmp/xz-download/bin_x86-64/xz.exe
+popd
+
+mkdir /tmp/clang-download
+pushd /tmp/clang-download
+curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
+ls -l "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+/tmp/xz-download/bin_x86-64/xz.exe -d -qq "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+tar xf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
+ls -l /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+
+
+
+export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
@@ -43,8 +61,6 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
       -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
       -D COMPILER_RT_BUILD_ORC=OFF \
-      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
@@ -52,6 +68,9 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
 start-group "ninja"
+
+#      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+#      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
