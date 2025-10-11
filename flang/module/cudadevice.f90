@@ -2008,6 +2008,11 @@ implicit none
     end function
   end interface
 
+  interface
+    attributes(device) subroutine fence_proxy_async()
+    end subroutine
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()
