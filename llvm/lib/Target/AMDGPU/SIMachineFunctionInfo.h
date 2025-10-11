@@ -276,6 +276,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   // TODO: 10 may be a better default since it's the maximum.
   unsigned Occupancy = 0;
+  unsigned MaxArchVGPRPressure = 0;
 
   SmallVector<StringValue, 2> SpillPhysVGPRS;
   SmallVector<StringValue> WWMReservedRegs;
@@ -348,6 +349,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
     YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
+    YamlIO.mapOptional("maxArchVGPRPressure", MFI.MaxArchVGPRPressure, 0u);
     YamlIO.mapOptional("spillPhysVGPRs", MFI.SpillPhysVGPRS);
     YamlIO.mapOptional("wwmReservedRegs", MFI.WWMReservedRegs);
     YamlIO.mapOptional("scavengeFI", MFI.ScavengeFI);
@@ -525,6 +527,9 @@ private:
 
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
+
+  // The max arch VGPR pressure found during scheduling.
+  unsigned MaxArchVGPRPressure;
 
   // Maximum number of dwords that can be clusterred during instruction
   // scheduler stage.
@@ -1206,6 +1211,12 @@ public:
   /// the AGPR form, instead of the VGPR form.
   bool selectAGPRFormMFMA(unsigned NumRegs) const {
     return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs;
+  }
+
+  unsigned getMaxArchVGPRPressure() const { return MaxArchVGPRPressure; }
+
+  void setMaxArchVGPRPressure(unsigned NewArchVGPRPressure) {
+    MaxArchVGPRPressure = NewArchVGPRPressure;
   }
 
   // \returns true if a function has a use of AGPRs via inline asm or
