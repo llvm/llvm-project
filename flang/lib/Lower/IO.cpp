@@ -528,14 +528,14 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         const auto expr = Fortran::evaluate::AsGenericExpr(s);
         fir::ExtendedValue exv = converter.genExprAddr(*expr, stmtCtx);
         mlir::Type type = fir::getBase(exv).getType();
-        mlir::Type eleType = type;
+        bool isClassType = mlir::isa<fir::ClassType>(type);
         if (mlir::Type baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
-          eleType = baseTy;
+          type = baseTy;
 
-        if (mlir::isa<fir::ClassType>(type))
-          boxType = fir::ClassType::get(fir::PointerType::get(eleType));
+        if (isClassType)
+          boxType = fir::ClassType::get(fir::PointerType::get(type));
         else
-          boxType = fir::BoxType::get(fir::PointerType::get(eleType));
+          boxType = fir::BoxType::get(fir::PointerType::get(type));
         descAddr = builder.createTemporary(loc, boxType);
         fir::MutableBoxValue box = fir::MutableBoxValue(descAddr, {}, {});
         fir::factory::associateMutableBox(builder, loc, box, exv,
