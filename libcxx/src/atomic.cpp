@@ -84,7 +84,7 @@ extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value)
 #  define ULF_WAKE_ALL 0x00000100
 
 template <std::size_t _Size>
-static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const volatile* __val) {
+static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
@@ -219,7 +219,7 @@ static void __contention_notify(
 template <std::size_t _Size>
 static void __contention_wait(__cxx_atomic_contention_t volatile* __waiter_count,
                               void const volatile* __address_to_wait,
-                              void const volatile* __old_value) {
+                              void const* __old_value) {
   __cxx_atomic_fetch_add(__waiter_count, __cxx_contention_t(1), memory_order_relaxed);
   // https://llvm.org/PR109290
   // There are no platform guarantees of a memory barrier in the platform wait implementation
@@ -307,7 +307,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_global_table(void cons
 
 template <std::size_t _Size>
 _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native(void const volatile* __address, void const volatile* __old_value) noexcept {
+__libcpp_atomic_wait_native(void const volatile* __address, void const* __old_value) noexcept {
   __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value);
 }
 
@@ -329,10 +329,10 @@ _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native(void const vola
 #elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
 
 template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<4>(void const volatile* __address, void const volatile* __old_value) noexcept;
+__libcpp_atomic_wait_native<4>(void const volatile* __address, void const* __old_value) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<8>(void const volatile* __address, void const volatile* __old_value) noexcept;
+__libcpp_atomic_wait_native<8>(void const volatile* __address, void const* __old_value) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
 
