@@ -2886,6 +2886,13 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
   return false;
 }
 
+bool VPExpressionRecipe::isSingleScalar() const {
+  // Cannot use vputils::isSingleScalar(), because all external operands
+  // of the expression will be live-ins while bundled.
+  return isa<VPReductionRecipe>(ExpressionRecipes.back()) &&
+         !isa<VPPartialReductionRecipe>(ExpressionRecipes.back());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,

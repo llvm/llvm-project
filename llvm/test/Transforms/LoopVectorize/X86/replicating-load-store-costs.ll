@@ -693,20 +693,20 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[TMP76:%.*]] = insertelement <8 x ptr> [[TMP75]], ptr [[TMP68]], i32 7
 ; I32-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP51]], <8 x ptr> [[TMP76]], <8 x ptr> [[BROADCAST_SPLAT2]]
 ; I32-NEXT:    [[TMP77:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 0
-; I32-NEXT:    [[TMP78:%.*]] = load float, ptr [[TMP77]], align 4
 ; I32-NEXT:    [[TMP79:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 1
-; I32-NEXT:    [[TMP80:%.*]] = load float, ptr [[TMP79]], align 4
 ; I32-NEXT:    [[TMP81:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 2
-; I32-NEXT:    [[TMP82:%.*]] = load float, ptr [[TMP81]], align 4
 ; I32-NEXT:    [[TMP83:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 3
-; I32-NEXT:    [[TMP84:%.*]] = load float, ptr [[TMP83]], align 4
 ; I32-NEXT:    [[TMP85:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 4
-; I32-NEXT:    [[TMP86:%.*]] = load float, ptr [[TMP85]], align 4
 ; I32-NEXT:    [[TMP87:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 5
-; I32-NEXT:    [[TMP88:%.*]] = load float, ptr [[TMP87]], align 4
 ; I32-NEXT:    [[TMP89:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 6
-; I32-NEXT:    [[TMP90:%.*]] = load float, ptr [[TMP89]], align 4
 ; I32-NEXT:    [[TMP91:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i32 7
+; I32-NEXT:    [[TMP78:%.*]] = load float, ptr [[TMP77]], align 4
+; I32-NEXT:    [[TMP80:%.*]] = load float, ptr [[TMP79]], align 4
+; I32-NEXT:    [[TMP82:%.*]] = load float, ptr [[TMP81]], align 4
+; I32-NEXT:    [[TMP84:%.*]] = load float, ptr [[TMP83]], align 4
+; I32-NEXT:    [[TMP86:%.*]] = load float, ptr [[TMP85]], align 4
+; I32-NEXT:    [[TMP88:%.*]] = load float, ptr [[TMP87]], align 4
+; I32-NEXT:    [[TMP90:%.*]] = load float, ptr [[TMP89]], align 4
 ; I32-NEXT:    [[TMP92:%.*]] = load float, ptr [[TMP91]], align 4
 ; I32-NEXT:    [[TMP93:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; I32-NEXT:    [[TMP94:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
@@ -847,32 +847,32 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I64-NEXT:    [[TMP70:%.*]] = insertelement <2 x double> poison, double [[TMP68]], i32 0
 ; I64-NEXT:    [[TMP71:%.*]] = insertelement <2 x double> [[TMP70]], double [[TMP69]], i32 1
 ; I64-NEXT:    [[TMP72:%.*]] = fsub <2 x double> zeroinitializer, [[TMP59]]
-; I64-NEXT:    [[TMP73:%.*]] = fsub <2 x double> zeroinitializer, [[TMP63]]
-; I64-NEXT:    [[TMP74:%.*]] = fsub <2 x double> zeroinitializer, [[TMP67]]
-; I64-NEXT:    [[TMP75:%.*]] = fsub <2 x double> zeroinitializer, [[TMP71]]
-; I64-NEXT:    [[TMP76:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP8]]
-; I64-NEXT:    [[TMP77:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP9]]
-; I64-NEXT:    [[TMP78:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
-; I64-NEXT:    [[TMP79:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP11]]
-; I64-NEXT:    [[TMP80:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
-; I64-NEXT:    [[TMP81:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP13]]
-; I64-NEXT:    [[TMP82:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP14]]
-; I64-NEXT:    [[TMP83:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP15]]
 ; I64-NEXT:    [[TMP84:%.*]] = extractelement <2 x double> [[TMP72]], i32 0
-; I64-NEXT:    store double [[TMP84]], ptr [[TMP76]], align 8
 ; I64-NEXT:    [[TMP85:%.*]] = extractelement <2 x double> [[TMP72]], i32 1
-; I64-NEXT:    store double [[TMP85]], ptr [[TMP77]], align 8
+; I64-NEXT:    [[TMP73:%.*]] = fsub <2 x double> zeroinitializer, [[TMP63]]
 ; I64-NEXT:    [[TMP86:%.*]] = extractelement <2 x double> [[TMP73]], i32 0
-; I64-NEXT:    store double [[TMP86]], ptr [[TMP78]], align 8
 ; I64-NEXT:    [[TMP87:%.*]] = extractelement <2 x double> [[TMP73]], i32 1
-; I64-NEXT:    store double [[TMP87]], ptr [[TMP79]], align 8
+; I64-NEXT:    [[TMP74:%.*]] = fsub <2 x double> zeroinitializer, [[TMP67]]
 ; I64-NEXT:    [[TMP88:%.*]] = extractelement <2 x double> [[TMP74]], i32 0
-; I64-NEXT:    store double [[TMP88]], ptr [[TMP80]], align 8
 ; I64-NEXT:    [[TMP89:%.*]] = extractelement <2 x double> [[TMP74]], i32 1
-; I64-NEXT:    store double [[TMP89]], ptr [[TMP81]], align 8
+; I64-NEXT:    [[TMP75:%.*]] = fsub <2 x double> zeroinitializer, [[TMP71]]
 ; I64-NEXT:    [[TMP90:%.*]] = extractelement <2 x double> [[TMP75]], i32 0
-; I64-NEXT:    store double [[TMP90]], ptr [[TMP82]], align 8
 ; I64-NEXT:    [[TMP91:%.*]] = extractelement <2 x double> [[TMP75]], i32 1
+; I64-NEXT:    [[TMP93:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP8]]
+; I64-NEXT:    [[TMP94:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP9]]
+; I64-NEXT:    [[TMP95:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
+; I64-NEXT:    [[TMP96:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP11]]
+; I64-NEXT:    [[TMP97:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
+; I64-NEXT:    [[TMP98:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP13]]
+; I64-NEXT:    [[TMP99:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP14]]
+; I64-NEXT:    [[TMP83:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP15]]
+; I64-NEXT:    store double [[TMP84]], ptr [[TMP93]], align 8
+; I64-NEXT:    store double [[TMP85]], ptr [[TMP94]], align 8
+; I64-NEXT:    store double [[TMP86]], ptr [[TMP95]], align 8
+; I64-NEXT:    store double [[TMP87]], ptr [[TMP96]], align 8
+; I64-NEXT:    store double [[TMP88]], ptr [[TMP97]], align 8
+; I64-NEXT:    store double [[TMP89]], ptr [[TMP98]], align 8
+; I64-NEXT:    store double [[TMP90]], ptr [[TMP99]], align 8
 ; I64-NEXT:    store double [[TMP91]], ptr [[TMP83]], align 8
 ; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; I64-NEXT:    [[TMP92:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
@@ -928,17 +928,17 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I32-NEXT:    [[TMP34:%.*]] = insertelement <4 x double> [[TMP33]], double [[TMP30]], i32 2
 ; I32-NEXT:    [[TMP35:%.*]] = insertelement <4 x double> [[TMP34]], double [[TMP31]], i32 3
 ; I32-NEXT:    [[TMP36:%.*]] = fsub <4 x double> zeroinitializer, [[TMP35]]
+; I32-NEXT:    [[TMP41:%.*]] = extractelement <4 x double> [[TMP36]], i32 0
+; I32-NEXT:    [[TMP42:%.*]] = extractelement <4 x double> [[TMP36]], i32 1
+; I32-NEXT:    [[TMP43:%.*]] = extractelement <4 x double> [[TMP36]], i32 2
+; I32-NEXT:    [[TMP44:%.*]] = extractelement <4 x double> [[TMP36]], i32 3
 ; I32-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP4]]
 ; I32-NEXT:    [[TMP38:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP5]]
 ; I32-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP6]]
 ; I32-NEXT:    [[TMP40:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP7]]
-; I32-NEXT:    [[TMP41:%.*]] = extractelement <4 x double> [[TMP36]], i32 0
 ; I32-NEXT:    store double [[TMP41]], ptr [[TMP37]], align 8
-; I32-NEXT:    [[TMP42:%.*]] = extractelement <4 x double> [[TMP36]], i32 1
 ; I32-NEXT:    store double [[TMP42]], ptr [[TMP38]], align 8
-; I32-NEXT:    [[TMP43:%.*]] = extractelement <4 x double> [[TMP36]], i32 2
 ; I32-NEXT:    store double [[TMP43]], ptr [[TMP39]], align 8
-; I32-NEXT:    [[TMP44:%.*]] = extractelement <4 x double> [[TMP36]], i32 3
 ; I32-NEXT:    store double [[TMP44]], ptr [[TMP40]], align 8
 ; I32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; I32-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100

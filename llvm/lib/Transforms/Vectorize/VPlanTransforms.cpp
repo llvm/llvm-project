@@ -3795,7 +3795,10 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
     }
   }
 
-  // Create explicit VPInstructions to convert vectors to scalars.
+  // Create explicit VPInstructions to convert vectors to scalars. The current
+  // implementation is conservative - it may miss some cases that may or may not
+  // be vector values. TODO: introduce Unpacks speculatively - remove them later
+  // if they are known to operate on scalar values.
   for (VPBasicBlock *VPBB : VPBBsInsideLoopRegion) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe,
@@ -3810,11 +3813,10 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
         if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
           continue;
 
-        // At the moment, we only create unpacks for scalar users outside
-        // replicate regions. Recipes inside replicate regions still manually
-        // extract the required lanes.
-        // TODO: Remove once replicate regions are
-        // unrolled completely.
+        // At the moment, we create unpacks only for scalar users outside
+        // replicate regions. Recipes inside replicate regions still extract the
+        // required lanes implicitly.
+        // TODO: Remove once replicate regions are unrolled completely.
         auto IsCandidateUnpackUser = [Def](VPUser *U) {
           VPRegionBlock *ParentRegion =
               cast<VPRecipeBase>(U)->getParent()->getParent();

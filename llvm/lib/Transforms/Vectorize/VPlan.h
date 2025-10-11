@@ -1012,6 +1012,11 @@ public:
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,
+    /// Extracts all lanes from its (non-scalable) vector operand. This is an
+    /// abstract VPInstruction whose single defined VPValue represents VF
+    /// scalars extracted from a vector, to be replaced by VF ExtractElement
+    /// VPInstructions.
+    Unpack,
     /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
     /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
@@ -1064,11 +1069,6 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
-    /// Extracts all lanes from its (non-scalable) vector operand. This is an
-    /// abstract VPInstruction whose single defined VPValue represents VF
-    /// scalars extracted from a vector, to be replaced by VF ExtractElement
-    /// VPInstructions.
-    Unpack,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -3116,6 +3116,9 @@ public:
   /// Returns true if this expression contains recipes that may have side
   /// effects.
   bool mayHaveSideEffects() const;
+
+  /// Returns true if the result of this VPExpressionRecipe is a single-scalar.
+  bool isSingleScalar() const;
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when
