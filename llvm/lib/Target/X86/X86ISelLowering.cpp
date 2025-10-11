@@ -19964,7 +19964,7 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
   unsigned NumElts = Width / IntSize;
   VecIntVT = MVT::getVectorVT(IntVT, NumElts);
   unsigned SrcElts, VTElts;
-  // vcvttps2qq cannot convert v16f32 <-> v8i64 
+  // vcvttps2qq cannot convert v16f32 <-> v8i64
   if (IntVT == MVT::i64 && Width == 512) {
     SrcElts = NumElts;
     VTElts = NumElts;
@@ -19972,7 +19972,7 @@ static SDValue lowerFPToIntToFP(SDValue CastToFP, const SDLoc &DL,
     SrcElts = Width / SrcSize;
     VTElts = Width / VTSize;
   }
-  
+
   VecSrcVT = MVT::getVectorVT(SrcVT, SrcElts);
   VecVT = MVT::getVectorVT(VT, VTElts);
   // sint_to_fp (fp_to_sint X) --> extelt (sint_to_fp (fp_to_sint (s2v X))), 0
