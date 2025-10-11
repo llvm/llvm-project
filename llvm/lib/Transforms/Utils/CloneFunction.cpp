@@ -44,7 +44,7 @@ using namespace llvm;
 STATISTIC(RemappedAtomMax, "Highest global NextAtomGroup (after mapping)");
 
 void llvm::mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap) {
-  auto CurGroup = DL->getAtomGroup();
+  uint64_t CurGroup = DL->getAtomGroup();
   if (!CurGroup)
     return;
 
@@ -62,21 +62,20 @@ void llvm::mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap) {
   RemappedAtomMax = std::max<uint64_t>(NewGroup, RemappedAtomMax);
 }
 
-namespace {
-void collectDebugInfoFromInstructions(const Function &F,
-                                      DebugInfoFinder &DIFinder) {
+static void collectDebugInfoFromInstructions(const Function &F,
+                                             DebugInfoFinder &DIFinder) {
   const Module *M = F.getParent();
-  if (M) {
-    // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
-    for (const auto &I : instructions(F))
-      DIFinder.processInstruction(*M, I);
-  }
+  if (!M)
+    return;
+  // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
+  for (const Instruction &I : instructions(F))
+    DIFinder.processInstruction(*M, I);
 }
 
 // Create a predicate that matches the metadata that should be identity mapped
 // during function cloning.
-MetadataPredicate createIdentityMDPredicate(const Function &F,
-                                            CloneFunctionChangeType Changes) {
+static MetadataPredicate
+createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
   if (Changes >= CloneFunctionChangeType::DifferentModule)
     return [](const Metadata *MD) { return false; };
 
@@ -107,7 +106,6 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
     return false;
   };
 }
-} // namespace
 
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
@@ -213,10 +211,9 @@ void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                      const MetadataPredicate *IdentityMD) {
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc.getAllMetadata(MDs);
-  for (auto MD : MDs) {
-    NewFunc.addMetadata(MD.first,
-                        *MapMetadata(MD.second, VMap, RemapFlag, TypeMapper,
-                                     Materializer, IdentityMD));
+  for (const auto &[Kind, MD] : MDs) {
+    NewFunc.addMetadata(Kind, *MapMetadata(MD, VMap, RemapFlag, TypeMapper,
+                                           Materializer, IdentityMD));
   }
 }
 
@@ -235,7 +232,6 @@ void llvm::CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
   // appropriate.  Note that we save BE this way in order to handle cloning of
   // recursive functions into themselves.
   for (const BasicBlock &BB : OldFunc) {
-
     // Create a new basic block and copy instructions into it!
     BasicBlock *CBB =
         CloneBasicBlock(&BB, VMap, NameSuffix, &NewFunc, CodeInfo);
@@ -321,7 +317,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
   // Cloning is always a Module level operation, since Metadata needs to be
   // cloned.
-  const auto RemapFlag = RF_None;
+  const RemapFlags RemapFlag = RF_None;
 
   CloneFunctionMetadataInto(*NewFunc, *OldFunc, VMap, RemapFlag, TypeMapper,
                             Materializer, &IdentityMD);
@@ -346,8 +342,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   // visiting the metadata attached to global values, which would allow this
   // code to be deleted. Alternatively, perhaps give responsibility for this
   // update to CloneFunctionInto's callers.
-  auto *NewModule = NewFunc->getParent();
-  auto *NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
+  Module *NewModule = NewFunc->getParent();
+  NamedMDNode *NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
   // Avoid multiple insertions of the same DICompileUnit to NMD.
   SmallPtrSet<const void *, 8> Visited(llvm::from_range, NMD->operands());
 
@@ -355,7 +351,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   // the function (e.g. as instructions' scope).
   DebugInfoFinder DIFinder;
   collectDebugInfoFromInstructions(*OldFunc, DIFinder);
-  for (auto *Unit : DIFinder.compile_units()) {
+  for (DICompileUnit *Unit : DIFinder.compile_units()) {
     MDNode *MappedUnit =
         MapMetadata(Unit, VMap, RF_None, TypeMapper, Materializer);
     if (Visited.insert(MappedUnit).second)
@@ -821,17 +817,16 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
         --PredCount[Pred];
 
       // Figure out how many entries to remove from each PHI.
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-        ++PredCount[PN->getIncomingBlock(i)];
+      for (BasicBlock *Pred : PN->blocks())
+        ++PredCount[Pred];
 
       // At this point, the excess predecessor entries are positive in the
       // map.  Loop over all of the PHIs and remove excess predecessor
       // entries.
       BasicBlock::iterator I = NewBB->begin();
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
-        for (const auto &PCI : PredCount) {
-          BasicBlock *Pred = PCI.first;
-          for (unsigned NumToRemove = PCI.second; NumToRemove; --NumToRemove)
+        for (const auto &[Pred, Count] : PredCount) {
+          for (unsigned _ : llvm::seq<unsigned>(Count))
             PN->removeIncomingValue(Pred, false);
         }
       }
@@ -866,8 +861,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // As phi-nodes have been now remapped, allow incremental simplification of
   // newly-cloned instructions.
   const DataLayout &DL = NewFunc->getDataLayout();
-  for (const auto &BB : *OldFunc) {
-    for (const auto &I : BB) {
+  for (const BasicBlock &BB : *OldFunc) {
+    for (const Instruction &I : BB) {
       auto *NewI = dyn_cast_or_null<Instruction>(VMap.lookup(&I));
       if (!NewI)
         continue;
@@ -997,8 +992,8 @@ void llvm::CloneAndPruneFunctionInto(
 void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
                                      ValueToValueMapTy &VMap) {
   // Rewrite the code to refer to itself.
-  for (auto *BB : Blocks) {
-    for (auto &Inst : *BB) {
+  for (BasicBlock *BB : Blocks) {
+    for (Instruction &Inst : *BB) {
       RemapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange(), VMap,
                           RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&Inst, VMap,
@@ -1151,9 +1146,9 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                               StringRef Ext, LLVMContext &Context) {
   MDBuilder MDB(Context);
 
-  for (auto *ScopeList : NoAliasDeclScopes) {
-    for (const auto &MDOperand : ScopeList->operands()) {
-      if (MDNode *MD = dyn_cast<MDNode>(MDOperand)) {
+  for (MDNode *ScopeList : NoAliasDeclScopes) {
+    for (const MDOperand &MDOp : ScopeList->operands()) {
+      if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
         AliasScopeNode SNANode(MD);
 
         std::string Name;
@@ -1177,7 +1172,7 @@ void llvm::adaptNoAliasScopes(Instruction *I,
   auto CloneScopeList = [&](const MDNode *ScopeList) -> MDNode * {
     bool NeedsReplacement = false;
     SmallVector<Metadata *, 8> NewScopeList;
-    for (const auto &MDOp : ScopeList->operands()) {
+    for (const MDOperand &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
         if (auto *NewMD = ClonedScopes.lookup(MD)) {
           NewScopeList.push_back(NewMD);
@@ -1193,12 +1188,12 @@ void llvm::adaptNoAliasScopes(Instruction *I,
   };
 
   if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I))
-    if (auto *NewScopeList = CloneScopeList(Decl->getScopeList()))
+    if (MDNode *NewScopeList = CloneScopeList(Decl->getScopeList()))
       Decl->setScopeList(NewScopeList);
 
   auto replaceWhenNeeded = [&](unsigned MD_ID) {
     if (const MDNode *CSNoAlias = I->getMetadata(MD_ID))
-      if (auto *NewScopeList = CloneScopeList(CSNoAlias))
+      if (MDNode *NewScopeList = CloneScopeList(CSNoAlias))
         I->setMetadata(MD_ID, NewScopeList);
   };
   replaceWhenNeeded(LLVMContext::MD_noalias);
