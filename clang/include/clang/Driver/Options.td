@@ -5345,6 +5345,9 @@ def mno_fix_cortex_a53_843419 : Flag<["-"], "mno-fix-cortex-a53-843419">,
 def mmark_bti_property : Flag<["-"], "mmark-bti-property">,
   Group<m_aarch64_Features_Group>,
   HelpText<"Add .note.gnu.property with BTI to assembly files (AArch64 only)">;
+def mno_large_global_group_reloc: Flag<["-"], "mno-large-global-group-reloc">, 
+  Group<m_aarch64_Features_Group>,
+  HelpText<"Disable group relocation type for global value and symbol when code model is large">;
 def mno_bti_at_return_twice : Flag<["-"], "mno-bti-at-return-twice">,
   Group<m_arm_Features_Group>,
   HelpText<"Do not add a BTI instruction after a setjmp or other"

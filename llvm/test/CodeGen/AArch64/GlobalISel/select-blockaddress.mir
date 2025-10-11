@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select %s | FileCheck %s
 # RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select -code-model=large %s | FileCheck %s --check-prefix=LARGE
 # RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select -code-model=large -relocation-model=pic %s | FileCheck %s --check-prefix=LARGE-PIC
+# RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select -code-model=large -mno-large-global-group-reloc %s | FileCheck %s --check-prefix=NO-LARGE-GLOBAL-GROUP-RELOC
 --- |
   source_filename = "blockaddress.ll"
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -62,6 +63,16 @@ body:             |
   ; LARGE-PIC-NEXT:   BR [[MOVaddrBA]]
   ; LARGE-PIC-NEXT: {{  $}}
   ; LARGE-PIC-NEXT: bb.1.block (ir-block-address-taken %ir-block.block):
+  ; NO-LARGE-GLOBAL-GROUP-RELOC-LABEL: name: test_blockaddress
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: bb.0 (%ir-block.0):
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: [[MOVZXi:%[0-9]+]]:gpr64 = MOVZXi target-flags(aarch64-g0, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 0
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[MOVZXi]], target-flags(aarch64-g1, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 16
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: [[MOVKXi1:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi]], target-flags(aarch64-g2, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 32
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: [[MOVKXi2:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi1]], target-flags(aarch64-g3) blockaddress(@test_blockaddress, %ir-block.block), 48
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: STRXui [[MOVKXi2]], [[MOVaddr]], 0 :: (store (p0) into @addr)
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: BR [[MOVKXi2]]
+  ; NO-LARGE-GLOBAL-GROUP-RELOC: bb.1.block (address-taken):
   bb.1 (%ir-block.0):
     %0:gpr(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
     %1:gpr(p0) = G_GLOBAL_VALUE @addr
