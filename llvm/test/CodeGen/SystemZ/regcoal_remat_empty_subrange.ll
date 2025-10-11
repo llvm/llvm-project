@@ -14,12 +14,12 @@
 define void @main(i16 %in) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lhr %r2, %r2
+; CHECK-NEXT:    lhr %r0, %r2
 ; CHECK-NEXT:    larl %r1, g_151
 ; CHECK-NEXT:    lghi %r3, 0
-; CHECK-NEXT:    chi %r2, 0
-; CHECK-NEXT:    lhi %r0, 1
+; CHECK-NEXT:    chi %r0, 0
 ; CHECK-NEXT:    locghile %r3, 1
+; CHECK-NEXT:    lhi %r0, 1
 ; CHECK-NEXT:    o %r0, 0(%r1)
 ; CHECK-NEXT:    larl %r1, g_222
 ; CHECK-NEXT:    lghi %r5, 0

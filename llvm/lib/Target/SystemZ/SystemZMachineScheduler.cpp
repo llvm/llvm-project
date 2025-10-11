@@ -5,14 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// -------------------------- Post RA scheduling ---------------------------- //
-// SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
-// the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
-// implementation that looks to optimize decoder grouping and balance the
-// usage of processor resources. Scheduler states are saved for the end
-// region of each MBB, so that a successor block can learn from it.
-//===----------------------------------------------------------------------===//
 
 #include "SystemZMachineScheduler.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -20,6 +12,361 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
+
+/// Pre-RA scheduling ///
+
+static cl::opt<unsigned> TinyRegionLim(
+    "tiny-region-lim", cl::Hidden, cl::init(10),
+    cl::desc("Run limited pre-ra scheduling on regions of this size or "
+             "smaller."));
+
+namespace SystemZSched {
+enum LatencyReduction { Always, Never, More, Heuristics, CycleBased };
+} // namespace SystemZSched
+
+static cl::opt<SystemZSched::LatencyReduction> PreRALatRed(
+    "prera-lat-red", cl::Hidden,
+    cl::desc("Tuning of latency reduction during pre-ra mi-scheduling."),
+    cl::init(SystemZSched::LatencyReduction::Heuristics),
+    cl::values(
+        clEnumValN(SystemZSched::LatencyReduction::Always, "always",
+                   "Reduce scheduled latency always."),
+        clEnumValN(SystemZSched::LatencyReduction::Never, "never",
+                   "Don't reduce scheduled latency."),
+        clEnumValN(SystemZSched::LatencyReduction::More, "more",
+                   "Reduce scheduled latency on most DAGs."),
+        clEnumValN(SystemZSched::LatencyReduction::Heuristics, "heuristics",
+                   "Use heuristics for reduction of scheduled latency."),
+        clEnumValN(SystemZSched::LatencyReduction::CycleBased, "cycle-based",
+                   "Use GenericSched cycle based decisions for reduction of "
+                   "scheduled latency.")));
+
+static bool isRegDef(const MachineOperand &MO) {
+  return MO.isReg() && MO.isDef();
+}
+
+static bool isPhysRegDef(const MachineOperand &MO) {
+  return isRegDef(MO) && MO.getReg().isPhysical();
+}
+
+static bool isVirtRegUse(const MachineOperand &MO) {
+  return MO.isReg() && MO.isUse() && MO.readsReg() && MO.getReg().isVirtual();
+}
+
+bool SystemZPreRASchedStrategy::shouldReduceLatency(SchedBoundary *Zone) const {
+  if (PreRALatRed == SystemZSched::Always)
+    return true;
+  if (PreRALatRed == SystemZSched::Never)
+    return false;
+
+  if (IsWideDAG)
+    return false;
+
+  if (PreRALatRed == SystemZSched::More)
+    return true;
+
+  if (PreRALatRed == SystemZSched::Heuristics)
+    // Don't extend the scheduled latency in regions with many nodes in data
+    // sequences, or for (single block loop) regions that are acyclically
+    // (within a single loop iteration) latency limited.
+    return HasDataSequences || Rem.IsAcyclicLatencyLimited;
+
+  if (PreRALatRed == SystemZSched::CycleBased) {
+    CandPolicy P;
+    getRemLat(Zone);
+    return GenericScheduler::shouldReduceLatency(P, *Zone, false, RemLat);
+  }
+
+  llvm_unreachable("Unhandled option value.");
+}
+
+unsigned SystemZPreRASchedStrategy::getRemLat(SchedBoundary *Zone) const {
+  if (RemLat == ~0U)
+    RemLat = computeRemLatency(*Zone);
+  return RemLat;
+}
+
+static bool isStoreOfVReg(const MachineInstr *MI) {
+  return MI->mayStore() && !MI->mayLoad() && MI->getNumOperands() &&
+         isVirtRegUse(MI->getOperand(0)) &&
+         MI->getDesc().operands()[0].OperandType != MCOI::OPERAND_MEMORY;
+}
+
+void SystemZPreRASchedStrategy::initializeStoresGroup() {
+  StoresGroup.clear();
+  FirstStoreInGroupScheduled = false;
+
+  unsigned CurrMaxDepth = 0;
+  for (unsigned Idx = DAG->SUnits.size() - 1; Idx + 1 != 0; --Idx) {
+    const SUnit *SU = &DAG->SUnits[Idx];
+    const MachineInstr *MI = SU->getInstr();
+    if (!MI->getNumOperands() || MI->isCopy())
+      continue;
+    bool IsStore = isStoreOfVReg(MI);
+
+    // Find a group of stores that all are at the bottom while avoiding
+    // regions with any additional group of lesser depth.
+    if (SU->getDepth() > CurrMaxDepth) {
+      CurrMaxDepth = SU->getDepth();
+      bool PrevGroup = StoresGroup.size() > 1;
+      StoresGroup.clear();
+      if (PrevGroup)
+        return;
+      if (IsStore)
+        StoresGroup.insert(SU);
+    } else if (IsStore && !StoresGroup.empty() &&
+               SU->getDepth() == CurrMaxDepth) {
+      // The group members should all have the same opcode.
+      if ((*StoresGroup.begin())->getInstr()->getOpcode() != MI->getOpcode()) {
+        StoresGroup.clear();
+        return;
+      }
+      StoresGroup.insert(SU);
+    }
+  }
+
+  // Value of 8 handles a known regression (with group of 20).
+  if (StoresGroup.size() < 8)
+    StoresGroup.clear();
+}
+
+static int biasPhysRegExtra(const SUnit *SU) {
+  if (int Res = biasPhysReg(SU, /*isTop=*/false))
+    return Res;
+
+  // Also recognize Load Address of stack slot. There are (at least
+  // currently) no instructions here defining a physreg that use a vreg.
+  const MachineInstr *MI = SU->getInstr();
+  if (MI->getNumOperands() && !MI->isCopy()) {
+    const MachineOperand &DefMO = MI->getOperand(0);
+    if (isPhysRegDef(DefMO)) {
+#ifndef NDEBUG
+      for (const MachineOperand &MO : MI->all_uses())
+        assert(!MO.getReg().isVirtual() &&
+               "Did not expect a virtual register use operand.");
+#endif
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int SystemZPreRASchedStrategy::computeSULivenessScore(
+    SchedCandidate &C, ScheduleDAGMILive *DAG, SchedBoundary *Zone) const {
+  const SUnit *SU = C.SU;
+  const MachineInstr *MI = SU->getInstr();
+  if (!MI->getNumOperands() || MI->isCopy())
+    return 0;
+  const MachineOperand &MO0 = MI->getOperand(0);
+  assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
+
+  bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
+  const unsigned Cycles = 2;
+  unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
+  bool HasDistToTop = NumLeft > Margin;
+
+  // Before pulling down a load (to close the live range), the liveness of
+  // the use operands is checked.
+  bool UsesLive = false;
+  if (isRegDef(MO0)) {
+    // Extract the PressureChanges that all fp/vector or GR64/GR32/GRH32 regs
+    // affect respectively. misched-prera-pdiffs.mir tests against any future
+    // change in the PressureSets modelling, so simply hard-code them here.
+    int PrioPressureChange = 0;
+    int GPRPressureChange = 0;
+    const PressureDiff &PDiff = DAG->getPressureDiff(SU);
+    for (const PressureChange &PC : PDiff) {
+      if (!PC.isValid())
+        break;
+      if (PC.getPSet() == SystemZ::VR16Bit)
+        PrioPressureChange = PC.getUnitInc();
+      else if (PC.getPSet() == SystemZ::GRX32Bit)
+        GPRPressureChange = PC.getUnitInc();
+    }
+    const TargetRegisterClass *RC = DAG->MRI.getRegClass(MO0.getReg());
+    int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
+    bool PrioDefNoKill = PrioPressureChange == -RegWeight;
+    bool GPRDefNoKill = GPRPressureChange == -RegWeight;
+    UsesLive = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
+  }
+
+  bool IsKillingStore = isStoreOfVReg(MI) &&
+    !DAG->getBotRPTracker().isRegLive(MO0.getReg());
+
+  // Pull down a defining SU if it preserves the scheduled latency while not
+  // causing any (vector) registers to become live. It should also be ok if
+  // there will be relatively many SUs scheduled above this one given the OOO
+  // execution.  TODO: Try scheduling small (DFSResult) subtrees as a unit.
+  bool SchedLow = UsesLive && (PreservesSchedLat || HasDistToTop);
+
+  // This handles regions with many chained stores of the same depth at the
+  // bottom in the input order (cactus). Push them upwards during scheduling.
+  bool SchedHigh = IsKillingStore && FirstStoreInGroupScheduled &&
+                   StoresGroup.count(SU);
+
+  if (SchedLow)
+    return -1;
+  if (SchedHigh)
+    return 1;
+  return 0;
+}
+
+bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
+                                             SchedCandidate &TryCand,
+                                             SchedBoundary *Zone) const {
+  assert(Zone && !Zone->isTop() && "Bottom-Up scheduling only.");
+
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = FirstValid;
+    return true;
+  }
+
+  // Bias physreg defs and copies to their uses and definitions respectively.
+  int TryCandPRegBias = biasPhysRegExtra(TryCand.SU);
+  int CandPRegBias = biasPhysRegExtra(Cand.SU);
+  if (tryGreater(TryCandPRegBias, CandPRegBias, TryCand, Cand, PhysReg))
+    return TryCand.Reason != NoCand;
+  if (TryCandPRegBias && CandPRegBias) {
+    // Both biased same way.
+    tryGreater(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand, NodeOrder);
+    return TryCand.Reason != NoCand;
+  }
+
+  // Schedule for latency after first trying to reduce register
+  // liveness. Don't do this with tiny regions: the input order is typically
+  // fairly good generally and it doesn't seem like a good idea to move only
+  // a few instructions around too much.
+  if (!TinyRegion) {
+    // Look for an opportunity to reduce register liveness.
+    int TryCandScore = computeSULivenessScore(TryCand, DAG, Zone);
+    int CandScore = computeSULivenessScore(Cand, DAG, Zone);
+    if (tryLess(TryCandScore, CandScore, TryCand, Cand, LivenessReduce))
+      return TryCand.Reason != NoCand;
+
+    // Avoid increasing the scheduled latency.
+    if (shouldReduceLatency(Zone) &&
+        TryCand.SU->getHeight() != Cand.SU->getHeight() &&
+        (std::max(TryCand.SU->getHeight(), Cand.SU->getHeight()) >
+         Zone->getScheduledLatency())) {
+      // Put the higher SU above only if its depth is less than what's remaining.
+      unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight()
+        ? Cand.SU->getDepth()
+        : TryCand.SU->getDepth();
+      if (HigherSUDepth != getRemLat(Zone) &&
+          tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
+                  GenericSchedulerBase::BotHeightReduce)) {
+        return TryCand.Reason != NoCand;
+      }
+    }
+  }
+
+  // Weak edges help copy coalescing.
+  if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft, TryCand, Cand,
+              Weak))
+    return TryCand.Reason != NoCand;
+
+  // Fall through to original instruction order.
+  if (TryCand.SU->NodeNum > Cand.SU->NodeNum) {
+    TryCand.Reason = NodeOrder;
+    return true;
+  }
+
+  return false;
+}
+
+void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
+                                           MachineBasicBlock::iterator End,
+                                           unsigned NumRegionInstrs) {
+  TinyRegion = NumRegionInstrs <= TinyRegionLim;
+
+  RegionPolicy.ShouldTrackPressure = !TinyRegion;
+
+  // These heuristics has so far seemed to work better without adding a
+  // top-down boundary.
+  RegionPolicy.OnlyBottomUp = true;
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
+}
+
+void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
+  GenericScheduler::initialize(dag);
+
+  LLVM_DEBUG(dbgs() << "Region is" << (TinyRegion ? "" : " not") << " tiny.\n");
+  if (TinyRegion)
+    return;
+
+  NumLeft = DAG->SUnits.size();
+  RemLat = ~0U;
+
+  // Enable latency reduction for a region that has a considerable amount of
+  // data sequences so that they become interlaved. These are SUs that only
+  // have one data predecessor / successor edge(s) to their adjacent
+  // SU(s). Disable if region has many SUs relative to the overall height.
+  unsigned DAGHeight = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+  IsWideDAG = DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
+  if ((HasDataSequences = !IsWideDAG)) {
+    unsigned CurrSequence = 0, NumSeqNodes = 0;
+    auto countSequence = [&CurrSequence, &NumSeqNodes]() {
+      NumSeqNodes += CurrSequence >= 2 ? CurrSequence : 0;
+      CurrSequence = 0;
+    };
+    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+      const SUnit *SU = &DAG->SUnits[Idx];
+      bool InDataSequence = true;
+      // One Data pred to MI just above, or no preds.
+      unsigned NumPreds = 0;
+      for (const SDep &Pred : SU->Preds)
+        if (++NumPreds != 1 || Pred.getKind() != SDep::Data ||
+            Pred.getSUnit()->NodeNum != Idx - 1)
+          InDataSequence = false;
+      // One Data succ or no succs (ignoring ExitSU).
+      unsigned NumSuccs = 0;
+      for (const SDep &Succ : SU->Succs)
+        if (Succ.getSUnit() != &DAG->ExitSU &&
+            (++NumSuccs != 1 || Succ.getKind() != SDep::Data))
+          InDataSequence = false;
+      // Another type of node or one that does not have a single data pred
+      // ends any previous sequence.
+      if (!InDataSequence || !NumPreds)
+        countSequence();
+      if (InDataSequence)
+        CurrSequence++;
+    }
+    countSequence();
+    if (NumSeqNodes >= DAG->SUnits.size() / 4)
+      LLVM_DEBUG(dbgs() << "Number of nodes in def-use sequences: "
+                        << NumSeqNodes << ". ";);
+    else
+      HasDataSequences = false;
+  }
+  LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
+                    << "enabled for data sequences.\n";);
+
+  initializeStoresGroup();
+  LLVM_DEBUG(if (!StoresGroup.empty()) dbgs()
+                 << "Has StoresGroup of " << StoresGroup.size() << " stores.\n";
+             else dbgs() << "No StoresGroup.\n";);
+}
+
+void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
+  GenericScheduler::schedNode(SU, IsTopNode);
+  if (TinyRegion)
+    return;
+
+  if (!FirstStoreInGroupScheduled && StoresGroup.count(SU))
+    FirstStoreInGroupScheduled = true;
+
+  assert(NumLeft > 0);
+  --NumLeft;
+  RemLat = ~0U;
+}
+
+/// Post-RA scheduling ///
 
 #ifndef NDEBUG
 // Print the set of SUs

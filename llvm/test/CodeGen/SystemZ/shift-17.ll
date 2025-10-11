@@ -88,40 +88,40 @@ define i128 @f4(i128 %a, i128 %b, i128 %sh) {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    l %r0, 12(%r5)
-; CHECK-NEXT:    vlvgp %v2, %r0, %r0
+; CHECK-NEXT:    vlvgp %v0, %r0, %r0
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
-; CHECK-NEXT:    vrepb %v2, %v2, 15
-; CHECK-NEXT:    vslb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v0, 0(%r4), 3
-; CHECK-NEXT:    vsl %v1, %v1, %v2
+; CHECK-NEXT:    vrepb %v0, %v0, 15
+; CHECK-NEXT:    vslb %v1, %v1, %v0
+; CHECK-NEXT:    vsl %v0, %v1, %v0
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
 ; CHECK-NEXT:    vrepib %v2, 1
 ; CHECK-NEXT:    xilf %r0, 4294967295
-; CHECK-NEXT:    vsrl %v0, %v0, %v2
+; CHECK-NEXT:    vsrl %v1, %v1, %v2
 ; CHECK-NEXT:    vlvgp %v2, %r0, %r0
 ; CHECK-NEXT:    vrepb %v2, %v2, 15
-; CHECK-NEXT:    vsrlb %v0, %v0, %v2
-; CHECK-NEXT:    vsrl %v0, %v0, %v2
-; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vsrlb %v1, %v1, %v2
+; CHECK-NEXT:    vsrl %v1, %v1, %v2
+; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 ;
 ; Z15-LABEL: f4:
 ; Z15:       # %bb.0:
 ; Z15-NEXT:    l %r0, 12(%r5)
-; Z15-NEXT:    vlvgp %v2, %r0, %r0
+; Z15-NEXT:    vlvgp %v0, %r0, %r0
 ; Z15-NEXT:    vl %v1, 0(%r3), 3
-; Z15-NEXT:    vrepb %v2, %v2, 15
-; Z15-NEXT:    vl %v0, 0(%r4), 3
-; Z15-NEXT:    vslb %v1, %v1, %v2
-; Z15-NEXT:    vsl %v1, %v1, %v2
+; Z15-NEXT:    vrepb %v0, %v0, 15
+; Z15-NEXT:    vslb %v1, %v1, %v0
+; Z15-NEXT:    vsl %v0, %v1, %v0
+; Z15-NEXT:    vl %v1, 0(%r4), 3
 ; Z15-NEXT:    vrepib %v2, 1
 ; Z15-NEXT:    xilf %r0, 4294967295
-; Z15-NEXT:    vsrl %v0, %v0, %v2
+; Z15-NEXT:    vsrl %v1, %v1, %v2
 ; Z15-NEXT:    vlvgp %v2, %r0, %r0
 ; Z15-NEXT:    vrepb %v2, %v2, 15
-; Z15-NEXT:    vsrlb %v0, %v0, %v2
-; Z15-NEXT:    vsrl %v0, %v0, %v2
-; Z15-NEXT:    vo %v0, %v1, %v0
+; Z15-NEXT:    vsrlb %v1, %v1, %v2
+; Z15-NEXT:    vsrl %v1, %v1, %v2
+; Z15-NEXT:    vo %v0, %v0, %v1
 ; Z15-NEXT:    vst %v0, 0(%r2), 3
 ; Z15-NEXT:    br %r14
   %res = tail call i128 @llvm.fshl.i128(i128 %a, i128 %b, i128 %sh)
@@ -209,40 +209,40 @@ define i128 @f8(i128 %a, i128 %b, i128 %sh) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    l %r0, 12(%r5)
-; CHECK-NEXT:    vlvgp %v2, %r0, %r0
+; CHECK-NEXT:    vlvgp %v0, %r0, %r0
 ; CHECK-NEXT:    vl %v1, 0(%r4), 3
-; CHECK-NEXT:    vrepb %v2, %v2, 15
-; CHECK-NEXT:    vsrlb %v1, %v1, %v2
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vsrl %v1, %v1, %v2
+; CHECK-NEXT:    vrepb %v0, %v0, 15
+; CHECK-NEXT:    vsrlb %v1, %v1, %v0
+; CHECK-NEXT:    vsrl %v0, %v1, %v0
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
 ; CHECK-NEXT:    vrepib %v2, 1
 ; CHECK-NEXT:    xilf %r0, 4294967295
-; CHECK-NEXT:    vsl %v0, %v0, %v2
+; CHECK-NEXT:    vsl %v1, %v1, %v2
 ; CHECK-NEXT:    vlvgp %v2, %r0, %r0
 ; CHECK-NEXT:    vrepb %v2, %v2, 15
-; CHECK-NEXT:    vslb %v0, %v0, %v2
-; CHECK-NEXT:    vsl %v0, %v0, %v2
-; CHECK-NEXT:    vo %v0, %v0, %v1
+; CHECK-NEXT:    vslb %v1, %v1, %v2
+; CHECK-NEXT:    vsl %v1, %v1, %v2
+; CHECK-NEXT:    vo %v0, %v1, %v0
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 ;
 ; Z15-LABEL: f8:
 ; Z15:       # %bb.0:
 ; Z15-NEXT:    l %r0, 12(%r5)
-; Z15-NEXT:    vlvgp %v2, %r0, %r0
+; Z15-NEXT:    vlvgp %v0, %r0, %r0
 ; Z15-NEXT:    vl %v1, 0(%r4), 3
-; Z15-NEXT:    vrepb %v2, %v2, 15
-; Z15-NEXT:    vl %v0, 0(%r3), 3
-; Z15-NEXT:    vsrlb %v1, %v1, %v2
-; Z15-NEXT:    vsrl %v1, %v1, %v2
+; Z15-NEXT:    vrepb %v0, %v0, 15
+; Z15-NEXT:    vsrlb %v1, %v1, %v0
+; Z15-NEXT:    vsrl %v0, %v1, %v0
+; Z15-NEXT:    vl %v1, 0(%r3), 3
 ; Z15-NEXT:    vrepib %v2, 1
 ; Z15-NEXT:    xilf %r0, 4294967295
-; Z15-NEXT:    vsl %v0, %v0, %v2
+; Z15-NEXT:    vsl %v1, %v1, %v2
 ; Z15-NEXT:    vlvgp %v2, %r0, %r0
 ; Z15-NEXT:    vrepb %v2, %v2, 15
-; Z15-NEXT:    vslb %v0, %v0, %v2
-; Z15-NEXT:    vsl %v0, %v0, %v2
-; Z15-NEXT:    vo %v0, %v0, %v1
+; Z15-NEXT:    vslb %v1, %v1, %v2
+; Z15-NEXT:    vsl %v1, %v1, %v2
+; Z15-NEXT:    vo %v0, %v1, %v0
 ; Z15-NEXT:    vst %v0, 0(%r2), 3
 ; Z15-NEXT:    br %r14
   %res = tail call i128 @llvm.fshr.i128(i128 %a, i128 %b, i128 %sh)
