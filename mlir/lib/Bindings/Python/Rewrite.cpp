@@ -261,7 +261,6 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of the RewritePatternSet
   //----------------------------------------------------------------------------
-  nb::class_<MlirRewritePattern>(m, "RewritePattern");
   nb::class_<PyRewritePatternSet>(m, "RewritePatternSet")
       .def(
           "__init__",

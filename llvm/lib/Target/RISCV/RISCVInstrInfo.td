@@ -1367,9 +1367,8 @@ def : InstAlias<".insn_s $opcode, $funct3, $rs2, (${rs1})",
 
 class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1))), (Inst GPR:$rs1)>;
-class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt1 = XLenVT,
-                ValueType vt2 = XLenVT>
-    : Pat<(vt1 (OpNode (vt1 GPR:$rs1), (vt2 GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
+class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType,
                 ValueType vt = XLenVT>
@@ -1973,8 +1972,9 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 /// Loads
 
-class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPRMem:$rs1), simm12_lo:$imm12))),
+class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT,
+            ValueType PtrVT = XLenVT>
+    : Pat<(vt (LoadOp (AddrRegImm (PtrVT GPRMem:$rs1), simm12_lo:$imm12))),
           (Inst GPRMem:$rs1, simm12_lo:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
@@ -1988,8 +1988,8 @@ def : LdPat<zextloadi16, LHU>;
 /// Stores
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-            ValueType vt>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPRMem:$rs1),
+            ValueType vt, ValueType PtrVT = XLenVT>
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT GPRMem:$rs1),
                    simm12_lo:$imm12)),
           (Inst StTy:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
 
