@@ -61,6 +61,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
       -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
       -D COMPILER_RT_BUILD_ORC=OFF \
+      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
@@ -69,8 +71,6 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
 
 start-group "ninja"
 
-#      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-#      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log

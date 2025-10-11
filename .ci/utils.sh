@@ -27,6 +27,7 @@ function at-exit {
   sccache --show-stats
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${BUILD_DIR}"/CMakeCache.txt artifacts/CMakeCache.txt
   cp "${MONOREPO_ROOT}"/*.log artifacts/ || :
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
