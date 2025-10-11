@@ -6266,9 +6266,8 @@ LogicalResult ShapeCastOp::verify() {
 /// By `order preserving` we mean that the flattened versions of the input and
 /// output vectors are (numerically) identical. In other words `transpose` is
 /// effectively a shape cast.
-static bool isOrderPreserving(TransposeOp transpose) {
-  ArrayRef<int64_t> permutation = transpose.getPermutation();
-  VectorType sourceType = transpose.getSourceVectorType();
+static bool isOrderPreserving(ArrayRef<int64_t> permutation,
+                              VectorType sourceType) {
   ArrayRef<int64_t> inShape = sourceType.getShape();
   ArrayRef<bool> inDimIsScalable = sourceType.getScalableDims();
   auto isNonScalableUnitDim = [&](int64_t dim) {
@@ -6284,6 +6283,11 @@ static bool isOrderPreserving(TransposeOp transpose) {
     }
   }
   return true;
+}
+
+static bool isOrderPreserving(TransposeOp transpose) {
+  return isOrderPreserving(transpose.getPermutation(),
+                           transpose.getSourceVectorType());
 }
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
@@ -6835,31 +6839,20 @@ public:
   }
 };
 
-/// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
-/// 'order preserving', where 'order preserving' means the flattened
-/// inputs and outputs of the transpose have identical (numerical) values.
+/// Cannonicalize transpose(broadcast(x)) into broadcast(shape_cast(x)),
+/// with the following checks and steps:
+/// (1) Normalize x to x' = shape_cast(x) such that x' has the same shape as
+/// broadcast(x)
 ///
-/// Example:
-/// ```
-///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<1x8xi32>
-///  %1 = vector.transpose %0, [1, 0] : vector<1x8xi32>
-///                                                 to vector<8x1xi32>
-/// ```
-/// can be rewritten as the equivalent
-/// ```
-///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<8x1xi32>.
-/// ```
-/// The algorithm works by partitioning dimensions into groups that can be
-/// locally permuted while preserving order, and checks that the transpose
-/// only permutes within these groups.
+/// (2) Check if transpose(x') is broadcastable to the original output type.
 ///
-/// Groups are either contiguous sequences of 1s, or non-1s (1-element groups).
-/// Consider broadcasting 4x1x1x7 to 2x3x4x5x6x7. This is equivalent to
-/// broadcasting from 1x1x4x1x1x7.
-///                   ^^^ ^ ^^^ ^
-///          groups:   0  1  2  3
-/// Order preserving permutations for this example are ones that only permute
-/// within the groups [0,1] and [3,4], like (1 0 2 4 3 5 6).
+/// (3) Check if the broadcasted dimensions in x -> broadcast(x) are the same as
+/// that in transpose(x') -> broadcast(transpose(x'))
+///
+/// (4) If the above conditions meet, we can generate broadcast(transpose(x')).
+/// However, this won't be profitable if transpose(shape_cast(x)) cannot be
+/// folded into shape_cast(x), so check if such folding is possible by checking
+/// whether such transpose preserves the order.
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
   using Base::Base;
@@ -6868,7 +6861,7 @@ public:
 
   LogicalResult matchAndRewrite(vector::TransposeOp transpose,
                                 PatternRewriter &rewriter) const override {
-
+    auto loc = transpose.getLoc();
     vector::BroadcastOp broadcast =
         transpose.getVector().getDefiningOp<vector::BroadcastOp>();
     if (!broadcast) {
@@ -6887,44 +6880,81 @@ public:
       return success();
     }
 
+    VectorType transposeInputType = transpose.getSourceVectorType();
     ArrayRef<int64_t> permutation = transpose.getPermutation();
     ArrayRef<int64_t> inputShape = inputType.getShape();
+    // This is also the shape of broadcast result.
+    ArrayRef<int64_t> transposeInputShape = transposeInputType.getShape();
+    ArrayRef<int64_t> outputShape = outputType.getShape();
     int64_t inputRank = inputType.getRank();
-    int64_t outputRank = transpose.getType().getRank();
+    int64_t outputRank = outputShape.size();
     int64_t deltaRank = outputRank - inputRank;
+    assert(deltaRank >= 0);
 
-    int low = 0;
-    for (int inputIndex = 0; inputIndex < inputRank; ++inputIndex) {
-      bool notOne = inputShape[inputIndex] != 1;
-      bool prevNotOne = (inputIndex != 0 && inputShape[inputIndex - 1] != 1);
-      bool groupEndFound = notOne || prevNotOne;
-      if (groupEndFound) {
-        int high = inputIndex + deltaRank;
-        // Return failure if not all permutation destinations for indices in
-        // [low, high) are in [low, high), i.e. the permutation is not local to
-        // the group.
-        for (int i = low; i < high; ++i) {
-          if (permutation[i] < low || permutation[i] >= high) {
-            return rewriter.notifyMatchFailure(
-                transpose, "permutation not local to group");
-          }
-        }
-        low = high;
-      }
+    // Normalize the input type.
+    VectorType normalizedInputType = inputType;
+    if (deltaRank > 0) {
+      // Fill leading dimensions with ones.
+      SmallVector<int64_t> newShape(deltaRank, 1);
+      newShape.append(inputShape.begin(), inputShape.end());
+      normalizedInputType =
+          VectorType::get(newShape, inputType.getElementType());
     }
 
-    // We don't need to check the final group [low, outputRank) because if it is
-    // not locally bound, there must be a preceding group that already failed
-    // the check (impossible to have just 1 non-locally bound group).
+    ArrayRef<int64_t> normalizedInputShape = normalizedInputType.getShape();
+    // Retrieve the original broadcasted dimensions.
+    BitVector origBroadcastDims(outputRank);
+    for (int64_t i = 0; i < outputRank; ++i) {
+      if (normalizedInputShape[i] == 1 && transposeInputShape[i] > 1)
+        origBroadcastDims.set(i);
+    }
 
-    // The preceding logic also ensures that at this point, the output of the
-    // transpose is definitely broadcastable from the input shape, assert so:
-    assert(vector::isBroadcastableTo(inputType, outputType) ==
-               vector::BroadcastableToResult::Success &&
-           "not broadcastable directly to transpose output");
+    // Transpose the normalized input type
+    VectorType::Builder builder(normalizedInputType);
+    for (auto [idx, idxNew] : enumerate(permutation))
+      builder.setDim(idx, normalizedInputShape[idxNew]);
+    VectorType transposedInputType = builder;
 
+    // Check if the new normalized and transposed inputType is broadcastable to
+    // the output type.
+    if (vector::isBroadcastableTo(transposedInputType, outputType) !=
+        BroadcastableToResult::Success)
+      return failure();
+
+    // Retrieve the prospective broadcasted dimensions from transposedInputType
+    // to outputType.
+    ArrayRef<int64_t> transposedInputShape = transposedInputType.getShape();
+    BitVector newBroadcastDims(outputRank);
+    for (int64_t i = 0; i < outputRank; ++i) {
+      if (transposedInputShape[i] == 1 && outputShape[i] > 1)
+        newBroadcastDims.set(i);
+    }
+
+    // Check if the _transposed_ of the original broadcasted dimensions equals
+    // to the prospective broadcasted dimensions.
+    BitVector refBroadcastDims(outputRank);
+    for (unsigned bitIdx : origBroadcastDims.set_bits())
+      refBroadcastDims.set(permutation[bitIdx]);
+    if (refBroadcastDims != newBroadcastDims)
+      return failure();
+
+    // Check if this transpose(shape_cast(x)) could be folded
+    // into shape_cast(x).
+    if (!isOrderPreserving(permutation, normalizedInputType))
+      return failure();
+
+    // All checks pass, replace with broadcast(transpose(x')), where x' =
+    // shape_cast(x).
+    Value normalizedInput =
+        rewriter
+            .create<vector::ShapeCastOp>(loc, normalizedInputType,
+                                         broadcast.getSource())
+            .getResult();
+    Value newTranspose =
+        rewriter.create<vector::TransposeOp>(loc, normalizedInput, permutation)
+            .getResult();
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
-                                                     broadcast.getSource());
+                                                     newTranspose);
 
     return success();
   }
