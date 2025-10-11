@@ -10577,6 +10577,56 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
+  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+                                  this]() -> bool {
+    if (CmpValue != 0)
+      return false;
+
+    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
+    if (!Def || Def->getParent() != CmpInstr.getParent())
+      return false;
+
+    bool CanOptimize = false;
+
+    // For S_OP that set SCC = DST!=0, do the transformation
+    //
+    //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
+    if (setsSCCifResultIsNonZero(*Def))
+      CanOptimize = true;
+
+    // s_cmp_lg_* is redundant because the SCC input value for S_CSELECT* has
+    // the same value that will be calculated by s_cmp_lg_*
+    //
+    //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
+    //   imm), 0)
+    if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+        Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
+      bool Op1IsNonZeroImm =
+          Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
+      bool Op2IsZeroImm =
+          Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
+      if (Op1IsNonZeroImm && Op2IsZeroImm)
+        CanOptimize = true;
+    }
+
+    if (!CanOptimize)
+      return false;
+
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI) ||
+          MI.killsRegister(AMDGPU::SCC, &RI))
+        return false;
+    }
+
+    if (MachineOperand *SccDef =
+            Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+      SccDef->setIsDead(false);
+
+    CmpInstr.eraseFromParent();
+    return true;
+  };
+
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
                                      bool IsReversible, bool IsSigned) -> bool {
@@ -10651,10 +10701,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
-         I != E; ++I) {
-      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
-          I->killsRegister(AMDGPU::SCC, &RI))
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI) ||
+          MI.killsRegister(AMDGPU::SCC, &RI))
         return false;
     }
 
@@ -10704,7 +10754,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
   case AMDGPU::S_CMPK_LG_I32:
-    return optimizeCmpAnd(0, 32, true, false);
+    return optimizeCmpAnd(0, 32, true, false) || optimizeCmpSelect();
   case AMDGPU::S_CMP_GT_U32:
   case AMDGPU::S_CMPK_GT_U32:
     return optimizeCmpAnd(0, 32, false, false);
@@ -10712,7 +10762,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false);
+    return optimizeCmpAnd(0, 64, true, false) || optimizeCmpSelect();
   }
 
   return false;
