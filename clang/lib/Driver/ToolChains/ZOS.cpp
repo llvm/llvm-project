@@ -245,6 +245,8 @@ void ZOS::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("//'" + ClangHLQ + ".SCEELIB(CRTDQUNW)'"));
   } break;
+  default:
+    break;
   }
 }
 
@@ -338,9 +340,9 @@ void ZOS::AddClangCXXStdlibIncludeArgs(
     TryAddIncludeFromPath(InstallBin, DriverArgs, CC1Args);
     break;
   }
-  case ToolChain::CST_Libstdcxx:
+  default:
     llvm::report_fatal_error(
-        "picking up libstdc++ headers is unimplemented on z/OS");
+        "picking up non libc++ headers is unimplemented on z/OS");
     break;
   }
 }
