@@ -66,16 +66,23 @@ public:
                      mlir::NamedAttribute attribute,
                      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
-    if (auto inlineAttr = mlir::dyn_cast<cir::InlineAttr>(attribute.getValue())) {
-      if (inlineAttr.isNoInline())
-        llvmFunc->addFnAttr(llvm::Attribute::NoInline);
-      else if (inlineAttr.isAlwaysInline())
-        llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
-      else if (inlineAttr.isInlineHint())
-        llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
-      else
-        llvm_unreachable("Unknown inline kind");
-      // Drop ammended CIR attribute from LLVM op.
+
+    if (auto inlineAttr =
+            mlir::dyn_cast<cir::InlineAttr>(attribute.getValue())) {
+      const auto toLLVMAttr =
+          [](const cir::InlineAttr &attr) -> llvm::Attribute::AttrKind {
+        switch (attr.getValue()) {
+        case cir::InlineKind::NoInline:
+          return llvm::Attribute::NoInline;
+        case cir::InlineKind::AlwaysInline:
+          return llvm::Attribute::AlwaysInline;
+        case cir::InlineKind::InlineHint:
+          return llvm::Attribute::InlineHint;
+        }
+        llvm_unreachable("Unknown cir::InlineKind value in inlineAttr");
+      };
+
+      llvmFunc->addFnAttr(toLLVMAttr(inlineAttr));
       func->removeAttr(attribute.getName());
     }
 

@@ -1626,7 +1626,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   // Add inline_kind attribute with "cir." prefix so amendOperation handles it
   if (auto inlineKind = op.getInlineKind()) {
-    fn->setAttr("cir.inline_kind", 
+    fn->setAttr("cir.inline_kind",
                 cir::InlineAttr::get(getContext(), *inlineKind));
   }
 
