@@ -1723,12 +1723,16 @@ struct VectorBroadcastScalarToLowRankLowering
       return success();
     }
 
-    // For 1-d vector, we additionally do a `vectorshuffle`.
+    // For 1-d vector, we additionally do a `vectorshuffle` if vector width > 1.
     auto v =
         LLVM::InsertElementOp::create(rewriter, broadcast.getLoc(), vectorType,
                                       poison, adaptor.getSource(), zero);
 
     int64_t width = cast<VectorType>(broadcast.getType()).getDimSize(0);
+    if (width == 1) {
+      rewriter.replaceOp(broadcast, v);
+      return success();
+    }
     SmallVector<int32_t> zeroValues(width, 0);
 
     // Shuffle the value across the desired number of elements.
