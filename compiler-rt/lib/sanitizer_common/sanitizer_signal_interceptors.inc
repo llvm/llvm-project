@@ -26,7 +26,7 @@ using namespace __sanitizer;
 #ifndef SIGNAL_INTERCEPTOR_SIGNAL_IMPL
 #  define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
     {                                                           \
-      ret = REAL(func)(signum, handler);                        \
+      return REAL(func)(signum, handler);                       \
     }
 #endif
 
@@ -37,10 +37,9 @@ using namespace __sanitizer;
         Printf(                                                               \
             "Warning: REAL(sigaction_symname) == nullptr. This may happen "   \
             "if you link with ubsan statically. Sigaction will not work.\n"); \
-        ret = -1;                                                             \
-      } else {                                                                \
-        ret = REAL(sigaction_symname)(signum, act, oldact);                   \
+        return -1;                                                            \
       }                                                                       \
+      return REAL(sigaction_symname)(signum, act, oldact);                    \
     }
 #endif
 
@@ -50,9 +49,7 @@ INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return 0;
 
   // TODO: support cloak_sanitizer_signal_handlers
-  int ret;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(bsd_signal, signum, handler);
-  return ret;
 }
 #define INIT_BSD_SIGNAL COMMON_INTERCEPT_FUNCTION(bsd_signal)
 #else  // SANITIZER_INTERCEPT_BSD_SIGNAL
@@ -67,8 +64,10 @@ INTERCEPTOR(uptr, signal, int signum, uptr handler) {
     // the cloak_sanitizer_signal_handlers setting. This differs from
     // sigaction().
     return (uptr) nullptr;
-  uptr ret;
-  SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
+
+  uptr ret = +[](auto signal, int signum, uptr handler) {
+    SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
+  }(signal, signum, handler);
 
   if (ret != sig_err && SetSignalHandlerFromSanitizer(signum, false))
     // If the user sets a signal handler, it is never cloaked, even if they
@@ -91,8 +90,11 @@ INTERCEPTOR(int, sigaction_symname, int signum,
     // If false, the user can view but not change the signal handler. This
     // differs from signal().
   }
-  int ret;
-  SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
+
+  int ret = +[](int signum, const __sanitizer_sigaction* act,
+                __sanitizer_sigaction* oldact) {
+    SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
+  }(signum, act, oldact);
 
   if (act) {
     if (ret == 0 && SetSignalHandlerFromSanitizer(signum, false)) {
