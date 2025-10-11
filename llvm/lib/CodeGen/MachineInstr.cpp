@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoExprs.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -2426,20 +2427,18 @@ static const DIExpression *computeExprForSpill(
          "Expected inlined-at fields to agree");
 
   const DIExpression *Expr = MI.getDebugExpression();
+  DIExprBuf DIBuf(Expr);
   if (MI.isIndirectDebugValue()) {
     assert(MI.getDebugOffset().getImm() == 0 &&
            "DBG_VALUE with nonzero offset");
-    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+    DIBuf.prepend(DIExpression::DerefBefore);
   } else if (MI.isDebugValueList()) {
     // We will replace the spilled register with a frame index, so
     // immediately deref all references to the spilled register.
-    std::array<uint64_t, 1> Ops{{dwarf::DW_OP_deref}};
-    for (const MachineOperand *Op : SpilledOperands) {
-      unsigned OpIdx = MI.getDebugOperandIndex(Op);
-      Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx);
-    }
+    for (const MachineOperand *Op : SpilledOperands)
+      DIBuf.appendOpsToArg({DIOp::Deref()}, MI.getDebugOperandIndex(Op));
   }
-  return Expr;
+  return DIBuf.toExpr();
 }
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {

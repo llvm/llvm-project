@@ -2136,8 +2136,7 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
     if (!BE)
       return std::nullopt;
     if (BE->isConstant() &&
-        DIExpression::SignedOrUnsignedConstant::SignedConstant ==
-            *BE->isConstant()) {
+        SignedOrUnsignedConstant::SignedConstant == *BE->isConstant()) {
       return static_cast<int64_t>(BE->getElement(1));
     }
     return std::nullopt;
@@ -2596,7 +2595,7 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
   Out << "!DIExpression(";
   ListSeparator FS;
   if (N->isValid()) {
-    for (const DIExpression::ExprOperand &Op : N->expr_ops()) {
+    for (const ExprOperand &Op : N->expr_ops()) {
       auto OpStr = dwarf::OperationEncodingString(Op.getOp());
       assert(!OpStr.empty() && "Expected valid opcode");
 
