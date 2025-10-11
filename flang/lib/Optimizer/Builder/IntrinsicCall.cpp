@@ -3244,6 +3244,11 @@ void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
       convertBarrierToLLVM(builder, loc, fir::getBase(args[0]));
   mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
                                            fir::getBase(args[1]), {});
+  auto kind = mlir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
+  auto space = mlir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
+  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // BESSEL_JN
