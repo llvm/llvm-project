@@ -21,9 +21,6 @@
 
 // UNSUPPORTED: sanitizer-new-delete
 
-// Sized deallocation was introduced in LLVM 11
-// XFAIL: using-built-library-before-llvm-11
-
 // AIX, and z/OS default to -fno-sized-deallocation.
 // XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}
 

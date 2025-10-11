@@ -62,7 +62,7 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: | | |   `-DeclRefExpr {{.*}} 'KT' lvalue ParmVar {{.*}} 'k' 'KT'
 // CHECK-NEXT: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
-// CHECK-NEXT: | `-FunctionDecl {{.*}} skep2 'void (K<2>)' explicit_instantiation_definition
+// CHECK-NEXT: | `-FunctionDecl {{.*}} skep2 'void (K<2>)' explicit_instantiation_definition instantiated_from 0x{{.+}}
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<2>'
 // CHECK-NEXT: |   | `-RecordType {{.*}} 'KN<2>' canonical
 // CHECK-NEXT: |   |   `-ClassTemplateSpecialization {{.*}} 'KN'

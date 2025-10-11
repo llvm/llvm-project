@@ -13,7 +13,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Optimizer/OpenMP/Utils.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -34,6 +33,36 @@ namespace {
 class AutomapToTargetDataPass
     : public flangomp::impl::AutomapToTargetDataPassBase<
           AutomapToTargetDataPass> {
+
+  // Returns true if the variable has a dynamic size and therefore requires
+  // bounds operations to describe its extents.
+  inline bool needsBoundsOps(mlir::Value var) {
+    assert(mlir::isa<mlir::omp::PointerLikeType>(var.getType()) &&
+           "only pointer like types expected");
+    mlir::Type t = fir::unwrapRefType(var.getType());
+    if (mlir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))
+      return fir::hasDynamicSize(inner);
+    return fir::hasDynamicSize(t);
+  }
+
+  // Generate MapBoundsOp operations for the variable if required.
+  inline void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
+                           llvm::SmallVectorImpl<mlir::Value> &boundsOps) {
+    mlir::Location loc = var.getLoc();
+    fir::factory::AddrAndBoundsInfo info =
+        fir::factory::getDataOperandBaseAddr(builder, var,
+                                             /*isOptional=*/false, loc);
+    fir::ExtendedValue exv =
+        hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
+                                        /*contiguousHint=*/true)
+            .first;
+    llvm::SmallVector<mlir::Value> tmp =
+        fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                           mlir::omp::MapBoundsType>(
+            builder, info, exv, /*dataExvIsAssumedSize=*/false, loc);
+    llvm::append_range(boundsOps, tmp);
+  }
+
   void findRelatedAllocmemFreemem(fir::AddrOfOp addressOfOp,
                                   llvm::DenseSet<fir::StoreOp> &allocmems,
                                   llvm::DenseSet<fir::LoadOp> &freemems) {
@@ -83,8 +112,8 @@ class AutomapToTargetDataPass
     auto addMapInfo = [&](auto globalOp, auto memOp) {
       builder.setInsertionPointAfter(memOp);
       SmallVector<Value> bounds;
-      if (flangomp::needsBoundsOps(memOp.getMemref()))
-        bounds = flangomp::genBoundsOps(builder, memOp.getMemref());
+      if (needsBoundsOps(memOp.getMemref()))
+        genBoundsOps(builder, memOp.getMemref(), bounds);
 
       omp::TargetEnterExitUpdateDataOperands clauses;
       mlir::omp::MapInfoOp mapInfo = mlir::omp::MapInfoOp::create(

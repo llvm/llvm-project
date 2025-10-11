@@ -924,11 +924,19 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
+      R"cpp(// auto with dependent type
+        template <typename>
+        struct [[A]] {};
+        template <typename T>
+        void foo(A<T> a) {
+          ^auto copy = a;
+        }
+      )cpp",
+
       R"cpp(// Override specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^override {} };
       )cpp",
-
       R"cpp(// Final specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^final {} };

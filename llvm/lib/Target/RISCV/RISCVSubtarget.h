@@ -196,6 +196,9 @@ public:
   bool hasCPOPLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
+  bool hasREV8Like() const {
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+  }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
@@ -209,6 +212,14 @@ public:
            hasShortForwardBranchOpt();
   }
 
+  bool hasShlAdd(int64_t ShAmt) const {
+    if (ShAmt <= 0)
+      return false;
+    if (ShAmt <= 3)
+      return HasStdExtZba || HasVendorXAndesPerf || HasVendorXTHeadBa;
+    return ShAmt <= 31 && HasVendorXqciac;
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
@@ -216,8 +227,8 @@ public:
   unsigned getXLen() const {
     return is64Bit() ? 64 : 32;
   }
-  bool useLoadStorePairs() const;
-  bool useCCMovInsn() const;
+  bool useMIPSLoadStorePairs() const;
+  bool useMIPSCCMovInsn() const;
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;

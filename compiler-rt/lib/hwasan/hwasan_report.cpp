@@ -738,9 +738,9 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
     Printf("%s", d.Default());
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
-           untagged_addr, offset, whence,
+           (void*)untagged_addr, offset, whence,
            candidate.heap.end - candidate.heap.begin,
-           (void *)candidate.heap.begin, (void *)candidate.heap.end);
+           (void*)candidate.heap.begin, (void*)candidate.heap.end);
     Printf("%s", d.Allocation());
     Printf("allocated by thread T%u here:\n", candidate.heap.thread_id);
     Printf("%s", d.Default());
@@ -775,14 +775,14 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
         Printf(
             "%p is located %s a global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            (void *)untagged_addr, candidate.after ? "after" : "before",
-            (void *)candidate.untagged_addr, module_name, (u32)module_address);
+            (void*)untagged_addr, candidate.after ? "after" : "before",
+            (u32)candidate.untagged_addr, module_name, (u32)module_address);
       else
         Printf(
             "%p is located %s a %zd-byte global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            (void *)untagged_addr, candidate.after ? "after" : "before", size,
-            (void *)candidate.untagged_addr, module_name, (u32)module_address);
+            (void*)untagged_addr, candidate.after ? "after" : "before", size,
+            (u32)candidate.untagged_addr, module_name, (u32)module_address);
     }
     Printf("%s", d.Default());
   }
@@ -843,9 +843,9 @@ void BaseReport::PrintAddressDescription() const {
     Printf("\nCause: use-after-free\n");
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
-           (void *)untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
-           (ssize)har.requested_size, UntagAddr(har.tagged_addr),
-           (void *)(UntagAddr(har.tagged_addr) + har.requested_size));
+           (void*)untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
+           (ssize)har.requested_size, (void*)UntagAddr(har.tagged_addr),
+           (void*)(UntagAddr(har.tagged_addr) + har.requested_size));
     Printf("%s", d.Allocation());
     Printf("freed by thread T%u here:\n", ha.free_thread_id);
     Printf("%s", d.Default());

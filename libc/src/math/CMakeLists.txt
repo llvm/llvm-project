@@ -392,6 +392,7 @@ add_math_entrypoint_object(log2f16)
 add_math_entrypoint_object(log)
 add_math_entrypoint_object(logf)
 add_math_entrypoint_object(logf16)
+add_math_entrypoint_object(log_bf16)
 
 add_math_entrypoint_object(logb)
 add_math_entrypoint_object(logbf)
@@ -515,6 +516,9 @@ add_math_entrypoint_object(roundevenl)
 add_math_entrypoint_object(roundevenf16)
 add_math_entrypoint_object(roundevenf128)
 add_math_entrypoint_object(roundevenbf16)
+
+add_math_entrypoint_object(rsqrtf)
+add_math_entrypoint_object(rsqrtf16)
 
 add_math_entrypoint_object(scalbln)
 add_math_entrypoint_object(scalblnf)

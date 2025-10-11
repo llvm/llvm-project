@@ -806,7 +806,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       // go-to-definition on auto should find the definition of the deduced
       // type, if possible
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         auto LocSym = locateSymbolForType(AST, *Deduced, Index);
         if (!LocSym.empty())
           return LocSym;
@@ -1965,7 +1967,7 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
 // Return the type most associated with an AST node.
 // This isn't precisely defined: we want "go to type" to do something useful.
-static QualType typeForNode(const ASTContext &Ctx,
+static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
                             const SelectionTree::Node *N) {
   // If we're looking at a namespace qualifier, walk up to what it's qualifying.
   // (If we're pointing at a *class* inside a NNS, N will be a TypeLoc).
@@ -1978,7 +1980,7 @@ static QualType typeForNode(const ASTContext &Ctx,
   if (const TypeLoc *TL = N->ASTNode.get<TypeLoc>()) {
     if (llvm::isa<DeducedType>(TL->getTypePtr()))
       if (auto Deduced = getDeducedType(
-              N->getDeclContext().getParentASTContext(), TL->getBeginLoc()))
+              N->getDeclContext().getParentASTContext(), H, TL->getBeginLoc()))
         return *Deduced;
     // Exception: an alias => underlying type.
     if (llvm::isa<TypedefType>(TL->getTypePtr()))
@@ -2161,7 +2163,8 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
     for (const QualType &Type : unwrapFindType(
-             typeForNode(AST.getASTContext(), N), AST.getHeuristicResolver()))
+             typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
+             AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 

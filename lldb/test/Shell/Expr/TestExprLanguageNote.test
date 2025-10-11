@@ -1,0 +1,87 @@
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.cpp -o %t.out
+#
+# RUN: %lldb -x -b -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/no-target.input 2>&1 | FileCheck %s --check-prefix=CHECK-NO-TARGET
+#
+# RUN: %lldb %t.out -x -b -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/with-target.input 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET
+
+#--- main.cpp
+
+int main() {
+  int x = 10;
+  __builtin_debugtrap();
+}
+
+#--- with-target.input
+
+expr blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Falling back to default language. Ran expression as 'Objective C++'.
+
+run
+
+expr blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Ran expression as 'C++14'.
+
+expr -l objc -- blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Expression evaluation in pure Objective-C not supported. Ran expression as 'Objective C++'.
+
+expr -l c -- blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Expression evaluation in pure C not supported. Ran expression as 'ISO C++'.
+
+expr -l c++14 -- blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Ran expression as 'C++14'
+
+expr -l c++20 -- blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Ran expression as 'C++20'
+
+expr -l objective-c++ -- blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Ran expression as 'Objective C++'
+
+# D uses TypeSystemClang but running expressions in it isn't supported. Test that we warn about this.
+expr -l D -- blah
+
+# CHECK-TARGET: (lldb) expr
+# CHECK-TARGET: note: Expression evaluation in D not supported. Falling back to default language. Ran expression as 'Objective C++'.
+
+expr -l c++17 -- x = 5
+
+# CHECK-TARGET:     (lldb) expr
+# CHECK-TARGET-NOT: note:
+
+expr x = 5
+
+# CHECK-TARGET:     (lldb) expr
+# CHECK-TARGET-NOT: note:
+
+#--- no-target.input
+
+expr blah
+
+# CHECK-NO-TARGET:     (lldb) expr
+# CHECK-NO-TARGET:     note: Falling back to default language. Ran expression as 'Objective C++'.
+
+expr -l c++ -- 1 + 1
+
+# CHECK-NO-TARGET:     (lldb) expr
+# CHECK-NO-TARGET-NOT: note:
+
+expr 1 + 1
+
+# CHECK-NO-TARGET:     (lldb) expr
+# CHECK-NO-TARGET-NOT: note:

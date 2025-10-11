@@ -184,6 +184,15 @@ def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
+def LLVM_SincosOp : LLVM_TwoResultIntrOp<"sincos", [], [0],
+  [Pure], /*requiresFastmath=*/1> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+      "functional-type(operands, results)";
+  let hasVerifier = 1;
+}
 
 def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
 def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
@@ -1162,9 +1171,13 @@ def LLVM_Annotation
 // Trap intrinsics.
 //
 
-def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap">;
+def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap"> {
+  let assemblyFormat = "attr-dict";
+}
 
-def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap">;
+def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap"> {
+  let assemblyFormat = "attr-dict";
+}
 
 def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*overloadedOperands=*/[], /*traits=*/[],
@@ -1172,6 +1185,8 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[0], /*immArgAttrNames=*/["failureKind"]> {
   let arguments = (ins I8Attr:$failureKind);
+
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 /// Create a call to vscale intrinsic.

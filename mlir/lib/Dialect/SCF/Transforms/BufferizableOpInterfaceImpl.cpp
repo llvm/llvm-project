@@ -188,8 +188,8 @@ struct ExecuteRegionOpInterface
     TypeRange newResultTypes(yieldOp.getResults());
 
     // Create new op and move over region.
-    auto newOp =
-        scf::ExecuteRegionOp::create(rewriter, op->getLoc(), newResultTypes);
+    auto newOp = scf::ExecuteRegionOp::create(
+        rewriter, op->getLoc(), newResultTypes, executeRegionOp.getNoInline());
     newOp.getRegion().takeBody(executeRegionOp.getRegion());
 
     // Bufferize every block.

@@ -65,7 +65,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   else
     fileName = llvm::StringRef(D->getName().str() + ".model");
 
-  if (!llvm::sys::fs::exists(fileName.str())) {
+  if (!CI.getVirtualFileSystem().exists(fileName)) {
     Bodies[D->getName()] = nullptr;
     return;
   }
@@ -84,8 +84,8 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   // behavior for models
   CompilerInstance Instance(std::move(Invocation),
                             CI.getPCHContainerOperations());
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   Instance.createDiagnostics(
-      CI.getVirtualFileSystem(),
       new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
       /*ShouldOwnClient=*/true);
 

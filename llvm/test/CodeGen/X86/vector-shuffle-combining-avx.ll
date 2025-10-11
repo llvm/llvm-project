@@ -370,6 +370,16 @@ define <8 x float> @constant_fold_vpermilvar_ps_256() {
   ret <8 x float> %1
 }
 
+define <8 x float> @freeze_vpermilvar_ps_256(<8 x float> %a0) {
+; CHECK-LABEL: freeze_vpermilvar_ps_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}}
+  %s0 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 3, i32 1, i32 2, i32 7, i32 6, i32 5, i32 4>)
+  %f0 = freeze <8 x float> %s0
+  %s1 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %f0, <8 x i32> <i32 0, i32 2, i32 3, i32 1, i32 7, i32 6, i32 5, i32 4>)
+  ret <8 x float> %s1
+}
+
 define void @PR39483() {
 ; X86-AVX1-LABEL: PR39483:
 ; X86-AVX1:       # %bb.0: # %entry

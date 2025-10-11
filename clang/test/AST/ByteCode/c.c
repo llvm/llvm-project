@@ -349,7 +349,7 @@ const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
 const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
 
 
-const int compared2 = strcmp(strcmp, _str); // all-warning {{incompatible pointer types}} \
+const int compared2 = strcmp(strcmp, _str); // all-error {{incompatible pointer types}} \
                                             // all-error {{initializer element is not a compile-time constant}}
 
 int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}
@@ -368,3 +368,7 @@ void discardedCmp(void)
 {
     (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
 }
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }

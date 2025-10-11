@@ -1244,7 +1244,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         break;
     }
 
-    D.takeAttributes(Attributes);
+    D.takeAttributesAppending(Attributes);
   }
 
   MultiParseScope TemplateParamScope(*this);
@@ -1299,7 +1299,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
-        << Tok.getIdentifierInfo() << Tok.isRegularKeywordAttribute();
+        << Tok.isRegularKeywordAttribute() << Tok.getIdentifierInfo();
     MaybeParseCXX11Attributes(D);
   }
 
@@ -3200,6 +3200,8 @@ ExprResult Parser::ParseRequiresExpression() {
         BalancedDelimiterTracker ExprBraces(*this, tok::l_brace);
         ExprBraces.consumeOpen();
         ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           ExprBraces.skipToEnd();
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
@@ -3369,6 +3371,8 @@ ExprResult Parser::ParseRequiresExpression() {
         //         expression ';'
         SourceLocation StartLoc = Tok.getLocation();
         ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;

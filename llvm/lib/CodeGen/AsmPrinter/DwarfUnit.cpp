@@ -100,7 +100,7 @@ DwarfUnit::~DwarfUnit() {
 }
 
 int64_t DwarfUnit::getDefaultLowerBound() const {
-  switch (getLanguage()) {
+  switch (getSourceLanguage()) {
   default:
     break;
 
@@ -573,7 +573,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   if (auto *NS = dyn_cast<DINamespace>(Context))
     return getOrCreateNameSpace(NS);
   if (auto *SP = dyn_cast<DISubprogram>(Context))
-    return getOrCreateSubprogramDIE(SP);
+    return getOrCreateSubprogramDIE(SP, nullptr);
   if (auto *M = dyn_cast<DIModule>(Context))
     return getOrCreateModule(M);
   return getDIE(Context);
@@ -704,12 +704,17 @@ void DwarfUnit::addType(DIE &Entity, const DIType *Ty,
   addDIEEntry(Entity, Attribute, DIEEntry(*getOrCreateTypeDIE(Ty)));
 }
 
+llvm::dwarf::SourceLanguage DwarfUnit::getSourceLanguage() const {
+  return static_cast<llvm::dwarf::SourceLanguage>(
+      getLanguage().getUnversionedName());
+}
+
 std::string DwarfUnit::getParentContextString(const DIScope *Context) const {
   if (!Context)
     return "";
 
   // FIXME: Decide whether to implement this for non-C++ languages.
-  if (!dwarf::isCPlusPlus((dwarf::SourceLanguage)getLanguage()))
+  if (!dwarf::isCPlusPlus(getSourceLanguage()))
     return "";
 
   std::string CS;
@@ -940,7 +945,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
 
   // Add prototype flag if we're dealing with a C language and the function has
   // been prototyped.
-  if (isPrototyped && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
+  if (isPrototyped && dwarf::isC(getSourceLanguage()))
     addFlag(Buffer, dwarf::DW_AT_prototyped);
 
   // Add a DW_AT_calling_convention if this has an explicit convention.
@@ -1066,7 +1071,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       if (!Element)
         continue;
       if (auto *SP = dyn_cast<DISubprogram>(Element))
-        getOrCreateSubprogramDIE(SP);
+        getOrCreateSubprogramDIE(SP, nullptr);
       else if (auto *DDTy = dyn_cast<DIDerivedType>(Element)) {
         if (DDTy->getTag() == dwarf::DW_TAG_friend) {
           DIE &ElemDie = createAndAddDIE(dwarf::DW_TAG_friend, Buffer);
@@ -1335,22 +1340,21 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
   return &MDie;
 }
 
-DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
+DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
+                                         const Function *FnHint, bool Minimal) {
   // Construct the context before querying for the existence of the DIE in case
   // such construction creates the DIE (as is the case for member function
   // declarations).
   DIE *ContextDIE =
-      Minimal ? &getUnitDie() : getOrCreateContextDIE(SP->getScope());
+      getOrCreateSubprogramContextDIE(SP, shouldPlaceInUnitDIE(SP, Minimal));
 
   if (DIE *SPDie = getDIE(SP))
     return SPDie;
 
   if (auto *SPDecl = SP->getDeclaration()) {
     if (!Minimal) {
-      // Add subprogram definitions to the CU die directly.
-      ContextDIE = &getUnitDie();
       // Build the decl now to ensure it precedes the definition.
-      getOrCreateSubprogramDIE(SPDecl);
+      getOrCreateSubprogramDIE(SPDecl, nullptr);
       // Check whether the DIE for SP has already been created after the call
       // above.
       // FIXME: Should the creation of definition subprogram DIE during
@@ -1449,7 +1453,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   // Add the prototype if we have a prototype and we have a C like
   // language.
-  if (SP->isPrototyped() && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
+  if (SP->isPrototyped() && dwarf::isC(getSourceLanguage()))
     addFlag(SPDie, dwarf::DW_AT_prototyped);
 
   if (SP->isObjCDirect())
@@ -1701,8 +1705,7 @@ DIE *DwarfUnit::getIndexTyDie() {
   addString(*IndexTyDie, dwarf::DW_AT_name, Name);
   addUInt(*IndexTyDie, dwarf::DW_AT_byte_size, std::nullopt, sizeof(int64_t));
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
-          dwarf::getArrayIndexTypeEncoding(
-              (dwarf::SourceLanguage)getLanguage()));
+          dwarf::getArrayIndexTypeEncoding(getSourceLanguage()));
   DD->addAccelType(*this, CUNode->getNameTableKind(), Name, *IndexTyDie,
                    /*Flags*/ 0);
   return IndexTyDie;
@@ -1890,11 +1893,12 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     bool IsBitfield = DT->isBitField();
 
     // Handle the size.
-    if (auto *Var = dyn_cast_or_null<DIVariable>(DT->getRawSizeInBits())) {
+    if (DT->getRawSizeInBits() == nullptr) {
+      // No size, just ignore.
+    } else if (auto *Var = dyn_cast<DIVariable>(DT->getRawSizeInBits())) {
       if (auto *VarDIE = getDIE(Var))
         addDIEEntry(MemberDie, dwarf::DW_AT_bit_size, *VarDIE);
-    } else if (auto *Exp =
-                   dyn_cast_or_null<DIExpression>(DT->getRawSizeInBits())) {
+    } else if (auto *Exp = dyn_cast<DIExpression>(DT->getRawSizeInBits())) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
       DwarfExpr.setMemoryLocationKind();

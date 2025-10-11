@@ -1802,7 +1802,11 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() == 1) {
     DeallocPtrIdx = ParamIdx(1, DeallocFD);
 
-    if (!DeallocPtrIdx.isValid() ||
+    // FIXME: We could probably be better about diagnosing that there IS no
+    // argument, or that the function doesn't have a prototype, but this is how
+    // GCC diagnoses this, and is reasonably clear.
+    if (!DeallocPtrIdx.isValid() || !hasFunctionProto(DeallocFD) ||
+        getFunctionOrMethodNumParams(DeallocFD) < 1 ||
         !getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex())
              .getCanonicalType()
              ->isPointerType()) {
@@ -3625,10 +3629,11 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       // Check for formats that get handled specially.
       .Case("NSString", NSStringFormat)
       .Case("CFString", CFStringFormat)
-      .Case("strftime", StrftimeFormat)
+      .Cases("gnu_strftime", "strftime", StrftimeFormat)
 
       // Otherwise, check for supported formats.
-      .Cases("scanf", "printf", "printf0", "strfmon", SupportedFormat)
+      .Cases("gnu_scanf", "scanf", "gnu_printf", "printf", "printf0",
+             "gnu_strfmon", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
       .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
       .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.
@@ -6356,19 +6361,8 @@ static void handleNoSanitizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                               Sanitizers.size()));
 }
 
-static void handleNoSanitizeSpecificAttr(Sema &S, Decl *D,
-                                         const ParsedAttr &AL) {
-  StringRef AttrName = AL.getAttrName()->getName();
-  normalizeName(AttrName);
-  StringRef SanitizerName = llvm::StringSwitch<StringRef>(AttrName)
-                                .Case("no_address_safety_analysis", "address")
-                                .Case("no_sanitize_address", "address")
-                                .Case("no_sanitize_thread", "thread")
-                                .Case("no_sanitize_memory", "memory");
-  if (isGlobalVar(D) && SanitizerName != "address")
-    S.Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
-        << AL << AL.isRegularKeywordAttribute() << ExpectedFunction;
-
+static AttributeCommonInfo
+getNoSanitizeAttrInfo(const ParsedAttr &NoSanitizeSpecificAttr) {
   // FIXME: Rather than create a NoSanitizeSpecificAttr, this creates a
   // NoSanitizeAttr object; but we need to calculate the correct spelling list
   // index rather than incorrectly assume the index for NoSanitizeSpecificAttr
@@ -6378,11 +6372,32 @@ static void handleNoSanitizeSpecificAttr(Sema &S, Decl *D,
   // getSpelling() or prettyPrint() on the resulting semantic attribute object
   // without failing assertions.
   unsigned TranslatedSpellingIndex = 0;
-  if (AL.isStandardAttributeSyntax())
+  if (NoSanitizeSpecificAttr.isStandardAttributeSyntax())
     TranslatedSpellingIndex = 1;
 
-  AttributeCommonInfo Info = AL;
+  AttributeCommonInfo Info = NoSanitizeSpecificAttr;
   Info.setAttributeSpellingListIndex(TranslatedSpellingIndex);
+  return Info;
+}
+
+static void handleNoSanitizeAddressAttr(Sema &S, Decl *D,
+                                        const ParsedAttr &AL) {
+  StringRef SanitizerName = "address";
+  AttributeCommonInfo Info = getNoSanitizeAttrInfo(AL);
+  D->addAttr(::new (S.Context)
+                 NoSanitizeAttr(S.Context, Info, &SanitizerName, 1));
+}
+
+static void handleNoSanitizeThreadAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef SanitizerName = "thread";
+  AttributeCommonInfo Info = getNoSanitizeAttrInfo(AL);
+  D->addAttr(::new (S.Context)
+                 NoSanitizeAttr(S.Context, Info, &SanitizerName, 1));
+}
+
+static void handleNoSanitizeMemoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef SanitizerName = "memory";
+  AttributeCommonInfo Info = getNoSanitizeAttrInfo(AL);
   D->addAttr(::new (S.Context)
                  NoSanitizeAttr(S.Context, Info, &SanitizerName, 1));
 }
@@ -6835,10 +6850,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // though they were unknown attributes.
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
-    if (AL.isRegularKeywordAttribute() || AL.isDeclspecAttribute()) {
-      S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
-                              ? diag::err_keyword_not_supported_on_target
-                              : diag::warn_unhandled_ms_attribute_ignored)
+    if (AL.isRegularKeywordAttribute()) {
+      S.Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target)
+          << AL.getAttrName() << AL.getRange();
+    } else if (AL.isDeclspecAttribute()) {
+      S.Diag(AL.getLoc(), diag::warn_unhandled_ms_attribute_ignored)
           << AL.getAttrName() << AL.getRange();
     } else {
       S.DiagnoseUnknownAttribute(AL);
@@ -7507,8 +7523,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NoSanitize:
     handleNoSanitizeAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_NoSanitizeSpecific:
-    handleNoSanitizeSpecificAttr(S, D, AL);
+  case ParsedAttr::AT_NoSanitizeAddress:
+    handleNoSanitizeAddressAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NoSanitizeThread:
+    handleNoSanitizeThreadAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NoSanitizeMemory:
+    handleNoSanitizeMemoryAttr(S, D, AL);
     break;
   case ParsedAttr::AT_GuardedBy:
     handleGuardedByAttr(S, D, AL);

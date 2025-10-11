@@ -716,6 +716,7 @@ CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
+unixFD = FNUM(FORTRAN_UNIT)
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -778,6 +779,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
 | Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
+| Library functions | FNUM |
 
 
 ### Intrinsic Function Folding

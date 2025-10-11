@@ -10176,4 +10176,11 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
 }
 
+TEST(APFloatTest, FrexpQuietSNaN) {
+  APFloat SNaN = APFloat::getSNaN(APFloat::PPCDoubleDouble());
+  int Exp;
+  APFloat Result = frexp(SNaN, Exp, APFloat::rmNearestTiesToEven);
+  EXPECT_FALSE(Result.isSignaling());
+}
+
 } // namespace

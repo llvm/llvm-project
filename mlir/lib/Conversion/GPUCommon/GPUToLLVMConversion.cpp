@@ -534,7 +534,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
                                                    /*maxTransferRank=*/1);
     // Transform N-D vector.from_elements to 1-D vector.from_elements before
     // conversion.
-    vector::populateVectorFromElementsLoweringPatterns(patterns);
+    vector::populateVectorFromElementsUnrollPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }

@@ -91,19 +91,17 @@ void uses(unsigned Parm) {
 
   CompositeHasComposite CoCArr[5];
   // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+3{{used as element type of array type 'CompositeHasComposite'}}
+  // expected-note@+3{{used as element type of array type 'CompositeHasComposite[5]'}}
   // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:CoCArr)
   while (1);
-  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+3{{used as element type of array type 'CompositeHasComposite[5]'}}
+  // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
   // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:CoCArr[3])
   while (1);
-  // expected-error@+4{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+3{{used as element type of sub-array type 'CompositeHasComposite'}}
+  // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
   // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:CoCArr[1:1])
@@ -121,7 +119,7 @@ void uses(unsigned Parm) {
 
   int *IPtrArr[5];
   // expected-error@+3{{invalid type 'int *' used in OpenACC 'reduction' variable reference; type is not a scalar value, or array of scalars, or composite of scalars}}
-  // expected-note@+2{{used as element type of array type 'int *'}}
+  // expected-note@+2{{used as element type of array type 'int *[5]'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:IPtrArr)
   while (1);
@@ -136,7 +134,7 @@ void uses(unsigned Parm) {
 
   HasPtr HPArr[5];
   // expected-error@+4{{invalid type 'int *' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+3{{used as element type of array type 'HasPtr'}}
+  // expected-note@+3{{used as element type of array type 'HasPtr[5]'}}
   // expected-note@#HASPTR{{used as field 'I' of composite 'HasPtr'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:HPArr)
@@ -152,7 +150,7 @@ void uses(unsigned Parm) {
 #pragma acc parallel reduction(+:CplxI)
   while (1);
   // expected-error@+3{{invalid type '_Complex int' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+2{{used as element type of array type '_Complex int'}}
+  // expected-note@+2{{used as element type of array type '_Complex int[5]'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:CplxIArr)
   while (1);
@@ -161,7 +159,7 @@ void uses(unsigned Parm) {
 #pragma acc parallel reduction(+:CplxF)
   while (1);
   // expected-error@+3{{invalid type '_Complex float' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
-  // expected-note@+2{{used as element type of array type '_Complex float'}}
+  // expected-note@+2{{used as element type of array type '_Complex float[5]'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:CplxFArr)
   while (1);
@@ -241,6 +239,50 @@ void TemplUses(T Parm, U CoS, V ChC) {
 
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
 #pragma acc parallel reduction(&: ChCPtr->COS)
+  while (1);
+
+  T ThreeDArray[3][4][5];
+
+  // expected-error@+3{{invalid type 'int[4][5]' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+2{{used as element type of array type 'int[3][4][5]'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:ThreeDArray)
+  while (1);
+  // expected-error@+3{{invalid type 'int[5]' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+2{{used as element type of array type 'int[4][5]'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:ThreeDArray[1:1])
+  while (1);
+  // expected-error@+3{{invalid type 'int[5]' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+2{{used as element type of array type 'int[4][5]'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:ThreeDArray[1])
+  while (1);
+
+#pragma acc parallel reduction(+:ThreeDArray[1:1][1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1:1][1:1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1][1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1][1:1])
+  while (1);
+
+#pragma acc parallel reduction(+:ThreeDArray[1:1][1][1:1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1:1][1][1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1:1][1:1][1:1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1:1][1:1][1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1][1][1:1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1][1][1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1][1:1][1:1])
+  while (1);
+#pragma acc parallel reduction(+:ThreeDArray[1][1:1][1])
   while (1);
 }
 

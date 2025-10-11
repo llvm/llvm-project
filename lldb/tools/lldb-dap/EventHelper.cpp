@@ -284,4 +284,15 @@ void SendInvalidatedEvent(
   dap.Send(protocol::Event{"invalidated", std::move(body)});
 }
 
+void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
+  if (!dap.clientFeatures.contains(protocol::eClientFeatureMemoryEvent))
+    return;
+  protocol::MemoryEventBody body;
+  body.memoryReference = variable.GetLoadAddress();
+  body.count = variable.GetByteSize();
+  if (body.memoryReference == LLDB_INVALID_ADDRESS)
+    return;
+  dap.Send(protocol::Event{"memory", std::move(body)});
+}
+
 } // namespace lldb_dap

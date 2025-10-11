@@ -151,7 +151,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO})
+  getActionDefinitionsBuilder({G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
       .minScalar(0, sXLen)
       .lower();
 
@@ -629,7 +629,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
-                               G_FTANH})
+                               G_FTANH, G_FMODF})
       .libcallFor({s32, s64})
       .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
@@ -725,8 +725,29 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
-  if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID))
+  if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+          RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+    if (II->hasScalarOperand() && !II->IsFPIntrinsic) {
+      MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+      MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+      auto OldScalar = MI.getOperand(II->ScalarOperand + 2).getReg();
+      // Legalize integer vx form intrinsic.
+      if (MRI.getType(OldScalar).isScalar()) {
+        if (MRI.getType(OldScalar).getSizeInBits() < sXLen.getSizeInBits()) {
+          Helper.Observer.changingInstr(MI);
+          Helper.widenScalarSrc(MI, sXLen, II->ScalarOperand + 2,
+                                TargetOpcode::G_ANYEXT);
+          Helper.Observer.changedInstr(MI);
+        } else if (MRI.getType(OldScalar).getSizeInBits() >
+                   sXLen.getSizeInBits()) {
+          // TODO: i64 in riscv32.
+          return false;
+        }
+      }
+    }
     return true;
+  }
 
   switch (IntrinsicID) {
   default:
@@ -869,17 +890,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
   RISCVMatInt::InstSeq SeqLo =
       RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
-}
-
-bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APF) const {
-  [[maybe_unused]] unsigned Size = APF.getSizeInBits(APF.getSemantics());
-  assert((Size == 32 || Size == 64) && "Only support f32 and f64");
-
-  int64_t Imm = APF.bitcastToAPInt().getSExtValue();
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
-  if (Seq.size() <= STI.getMaxBuildIntsCost())
-    return false;
-  return true;
 }
 
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
@@ -1372,9 +1382,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
   case TargetOpcode::G_FCONSTANT: {
-    const APFloat FVal = MI.getOperand(1).getFPImm()->getValueAPF();
-    if (shouldBeInFConstantPool(FVal))
-      return Helper.lowerFConstant(MI);
+    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
 
     // Convert G_FCONSTANT to G_CONSTANT.
     Register DstReg = MI.getOperand(0).getReg();
