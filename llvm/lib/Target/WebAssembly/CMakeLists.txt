@@ -88,6 +88,7 @@ add_llvm_target(WebAssemblyCodeGen
   CodeGen
   CodeGenTypes
   Core
+  GlobalISel
   MC
   Scalar
   SelectionDAG
