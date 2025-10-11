@@ -40,6 +40,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -59,6 +60,9 @@ STATISTIC(NumPhysCSEs,
 STATISTIC(NumCrossBBCSEs,
           "Number of cross-MBB physreg referencing CS eliminated");
 STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
+
+DEBUG_COUNTER(MachineCSECounter, "machine-cse",
+              "Controls which instructions are removed");
 
 // Threshold to avoid excessive cost to compute isProfitableToCSE.
 static cl::opt<int>
@@ -666,6 +670,11 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
 
       CSEPairs.emplace_back(OldReg, NewReg);
       --NumDefs;
+    }
+
+    if (DoCSE && !DebugCounter::shouldExecute(MachineCSECounter)) {
+      LLVM_DEBUG(dbgs() << "Skip CSE due to debug counter\n");
+      DoCSE = false;
     }
 
     // Actually perform the elimination.
