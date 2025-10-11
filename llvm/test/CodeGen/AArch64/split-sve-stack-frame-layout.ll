@@ -314,18 +314,18 @@ define void @all_stack_areas(<vscale x 16 x i1> %pred, double %fp) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-17
 ; CHECK-NEXT:    str z23, [sp] // 16-byte Folded Spill
@@ -387,18 +387,18 @@ define void @all_stack_areas(<vscale x 16 x i1> %pred, double %fp) {
 ; CHECK-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #17
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -471,21 +471,21 @@ define void @all_stack_areas_fp(<vscale x 16 x i1> %pred, double %fp) "frame-poi
 ; CHECK-LABEL: all_stack_areas_fp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x28, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-17
 ; CHECK-NEXT:    str z23, [sp] // 16-byte Folded Spill
@@ -546,20 +546,20 @@ define void @all_stack_areas_fp(<vscale x 16 x i1> %pred, double %fp) "frame-poi
 ; CHECK-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #17
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    ldr x28, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ppr_local = alloca <vscale x 16 x i1>
@@ -619,7 +619,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    stp x28, x27, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x9, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    stp x26, x19, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 64
@@ -631,18 +631,18 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-NEXT:    .cfi_offset w30, -56
 ; CHECK-NEXT:    .cfi_offset w29, -64
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-16
 ; CHECK-NEXT:    str z23, [sp] // 16-byte Folded Spill
@@ -716,18 +716,18 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-NEXT:    .cfi_restore z13
 ; CHECK-NEXT:    .cfi_restore z14
 ; CHECK-NEXT:    .cfi_restore z15
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 64
 ; CHECK-NEXT:    ldp x26, x19, [sp, #48] // 16-byte Folded Reload
@@ -763,10 +763,10 @@ define void @zpr_and_ppr_local_realignment(<vscale x 16 x i1> %pred, <vscale x 1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #1040
 ; CHECK-NEXT:    sub x9, sp, #1040
-; CHECK-NEXT:    str x29, [sp, #1024] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #1024] // 8-byte Spill
 ; CHECK-NEXT:    add x29, sp, #1024
 ; CHECK-NEXT:    addvl x9, x9, #-2
-; CHECK-NEXT:    str x30, [sp, #1032] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #1032] // 8-byte Spill
 ; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
@@ -776,8 +776,8 @@ define void @zpr_and_ppr_local_realignment(<vscale x 16 x i1> %pred, <vscale x 1
 ; CHECK-NEXT:    str z0, [x8, #-2, mul vl]
 ; CHECK-NEXT:    str x0, [sp]
 ; CHECK-NEXT:    sub sp, x29, #1024
-; CHECK-NEXT:    ldr x30, [sp, #1032] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #1024] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #1032] // 8-byte Reload
+; CHECK-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #1040
 ; CHECK-NEXT:    ret
   %ppr_local = alloca <vscale x 16 x i1>
@@ -822,3 +822,5 @@ define void @zpr_and_ppr_local_stack_probing(<vscale x 16 x i1> %pred, <vscale x
   store volatile i64 %gpr, ptr %gpr_local
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-FRAMELAYOUT: {{.*}}
