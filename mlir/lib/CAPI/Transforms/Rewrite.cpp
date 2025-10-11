@@ -270,17 +270,6 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
-static inline mlir::FrozenRewritePatternSet *
-unwrap(MlirFrozenRewritePatternSet module) {
-  assert(module.ptr && "unexpected null module");
-  return static_cast<mlir::FrozenRewritePatternSet *>(module.ptr);
-}
-
-static inline MlirFrozenRewritePatternSet
-wrap(mlir::FrozenRewritePatternSet *module) {
-  return {module};
-}
-
 MlirFrozenRewritePatternSet
 mlirFreezeRewritePattern(MlirRewritePatternSet set) {
   auto *m = new mlir::FrozenRewritePatternSet(std::move(*unwrap(set)));
@@ -310,15 +299,6 @@ mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
 //===----------------------------------------------------------------------===//
 /// PatternRewriter API
 //===----------------------------------------------------------------------===//
-
-inline mlir::PatternRewriter *unwrap(MlirPatternRewriter rewriter) {
-  assert(rewriter.ptr && "unexpected null rewriter");
-  return static_cast<mlir::PatternRewriter *>(rewriter.ptr);
-}
-
-inline MlirPatternRewriter wrap(mlir::PatternRewriter *rewriter) {
-  return {rewriter};
-}
 
 MlirRewriterBase mlirPatternRewriterAsBase(MlirPatternRewriter rewriter) {
   return wrap(static_cast<mlir::RewriterBase *>(unwrap(rewriter)));
@@ -400,15 +380,6 @@ void mlirRewritePatternSetAdd(MlirRewritePatternSet set,
 //===----------------------------------------------------------------------===//
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-static inline mlir::PDLPatternModule *unwrap(MlirPDLPatternModule module) {
-  assert(module.ptr && "unexpected null module");
-  return static_cast<mlir::PDLPatternModule *>(module.ptr);
-}
-
-static inline MlirPDLPatternModule wrap(mlir::PDLPatternModule *module) {
-  return {module};
-}
-
 MlirPDLPatternModule mlirPDLPatternModuleFromModule(MlirModule op) {
   return wrap(new mlir::PDLPatternModule(
       mlir::OwningOpRef<mlir::ModuleOp>(unwrap(op))));
@@ -424,22 +395,6 @@ mlirRewritePatternSetFromPDLPatternModule(MlirPDLPatternModule op) {
   auto *m = new mlir::RewritePatternSet(std::move(*unwrap(op)));
   op.ptr = nullptr;
   return wrap(m);
-}
-
-inline const mlir::PDLValue *unwrap(MlirPDLValue value) {
-  assert(value.ptr && "unexpected null PDL value");
-  return static_cast<const mlir::PDLValue *>(value.ptr);
-}
-
-inline MlirPDLValue wrap(const mlir::PDLValue *value) { return {value}; }
-
-inline mlir::PDLResultList *unwrap(MlirPDLResultList results) {
-  assert(results.ptr && "unexpected null PDL results");
-  return static_cast<mlir::PDLResultList *>(results.ptr);
-}
-
-inline MlirPDLResultList wrap(mlir::PDLResultList *results) {
-  return {results};
 }
 
 MlirValue mlirPDLValueAsValue(MlirPDLValue value) {
