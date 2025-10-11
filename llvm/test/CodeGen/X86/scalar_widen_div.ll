@@ -150,15 +150,15 @@ define <4 x i16> @test_ushort_div(<4 x i16> %num, <4 x i16> %div) {
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divw %si
-; CHECK-NEXT:    movl %eax, %esi
+; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
+; CHECK-NEXT:    movd %eax, %xmm2
+; CHECK-NEXT:    pinsrw $1, %ecx, %xmm2
 ; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    pextrw $2, %xmm1, %edi
+; CHECK-NEXT:    pextrw $2, %xmm1, %ecx
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divw %di
+; CHECK-NEXT:    divw %cx
 ; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    movd %esi, %xmm2
-; CHECK-NEXT:    pinsrw $1, %ecx, %xmm2
 ; CHECK-NEXT:    pinsrw $2, %eax, %xmm2
 ; CHECK-NEXT:    pextrw $3, %xmm0, %eax
 ; CHECK-NEXT:    pextrw $3, %xmm1, %ecx

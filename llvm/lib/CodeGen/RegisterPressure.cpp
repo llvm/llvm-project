@@ -476,25 +476,44 @@ class RegisterOperandsCollector {
     : RegOpers(RegOpers), TRI(TRI), MRI(MRI), IgnoreDead(IgnoreDead) {}
 
   void collectInstr(const MachineInstr &MI) const {
-    for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
-      collectOperand(*OperI);
+    RegisterOperands ImplicitDefs;
+    for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI) {
+      if (OperI->isReg() && OperI->isImplicit() && OperI->isDef())
+        collectOperand(*OperI, ImplicitDefs);
+      else
+        collectOperand(*OperI, RegOpers);
+    }
 
-    // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
-      removeRegLanes(RegOpers.Defs, P);
+    // Remove redundant physreg dead defs according to definition order.
+    mergeDeadDefs(ImplicitDefs);
   }
 
   void collectInstrLanes(const MachineInstr &MI) const {
-    for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
-      collectOperandLanes(*OperI);
+    RegisterOperands ImplicitDefs;
+    for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI) {
+      if (OperI->isReg() && OperI->isImplicit() && OperI->isDef())
+        collectOperandLanes(*OperI, ImplicitDefs);
+      else
+        collectOperandLanes(*OperI, RegOpers);
+    }
 
-    // Remove redundant physreg dead defs.
+    // Remove redundant physreg dead defs according to definition order.
+    mergeDeadDefs(ImplicitDefs);
+  }
+
+  void mergeDeadDefs(RegisterOperands &ImplicitDefs) const{
     for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
       removeRegLanes(RegOpers.Defs, P);
+    for (const VRegMaskOrUnit &P : ImplicitDefs.Defs)
+      removeRegLanes(RegOpers.DeadDefs, P);
+    for (const VRegMaskOrUnit &P : ImplicitDefs.DeadDefs)
+      removeRegLanes(ImplicitDefs.Defs, P);
+    RegOpers.Defs.append(ImplicitDefs.Defs);
+    RegOpers.DeadDefs.append(ImplicitDefs.DeadDefs);
   }
 
   /// Push this operand's register onto the correct vectors.
-  void collectOperand(const MachineOperand &MO) const {
+  void collectOperand(const MachineOperand &MO,RegisterOperands &RegOpers) const {
     if (!MO.isReg() || !MO.getReg())
       return;
     Register Reg = MO.getReg();
@@ -526,7 +545,7 @@ class RegisterOperandsCollector {
     }
   }
 
-  void collectOperandLanes(const MachineOperand &MO) const {
+  void collectOperandLanes(const MachineOperand &MO,RegisterOperands &RegOpers) const {
     if (!MO.isReg() || !MO.getReg())
       return;
     Register Reg = MO.getReg();
