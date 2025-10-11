@@ -2009,6 +2009,11 @@ implicit none
   end interface
 
   interface
+    attributes(device) subroutine fence_proxy_async()
+    end subroutine
+  end interface
+
+  interface
     attributes(device) subroutine tma_bulk_commit_group()
     end subroutine
   end interface

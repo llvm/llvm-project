@@ -421,6 +421,14 @@ end subroutine
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
 ! CHECK: nvvm.mbarrier.arrive.expect_tx %[[SHARED_PTR]], %{{.*}} : !llvm.ptr<3>, i32
 
+
+attributes(global) subroutine test_fence()
+  call fence_proxy_async()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_fence()
+! CHECK: nvvm.fence.proxy {kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
+
 attributes(global) subroutine test_tma()
   call tma_bulk_commit_group()
   call tma_bulk_wait_group()
