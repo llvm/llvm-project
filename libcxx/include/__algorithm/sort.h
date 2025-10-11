@@ -902,74 +902,45 @@ using __sort_is_specialized_in_library _LIBCPP_NODEBUG = __is_any_of<
 
 template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* __first, _Type* __last, __less<>&) {
-#if _LIBCPP_STD_VER >= 20
-  if (std::is_constant_evaluated()) {
-    if (__last == __first)
-      return;
+  if (__last == __first)
+    return;
 
-    auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
-    std::__introsort<_ClassicAlgPolicy, ranges::less, _Type*, __use_branchless_sort<ranges::less, _Type*>>(
-        __first, __last, ranges::less{}, __depth_limit);
-  } else
-#endif
-  {
-    __less<_Type> __comp;
-    std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
-  }
+  ptrdiff_t __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
+  std::__introsort<_AlgPolicy, __less<>, _Type*, __use_branchless_sort<__less<>, _Type*> >(
+      __first, __last, __less<>(), __depth_limit);
 }
 
 template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* __first, _Type* __last, less<_Type>&) {
-#if _LIBCPP_STD_VER >= 20
-  if (std::is_constant_evaluated()) {
-    if (__last == __first)
-      return;
+  if (__last == __first)
+    return;
 
-    auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
-    std::__introsort<_ClassicAlgPolicy, ranges::less, _Type*, __use_branchless_sort<ranges::less, _Type*>>(
-        __first, __last, ranges::less{}, __depth_limit);
-  } else
-#endif
-  {
-    __less<_Type> __comp;
-    std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
-  }
+  ptrdiff_t __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
+  std::__introsort<_AlgPolicy, __less<>, _Type*, __use_branchless_sort<__less<>, _Type*> >(
+      __first, __last, __less<>(), __depth_limit);
 }
 
 #if _LIBCPP_STD_VER >= 14
 template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __sort_dispatch(_Type* __first, _Type* __last, less<>&) {
-#  if _LIBCPP_STD_VER >= 20
-  if (std::is_constant_evaluated()) {
-    if (__last == __first)
-      return;
+  if (__last == __first)
+    return;
 
-    auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
-    std::__introsort<_ClassicAlgPolicy, ranges::less, _Type*, __use_branchless_sort<ranges::less, _Type*>>(
-        __first, __last, ranges::less{}, __depth_limit);
-  } else
-#  endif
-  {
-    __less<_Type> __comp;
-    std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
-  }
+  auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
+  std::__introsort<_AlgPolicy, less<>, _Type*, __use_branchless_sort<less<>, _Type*>>(
+      __first, __last, less<>{}, __depth_limit);
 }
 #endif
 
 #if _LIBCPP_STD_VER >= 20
 template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr void __sort_dispatch(_Type* __first, _Type* __last, ranges::less&) {
-  if (std::is_constant_evaluated()) {
-    if (__last == __first)
-      return;
+  if (__last == __first)
+    return;
 
-    auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
-    std::__introsort<_ClassicAlgPolicy, ranges::less, _Type*, __use_branchless_sort<ranges::less, _Type*>>(
-        __first, __last, ranges::less{}, __depth_limit);
-  } else {
-    __less<_Type> __comp;
-    std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
-  }
+  auto __depth_limit = static_cast<ptrdiff_t>(2 * std::__bit_log2(static_cast<size_t>(__last - __first)));
+  std::__introsort<_AlgPolicy, ranges::less, _Type*, __use_branchless_sort<ranges::less, _Type*>>(
+      __first, __last, ranges::less{}, __depth_limit);
 }
 #endif
 
