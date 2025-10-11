@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__atomic/contention_t.h>
 #include <__thread/timed_backoff_policy.h>
 #include <atomic>
 #include <climits>
 #include <cstddef>
+#include <cstring>
 #include <functional>
 #include <thread>
 
@@ -59,7 +61,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifdef __linux__
 
-
 // TODO : update
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
@@ -85,11 +86,12 @@ extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value)
 template <std::size_t _Size>
 static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const volatile* __val) {
   static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
+  char buffer[_Size];
+  std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
   if constexpr (_Size == 4)
-    __ulock_wait(UL_COMPARE_AND_WAIT, const_cast<void*>(__ptr), *reinterpret_cast<uint32_t const volatile*>(__val), 0);
+    __ulock_wait(UL_COMPARE_AND_WAIT, const_cast<void*>(__ptr), *reinterpret_cast<uint32_t const*>(&buffer), 0);
   else
-    __ulock_wait(
-        UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), *reinterpret_cast<uint64_t const volatile*>(__val), 0);
+    __ulock_wait(UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), *reinterpret_cast<uint64_t const*>(&buffer), 0);
 }
 
 template <std::size_t _Size>
@@ -199,45 +201,70 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 
 #endif // __linux__
 
-static constexpr size_t __libcpp_contention_table_size = (1 << 8); /* < there's no magic in this number */
-
-struct alignas(64) /*  aim to avoid false sharing */ __libcpp_contention_table_entry {
-  __cxx_atomic_contention_t __contention_state;
-  __cxx_atomic_contention_t __platform_state;
-  inline constexpr __libcpp_contention_table_entry() : __contention_state(0), __platform_state(0) {}
-};
-
-static __libcpp_contention_table_entry __libcpp_contention_table[__libcpp_contention_table_size];
-
-static hash<void const volatile*> __libcpp_contention_hasher;
-
-static __libcpp_contention_table_entry* __get_global_contention_state(void const volatile* p) {
-  return &__libcpp_contention_table[__libcpp_contention_hasher(p) & (__libcpp_contention_table_size - 1)];
-}
+// =============================
+// Local hidden helper functions
+// =============================
 
 /* Given an atomic to track contention and an atomic to actually wait on, which may be
    the same atomic, we try to detect contention to avoid spuriously calling the platform. */
 
 template <std::size_t _Size>
-static void __libcpp_contention_notify(__cxx_atomic_contention_t volatile* __global_contention_state,
-                                       void const volatile* __address_to_notify,
-                                       bool __notify_one) {
-  if (0 != __cxx_atomic_load(__global_contention_state, memory_order_seq_cst))
+static void __contention_notify(
+    __cxx_atomic_contention_t volatile* __waiter_count, void const volatile* __address_to_notify, bool __notify_one) {
+  if (0 != __cxx_atomic_load(__waiter_count, memory_order_seq_cst))
     // We only call 'wake' if we consumed a contention bit here.
     __libcpp_platform_wake_by_address<_Size>(__address_to_notify, __notify_one);
 }
 
 template <std::size_t _Size>
-static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __contention_state,
-                                     void const volatile* __address_to_wait,
-                                     void const volatile* __old_value) {
-  __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_relaxed);
+static void __contention_wait(__cxx_atomic_contention_t volatile* __waiter_count,
+                              void const volatile* __address_to_wait,
+                              void const volatile* __old_value) {
+  __cxx_atomic_fetch_add(__waiter_count, __cxx_contention_t(1), memory_order_relaxed);
   // https://llvm.org/PR109290
   // There are no platform guarantees of a memory barrier in the platform wait implementation
   __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
   __libcpp_platform_wait_on_address<_Size>(__address_to_wait, __old_value);
-  __cxx_atomic_fetch_sub(__contention_state, __cxx_contention_t(1), memory_order_release);
+  __cxx_atomic_fetch_sub(__waiter_count, __cxx_contention_t(1), memory_order_release);
+}
+
+#if defined(__APPLE__) && defined(__aarch64__)
+constexpr size_t __cache_line_size = 128;
+#else
+constexpr size_t __cache_line_size = 64;
+#endif
+
+static constexpr size_t __contention_table_size = (1 << 8); /* < there's no magic in this number */
+
+static constexpr hash<void const volatile*> __contention_hasher;
+
+// Waiter count table for all atomics with the correct size that use itself as the wait/notify address.
+
+struct alignas(__cache_line_size) /*  aim to avoid false sharing */ __contention_state_native {
+  __cxx_atomic_contention_t __waiter_count;
+  constexpr __contention_state_native() : __waiter_count(0) {}
+};
+
+static __contention_state_native __contention_table_native[__contention_table_size];
+
+static __cxx_atomic_contention_t* __get_native_waiter_count(void const volatile* p) {
+  return &__contention_table_native[__contention_hasher(p) & (__contention_table_size - 1)].__waiter_count;
+}
+
+// Global contention table for all atomics with the wrong size that use the global table's atomic as wait/notify
+// address.
+
+struct alignas(__cache_line_size) /*  aim to avoid false sharing */ __contention_state_global {
+  __cxx_atomic_contention_t __waiter_count;
+  __cxx_atomic_contention_t __platform_state;
+  constexpr __contention_state_global() : __waiter_count(0), __platform_state(0) {}
+};
+
+static __contention_state_global __contention_table_global[__contention_table_size];
+
+static __contention_state_global* __get_global_contention_state(void const volatile* p) {
+  return &__contention_table_global[__contention_hasher(p) & (__contention_table_size - 1)];
 }
 
 /* When the incoming atomic is the wrong size for the platform wait size, need to
@@ -247,12 +274,15 @@ static void __atomic_notify_global_table(void const volatile* __location) {
   auto const __entry = __get_global_contention_state(__location);
   // The value sequence laundering happens on the next line below.
   __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_seq_cst);
-  __libcpp_contention_notify<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__contention_state,
-      &__entry->__platform_state,
-      false /* when laundering, we can't handle notify_one */);
+  __contention_notify<sizeof(__cxx_atomic_contention_t)>(
+      &__entry->__waiter_count, &__entry->__platform_state, false /* when laundering, we can't handle notify_one */);
 }
 
+// =============================
+// New dylib exported symbols
+// =============================
+
+// global
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor_global(void const volatile* __location) noexcept {
   auto const __entry = __get_global_contention_state(__location);
   return __cxx_atomic_load(&__entry->__platform_state, memory_order_acquire);
@@ -261,37 +291,37 @@ _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor_global(void
 _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait_global_table(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
   auto const __entry = __get_global_contention_state(__location);
-  __libcpp_contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__contention_state, &__entry->__platform_state, &__old_value);
+  __contention_wait<sizeof(__cxx_atomic_contention_t)>(
+      &__entry->__waiter_count, &__entry->__platform_state, &__old_value);
 }
 
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_global_table(void const volatile* __location) noexcept {
+  __atomic_notify_global_table(__location);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_global_table(void const volatile* __location) noexcept {
+  __atomic_notify_global_table(__location);
+}
+
+// native
+
 template <std::size_t _Size>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
+_LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait_native(void const volatile* __address, void const volatile* __old_value) noexcept {
-  __libcpp_contention_wait<_Size>(
-      &__get_global_contention_state(__address)->__contention_state, __address, __old_value);
-}
-
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_global_table(void const volatile* __location) noexcept {
-  __atomic_notify_global_table(__location);
-}
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_global_table(void const volatile* __location) noexcept {
-  __atomic_notify_global_table(__location);
-}
-
-/* When the incoming atomic happens to be the platform wait size, we still need to use the
-   table for the contention detection, but we can use the atomic directly for the wait. */
-
-template <std::size_t _Size>
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_native(void const volatile* __location) noexcept {
-  __libcpp_contention_notify<_Size>(&__get_global_contention_state(__location)->__contention_state, __location, true);
+  __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value);
 }
 
 template <std::size_t _Size>
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native(void const volatile* __location) noexcept {
-  __libcpp_contention_notify<_Size>(&__get_global_contention_state(__location)->__contention_state, __location, false);
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native(void const volatile* __location) noexcept {
+  __contention_notify<_Size>(__get_native_waiter_count(__location), __location, true);
 }
 
+template <std::size_t _Size>
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native(void const volatile* __location) noexcept {
+  __contention_notify<_Size>(__get_native_waiter_count(__location), __location, false);
+}
+
+// Instantiation of the templates with supported size
 #ifdef __linux__
 
 // TODO
@@ -304,13 +334,13 @@ __libcpp_atomic_wait_native<4>(void const volatile* __address, void const volati
 template _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait_native<8>(void const volatile* __address, void const volatile* __old_value) noexcept;
 
-template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
 
-template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
 
-template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native<4>(void const volatile* __location) noexcept;
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<4>(void const volatile* __location) noexcept;
 
-template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
 
 #elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
 
@@ -321,5 +351,45 @@ template _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all_native<8>(void c
 // TODO
 
 #endif // __linux__
+
+// =============================================================
+// Old dylib exported symbols, for backwards compatibility
+// =============================================================
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile* __location) noexcept {
+  __libcpp_atomic_notify_one_global_table(__location);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile* __location) noexcept {
+  __libcpp_atomic_notify_all_global_table(__location);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile* __location) noexcept {
+  return __libcpp_atomic_monitor_global(__location);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
+  __libcpp_atomic_wait_global_table(__location, __old_value);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) noexcept {
+  __libcpp_atomic_notify_one_native<sizeof(__cxx_atomic_contention_t)>(__location);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) noexcept {
+  __libcpp_atomic_notify_all_native<sizeof(__cxx_atomic_contention_t)>(__location);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) noexcept {
+  __libcpp_atomic_wait_native<sizeof(__cxx_atomic_contention_t)>(__location, &__old_value);
+}
+
+// this function is even unused in the old ABI
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
+__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile* __location) noexcept {
+  return __cxx_atomic_load(__location, memory_order_acquire);
+}
 
 _LIBCPP_END_NAMESPACE_STD

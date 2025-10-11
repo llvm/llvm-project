@@ -205,6 +205,14 @@ This flag fixes the implementation of CityHash used for ``hash<fundamental-type>
 CityHash has the problem that it drops some bits on the floor. Fixing the implementation changes the hash of values,
 resulting in an ABI break.
 
+``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``
+-------------------------------------------------
+This flag changes the implementation of ``atomic::wait()`` and ``atomic::notify_one()/notify_all()`` to use the
+native atomic wait/notify operations on platforms that support them based on the size of the atomic type, instead
+of the type itself. This changes the behaviour of ``atomic::wait()`` and ``atomic::notify_one()/notify_all()`` in
+some cases, resulting in an ABI break.
+
+
 inline namespaces
 =================
 Inline namespaces which contain types that are observable by the user need to be kept the same, since they affect

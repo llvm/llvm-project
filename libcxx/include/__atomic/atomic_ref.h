@@ -233,7 +233,7 @@ protected:
 
 template <class _Tp>
 struct __atomic_waitable_traits<__atomic_ref_base<_Tp>> {
-  using __inner_type _LIBCPP_NODEBUG = _Tp;
+  using __value_type _LIBCPP_NODEBUG = _Tp;
 
   static _LIBCPP_HIDE_FROM_ABI _Tp __atomic_load(const __atomic_ref_base<_Tp>& __a, memory_order __order) {
     return __a.load(__order);
