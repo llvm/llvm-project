@@ -168,6 +168,18 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  fopen_s
+  SRCS
+    fopen_s.cpp
+  HDRS
+    ../fopen_s.h
+  DEPENDS
+    libc.src.stdio.fopen
+    libc.src.__support.macros.config
+    libc.src.stdlib.annex_k_helper_macros
+)
+
+add_generic_entrypoint_object(
   fclose
   SRCS
     fclose.cpp
