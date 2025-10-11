@@ -16048,7 +16048,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
         // For expressions of the form (Const + A), check if we have guard info
         // for (Const + 1 + A), and rewrite to ((Const + 1 + A) - 1). This makes
         // sure we don't loose information when rewriting expressions based on
-        // back-edge taken counts in some cases..
+        // back-edge taken counts in some cases.
         if (Expr->getNumOperands() == 2) {
           auto *NewC =
               SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));

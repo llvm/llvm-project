@@ -19,16 +19,9 @@ define dso_local void @assumeDivisibleTC(ptr noalias nocapture %a, ptr noalias n
 ; CHECK-NEXT:    [[CMP110:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP110]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[N]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 1
-; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
-; CHECK:       for.body.preheader.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[N]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_011:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_011:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[I_011]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[TMP0]], 3
@@ -41,25 +34,8 @@ define dso_local void @assumeDivisibleTC(ptr noalias nocapture %a, ptr noalias n
 ; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX4_1]], align 1
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[I_011]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
-; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       exit.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[I_011_UNR:%.*]] = phi i32 [ [[INC_1]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[FOR_BODY_EPIL_PREHEADER]], label [[EXIT_LOOPEXIT:%.*]]
-; CHECK:       for.body.epil.preheader:
-; CHECK-NEXT:    [[I_011_EPIL_INIT:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[I_011_UNR]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
-; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
-; CHECK:       for.body.epil:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[I_011_EPIL_INIT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_EPIL]], align 1
-; CHECK-NEXT:    [[ADD_EPIL:%.*]] = add i8 [[TMP4]], 3
-; CHECK-NEXT:    [[ARRAYIDX4_EPIL:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[I_011_EPIL_INIT]]
-; CHECK-NEXT:    store i8 [[ADD_EPIL]], ptr [[ARRAYIDX4_EPIL]], align 1
-; CHECK-NEXT:    br label [[EXIT_LOOPEXIT]]
+; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[INC_1]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP1_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
