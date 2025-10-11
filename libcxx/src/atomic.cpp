@@ -61,14 +61,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifdef __linux__
 
-// TODO : update
-static void
-__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+template <std::size_t _Size>
+static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+  static_assert(_Size == 4, "Can only wait on 4 bytes value");
+  char buffer[_Size];
+  std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
   static constexpr timespec __timeout = {2, 0};
-  _LIBCPP_FUTEX(__ptr, FUTEX_WAIT_PRIVATE, __val, &__timeout, 0, 0);
+  _LIBCPP_FUTEX(__ptr, FUTEX_WAIT_PRIVATE, *reinterpret_cast<__cxx_contention_t const*>(&buffer), &__timeout, 0, 0);
 }
 
-static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+template <std::size_t _Size>
+static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+  static_assert(_Size == 4, "Can only wake up on 4 bytes value");
   _LIBCPP_FUTEX(__ptr, FUTEX_WAKE_PRIVATE, __notify_one ? 1 : INT_MAX, 0, 0, 0);
 }
 
@@ -105,20 +109,24 @@ static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool _
 }
 
 #elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
-// TODO : update
 /*
  * Since __cxx_contention_t is int64_t even on 32bit FreeBSD
  * platforms, we have to use umtx ops that work on the long type, and
  * limit its use to architectures where long and int64_t are synonyms.
  */
 
-static void
-__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
-  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAIT, __val, nullptr, nullptr);
+template <std::size_t _Size>
+static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+  static_assert(_Size == 8, "Can only wait on 8 bytes value");
+  char buffer[_Size];
+  std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
+  _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
 }
 
-static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
-  _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
+template <std::size_t _Size>
+static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+  static_assert(_Size == 8, "Can only wake up on 8 bytes value");
+  _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
 }
 
 #elif defined(_WIN32)
@@ -188,16 +196,16 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 #else // <- Add other operating systems here
 
 // Baseline is just a timed backoff
-// TODO : update
 
-static void
-__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+template <std::size_t _Size>
+static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   __libcpp_thread_poll_with_backoff(
-      [=]() -> bool { return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__ptr, memory_order_relaxed), __val); },
+      [=]() -> bool { return !std::memcmp(const_cast<const void*>(__ptr), __val, _Size); },
       __libcpp_timed_backoff_policy());
 }
 
-static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile*, bool) {}
+template <std::size_t _Size>
+static void __libcpp_platform_wake_by_address(void const volatile*, bool) {}
 
 #endif // __linux__
 
@@ -324,7 +332,12 @@ _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native(void const vola
 // Instantiation of the templates with supported size
 #ifdef __linux__
 
-// TODO
+template _LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait_native<4>(void const volatile* __address, void const* __old_value) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<4>(void const volatile* __location) noexcept;
 
 #elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
 
@@ -344,11 +357,21 @@ template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(voi
 
 #elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
 
-// TODO
+template _LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait_native<8>(void const volatile* __address, void const* __old_value) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
 
 #else // <- Add other operating systems here
 
-// TODO
+template _LIBCPP_EXPORTED_FROM_ABI void
+__libcpp_atomic_wait_native<8>(void const volatile* __address, void const* __old_value) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
 
 #endif // __linux__
 
