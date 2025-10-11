@@ -785,6 +785,12 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
   ];
+  let options = [
+    Option<"chipset", "chipset", "std::string",
+          /*default=*/"\"gfx000\"",
+          "Chipset that these operations will run on">
+  ];
+
 }
 
 //===----------------------------------------------------------------------===//
