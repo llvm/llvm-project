@@ -34,11 +34,26 @@ define double @scvtf64_i64(double %a0) {
 ; SSE-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: scvtf64_i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vcvttsd2si %xmm0, %rax
-; AVX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: scvtf64_i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-VL-LABEL: scvtf64_i64:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttpd2qq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtqq2pd %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: scvtf64_i64:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NOVL-NEXT:    vcvttpd2qq %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
   %ii = fptosi double %a0 to i64
   %ff = sitofp i64 %ii to double
   ret double %ff
@@ -69,11 +84,26 @@ define float @scvtf32_i64(float %a0) {
 ; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: scvtf32_i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vcvttss2si %xmm0, %rax
-; AVX-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: scvtf32_i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvttss2si %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-VL-LABEL: scvtf32_i64:
+; AVX512-VL:       # %bb.0:
+; AVX512-VL-NEXT:    vcvttps2qq %xmm0, %xmm0
+; AVX512-VL-NEXT:    vcvtqq2ps %xmm0, %xmm0
+; AVX512-VL-NEXT:    retq
+;
+; AVX512-NOVL-LABEL: scvtf32_i64:
+; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NOVL-NEXT:    vcvttps2qq %ymm0, %zmm0
+; AVX512-NOVL-NEXT:    vcvtqq2ps %zmm0, %ymm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NOVL-NEXT:    vzeroupper
+; AVX512-NOVL-NEXT:    retq
   %ii = fptosi float %a0 to i64
   %ff = sitofp i64 %ii to float
   ret float %ff
