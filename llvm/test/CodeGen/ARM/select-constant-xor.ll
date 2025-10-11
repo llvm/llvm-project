@@ -320,8 +320,8 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK7A-LABEL: icmpasrne:
 ; CHECK7A:       @ %bb.0:
-; CHECK7A-NEXT:    cmn r0, #1
-; CHECK7A-NEXT:    movle r1, r2
+; CHECK7A-NEXT:    cmp r0, #0
+; CHECK7A-NEXT:    movlt r1, r2
 ; CHECK7A-NEXT:    mov r0, r1
 ; CHECK7A-NEXT:    bx lr
 ;
@@ -337,16 +337,16 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK7M-LABEL: icmpasrne:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    cmp.w r0, #-1
-; CHECK7M-NEXT:    it le
-; CHECK7M-NEXT:    movle r1, r2
+; CHECK7M-NEXT:    cmp r0, #0
+; CHECK7M-NEXT:    it lt
+; CHECK7M-NEXT:    movlt r1, r2
 ; CHECK7M-NEXT:    mov r0, r1
 ; CHECK7M-NEXT:    bx lr
 ;
 ; CHECK81M-LABEL: icmpasrne:
 ; CHECK81M:       @ %bb.0:
-; CHECK81M-NEXT:    cmp.w r0, #-1
-; CHECK81M-NEXT:    csel r0, r1, r2, gt
+; CHECK81M-NEXT:    cmp r0, #0
+; CHECK81M-NEXT:    csel r0, r1, r2, ge
 ; CHECK81M-NEXT:    bx lr
   %sh = ashr i32 %input, 31
   %c = icmp ne i32 %sh, -1
