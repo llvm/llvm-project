@@ -13822,7 +13822,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
       !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl) &&
-      !VDecl->getInstantiatedFromStaticDataMember()) {
+      !VDecl->getInstantiatedFromStaticDataMember() &&
+      !(VDecl->hasAttr<SelectAnyAttr>() || VDecl->hasAttr<WeakAttr>())) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -16162,7 +16163,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       !FD->isInvalidDecl() && !FD->isInlined() &&
       BodyKind != FnBodyKind::Delete && BodyKind != FnBodyKind::Default &&
       FD->getFormalLinkage() == Linkage::External && !FD->isTemplated() &&
-      !FD->isTemplateInstantiation()) {
+      !FD->isTemplateInstantiation() &&
+      !(FD->hasAttr<SelectAnyAttr>() || FD->hasAttr<WeakAttr>())) {
     assert(FD->isThisDeclarationADefinition());
     Diag(FD->getLocation(), diag::err_extern_def_in_header_unit);
     FD->setInvalidDecl();
