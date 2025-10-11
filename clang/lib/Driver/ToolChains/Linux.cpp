@@ -300,11 +300,10 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // and the MIPS ABI require .dynsym to be sorted in different ways.
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
-  // Android loader does not support .gnu.hash until API 23.
   // Hexagon linker/loader does not support .gnu.hash.
   // SUSE SLES 11 will stop being supported Mar 2028.
   if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE() || (IsAndroid && Triple.isAndroidVersionLT(23)))
+    if (Distro.IsOpenSUSE())
       ExtraOpts.push_back("--hash-style=both");
     else
       ExtraOpts.push_back("--hash-style=gnu");
