@@ -346,6 +346,18 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
+    {"barrier_arrive",
+     &I::genBarrierArrive,
+     {{{"barrier", asAddr}}},
+     /*isElemental=*/false},
+    {"barrier_arrive_cnt",
+     &I::genBarrierArriveCnt,
+     {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"barrier_init",
+     &I::genBarrierInit,
+     {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -3174,6 +3186,56 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = fir::LoadOp::create(builder, loc, pointerBoxRef);
   return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+static mlir::Value convertBarrierToLLVM(fir::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        mlir::Value barrier) {
+  mlir::Value llvmPtr = fir::ConvertOp::create(
+      builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
+      barrier);
+  mlir::Value addrCast = mlir::LLVM::AddrSpaceCastOp::create(
+      builder, loc,
+      mlir::LLVM::LLVMPointerType::get(
+          builder.getContext(),
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared)),
+      llvmPtr);
+  return addrCast;
+}
+
+// BARRIER_ARRIVE (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
+                                   llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::Value barrier = convertBarrierToLLVM(builder, loc, args[0]);
+  return mlir::NVVM::MBarrierArriveSharedOp::create(builder, loc, resultType,
+                                                    barrier)
+      .getResult();
+}
+
+// BARRIER_ARRIBVE_CNT (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  mlir::Value barrier = convertBarrierToLLVM(builder, loc, args[0]);
+  mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
+  // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
+  // currently just the sink symbol `_`.
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
+  mlir::NVVM::MBarrierArriveExpectTxOp::create(builder, loc, barrier, args[1],
+                                               {});
+  return fir::LoadOp::create(builder, loc, token);
+}
+
+// BARRIER_INIT (CUDA)
+void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value barrier =
+      convertBarrierToLLVM(builder, loc, fir::getBase(args[0]));
+  mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
+                                           fir::getBase(args[1]), {});
 }
 
 // BESSEL_JN
