@@ -2615,7 +2615,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("optnone"),
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
@@ -2710,10 +2709,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
-
-  if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
-      attr.isStringAttribute())
-    funcOp.setUnsafeFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
       attr.isStringAttribute())
