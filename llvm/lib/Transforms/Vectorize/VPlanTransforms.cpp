@@ -942,10 +942,29 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
+namespace {
+/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+/// Returns an optional pair, where the first element indicates whether it is
+/// an intrinsic ID.
+static std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+  return TypeSwitch<const VPSingleDefRecipe *,
+                    std::optional<std::pair<bool, unsigned>>>(R)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+            VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
+          [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+      .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+        return std::make_pair(true, I->getVectorIntrinsicID());
+      })
+      .Default([](auto *) { return std::nullopt; });
+}
+} // namespace
+
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
 /// non-nullptr Value for a handled \p Opcode if corresponding \p Operands are
 /// foldable live-ins.
-static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
+static Value *tryToFoldLiveIns(VPSingleDefRecipe &R,
+                               std::pair<bool, unsigned> OpcodeOrIID,
                                ArrayRef<VPValue *> Operands,
                                const DataLayout &DL, VPTypeAnalysis &TypeInfo) {
   SmallVector<Value *, 4> Ops;
@@ -956,6 +975,14 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
   }
 
   InstSimplifyFolder Folder(DL);
+  if (OpcodeOrIID.first) {
+    if (R.getNumOperands() != 2)
+      return nullptr;
+    unsigned ID = OpcodeOrIID.second;
+    return Folder.FoldBinaryIntrinsic(
+        ID, Ops[0], Ops[1], TypeInfo.inferScalarType(R.getVPSingleValue()));
+  }
+  unsigned Opcode = OpcodeOrIID.second;
   if (Instruction::isBinaryOp(Opcode))
     return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode), Ops[0],
                             Ops[1]);
@@ -1005,19 +1032,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
-  if (TypeSwitch<VPRecipeBase *, bool>(&R)
-          .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-                VPReplicateRecipe, VPWidenSelectRecipe>([&](auto *I) {
-            const DataLayout &DL =
-                Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
-            Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
-                                        TypeInfo);
-            if (V)
-              I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
-            return V;
-          })
-          .Default([](auto *) { return false; }))
-    return;
+  if (auto OpcodeOrIID = getOpcodeOrIntrinsicID(Def)) {
+    const DataLayout &DL =
+        Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
+    if (Value *V =
+            tryToFoldLiveIns(*Def, *OpcodeOrIID, Def->operands(), DL, TypeInfo))
+      return Def->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+  }
 
   // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
@@ -1967,22 +1988,6 @@ namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool isSentinel(const VPSingleDefRecipe *Def) {
     return Def == getEmptyKey() || Def == getTombstoneKey();
-  }
-
-  /// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
-  /// Returns an optional pair, where the first element indicates whether it is
-  /// an intrinsic ID.
-  static std::optional<std::pair<bool, unsigned>>
-  getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
-    return TypeSwitch<const VPSingleDefRecipe *,
-                      std::optional<std::pair<bool, unsigned>>>(R)
-        .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-              VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
-            [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-        .Case<VPWidenIntrinsicRecipe>([](auto *I) {
-          return std::make_pair(true, I->getVectorIntrinsicID());
-        })
-        .Default([](auto *) { return std::nullopt; });
   }
 
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
