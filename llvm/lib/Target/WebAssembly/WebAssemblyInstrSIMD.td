@@ -396,7 +396,7 @@ defm STORE_V128_A64 :
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : StorePat<vec.vt, store, "STORE_V128">;
+defm : StorePat<vec.vt, V128, store, "STORE_V128">;
 }
 
 // Store lane

@@ -145,8 +145,8 @@ defm STORE_I64  : WebAssemblyStore<I64, "i64.store", 0x37>;
 defm STORE_F32  : WebAssemblyStore<F32, "f32.store", 0x38>;
 defm STORE_F64  : WebAssemblyStore<F64, "f64.store", 0x39>;
 
-multiclass StorePat<ValueType ty, SDPatternOperator kind, string Name> {
-  def : Pat<(kind ty:$val, (AddrOps32 offset32_op:$offset, I32:$addr)),
+multiclass StorePat<ValueType ty, WebAssemblyRegClass rc, SDPatternOperator kind, string Name> {
+  def : Pat<(kind (ty rc:$val), (AddrOps32 offset32_op:$offset, I32:$addr)),
             (!cast<NI>(Name # "_A32") 0,
                                       offset32_op:$offset,
                                       I32:$addr,
@@ -160,10 +160,10 @@ multiclass StorePat<ValueType ty, SDPatternOperator kind, string Name> {
             Requires<[HasAddr64]>;
 }
 
-defm : StorePat<i32, store, "STORE_I32">;
-defm : StorePat<i64, store, "STORE_I64">;
-defm : StorePat<f32, store, "STORE_F32">;
-defm : StorePat<f64, store, "STORE_F64">;
+defm : StorePat<i32, I32, store, "STORE_I32">;
+defm : StorePat<i64, I64, store, "STORE_I64">;
+defm : StorePat<f32, F32, store, "STORE_F32">;
+defm : StorePat<f64, F64, store, "STORE_F64">;
 
 // Truncating store.
 defm STORE8_I32 : WebAssemblyStore<I32, "i32.store8", 0x3a>;
@@ -176,13 +176,13 @@ defm STORE32_I64 : WebAssemblyStore<I64, "i64.store32", 0x3e>;
 defm STORE_F16_F32 :
   WebAssemblyStore<F32, "f32.store_f16", 0xfc31, [HasFP16]>;
 
-defm : StorePat<i32, truncstorei8, "STORE8_I32">;
-defm : StorePat<i32, truncstorei16, "STORE16_I32">;
-defm : StorePat<i64, truncstorei8, "STORE8_I64">;
-defm : StorePat<i64, truncstorei16, "STORE16_I64">;
-defm : StorePat<i64, truncstorei32, "STORE32_I64">;
+defm : StorePat<i32, I32, truncstorei8, "STORE8_I32">;
+defm : StorePat<i32, I32, truncstorei16, "STORE16_I32">;
+defm : StorePat<i64, I64, truncstorei8, "STORE8_I64">;
+defm : StorePat<i64, I64, truncstorei16, "STORE16_I64">;
+defm : StorePat<i64, I64, truncstorei32, "STORE32_I64">;
 
-defm : StorePat<f32, int_wasm_storef16_f32, "STORE_F16_F32">;
+defm : StorePat<f32, F32, int_wasm_storef16_f32, "STORE_F16_F32">;
 
 multiclass MemoryOps<WebAssemblyRegClass rc, string B> {
 // Current memory size.

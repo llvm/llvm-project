@@ -61,14 +61,113 @@ using namespace llvm;
 WebAssemblyRegisterBankInfo::WebAssemblyRegisterBankInfo(
     const TargetRegisterInfo &TRI) {}
 
+bool WebAssemblyRegisterBankInfo::isPHIWithFPConstraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const WebAssemblyRegisterInfo &TRI, const unsigned Depth) const {
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                [&](const MachineInstr &UseMI) {
+                  if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                    return true;
+                  return isPHIWithFPConstraints(UseMI, MRI, TRI, Depth + 1);
+                });
+}
+
+bool WebAssemblyRegisterBankInfo::hasFPConstraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const WebAssemblyRegisterInfo &TRI, unsigned Depth) const {
+  unsigned Op = MI.getOpcode();
+  // if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
+  //   return true;
+
+  // Do we have an explicit floating point instruction?
+  if (isPreISelGenericFloatingPointOpcode(Op))
+    return true;
+
+  // No. Check if we have a copy-like instruction. If we do, then we could
+  // still be fed by floating point instructions.
+  if (Op != TargetOpcode::COPY && !MI.isPHI() &&
+      !isPreISelGenericOptimizationHint(Op))
+    return false;
+
+  // Check if we already know the register bank.
+  auto *RB = getRegBank(MI.getOperand(0).getReg(), MRI, TRI);
+  if (RB == &WebAssembly::F32RegBank || RB == &WebAssembly::F64RegBank)
+    return true;
+  if (RB == &WebAssembly::I32RegBank || RB == &WebAssembly::I64RegBank)
+    return false;
+
+  // We don't know anything.
+  //
+  // If we have a phi, we may be able to infer that it will be assigned a FPR
+  // based off of its inputs.
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MI.explicit_uses(), [&](const MachineOperand &Op) {
+    return Op.isReg() &&
+           onlyDefinesFP(*MRI.getVRegDef(Op.getReg()), MRI, TRI, Depth + 1);
+  });
+}
+
+bool WebAssemblyRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI,
+                                             const WebAssemblyRegisterInfo &TRI,
+                                             unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FPTOSI_SAT:
+  case TargetOpcode::G_FPTOUI_SAT:
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+    return true;
+  default:
+    break;
+  }
+  return hasFPConstraints(MI, MRI, TRI, Depth);
+}
+
+bool WebAssemblyRegisterBankInfo::onlyDefinesFP(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const WebAssemblyRegisterInfo &TRI, unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC:
+    return true;
+  default:
+    break;
+  }
+  return hasFPConstraints(MI, MRI, TRI, Depth);
+}
+
+bool WebAssemblyRegisterBankInfo::prefersFPUse(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const WebAssemblyRegisterInfo &TRI, unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() ==
+           MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+  }
+  return onlyDefinesFP(MI, MRI, TRI, Depth);
+}
+
 const RegisterBankInfo::InstructionMapping &
 WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const WebAssemblySubtarget &STI = MF.getSubtarget<WebAssemblySubtarget>();
+  const WebAssemblyRegisterInfo &TRI = *STI.getRegisterInfo();
 
   if ((Opc != TargetOpcode::COPY && !isPreISelGenericOpcode(Opc)) ||
       Opc == TargetOpcode::G_PHI) {
@@ -223,13 +322,50 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case G_LOAD:
   case G_ZEXTLOAD:
-  case G_SEXTLOAD:
-  case G_STORE:
+  case G_SEXTLOAD: {
     if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() != 0)
       break;
+
+    auto *LoadValueMapping = &Op0IntValueMapping;
+    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](const MachineInstr &UseMI) {
+                 // If we have at least one direct or indirect use
+                 // in a FP instruction,
+                 // assume this was a floating point load in the IR. If it was
+                 // not, we would have had a bitcast before reaching that
+                 // instruction.
+                 //
+                 // Int->FP conversion operations are also captured in
+                 // prefersFPUse().
+
+                 if (isPHIWithFPConstraints(UseMI, MRI, TRI))
+                   return true;
+
+                 return onlyUsesFP(UseMI, MRI, TRI) ||
+                        prefersFPUse(UseMI, MRI, TRI);
+               }))
+      LoadValueMapping = &Op0FloatValueMapping;
     OperandsMapping =
-        getOperandsMapping({&Op0IntValueMapping, &Pointer0ValueMapping});
+        getOperandsMapping({LoadValueMapping, &Pointer0ValueMapping});
     break;
+  }
+  case G_STORE: {
+    if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() != 0)
+      break;
+
+    Register VReg = MI.getOperand(0).getReg();
+    if (!VReg)
+      break;
+    MachineInstr *DefMI = MRI.getVRegDef(VReg);
+    if (onlyDefinesFP(*DefMI, MRI, TRI)) {
+      OperandsMapping =
+          getOperandsMapping({&Op0FloatValueMapping, &Pointer0ValueMapping});
+    } else {
+      OperandsMapping =
+          getOperandsMapping({&Op0IntValueMapping, &Pointer0ValueMapping});
+    }
+    break;
+  }
   case G_MEMCPY:
   case G_MEMMOVE: {
     if (MRI.getType(MI.getOperand(0).getReg()).getAddressSpace() != 0)
@@ -375,11 +511,60 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         // We only care about the mapping of the destination for COPY.
         1);
   }
-  case G_SELECT:
-    OperandsMapping = getOperandsMapping(
-        {&Op0IntValueMapping, &WebAssembly::ValueMappings[WebAssembly::I32Idx],
-         &Op0IntValueMapping, &Op0IntValueMapping});
+  case G_SELECT: {
+    // Try to minimize the number of copies. If we have more floating point
+    // constrained values than not, then we'll put everything on FPR. Otherwise,
+    // everything has to be on GPR.
+    unsigned NumFP = 0;
+
+    // Check if the uses of the result always produce floating point values.
+    //
+    // For example:
+    //
+    // %z = G_SELECT %cond %x %y
+    // fpr = G_FOO %z ...
+    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+               [&](MachineInstr &MI) { return onlyUsesFP(MI, MRI, TRI); }))
+      ++NumFP;
+
+    // Check if the defs of the source values always produce floating point
+    // values.
+    //
+    // For example:
+    //
+    // %x = G_SOMETHING_ALWAYS_FLOAT %a ...
+    // %z = G_SELECT %cond %x %y
+    //
+    // Also check whether or not the sources have already been decided to be
+    // FPR. Keep track of this.
+    //
+    // This doesn't check the condition, since it's just whatever is in NZCV.
+    // This isn't passed explicitly in a register to fcsel/csel.
+    for (unsigned Idx = 2; Idx < 4; ++Idx) {
+      Register VReg = MI.getOperand(Idx).getReg();
+      MachineInstr *DefMI = MRI.getVRegDef(VReg);
+      if (getRegBank(VReg, MRI, TRI) == &WebAssembly::F32RegBank ||
+          getRegBank(VReg, MRI, TRI) == &WebAssembly::F64RegBank ||
+          onlyDefinesFP(*DefMI, MRI, TRI))
+        ++NumFP;
+    }
+
+    // If we have more FP constraints than not, then move everything over to
+    // FPR.
+    if (NumFP >= 2) {
+      OperandsMapping =
+          getOperandsMapping({&Op0FloatValueMapping,
+                              &WebAssembly::ValueMappings[WebAssembly::I32Idx],
+                              &Op0FloatValueMapping, &Op0FloatValueMapping});
+
+    } else {
+      OperandsMapping =
+          getOperandsMapping({&Op0IntValueMapping,
+                              &WebAssembly::ValueMappings[WebAssembly::I32Idx],
+                              &Op0IntValueMapping, &Op0IntValueMapping});
+    }
     break;
+  }
   case G_FPTOSI:
   case G_FPTOSI_SAT:
   case G_FPTOUI:
