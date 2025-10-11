@@ -990,7 +990,7 @@ define double @stack_fold_cvtsi2sd(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1034,7 +1034,7 @@ define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -1080,7 +1080,7 @@ define double @stack_fold_cvtsi642sd(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1124,7 +1124,7 @@ define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -1170,7 +1170,7 @@ define float @stack_fold_cvtsi2ss(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1214,9 +1214,9 @@ define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1261,7 +1261,7 @@ define float @stack_fold_cvtsi642ss(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1305,9 +1305,9 @@ define <4 x float> @stack_fold_cvtsi642ss_int(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -2861,8 +2861,8 @@ define double @stack_fold_roundsd(double %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call double @llvm.floor.f64(double %a0)
@@ -2876,7 +2876,7 @@ define double @stack_fold_roundsd_minsize(double %a0) minsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call double @llvm.floor.f64(double %a0)
@@ -2908,8 +2908,8 @@ define float @stack_fold_roundss(float %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vroundss $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vroundss $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call float @llvm.floor.f32(float %a0)
@@ -3106,8 +3106,8 @@ define double @stack_fold_sqrtsd(double %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vsqrtsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vsqrtsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call double @llvm.sqrt.f64(double %a0)
@@ -3124,8 +3124,8 @@ define float @stack_fold_sqrtss(float %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vsqrtss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vsqrtss {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call float @llvm.sqrt.f32(float %a0)

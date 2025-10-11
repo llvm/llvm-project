@@ -14,15 +14,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyAsmPrinter.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
+#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -45,6 +47,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -153,9 +156,11 @@ static std::string getEmscriptenInvokeSymbolName(wasm::WasmSignature *Sig) {
 //===----------------------------------------------------------------------===//
 
 MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
-    const Function *F, bool EnableEmEH, wasm::WasmSignature *Sig,
-    bool &InvokeDetected) {
+    const Function *F, wasm::WasmSignature *Sig, bool &InvokeDetected) {
   MCSymbolWasm *WasmSym = nullptr;
+
+  const bool EnableEmEH =
+      WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj;
   if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);
     InvokeDetected = true;
@@ -166,10 +171,10 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
           WebAssembly::signatureToString(Sig);
       report_fatal_error(Twine(Msg));
     }
-    WasmSym = cast<MCSymbolWasm>(
+    WasmSym = static_cast<MCSymbolWasm *>(
         GetExternalSymbolSymbol(getEmscriptenInvokeSymbolName(Sig)));
   } else {
-    WasmSym = cast<MCSymbolWasm>(getSymbol(F));
+    WasmSym = static_cast<MCSymbolWasm *>(getSymbol(F));
   }
   return WasmSym;
 }
@@ -181,9 +186,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   }
 
   assert(!GV->isThreadLocal());
-
-  MCSymbolWasm *Sym = cast<MCSymbolWasm>(getSymbol(GV));
-
+  auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(GV));
   if (!Sym->getType()) {
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
@@ -213,8 +216,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
-  auto *WasmSym = cast<MCSymbolWasm>(GetExternalSymbolSymbol(Name));
-
+  auto *WasmSym = static_cast<MCSymbolWasm *>(GetExternalSymbolSymbol(Name));
   // May be called multiple times, so early out.
   if (WasmSym->getType())
     return WasmSym;
@@ -247,13 +249,6 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   SmallVector<wasm::ValType, 4> Params;
   if (Name == "__cpp_exception" || Name == "__c_longjmp") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
-    // In static linking we define tag symbols in WasmException::endModule().
-    // But we may have multiple objects to be linked together, each of which
-    // defines the tag symbols. To resolve them, we declare them as weak. In
-    // dynamic linking we make tag symbols undefined in the backend, define it
-    // in JS, and feed them to each importing module.
-    if (!isPositionIndependent())
-      WasmSym->setWeak(true);
     WasmSym->setExternal(true);
 
     // Currently both C++ exceptions and C longjmps have a single pointer type
@@ -307,7 +302,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
   // not be found here.
   MachineModuleInfoWasm &MMIW = MMI->getObjFileInfo<MachineModuleInfoWasm>();
   for (StringRef Name : MMIW.MachineSymbolsUsed) {
-    auto *WasmSym = cast<MCSymbolWasm>(getOrCreateWasmSymbol(Name));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(getOrCreateWasmSymbol(Name));
     if (WasmSym->isFunction()) {
       // TODO(wvo): is there any case where this overlaps with the call to
       // emitFunctionType in the loop below?
@@ -319,7 +314,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // Emit .globaltype, .tagtype, or .tabletype declarations for extern
     // declarations, i.e. those that have only been declared (but not defined)
     // in the current module
-    auto Sym = cast_or_null<MCSymbolWasm>(It.getValue().Symbol);
+    auto Sym = static_cast<MCSymbolWasm *>(It.getValue().Symbol);
     if (Sym && !Sym->isDefined())
       emitSymbolType(Sym);
   }
@@ -342,9 +337,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // will discard it later if it turns out not to be necessary.
     auto Signature = signatureFromMVTs(OutContext, Results, Params);
     bool InvokeDetected = false;
-    auto *Sym = getMCSymbolForFunction(
-        &F, WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj,
-        Signature, InvokeDetected);
+    auto *Sym = getMCSymbolForFunction(&F, Signature, InvokeDetected);
 
     // Multiple functions can be mapped to the same invoke symbol. For
     // example, two IR functions '__invoke_void_i8*' and '__invoke_void_i32'
@@ -378,7 +371,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     }
 
     if (F.hasFnAttribute("wasm-export-name")) {
-      auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
+      auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(&F));
       StringRef Name = F.getFnAttribute("wasm-export-name").getValueAsString();
       Sym->setExportName(OutContext.allocateString(Name));
       getTargetStreamer()->emitExportName(Sym, Name);
@@ -402,7 +395,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!F.isIntrinsic() && F.hasAddressTaken()) {
       MCSymbolWasm *FunctionTable =
           WebAssembly::getOrCreateFunctionTableSymbol(OutContext, Subtarget);
-      OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);    
+      OutStreamer->emitSymbolAttribute(FunctionTable, MCSA_NoDeadStrip);
       break;
     }
   }
@@ -448,7 +441,9 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     llvm::SmallSet<StringRef, 4> SeenLanguages;
     for (size_t I = 0, E = Debug->getNumOperands(); I < E; ++I) {
       const auto *CU = cast<DICompileUnit>(Debug->getOperand(I));
-      StringRef Language = dwarf::LanguageString(CU->getSourceLanguage());
+      StringRef Language =
+          dwarf::LanguageString(CU->getSourceLanguage().getUnversionedName());
+
       Language.consume_front("DW_LANG_");
       if (SeenLanguages.insert(Language).second)
         Languages.emplace_back(Language.str(), "");
@@ -578,7 +573,7 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
     auto *GV = cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
     StringRef AnnotationString;
     getConstantStringInfo(GV, AnnotationString);
-    auto *Sym = cast<MCSymbolWasm>(getSymbol(F));
+    auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(F));
     CustomSections[AnnotationString].push_back(Sym);
   }
 
@@ -615,7 +610,7 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   computeSignatureVTs(F.getFunctionType(), &F, F, TM, ParamVTs, ResultVTs);
 
   auto Signature = signatureFromMVTs(OutContext, ResultVTs, ParamVTs);
-  auto *WasmSym = cast<MCSymbolWasm>(CurrentFnSym);
+  auto *WasmSym = static_cast<MCSymbolWasm *>(CurrentFnSym);
   WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
@@ -752,8 +747,14 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 }
 
+char WebAssemblyAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
+                "WebAssembly Assmebly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyAsmPrinter() {
   RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
   RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
 }

@@ -170,12 +170,3 @@ v3u32 test_amdgcn_raw_ptr_buffer_load_b96_non_const_soffset(__amdgpu_buffer_rsrc
 v4u32 test_amdgcn_raw_ptr_buffer_load_b128_non_const_soffset(__amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
   return __builtin_amdgcn_raw_buffer_load_b128(rsrc, /*offset=*/0, soffset, /*aux=*/0);
 }
-
-// CHECK-LABEL: @test_amdgcn_raw_ptr_buffer_load_lds(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]], i32 1, i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 2, i32 3)
-// CHECK-NEXT:    ret void
-//
-void test_amdgcn_raw_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void * lds, int offset, int soffset) {
-    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, lds, 1, offset, soffset, 2, 3);
-}

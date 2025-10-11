@@ -86,7 +86,7 @@ MSBuild.exe had been shipped as a component of the .NET framework, but since
 2013 it's part of Visual Studio. You can find it at "C:\\Program Files
 (x86)\\msbuild".
 
-You can build LLD as a 64 bit application. To do that, open VS2013 x64 command
+You can build LLD as a 64-bit application. To do that, open VS2013 x64 command
 prompt and run cmake for "Visual Studio 12 Win64" target.
 
 Using Ninja

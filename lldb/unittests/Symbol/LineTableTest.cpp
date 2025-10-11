@@ -58,7 +58,7 @@ private:
   uint32_t CalculateAbilities() override { return UINT32_MAX; }
   uint32_t GetNumCompileUnits() override { return 1; }
   CompUnitSP GetCompileUnitAtIndex(uint32_t) override { return m_cu_sp; }
-  Symtab *GetSymtab() override { return nullptr; }
+  Symtab *GetSymtab(bool can_create = true) override { return nullptr; }
   LanguageType ParseLanguage(CompileUnit &) override { return eLanguageTypeC; }
   size_t ParseFunctions(CompileUnit &) override { return 0; }
   bool ParseLineTable(CompileUnit &) override { return true; }

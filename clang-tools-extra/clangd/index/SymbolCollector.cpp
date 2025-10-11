@@ -325,7 +325,7 @@ private:
     if (R.second) {
       llvm::SmallString<256> AbsPath = Path;
       if (!llvm::sys::path::is_absolute(AbsPath) && !FallbackDir.empty())
-        llvm::sys::fs::make_absolute(FallbackDir, AbsPath);
+        llvm::sys::path::make_absolute(FallbackDir, AbsPath);
       assert(llvm::sys::path::is_absolute(AbsPath) &&
              "If the VFS can't make paths absolute, a FallbackDir must be "
              "provided");
@@ -1201,7 +1201,7 @@ void SymbolCollector::addRef(SymbolID ID, const SymbolRef &SR) {
 }
 
 SymbolID SymbolCollector::getSymbolIDCached(const Decl *D) {
-  auto It = DeclToIDCache.try_emplace(D, SymbolID{});
+  auto It = DeclToIDCache.try_emplace(D);
   if (It.second)
     It.first->second = getSymbolID(D);
   return It.first->second;
@@ -1210,7 +1210,7 @@ SymbolID SymbolCollector::getSymbolIDCached(const Decl *D) {
 SymbolID SymbolCollector::getSymbolIDCached(const llvm::StringRef MacroName,
                                             const MacroInfo *MI,
                                             const SourceManager &SM) {
-  auto It = MacroToIDCache.try_emplace(MI, SymbolID{});
+  auto It = MacroToIDCache.try_emplace(MI);
   if (It.second)
     It.first->second = getSymbolID(MacroName, MI, SM);
   return It.first->second;

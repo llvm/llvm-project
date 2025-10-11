@@ -116,7 +116,9 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::FSW:
     return 2;
   case RISCV::LD:
+  case RISCV::LD_RV32:
   case RISCV::SD:
+  case RISCV::SD_RV32:
   case RISCV::FLD:
   case RISCV::FSD:
     return 3;
@@ -144,7 +146,9 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::FLW:
   case RISCV::FSW:
   case RISCV::LD:
+  case RISCV::LD_RV32:
   case RISCV::SD:
+  case RISCV::SD_RV32:
   case RISCV::FLD:
   case RISCV::FSD:
     return maskTrailingOnes<unsigned>(5U);
@@ -184,7 +188,8 @@ static bool isCompressedReg(Register Reg) {
          RISCV::GPRF16CRegClass.contains(Reg) ||
          RISCV::GPRF32CRegClass.contains(Reg) ||
          RISCV::FPR32CRegClass.contains(Reg) ||
-         RISCV::FPR64CRegClass.contains(Reg);
+         RISCV::FPR64CRegClass.contains(Reg) ||
+         RISCV::GPRPairCRegClass.contains(Reg);
 }
 
 // Return true if MI is a load for which there exists a compressed version.
@@ -202,7 +207,9 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LW:
   case RISCV::LW_INX:
   case RISCV::LD:
-    return STI.hasStdExtCOrZca();
+    return STI.hasStdExtZca();
+  case RISCV::LD_RV32:
+    return STI.hasStdExtZclsd();
   case RISCV::FLW:
     return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
   case RISCV::FLD:
@@ -224,7 +231,9 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SW:
   case RISCV::SW_INX:
   case RISCV::SD:
-    return STI.hasStdExtCOrZca();
+    return STI.hasStdExtZca();
+  case RISCV::SD_RV32:
+    return STI.hasStdExtZclsd();
   case RISCV::FSW:
     return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
   case RISCV::FSD:
@@ -250,7 +259,7 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
   if (isCompressibleLoad(MI) || isCompressibleStore(MI)) {
     const MachineOperand &MOImm = MI.getOperand(2);
     if (!MOImm.isImm())
-      return RegImmPair(RISCV::NoRegister, 0);
+      return RegImmPair(Register(), 0);
 
     int64_t Offset = MOImm.getImm();
     int64_t NewBaseAdjust = getBaseAdjustForCompression(Offset, Opcode);
@@ -283,7 +292,7 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
       }
     }
   }
-  return RegImmPair(RISCV::NoRegister, 0);
+  return RegImmPair(Register(), 0);
 }
 
 // Check all uses after FirstMI of the given register, keeping a vector of
@@ -323,9 +332,11 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   // are required for a code size reduction. If no base adjustment is required,
   // then copying the register costs one new c.mv (or c.li Rd, 0 for "copying"
   // the zero register) and therefore two uses are required for a code size
-  // reduction.
-  if (MIs.size() < 2 || (RegImm.Imm != 0 && MIs.size() < 3))
-    return RISCV::NoRegister;
+  // reduction. For GPR pairs, we need 2 ADDIs to copy so we need three users.
+  unsigned CopyCost = RISCV::GPRPairRegClass.contains(RegImm.Reg) ? 2 : 1;
+  assert((RegImm.Imm == 0 || CopyCost == 1) && "GPRPair should have zero imm");
+  if (MIs.size() <= CopyCost || (RegImm.Imm != 0 && MIs.size() <= 2))
+    return Register();
 
   // Find a compressible register which will be available from the first
   // instruction we care about to the last.
@@ -342,8 +353,10 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     RCToScavenge = &RISCV::FPR32CRegClass;
   else if (RISCV::FPR64RegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::FPR64CRegClass;
+  else if (RISCV::GPRPairRegClass.contains(RegImm.Reg))
+    RCToScavenge = &RISCV::GPRPairCRegClass;
   else
-    return RISCV::NoRegister;
+    return Register();
 
   RegScavenger RS;
   RS.enterBasicBlockEnd(MBB);
@@ -402,7 +415,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
   // This optimization only makes sense if compressed instructions are emitted.
-  if (!STI.hasStdExtCOrZca())
+  if (!STI.hasStdExtZca())
     return false;
 
   for (MachineBasicBlock &MBB : Fn) {
@@ -428,28 +441,10 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
             .addReg(RegImm.Reg)
             .addImm(RegImm.Imm);
-      } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
-        assert(RegImm.Imm == 0);
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX),
-                NewReg)
-            .addReg(RegImm.Reg);
-      } else if (RISCV::GPRF32RegClass.contains(RegImm.Reg)) {
-        assert(RegImm.Imm == 0);
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR32INX),
-                NewReg)
-            .addReg(RegImm.Reg);
       } else {
-        // If we are looking at replacing an FPR register we don't expect to
-        // have any offset. The only compressible FP instructions with an offset
-        // are loads and stores, for which the offset applies to the GPR operand
-        // not the FPR operand.
         assert(RegImm.Imm == 0);
-        unsigned Opcode = RISCV::FPR32RegClass.contains(RegImm.Reg)
-                              ? RISCV::FSGNJ_S
-                              : RISCV::FSGNJ_D;
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(Opcode), NewReg)
-            .addReg(RegImm.Reg)
-            .addReg(RegImm.Reg);
+        TII.copyPhysReg(MBB, MI, MI.getDebugLoc(), NewReg, RegImm.Reg,
+                        /*KillSrc*/ false);
       }
 
       // Update the set of instructions to use the compressed register and

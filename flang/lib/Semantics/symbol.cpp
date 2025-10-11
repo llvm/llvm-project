@@ -144,6 +144,52 @@ llvm::raw_ostream &operator<<(
       os << ' ' << x;
     }
   }
+  if (!x.openACCRoutineInfos_.empty()) {
+    os << " openACCRoutineInfos:";
+    for (const auto &x : x.openACCRoutineInfos_) {
+      os << x;
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &x) {
+  if (x.dType() != common::OpenACCDeviceType::None) {
+    os << " deviceType(" << common::EnumToString(x.dType()) << ')';
+  }
+  if (x.isSeq()) {
+    os << " seq";
+  }
+  if (x.isVector()) {
+    os << " vector";
+  }
+  if (x.isWorker()) {
+    os << " worker";
+  }
+  if (x.isGang()) {
+    os << " gang(" << x.gangDim() << ')';
+  }
+  if (const auto *bindName{x.bindName()}) {
+    if (const auto &symbol{std::get_if<std::string>(bindName)}) {
+      os << " bindName(\"" << *symbol << "\")";
+    } else {
+      const SymbolRef s{std::get<SymbolRef>(*bindName)};
+      os << " bindName(" << s->name() << ")";
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineInfo &x) {
+  if (x.isNohost()) {
+    os << " nohost";
+  }
+  os << static_cast<const OpenACCRoutineDeviceTypeInfo &>(x);
+  for (const auto &d : x.deviceTypeInfos_) {
+    os << d;
+  }
   return os;
 }
 
@@ -246,8 +292,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
   return common::visit(
-      common::visitors{
-          [](const UnknownDetails &) { return "Unknown"; },
+      common::visitors{[](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
           [](const ModuleDetails &) { return "Module"; },
           [](const SubprogramDetails &) { return "Subprogram"; },
@@ -266,7 +311,7 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-      },
+          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
       details);
 }
 
@@ -285,8 +330,14 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
-            [&](const ProcEntityDetails &) { return has<EntityDetails>(); },
+            [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
+              if (const auto *oldProc{this->detailsIf<ProcEntityDetails>()}) {
+                // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
+                return oldProc->isDummy() && !oldProc->procInterface() &&
+                    attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
+                    !test(Flag::Subroutine);
+              }
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
@@ -297,8 +348,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
-            [&](const HostAssocDetails &) {
-              return this->has<HostAssocDetails>();
+            [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
+            [&](const UserReductionDetails &) {
+              return has<UserReductionDetails>();
             },
             [](const auto &) { return false; },
         },
@@ -563,7 +615,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               sep = ',';
             }
           },
-          [](const HostAssocDetails &) {},
+          [&os](const HostAssocDetails &x) { os << " => " << x.symbol(); },
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
@@ -597,6 +649,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const MiscDetails &x) {
             os << ' ' << MiscDetails::EnumToString(x.kind());
+          },
+          [&](const UserReductionDetails &x) {
+            for (auto &type : x.GetTypeList()) {
+              DumpType(os, type);
+            }
           },
           [&](const auto &x) { os << x; },
       },
@@ -712,6 +769,11 @@ void DerivedTypeDetails::add_component(const Symbol &symbol) {
   componentNames_.push_back(symbol.name());
 }
 
+void DerivedTypeDetails::add_originalKindParameter(
+    SourceName name, const parser::Expr *expr) {
+  originalKindParameterMap_.emplace(name, expr);
+}
+
 const Symbol *DerivedTypeDetails::GetParentComponent(const Scope &scope) const {
   if (auto extends{GetParentComponentName()}) {
     if (auto iter{scope.find(*extends)}; iter != scope.cend()) {
@@ -796,6 +858,9 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpLinear:
     clauseName = "LINEAR";
     break;
+  case Symbol::Flag::OmpUniform:
+    clauseName = "UNIFORM";
+    break;
   case Symbol::Flag::OmpFirstPrivate:
     clauseName = "FIRSTPRIVATE";
     break;
@@ -805,8 +870,7 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpMapTo:
   case Symbol::Flag::OmpMapFrom:
   case Symbol::Flag::OmpMapToFrom:
-  case Symbol::Flag::OmpMapAlloc:
-  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapStorage:
   case Symbol::Flag::OmpMapDelete:
     clauseName = "MAP";
     break;

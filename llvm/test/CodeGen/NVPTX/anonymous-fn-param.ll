@@ -6,7 +6,7 @@
 
 ; CHECK:      .func (.param .b32 func_retval0) __unnamed_1(
 ; CHECK-NEXT: .param .b32 __unnamed_1_param_0
-; CHECK:      ld.param.u32 {{%r[0-9]+}}, [__unnamed_1_param_0];
+; CHECK:      ld.param.b32 {{%r[0-9]+}}, [__unnamed_1_param_0];
 
 define internal i32 @0(i32 %a) {
 entry:
@@ -16,7 +16,7 @@ entry:
 
 ; CHECK:      .func (.param .b32 func_retval0) __unnamed_2(
 ; CHECK-NEXT: .param .b32 __unnamed_2_param_0
-; CHECK:      ld.param.u32 {{%r[0-9]+}}, [__unnamed_2_param_0];
+; CHECK:      ld.param.b32 {{%r[0-9]+}}, [__unnamed_2_param_0];
 
 define internal i32 @1(i32 %a) {
 entry:

@@ -23,10 +23,12 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 
+class AssumptionCache;
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
@@ -38,7 +40,6 @@ class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
 class Value;
-class LoopVersioning;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -203,9 +204,9 @@ public:
 /// needed for generating the output IR.
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
-                   LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan,
-                   Loop *CurrentParentLoop, Type *CanonicalIVTy);
+                   LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
+                   IRBuilderBase &Builder, VPlan *Plan, Loop *CurrentParentLoop,
+                   Type *CanonicalIVTy);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -283,26 +284,13 @@ struct VPTransformState {
     Iter->second[CacheIdx] = V;
   }
 
-  /// Add additional metadata to \p To that was not present on \p Orig.
-  ///
-  /// Currently this is used to add the noalias annotations based on the
-  /// inserted memchecks.  Use this for instructions that are *cloned* into the
-  /// vector loop.
-  void addNewMetadata(Instruction *To, const Instruction *Orig);
-
-  /// Add metadata from one instruction to another.
-  ///
-  /// This includes both the original MDs from \p From and additional ones (\see
-  /// addNewMetadata).  Use this for *newly created* instructions in the vector
-  /// loop.
-  void addMetadata(Value *To, Instruction *From);
-
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vectorized value of a scalarized value \p V one lane at a
-  /// time.
-  void packScalarIntoVectorizedValue(const VPValue *Def, const VPLane &Lane);
+  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
+  /// and return the resulting value.
+  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
+                                       const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -327,33 +315,23 @@ struct VPTransformState {
 
     CFGState(DominatorTree *DT)
         : DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
-
-    /// Returns the BasicBlock* mapped to the pre-header of the loop region
-    /// containing \p R.
-    BasicBlock *getPreheaderBBFor(VPRecipeBase *R);
   } CFG;
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
   LoopInfo *LI;
 
+  /// Hold a pointer to AssumptionCache to register new assumptions after
+  /// replicating assume calls.
+  AssumptionCache *AC;
+
   /// Hold a reference to the IRBuilder used to generate output IR code.
   IRBuilderBase &Builder;
-
-  /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
-  InnerLoopVectorizer *ILV;
 
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
 
   /// The parent loop object for the current scope, or nullptr.
   Loop *CurrentParentLoop = nullptr;
-
-  /// LoopVersioning.  It's only set up (non-null) if memchecks were
-  /// used.
-  ///
-  /// This is currently only used to add no-alias metadata based on the
-  /// memchecks.  The actually versioning is performed manually.
-  LoopVersioning *LVer = nullptr;
 
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
@@ -371,12 +349,14 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
+  ScalarEvolution &SE;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind)
-      : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM), CostKind(CostKind) {}
+                const VPlan &Plan, LoopVectorizationCostModel &CM,
+                TargetTransformInfo::TargetCostKind CostKind,
+                ScalarEvolution &SE)
+      : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
+        CostKind(CostKind), SE(SE) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -388,6 +368,20 @@ struct VPCostContext {
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
+
+  /// Return true if \p I is considered uniform-after-vectorization in the
+  /// legacy cost model for \p VF. Only used to check for additional VPlan
+  /// simplifications.
+  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
+
+  /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
+  /// and \p Operands with \p VF. This is a convenience wrapper for the
+  /// type-based getScalarizationOverhead API. If \p AlwaysIncludeReplicatingR
+  /// is true, always compute the cost of scalarizing replicating operands.
+  InstructionCost
+  getScalarizationOverhead(Type *ResultTy, ArrayRef<const VPValue *> Operands,
+                           ElementCount VF,
+                           bool AlwaysIncludeReplicatingR = false);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -406,9 +400,14 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
+  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
+  /// require slot tracking.
+  std::unique_ptr<ModuleSlotTracker> MST;
+
   void assignName(const VPValue *V);
   void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
+  std::string getName(const Value *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
@@ -473,6 +472,10 @@ public:
 };
 #endif
 
+/// Check if a constant \p CI can be safely treated as having been extended
+/// from a narrower type with the given extension kind.
+bool canConstantBeExtended(const ConstantInt *CI, Type *NarrowType,
+                           TTI::PartialReductionExtendKind ExtKind);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

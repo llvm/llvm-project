@@ -18,7 +18,6 @@ foo:
 ; CHECK: ldd r7, Z+30                 ; encoding: [0x76,0x8c]
 
 ; CHECK: ldd r9, Z+foo                ; encoding: [0x90'A',0x80'A']
-; CHECK:                              ;   fixup A - offset: 0, value: +foo, kind: fixup_6
 
 ; INST: ldd r2, Y+2
 ; INST: ldd r0, Y+0

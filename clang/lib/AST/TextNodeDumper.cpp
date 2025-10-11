@@ -24,6 +24,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
 #include <algorithm>
 #include <utility>
@@ -433,6 +434,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
     case OpenACCClauseKind::Invalid:
+    case OpenACCClauseKind::Shortloop:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
@@ -500,10 +502,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       llvm::interleaveComma(
           cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
           [&](const DeviceTypeArgument &Arch) {
-            if (Arch.first == nullptr)
+            if (Arch.getIdentifierInfo() == nullptr)
               OS << "*";
             else
-              OS << Arch.first->getName();
+              OS << Arch.getIdentifierInfo()->getName();
           });
       OS << ")";
       break;
@@ -738,6 +740,14 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     else if (const auto *BE = B.dyn_cast<const Expr *>()) {
       OS << BE->getStmtClassName() << ' ';
       dumpPointer(BE);
+    } else if (const auto BTI = B.dyn_cast<TypeInfoLValue>()) {
+      OS << "TypeInfoLValue ";
+      ColorScope Color(OS, ShowColors, TypeColor);
+      BTI.print(OS, PrintPolicy);
+    } else if (B.is<DynamicAllocLValue>()) {
+      OS << "DynamicAllocLValue";
+      auto BDA = B.getDynamicAllocType();
+      dumpType(BDA);
     } else {
       const auto *VDB = B.get<const ValueDecl *>();
       OS << VDB->getDeclKindName() << "Decl";
@@ -821,9 +831,24 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
     return;
   }
-  case APValue::MemberPointer:
-    OS << "MemberPointer <todo>";
+  case APValue::MemberPointer: {
+    OS << "MemberPointer ";
+    auto Path = Value.getMemberPointerPath();
+    for (const CXXRecordDecl *D : Path) {
+      {
+        ColorScope Color(OS, ShowColors, DeclNameColor);
+        OS << D->getDeclName();
+      }
+      OS << "::";
+    }
+
+    ColorScope Color(OS, ShowColors, DeclNameColor);
+    if (const ValueDecl *MemDecl = Value.getMemberPointerDecl())
+      OS << MemDecl->getDeclName();
+    else
+      OS << "null";
     return;
+  }
   case APValue::AddrLabelDiff:
     OS << "AddrLabelDiff <todo>";
     return;
@@ -1012,39 +1037,34 @@ void clang::TextNodeDumper::dumpTemplateSpecializationKind(
   }
 }
 
-void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *NNS) {
+void clang::TextNodeDumper::dumpNestedNameSpecifier(NestedNameSpecifier NNS) {
   if (!NNS)
     return;
 
   AddChild([=] {
     OS << "NestedNameSpecifier";
 
-    switch (NNS->getKind()) {
-    case NestedNameSpecifier::Identifier:
-      OS << " Identifier";
-      OS << " '" << NNS->getAsIdentifier()->getName() << "'";
-      break;
-    case NestedNameSpecifier::Namespace:
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Namespace: {
+      auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
       OS << " "; // "Namespace" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespace());
-      break;
-    case NestedNameSpecifier::NamespaceAlias:
-      OS << " "; // "NamespaceAlias" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespaceAlias());
-      break;
-    case NestedNameSpecifier::TypeSpec:
-      OS << " TypeSpec";
-      dumpType(QualType(NNS->getAsType(), 0));
-      break;
-    case NestedNameSpecifier::Global:
-      OS << " Global";
-      break;
-    case NestedNameSpecifier::Super:
-      OS << " Super";
+      dumpBareDeclRef(Namespace);
+      dumpNestedNameSpecifier(Prefix);
       break;
     }
-
-    dumpNestedNameSpecifier(NNS->getPrefix());
+    case NestedNameSpecifier::Kind::Type:
+      OS << " TypeSpec";
+      dumpType(QualType(NNS.getAsType(), 0));
+      break;
+    case NestedNameSpecifier::Kind::Global:
+      OS << " Global";
+      break;
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      OS << " Super";
+      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
+    }
   });
 }
 
@@ -1093,7 +1113,7 @@ const char *TextNodeDumper::getCommandName(unsigned CommandID) {
 }
 
 void TextNodeDumper::printFPOptions(FPOptionsOverride FPO) {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     OS << " " #NAME "=" << FPO.get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
@@ -1357,6 +1377,8 @@ void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
 void TextNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " expr";
+  if (TA.isCanonicalExpr())
+    OS << " canonical";
   dumpTemplateArgument(TA);
 }
 
@@ -1378,8 +1400,8 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
     if (!First)
       OS << " -> ";
 
-    const auto *RD =
-        cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
+    const auto *RD = cast<CXXRecordDecl>(
+        Base->getType()->castAsCanonical<RecordType>()->getOriginalDecl());
 
     if (Base->isVirtual())
       OS << "virtual ";
@@ -1388,6 +1410,26 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   }
 
   OS << ')';
+}
+
+void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
+  if (!Node->hasLabelTarget())
+    return;
+
+  OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
+
+  auto *Target = Node->getNamedLoopOrSwitch();
+  if (!Target) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>>";
+  } else {
+    {
+      ColorScope Color(OS, ShowColors, StmtColor);
+      OS << Target->getStmtClassName();
+    }
+    dumpPointer(Target);
+  }
+  OS << ")";
 }
 
 void TextNodeDumper::VisitIfStmt(const IfStmt *Node) {
@@ -1941,16 +1983,12 @@ void TextNodeDumper::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 void TextNodeDumper::VisitVariableArrayType(const VariableArrayType *T) {
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
   VisitArrayType(T);
 }
 
 void TextNodeDumper::VisitDependentSizedArrayType(
     const DependentSizedArrayType *T) {
   VisitArrayType(T);
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
 }
 
 void TextNodeDumper::VisitDependentSizedExtVectorType(
@@ -2093,19 +2131,32 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
 }
 
 void TextNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
   dumpDeclRef(T->getDecl());
 }
 
 void TextNodeDumper::VisitUsingType(const UsingType *T) {
-  dumpDeclRef(T->getFoundDecl());
-  if (!T->typeMatchesDecl())
-    OS << " divergent";
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
+  dumpDeclRef(T->getDecl());
+  dumpType(T->desugar());
 }
 
 void TextNodeDumper::VisitTypedefType(const TypedefType *T) {
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
   dumpDeclRef(T->getDecl());
-  if (!T->typeMatchesDecl())
+  if (!T->typeMatchesDecl()) {
     OS << " divergent";
+    dumpType(T->desugar());
+  }
 }
 
 void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
@@ -2119,7 +2170,17 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
 }
 
 void TextNodeDumper::VisitTagType(const TagType *T) {
-  dumpDeclRef(T->getDecl());
+  if (T->isCanonicalUnqualified())
+    OS << " canonical";
+  if (T->isTagOwned())
+    OS << " owns_tag";
+  if (T->isInjected())
+    OS << " injected";
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
+  dumpNestedNameSpecifier(T->getQualifier());
+  dumpDeclRef(T->getOriginalDecl());
 }
 
 void TextNodeDumper::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
@@ -2163,12 +2224,15 @@ void TextNodeDumper::VisitTemplateSpecializationType(
     const TemplateSpecializationType *T) {
   if (T->isTypeAlias())
     OS << " alias";
+  if (ElaboratedTypeKeyword K = T->getKeyword();
+      K != ElaboratedTypeKeyword::None)
+    OS << ' ' << TypeWithKeyword::getKeywordName(K);
   dumpTemplateName(T->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
-  dumpDeclRef(T->getDecl());
+  dumpDeclRef(T->getOriginalDecl());
 }
 
 void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
@@ -2209,7 +2273,7 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
   if (D->isFixed())
     dumpType(D->getIntegerType());
 
-  if (const auto *Instance = D->getInstantiatedFromMemberEnum()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -2315,7 +2379,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (!D->param_empty() && !D->param_begin())
     OS << " <<<NULL params x " << D->getNumParams() << ">>>";
 
-  if (const auto *Instance = D->getInstantiatedFromMemberFunction()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -2403,6 +2467,11 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
     OS << " destroyed";
   if (D->isParameterPack())
     OS << " pack";
+
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
+    OS << " instantiated_from";
+    dumpPointer(Instance);
+  }
 
   if (D->hasInit()) {
     const Expr *E = D->getInit();
@@ -2551,7 +2620,7 @@ void TextNodeDumper::VisitTypeAliasTemplateDecl(
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
   VisitRecordDecl(D);
-  if (const auto *Instance = D->getInstantiatedFromMemberClass()) {
+  if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
@@ -2759,8 +2828,7 @@ void TextNodeDumper::VisitTemplateTemplateParmDecl(
 
 void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
   dumpNestedNameSpecifier(D->getQualifier());
 }
@@ -2773,16 +2841,14 @@ void TextNodeDumper::VisitUsingEnumDecl(const UsingEnumDecl *D) {
 void TextNodeDumper::VisitUnresolvedUsingTypenameDecl(
     const UnresolvedUsingTypenameDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
 }
 
 void TextNodeDumper::VisitUnresolvedUsingValueDecl(
     const UnresolvedUsingValueDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
   dumpType(D->getType());
 }
@@ -3016,6 +3082,25 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   else
     OS << " tbuffer";
   dumpName(D);
+}
+
+void TextNodeDumper::VisitHLSLRootSignatureDecl(
+    const HLSLRootSignatureDecl *D) {
+  dumpName(D);
+  OS << " version: ";
+  switch (D->getVersion()) {
+  case llvm::dxbc::RootSignatureVersion::V1_0:
+    OS << "1.0";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_1:
+    OS << "1.1";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_2:
+    OS << "1.2";
+    break;
+  }
+  OS << ", ";
+  llvm::hlsl::rootsig::dumpRootElements(OS, D->getRootElements());
 }
 
 void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {

@@ -373,41 +373,12 @@ void CoarrayChecker::Leave(const parser::CriticalStmt &x) {
 }
 
 void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
-  haveStat_ = false;
-  haveTeam_ = false;
-  haveTeamNumber_ = false;
   for (const auto &imageSelectorSpec :
       std::get<std::list<parser::ImageSelectorSpec>>(imageSelector.t)) {
-    if (const auto *team{
-            std::get_if<parser::TeamValue>(&imageSelectorSpec.u)}) {
-      if (haveTeam_) {
-        context_.Say(parser::FindSourceLocation(imageSelectorSpec), // C929
-            "TEAM value can only be specified once"_err_en_US);
-      }
-      CheckTeamType(context_, *team);
-      haveTeam_ = true;
-    }
     if (const auto *stat{std::get_if<parser::ImageSelectorSpec::Stat>(
             &imageSelectorSpec.u)}) {
-      if (haveStat_) {
-        context_.Say(parser::FindSourceLocation(imageSelectorSpec), // C929
-            "STAT variable can only be specified once"_err_en_US);
-      }
       CheckTeamStat(context_, *stat);
-      haveStat_ = true;
     }
-    if (std::get_if<parser::ImageSelectorSpec::Team_Number>(
-            &imageSelectorSpec.u)) {
-      if (haveTeamNumber_) {
-        context_.Say(parser::FindSourceLocation(imageSelectorSpec), // C929
-            "TEAM_NUMBER value can only be specified once"_err_en_US);
-      }
-      haveTeamNumber_ = true;
-    }
-  }
-  if (haveTeam_ && haveTeamNumber_) {
-    context_.Say(parser::FindSourceLocation(imageSelector), // C930
-        "Cannot specify both TEAM and TEAM_NUMBER"_err_en_US);
   }
 }
 

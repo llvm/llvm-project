@@ -13,8 +13,8 @@
 
 ; CHECK: br i1 %x, label %b1, label %exit, !prof ![[PROF1:[0-9]+]]
 ; CHECK: br i1 %y, label %blk, label %exit, !prof ![[PROF2:[0-9]+]]
-; CHECK: ![[PROF1]] = !{!"branch_weights", i32 1, i32 1}
-; CHECK: ![[PROF2]] = !{!"branch_weights", i32 0, i32 1}
+; CHECK: ![[PROF1]] = !{!"branch_weights", i32 2, i32 2}
+; CHECK: ![[PROF2]] = !{!"branch_weights", i32 0, i32 2}
 ; ASSERTION: Assertion `allTakenPathsExit()
 
 ; b1->exit is the only way out from b1, but the exit block would have been

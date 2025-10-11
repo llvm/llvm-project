@@ -1,0 +1,52 @@
+# RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s
+# REQUIRES: x86-registered-target
+
+# This test covers the scenario that saves a register on the stack, uses this register as an entry value DBG_VALUE location, and then clobbers it.
+
+--- |
+  target triple = "x86_64-"
+  define void @foo(ptr swiftasync %0) !dbg !4 {
+    call void @llvm.dbg.value(metadata ptr %0, metadata !9, metadata !DIExpression(DW_OP_LLVM_entry_value, 1)), !dbg !17
+    ret void
+  }
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !2, producer: "blah", isOptimized: true, flags: "blah", runtimeVersion: 5, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "blah", directory: "blah")
+  !3 = !{}
+  !4 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !2, file: !2, line: 284, type: !7, unit: !1)
+  !7 = !DISubroutineType(types: !3)
+  !9 = !DILocalVariable(name: "self", arg: 3, scope: !4, file: !2, line: 328, type: !12, flags: DIFlagArtificial)
+  !12 = !DICompositeType(tag: DW_TAG_structure_type, name: "blah", scope: !2, file: !2, size: 64, elements: !3)
+  !17 = !DILocation(line: 328, column: 17, scope: !4)
+
+...
+---
+name:            foo
+alignment:       16
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r14', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+    liveins: $r14
+    ; Put a copy of r14 on the stack.
+    MOV64mr $rbp, 1, $noreg, -48, $noreg, $r14 :: (store (s64) into %stack.0)
+    DBG_VALUE $r14, $noreg, !9, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !17
+    MOV64mi32 $noreg, 1, $noreg, 0, $noreg, 0, debug-location !17 :: (store (s64) into `ptr null`)
+    $r14 = MOV64rr killed $r13
+    ; Clobber $r14
+    RETI64 24
+# CHECK: bb.0:
+# CHECK:      MOV64mr $rbp, 1, $noreg, -48, $noreg, $r14
+# CHECK-NEXT: DBG_VALUE $r14, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
+# CHECK-NOT:  DBG_VALUE

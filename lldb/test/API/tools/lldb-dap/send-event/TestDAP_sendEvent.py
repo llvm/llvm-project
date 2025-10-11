@@ -10,12 +10,14 @@ import lldbdap_testcase
 
 
 class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows
     def test_send_event(self):
         """
         Test sending a custom event.
         """
         program = self.getBuildArtifact("a.out")
         source = "main.c"
+        breakpoint_line = line_number(source, "// breakpoint")
         custom_event_body = {
             "key": 321,
             "arr": [True],
@@ -29,9 +31,6 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
                 ),
             ],
         )
-
-        breakpoint_line = line_number(source, "// breakpoint")
-
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
 
@@ -45,6 +44,7 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(custom_event["event"], "my-custom-event")
         self.assertEqual(custom_event["body"], custom_event_body)
 
+    @skipIfWindows
     def test_send_internal_event(self):
         """
         Test sending an internal event produces an error.

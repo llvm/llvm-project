@@ -1,0 +1,49 @@
+! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+module overrides
+  type realResult
+    real a
+  end type
+  interface operator(*)
+    procedure :: multHostDevice, multDeviceHost
+  end interface
+  interface assignment(=)
+    procedure :: assignHostResult, assignDeviceResult
+  end interface
+ contains
+  elemental function multHostDevice(x, y) result(result)
+    real, intent(in) :: x
+    real, intent(in), device :: y
+    type(realResult) result
+    result%a = x * y
+  end
+  elemental function multDeviceHost(x, y) result(result)
+    real, intent(in), device :: x
+    real, intent(in) :: y
+    type(realResult) result
+    result%a = x * y
+  end
+  elemental subroutine assignHostResult(lhs, rhs)
+    real, intent(out) :: lhs
+    type(realResult), intent(in) :: rhs
+    lhs = rhs%a
+  end
+  elemental subroutine assignDeviceResult(lhs, rhs)
+    real, intent(out), device :: lhs
+    type(realResult), intent(in) :: rhs
+    lhs = rhs%a
+  end
+end
+
+program p
+  use overrides
+  real, device :: da, db
+  real :: ha, hb
+!CHECK: CALL assigndeviceresult(db,multhostdevice(2._4,da))
+  db = 2. * da
+!CHECK: CALL assigndeviceresult(db,multdevicehost(da,2._4))
+  db = da * 2.
+!CHECK: CALL assignhostresult(ha,multhostdevice(2._4,da))
+  ha = 2. * da
+!CHECK: CALL assignhostresult(ha,multdevicehost(da,2._4))
+  ha = da * 2.
+end

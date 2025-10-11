@@ -30,6 +30,7 @@
 namespace mlir {
 class Builder;
 class OpBuilder;
+class ImplicitLocOpBuilder;
 
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion
@@ -114,7 +115,7 @@ public:
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
   /// Print the operation to the given stream.
-  void print(raw_ostream &os, OpPrintingFlags flags = std::nullopt) {
+  void print(raw_ostream &os, OpPrintingFlags flags = {}) {
     state->print(os, flags);
   }
   void print(raw_ostream &os, AsmState &asmState) {
@@ -272,7 +273,7 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 
 public:
-  void dump() const { llvm::errs() << *this << "\n"; }
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << "\n"; }
 
   MLIRContext *getContext() const {
     PointerUnion pu = *this;
@@ -888,7 +889,7 @@ public:
         continue;
 
       // Non-empty regions must contain a single basic block.
-      if (!llvm::hasSingleElement(region))
+      if (!region.hasOneBlock())
         return op->emitOpError("expects region #")
                << i << " to have 0 or 1 blocks";
 
@@ -1631,14 +1632,11 @@ using detect_has_verify_region_trait =
 
 /// Verify the given trait if it provides a verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *op) {
-  return T::verifyTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_trait<T>::value, LogicalResult>
-verifyTrait(Operation *) {
-  return success();
+LogicalResult verifyTrait(Operation *op) {
+  if constexpr (detect_has_verify_trait<T>::value)
+    return T::verifyTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the given operation.
@@ -1649,15 +1647,11 @@ LogicalResult verifyTraits(Operation *op) {
 
 /// Verify the given trait if it provides a region verifier.
 template <typename T>
-std::enable_if_t<detect_has_verify_region_trait<T>::value, LogicalResult>
-verifyRegionTrait(Operation *op) {
-  return T::verifyRegionTrait(op);
-}
-template <typename T>
-inline std::enable_if_t<!detect_has_verify_region_trait<T>::value,
-                        LogicalResult>
-verifyRegionTrait(Operation *) {
-  return success();
+LogicalResult verifyRegionTrait(Operation *op) {
+  if constexpr (detect_has_verify_region_trait<T>::value)
+    return T::verifyRegionTrait(op);
+  else
+    return success();
 }
 
 /// Given a set of traits, return the result of verifying the regions of the

@@ -5,7 +5,7 @@
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=24278
 
 ; Make sure we do not crash when dealing with a vector constant expression.
-define <4 x ptr> @test(ptr %ptr) {
+define <4 x ptr> @test(ptr %ptr) null_pointer_is_valid {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L3:%.*]] = load i64, ptr [[PTR:%.*]], align 4

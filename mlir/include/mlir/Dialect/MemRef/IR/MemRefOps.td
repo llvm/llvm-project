@@ -13,9 +13,9 @@ include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/MemOpInterfaces.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -142,22 +142,74 @@ class AllocLikeOp<string mnemonic,
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 
-def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
+def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
+      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      Pure,
+      ViewLikeOpInterface,
+      SameOperandsAndResultType,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+    ]> {
   let summary =
-      "assertion that gives alignment information to the input memref";
+      "assumption that gives alignment information to the input memref";
   let description = [{
-    The `assume_alignment` operation takes a memref and an integer of alignment
-    value, and internally annotates the buffer with the given alignment. If
-    the buffer isn't aligned to the given alignment, the behavior is undefined.
+      The `assume_alignment` operation takes a memref and an integer alignment
+      value. It returns a new SSA value of the same memref type, but associated
+      with the assumption that the underlying buffer is aligned to the given
+      alignment.
 
-    This operation doesn't affect the semantics of a correct program. It's for
-    optimization only, and the optimization is best-effort.
+      If the buffer isn't aligned to the given alignment, its result is poison.
+      This operation doesn't affect the semantics of a program where the
+      alignment assumption holds true. It is intended for optimization purposes,
+      allowing the compiler to generate more efficient code based on the
+      alignment assumption. The optimization is best-effort.
   }];
   let arguments = (ins AnyMemRef:$memref,
                        ConfinedAttr<I32Attr, [IntPositive]>:$alignment);
-  let results = (outs);
+  let results = (outs AnyMemRef:$result);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
+  let extraClassDeclaration = [{
+    MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
+
+    Value getViewSource() { return getMemref(); }
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DistinctObjectsOp
+//===----------------------------------------------------------------------===//
+
+def DistinctObjectsOp : MemRef_Op<"distinct_objects", [
+      Pure,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>
+      // ViewLikeOpInterface TODO: ViewLikeOpInterface only supports a single argument
+    ]> {
+  let summary = "assumption that acesses to specific memrefs will never alias";
+  let description = [{
+      The `distinct_objects` operation takes a list of memrefs and returns the same
+      memrefs, with the additional assumption that accesses to them will never
+      alias with each other. This means that loads and stores to different
+      memrefs in the list can be safely reordered.
+
+      If the memrefs do alias, the load/store behavior is undefined. This
+      operation doesn't affect the semantics of a valid program. It is
+      intended for optimization purposes, allowing the compiler to generate more
+      efficient code based on the non-aliasing assumption. The optimization is
+      best-effort.
+
+      Example:
+
+      ```mlir
+      %1, %2 = memref.distinct_objects %a, %b : memref<?xf32>, memref<?xf32>
+      ```
+  }];
+  let arguments = (ins Variadic<AnyMemRef>:$operands);
+  let results = (outs Variadic<AnyMemRef>:$results);
+
+  let assemblyFormat = "$operands attr-dict `:` type($operands)";
   let hasVerifier = 1;
 }
 
@@ -323,7 +375,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
     The `alloca` operation allocates memory on the stack, to be automatically
     released when control transfers back from the region of its closest
     surrounding operation with an
-    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
+    [`AutomaticAllocationScope`](../Traits/#automaticallocationscope) trait.
     The amount of memory allocated is specified by its memref and additional
     operands. For example:
 
@@ -441,6 +493,7 @@ def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
 def MemRef_CastOp : MemRef_Op<"cast", [
       DeclareOpInterfaceMethods<CastOpInterface>,
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       MemRefsNormalizable,
       Pure,
       SameOperandsAndResultShape,
@@ -514,7 +567,7 @@ def MemRef_CastOp : MemRef_Op<"cast", [
 // CopyOp
 //===----------------------------------------------------------------------===//
 
-def CopyOp : MemRef_Op<"copy", [CopyOpInterface, SameOperandsElementType,
+def CopyOp : MemRef_Op<"copy", [SameOperandsElementType,
     SameOperandsShape]> {
 
   let description = [{
@@ -1062,8 +1115,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
 
 def AtomicYieldOp : MemRef_Op<"atomic_yield", [
       HasParent<"GenericAtomicRMWOp">,
-      Pure,
-      Terminator
+      Pure, Terminator, ReturnLike
     ]> {
   let summary = "yield operation for GenericAtomicRMWOp";
   let description = [{
@@ -1149,7 +1201,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
                        MemRefTypeAttr:$type,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
-                       OptionalAttr<I64Attr>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let assemblyFormat = [{
        ($sym_visibility^)?
@@ -1180,6 +1232,7 @@ def LoadOp : MemRef_Op<"load",
                      "memref", "result",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "load operation";
@@ -1187,15 +1240,25 @@ def LoadOp : MemRef_Op<"load",
     The `load` op reads an element from a memref at the specified indices.
 
     The number of indices must match the rank of the memref. The indices must
-    be in-bounds: `0 <= idx < dim_size`
+    be in-bounds: `0 <= idx < dim_size`.
+
+    Lowerings of `memref.load` may emit attributes, e.g. `inbouds` + `nuw`
+    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
+    behavior if indices are out of bounds or if computing the offset in the
+    memref would cause signed overflow of the `index` type.
 
     The single result of `memref.load` is a value with the same type as the
     element type of the memref.
 
     A set `nontemporal` attribute indicates that this load is not expected to
     be reused in the cache. For details, refer to the
-    [https://llvm.org/docs/LangRef.html#load-instruction](LLVM load instruction).
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
     Example:
 
     ```mlir
@@ -1206,7 +1269,38 @@ def LoadOp : MemRef_Op<"load",
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, memref, indices, nontemporal,
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
+    }]>,
+    OpBuilder<(ins "Type":$resultType,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, memref, indices, nontemporal,
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
+    }]>
+  ];
+
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
@@ -1229,6 +1323,7 @@ def LoadOp : MemRef_Op<"load",
 def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
       DeclareOpInterfaceMethods<CastOpInterface>,
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      MemorySpaceCastOpInterface,
       MemRefsNormalizable,
       Pure,
       SameOperandsAndResultElementType,
@@ -1246,6 +1341,10 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
     The input and result must have the same shape, element type, rank, and layout.
 
     If the source and target address spaces are the same, this operation is a noop.
+
+    Finally, if the target memory-space is the generic/default memory-space,
+    then it is assumed this cast can be bubbled down safely. See the docs of
+    `MemorySpaceCastOpInterface` interface for more details.
 
     Example:
 
@@ -1266,6 +1365,27 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
 
   let extraClassDeclaration = [{
     Value getViewSource() { return getSource(); }
+
+    //===------------------------------------------------------------------===//
+    // MemorySpaceCastConsumerOpInterface
+    //===------------------------------------------------------------------===//
+    /// Returns the `source` memref.
+    TypedValue<PtrLikeTypeInterface> getSourcePtr();
+    /// Returns the `dest` memref.
+    TypedValue<PtrLikeTypeInterface> getTargetPtr();
+    /// Returns whether the memory-space cast is valid. Only casts between
+    /// memrefs are considered valid. Further, the `tgt` and `src` should only
+    /// differ on the memory-space parameter of the memref type.
+    bool isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
+                                PtrLikeTypeInterface src);
+    /// Clones the operation using a new target type and source value.
+    MemorySpaceCastOpInterface cloneMemorySpaceCastOp(
+        OpBuilder &b, PtrLikeTypeInterface tgt,
+        TypedValue<PtrLikeTypeInterface> src);
+    /// Returns whether the `source` value can be promoted by the
+    /// `MemorySpaceCastConsumerOpInterface::bubbleDownCasts` method. The only
+    /// casts the op recognizes as promotable are to the generic memory-space.
+    bool isSourcePromotable();
   }];
 
   let hasFolder = 1;
@@ -1294,7 +1414,14 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
     instruction cache.
   }];
 
-  let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
+  // The memref argument is labeled with a side effect to enforce a
+  // relative ordering of the prefetch and other memory operations targeting
+  // that memory stream.
+  // We need it to be a write otherwise the operation would be trivially removed
+  // since it does not produce a value.
+
+  let arguments = (ins Arg<AnyMemRef, "prefetch address", [MemWrite]> :$memref,
+                       Variadic<Index>:$indices,
                        BoolAttr:$isWrite,
                        ConfinedAttr<I32Attr, [IntMinValue<0>,
                                           IntMaxValue<3>]>:$localityHint,
@@ -1321,6 +1448,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 def MemRef_ReinterpretCastOp
   : MemRef_OpWithOffsetSizesAndStrides<"reinterpret_cast", [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AttrSizedOperandSegments,
       MemRefsNormalizable,
       Pure,
@@ -1331,7 +1459,79 @@ def MemRef_ReinterpretCastOp
   let description = [{
     Modify offset, sizes and strides of an unranked/ranked memref.
 
-    Example:
+    Example 1:
+
+    Consecutive `reinterpret_cast` operations on memref's with static
+    dimensions.
+
+    We distinguish between *underlying memory* — the sequence of elements as
+    they appear in the contiguous memory of the memref — and the
+    *strided memref*, which refers to the underlying memory interpreted
+    according to specified offsets, sizes, and strides.
+
+    ```mlir
+    %result1 = memref.reinterpret_cast %arg0 to
+      offset: [9],
+      sizes: [4, 4],
+      strides: [16, 2]
+    : memref<8x8xf32, strided<[8, 1], offset: 0>> to
+      memref<4x4xf32, strided<[16, 2], offset: 9>>
+
+    %result2 = memref.reinterpret_cast %result1 to
+      offset: [0],
+      sizes: [2, 2],
+      strides: [4, 2]
+    : memref<4x4xf32, strided<[16, 2], offset: 9>> to
+      memref<2x2xf32, strided<[4, 2], offset: 0>>
+    ```
+
+    The underlying memory of `%arg0` consists of a linear sequence of integers
+    from 1 to 64. Its memref has the following 8x8 elements:
+
+    ```mlir
+    [[1,  2,  3,  4,  5,  6,  7,  8],
+    [9,  10, 11, 12, 13, 14, 15, 16],
+    [17, 18, 19, 20, 21, 22, 23, 24],
+    [25, 26, 27, 28, 29, 30, 31, 32],
+    [33, 34, 35, 36, 37, 38, 39, 40],
+    [41, 42, 43, 44, 45, 46, 47, 48],
+    [49, 50, 51, 52, 53, 54, 55, 56],
+    [57, 58, 59, 60, 61, 62, 63, 64]]
+    ```
+
+    Following the first `reinterpret_cast`, the strided memref elements
+    of `%result1` are:
+
+    ```mlir
+    [[10, 12, 14, 16],
+    [26, 28, 30, 32],
+    [42, 44, 46, 48],
+    [58, 60, 62, 64]]
+    ```
+
+    Note: The offset and strides are relative to the underlying memory of
+    `%arg0`.
+
+    The second `reinterpret_cast` results in the following strided memref
+    for `%result2`:
+
+    ```mlir
+    [[1, 3],
+    [5, 7]]
+    ```
+
+    Notice that it does not matter if you use %result1 or %arg0 as a source
+    for the second `reinterpret_cast` operation. Only the underlying memory
+    pointers will be reused.
+
+    The offset and stride are relative to the base underlying memory of the
+    memref, starting at 1, not at 10 as seen in the output of `%result1`.
+    This behavior contrasts with the `subview` operator, where values are
+    relative to the strided memref (refer to `subview` examples).
+    Consequently, the second `reinterpret_cast` behaves as if `%arg0` were
+    passed directly as its argument.
+
+    Example 2:
     ```mlir
     memref.reinterpret_cast %ranked to
       offset: [0],
@@ -1372,7 +1572,7 @@ def MemRef_ReinterpretCastOp
                        DenseI64ArrayAttr:$static_offsets,
                        DenseI64ArrayAttr:$static_sizes,
                        DenseI64ArrayAttr:$static_strides);
-  let results = (outs AnyMemRef:$result);
+  let results = (outs AnyStridedMemRef:$result);
 
   let assemblyFormat = [{
     $source `to` `offset` `` `:`
@@ -1476,6 +1676,7 @@ def MemRef_RankOp : MemRef_Op<"rank", [Pure]> {
 
 def MemRef_ReshapeOp: MemRef_Op<"reshape", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     Pure,
     ViewLikeOpInterface]>  {
   let summary = "memref reshape operation";
@@ -1574,6 +1775,7 @@ class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 
 def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
   let summary = "operation to produce a memref with a higher rank.";
   let description = [{
@@ -1683,13 +1885,21 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
         OpBuilder &b, Location loc, MemRefType expandedType,
         ArrayRef<ReassociationIndices> reassociation,
         ArrayRef<OpFoldResult> inputShape);
+
+    // Return a vector with all the static and dynamic values in the output shape.
+    SmallVector<OpFoldResult> getMixedOutputShape() {
+      OpBuilder builder(getContext());
+      return ::mlir::getMixedValues(getStaticOutputShape(), getOutputShape(), builder);
+    }
   }];
 
   let hasVerifier = 1;
 }
 
 def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+  ]> {
   let summary = "operation to produce a memref with a smaller rank.";
   let description = [{
     The `memref.collapse_shape` op produces a new view with a smaller rank
@@ -1796,19 +2006,30 @@ def MemRef_StoreOp : MemRef_Op<"store",
                      "memref", "value",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "store operation";
   let description = [{
     The `store` op stores an element into a memref at the specified indices.
-    
+
     The number of indices must match the rank of the memref. The indices must
-    be in-bounds: `0 <= idx < dim_size`
+    be in-bounds: `0 <= idx < dim_size`.
+
+    Lowerings of `memref.store` may emit attributes, e.g. `inbouds` + `nuw`
+    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
+    behavior if indices are out of bounds or if computing the offset in the
+    memref would cause signed overflow of the `index` type.
 
     A set `nontemporal` attribute indicates that this store is not expected to
     be reused in the cache. For details, refer to the
-    [https://llvm.org/docs/LangRef.html#store-instruction](LLVM store instruction).
+    [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
     Example:
 
     ```mlir
@@ -1820,13 +2041,24 @@ def MemRef_StoreOp : MemRef_Op<"store",
                        Arg<AnyMemRef, "the reference to store to",
                            [MemWrite]>:$memref,
                        Variadic<Index>:$indices,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
+    OpBuilder<(ins "Value":$valueToStore,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
+                   alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
+                               nullptr);
+    }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);
       $_state.addOperands(memref);
-    }]>];
+    }]>
+  ];
 
   let extraClassDeclaration = [{
       Value getValueToStore() { return getOperand(0); }
@@ -1852,6 +2084,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
 
 def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<ViewLikeOpInterface>,
     AttrSizedOperandSegments,
     OffsetSizeAndStrideOpInterface,
@@ -1898,6 +2131,64 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
     Example 1:
 
+    Consecutive `subview` operations on memref's with static dimensions.
+
+    We distinguish between *underlying memory* — the sequence of elements as
+    they appear in the contiguous memory of the memref — and the
+    *strided memref*, which refers to the underlying memory interpreted
+    according to specified offsets, sizes, and strides.
+
+    ```mlir
+    %result1 = memref.subview %arg0[1, 1][4, 4][2, 2]
+    : memref<8x8xf32, strided<[8, 1], offset: 0>> to
+      memref<4x4xf32, strided<[16, 2], offset: 9>>
+
+    %result2 = memref.subview %result1[1, 1][2, 2][2, 2]
+    : memref<4x4xf32, strided<[16, 2], offset: 9>> to
+      memref<2x2xf32, strided<[32, 4], offset: 27>>
+    ```
+
+    The underlying memory of `%arg0` consists of a linear sequence of integers
+    from 1 to 64. Its memref has the following 8x8 elements:
+
+    ```mlir
+    [[1,  2,  3,  4,  5,  6,  7,  8],
+    [9,  10, 11, 12, 13, 14, 15, 16],
+    [17, 18, 19, 20, 21, 22, 23, 24],
+    [25, 26, 27, 28, 29, 30, 31, 32],
+    [33, 34, 35, 36, 37, 38, 39, 40],
+    [41, 42, 43, 44, 45, 46, 47, 48],
+    [49, 50, 51, 52, 53, 54, 55, 56],
+    [57, 58, 59, 60, 61, 62, 63, 64]]
+    ```
+
+    Following the first `subview`, the strided memref elements of `%result1`
+    are:
+
+    ```mlir
+    [[10, 12, 14, 16],
+    [26, 28, 30, 32],
+    [42, 44, 46, 48],
+    [58, 60, 62, 64]]
+    ```
+
+    Note: The offset and strides are relative to the strided memref of `%arg0`
+    (compare to the corresponding `reinterpret_cast` example).
+
+    The second `subview` results in the following strided memref for
+    `%result2`:
+
+    ```mlir
+    [[28, 32],
+    [60, 64]]
+    ```
+
+    Unlike the `reinterpret_cast`, the values are relative to the strided
+    memref of the input (`%result1` in this case) and not its
+    underlying memory.
+
+    Example 2:
+
     ```mlir
     // Subview of static memref with strided layout at static offsets, sizes
     // and strides.
@@ -1906,7 +2197,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
           memref<8x2xf32, strided<[21, 18], offset: 137>>
     ```
 
-    Example 2:
+    Example 3:
 
     ```mlir
     // Subview of static memref with identity layout at dynamic offsets, sizes
@@ -1915,7 +2206,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
         : memref<64x4xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
     ```
 
-    Example 3:
+    Example 4:
 
     ```mlir
     // Subview of dynamic memref with strided layout at dynamic offsets and
@@ -1925,7 +2216,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
           memref<4x4xf32, strided<[?, ?], offset: ?>>
     ```
 
-    Example 4:
+    Example 5:
 
     ```mlir
     // Rank-reducing subviews.
@@ -1935,14 +2226,13 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
         : memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
     ```
 
-    Example 5:
+    Example 6:
 
     ```mlir
     // Identity subview. The subview is the full source memref.
     %1 = memref.subview %0[0, 0, 0] [8, 16, 4] [1, 1, 1]
         : memref<8x16x4xf32> to memref<8x16x4xf32>
     ```
-
   }];
 
   let arguments = (ins AnyMemRef:$source,
@@ -2070,6 +2360,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
 def MemRef_TransposeOp : MemRef_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     Pure]>,
     Arguments<(ins AnyStridedMemRef:$in, AffineMapAttr:$permutation)>,
     Results<(outs AnyStridedMemRef)> {
@@ -2105,6 +2396,7 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [
 
 def MemRef_ViewOp : MemRef_Op<"view", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<ViewLikeOpInterface>,
     Pure]> {
   let summary = "memref view operation";
@@ -2173,6 +2465,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2180,6 +2473,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
 //===----------------------------------------------------------------------===//
 
 def AtomicRMWOp : MemRef_Op<"atomic_rmw", [
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
       AllTypesMatch<["value", "result"]>,
       TypesMatchWith<"value type matches element type of memref",
                      "memref", "value",

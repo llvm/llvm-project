@@ -15,7 +15,7 @@ define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    lui ra, 3563
-; CHECK-NEXT:    addiw ra, ra, -577
+; CHECK-NEXT:    addi ra, ra, -577
 ; CHECK-NEXT:    slli ra, ra, 12
 ; CHECK-NEXT:    addi ra, ra, -259
 ; CHECK-NEXT:    slli ra, ra, 12
@@ -26,7 +26,7 @@ define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-NEXT:    mv a1, s1
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    lui ra, 3563
-; CHECK-NEXT:    addiw ra, ra, -577
+; CHECK-NEXT:    addi ra, ra, -577
 ; CHECK-NEXT:    slli ra, ra, 12
 ; CHECK-NEXT:    addi ra, ra, -259
 ; CHECK-NEXT:    slli ra, ra, 12

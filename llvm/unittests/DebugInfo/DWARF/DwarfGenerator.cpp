@@ -243,7 +243,7 @@ void dwarfgen::LineTable::addByte(uint8_t Value) {
 void dwarfgen::LineTable::addStandardOpcode(uint8_t Opcode,
                                             ArrayRef<ValueAndLength> Operands) {
   Contents.push_back({Opcode, Byte});
-  Contents.insert(Contents.end(), Operands.begin(), Operands.end());
+  llvm::append_range(Contents, Operands);
 }
 
 void dwarfgen::LineTable::addExtendedOpcode(uint64_t Length, uint8_t Opcode,
@@ -251,7 +251,7 @@ void dwarfgen::LineTable::addExtendedOpcode(uint64_t Length, uint8_t Opcode,
   Contents.push_back({0, Byte});
   Contents.push_back({Length, ULEB});
   Contents.push_back({Opcode, Byte});
-  Contents.insert(Contents.end(), Operands.begin(), Operands.end());
+  llvm::append_range(Contents, Operands);
 }
 
 void dwarfgen::LineTable::generate(MCContext &MC, AsmPrinter &Asm) const {
@@ -454,19 +454,19 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return make_error<StringError>(Twine("no register info for target ") +
                                        TripleName,
                                    inconvertibleErrorCode());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return make_error<StringError>("no asm info for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return make_error<StringError>("no subtarget info for target " + TripleName,
                                    inconvertibleErrorCode());

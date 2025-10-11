@@ -535,16 +535,13 @@ else:
   ret i1 %cmp1
 }
 
-; TODO: X != Y implies X | Y != 0
 define i1 @or_nonzero_from_nonequal(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_nonzero_from_nonequal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -731,6 +728,84 @@ entry:
   %cond2 = icmp ne i64 %w, %z
   call void @llvm.assume(i1 %cond2)
   ret i1 %cmp
+}
+
+; TODO: We can prove `%cond2` is always false
+define void @test_nonequal_domcond_loop1(i32 %x0, i1 %x1) {
+; CHECK-LABEL: @test_nonequal_domcond_loop1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X0:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    br i1 [[X1:%.*]], label [[IF_THEN:%.*]], label [[LOOP_HEADER]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X0]], 1
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[AND]], [[PHI]]
+; CHECK-NEXT:    br i1 [[COND1]], label [[IF_THEN2:%.*]], label [[LATCH]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       indirectbb:
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[PHI]], 31
+; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %phi = phi i32 [ 0, %entry ], [ %x0, %latch ]
+  br label %latch
+
+latch:
+  br i1 %x1, label %if.then, label %loop.header
+
+if.then:
+  %and = and i32 %x0, 1
+  %cond1 = icmp eq i32 %and, %phi
+  br i1 %cond1, label %if.then2, label %latch
+
+if.then2:
+  br label %indirectbb
+
+indirectbb:
+  %cond2 = icmp eq i32 %phi, 31
+  br i1 %cond2, label %exit, label %latch
+
+exit:
+  ret void
+}
+
+define void @test_nonequal_domcond_loop2(ptr %p) {
+; CHECK-LABEL: @test_nonequal_domcond_loop2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD1:%.*]] = load volatile i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    [[LOAD2:%.*]] = load volatile i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LOAD2]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i8 [[LOAD2]], [[LOAD1]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
+; CHECK-NEXT:    br i1 [[OR]], label [[WHILE_COND]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br i1 false, label [[WHILE_COND]], label [[FOR_BODY]]
+;
+entry:
+  %load1 = load volatile i8, ptr %p, align 1
+  br label %while.cond
+
+while.cond:
+  %load2 = load volatile i8, ptr %p, align 1
+  %cmp1 = icmp eq i8 %load2, 0
+  %cmp2 = icmp uge i8 %load2, %load1
+  %or = select i1 %cmp1, i1 true, i1 %cmp2
+  br i1 %or, label %while.cond, label %for.body
+
+for.body:
+  %cond = icmp eq i8 %load1, %load2
+  br i1 %cond, label %while.cond, label %for.body
 }
 
 declare void @side_effect()

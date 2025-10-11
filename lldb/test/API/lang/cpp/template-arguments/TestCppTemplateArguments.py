@@ -1,4 +1,5 @@
 import lldb
+import lldbsuite.test.lldbplatformutil as lldbplatformutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -82,8 +83,12 @@ class TestCase(TestBase):
         value = self.expect_expr("temp7", result_type="Foo<__fp16, __fp16>")
         self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
 
-        value = self.expect_expr("temp8", result_type="Foo<__fp16, __fp16>")
-        self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
+        # The target we use when evaluating these expressions for Arm leads to there
+        # not being a __bf16 type in the AST so we fall back to __fp16 and evaluating
+        # this fails.
+        if lldbplatformutil.getArchitecture() != "arm":
+            value = self.expect_expr("temp8", result_type="Foo<__bf16, __bf16>")
+            self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
 
         value = self.expect_expr("temp9", result_type="Bar<double, 1.200000e+00>")
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)

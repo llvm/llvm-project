@@ -103,7 +103,7 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
   dxbc::ShaderHash HashData = {0, {0}};
   // The Hash's IncludesSource flag gets set whenever the hashed shader includes
   // debug information.
-  if (M.debug_compile_units_begin() != M.debug_compile_units_end())
+  if (!M.debug_compile_units().empty())
     HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
@@ -158,20 +158,22 @@ void DXContainerGlobals::addRootSignature(Module &M,
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
-  assert(MMI.EntryPropertyVec.size() == 1);
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
+  const Function *EntryFunction = nullptr;
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const auto &FuncRs = RSA.find(EntryFunction);
+  if (MMI.ShaderProfile != llvm::Triple::RootSignature) {
+    assert(MMI.EntryPropertyVec.size() == 1);
+    EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  }
 
-  if (FuncRs == RSA.end())
+  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
+  if (!RS)
     return;
 
-  const RootSignatureDesc &RS = FuncRs->second;
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
-  RS.write(OS);
+  RS->write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
@@ -180,7 +182,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
   const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
@@ -229,7 +231,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
     dxbc::PSV::ResourceType ResType;
-    if (TypeInfo.getUAV().HasCounter)
+    if (RI.hasCounter())
       ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
     else if (TypeInfo.isStruct())
       ResType = dxbc::PSV::ResourceType::UAVStructured;
@@ -259,7 +261,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() == 1 ||
-         MMI.ShaderProfile == Triple::Library);
+         MMI.ShaderProfile == Triple::Library ||
+         MMI.ShaderProfile == Triple::RootSignature);
   PSV.BaseData.ShaderStage =
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
@@ -280,7 +283,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     break;
   }
 
-  if (MMI.ShaderProfile != Triple::Library)
+  if (MMI.ShaderProfile != Triple::Library &&
+      MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
   PSV.finalize(MMI.ShaderProfile);

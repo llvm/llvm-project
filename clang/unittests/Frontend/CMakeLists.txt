@@ -10,6 +10,7 @@ add_clang_unittest(FrontendTests
   PCHPreambleTest.cpp
   ReparseWorkingDirTest.cpp
   OutputStreamTest.cpp
+  SearchPathTest.cpp
   TextDiagnosticTest.cpp
   UtilsTest.cpp
   CLANG_LIBS

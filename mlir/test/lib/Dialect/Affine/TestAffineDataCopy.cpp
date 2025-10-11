@@ -144,7 +144,7 @@ void TestAffineDataCopy::runOnOperation() {
     }
   }
   GreedyRewriteConfig config;
-  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+  config.setStrictness(GreedyRewriteStrictness::ExistingAndNewOps);
   (void)applyOpPatternsGreedily(copyOps, std::move(patterns), config);
 }
 

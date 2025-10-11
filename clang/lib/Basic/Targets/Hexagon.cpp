@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
-#include "Targets.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -150,7 +149,7 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAudio = true;
   }
   if (CPU.compare("hexagonv68") >= 0) {
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
   }
   return true;

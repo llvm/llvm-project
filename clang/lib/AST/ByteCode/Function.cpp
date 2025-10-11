@@ -8,9 +8,9 @@
 
 #include "Function.h"
 #include "Program.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -22,11 +22,13 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
     : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
-      HasRVO(HasRVO) {
+      ParamOffsets(std::move(ParamOffsets)), IsValid(false),
+      IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
+      HasBody(false), Defined(false) {
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
-    BuiltinID = F->getBuiltinID();
+    Immediate = F->isImmediateFunction();
+    Constexpr = F->isConstexpr() || F->hasAttr<MSConstexprAttr>();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Ctor;
@@ -41,7 +43,14 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
         Kind = FunctionKind::LambdaCallOperator;
       else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
         Kind = FunctionKind::CopyOrMoveOperator;
+    } else {
+      Virtual = false;
     }
+  } else {
+    Variadic = false;
+    Virtual = false;
+    Immediate = false;
+    Constexpr = false;
   }
 }
 
@@ -61,20 +70,4 @@ SourceInfo Function::getSource(CodePtr PC) const {
   if (It == SrcMap.end())
     return SrcMap.back().second;
   return It->second;
-}
-
-/// Unevaluated builtins don't get their arguments put on the stack
-/// automatically. They instead operate on the AST of their Call
-/// Expression.
-/// Similar information is available via ASTContext::BuiltinInfo,
-/// but that is not correct for our use cases.
-static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type ||
-         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
-         BuiltinID == Builtin::BI__builtin_constant_p ||
-         BuiltinID == Builtin::BI__noop;
-}
-
-bool Function::isUnevaluatedBuiltin() const {
-  return ::isUnevaluatedBuiltin(BuiltinID);
 }

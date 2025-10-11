@@ -224,6 +224,12 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     PrintExprs(adjustArgsNeedDevicePtr_begin(), adjustArgsNeedDevicePtr_end());
     OS << ")";
   }
+  if (adjustArgsNeedDeviceAddr_size()) {
+    OS << " adjust_args(need_device_addr:";
+    PrintExprs(adjustArgsNeedDeviceAddr_begin(),
+               adjustArgsNeedDeviceAddr_end());
+    OS << ")";
+  }
 
   auto PrintInteropInfo = [&OS](OMPInteropInfo *Begin, OMPInteropInfo *End) {
     for (OMPInteropInfo *I = Begin; I != End; ++I) {

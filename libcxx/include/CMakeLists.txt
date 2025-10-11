@@ -25,6 +25,7 @@ set(files
   __algorithm/find_segment_if.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_n_segment.h
   __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h
@@ -215,6 +216,7 @@ set(files
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
+  __atomic/floating_point_helper.h
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
@@ -380,6 +382,7 @@ set(files
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -402,6 +405,7 @@ set(files
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_format.h
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
@@ -444,14 +448,12 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
-  __fwd/map.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
-  __fwd/set.h
   __fwd/span.h
   __fwd/sstream.h
   __fwd/stack.h
@@ -497,6 +499,7 @@ set(files
   __iterator/ostreambuf_iterator.h
   __iterator/permutable.h
   __iterator/prev.h
+  __iterator/product_iterator.h
   __iterator/projected.h
   __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
@@ -509,13 +512,18 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/check_grouping.h
+  __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
-  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
+  __locale_dir/messages.h
+  __locale_dir/money.h
+  __locale_dir/num.h
   __locale_dir/pad_and_output.h
+  __locale_dir/scan_keyword.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
@@ -524,6 +532,10 @@ set(files
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
+  __locale_dir/time.h
+  __locale_dir/wbuffer_convert.h
+  __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -545,6 +557,7 @@ set(files
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
+  __mdspan/aligned_accessor.h
   __mdspan/default_accessor.h
   __mdspan/extents.h
   __mdspan/layout_left.h
@@ -569,6 +582,7 @@ set(files
   __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/is_sufficiently_aligned.h
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
@@ -703,6 +717,7 @@ set(files
   __ranges/iota_view.h
   __ranges/istream_view.h
   __ranges/join_view.h
+  __ranges/join_with_view.h
   __ranges/lazy_split_view.h
   __ranges/movable_box.h
   __ranges/non_propagating_cache.h
@@ -723,6 +738,7 @@ set(files
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
+  __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
@@ -763,23 +779,19 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/ignore.h
-  __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
-  __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
   __type_traits/add_cv_quals.h
-  __type_traits/add_lvalue_reference.h
   __type_traits/add_pointer.h
-  __type_traits/add_rvalue_reference.h
+  __type_traits/add_reference.h
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
   __type_traits/conditional.h
@@ -797,6 +809,7 @@ set(files
   __type_traits/extent.h
   __type_traits/has_unique_object_representation.h
   __type_traits/has_virtual_destructor.h
+  __type_traits/integer_traits.h
   __type_traits/integral_constant.h
   __type_traits/invoke.h
   __type_traits/is_abstract.h
@@ -826,6 +839,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_generic_transparent_comparator.h
   __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
@@ -833,7 +847,6 @@ set(files
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
-  __type_traits/is_nothrow_convertible.h
   __type_traits/is_nothrow_destructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
@@ -844,10 +857,10 @@ set(files
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
+  __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
-  __type_traits/is_signed_integer.h
   __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
@@ -860,8 +873,8 @@ set(files
   __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
+  __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
-  __type_traits/is_unsigned_integer.h
   __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
@@ -869,6 +882,7 @@ set(files
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h
@@ -900,6 +914,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/default_three_way_comparator.h
   __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
@@ -910,6 +925,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/is_valid_range.h
+  __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h
@@ -921,6 +937,7 @@ set(files
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/try_key_extraction.h
   __utility/unreachable.h
   __variant/monostate.h
   __vector/comparison.h
@@ -932,6 +949,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
@@ -1025,7 +1043,6 @@ set(files
   mdspan
   memory
   memory_resource
-  module.modulemap
   mutex
   new
   numbers
@@ -1558,6 +1575,7 @@ set(files
   __cxx03/__utility/unreachable.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
+  __cxx03/__verbose_trap
   __cxx03/algorithm
   __cxx03/array
   __cxx03/atomic
@@ -1665,8 +1683,16 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
+# We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
+# make __config_site modular when per-target runtime directories are used.
+if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
+endif()
+configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1689,12 +1715,17 @@ list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-target_link_libraries(cxx-headers INTERFACE libcxx-libc-headers libcxx-abi-headers)
+target_link_libraries(cxx-headers INTERFACE runtimes-libc-headers libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.
 target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
                                                  ${LIBCXX_GENERATED_INCLUDE_DIR})
+
+# Make sure to map the generated include directory back to libc++'s actual source directory when generating
+# debug information. Otherwise, the debug information will refer to generated headers which are created during
+# the build and generally not persistent.
+target_add_compile_flags_if_supported(cxx-headers INTERFACE "-fdebug-prefix-map=${LIBCXX_GENERATED_INCLUDE_DIR}=${LIBCXX_SOURCE_DIR}/include")
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
@@ -1720,6 +1751,12 @@ if (LIBCXX_INSTALL_HEADERS)
 
   # Install the generated IWYU file to the generic include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated modulemap file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)

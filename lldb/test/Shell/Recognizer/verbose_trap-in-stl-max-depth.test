@@ -12,5 +12,5 @@ run
 frame recognizer info 0
 # CHECK: frame 0 is recognized by Verbose Trap StackFrame Recognizer
 frame info
-# CHECK: frame #0: {{.*}}`std::recursively_aborts(int) {{.*}} at verbose_trap-in-stl-max-depth.cpp
+# CHECK: frame #0: {{.*}}`__clang_trap_msg$Error$max depth at verbose_trap-in-stl-max-depth.cpp
 q

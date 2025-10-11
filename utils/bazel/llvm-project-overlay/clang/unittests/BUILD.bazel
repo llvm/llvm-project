@@ -2,9 +2,9 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-package(
-    default_visibility = ["//visibility:public"],
-)
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
@@ -96,6 +96,37 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "dataflow_testing_support",
+    testonly = 1,
+    srcs = ["Analysis/FlowSensitive/TestingSupport.cpp"],
+    hdrs = ["Analysis/FlowSensitive/TestingSupport.h"],
+    deps = [
+        "//clang:analysis",
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:lex",
+        "//clang:serialization",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//llvm:TestingAnnotations",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_library(
+    name = "dataflow_solver_test",
+    testonly = 1,
+    hdrs = ["Analysis/FlowSensitive/SolverTest.h"],
+    deps = [
+        ":dataflow_testing_support",
+        "//clang:analysis",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
 cc_test(
     name = "analysis_tests",
     size = "small",
@@ -114,8 +145,10 @@ cc_test(
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
+        "//clang:testing",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -204,7 +237,6 @@ cc_test(
         [
             "Format/*.cpp",
             "Format/*.h",
-            "Tooling/*.h",
         ],
         allow_empty = False,
     ),
@@ -212,10 +244,10 @@ cc_test(
     features = ["-layering_check"],  # #include "../../lib/Format/TokenAnalyzer.h"
     shard_count = 20,
     deps = [
+        ":tooling_tests_hdrs",
         "//clang:basic",
         "//clang:format",
         "//clang:frontend",
-        "//clang:rewrite",
         "//clang:tooling_core",
         "//llvm:Support",
         "//third-party/unittest:gmock",
@@ -242,6 +274,7 @@ cc_test(
         "//clang:sema",
         "//clang:serialization",
         "//clang:tooling",
+        "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//third-party/unittest:gmock",
@@ -278,28 +311,6 @@ cc_test(
     ],
 )
 
-# A library to carefully expose the tooling headers using the include prefix
-# expected by the `rename_tests`.
-cc_library(
-    name = "rename_tests_tooling_hdrs",
-    testonly = 1,
-    hdrs = glob(
-        ["Tooling/*.h"],
-        allow_empty = False,
-    ),
-    include_prefix = "unittests",
-    deps = [
-        "//clang:ast",
-        "//clang:basic",
-        "//clang:frontend",
-        "//clang:rewrite",
-        "//clang:tooling",
-        "//clang:tooling_core",
-        "//llvm:Support",
-        "//third-party/unittest:gtest",
-    ],
-)
-
 cc_test(
     name = "rewrite_tests",
     size = "small",
@@ -326,6 +337,7 @@ cc_test(
         ":ast_matchers_tests_hdrs",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
@@ -347,12 +359,12 @@ cc_library(
         allow_empty = False,
     ),
     deps = [
+        "//clang:analysis",
         "//clang:ast_matchers",
         "//clang:crosstu",
         "//clang:frontend",
         "//clang:static_analyzer_core",
         "//clang:static_analyzer_frontend",
-        "//clang:testing",
         "//clang:tooling",
         "//third-party/unittest:gtest",
     ],
@@ -387,18 +399,35 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "tooling_tests_hdrs",
+    testonly = 1,
+    hdrs = glob(
+        ["Tooling/*.h"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:rewrite",
+        "//clang:tooling",
+        "//clang:tooling_core",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+    ],
+)
+
 cc_test(
     name = "tooling_tests",
     size = "medium",
     srcs = glob(
-        [
-            "Tooling/*.cpp",
-            "Tooling/*.h",
-        ],
+        ["Tooling/*.cpp"],
         allow_empty = False,
     ),
     shard_count = 20,
     deps = [
+        ":tooling_tests_hdrs",
         "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
@@ -521,6 +550,197 @@ cc_test(
     }),
     deps = [
         "//clang:libclang",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "crosstu_tests",
+    size = "small",
+    srcs = glob(
+        ["CrossTU/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:ast",
+        "//clang:crosstu",
+        "//clang:frontend",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "driver_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Driver/*.cpp",
+            "Driver/*.h",
+        ],
+        allow_empty = False,
+        exclude = [
+            "Driver/GCCVersionTest.cpp",  # Includes private headers
+        ],
+    ),
+    deps = [
+        "//clang:basic",
+        "//clang:driver",
+        "//clang:frontend",
+        "//llvm:FrontendDebug",
+        "//llvm:MC",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "parse_tests",
+    size = "small",
+    srcs = glob(
+        ["Parse/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:lex",
+        "//clang:parse",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "directory_watcher_tests",
+    size = "small",
+    srcs = glob(
+        ["DirectoryWatcher/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:directory_watcher",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "index_tests",
+    size = "small",
+    srcs = glob(
+        ["Index/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:index",
+        "//clang:lex",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "install_api_tests",
+    size = "small",
+    srcs = glob(
+        ["InstallAPI/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:install_api",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "interpreter_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Interpreter/*.cpp",
+            "Interpreter/*.h",
+        ],
+        allow_empty = False,
+    ),
+    args = [
+        # TODO: some tests fail with: "JIT session error: Symbols not found:
+        # [ _ZnwmPv26__clang_Interpreter_NewTag, __clang_Interpreter_SetValueWithAlloc ]
+        "--gtest_filter=-InterpreterTest.*:InterpreterTestBase.*",
+    ],
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:codegen",
+        "//clang:config",
+        "//clang:frontend",
+        "//clang:interpreter",
+        "//clang:lex",
+        "//clang:parse",
+        "//clang:sema",
+        "//llvm:LineEditor",
+        "//llvm:MC",
+        "//llvm:OrcJIT",
+        "//llvm:OrcShared",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:ir_headers",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "serialization_tests",
+    size = "small",
+    srcs = glob(
+        ["Serialization/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:parse",
+        "//clang:serialization",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "support_tests",
+    size = "small",
+    srcs = glob(
+        ["Support/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//clang:frontend",
+        "//clang:lex",
         "//llvm:Support",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",

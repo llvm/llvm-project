@@ -1,4 +1,4 @@
-//===--- LinuxKernelTidyModule.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,6 +30,7 @@ static ClangTidyModuleRegistry::Add<LinuxKernelModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the LinuxKernelModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int LinuxKernelModuleAnchorSource = 0;
 
 } // namespace clang::tidy

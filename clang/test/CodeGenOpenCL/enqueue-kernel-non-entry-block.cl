@@ -9,15 +9,8 @@
 typedef struct {int a;} ndrange_t;
 
 kernel void test(int i) {
-
 // AMDGPU-LABEL: define {{.*}} amdgpu_kernel void @test
-// AMDGPU-LABEL: call void @__clang_ocl_kern_imp_test(i32 noundef %0)
-
 // SPIR-LABEL: define {{.*}} spir_kernel void @test
-// SPIR-LABEL: call spir_func void @__clang_ocl_kern_imp_test(i32 noundef %0)
-
-// AMDGPU-LABEL: define {{.*}} void @__clang_ocl_kern_imp_test
-// SPIR-LABEL: define {{.*}} spir_func void @__clang_ocl_kern_imp_test
 
 // COMMON-LABEL: entry:
 // AMDGPU: %block_sizes = alloca [1 x i64]
@@ -44,5 +37,5 @@ kernel void test(int i) {
 
 // CHECK-DEBUG: ![[TESTFILE:[0-9]+]] = !DIFile(filename: "<stdin>"
 // CHECK-DEBUG: ![[TESTSCOPE:[0-9]+]] = distinct !DISubprogram(name: "test", linkageName: "__clang_ocl_kern_imp_test", {{.*}} file: ![[TESTFILE]]
-// CHECK-DEBUG: ![[IFSCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TESTSCOPE]], file: ![[TESTFILE]], line: 33)
-// CHECK-DEBUG: ![[TEMPLOCATION]] = !DILocation(line: 34, scope: ![[IFSCOPE]])
+// CHECK-DEBUG: ![[IFSCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[TESTSCOPE]], file: ![[TESTFILE]], line: 26)
+// CHECK-DEBUG: ![[TEMPLOCATION]] = !DILocation(line: 27, scope: ![[IFSCOPE]])

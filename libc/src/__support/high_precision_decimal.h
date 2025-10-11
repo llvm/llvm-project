@@ -15,11 +15,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 #define LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

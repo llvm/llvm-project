@@ -3,90 +3,92 @@
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
-; CHECK-NEXT: Live-in ir<[[VF:.+]]> = VF
-; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
-; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-NEXT:  IR %start2 = ptrtoint ptr %start to i64
+; CHECK-NEXT:  IR %end1 = ptrtoint ptr %end to i64
+; CHECK-NEXT:  IR %0 = sub i64 %end1, %start2
+; CHECK-NEXT:  EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<2>
+; CHECK-NEXT:  EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<vector.ph>:
-; CHECK-NEXT:   IR %n.mod.vf = urem i64 %0, 2
-; CHECK-NEXT:   IR %n.vec = sub i64 %0, %n.mod.vf
-; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + ir<%n.vec> * ir<1>
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<%n.mod.vf> = urem ir<%0>, ir<2>
+; CHECK-NEXT:   EMIT vp<[[VTC:%.+]]> = sub ir<%0>, vp<%n.mod.vf>
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VTC]]> * ir<1>
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
-; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
-; CHECK-NEXT:     EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
-; CHECK-NEXT:     EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
-; CHECK-NEXT:     EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
-; CHECK-NEXT:   Successor(s): pred.store
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
+; CHECK-NEXT:   EMIT vp<[[STEP1:%.+]]> = extractelement vp<[[STEPS]]>, ir<0>
+; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEP1]]>
+; CHECK-NEXT:   EMIT vp<[[STEP2:%.+]]> = extractelement vp<[[STEPS]]>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[PTR]]>.1 = ptradd ir<%start>, vp<[[STEP2]]>
+; CHECK-NEXT:   EMIT vp<[[PTR_VEC:%.+]]> = buildvector vp<[[PTR]]>, vp<[[PTR]]>.1
+; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[PTR]]>
+; CHECK-NEXT:   EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
+; CHECK-NEXT:   EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
+; CHECK-NEXT:   EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
+; CHECK-NEXT:   EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
+; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.store: {
-; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C2]]>
-; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[C2]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE store ir<0>, vp<[[PTR]]>
-; CHECK-NEXT:     Successor(s): pred.store.continue
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<0>, vp<[[PTR_VEC]]>
+; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): if.then.2.0
-; CHECK-EMPTY:
-; CHECK-NEXT:   if.then.2.0:
-; CHECK-NEXT:   Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.store: {
-; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C1]]>
-; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE store ir<42>, vp<[[PTR]]>
-; CHECK-NEXT:     Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): if.then.1.1
-; CHECK-EMPTY:
-; CHECK-NEXT:   if.then.1.1:
-; CHECK-NEXT:   Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.store: {
-; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
-; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE store ir<2>, vp<[[PTR]]>
-; CHECK-NEXT:     Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): default.2
-; CHECK-EMPTY:
-; CHECK-NEXT:   default.2:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
+; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT: Successor(s): if.then.2.0
+; CHECK-EMPTY:
+; CHECK-NEXT: if.then.2.0:
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[C1]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<42>, vp<[[PTR_VEC]]>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): if.then.1.1
+; CHECK-EMPTY:
+; CHECK-NEXT: if.then.1.1:
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<2>, vp<[[PTR_VEC]]>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): default.2
+; CHECK-EMPTY:
+; CHECK-NEXT: default.2:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<2>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, ir<[[VTC]]>
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
@@ -94,7 +96,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%start>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[END]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:

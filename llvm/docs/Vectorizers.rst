@@ -346,7 +346,7 @@ instruction is available.
   }
 
 Many of these math functions are only vectorizable if the file has been built
-with a specified target vector library that provides a vector implemention
+with a specified target vector library that provides a vector implementation
 of that math function. Using clang, this is handled by the "-fveclib" command
 line option with one of the following vector libraries:
 "accelerate,libmvec,massv,svml,sleef,darwin_libsystem_m,armpl,amdlibm"
@@ -479,8 +479,6 @@ through clang using the command line flag:
 .. code-block:: console
 
    $ clang -fno-slp-vectorize file.c
-
-.. _sandbox-vectorizer:
 
 The Sandbox Vectorizer
 ======================

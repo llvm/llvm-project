@@ -1,9 +1,10 @@
 ; RUN: llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 --show-mc-encoding 2>&1 | FileCheck %s --check-prefix=MCORE
-; RUN: not --crash llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m3 2>&1 | FileCheck %s --check-prefix=M3CORE
-; RUN: not --crash llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s --check-prefix=ACORE
+; RUN: not llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m3 2>&1 | FileCheck %s --check-prefix=M3CORE
+; RUN: not llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s --check-prefix=ACORE
 
-; ACORE: LLVM ERROR: Invalid register name "control".
-; M3CORE: LLVM ERROR: Invalid register name "xpsr_nzcvqg".
+; ACORE: error: <unknown>:0:0: invalid register "control" for llvm.write_register
+; M3CORE: error: <unknown>:0:0: invalid register "xpsr_nzcvqg" for llvm.write_register
+
 
 define i32 @read_mclass_registers() nounwind {
 entry:

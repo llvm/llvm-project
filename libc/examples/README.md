@@ -3,7 +3,7 @@ Examples
 This directory contains a few example programs which illustrate how one can set
 up their own projects to use LLVM's libc, either as an overlay or as the only
 libc in their projects. See the
-[the usage mode document](https://libc.llvm.org/usage_modes.html) for more
+[the usage mode document](https://libc.llvm.org/build_and_test.html) for more
 information about the different modes in which one can build and use the libc.
 
 Building the Examples
@@ -19,8 +19,9 @@ cd build
 ```
 
 Each example can be built to use the libc in either
-[the overlay mode](https://libc.llvm.org/overlay_mode.html) or the
-[full build mode](https://libc.llvm.org/fullbuild_mode.html). The CMake
+[the overlay mode](https://libc.llvm.org/overlay_mode.html), the
+[full host build mode](https://libc.llvm.org/full_host_build.html) or the
+[full cross build mode](https://libc.llvm.org/full_cross_build.html). The CMake
 configure step differs slightly depending on the mode you want to use the libc
 in.
 
@@ -49,7 +50,8 @@ Building against a full libc
 ----------------------------
 
 Before you can link an example against the full libc, you will have to first
-install it. See [the documentation of the full build mode](https://libc.llvm.org/fullbuild_mode.html)
+install it. See [documentation for full host build mode](https://libc.llvm.org/full_host_build.html)
+or [documentation for full cross build mode](https://libc.llvm.org/full_cross_build.html)
 to learn how to install a full libc along with the other LLVM toolchain pieces
 like `clang`, `lld` and `compiler-rt`. The CMake build for the examples will
 assume that you have all of these components installed in a special sysroot

@@ -103,8 +103,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
                     __CLC_AS_GENTYPE(0x3f000000 | (ixn & MANTBITS_SP32));
 
   indx = indx >> 16;
-  __CLC_GENTYPE rh = f * USE_TABLE(log_inv_tbl_ep_head, indx);
-  __CLC_GENTYPE rt = f * USE_TABLE(log_inv_tbl_ep_tail, indx);
+  __CLC_GENTYPE rh = f * __CLC_USE_TABLE(log_inv_tbl_ep_head, indx);
+  __CLC_GENTYPE rt = f * __CLC_USE_TABLE(log_inv_tbl_ep_tail, indx);
   ;
   r = rh + rt;
 
@@ -116,9 +116,10 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   const __CLC_GENTYPE LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
   __CLC_GENTYPE lth = -r;
   __CLC_GENTYPE ltt =
-      __clc_mad(mfn, LOG2_TAIL, -poly) + USE_TABLE(loge_tbl_hi, indx);
+      __clc_mad(mfn, LOG2_TAIL, -poly) + __CLC_USE_TABLE(loge_tbl_hi, indx);
   __CLC_GENTYPE lt = lth + ltt;
-  __CLC_GENTYPE lh = __clc_mad(mfn, LOG2_HEAD, USE_TABLE(loge_tbl_lo, indx));
+  __CLC_GENTYPE lh =
+      __clc_mad(mfn, LOG2_HEAD, __CLC_USE_TABLE(loge_tbl_lo, indx));
   __CLC_GENTYPE l = lh + lt;
 
   // Select near 1 or not
@@ -165,8 +166,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
                              0x1.000000p-1f),
                    r * r, r);
 
-  __CLC_GENTYPE exph = USE_TABLE(exp_tbl_ep_head, j);
-  __CLC_GENTYPE expt = USE_TABLE(exp_tbl_ep_tail, j);
+  __CLC_GENTYPE exph = __CLC_USE_TABLE(exp_tbl_ep_head, j);
+  __CLC_GENTYPE expt = __CLC_USE_TABLE(exp_tbl_ep_tail, j);
 
   __CLC_GENTYPE expylogx =
       __clc_mad(exph, poly, __clc_mad(expt, poly, expt)) + exph;
@@ -203,8 +204,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   __CLC_BIT_INTN x_is_ninf = ix == (__CLC_INTN)NINFBITPATT_SP32;
   __CLC_BIT_INTN x_is_pinf = ix == (__CLC_INTN)PINFBITPATT_SP32;
 
-  ret = (!xpos & (inty == 2)) ? __CLC_AS_INTN((__CLC_GENTYPE)__CLC_GENTYPE_NAN)
-                              : ret;
+  ret = (!xpos & (inty == 2)) ? __CLC_AS_INTN(__CLC_GENTYPE_NAN) : ret;
   __CLC_INTN xinf =
       xpos ? (__CLC_INTN)PINFBITPATT_SP32 : (__CLC_INTN)NINFBITPATT_SP32;
   ret = ((ax == 0) & !ypos & (inty == 1)) ? xinf : ret;
@@ -217,7 +217,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   ret = (x_is_pinf & !ypos) ? 0 : ret;
   ret = (x_is_pinf & ypos) ? PINFBITPATT_SP32 : ret;
   ret = ax > PINFBITPATT_SP32 ? ix : ret;
-  ret = ny == 0 ? __CLC_AS_INTN((__CLC_GENTYPE)__CLC_GENTYPE_NAN) : ret;
+  ret = ny == 0 ? __CLC_AS_INTN(__CLC_GENTYPE_NAN) : ret;
 
   return __CLC_AS_GENTYPE(ret);
 }
@@ -264,8 +264,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
     __CLC_GENTYPE F = __CLC_AS_GENTYPE(rax | 0x3FE0000000000000L);
     __CLC_GENTYPE Y = __CLC_AS_GENTYPE(mantissa | 0x3FE0000000000000L);
     __CLC_GENTYPE f = F - Y;
-    __CLC_GENTYPE log_h = USE_TABLE(log_f_inv_tbl_head, index);
-    __CLC_GENTYPE log_t = USE_TABLE(log_f_inv_tbl_tail, index);
+    __CLC_GENTYPE log_h = __CLC_USE_TABLE(log_f_inv_tbl_head, index);
+    __CLC_GENTYPE log_t = __CLC_USE_TABLE(log_f_inv_tbl_tail, index);
     __CLC_GENTYPE f_inv = (log_h + log_t) * f;
     __CLC_GENTYPE r1 =
         __CLC_AS_GENTYPE(__CLC_AS_ULONGN(f_inv) & 0xfffffffff8000000L);
@@ -285,8 +285,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
     __CLC_GENTYPE poly0t = r1 - poly0h + hr1r1;
     poly = __clc_fma(r1, r2, __clc_fma(0.5 * r2, r2, poly)) + r2 + poly0t;
 
-    log_h = USE_TABLE(powlog_tbl_head, index);
-    log_t = USE_TABLE(powlog_tbl_tail, index);
+    log_h = __CLC_USE_TABLE(powlog_tbl_head, index);
+    log_t = __CLC_USE_TABLE(powlog_tbl_tail, index);
 
     __CLC_GENTYPE resT_t = __clc_fma(xexp, real_log2_tail, +log_t) - poly;
     __CLC_GENTYPE resT = resT_t - poly0h;
@@ -324,14 +324,23 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
     const __CLC_GENTYPE lnof2_by_64_head = 0.010830424260348081;
     const __CLC_GENTYPE lnof2_by_64_tail = -4.359010638708991e-10;
 
+    // If v is so large that we need to return INFINITY, or so small that we
+    // need to return 0, set v to known values that will produce that result. Do
+    // not try to continue the computation with the original v and patch it up
+    // afterwards because v may be so large that temp is out of range of int, in
+    // which case that conversion, and a value based on that conversion being
+    // passed to __clc_ldexp, results in undefined behavior.
+    v = v > max_exp_arg ? 1000.0 : v;
+    v = v < min_exp_arg ? -1000.0 : v;
+
     __CLC_GENTYPE temp = v * sixtyfour_by_lnof2;
     __CLC_INTN n = __CLC_CONVERT_INTN(temp);
     __CLC_GENTYPE dn = __CLC_CONVERT_GENTYPE(n);
     __CLC_INTN j = n & 0x0000003f;
     __CLC_INTN m = n >> 6;
 
-    __CLC_GENTYPE f1 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
-    __CLC_GENTYPE f2 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
+    __CLC_GENTYPE f1 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_head, j);
+    __CLC_GENTYPE f2 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_tail, j);
     __CLC_GENTYPE f = f1 + f2;
 
     __CLC_GENTYPE r1 = __clc_fma(dn, -lnof2_by_64_head, v);
@@ -351,10 +360,6 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
 
     expv = __clc_fma(f, q, f2) + f1;
     expv = __clc_ldexp(expv, m);
-
-    expv = v > max_exp_arg ? __CLC_AS_GENTYPE((__CLC_ULONGN)0x7FF0000000000000L)
-                           : expv;
-    expv = v < min_exp_arg ? 0.0 : expv;
   }
 
   // See whether y is an integer.
@@ -371,8 +376,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   // Now all the edge cases
   __CLC_BIT_INTN x_is_ninf = ux == (__CLC_LONGN)NINFBITPATT_DP64;
   __CLC_BIT_INTN x_is_pinf = ux == (__CLC_LONGN)PINFBITPATT_DP64;
-  ret = (!xpos & (inty == 2)) ? __CLC_AS_LONGN((__CLC_GENTYPE)__CLC_GENTYPE_NAN)
-                              : ret;
+  ret = (!xpos & (inty == 2)) ? __CLC_AS_LONGN(__CLC_GENTYPE_NAN) : ret;
   __CLC_LONGN xinf =
       xpos ? (__CLC_LONGN)PINFBITPATT_DP64 : (__CLC_LONGN)NINFBITPATT_DP64;
   ret = ((ax == 0L) & !ypos & (inty == 1)) ? xinf : ret;
@@ -387,9 +391,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_rootn(__CLC_GENTYPE x,
   ret = (x_is_pinf & !ypos) ? 0L : ret;
   ret = (x_is_pinf & ypos) ? (__CLC_LONGN)PINFBITPATT_DP64 : ret;
   ret = ax > (__CLC_LONGN)PINFBITPATT_DP64 ? ux : ret;
-  ret = __CLC_CONVERT_LONGN(ny == 0)
-            ? __CLC_AS_LONGN((__CLC_GENTYPE)__CLC_GENTYPE_NAN)
-            : ret;
+  ret = __CLC_CONVERT_LONGN(ny == 0) ? __CLC_AS_LONGN(__CLC_GENTYPE_NAN) : ret;
   return __CLC_AS_GENTYPE(ret);
 }
 

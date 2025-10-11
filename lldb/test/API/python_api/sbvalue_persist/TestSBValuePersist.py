@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 class SBValuePersistTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Test SBValue::Persist"""
         self.build()

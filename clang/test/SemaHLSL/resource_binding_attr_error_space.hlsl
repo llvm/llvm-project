@@ -30,7 +30,7 @@ cbuffer cbuf4 {
   // this test validates that no diagnostic is emitted on the space parameter, because
   // this register annotation is not in the global scope.
   // expected-error@+1 {{binding type 'u' only applies to UAV resources}}
-  float a : register(u2, space3); 
+  float a : register(u2, space3);
 }
 
 // expected-error@+1 {{invalid space specifier 's2' used; expected 'space' followed by an integer, like space1}}

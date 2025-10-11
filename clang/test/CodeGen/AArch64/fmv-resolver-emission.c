@@ -68,6 +68,14 @@ inline __attribute__((target_version("default"))) void linkonce_func(void) {}
 void call_linkonce(void) { linkonce_func(); }
 
 
+// Test that an ifunc is generated when the clones attribute has a default version.
+__attribute__((target_clones("default", "aes"))) void clones_with_default(void) {}
+
+
+// Test that an ifunc is NOT generated when the clones attribute does not have a default version.
+__attribute__((target_clones("aes"))) void clones_without_default(void) {}
+
+
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
 // CHECK: @used_before_default_def = weak_odr ifunc void (), ptr @used_before_default_def.resolver
@@ -76,6 +84,7 @@ void call_linkonce(void) { linkonce_func(); }
 // CHECK: @indirect_use = weak_odr ifunc void (), ptr @indirect_use.resolver
 // CHECK: @internal_func = internal ifunc void (), ptr @internal_func.resolver
 // CHECK: @linkonce_func = weak_odr ifunc void (), ptr @linkonce_func.resolver
+// CHECK: @clones_with_default = weak_odr ifunc void (), ptr @clones_with_default.resolver
 //.
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_before_default_def._Maes
@@ -228,6 +237,27 @@ void call_linkonce(void) { linkonce_func(); }
 // CHECK-NEXT:    ret void
 //
 //
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@clones_with_default.default
+// CHECK-SAME: () #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@clones_with_default._Maes
+// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret void
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@clones_without_default._Maes
+// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret void
+//
+//
 // CHECK-LABEL: define {{[^@]+}}@used_before_default_def.resolver() comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
@@ -338,6 +368,20 @@ void call_linkonce(void) { linkonce_func(); }
 // CHECK-NEXT:    ret ptr @linkonce_func._Maes
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @linkonce_func.default
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@clones_with_default.resolver() comdat {
+// CHECK-NEXT:  resolver_entry:
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 33536
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 33536
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
+// CHECK:       resolver_return:
+// CHECK-NEXT:    ret ptr @clones_with_default._Maes
+// CHECK:       resolver_else:
+// CHECK-NEXT:    ret ptr @clones_with_default.default
 //
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}

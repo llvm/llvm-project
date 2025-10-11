@@ -4,20 +4,6 @@
 #include "objc-mock-types.h"
 #include "mock-system-header.h"
 
-namespace std {
-
-template <typename T> struct remove_reference {
-  typedef T type;
-};
-
-template <typename T> struct remove_reference<T&> {
-  typedef T type;
-};
-
-template<typename T> typename remove_reference<T>::type&& move(T&& t);
-
-} // namespace std
-
 typedef struct OpaqueJSString * JSStringRef;
 
 class Obj;
@@ -138,3 +124,20 @@ JSStringRef opaque_ptr() {
 }
 
 @end
+
+namespace template_forward_declare {
+
+template<typename> class HashSet;
+
+template<typename T>
+using SingleThreadHashSet = HashSet<T>;
+
+template<typename> class HashSet { };
+
+struct Font { };
+
+struct ComplexTextController {
+    SingleThreadHashSet<const Font>* fallbackFonts { nullptr };
+};
+
+}

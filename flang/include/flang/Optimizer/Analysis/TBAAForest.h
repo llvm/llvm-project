@@ -40,6 +40,18 @@ struct TBAATree {
 
     mlir::LLVM::TBAATagAttr getTag(llvm::StringRef uniqueId) const;
 
+    /// Create a TBAA tag pointing to the root of this subtree,
+    /// i.e. all the children tags will alias with this tag.
+    mlir::LLVM::TBAATagAttr getTag() const;
+
+    mlir::LLVM::TBAATypeDescriptorAttr getRoot() const { return parent; }
+
+    /// For the given name, get or create a subtree in the current
+    /// subtree. For example, this is used for creating subtrees
+    /// inside the "global data" subtree for the COMMON block variables
+    /// belonging to the same COMMON block.
+    SubtreeState &getOrCreateNamedSubtree(mlir::StringAttr name);
+
   private:
     SubtreeState(mlir::MLIRContext *ctx, std::string name,
                  mlir::LLVM::TBAANodeAttr grandParent)
@@ -51,17 +63,47 @@ struct TBAATree {
     const std::string parentId;
     mlir::MLIRContext *const context;
     mlir::LLVM::TBAATypeDescriptorAttr parent;
-    llvm::DenseMap<llvm::StringRef, mlir::LLVM::TBAATagAttr> tagDedup;
+    // A map of named sub-trees, e.g. sub-trees of the COMMON blocks
+    // placed under the "global data" root.
+    llvm::DenseMap<mlir::StringAttr, SubtreeState> namedSubtrees;
   };
 
+  /// A subtree for POINTER/TARGET variables data.
+  /// Any POINTER variable must use a tag that points
+  /// to the root of this subtree.
+  /// A TARGET dummy argument must also point to this root.
+  SubtreeState targetDataTree;
+  /// A subtree for global variables data (e.g. user module variables).
   SubtreeState globalDataTree;
+  /// A subtree for variables allocated via fir.alloca or fir.allocmem.
   SubtreeState allocatedDataTree;
+  /// A subtree for subprogram's dummy arguments.
+  /// It only contains children for the dummy arguments
+  /// that are not POINTER/TARGET. They all do not conflict
+  /// with each other and with any other data access, except
+  /// with unknown data accesses (FIR alias analysis uses
+  /// SourceKind::Indirect for sources of such accesses).
   SubtreeState dummyArgDataTree;
+  /// A subtree for global variables descriptors.
   SubtreeState directDataTree;
   mlir::LLVM::TBAATypeDescriptorAttr anyAccessDesc;
   mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc;
   mlir::LLVM::TBAATypeDescriptorAttr anyDataTypeDesc;
 
+  // Structure of the created tree:
+  //   Function root
+  //   |
+  //   "any access"
+  //   |
+  //   |- "descriptor member"
+  //   |- "any data access"
+  //      |
+  //      |- "dummy arg data"
+  //      |- "target data"
+  //         |
+  //         |- "allocated data"
+  //         |- "direct data"
+  //         |- "global data"
   static TBAATree buildTree(mlir::StringAttr functionName);
 
 private:
@@ -98,8 +140,8 @@ public:
   // responsibility to provide unique name for the scope.
   // If the scope string is empty, returns the TBAA tree for the
   // "root" scope of the given function.
-  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
-                                              llvm::StringRef scope) {
+  inline TBAATree &getMutableFuncTreeWithScope(mlir::func::FuncOp func,
+                                               llvm::StringRef scope) {
     mlir::StringAttr name = func.getSymNameAttr();
     if (!scope.empty())
       name = mlir::StringAttr::get(name.getContext(),
@@ -107,13 +149,20 @@ public:
     return getFuncTree(name);
   }
 
+  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
+                                              llvm::StringRef scope) {
+    return getMutableFuncTreeWithScope(func, scope);
+  }
+
 private:
-  const TBAATree &getFuncTree(mlir::StringAttr symName) {
+  TBAATree &getFuncTree(mlir::StringAttr symName) {
     if (!separatePerFunction)
       symName = mlir::StringAttr::get(symName.getContext(), "");
     if (!trees.contains(symName))
       trees.insert({symName, TBAATree::buildTree(symName)});
-    return trees.at(symName);
+    auto it = trees.find(symName);
+    assert(it != trees.end());
+    return it->second;
   }
 
   // Should each function use a different tree?

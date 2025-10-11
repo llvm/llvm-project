@@ -55,7 +55,7 @@ namespace format {
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
-  /* l_brace of if/for/while */                                                \
+  /* l_brace of if/for/while/switch/catch */                                   \
   TYPE(ControlStatementLBrace)                                                 \
   TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
@@ -83,6 +83,7 @@ namespace format {
   TYPE(FunctionDeclarationName)                                                \
   TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
+  TYPE(FunctionLikeMacro)                                                      \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
   /* The colons as part of a C11 _Generic selection */                         \
@@ -126,15 +127,24 @@ namespace format {
   TYPE(ObjCBlockLParen)                                                        \
   TYPE(ObjCDecl)                                                               \
   TYPE(ObjCForIn)                                                              \
+  /* The square brackets surrounding a method call, the colon separating the   \
+   * method or parameter name and the argument inside the square brackets, and \
+   * the colon separating the method or parameter name and the type inside the \
+   * method declaration. */                                                    \
   TYPE(ObjCMethodExpr)                                                         \
+  /* The '+' or '-' at the start of the line. */                               \
   TYPE(ObjCMethodSpecifier)                                                    \
   TYPE(ObjCProperty)                                                           \
+  /* The parentheses following '@selector' and the colon following the method  \
+   * or parameter name inside the parentheses. */                              \
+  TYPE(ObjCSelector)                                                           \
   TYPE(ObjCStringLiteral)                                                      \
   TYPE(OverloadedOperator)                                                     \
   TYPE(OverloadedOperatorLParen)                                               \
   TYPE(PointerOrReference)                                                     \
   TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(PureVirtualSpecifier)                                                   \
+  TYPE(QtProperty)                                                             \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RecordRBrace)                                                           \
@@ -144,6 +154,9 @@ namespace format {
   TYPE(RequiresExpression)                                                     \
   TYPE(RequiresExpressionLBrace)                                               \
   TYPE(RequiresExpressionLParen)                                               \
+  /* The hash key in languages that have hash literals, not including the      \
+   * field name in the C++ struct literal. Also the method or parameter name   \
+   * in the Objective-C method declaration or call. */                         \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
@@ -621,6 +634,9 @@ public:
   bool MacroParent = false;
 
   bool is(tok::TokenKind Kind) const { return Tok.is(Kind); }
+  bool is(tok::ObjCKeywordKind Kind) const {
+    return Tok.getObjCKeywordID() == Kind;
+  }
   bool is(TokenType TT) const { return getType() == TT; }
   bool is(const IdentifierInfo *II) const {
     return II && II == Tok.getIdentifierInfo();
@@ -640,6 +656,9 @@ public:
     return is(K1) || isOneOf(K2, Ks...);
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
+  template <typename... Ts> bool isNoneOf(Ts... Ks) const {
+    return !isOneOf(Ks...);
+  }
 
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
@@ -678,10 +697,6 @@ public:
     return isOneOf(tok::kw___attribute, tok::kw___declspec, TT_AttributeMacro);
   }
 
-  bool isObjCAtKeyword(tok::ObjCKeywordKind Kind) const {
-    return Tok.isObjCAtKeyword(Kind);
-  }
-
   bool isAccessSpecifierKeyword() const {
     return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private);
   }
@@ -703,15 +718,24 @@ public:
            isAttribute();
   }
 
+  [[nodiscard]] bool isQtProperty() const;
   [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
-           (Next->isObjCAtKeyword(tok::objc_public) ||
-            Next->isObjCAtKeyword(tok::objc_protected) ||
-            Next->isObjCAtKeyword(tok::objc_package) ||
-            Next->isObjCAtKeyword(tok::objc_private));
+           Next->isOneOf(tok::objc_public, tok::objc_protected,
+                         tok::objc_package, tok::objc_private);
+  }
+
+  bool isObjCLifetimeQualifier(const FormatStyle &Style) const {
+    if (Style.Language != FormatStyle::LK_ObjC || isNot(tok::identifier) ||
+        !TokenText.starts_with("__")) {
+      return false;
+    }
+    const auto Qualifier = TokenText.substr(2);
+    return Qualifier == "autoreleasing" || Qualifier == "strong" ||
+           Qualifier == "weak" || Qualifier == "unsafe_unretained";
   }
 
   /// Returns whether \p Tok is ([{ or an opening < of a template or in
@@ -738,7 +762,7 @@ public:
   /// Returns \c true if this is a "." or "->" accessing a member.
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
-           !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
+           isNoneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
                     TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 
@@ -1063,6 +1087,7 @@ struct AdditionalKeywords {
     kw_interface = &IdentTable.get("interface");
     kw_native = &IdentTable.get("native");
     kw_package = &IdentTable.get("package");
+    kw_record = &IdentTable.get("record");
     kw_synchronized = &IdentTable.get("synchronized");
     kw_throws = &IdentTable.get("throws");
     kw___except = &IdentTable.get("__except");
@@ -1257,7 +1282,7 @@ struct AdditionalKeywords {
     kw_verilogHashHash = &IdentTable.get("##");
     kw_apostrophe = &IdentTable.get("\'");
 
-    // TableGen keywords
+    // TableGen keywords.
     kw_bit = &IdentTable.get("bit");
     kw_bits = &IdentTable.get("bits");
     kw_code = &IdentTable.get("code");
@@ -1272,8 +1297,7 @@ struct AdditionalKeywords {
     kw_multiclass = &IdentTable.get("multiclass");
     kw_then = &IdentTable.get("then");
 
-    // Keep this at the end of the constructor to make sure everything here
-    // is
+    // Keep this at the end of the constructor to make sure everything here is
     // already initialized.
     JsExtraKeywords = std::unordered_set<IdentifierInfo *>(
         {kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
@@ -1282,19 +1306,14 @@ struct AdditionalKeywords {
          // Keywords from the Java section.
          kw_abstract, kw_extends, kw_implements, kw_instanceof, kw_interface});
 
-    CSharpExtraKeywords = std::unordered_set<IdentifierInfo *>(
-        {kw_base, kw_byte, kw_checked, kw_decimal, kw_delegate, kw_event,
-         kw_fixed, kw_foreach, kw_implicit, kw_in, kw_init, kw_interface,
-         kw_internal, kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override,
-         kw_params, kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte,
-         kw_sealed, kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort,
-         kw_when, kw_where,
-         // Keywords from the JavaScript section.
-         kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
-         kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
-         kw_set, kw_type, kw_typeof, kw_var, kw_yield,
-         // Keywords from the Java section.
-         kw_abstract, kw_extends, kw_implements, kw_instanceof, kw_interface});
+    CSharpExtraKeywords = JsExtraKeywords;
+    CSharpExtraKeywords.insert(
+        {kw_base,   kw_byte,     kw_checked, kw_decimal,  kw_delegate,
+         kw_event,  kw_fixed,    kw_foreach, kw_implicit, kw_in,
+         kw_init,   kw_internal, kw_lock,    kw_null,     kw_object,
+         kw_out,    kw_params,   kw_ref,     kw_string,   kw_stackalloc,
+         kw_sbyte,  kw_sealed,   kw_uint,    kw_ulong,    kw_unchecked,
+         kw_unsafe, kw_ushort,   kw_when,    kw_where});
 
     // Some keywords are not included here because they don't need special
     // treatment like `showcancelled` or they should be treated as identifiers
@@ -1412,6 +1431,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_interface;
   IdentifierInfo *kw_native;
   IdentifierInfo *kw_package;
+  IdentifierInfo *kw_record;
   IdentifierInfo *kw_synchronized;
   IdentifierInfo *kw_throws;
 
@@ -1701,8 +1721,8 @@ struct AdditionalKeywords {
     }
   }
 
-  /// Returns \c true if \p Tok is a C# keyword, returns
-  /// \c false if it is a anything else.
+  /// Returns \c true if \p Tok is a C# keyword, returns \c false if it is
+  /// anything else.
   bool isCSharpKeyword(const FormatToken &Tok) const {
     if (Tok.isAccessSpecifierKeyword())
       return true;
@@ -1928,7 +1948,7 @@ private:
   /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;
 
-  /// The C# keywords beyond the C++ keyword set
+  /// The C# keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> CSharpExtraKeywords;
 
   /// The Verilog keywords beyond the C++ keyword set.

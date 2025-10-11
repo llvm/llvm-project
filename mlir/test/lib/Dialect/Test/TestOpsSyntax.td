@@ -69,6 +69,12 @@ def TestAttrWithLoc : TEST_Op<"attr_with_loc"> {
   let assemblyFormat = "`(` $value `` custom<OptionalLoc>($loc) `)` attr-dict";
 }
 
+def ParseCustomOperationNameAPI : TEST_Op<"parse_custom_operation_name_api"> {
+  let summary = "noop that exercises the parseCustomOperationName API";
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "`(` custom<CustomOperationNameEntry>($name) `)` attr-dict";
+}
+
 // -----
 
 // This is used to test that the fallback for a custom op's parser and printer
