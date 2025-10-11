@@ -737,29 +737,31 @@ packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets
 
 ### MultiMemRead
 
-Read memory from multiple memory addresses.
+Read memory from multiple memory ranges.
 
-There are two arguments to the request:
+This packet has one argument:
 
-* `ranges`: a list of base-16 pairs of numbers. Each pair is separated by a
-`,`, as is each number in the pair. The first number of the pair denotes the
-base address of the memory read, the second denotes the number of bytes to be
-read.
-* `options`: an optional string of options. If present, it may be empty. If
-present, it is the last argument of the request.
+* `ranges`: a list of pairs of numbers, formatted in base-16. Each pair is
+separated by a `,`, as is each number in each pair. The first number of the
+pair denotes the base address of the memory read, the second denotes the number
+of bytes to be read. The list must end with a `;`.
 
-Both arguments must end with a `;`.
+The reply packet starts with a comma-separated list of numbers formatted in
+base-16, denoting how many bytes were read from each range, in the same order
+as the request packet. The list is followed by a `;`, followed by a sequence of
+bytes containing binary encoded data for all memory that was read. The length
+of this sequence must be equal to the sum of the numbers provided at the start
+of the reply. The order of the binary data is the same as the order of the
+ranges in the request packet.
 
-The reply packet starts with a comma-separated list of base-16 numbers,
-denoting how many bytes were read from each address, followed by a `;`,
-followed by a sequence of bytes containing the memory data. The length of this
-sequence must be equal to the sum of the numbers provided at the start of the
-reply.
+If an entire range is not readable, the stub may perform a partial read of a
+prefix of the range.
 
-If the stub is unable to read from any individual address, it should return a
-length of "zero" for that address in the reply packet.
+If the stub is unable to read any bytes from a particular range, it must return
+a length of "zero" for that range in the reply packet; no bytes for this memory
+range are included in the sequence of bytes that follows.
 
-A stub that supports this packet should return `MultiMemRead+` in the reply to
+A stub that supports this packet must include `MultiMemRead+` in the reply to
 `qSupported`.
 
 ```
@@ -768,10 +770,20 @@ read packet: $4,0,2;<binary encoding of abcd1000><binary encoding of eeff>
 ```
 
 In the example above, the first read produced `abcd1000`, the read of `a0`
-bytes from address `200200` failed, and the third read produced two bytes –
-`eeff` – out of the four requested.
+bytes from address `200200` failed to read any bytes, and the third read
+produced two bytes – `eeff` – out of the four requested.
 
-**Priority to Implement:** Only required for performance.
+```
+send packet: $MultiMemRead:ranges:100a00,0;
+read packet: $0;
+```
+
+In the example above, a read of zero bytes was requested. A zero-length request
+provides an alternative way of testing whether the stub supports
+`MultiMemRead`.
+
+**Priority to Implement:** Only required for performance, the debugger will
+fall back to doing separate read requests if this packet is unavailable.
 
 ## QEnvironment:NAME=VALUE
 
