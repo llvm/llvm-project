@@ -462,10 +462,10 @@ ConstantFPRange ConstantFPRange::cast(const fltSemantics &DstSem,
 }
 
 ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
-  bool MayBeQNaN =
-      (MayBeQNaN || MayBeSNaN) && (Other.MayBeQNaN || Other.MayBeSNaN);
+  bool ResMayBeQNaN = ((MayBeQNaN || MayBeSNaN) && !Other.isEmptySet()) ||
+                      ((Other.MayBeQNaN || Other.MayBeSNaN) && !isEmptySet());
   if (isNaNOnly() || Other.isNaNOnly())
-    return getNaNOnly(getSemantics(), /*MayBeQNaN=*/MayBeQNaN,
+    return getNaNOnly(getSemantics(), /*MayBeQNaN=*/ResMayBeQNaN,
                       /*MayBeSNaN=*/false);
   bool LHSHasNegInf = false, LHSHasPosInf = false;
   APFloat LHSLower = Lower, LHSUpper = Upper;
@@ -476,7 +476,8 @@ ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
   bool RHSFiniteIsNonEmpty =
       removeInf(RHSLower, RHSUpper, RHSHasPosInf, RHSHasNegInf);
   // -inf + +inf = QNaN
-  MayBeQNaN |= (LHSHasNegInf && RHSHasPosInf) || (LHSHasPosInf && RHSHasNegInf);
+  ResMayBeQNaN |=
+      (LHSHasNegInf && RHSHasPosInf) || (LHSHasPosInf && RHSHasNegInf);
   // +inf + finite/+inf = +inf, -inf + finite/-inf = -inf
   bool HasNegInf = (LHSHasNegInf && (RHSFiniteIsNonEmpty || RHSHasNegInf)) ||
                    (RHSHasNegInf && (LHSFiniteIsNonEmpty || LHSHasNegInf));
@@ -489,12 +490,14 @@ ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
     APFloat NewUpper =
         HasPosInf ? APFloat::getInf(LHSUpper.getSemantics(), /*Negative=*/false)
                   : LHSUpper + RHSUpper;
-    return ConstantFPRange(NewLower, NewUpper, MayBeQNaN, /*MayBeSNaN=*/false);
+    return ConstantFPRange(NewLower, NewUpper, ResMayBeQNaN,
+                           /*MayBeSNaN=*/false);
   }
   // If both HasNegInf and HasPosInf are true, the non-NaN part is empty.
   return ConstantFPRange(
       APFloat::getInf(Lower.getSemantics(), /*Negative=*/HasNegInf),
-      APFloat::getInf(Upper.getSemantics(), /*Negative=*/!HasPosInf), MayBeQNaN,
+      APFloat::getInf(Upper.getSemantics(), /*Negative=*/!HasPosInf),
+      ResMayBeQNaN,
       /*MayBeSNaN=*/false);
 }
 

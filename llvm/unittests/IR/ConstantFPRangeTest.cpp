@@ -22,6 +22,7 @@ protected:
   static ConstantFPRange Full;
   static ConstantFPRange Empty;
   static ConstantFPRange Finite;
+  static ConstantFPRange NonNaN;
   static ConstantFPRange One;
   static ConstantFPRange PosZero;
   static ConstantFPRange NegZero;
@@ -44,6 +45,8 @@ ConstantFPRange ConstantFPRangeTest::Empty =
     ConstantFPRange::getEmpty(APFloat::IEEEdouble());
 ConstantFPRange ConstantFPRangeTest::Finite =
     ConstantFPRange::getFinite(APFloat::IEEEdouble());
+ConstantFPRange ConstantFPRangeTest::NonNaN =
+    ConstantFPRange::getNonNaN(APFloat::IEEEdouble());
 ConstantFPRange ConstantFPRangeTest::One = ConstantFPRange(APFloat(1.0));
 ConstantFPRange ConstantFPRangeTest::PosZero = ConstantFPRange(
     APFloat::getZero(APFloat::IEEEdouble(), /*Negative=*/false));
@@ -137,15 +140,15 @@ static void EnumerateConstantFPRangesImpl(Fn TestFn, SparseLevel Level,
 
 template <typename Fn>
 static void EnumerateConstantFPRanges(Fn TestFn, SparseLevel Level,
-                                      bool IgnoreNaNs = false) {
+                                      bool IgnoreSNaNs = false) {
   EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/false,
                                 /*MayBeSNaN=*/false);
-  if (IgnoreNaNs)
+  EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/true,
+                                /*MayBeSNaN=*/false);
+  if (IgnoreSNaNs)
     return;
   EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/false,
                                 /*MayBeSNaN=*/true);
-  EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/true,
-                                /*MayBeSNaN=*/false);
   EnumerateConstantFPRangesImpl(TestFn, Level, /*MayBeQNaN=*/true,
                                 /*MayBeSNaN=*/true);
 }
@@ -157,9 +160,9 @@ static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn,
       [&](const ConstantFPRange &CR1) {
         EnumerateConstantFPRanges(
             [&](const ConstantFPRange &CR2) { TestFn(CR1, CR2); }, Level,
-            /*IgnoreNaNs=*/true);
+            /*IgnoreSNaNs=*/true);
       },
-      Level, /*IgnoreNaNs=*/true);
+      Level, /*IgnoreSNaNs=*/true);
 }
 
 template <typename Fn>
@@ -826,13 +829,13 @@ TEST_F(ConstantFPRangeTest, negate) {
 }
 
 TEST_F(ConstantFPRangeTest, getWithout) {
-  EXPECT_EQ(Full.getWithoutNaN(), ConstantFPRange::getNonNaN(Sem));
+  EXPECT_EQ(Full.getWithoutNaN(), NonNaN);
   EXPECT_EQ(NaN.getWithoutNaN(), Empty);
 
   EXPECT_EQ(NaN.getWithoutInf(), NaN);
   EXPECT_EQ(PosInf.getWithoutInf(), Empty);
   EXPECT_EQ(NegInf.getWithoutInf(), Empty);
-  EXPECT_EQ(ConstantFPRange::getNonNaN(Sem).getWithoutInf(), Finite);
+  EXPECT_EQ(NonNaN.getWithoutInf(), Finite);
   EXPECT_EQ(Zero.getWithoutInf(), Zero);
   EXPECT_EQ(ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
                                        APFloat(3.0))
@@ -948,7 +951,7 @@ TEST_F(ConstantFPRangeTest, cast) {
 }
 
 TEST_F(ConstantFPRangeTest, add) {
-  EXPECT_EQ(Full.add(Full), ConstantFPRange::getNonNaN(Sem).unionWith(QNaN));
+  EXPECT_EQ(Full.add(Full), NonNaN.unionWith(QNaN));
   EXPECT_EQ(Full.add(Empty), Empty);
   EXPECT_EQ(Empty.add(Full), Empty);
   EXPECT_EQ(Empty.add(Empty), Empty);
@@ -970,6 +973,11 @@ TEST_F(ConstantFPRangeTest, add) {
   EXPECT_EQ(NegZero.add(NegZero), NegZero);
   EXPECT_EQ(NegZero.add(Zero), Zero);
   EXPECT_EQ(NaN.add(NaN), QNaN);
+  EXPECT_EQ(NaN.add(Finite), QNaN);
+  EXPECT_EQ(NonNaN.unionWith(NaN).add(NonNaN), NonNaN.unionWith(QNaN));
+  EXPECT_EQ(PosInf.unionWith(QNaN).add(PosInf), PosInf.unionWith(QNaN));
+  EXPECT_EQ(PosInf.unionWith(NaN).add(ConstantFPRange(APFloat(24.0))),
+            PosInf.unionWith(QNaN));
 
 #if defined(EXPENSIVE_CHECKS)
   EnumerateTwoInterestingConstantFPRanges(
@@ -1002,7 +1010,7 @@ TEST_F(ConstantFPRangeTest, add) {
 }
 
 TEST_F(ConstantFPRangeTest, sub) {
-  EXPECT_EQ(Full.sub(Full), ConstantFPRange::getNonNaN(Sem).unionWith(QNaN));
+  EXPECT_EQ(Full.sub(Full), NonNaN.unionWith(QNaN));
   EXPECT_EQ(Full.sub(Empty), Empty);
   EXPECT_EQ(Empty.sub(Full), Empty);
   EXPECT_EQ(Empty.sub(Empty), Empty);
@@ -1025,6 +1033,7 @@ TEST_F(ConstantFPRangeTest, sub) {
   EXPECT_EQ(NegZero.sub(PosZero), NegZero);
   EXPECT_EQ(NegZero.sub(Zero), Zero);
   EXPECT_EQ(NaN.sub(NaN), QNaN);
+  EXPECT_EQ(NaN.add(Finite), QNaN);
 
 #if defined(EXPENSIVE_CHECKS)
   EnumerateTwoInterestingConstantFPRanges(
