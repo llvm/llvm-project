@@ -53,3 +53,56 @@ TEST(AbstractCallSite, CallbackCall) {
   EXPECT_TRUE(ACS.isCallee(CallbackUse));
   EXPECT_EQ(ACS.getCalledFunction(), Callback);
 }
+
+TEST(AbstractCallSite, DirectCall) {
+  LLVMContext C;
+
+  const char *IR = "declare void @bar()\n"
+                   "define void @foo() {\n"
+                   "  call void @bar()\n"
+                   "  ret void\n"
+                   "}\n";
+
+  std::unique_ptr<Module> M = parseIR(C, IR);
+  ASSERT_TRUE(M);
+
+  Function *Callee = M->getFunction("bar");
+  ASSERT_NE(Callee, nullptr);
+
+  const Use *DirectCallUse = Callee->getSingleUndroppableUse();
+  ASSERT_NE(DirectCallUse, nullptr);
+
+  AbstractCallSite ACS(DirectCallUse);
+  EXPECT_TRUE(ACS);
+  EXPECT_TRUE(ACS.isDirectCall());
+  EXPECT_TRUE(ACS.isCallee(DirectCallUse));
+  EXPECT_EQ(ACS.getCalledFunction(), Callee);
+}
+
+TEST(AbstractCallSite, IndirectCall) {
+  LLVMContext C;
+
+  const char *IR = "define void @foo(ptr %0) {\n"
+                   "  call void %0()\n"
+                   "  ret void\n"
+                   "}\n";
+
+  std::unique_ptr<Module> M = parseIR(C, IR);
+  ASSERT_TRUE(M);
+
+  Function *Fun = M->getFunction("foo");
+  ASSERT_NE(Fun, nullptr);
+
+  Argument *ArgAsCallee = Fun->getArg(0);
+  ASSERT_NE(ArgAsCallee, nullptr);
+
+  const Use *IndCallUse = ArgAsCallee->getSingleUndroppableUse();
+  ASSERT_NE(IndCallUse, nullptr);
+
+  AbstractCallSite ACS(IndCallUse);
+  EXPECT_TRUE(ACS);
+  EXPECT_TRUE(ACS.isIndirectCall());
+  EXPECT_TRUE(ACS.isCallee(IndCallUse));
+  EXPECT_EQ(ACS.getCalledFunction(), nullptr);
+  EXPECT_EQ(ACS.getCalledOperand(), ArgAsCallee);
+}
