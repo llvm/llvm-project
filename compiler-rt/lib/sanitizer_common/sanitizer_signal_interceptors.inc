@@ -24,10 +24,8 @@ using namespace __sanitizer;
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGNAL_IMPL
-#  define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
-    {                                                           \
-      return REAL(func)(signum, handler);                       \
-    }
+#define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signum, handler) \
+  { return REAL(func)(signum, handler); }
 #endif
 
 #ifndef SIGNAL_INTERCEPTOR_SIGACTION_IMPL
