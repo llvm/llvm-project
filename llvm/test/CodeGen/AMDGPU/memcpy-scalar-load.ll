@@ -26,15 +26,15 @@ define void @memcpy_p1_p4_sz31_align_4_4(ptr addrspace(1) align 4 %dst, ptr addr
 ; CHECK-LABEL: memcpy_p1_p4_sz31_align_4_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[16:17], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v2, s[16:17] offset:15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
-; CHECK-NEXT:    v_mov_b32_e32 v3, s5
-; CHECK-NEXT:    v_mov_b32_e32 v4, s6
-; CHECK-NEXT:    v_mov_b32_e32 v5, s7
-; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v6, s[16:17] offset:15
+; CHECK-NEXT:    v_mov_b32_e32 v9, s7
+; CHECK-NEXT:    v_mov_b32_e32 v8, s6
+; CHECK-NEXT:    v_mov_b32_e32 v7, s5
+; CHECK-NEXT:    v_mov_b32_e32 v6, s4
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:15
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
