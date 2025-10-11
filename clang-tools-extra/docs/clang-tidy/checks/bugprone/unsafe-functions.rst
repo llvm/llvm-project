@@ -128,7 +128,7 @@ fully qualified name (``::std::original``).
 Options
 -------
 
-.. option:: ReportMoreUnsafeFunctions
+.. option:: ReportMoreUnsafeFunctions (added in 17.0.1)
 
    When `true`, additional functions from widely used APIs (such as POSIX) are
    added to the list of reported functions.
@@ -136,14 +136,14 @@ Options
    this option enables.
    Default is `true`.
 
-.. option:: ReportDefaultFunctions
+.. option:: ReportDefaultFunctions (added in 20.1.0)
 
     When `true`, the check reports the default set of functions.
     Consider changing the setting to false if you only want to see custom
     functions matched via :ref:`custom functions<CustomFunctions>`.
     Default is `true`.
 
-.. option:: CustomFunctions
+.. option:: CustomFunctions (added in 20.1.0)
 
     A semicolon-separated list of custom functions to be matched. A matched
     function contains a regular expression, an optional name of the replacement

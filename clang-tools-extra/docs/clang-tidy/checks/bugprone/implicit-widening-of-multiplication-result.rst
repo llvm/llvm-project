@@ -34,18 +34,18 @@ where for that to happen you "only" need a ~269MPix image.
 Options
 -------
 
-.. option:: UseCXXStaticCastsInCppSources
+.. option:: UseCXXStaticCastsInCppSources (added in 15.0.0)
 
    When suggesting fix-its for C++ code, should C++-style ``static_cast<>()``'s
    be suggested, or C-style casts. Defaults to `true`.
 
-.. option:: UseCXXHeadersInCppSources
+.. option:: UseCXXHeadersInCppSources (added in 15.0.0)
 
    When suggesting to include the appropriate header in C++ code,
    should ``<cstddef>`` header be suggested, or ``<stddef.h>``.
    Defaults to `true`.
 
-.. option:: IgnoreConstantIntExpr
+.. option:: IgnoreConstantIntExpr (added in 19.1.0)
 
    If the multiplication operands are compile-time constants (like literals or
    are ``constexpr``) and fit within the source expression type, do not emit a

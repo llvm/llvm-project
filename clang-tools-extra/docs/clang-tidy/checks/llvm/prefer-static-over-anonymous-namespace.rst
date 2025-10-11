@@ -62,12 +62,12 @@ Should become:
 Options
 -------
 
-.. option:: AllowVariableDeclarations
+.. option:: AllowVariableDeclarations (added in 21.1.0)
 
   When `true`, allow variable declarations to be in anonymous namespace.
   Default value is `true`.
 
-.. option:: AllowMemberFunctionsInClass
+.. option:: AllowMemberFunctionsInClass (added in 21.1.0)
 
   When `true`, only methods defined in anonymous namespace outside of the
   corresponding class will be warned. Default value is `true`.

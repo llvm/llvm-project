@@ -19,7 +19,7 @@ The latter is shorter, simpler and does not require use of raw pointer APIs.
 Options
 -------
 
-.. option:: PreferResetCall
+.. option:: PreferResetCall (added in 15.0.0)
 
   If `true`, refactor by calling the reset member function instead of
   assigning to ``nullptr``. Default value is `false`.

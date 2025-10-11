@@ -37,7 +37,7 @@ Example:
 Options
 -------
 
-.. option:: FixMode
+.. option:: FixMode (added in 19.1.0)
 
   Selects what kind of a fix the check should provide. The default is `UseStatic`.
 

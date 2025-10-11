@@ -31,7 +31,7 @@ Example:
 Options
 -------
 
-.. option:: AllowPartialMove
+.. option:: AllowPartialMove (added in 17.0.1)
 
    If set to `true`, the check accepts ``std::move`` calls containing any
    subexpression containing the parameter. CppCoreGuideline F.18 officially
@@ -51,12 +51,12 @@ Options
       pair<Obj, Obj> other = std::move(p);
     }
 
-.. option:: IgnoreUnnamedParams
+.. option:: IgnoreUnnamedParams (added in 17.0.1)
 
    If set to `true`, the check ignores unnamed rvalue reference parameters.
    Default is `false`.
 
-.. option:: IgnoreNonDeducedTemplateTypes
+.. option:: IgnoreNonDeducedTemplateTypes (added in 17.0.1)
 
    If set to `true`, the check ignores non-deduced template type rvalue
    reference parameters. Default is `false`.
@@ -79,7 +79,7 @@ Options
       T other = std::forward<T>(t);
     }
 
-.. option:: MoveFunction
+.. option:: MoveFunction (added in 21.1.0)
 
    Specify the function used for moving. Default is `::std::move`.
 

@@ -41,14 +41,14 @@ Following types are considered as hostile:
 Options
 -------
 
-.. option:: RAIITypesList
+.. option:: RAIITypesList (added in 18.1.0)
 
     A semicolon-separated list of qualified types which should not be allowed to
     persist across suspension points.
     Eg: `my::lockable;a::b;::my::other::lockable`
     The default value of this option is `std::lock_guard;std::scoped_lock`.
 
-.. option:: AllowedAwaitablesList
+.. option:: AllowedAwaitablesList (added in 18.1.0)
 
     A semicolon-separated list of qualified types of awaitables types which can
     be safely awaited while having hostile RAII objects in scope.

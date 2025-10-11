@@ -55,7 +55,7 @@ All other uses of ``goto`` are diagnosed in `C++`.
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 21.1.0)
 
    If set to `true`, the check will not warn if a ``goto`` statement is
    expanded from a macro. Default is `false`.

@@ -52,7 +52,7 @@ Examples:
 Options
 -------
 
-.. option:: AOCVersion
+.. option:: AOCVersion (added in 15.0.0)
 
    Defines the version of the Altera Offline Compiler. Defaults to ``1600``
    (corresponding to version 16.00).

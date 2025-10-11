@@ -11,7 +11,7 @@ The according rule is defined in the `High Integrity C++ Standard, Section 5.6.1
 Options
 -------
 
-.. option:: IgnorePositiveIntegerLiterals
+.. option:: IgnorePositiveIntegerLiterals (added in 15.0.0)
 
    If this option is set to `true`, the check will not warn on bitwise operations with positive integer literals, e.g. `~0`, `2 << 1`, etc.
    Default value is `false`.

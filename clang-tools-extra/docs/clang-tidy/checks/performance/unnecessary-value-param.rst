@@ -61,12 +61,12 @@ depends on function signatures.
 Options
 -------
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
 
-.. option:: AllowedTypes
+.. option:: AllowedTypes (added in 15.0.0)
 
    A semicolon-separated list of names of types allowed to be passed by value.
    Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$`` matches every
@@ -75,7 +75,7 @@ Options
    matched against the qualified type name (i.e. ``namespace::Type``),
    otherwise it is matched against only the type name (i.e. ``Type``).
 
-.. option:: IgnoreCoroutines
+.. option:: IgnoreCoroutines (added in 21.1.0)
 
    A boolean specifying whether the check should suggest passing parameters by
    reference in coroutines. Passing parameters by reference in coroutines may

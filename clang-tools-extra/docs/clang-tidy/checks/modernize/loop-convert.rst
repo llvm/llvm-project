@@ -143,13 +143,13 @@ lives.
 Options
 -------
 
-.. option:: UseCxx20ReverseRanges
+.. option:: UseCxx20ReverseRanges (added in 15.0.0)
 
    When set to true convert loops when in C++20 or later mode using
    ``std::ranges::reverse_view``.
    Default value is `true`.
 
-.. option:: MakeReverseRangeFunction
+.. option:: MakeReverseRangeFunction (added in 15.0.0)
 
    Specify the function used to reverse an iterator pair, the function should
    accept a class with ``rbegin`` and ``rend`` methods and return a
@@ -158,7 +158,7 @@ Options
    and ``llvm::reverse``.
    Default value is an empty string.
 
-.. option:: MakeReverseRangeHeader
+.. option:: MakeReverseRangeHeader (added in 15.0.0)
 
    Specifies the header file where :option:`MakeReverseRangeFunction` is
    declared. For the previous examples this option would be set to
@@ -170,7 +170,7 @@ Options
    system include.
    Default value is an empty string.
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.

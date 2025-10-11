@@ -55,7 +55,7 @@ other smart pointers or other classes use the :option:`SmartPointers` option.
 Options
 -------
 
-.. option:: SmartPointers
+.. option:: SmartPointers (added in 21.1.0)
 
     Semicolon-separated list of fully qualified class names of custom smart
     pointers. Default value is `::std::unique_ptr;::std::shared_ptr;

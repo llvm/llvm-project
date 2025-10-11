@@ -19,7 +19,7 @@ WARNING! This check may be expensive on large source files.
 Options
 -------
 
-.. option:: IgnoredExceptions
+.. option:: IgnoredExceptions (added in 15.0.0)
 
    Comma-separated list containing type names which are not counted as thrown
    exceptions in the check. Default value is an empty string.

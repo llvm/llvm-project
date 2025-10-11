@@ -29,7 +29,7 @@ Likely intended output::
 Options
 -------
 
-.. option::  IgnoreMacros
+.. option::  IgnoreMacros (added in 18.1.0)
 
   The value `true` specifies that attempting to get the name of a function from
   within a macro should not be diagnosed. The default value is `false`.

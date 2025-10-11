@@ -117,22 +117,22 @@ This check requires C++11 or higher to run.
 Options
 -------
 
-.. option:: ContainersWithPushBack
+.. option:: ContainersWithPushBack (added in 15.0.0)
 
    Semicolon-separated list of class names of custom containers that support
    ``push_back``.
 
-.. option:: ContainersWithPush
+.. option:: ContainersWithPush (added in 16.0.0)
 
    Semicolon-separated list of class names of custom containers that support
    ``push``.
 
-.. option:: ContainersWithPushFront
+.. option:: ContainersWithPushFront (added in 16.0.0)
 
    Semicolon-separated list of class names of custom containers that support
    ``push_front``.
 
-.. option:: IgnoreImplicitConstructors
+.. option:: IgnoreImplicitConstructors (added in 15.0.0)
 
     When `true`, the check will ignore implicitly constructed arguments of
     ``push_back``, e.g.
@@ -144,21 +144,21 @@ Options
 
     Default is `false`.
 
-.. option:: SmartPointers
+.. option:: SmartPointers (added in 15.0.0)
 
    Semicolon-separated list of class names of custom smart pointers.
 
-.. option:: TupleTypes
+.. option:: TupleTypes (added in 15.0.0)
 
     Semicolon-separated list of ``std::tuple``-like class names.
 
-.. option:: TupleMakeFunctions
+.. option:: TupleMakeFunctions (added in 15.0.0)
 
     Semicolon-separated list of ``std::make_tuple``-like function names. Those
     function calls will be removed from ``push_back`` calls and turned into
     ``emplace_back``.
 
-.. option:: EmplacyFunctions
+.. option:: EmplacyFunctions (added in 15.0.0)
 
     Semicolon-separated list of containers without their template parameters
     and some ``emplace``-like method of the container. Example:

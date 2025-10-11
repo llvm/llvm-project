@@ -9,7 +9,7 @@ cert-oop57-cpp
 Options
 -------
 
-.. option:: MemSetNames
+.. option:: MemSetNames (added in 15.0.0)
 
    Specify extra functions to flag that act similarly to ``memset``.
    Specify names in a semicolon delimited list.
@@ -17,7 +17,7 @@ Options
    The check will detect the following functions:
    `memset`, `std::memset`.
 
-.. option:: MemCpyNames
+.. option:: MemCpyNames (added in 15.0.0)
 
    Specify extra functions to flag that act similarly to ``memcpy``.
    Specify names in a semicolon delimited list.
@@ -26,7 +26,7 @@ Options
    `std::memcpy`, `memcpy`, `std::memmove`, `memmove`, `std::strcpy`,
    `strcpy`, `memccpy`, `stpncpy`, `strncpy`.
 
-.. option:: MemCmpNames
+.. option:: MemCmpNames (added in 15.0.0)
 
    Specify extra functions to flag that act similarly to ``memcmp``.
    Specify names in a semicolon delimited list.

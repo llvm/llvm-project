@@ -33,7 +33,7 @@ is more permissive (see :option:`StrictMode`).
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 15.0.0)
 
   When `false` (default value), the check will ignore trivially unused parameters,
   i.e. when the corresponding function has an empty body (and in case of
@@ -41,7 +41,7 @@ Options
   an unused parameter is unlikely to be unnoticed by a human reader, and
   there's basically no place for a bug to hide.
 
-.. option:: IgnoreVirtual
+.. option:: IgnoreVirtual (added in 17.0.1)
 
   Determines whether virtual method parameters should be inspected.
   Set to `true` to ignore them. Default is `false`.

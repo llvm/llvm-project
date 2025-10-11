@@ -35,18 +35,18 @@ becomes
 Options
 -------
 
-.. option:: StringLikeClasses
+.. option:: StringLikeClasses (added in 15.0.0)
 
    Semicolon-separated list of names of string-like classes. By default includes
    ``::std::basic_string``, ``::std::basic_string_view``, and
    ``::absl::string_view``.
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
 
-.. option:: AbseilStringsMatchHeader
+.. option:: AbseilStringsMatchHeader (added in 15.0.0)
 
    The location of Abseil's ``strings/match.h``. Defaults to
    ``absl/strings/match.h``.

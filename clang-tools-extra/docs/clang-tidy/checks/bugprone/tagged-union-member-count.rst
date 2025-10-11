@@ -118,7 +118,7 @@ Example counts:
 Options
 -------
 
-.. option:: EnableCountingEnumHeuristic
+.. option:: EnableCountingEnumHeuristic (added in 20.1.0)
 
 This option enables or disables the counting enum heuristic.
 It uses the prefixes and suffixes specified in the options
@@ -169,11 +169,11 @@ When :option:`EnableCountingEnumHeuristic` is `true`:
     } Data;
   };
 
-.. option:: CountingEnumPrefixes
+.. option:: CountingEnumPrefixes (added in 20.1.0)
 
 See :option:`CountingEnumSuffixes` below.
 
-.. option:: CountingEnumSuffixes
+.. option:: CountingEnumSuffixes (added in 20.1.0)
 
 CountingEnumPrefixes and CountingEnumSuffixes are lists of semicolon
 separated strings that are used to search for possible counting enum constants.
@@ -261,7 +261,7 @@ When :option:`EnableCountingEnumHeuristic` is `true` and :option:`CountingEnumPr
     } Data;
   };
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 20.1.0)
 
 When enabled, the check will also give a warning, when the number of tags
 is greater than the number of union data members.

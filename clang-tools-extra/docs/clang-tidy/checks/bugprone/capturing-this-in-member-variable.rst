@@ -35,13 +35,13 @@ Possible fixes:
 Options
 -------
 
-.. option:: FunctionWrapperTypes
+.. option:: FunctionWrapperTypes (added in 21.1.0)
 
   A semicolon-separated list of names of types. Used to specify function
   wrapper that can hold lambda expressions.
   Default is `::std::function;::std::move_only_function;::boost::function`.
 
-.. option:: BindFunctions
+.. option:: BindFunctions (added in 21.1.0)
 
   A semicolon-separated list of fully qualified names of functions that can
   capture ``this`` pointer.

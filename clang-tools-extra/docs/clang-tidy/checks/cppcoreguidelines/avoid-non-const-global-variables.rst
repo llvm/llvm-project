@@ -45,7 +45,7 @@ or both.
 Options
 -------
 
-.. option:: AllowInternalLinkage
+.. option:: AllowInternalLinkage (added in 19.1.0)
 
    When set to `true`, static non-const variables and variables in anonymous
    namespaces will not generate a warning. The default value is `false`.

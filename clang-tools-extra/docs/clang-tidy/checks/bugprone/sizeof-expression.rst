@@ -276,28 +276,28 @@ importantly, ``char``) are excluded.
 Options
 -------
 
-.. option:: WarnOnSizeOfConstant
+.. option:: WarnOnSizeOfConstant (added in 15.0.0)
 
    When `true`, the check will warn on an expression like
    ``sizeof(CONSTANT)``. Default is `true`.
 
-.. option:: WarnOnSizeOfIntegerExpression
+.. option:: WarnOnSizeOfIntegerExpression (added in 15.0.0)
 
    When `true`, the check will warn on an expression like ``sizeof(expr)``
    where the expression results in an integer. Default is `false`.
 
-.. option:: WarnOnSizeOfThis
+.. option:: WarnOnSizeOfThis (added in 15.0.0)
 
    When `true`, the check will warn on an expression like ``sizeof(this)``.
    Default is `true`.
 
-.. option:: WarnOnSizeOfCompareToConstant
+.. option:: WarnOnSizeOfCompareToConstant (added in 15.0.0)
 
    When `true`, the check will warn on an expression like
    ``sizeof(expr) <= k`` for a suspicious constant `k` while `k` is `0` or
    greater than `0x8000`. Default is `true`.
 
-.. option:: WarnOnSizeOfPointerToAggregate
+.. option:: WarnOnSizeOfPointerToAggregate (added in 16.0.0)
 
    When `true`, the check will warn when the argument of ``sizeof`` is either a
    pointer-to-aggregate type, an expression returning a pointer-to-aggregate
@@ -305,20 +305,20 @@ Options
    conversion (that may be implicit or explicit, for example ``array + 2`` or
    ``(int *)array``). Default is `true`.
 
-.. option:: WarnOnSizeOfPointer
+.. option:: WarnOnSizeOfPointer (added in 19.1.0)
 
    When `true`, the check will report all expressions where the argument of
    ``sizeof`` is an expression that produces a pointer (except for a few
    idiomatic expressions that are probably intentional and correct).
    This detects occurrences of CWE 467. Default is `false`.
 
-.. option:: WarnOnOffsetDividedBySizeOf
+.. option:: WarnOnOffsetDividedBySizeOf (added in 20.1.0)
 
    When `true`, the check will warn on pointer arithmetic where the
    element count is obtained from a division with ``sizeof(...)``,
    e.g., ``Ptr + Bytes / sizeof(*T)``. Default is `true`.
 
-.. option:: WarnOnSizeOfInLoopTermination
+.. option:: WarnOnSizeOfInLoopTermination (added in 21.1.0)
 
    When `true`, the check will warn about incorrect use of sizeof expression
    in loop termination condition. The warning triggers if the ``sizeof``

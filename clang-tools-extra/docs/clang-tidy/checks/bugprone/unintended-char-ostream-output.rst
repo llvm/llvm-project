@@ -42,7 +42,7 @@ Or cast to char to explicitly indicate that output should be a character.
 Options
 -------
 
-.. option:: AllowedTypes
+.. option:: AllowedTypes (added in 21.1.0)
 
   A semicolon-separated list of type names that will be treated like the ``char``
   type: the check will not report variables declared with with these types or
@@ -52,7 +52,7 @@ Options
   ``typedef`` alias for ``unsigned char``.
   Default is `unsigned char;signed char`.
 
-.. option:: CastTypeName
+.. option:: CastTypeName (added in 21.1.0)
 
   When `CastTypeName` is specified, the fix-it will use `CastTypeName` as the
   cast target type. Otherwise, fix-it will automatically infer the type.
