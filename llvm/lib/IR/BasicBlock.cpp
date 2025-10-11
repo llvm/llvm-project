@@ -658,6 +658,26 @@ void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
   this->replaceSuccessorsPhiUsesWith(this, New);
 }
 
+void BasicBlock::deduplicatePhiUsesOf(BasicBlock *BB) {
+  // N.B. This might not be a complete BasicBlock, so don't assume
+  // that it ends with a non-phi instruction.
+  for (Instruction &I : *this) {
+    PHINode *PN = dyn_cast<PHINode>(&I);
+    if (!PN)
+      break;
+    // Since the order of basic blocks in a PHINode are sorted we can
+    // use the index of \p BB + 1 as the first index to check for duplicates.
+    unsigned Idx = PN->getBasicBlockIndex(BB) + 1;
+    while (Idx < PN->getNumIncomingValues()) {
+      BasicBlock *DuplicateBB = PN->getIncomingBlock(Idx);
+      if (DuplicateBB != BB) {
+        break;
+      }
+      PN->removeIncomingValue(Idx);
+    }
+  }
+}
+
 bool BasicBlock::isLandingPad() const {
   return isa<LandingPadInst>(getFirstNonPHIIt());
 }
