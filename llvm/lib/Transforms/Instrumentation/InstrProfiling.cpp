@@ -1948,7 +1948,7 @@ bool InstrLowerer::emitDataDelayedInit(
 
   for (auto *Kernel : Kernels) {
     auto &KernelEntry = Kernel->getEntryBlock();
-    IRB.SetInsertPoint(KernelEntry.getFirstNonPHI());
+    IRB.SetInsertPoint(KernelEntry.getFirstNonPHIIt());
     IRB.CreateCall(DelayedInitF);
   }
 
