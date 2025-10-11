@@ -157,7 +157,6 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-
   test<std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
