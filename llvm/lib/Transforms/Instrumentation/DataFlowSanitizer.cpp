@@ -2187,8 +2187,14 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       // and then the entire shadow for the second origin pointer (which will be
       // chosen by combineOrigins() iff the least-significant half of the wide
       // shadow was empty but the other half was not).
-      Value *WideShadowLo = IRB.CreateShl(
-          WideShadow, ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2));
+      Value *WideShadowLo =
+          F->getParent()->getDataLayout().isLittleEndian()
+              ? IRB.CreateShl(
+                    WideShadow,
+                    ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2))
+              : IRB.CreateAnd(
+                    WideShadow,
+                    ConstantInt::get(WideShadowTy, 0xFFFFFFFF00000000ULL));
       Shadows.push_back(WideShadow);
       Origins.push_back(DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr));
 
