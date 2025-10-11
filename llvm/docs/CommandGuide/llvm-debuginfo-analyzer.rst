@@ -394,6 +394,8 @@ to make the output easier to understand.
    =list: Elements are displayed in a tabular format.
    =parents: Elements and parents are displayed in a tree format.
    =view: Elements, parents and children are displayed in a tree format.
+   =debugger: Lines, and optionally variables and instructions are
+          displayed in a way to simulate stepping through a debugger.
 
 The **list** layout presents the logical elements in a tabular form
 without any parent-child relationship. This may be the preferred way to
@@ -416,6 +418,10 @@ criteria (:option:`--select`) or (:option:`--compare`) and its parents.
 The combined **view** layout includes the elements that match any given
 criteria (:option:`--select`) or (:option:`--compare`), its parents
 and children.
+
+The combined **debugger** layout prints each statement line in order and
+variables live at each line (if `--print=symbols` given), as well as
+instructions (if `--print=instructions` given).
 
 **Notes**:
 
