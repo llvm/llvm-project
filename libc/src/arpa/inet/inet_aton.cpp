@@ -14,10 +14,11 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
-  unsigned long parts[4] = {0};
+  constexpr int IPV4_MAX_DOT_NUM = 3;
+  unsigned long parts[IPV4_MAX_DOT_NUM + 1] = {0};
   int dot_num = 0;
 
-  for (; dot_num < 4; ++dot_num) {
+  for (; dot_num <= IPV4_MAX_DOT_NUM; ++dot_num) {
     auto result = internal::strtointeger<unsigned long>(cp, 0);
     parts[dot_num] = result;
 
@@ -32,7 +33,7 @@ LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
       cp += (result.parsed_len + 1);
   }
 
-  if (dot_num > 3)
+  if (dot_num > IPV4_MAX_DOT_NUM)
     return 0;
 
   unsigned long result = 0;
@@ -41,7 +42,7 @@ LLVM_LIBC_FUNCTION(int, inet_aton, (const char *cp, in_addr *inp)) {
         i == dot_num ? (0xffffffffUL >> (8 * dot_num)) : 0xffUL;
     if (parts[i] > max_part)
       return 0;
-    int shift = i == dot_num ? 0 : 8 * (3 - i);
+    int shift = i == dot_num ? 0 : 8 * (IPV4_MAX_DOT_NUM - i);
     result |= parts[i] << shift;
   }
 
