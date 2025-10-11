@@ -58,7 +58,7 @@ entry:
   %e13 = extractelement <32 x i8> %v, i32 14
   %e14 = extractelement <32 x i8> %v, i32 13
   %e15 = extractelement <32 x i8> %v, i32 12
-  %ins0 = insertelement <16 x i8> undef, i8 %e0, i32 0
+  %ins0 = insertelement <16 x i8> poison, i8 %e0, i32 0
   %ins1 = insertelement <16 x i8> %ins0, i8 %e1, i32 1
   %ins2 = insertelement <16 x i8> %ins1, i8 %e2, i32 2
   %ins3 = insertelement <16 x i8> %ins2, i8 %e3, i32 3
@@ -135,7 +135,7 @@ entry:
   %e13 = extractelement <32 x i8> %v, i32 27
   %e14 = extractelement <32 x i8> %v, i32 29
   %e15 = extractelement <32 x i8> %v, i32 31
-  %ins0 = insertelement <16 x i8> undef, i8 %e0, i32 0
+  %ins0 = insertelement <16 x i8> poison, i8 %e0, i32 0
   %ins1 = insertelement <16 x i8> %ins0, i8 %e1, i32 1
   %ins2 = insertelement <16 x i8> %ins1, i8 %e2, i32 2
   %ins3 = insertelement <16 x i8> %ins2, i8 %e3, i32 3
@@ -186,7 +186,7 @@ entry:
   %e5 = extractelement <16 x i16> %v, i32 5
   %e6 = extractelement <16 x i16> %v, i32 6
   %e7 = extractelement <16 x i16> %v, i32 0
-  %ins0 = insertelement <8 x i16> undef, i16 %e0, i32 0
+  %ins0 = insertelement <8 x i16> poison, i16 %e0, i32 0
   %ins1 = insertelement <8 x i16> %ins0, i16 %e1, i32 1
   %ins2 = insertelement <8 x i16> %ins1, i16 %e2, i32 2
   %ins3 = insertelement <8 x i16> %ins2, i16 %e3, i32 3
@@ -231,7 +231,7 @@ entry:
   %e5 = extractelement <16 x i16> %v, i32 10
   %e6 = extractelement <16 x i16> %v, i32 3
   %e7 = extractelement <16 x i16> %v, i32 11
-  %ins0 = insertelement <8 x i16> undef, i16 %e0, i32 0
+  %ins0 = insertelement <8 x i16> poison, i16 %e0, i32 0
   %ins1 = insertelement <8 x i16> %ins0, i16 %e1, i32 1
   %ins2 = insertelement <8 x i16> %ins1, i16 %e2, i32 2
   %ins3 = insertelement <8 x i16> %ins2, i16 %e3, i32 3
@@ -264,7 +264,7 @@ entry:
   %e1 = extractelement <8 x i32> %v, i32 0
   %e2 = extractelement <8 x i32> %v, i32 0
   %e3 = extractelement <8 x i32> %v, i32 0
-  %ins0 = insertelement <4 x i32> undef, i32 %e0, i32 0
+  %ins0 = insertelement <4 x i32> poison, i32 %e0, i32 0
   %ins1 = insertelement <4 x i32> %ins0, i32 %e1, i32 1
   %ins2 = insertelement <4 x i32> %ins1, i32 %e2, i32 2
   %ins3 = insertelement <4 x i32> %ins2, i32 %e3, i32 3
@@ -292,7 +292,7 @@ entry:
   %e1 = extractelement <8 x i32> %v, i32 6
   %e2 = extractelement <8 x i32> %v, i32 1
   %e3 = extractelement <8 x i32> %v, i32 0
-  %ins0 = insertelement <4 x i32> undef, i32 %e0, i32 0
+  %ins0 = insertelement <4 x i32> poison, i32 %e0, i32 0
   %ins1 = insertelement <4 x i32> %ins0, i32 %e1, i32 1
   %ins2 = insertelement <4 x i32> %ins1, i32 %e2, i32 2
   %ins3 = insertelement <4 x i32> %ins2, i32 %e3, i32 3
@@ -317,7 +317,7 @@ entry:
   %e1 = extractelement <8 x float> %v, i32 1
   %e2 = extractelement <8 x float> %v, i32 1
   %e3 = extractelement <8 x float> %v, i32 3
-  %ins0 = insertelement <4 x float> undef, float %e0, i32 0
+  %ins0 = insertelement <4 x float> poison, float %e0, i32 0
   %ins1 = insertelement <4 x float> %ins0, float %e1, i32 1
   %ins2 = insertelement <4 x float> %ins1, float %e2, i32 2
   %ins3 = insertelement <4 x float> %ins2, float %e3, i32 3
@@ -342,7 +342,7 @@ entry:
   %e1 = extractelement <8 x float> %v, i32 0
   %e2 = extractelement <8 x float> %v, i32 6
   %e3 = extractelement <8 x float> %v, i32 0
-  %ins0 = insertelement <4 x float> undef, float %e0, i32 0
+  %ins0 = insertelement <4 x float> poison, float %e0, i32 0
   %ins1 = insertelement <4 x float> %ins0, float %e1, i32 1
   %ins2 = insertelement <4 x float> %ins1, float %e2, i32 2
   %ins3 = insertelement <4 x float> %ins2, float %e3, i32 3
@@ -372,7 +372,7 @@ entry:
   %v = load <4 x i64>, ptr %src
   %e0 = extractelement <4 x i64> %v, i32 0
   %e1 = extractelement <4 x i64> %v, i32 0
-  %ins0 = insertelement <2 x i64> undef, i64 %e0, i32 0
+  %ins0 = insertelement <2 x i64> poison, i64 %e0, i32 0
   %ins1 = insertelement <2 x i64> %ins0, i64 %e1, i32 1
   store <2 x i64> %ins1, ptr %dst
   ret void
@@ -406,7 +406,7 @@ entry:
   %v = load <4 x i64>, ptr %src
   %e0 = extractelement <4 x i64> %v, i32 1
   %e1 = extractelement <4 x i64> %v, i32 2
-  %ins0 = insertelement <2 x i64> undef, i64 %e0, i32 0
+  %ins0 = insertelement <2 x i64> poison, i64 %e0, i32 0
   %ins1 = insertelement <2 x i64> %ins0, i64 %e1, i32 1
   store <2 x i64> %ins1, ptr %dst
   ret void
@@ -425,7 +425,7 @@ entry:
   %v = load <4 x double>, ptr %src
   %e0 = extractelement <4 x double> %v, i32 1
   %e1 = extractelement <4 x double> %v, i32 0
-  %ins0 = insertelement <2 x double> undef, double %e0, i32 0
+  %ins0 = insertelement <2 x double> poison, double %e0, i32 0
   %ins1 = insertelement <2 x double> %ins0, double %e1, i32 1
   store <2 x double> %ins1, ptr %dst
   ret void
@@ -444,7 +444,7 @@ entry:
   %v = load <4 x double>, ptr %src
   %e0 = extractelement <4 x double> %v, i32 3
   %e1 = extractelement <4 x double> %v, i32 1
-  %ins0 = insertelement <2 x double> undef, double %e0, i32 0
+  %ins0 = insertelement <2 x double> poison, double %e0, i32 0
   %ins1 = insertelement <2 x double> %ins0, double %e1, i32 1
   store <2 x double> %ins1, ptr %dst
   ret void
