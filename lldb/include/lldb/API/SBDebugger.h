@@ -424,6 +424,7 @@ public:
   bool GetUseSourceCache() const;
 
   /// Get the default architecture.
+  LLDB_RPC_POINTER_PLUS_LEN
   static bool GetDefaultArchitecture(char *arch_name, size_t arch_name_len);
 
   /// Set the default architecture.
@@ -479,6 +480,7 @@ public:
 #endif
 
   /// Dispatch input to the debugger.
+  LLDB_RPC_POINTER_PLUS_LEN
   void DispatchInput(const void *data, size_t data_len);
 
   /// Interrupt the current input dispatch.
