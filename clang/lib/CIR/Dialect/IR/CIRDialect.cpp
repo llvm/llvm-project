@@ -1758,21 +1758,12 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
-  // Parse optional inline attribute: inline_never, inline_always, or
-  // inline_hint
-  if (parser.parseOptionalKeyword("inline_never").succeeded()) {
-    state.addAttribute(
-        getInlineKindAttrName(state.name),
-        cir::InlineAttr::get(builder.getContext(), cir::InlineKind::NoInline));
-  } else if (parser.parseOptionalKeyword("inline_always").succeeded()) {
-    state.addAttribute(getInlineKindAttrName(state.name),
-                       cir::InlineAttr::get(builder.getContext(),
-                                            cir::InlineKind::AlwaysInline));
-  } else if (parser.parseOptionalKeyword("inline_hint").succeeded()) {
-    state.addAttribute(getInlineKindAttrName(state.name),
-                       cir::InlineAttr::get(builder.getContext(),
-                                            cir::InlineKind::InlineHint));
-  }
+  // Parse optional inline attribute: #cir.inline<never|always|hint>
+  cir::InlineAttr inlineAttr;
+  OptionalParseResult inlineResult = parser.parseOptionalAttribute(
+      inlineAttr, getInlineKindAttrName(state.name), state.attributes);
+  if (inlineResult.has_value() && failed(*inlineResult))
+    return failure();
 
   // Parse the optional function body.
   auto *body = state.addRegion();
@@ -1867,14 +1858,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       p << "(" << globalDtorPriority.value() << ")";
   }
 
-  if (auto inlineKind = getInlineKind()) {
-    if (*inlineKind == cir::InlineKind::NoInline) {
-      p << " inline_never";
-    } else if (*inlineKind == cir::InlineKind::AlwaysInline) {
-      p << " inline_always";
-    } else if (*inlineKind == cir::InlineKind::InlineHint) {
-      p << " inline_hint";
-    }
+  if (auto inlineAttr = getInlineKindAttr()) {
+    p << ' ';
+    p.printAttribute(inlineAttr);
   }
 
   // Print the body if this is not an external function.

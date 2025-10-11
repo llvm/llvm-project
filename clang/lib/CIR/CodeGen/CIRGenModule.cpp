@@ -1924,7 +1924,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
 
-  auto existingInlineKind = f.getInlineKind();
+  std::optional<cir::InlineKind> existingInlineKind = f.getInlineKind();
   bool isNoInline =
       existingInlineKind && *existingInlineKind == cir::InlineKind::NoInline;
   bool isAlwaysInline = existingInlineKind &&
@@ -1935,9 +1935,9 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
 
     if (!isAlwaysInline &&
         codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
-      // If we don't have a declaration to control inlining, the function isn't
-      // explicitly marked as alwaysinline for semantic reasons, and inlining is
-      // disabled, mark the function as noinline.
+      // If inlining is disabled and we don't have a declaration to control
+      // inlining, mark the function as 'noinline' unless it is explicitly
+      // marked as 'alwaysinline'.
       f.setInlineKindAttr(
           cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
     }
@@ -1959,11 +1959,12 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     f.setInlineKindAttr(
         cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
   } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
-    // (noinline wins over always_inline, and we can't specify both in IR)
+    // Don't override AlwaysInline with NoInline, or vice versa, since we can't
+    // specify both in IR.
     f.setInlineKindAttr(
         cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline));
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
-    // If we're not inlining, then force everything that isn't always_inline
+    // If inlining is disabled, force everything that isn't always_inline
     // to carry an explicit noinline attribute.
     if (!isAlwaysInline) {
       f.setInlineKindAttr(
@@ -1974,6 +1975,9 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     // absence to mark things as noinline.
     // Search function and template pattern redeclarations for inline.
     if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
+      // TODO: Share this checkForInline implementation with classic codegen.
+      // This logic is likely to change over time, so sharing would help ensure
+      // consistency.
       auto checkForInline = [](const FunctionDecl *decl) {
         auto checkRedeclForInline = [](const FunctionDecl *redecl) {
           return redecl->isInlineSpecified();
