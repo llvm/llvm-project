@@ -115,6 +115,44 @@ template <class It>
 cpp17_input_iterator(It) -> cpp17_input_iterator<It>;
 #endif
 
+template <class Container>
+class single_pass_iterator {
+  Container* container_;
+
+public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type        = typename Container::value_type;
+  using difference_type   = typename Container::difference_type;
+  using pointer           = typename Container::pointer;
+  using reference         = typename Container::reference;
+
+  TEST_CONSTEXPR explicit single_pass_iterator() = default;
+  TEST_CONSTEXPR explicit single_pass_iterator(Container& container)
+      : container_(container.empty() ? nullptr : &container) {}
+
+  TEST_CONSTEXPR reference operator*() const { return container_->back(); }
+
+  TEST_CONSTEXPR_CXX14 single_pass_iterator& operator++() {
+    container_->pop_back();
+    if (container_->empty())
+      container_ = nullptr;
+    return *this;
+  }
+
+  TEST_CONSTEXPR_CXX14 single_pass_iterator operator++(int) { return ++(*this); }
+
+  friend TEST_CONSTEXPR bool operator==(const single_pass_iterator& lhs, const single_pass_iterator& rhs) {
+    return lhs.container_ == rhs.container_;
+  }
+
+  friend TEST_CONSTEXPR bool operator!=(const single_pass_iterator& lhs, const single_pass_iterator& rhs) {
+    return !(lhs == rhs);
+  }
+
+  template <class T>
+  void operator,(const T&) = delete;
+};
+
 #if TEST_STD_VER > 17
    static_assert(std::input_iterator<cpp17_input_iterator<int*>>);
 #endif
