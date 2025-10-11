@@ -1173,6 +1173,10 @@ let Command = "process launch" in {
         Arg<"Boolean">,
         Desc<"Set whether to shell expand arguments to the process when "
              "launching.">;
+  def process_launch_memory_tagging
+      : Option<"memory-tagging", "M">,
+        Desc<"Set whether to enable memory tagging (MTE) when launching the "
+             "process.">;
 }
 
 let Command = "process attach" in {

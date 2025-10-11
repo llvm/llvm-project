@@ -7,11 +7,23 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbsuite.test.cpu_feature as cpu_feature
 
-exe_name = "uaf_mte"  # Must match Makefile
+exe_name = "uaf"  # Must match Makefile
 
 
 class TestDarwinMTE(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+
+    @skipUnlessFeature(cpu_feature.AArch64.MTE)
+    def test_process_launch_memory_tagging(self):
+        self.build(make_targets=["binary-plain"])
+        self.createTestTarget(self.getBuildArtifact(exe_name))
+
+        self.expect("process launch", substrs=["exited with status = 0"])
+
+        self.expect(
+            "process launch --memory-tagging",
+            substrs=["stopped", "stop reason = EXC_ARM_MTE_TAG_FAULT"],
+        )
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)
     def test_tag_fault(self):
@@ -47,7 +59,7 @@ class TestDarwinMTE(TestBase):
         self.expect("memory region ptr", substrs=["memory tagging: enabled"])
 
     @skipUnlessFeature(cpu_feature.AArch64.MTE)
-    def test_memory_read_with_tags(self):
+    def test_memory_read_show_tags(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// before free", lldb.SBFileSpec("main.c"), exe_name=exe_name
