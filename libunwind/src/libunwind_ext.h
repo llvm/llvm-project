@@ -12,6 +12,7 @@
 #ifndef __LIBUNWIND_EXT__
 #define __LIBUNWIND_EXT__
 
+#ifndef __wasm__
 #include "config.h"
 #include <libunwind.h>
 #include <unwind.h>
@@ -132,6 +133,7 @@ extern _Unwind_Reason_Code _Unwind_VRS_Interpret(_Unwind_Context *context,
 
 #ifdef __cplusplus
 }
+#endif
 #endif
 
 #endif // __LIBUNWIND_EXT__
