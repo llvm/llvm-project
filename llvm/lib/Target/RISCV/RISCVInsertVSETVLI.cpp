@@ -168,6 +168,7 @@ struct DemandedFields {
   // If this is true, we demand that VTYPE is set to some legal state, i.e. that
   // vill is unset.
   bool VILL = false;
+  bool AltFmt = false;
 
   // Return true if any part of VTYPE was used
   bool usedVTYPE() const {
@@ -187,6 +188,7 @@ struct DemandedFields {
     TailPolicy = true;
     MaskPolicy = true;
     VILL = true;
+    AltFmt = true;
   }
 
   // Mark all VL properties as demanded
@@ -212,6 +214,7 @@ struct DemandedFields {
     TailPolicy |= B.TailPolicy;
     MaskPolicy |= B.MaskPolicy;
     VILL |= B.VILL;
+    AltFmt |= B.AltFmt;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -327,6 +330,9 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
     return false;
   if (Used.MaskPolicy && RISCVVType::isMaskAgnostic(CurVType) !=
                              RISCVVType::isMaskAgnostic(NewVType))
+    return false;
+  if (Used.AltFmt &&
+      RISCVVType::isAltFmt(CurVType) != RISCVVType::isAltFmt(NewVType))
     return false;
   return true;
 }
@@ -479,6 +485,9 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.TailPolicy = false;
   }
 
+  Res.AltFmt = RISCVII::getAltFmtType(MI.getDesc().TSFlags) !=
+               RISCVII::AltFmtType::DontCare;
+
   return Res;
 }
 
@@ -510,6 +519,7 @@ class VSETVLIInfo {
   uint8_t TailAgnostic : 1;
   uint8_t MaskAgnostic : 1;
   uint8_t SEWLMULRatioOnly : 1;
+  uint8_t AltFmt : 1;
 
 public:
   VSETVLIInfo()
@@ -586,6 +596,7 @@ public:
   RISCVVType::VLMUL getVLMUL() const { return VLMul; }
   bool getTailAgnostic() const { return TailAgnostic; }
   bool getMaskAgnostic() const { return MaskAgnostic; }
+  bool getAltFmt() const { return AltFmt; }
 
   bool hasNonZeroAVL(const LiveIntervals *LIS) const {
     if (hasAVLImm())
@@ -647,14 +658,16 @@ public:
     SEW = RISCVVType::getSEW(VType);
     TailAgnostic = RISCVVType::isTailAgnostic(VType);
     MaskAgnostic = RISCVVType::isMaskAgnostic(VType);
+    AltFmt = RISCVVType::isAltFmt(VType);
   }
-  void setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA) {
+  void setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA, bool AF) {
     assert(isValid() && !isUnknown() &&
            "Can't set VTYPE for uninitialized or unknown");
     VLMul = L;
     SEW = S;
     TailAgnostic = TA;
     MaskAgnostic = MA;
+    AltFmt = AF;
   }
 
   void setVLMul(RISCVVType::VLMUL VLMul) { this->VLMul = VLMul; }
@@ -662,7 +675,8 @@ public:
   unsigned encodeVTYPE() const {
     assert(isValid() && !isUnknown() && !SEWLMULRatioOnly &&
            "Can't encode VTYPE for uninitialized or unknown");
-    return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
+    return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic,
+                                   AltFmt);
   }
 
   bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
@@ -674,9 +688,9 @@ public:
            "Can't compare VTYPE in unknown state");
     assert(!SEWLMULRatioOnly && !Other.SEWLMULRatioOnly &&
            "Can't compare when only LMUL/SEW ratio is valid.");
-    return std::tie(VLMul, SEW, TailAgnostic, MaskAgnostic) ==
+    return std::tie(VLMul, SEW, TailAgnostic, MaskAgnostic, AltFmt) ==
            std::tie(Other.VLMul, Other.SEW, Other.TailAgnostic,
-                    Other.MaskAgnostic);
+                    Other.MaskAgnostic, Other.AltFmt);
   }
 
   unsigned getSEWLMULRatio() const {
@@ -1005,6 +1019,8 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
   RISCVVType::VLMUL VLMul = RISCVII::getLMul(TSFlags);
 
+  bool AltFmt =
+      RISCVII::getAltFmtType(TSFlags) == RISCVII::AltFmtType::IsAltFmt;
   unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
   // A Log2SEW of 0 is an operation on mask registers only.
   unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
@@ -1045,7 +1061,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
     assert(SEW == EEW && "Initial SEW doesn't match expected EEW");
   }
 #endif
-  InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
+  InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic, AltFmt);
 
   forwardVSETVLIAVL(InstrInfo);
 
@@ -1198,7 +1214,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     // be coalesced into another vsetvli since we won't demand any fields.
     VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
     NewInfo.setAVLImm(1);
-    NewInfo.setVTYPE(RISCVVType::LMUL_1, /*sew*/ 8, /*ta*/ true, /*ma*/ true);
+    NewInfo.setVTYPE(RISCVVType::LMUL_1, /*sew*/ 8, /*ta*/ true, /*ma*/ true,
+                     /*AF*/ false);
     Info = NewInfo;
     return;
   }
@@ -1240,7 +1257,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
       (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
           IncomingInfo.getTailAgnostic(),
       (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
-          IncomingInfo.getMaskAgnostic());
+          IncomingInfo.getMaskAgnostic(),
+      Demanded.AltFmt ? IncomingInfo.getAltFmt() : 0);
 
   // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
   // the AVL.
