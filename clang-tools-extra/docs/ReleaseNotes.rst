@@ -249,6 +249,11 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
+  :doc:`bugprone-libc-memory-calls-on-nontrivial-types
+  <clang-tidy/checks/bugprone/libc-memory-calls-on-nontrivial-types>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

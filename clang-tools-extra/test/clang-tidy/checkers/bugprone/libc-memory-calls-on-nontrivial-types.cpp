@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s cert-oop57-cpp %t -- \
+// RUN: %check_clang_tidy %s libc-memory-calls-on-nontrivial-types %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  {cert-oop57-cpp.MemSetNames: mymemset, \
-// RUN:  cert-oop57-cpp.MemCpyNames: mymemcpy, \
-// RUN:  cert-oop57-cpp.MemCmpNames: mymemcmp}}' \
+// RUN:  {libc-memory-calls-on-nontrivial-types.MemSetNames: mymemset, \
+// RUN:  libc-memory-calls-on-nontrivial-types.MemCpyNames: mymemcpy, \
+// RUN:  libc-memory-calls-on-nontrivial-types.MemCmpNames: mymemcmp}}' \
 // RUN: --
 
 void mymemset(void *, unsigned char, decltype(sizeof(int)));

@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-/// Flags use of the `C` standard library functions 'memset', 'memcpy' and
+/// Flags use of the C standard library functions 'memset', 'memcpy' and
 /// 'memcmp' and similar derivatives on non-trivial types.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/cert/oop57-cpp.html
-class NonTrivialTypesLibcMemoryCallsCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/libc-memory-calls-on-nontrivial-types.html
+class LibcMemoryCallsOnNonTrivialTypesCheck : public ClangTidyCheck {
 public:
-  NonTrivialTypesLibcMemoryCallsCheck(StringRef Name,
+  LibcMemoryCallsOnNonTrivialTypesCheck(StringRef Name,
                                       ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus && !LangOpts.ObjC;
@@ -35,6 +35,6 @@ private:
   const StringRef MemCmpNames;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NONTRIVIALTYPESLIBCMEMORYCALLSCHECK_H
