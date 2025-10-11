@@ -338,7 +338,7 @@ MlirRewriterBase mlirPatternRewriterAsBase(MlirPatternRewriter rewriter) {
 //===----------------------------------------------------------------------===//
 
 inline const mlir::RewritePattern *unwrap(MlirRewritePattern pattern) {
-  assert(pattern.ptr && "unexpected null pattern");
+  assert(pattern.ptr && "expected non-null pattern");
   return static_cast<const mlir::RewritePattern *>(pattern.ptr);
 }
 
