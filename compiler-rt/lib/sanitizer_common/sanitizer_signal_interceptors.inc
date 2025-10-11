@@ -70,7 +70,7 @@ INTERCEPTOR(uptr, signal, int signum, uptr handler) {
   }(signal, signum, handler);
 
   if (ret != sig_err && SetSignalHandlerFromSanitizer(signum, false))
-    // If the user sets a signal handler, it is never cloaked, even if they
+    // If the user sets a signal handler, it becomes uncloaked, even if they
     // reuse a sanitizer's signal handler.
     ret = sig_dfl;
 
@@ -98,9 +98,8 @@ INTERCEPTOR(int, sigaction_symname, int signum,
 
   if (act) {
     if (ret == 0 && SetSignalHandlerFromSanitizer(signum, false)) {
-      // If the user sets a signal handler, it is never cloaked, even if they
+      // If the user sets a signal handler, it becomes uncloaked, even if they
       // reuse a sanitizer's signal handler.
-      SetSignalHandlerFromSanitizer(signum, false);
 
       if (oldact)
         oldact->handler = reinterpret_cast<__sanitizer_sighandler_ptr>(sig_dfl);
