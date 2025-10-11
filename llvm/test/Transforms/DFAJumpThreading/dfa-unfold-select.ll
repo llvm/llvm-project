@@ -227,10 +227,6 @@ define i32 @test3(i32 %num) {
 ; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       for.body.jt4:
-; CHECK-NEXT:    [[COUNT_JT4:%.*]] = phi i32 [ [[INC_JT4:%.*]], [[FOR_INC_JT4:%.*]] ]
-; CHECK-NEXT:    [[STATE_JT4:%.*]] = phi i32 [ [[STATE_NEXT_JT4:%.*]], [[FOR_INC_JT4]] ]
-; CHECK-NEXT:    br label [[FOR_INC_JT1]]
 ; CHECK:       for.body.jt3:
 ; CHECK-NEXT:    [[COUNT_JT3:%.*]] = phi i32 [ [[INC_JT3:%.*]], [[FOR_INC_JT3:%.*]] ]
 ; CHECK-NEXT:    [[STATE_JT3:%.*]] = phi i32 [ [[STATE_NEXT_JT3:%.*]], [[FOR_INC_JT3]] ]
@@ -261,17 +257,14 @@ define i32 @test3(i32 %num) {
 ; CHECK:       sel.2.si.unfold.false:
 ; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI1:%.*]] = phi i32 [ 4, [[SEL_2_SI_UNFOLD_TRUE_JT3]] ]
 ; CHECK-NEXT:    br label [[SEL_3_SI_UNFOLD_FALSE]]
-; CHECK:       sel.2.si.unfold.false.jt4:
+; CHECK:       sel.2.si.unfold.false.jt3:
 ; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI1_JT4:%.*]] = phi i32 [ 4, [[SEL_2_SI_UNFOLD_TRUE:%.*]] ]
-; CHECK-NEXT:    br label [[SEL_3_SI_UNFOLD_FALSE_JT4:%.*]]
+; CHECK-NEXT:    br label [[SEL_3_SI_UNFOLD_FALSE_JT3]]
 ; CHECK:       sel.3.si.unfold.false:
 ; CHECK-NEXT:    [[SEL_2_SI_UNFOLD_PHI:%.*]] = phi i32 [ poison, [[SEL_2_SI_UNFOLD_TRUE]] ], [ [[DOTSI_UNFOLD_PHI1]], [[SEL_2_SI_UNFOLD_FALSE]] ]
 ; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       sel.3.si.unfold.false.jt4:
-; CHECK-NEXT:    [[SEL_2_SI_UNFOLD_PHI_JT4:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI1_JT4]], [[SEL_2_SI_UNFOLD_FALSE_JT4]] ]
-; CHECK-NEXT:    br label [[FOR_INC_JT4]]
 ; CHECK:       sel.3.si.unfold.false.jt3:
-; CHECK-NEXT:    [[SEL_2_SI_UNFOLD_PHI_JT3:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI_JT3]], [[SEL_2_SI_UNFOLD_TRUE_JT3]] ]
+; CHECK-NEXT:    [[SEL_2_SI_UNFOLD_PHI_JT3:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI_JT3]], [[SEL_2_SI_UNFOLD_TRUE_JT3]] ], [ [[DOTSI_UNFOLD_PHI1_JT4]], [[SEL_2_SI_UNFOLD_FALSE_JT4]] ]
 ; CHECK-NEXT:    br label [[FOR_INC_JT3]]
 ; CHECK:       sel.1.si.unfold.true:
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[FOR_INC]], label [[SEL_1_SI_UNFOLD_FALSE_JT2:%.*]]
@@ -289,11 +282,6 @@ define i32 @test3(i32 %num) {
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[COUNT5]], 1
 ; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp slt i32 [[INC]], [[NUM:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT]], label [[FOR_BODY]], label [[FOR_END:%.*]]
-; CHECK:       for.inc.jt4:
-; CHECK-NEXT:    [[STATE_NEXT_JT4]] = phi i32 [ [[SEL_2_SI_UNFOLD_PHI_JT4]], [[SEL_3_SI_UNFOLD_FALSE_JT4]] ]
-; CHECK-NEXT:    [[INC_JT4]] = add nsw i32 undef, 1
-; CHECK-NEXT:    [[CMP_EXIT_JT4:%.*]] = icmp slt i32 [[INC_JT4]], [[NUM]]
-; CHECK-NEXT:    br i1 [[CMP_EXIT_JT4]], label [[FOR_BODY_JT4:%.*]], label [[FOR_END]]
 ; CHECK:       for.inc.jt3:
 ; CHECK-NEXT:    [[STATE_NEXT_JT3]] = phi i32 [ [[SEL_2_SI_UNFOLD_PHI_JT3]], [[SEL_3_SI_UNFOLD_FALSE_JT3]] ]
 ; CHECK-NEXT:    [[INC_JT3]] = add nsw i32 [[COUNT5]], 1
@@ -305,8 +293,8 @@ define i32 @test3(i32 %num) {
 ; CHECK-NEXT:    [[CMP_EXIT_JT2:%.*]] = icmp slt i32 [[INC_JT2]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT_JT2]], label [[FOR_BODY_JT2]], label [[FOR_END]]
 ; CHECK:       for.inc.jt1:
-; CHECK-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT_JT4]], [[FOR_BODY_JT4]] ], [ [[COUNT_JT3]], [[FOR_BODY_JT3]] ], [ [[COUNT5]], [[SEL_1_SI_UNFOLD_TRUE_JT1]] ], [ [[COUNT]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[STATE_NEXT_JT1]] = phi i32 [ 1, [[FOR_BODY]] ], [ 1, [[FOR_BODY_JT3]] ], [ 1, [[FOR_BODY_JT4]] ], [ [[DOTSI_UNFOLD_PHI2_JT1]], [[SEL_1_SI_UNFOLD_TRUE_JT1]] ]
+; CHECK-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT_JT3]], [[FOR_BODY_JT3]] ], [ [[COUNT5]], [[SEL_1_SI_UNFOLD_TRUE_JT1]] ], [ [[COUNT]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[STATE_NEXT_JT1]] = phi i32 [ 1, [[FOR_BODY]] ], [ 1, [[FOR_BODY_JT3]] ], [ [[DOTSI_UNFOLD_PHI2_JT1]], [[SEL_1_SI_UNFOLD_TRUE_JT1]] ]
 ; CHECK-NEXT:    [[INC_JT1]] = add nsw i32 [[COUNT4]], 1
 ; CHECK-NEXT:    [[CMP_EXIT_JT1:%.*]] = icmp slt i32 [[INC_JT1]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT_JT1]], label [[FOR_BODY_JT1]], label [[FOR_END]]
@@ -402,36 +390,28 @@ define void @pr65222(i32 %flags, i1 %cmp, i1 %tobool.not) {
 ; CHECK-NEXT:    br label [[IF_END_JT2:%.*]]
 ; CHECK:       cond1.si.unfold.true:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END]], label [[COND1_SI_UNFOLD_FALSE_JT1:%.*]]
-; CHECK:       cond1.si.unfold.true.jt3:
+; CHECK:       cond1.si.unfold.true.jt2:
 ; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI2:%.*]] = phi i32 [ 3, [[THEN]] ]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END_JT3:%.*]], label [[COND1_SI_UNFOLD_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_END_JT2]], label [[COND1_SI_UNFOLD_FALSE:%.*]]
 ; CHECK:       cond1.si.unfold.false:
 ; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI3:%.*]] = phi i32 [ 1, [[COND1_SI_UNFOLD_TRUE]] ]
 ; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       cond1.si.unfold.false.jt1:
+; CHECK:       cond1.si.unfold.false.jt2:
 ; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI3_JT1:%.*]] = phi i32 [ 1, [[COND1_SI_UNFOLD_TRUE1:%.*]] ]
-; CHECK-NEXT:    br label [[IF_END_JT1:%.*]]
+; CHECK-NEXT:    br label [[IF_END_JT2]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[UNFOLDED:%.*]] = phi i32 [ [[FLAGS:%.*]], [[WHILE_COND]] ], [ [[COND_SI_UNFOLD_PHI]], [[TOUNFOLD_SI_UNFOLD_FALSE1]] ], [ poison, [[COND1_SI_UNFOLD_TRUE1]] ], [ [[DOTSI_UNFOLD_PHI3]], [[COND1_SI_UNFOLD_FALSE]] ]
 ; CHECK-NEXT:    [[OTHER:%.*]] = phi i32 [ [[FLAGS]], [[WHILE_COND]] ], [ 0, [[TOUNFOLD_SI_UNFOLD_FALSE1]] ], [ 0, [[COND1_SI_UNFOLD_TRUE1]] ], [ 0, [[COND1_SI_UNFOLD_FALSE]] ]
 ; CHECK-NEXT:    switch i32 [[UNFOLDED]], label [[UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       if.end.jt1:
-; CHECK-NEXT:    [[UNFOLDED_JT1:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI3_JT1]], [[COND1_SI_UNFOLD_FALSE_JT1]] ]
-; CHECK-NEXT:    [[OTHER_JT1:%.*]] = phi i32 [ 0, [[COND1_SI_UNFOLD_FALSE_JT1]] ]
-; CHECK-NEXT:    br label [[UNREACHABLE]]
-; CHECK:       if.end.jt3:
-; CHECK-NEXT:    [[UNFOLDED_JT3:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI2]], [[COND1_SI_UNFOLD_TRUE]] ]
-; CHECK-NEXT:    [[OTHER_JT3:%.*]] = phi i32 [ 0, [[COND1_SI_UNFOLD_TRUE]] ]
-; CHECK-NEXT:    br label [[UNREACHABLE]]
 ; CHECK:       if.end.jt0:
 ; CHECK-NEXT:    [[UNFOLDED_JT0:%.*]] = phi i32 [ [[COND_SI_UNFOLD_PHI_JT0]], [[TOUNFOLD_SI_UNFOLD_FALSE_JT0]] ]
 ; CHECK-NEXT:    [[OTHER_JT0:%.*]] = phi i32 [ 0, [[TOUNFOLD_SI_UNFOLD_FALSE_JT0]] ]
 ; CHECK-NEXT:    br label [[SW_BB]]
 ; CHECK:       if.end.jt2:
-; CHECK-NEXT:    [[UNFOLDED_JT2:%.*]] = phi i32 [ [[COND_SI_UNFOLD_PHI_JT2]], [[TOUNFOLD_SI_UNFOLD_FALSE]] ]
-; CHECK-NEXT:    [[OTHER_JT2:%.*]] = phi i32 [ 0, [[TOUNFOLD_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    [[UNFOLDED_JT2:%.*]] = phi i32 [ [[COND_SI_UNFOLD_PHI_JT2]], [[TOUNFOLD_SI_UNFOLD_FALSE]] ], [ [[DOTSI_UNFOLD_PHI2]], [[COND1_SI_UNFOLD_TRUE]] ], [ [[DOTSI_UNFOLD_PHI3_JT1]], [[COND1_SI_UNFOLD_FALSE_JT1]] ]
+; CHECK-NEXT:    [[OTHER_JT2:%.*]] = phi i32 [ 0, [[TOUNFOLD_SI_UNFOLD_FALSE]] ], [ 0, [[COND1_SI_UNFOLD_TRUE]] ], [ 0, [[COND1_SI_UNFOLD_FALSE_JT1]] ]
 ; CHECK-NEXT:    br label [[UNREACHABLE]]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable

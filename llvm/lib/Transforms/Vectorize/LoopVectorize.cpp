@@ -3903,7 +3903,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
+                            *CM.PSE.getSE());
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -4160,7 +4161,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       // Add on other costs that are modelled in VPlan, but not in the legacy
       // cost model.
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind,
+                            *CM.PSE.getSE());
       VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
       assert(VectorRegion && "Expected to have a vector region!");
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -4262,8 +4264,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
-        RecurKind RK = Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
-        return RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum;
+        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+            Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind());
       }))
     return false;
 
@@ -5694,7 +5696,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     Instruction *I = Worklist.pop_back_val();
     for (auto &Op : I->operands())
       if (auto *InstOp = dyn_cast<Instruction>(Op))
-        if ((InstOp->getParent() == I->getParent()) && !isa<PHINode>(InstOp) &&
+        if (TheLoop->contains(InstOp) && !isa<PHINode>(InstOp) &&
             AddrDefs.insert(InstOp).second)
           Worklist.push_back(InstOp);
   }
@@ -6852,7 +6854,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
                                                ElementCount VF) const {
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, *PSE.getSE());
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -7085,7 +7087,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // simplifications not accounted for in the legacy cost model. If that's the
   // case, don't trigger the assertion, as the extra simplifications may cause a
   // different VF to be picked by the VPlan-based cost model.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind,
+                        *CM.PSE.getSE());
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   // Verify that the VPlan-based and legacy cost models agree, except for VPlans
   // with early exits and plans with additional VPlan simplifications. The
@@ -7279,8 +7282,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     if (!Exit->hasPredecessors())
       continue;
     for (VPRecipeBase &PhiR : Exit->phis())
-      SE.forgetLcssaPhiWithNewPredecessor(
-          OrigLoop, cast<PHINode>(&cast<VPIRPhi>(PhiR).getInstruction()));
+      SE.forgetLcssaPhiWithNewPredecessor(OrigLoop,
+                                          &cast<VPIRPhi>(PhiR).getIRPhi());
   }
   // Forget the original loop and block dispositions.
   SE.forgetLoop(OrigLoop);
@@ -8393,11 +8396,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     R->setOperand(1, WideIV->getStepValue());
   }
 
-  VPlanTransforms::runPass(
-      VPlanTransforms::addExitUsersForFirstOrderRecurrences, *Plan, Range);
+  // TODO: We can't call runPass on these transforms yet, due to verifier
+  // failures.
+  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::runPass(VPlanTransforms::addScalarResumePhis, *Plan,
-                           RecipeBuilder, IVEndValues);
+  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8418,7 +8421,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind);
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind,
+                          *CM.PSE.getSE());
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
@@ -8508,8 +8512,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   DenseMap<VPValue *, VPValue *> IVEndValues;
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
   // values.
-  VPlanTransforms::runPass(VPlanTransforms::addScalarResumePhis, *Plan,
-                           RecipeBuilder, IVEndValues);
+  // TODO: We can't call runPass on the transform yet, due to verifier
+  // failures.
+  VPlanTransforms::addScalarResumePhis(*Plan, RecipeBuilder, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9343,13 +9348,12 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  // Ensure that the start values for all header phi recipes are updated before
-  // vectorizing the epilogue loop.
   VPCanonicalIVPHIRecipe *IV = Plan.getCanonicalIV();
-  // When vectorizing the epilogue loop, the canonical induction start
-  // value needs to be changed from zero to the value after the main
-  // vector loop. Find the resume value created during execution of the main
-  // VPlan. It must be the first phi in the loop preheader.
+  // When vectorizing the epilogue loop, the canonical induction needs to be
+  // adjusted by the value after the main vector loop. Find the resume value
+  // created during execution of the main VPlan. It must be the first phi in the
+  // loop preheader. Use the value to increment the canonical IV, and update all
+  // users in the loop region to use the adjusted value.
   // FIXME: Improve modeling for canonical IV start values in the epilogue
   // loop.
   using namespace llvm::PatternMatch;
@@ -9384,10 +9388,16 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                 }) &&
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
-  IV->setOperand(0, VPV);
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  IV->replaceAllUsesWith(Add);
+  Add->setOperand(0, IV);
 
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;
+  // Ensure that the start values for all header phi recipes are updated before
+  // vectorizing the epilogue loop. Skip the canonical IV, which has been
+  // handled above.
   for (VPRecipeBase &R : drop_begin(Header->phis())) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
@@ -9873,7 +9883,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     VPCostContext CostCtx(CM.TTI, *CM.TLI, LVP.getPlanFor(VF.Width), CM,
-                          CM.CostKind);
+                          CM.CostKind, *CM.PSE.getSE());
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
                                      LVP.getPlanFor(VF.Width), SEL,

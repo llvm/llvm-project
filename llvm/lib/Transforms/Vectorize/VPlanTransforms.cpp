@@ -1234,6 +1234,18 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (!Plan->isUnrolled())
     return;
 
+  // Hoist an invariant increment Y of a phi X, by having X start at Y.
+  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && Y->isLiveIn() &&
+      isa<VPPhi>(X)) {
+    auto *Phi = cast<VPPhi>(X);
+    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
+        Phi->getNumUsers() == 1 && (*Phi->user_begin() == &R)) {
+      Phi->setOperand(0, Y);
+      Def->replaceAllUsesWith(Phi);
+      return;
+    }
+  }
+
   // VPVectorPointer for part 0 can be replaced by their start pointer.
   if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&R)) {
     if (VecPtr->isFirstPart()) {
@@ -3180,9 +3192,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
                               DebugLoc::getUnknown(), "induction");
 
   // Create the widened phi of the vector IV.
-  auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), nullptr,
+  auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), Init,
                                        WidenIVR->getDebugLoc(), "vec.ind");
-  WidePHI->addOperand(Init);
   WidePHI->insertBefore(WidenIVR);
 
   // Create the backedge value for the vector IV.
@@ -3545,8 +3556,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   VPValue *A, *B;
   VPValue *Tmp = nullptr;
   // Sub reductions could have a sub between the add reduction and vec op.
-  if (match(VecOp,
-            m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Tmp)))) {
+  if (match(VecOp, m_Sub(m_ZeroInt(), m_VPValue(Tmp)))) {
     Sub = VecOp->getDefiningRecipe();
     VecOp = Tmp;
   }
