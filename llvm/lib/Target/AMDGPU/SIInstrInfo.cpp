@@ -6906,9 +6906,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
         ScalarOp->setReg(CurReg);
       else {
         // Insert into the same block of use
-        BuildMI(*ScalarOp->getParent()->getParent(),
-                ScalarOp->getParent()->getIterator(), DL, TII.get(AMDGPU::COPY),
-                PhySGPRs[Idx])
+        BuildMI(*ScalarOp->getParent()->getParent(), ScalarOp->getParent(), DL,
+                TII.get(AMDGPU::COPY), PhySGPRs[Idx])
             .addReg(CurReg);
         ScalarOp->setReg(PhySGPRs[Idx]);
       }
@@ -6983,9 +6982,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
       if (PhySGPRs.empty() || !PhySGPRs[Idx].isValid())
         ScalarOp->setReg(SScalarOp);
       else {
-        BuildMI(*ScalarOp->getParent()->getParent(),
-                ScalarOp->getParent()->getIterator(), DL, TII.get(AMDGPU::COPY),
-                PhySGPRs[Idx])
+        BuildMI(*ScalarOp->getParent()->getParent(), ScalarOp->getParent(), DL,
+                TII.get(AMDGPU::COPY), PhySGPRs[Idx])
             .addReg(SScalarOp);
         ScalarOp->setReg(PhySGPRs[Idx]);
       }
@@ -7626,7 +7624,7 @@ void SIInstrInfo::createWaterFall(MachineInstr *MI, MachineDominatorTree *MDT,
 
     // Also include following copies of the return value
     ++End;
-    while (End != MBB.end() && End->isCopy() && End->getOperand(1).isReg() &&
+    while (End != MBB.end() && End->isCopy() &&
            MI->definesRegister(End->getOperand(1).getReg(), &RI))
       ++End;
 
@@ -7666,9 +7664,9 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
     MachineRegisterInfo &MRI, Register DstReg, MachineInstr &Inst) const {
   // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
   // hope for the best.
-  unsigned RegSize = RI.getRegSizeInBits(DstReg, MRI);
-  unsigned NumSubRegs = RegSize / 32;
-  if (NumSubRegs == 1) {
+  const TargetRegisterClass *DstRC = RI.getRegClassForReg(MRI, DstReg);
+  ArrayRef<int16_t> BaseIndices = RI.getRegSplitParts(DstRC, 4);
+  if (BaseIndices.empty() || BaseIndices.size() == 1) {
     Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
             get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
@@ -7678,17 +7676,18 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
         .addReg(NewDst);
   } else {
     SmallVector<Register, 8> DstRegs;
-    for (unsigned i = 0; i < NumSubRegs; ++i) {
+    for (unsigned i = 0; i < BaseIndices.size(); ++i) {
       Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
               get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-          .addReg(Inst.getOperand(1).getReg(), 0, RI.getSubRegFromChannel(i));
+          .addReg(Inst.getOperand(1).getReg(), 0, BaseIndices[i]);
+
       DstRegs.push_back(NewDst);
     }
     MachineInstrBuilder MIB =
         BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
                 get(AMDGPU::REG_SEQUENCE), DstReg);
-    for (unsigned i = 0; i < NumSubRegs; ++i) {
+    for (unsigned i = 0; i < BaseIndices.size(); ++i) {
       MIB.addReg(DstRegs[i]);
       MIB.addImm(RI.getSubRegFromChannel(i));
     }

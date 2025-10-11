@@ -2,14 +2,26 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope %s
 
 define hidden void @external_void_func_a15i32_inreg([15 x i32] inreg %args) #0 {
+; CHECK-LABEL: external_void_func_a15i32_inreg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
 define hidden void @external_void_func_a16i32_inreg([16 x i32] inreg %args) #0 {
+; CHECK-LABEL: external_void_func_a16i32_inreg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
 define hidden void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1) #0 {
+; CHECK-LABEL: external_void_func_a15i32_inreg_i32_inreg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
@@ -217,8 +229,3 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
   call void @external_void_func_a15i32_inreg_i32_inreg([15 x i32] inreg %arg0, i32 inreg %arg1)
   ret void
 }
-
-attributes #0 = { nounwind }
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
