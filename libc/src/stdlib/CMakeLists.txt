@@ -65,6 +65,38 @@ add_entrypoint_object(
   libc.config.app_h
 )
 
+add_object_library(
+  environ_internal
+  SRCS
+    environ_internal.cpp
+  HDRS
+    environ_internal.h
+  DEPENDS
+    libc.config.app_h
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.string_view
+    libc.src.__support.threads.mutex
+    libc.src.stdlib.free
+    libc.src.stdlib.malloc
+    libc.src.string.memcpy
+)
+
+add_entrypoint_object(
+  setenv
+  SRCS
+    setenv.cpp
+  HDRS
+    setenv.h
+  DEPENDS
+    .environ_internal
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.__support.threads.mutex
+    libc.src.stdlib.malloc
+    libc.src.string.memcpy
+    libc.src.string.strlen
+)
+
 add_entrypoint_object(
   strfromf
   SRCS

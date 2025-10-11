@@ -1264,6 +1264,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.setenv
     libc.src.stdlib.wcstombs
     libc.src.stdlib.wctomb
 

@@ -197,6 +197,14 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: setenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: int
   - name: srand
     standards:
       - stdc

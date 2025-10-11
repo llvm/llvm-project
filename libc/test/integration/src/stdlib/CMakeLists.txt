@@ -16,3 +16,15 @@ add_integration_test(
     FRANCE=Paris
     GERMANY=Berlin
 )
+
+add_integration_test(
+  setenv_test
+  SUITE
+    stdlib-integration-tests
+  SRCS
+    setenv_test.cpp
+  DEPENDS
+    libc.src.stdlib.getenv
+    libc.src.stdlib.setenv
+    libc.src.string.strcmp
+)
