@@ -61,6 +61,124 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 using namespace Fortran::parser::omp;
 
+OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
+    : DirectiveStructureChecker(context,
+#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+      ) {
+  scopeStack_.push_back(&context.globalScope());
+}
+
+bool OmpStructureChecker::Enter(const parser::MainProgram &x) {
+  using StatementProgramStmt = parser::Statement<parser::ProgramStmt>;
+  if (auto &stmt{std::get<std::optional<StatementProgramStmt>>(x.t)}) {
+    scopeStack_.push_back(stmt->statement.v.symbol->scope());
+  } else {
+    for (const Scope &scope : context_.globalScope().children()) {
+      // There can only be one main program.
+      if (scope.kind() == Scope::Kind::MainProgram) {
+        scopeStack_.push_back(&scope);
+        break;
+      }
+    }
+  }
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::MainProgram &x) {
+  scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::BlockData &x) {
+  // The BLOCK DATA name is optional, so we need to look for the
+  // corresponding scope in the global scope.
+  auto &stmt{std::get<parser::Statement<parser::BlockDataStmt>>(x.t)};
+  if (auto &name{stmt.statement.v}) {
+    scopeStack_.push_back(name->symbol->scope());
+  } else {
+    for (const Scope &scope : context_.globalScope().children()) {
+      if (scope.kind() == Scope::Kind::BlockData) {
+        if (scope.symbol()->name().empty()) {
+          scopeStack_.push_back(&scope);
+          break;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::BlockData &x) {
+  scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::Module &x) {
+  auto &stmt{std::get<parser::Statement<parser::ModuleStmt>>(x.t)};
+  const Symbol *sym{stmt.statement.v.symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::Module &x) {
+  scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::Submodule &x) {
+  auto &stmt{std::get<parser::Statement<parser::SubmoduleStmt>>(x.t)};
+  const Symbol *sym{std::get<parser::Name>(stmt.statement.t).symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::Submodule &x) {
+  scopeStack_.pop_back();
+}
+
+// Function/subroutine subprogram nodes don't appear in INTERFACEs, but
+// the subprogram/end statements do.
+bool OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
+  const Symbol *sym{std::get<parser::Name>(x.t).symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
+  scopeStack_.pop_back();
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
+  const Symbol *sym{std::get<parser::Name>(x.t).symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
+  scopeStack_.pop_back();
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
+  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
+  auto &execPart{std::get<parser::Block>(x.t)};
+  if (auto &&source{parser::GetSource(specPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  } else if (auto &&source{parser::GetSource(execPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  }
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
+  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
+  auto &execPart{std::get<parser::Block>(x.t)};
+  if (auto &&source{parser::GetSource(specPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  } else if (auto &&source{parser::GetSource(execPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  }
+}
+
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
