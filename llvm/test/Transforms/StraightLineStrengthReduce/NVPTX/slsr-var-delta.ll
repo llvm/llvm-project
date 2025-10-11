@@ -1,8 +1,7 @@
 ; RUN: opt < %s -passes=slsr -S | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_75 | FileCheck %s --check-prefix=PTX
 
-target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
-target triple = "nvptx64-unknown-unknown"
+target triple = "nvptx64-nvidia-cuda"
 
 ; Test SLSR can reuse the computation by complex variable delta.
 ; The original program needs 4 mul.wide.s32, after SLSR with 

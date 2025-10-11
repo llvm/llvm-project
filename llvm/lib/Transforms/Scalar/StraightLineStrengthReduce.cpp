@@ -113,7 +113,7 @@ static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
 
 DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
-              "Controls whether rewriteCandidateWithBasis is executed.");
+              "Controls whether rewriteCandidate is executed.");
 
 namespace {
 
@@ -323,6 +323,24 @@ public:
     bool isHighEfficiency() const {
       return getComputationEfficiency(CandidateKind, Index, Stride, Base) >= 4;
     }
+
+    // Verify that this candidate has valid delta components relative to the
+    // basis
+    bool hasValidDelta(const Candidate &Basis) const {
+      switch (DeltaKind) {
+      case IndexDelta:
+        // Index differs, Base and Stride must match
+        return Base == Basis.Base && StrideSCEV == Basis.StrideSCEV;
+      case StrideDelta:
+        // Stride differs, Base and Index must match
+        return Base == Basis.Base && Index == Basis.Index;
+      case BaseDelta:
+        // Base differs, Stride and Index must match
+        return StrideSCEV == Basis.StrideSCEV && Index == Basis.Index;
+      default:
+        return false;
+      }
+    }
   };
 
   bool runOnFunction(Function &F);
@@ -363,7 +381,7 @@ private:
                                       Instruction *I);
 
   // Rewrites candidate C with respect to Basis.
-  void rewriteCandidateWithBasis(const Candidate &C, const Candidate &Basis);
+  void rewriteCandidate(const Candidate &C);
 
   // Emit code that computes the "bump" from Basis to C.
   static Value *emitBump(const Candidate &Basis, const Candidate &C,
@@ -540,9 +558,8 @@ private:
   };
 };
 
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &OS,
-           const StraightLineStrengthReduce::Candidate &C) {
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const StraightLineStrengthReduce::Candidate &C) {
   OS << "Ins: " << *C.Ins << "\n  Base: " << *C.Base
      << "\n  Index: " << *C.Index << "\n  Stride: " << *C.Stride
      << "\n  StrideSCEV: " << *C.StrideSCEV;
@@ -551,10 +568,9 @@ operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &OS,
-           const StraightLineStrengthReduce::DeltaInfo &DI) {
+LLVM_DUMP_METHOD
+inline raw_ostream &
+operator<<(raw_ostream &OS, const StraightLineStrengthReduce::DeltaInfo &DI) {
   OS << "Cand: " << *DI.Cand << "\n";
   OS << "Delta Kind: ";
   switch (DI.DeltaKind) {
@@ -730,9 +746,14 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 
   // If we did not find a constant delta, we might have found a variable delta
   if (C.Delta) {
-    LLVM_DEBUG(dbgs() << "Found delta from ";
-               if (C.DeltaKind == Candidate::BaseDelta) dbgs() << "Base: ";
-               else dbgs() << "Stride: "; dbgs() << *C.Delta << "\n");
+    LLVM_DEBUG({
+      dbgs() << "Found delta from ";
+      if (C.DeltaKind == Candidate::BaseDelta)
+        dbgs() << "Base: ";
+      else
+        dbgs() << "Stride: ";
+      dbgs() << *C.Delta << "\n";
+    });
     assert(C.DeltaKind != Candidate::InvalidDelta && C.Basis);
   }
 }
@@ -816,8 +837,7 @@ void StraightLineStrengthReduce::sortCandidateInstructions() {
   // processed before processing itself.
   DenseMap<Instruction *, int> InDegree;
   for (auto &KV : DependencyGraph) {
-    if (InDegree.find(KV.first) == InDegree.end())
-      InDegree[KV.first] = 0;
+    InDegree.try_emplace(KV.first, 0);
 
     for (auto *Child : KV.second) {
       InDegree[Child]++;
@@ -839,8 +859,8 @@ void StraightLineStrengthReduce::sortCandidateInstructions() {
     SortedCandidateInsts.push_back(I);
 
     for (auto *Next : DependencyGraph[I]) {
-      InDegree[Next]--;
-      if (InDegree[Next] == 0)
+      auto &Degree = InDegree[Next];
+      if (--Degree == 0)
         WorkList.push(Next);
     }
   }
@@ -1080,8 +1100,8 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
                                             IRBuilder<> &Builder,
                                             const DataLayout *DL) {
   auto CreateMul = [&](Value *LHS, Value *RHS) {
-    if (isa<ConstantInt>(RHS)) {
-      APInt ConstRHS = cast<ConstantInt>(RHS)->getValue();
+    if (ConstantInt *CR = dyn_cast<ConstantInt>(RHS)) {
+      const APInt &ConstRHS = CR->getValue();
       IntegerType *DeltaType =
           IntegerType::get(C.Ins->getContext(), ConstRHS.getBitWidth());
       if (ConstRHS.isPowerOf2()) {
@@ -1126,58 +1146,51 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
     Value *ExtendedStride = Builder.CreateSExtOrTrunc(C.Stride, DeltaType);
 
     return CreateMul(ExtendedStride, C.Delta);
-  } else {
-    assert(C.DeltaKind == Candidate::StrideDelta ||
-           C.DeltaKind == Candidate::BaseDelta);
-    assert(C.CandidateKind != Candidate::Mul);
-    // StrideDelta
-    // X = B + i * S
-    // Y = B + i * S'
-    //   = B + i * (S + Delta)
-    //   = B + i * S + i * Delta
-    //   = X + i * StrideDelta
-    // Bump = i * (S' - S)
-    //
-    // BaseDelta
-    // X = B  + i * S
-    // Y = B' + i * S
-    //   = (B + Delta) + i * S
-    //   = X + BaseDelta
-    // Bump = (B' - B).
-    Value *Bump = C.Delta;
-    if (C.DeltaKind == Candidate::StrideDelta) {
-      // If this value is consumed by a GEP, promote StrideDelta before doing
-      // StrideDelta * Index to ensure the same semantics as the original GEP.
-      if (C.CandidateKind == Candidate::GEP) {
-        auto *GEP = cast<GetElementPtrInst>(C.Ins);
-        Type *NewScalarIndexTy =
-            DL->getIndexType(GEP->getPointerOperandType()->getScalarType());
-        Bump = Builder.CreateSExtOrTrunc(Bump, NewScalarIndexTy);
-      }
-      if (!C.Index->isOne()) {
-        Value *ExtendedIndex =
-            Builder.CreateSExtOrTrunc(C.Index, Bump->getType());
-        Bump = CreateMul(Bump, ExtendedIndex);
-      }
-    }
-    return Bump;
   }
+
+  assert(C.DeltaKind == Candidate::StrideDelta ||
+         C.DeltaKind == Candidate::BaseDelta);
+  assert(C.CandidateKind != Candidate::Mul);
+  // StrideDelta
+  // X = B + i * S
+  // Y = B + i * S'
+  //   = B + i * (S + Delta)
+  //   = B + i * S + i * Delta
+  //   = X + i * StrideDelta
+  // Bump = i * (S' - S)
+  //
+  // BaseDelta
+  // X = B  + i * S
+  // Y = B' + i * S
+  //   = (B + Delta) + i * S
+  //   = X + BaseDelta
+  // Bump = (B' - B).
+  Value *Bump = C.Delta;
+  if (C.DeltaKind == Candidate::StrideDelta) {
+    // If this value is consumed by a GEP, promote StrideDelta before doing
+    // StrideDelta * Index to ensure the same semantics as the original GEP.
+    if (C.CandidateKind == Candidate::GEP) {
+      auto *GEP = cast<GetElementPtrInst>(C.Ins);
+      Type *NewScalarIndexTy =
+          DL->getIndexType(GEP->getPointerOperandType()->getScalarType());
+      Bump = Builder.CreateSExtOrTrunc(Bump, NewScalarIndexTy);
+    }
+    if (!C.Index->isOne()) {
+      Value *ExtendedIndex =
+          Builder.CreateSExtOrTrunc(C.Index, Bump->getType());
+      Bump = CreateMul(Bump, ExtendedIndex);
+    }
+  }
+  return Bump;
 }
 
-void StraightLineStrengthReduce::rewriteCandidateWithBasis(
-    const Candidate &C, const Candidate &Basis) {
+void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
   if (!DebugCounter::shouldExecute(StraightLineStrengthReduceCounter))
     return;
 
-  // If one of Base, Index, and Stride are different,
-  // other parts must be the same
+  const Candidate &Basis = *C.Basis;
   assert(C.Delta && C.CandidateKind == Basis.CandidateKind &&
-         ((C.Base == Basis.Base && C.StrideSCEV == Basis.StrideSCEV &&
-           C.DeltaKind == Candidate::IndexDelta) ||
-          (C.Base == Basis.Base && C.Index == Basis.Index &&
-           C.DeltaKind == Candidate::StrideDelta) ||
-          (C.StrideSCEV == Basis.StrideSCEV && C.Index == Basis.Index &&
-           C.DeltaKind == Candidate::BaseDelta)));
+         C.hasValidDelta(Basis));
 
   IRBuilder<> Builder(C.Ins);
   Value *Bump = emitBump(Basis, C, Builder, DL);
@@ -1258,7 +1271,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   // always before rewriting its Basis
   for (Instruction *I : reverse(SortedCandidateInsts))
     if (Candidate *C = pickRewriteCandidate(I))
-      rewriteCandidateWithBasis(*C, *C->Basis);
+      rewriteCandidate(*C);
 
   for (auto *DeadIns : DeadInstructions)
     // A dead instruction may be another dead instruction's op,

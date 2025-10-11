@@ -1,7 +1,6 @@
 ; RUN: opt < %s -passes=slsr -S | FileCheck %s
 
-target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
-target triple = "nvptx64-unknown-unknown"
+target triple = "nvptx64-nvidia-cuda"
 
 ; CHECK-LABEL: slsr_i8_zero_delta(
 ; CHECK-SAME:      ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[ADD:%.*]])
