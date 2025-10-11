@@ -1100,6 +1100,7 @@ __m256d test_mm256_hadd_pd(__m256d A, __m256d B) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_hadd_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_hadd_pd((__m256d){+1.0, +2.0, +3.0, +4.0}, (__m256d){+5.0, +6.0, +7.0, +8.0}), +3.0, +11.0, +7.0, +15.0));
 
 __m256 test_mm256_hadd_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_hadd_ps
@@ -1107,17 +1108,27 @@ __m256 test_mm256_hadd_ps(__m256 A, __m256 B) {
   return _mm256_hadd_ps(A, B);
 }
 
+TEST_CONSTEXPR(match_m256(_mm256_hadd_ps(
+    (__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f},
+    (__m256){+9.0f, +10.0f, +11.0f, +12.0f, +13.0f, +14.0f, +15.0f, +16.0f}),
+    +3.0f, +7.0f, +19.0f, +23.0f, +11.0f, +15.0f, +27.0f, +31.0f));
+
 __m256d test_mm256_hsub_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_hsub_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_hsub_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_hsub_pd((__m256d){+1.0, +2.0, +4.0, +3.0}, (__m256d){+10.0, +6.0, +16.0, +8.0}), -1.0,+4.0,+1.0,+8.0));
 
 __m256 test_mm256_hsub_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_hsub_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_hsub_ps(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_hsub_ps(
+    (__m256){1.0f, 2.0f, 4.0f, 3.0f, 5.0f, 7.0f, 7.0f, 5.0f},
+    (__m256){6.0f, 9.0f, 11.0f, 8.0f, 13.0f, 17.0f, 15.0f, 11.0f}),
+    -1.0f, 1.0f, -3.0f, 3.0f, -2.0f, 2.0f, -4.0f, 4.0f));
 
 __m256i test_mm256_insert_epi8(__m256i x, char b) {
   // CHECK-LABEL: test_mm256_insert_epi8
