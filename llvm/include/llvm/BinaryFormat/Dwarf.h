@@ -390,7 +390,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_C11:
     return {{DW_LNAME_C, 201112}};
   case DW_LANG_C17:
-    return {{DW_LNAME_C, 201712}};
+    return {{DW_LNAME_C, 201710}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
