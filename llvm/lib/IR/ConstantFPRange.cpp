@@ -493,7 +493,8 @@ ConstantFPRange ConstantFPRange::add(const ConstantFPRange &Other) const {
     return ConstantFPRange(NewLower, NewUpper, ResMayBeQNaN,
                            /*MayBeSNaN=*/false);
   }
-  // If both HasNegInf and HasPosInf are true, the non-NaN part is empty.
+  // If both HasNegInf and HasPosInf are false, the non-NaN part is empty.
+  // We just return the canonical form [+inf, -inf] for the empty non-NaN set.
   return ConstantFPRange(
       APFloat::getInf(Lower.getSemantics(), /*Negative=*/HasNegInf),
       APFloat::getInf(Upper.getSemantics(), /*Negative=*/!HasPosInf),
