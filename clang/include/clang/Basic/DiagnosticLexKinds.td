@@ -557,6 +557,10 @@ def warn_pp_hdrstop_filename_ignored : Warning<
 def remark_pp_search_path_usage : Remark<
   "search path used: '%0'">,
   InGroup<UsedSearchPath>;
+def warn_header_shadowed
+  : Warning<"multiple candidates for header '%0' found; "
+            "using the one from '%1', shadowed by '%2'">,
+    InGroup<HeaderShadowing>, DefaultIgnore;
 def err_pp_file_not_found_angled_include_not_fatal : Error<
   "'%0' file not found with <angled> %select{include|import}1; "
   "use \"quotes\" instead">;
