@@ -23,7 +23,8 @@ hide_from_abi::hide_from_abi(llvm::StringRef name, clang::tidy::ClangTidyContext
 void hide_from_abi::registerMatchers(clang::ast_matchers::MatchFinder* finder) {
   using namespace clang::ast_matchers;
 
-  auto has_hide_from_abi_attr = anyOf(hasAttr(clang::attr::Visibility), hasAttr(clang::attr::AbiTag));
+  auto has_hide_from_abi_attr =
+      anyOf(hasAttr(clang::attr::Visibility), hasAttr(clang::attr::AbiTag), hasAttr(clang::attr::GNUInline));
 
   finder->addMatcher(
       functionDecl(
