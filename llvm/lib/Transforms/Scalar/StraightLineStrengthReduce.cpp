@@ -34,7 +34,7 @@
 //
 // Note: (i' - i) * S is folded to the extent possible.
 //
-// For form Add and GEP, we can also rewrite a candidate in a simpler way
+// For Add and GEP forms, we can also rewrite a candidate in a simpler way
 // with respect to other dominating candidates if their B or S are different
 // but other parts are the same. For example,
 //
@@ -52,8 +52,8 @@
 // S1: X = &B[i * S]
 // S2: Y = &B[i * S']   => X + i * (S' - S)
 //
-// PS: Stride delta write on form Mul is usually non-profitable, and Base delta
-// write sometimes is profitable, so we do not support them on form Mul.
+// PS: Stride delta rewrite on Mul form is usually non-profitable, and Base
+// delta rewrite sometimes is profitable, so we do not support them on Mul.
 //
 // This rewriting is in general a good idea. The code patterns we focus on
 // usually come from loop unrolling, so the delta is likely the same
@@ -1124,8 +1124,9 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
     // IndexDelta
     // X = B + i * S
     // Y = B + i` * S
-    //   = B + (i' - i) * S
-    //   = X + Delta * S
+    //   = B + (i + IndexDelta) * S
+    //   = B + i * S + IndexDelta * S
+    //   = X + IndexDelta * S
     // Bump = (i' - i) * S
 
     // If Delta is 0, C is a fully redundant of C.Basis,
@@ -1154,15 +1155,15 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
   // StrideDelta
   // X = B + i * S
   // Y = B + i * S'
-  //   = B + i * (S + Delta)
-  //   = B + i * S + i * Delta
+  //   = B + i * (S + StrideDelta)
+  //   = B + i * S + i * StrideDelta
   //   = X + i * StrideDelta
   // Bump = i * (S' - S)
   //
   // BaseDelta
   // X = B  + i * S
   // Y = B' + i * S
-  //   = (B + Delta) + i * S
+  //   = (B + BaseDelta) + i * S
   //   = X + BaseDelta
   // Bump = (B' - B).
   Value *Bump = C.Delta;
