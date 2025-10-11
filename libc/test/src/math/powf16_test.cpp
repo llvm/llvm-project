@@ -28,24 +28,8 @@ TEST_F(LlvmLibcPowF16Test, SelectedX_AllY) {
       float16 y = FPBits(y_u).get_val();
 
       mpfr::BinaryInput<float16> input{x, y};
-      float16 result = LIBC_NAMESPACE::powf16(x, y);
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Pow, input, result, 1.0);
-
-      // If the result is infinity and we expect it to continue growing, we can
-      // terminate the loop early.
-      if (FPBits(result).is_inf() && FPBits(result).is_pos()) {
-        // For x > 1, as y increases in the positive range, pow remains inf.
-        if (x > static_cast<float16>(1.0f) && y > static_cast<float16>(0.0f)) {
-          // The y_u loop covers the positive range up to 0x7BFF.
-          break;
-        }
-        // For 0 < x < 1, as y becomes more negative, pow becomes inf.
-        if (x > static_cast<float16>(0.0f) && x < static_cast<float16>(1.0f) &&
-            y < static_cast<float16>(0.0f)) {
-          // The y_u loop covers the negative range from 0x8000.
-          break;
-        }
-      }
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Pow, input,
+                                     LIBC_NAMESPACE::powf16(x, y), 0.5);
     }
   }
 }
@@ -58,18 +42,8 @@ TEST_F(LlvmLibcPowF16Test, SelectedY_AllX) {
     for (uint16_t x_u = 0; x_u <= 0x7c00U; ++x_u) {
       float16 x = FPBits(x_u).get_val();
       mpfr::BinaryInput<float16> input{x, y};
-      float16 result = LIBC_NAMESPACE::powf16(x, y);
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Pow, input, result, 1.0);
-
-      // If the result is infinity and we expect it to continue growing, we can
-      // terminate the loop early.
-      if (FPBits(result).is_inf() && FPBits(result).is_pos()) {
-        // For y > 0, as x increases in the positive range, pow remains inf.
-        if (y > 0.0f16 && x > 0.0f16) {
-          // The x_u loop covers the positive range up to 0x7BFF.
-          break;
-        }
-      }
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Pow, input,
+                                     LIBC_NAMESPACE::powf16(x, y), 0.5);
     }
   }
 }
