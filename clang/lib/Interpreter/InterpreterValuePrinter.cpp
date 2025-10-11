@@ -22,6 +22,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -96,16 +97,14 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   return GetFullTypeName(Ctx, NonRefTy);
 }
 
-static std::string EnumToString(const Value &V) {
+static std::string EnumToString(ASTContext &Ctx, QualType QT, uint64_t Data) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
-  ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
 
-  uint64_t Data = V.convertTo<uint64_t>();
   bool IsFirst = true;
-  llvm::APSInt AP = Ctx.MakeIntValue(Data, V.getType());
+  llvm::APSInt AP = Ctx.MakeIntValue(Data, QT);
 
-  auto *ED = V.getType()->castAsEnumDecl();
+  auto *ED = QT->castAsEnumDecl();
   for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E; ++I) {
     if (I->getInitVal() == AP) {
       if (!IsFirst)
@@ -120,12 +119,13 @@ static std::string EnumToString(const Value &V) {
   return Str;
 }
 
-static std::string FunctionToString(const Value &V, const void *Ptr) {
+static std::string FunctionToString(ASTContext &Ctx, QualType QT,
+                                    const void *Ptr) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
   SS << "Function @" << Ptr;
 
-  const DeclContext *PTU = V.getASTContext().getTranslationUnitDecl();
+  const DeclContext *PTU = Ctx.getTranslationUnitDecl();
   // Find the last top-level-stmt-decl. This is a forward iterator but the
   // partial translation unit should not be large.
   const TopLevelStmtDecl *TLSD = nullptr;
@@ -137,7 +137,8 @@ static std::string FunctionToString(const Value &V, const void *Ptr) {
   // *OpaqueType, void *Val);
   const FunctionDecl *FD = nullptr;
   if (auto *InterfaceCall = llvm::dyn_cast<CallExpr>(TLSD->getStmt())) {
-    const auto *Arg = InterfaceCall->getArg(/*Val*/ 3);
+    const auto *Arg = InterfaceCall->getArg(InterfaceCall->getNumArgs() - 1);
+
     // Get rid of cast nodes.
     while (const CastExpr *CastE = llvm::dyn_cast<CastExpr>(Arg))
       Arg = CastE->getSubExpr();
@@ -154,13 +155,6 @@ static std::string FunctionToString(const Value &V, const void *Ptr) {
   return Str;
 }
 
-static std::string VoidPtrToString(const void *Ptr) {
-  std::string Str;
-  llvm::raw_string_ostream SS(Str);
-  SS << Ptr;
-  return Str;
-}
-
 static std::string CharPtrToString(const char *Ptr) {
   if (!Ptr)
     return "0";
@@ -173,65 +167,32 @@ static std::string CharPtrToString(const char *Ptr) {
 
 namespace clang {
 
-struct ValueRef : public Value {
-  ValueRef(const Interpreter *In, void *Ty) : Value(In, Ty) {
-    // Tell the base class to not try to deallocate if it manages the value.
-    IsManuallyAlloc = false;
+std::string ValueToString::toString(const Value *Buf) {
+
+  switch (Buf->getKind()) {
+  case Value::K_Builtin:
+    return BuiltinToString(*Buf);
+  case Value::K_Pointer:
+    return PointerToString(*Buf);
+  case Value::K_Str:
+    break;
+  case Value::K_Array:
+    return ArrayToString(*Buf);
+
+  default:
+    break;
   }
-};
+  return "";
+}
 
-std::string Interpreter::ValueDataToString(const Value &V) const {
-  Sema &S = getCompilerInstance()->getSema();
-  ASTContext &Ctx = S.getASTContext();
+std::string ValueToString::BuiltinToString(const Value &B) {
+  if (!B.hasValue())
+    return ""; // No data in buffer
 
-  QualType QT = V.getType();
-
-  if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(QT)) {
-    QualType ElemTy = CAT->getElementType();
-    size_t ElemCount = Ctx.getConstantArrayElementCount(CAT);
-    const Type *BaseTy = CAT->getBaseElementTypeUnsafe();
-    size_t ElemSize = Ctx.getTypeSizeInChars(BaseTy).getQuantity();
-
-    // Treat null terminated char arrays as strings basically.
-    if (ElemTy->isCharType()) {
-      char last = *(char *)(((uintptr_t)V.getPtr()) + ElemCount * ElemSize - 1);
-      if (last == '\0')
-        return CharPtrToString((char *)V.getPtr());
-    }
-
-    std::string Result = "{ ";
-    for (unsigned Idx = 0, N = CAT->getZExtSize(); Idx < N; ++Idx) {
-      ValueRef InnerV = ValueRef(this, ElemTy.getAsOpaquePtr());
-      if (ElemTy->isBuiltinType()) {
-        // Single dim arrays, advancing.
-        uintptr_t Offset = (uintptr_t)V.getPtr() + Idx * ElemSize;
-        InnerV.setRawBits((void *)Offset, ElemSize * 8);
-      } else {
-        // Multi dim arrays, position to the next dimension.
-        size_t Stride = ElemCount / N;
-        uintptr_t Offset = ((uintptr_t)V.getPtr()) + Idx * Stride * ElemSize;
-        InnerV.setPtr((void *)Offset);
-      }
-
-      Result += ValueDataToString(InnerV);
-
-      // Skip the \0 if the char types
-      if (Idx < N - 1)
-        Result += ", ";
-    }
-    Result += " }";
-    return Result;
-  }
-
+  QualType QT = B.getType();
   QualType DesugaredTy = QT.getDesugaredType(Ctx);
   QualType NonRefTy = DesugaredTy.getNonReferenceType();
 
-  // FIXME: Add support for user defined printers.
-  // LookupResult R = LookupUserDefined(S, QT);
-  // if (!R.empty())
-  //   return CallUserSpecifiedPrinter(R, V);
-
-  // If it is a builtin type dispatch to the builtin overloads.
   if (auto *BT = DesugaredTy.getCanonicalType()->getAs<BuiltinType>()) {
 
     auto formatFloating = [](auto Val, char Suffix = '\0') -> std::string {
@@ -263,90 +224,175 @@ std::string Interpreter::ValueDataToString(const Value &V) const {
       return "{ error: unknown builtin type '" + std::to_string(BT->getKind()) +
              " '}";
     case clang::BuiltinType::Bool:
-      SS << ((V.getBool()) ? "true" : "false");
+      SS << ((B.getBool()) ? "true" : "false");
       return Str;
     case clang::BuiltinType::Char_S:
-      SS << '\'' << V.getChar_S() << '\'';
+      SS << '\'' << B.getChar_S() << '\'';
       return Str;
     case clang::BuiltinType::SChar:
-      SS << '\'' << V.getSChar() << '\'';
+      SS << '\'' << B.getSChar() << '\'';
       return Str;
     case clang::BuiltinType::Char_U:
-      SS << '\'' << V.getChar_U() << '\'';
+      SS << '\'' << B.getChar_U() << '\'';
       return Str;
     case clang::BuiltinType::UChar:
-      SS << '\'' << V.getUChar() << '\'';
+      SS << '\'' << B.getUChar() << '\'';
       return Str;
     case clang::BuiltinType::Short:
-      SS << V.getShort();
+      SS << B.getShort();
       return Str;
     case clang::BuiltinType::UShort:
-      SS << V.getUShort();
+      SS << B.getUShort();
       return Str;
     case clang::BuiltinType::Int:
-      SS << V.getInt();
+      SS << B.getInt();
       return Str;
     case clang::BuiltinType::UInt:
-      SS << V.getUInt();
+      SS << B.getUInt();
       return Str;
     case clang::BuiltinType::Long:
-      SS << V.getLong();
+      SS << B.getLong();
       return Str;
     case clang::BuiltinType::ULong:
-      SS << V.getULong();
+      SS << B.getULong();
       return Str;
     case clang::BuiltinType::LongLong:
-      SS << V.getLongLong();
+      SS << B.getLongLong();
       return Str;
     case clang::BuiltinType::ULongLong:
-      SS << V.getULongLong();
+      SS << B.getULongLong();
       return Str;
     case clang::BuiltinType::Float:
-      return formatFloating(V.getFloat(), /*suffix=*/'f');
+      return formatFloating(B.getFloat(), /*suffix=*/'f');
 
     case clang::BuiltinType::Double:
-      return formatFloating(V.getDouble());
+      return formatFloating(B.getDouble());
 
     case clang::BuiltinType::LongDouble:
-      return formatFloating(V.getLongDouble(), /*suffix=*/'L');
+      return formatFloating(B.getLongDouble(), /*suffix=*/'L');
     }
   }
 
+  if (NonRefTy->isEnumeralType())
+    return EnumToString(Ctx, QT, B.getUInt());
+
+  return "";
+}
+
+std::string ValueToString::PointerToString(const Value &P) {
+
+  QualType QT = P.getType();
+  QualType DesugaredTy = QT.getDesugaredType(Ctx);
+  QualType NonRefTy = DesugaredTy.getNonReferenceType();
+
   if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
       NonRefTy->getPointeeType()->isFunctionProtoType())
-    return FunctionToString(V, V.getPtr());
+    return FunctionToString(Ctx, QT, (void *)P.getAddr());
 
   if (NonRefTy->isFunctionType())
-    return FunctionToString(V, &V);
-
-  if (NonRefTy->isEnumeralType())
-    return EnumToString(V);
+    return FunctionToString(Ctx, QT, (void *)P.getAddr());
 
   if (NonRefTy->isNullPtrType())
     return "nullptr\n";
 
-  // FIXME: Add support for custom printers in C.
   if (NonRefTy->isPointerType()) {
-    if (NonRefTy->getPointeeType()->isCharType())
-      return CharPtrToString((char *)V.getPtr());
+    auto PointeeTy = NonRefTy->getPointeeType();
 
-    return VoidPtrToString(V.getPtr());
+    // char* -> print string literal
+    if (PointeeTy->isCharType()) {
+      if (P.HasPointee() && P.getPointerPointee().isStr())
+        return CharPtrToString(P.getPointerPointee().getStrVal());
+      return std::to_string(P.getAddr());
+    }
+
+    std::ostringstream OS;
+    OS << "0x" << std::hex << P.getAddr();
+    return OS.str();
   }
 
-  // Fall back to printing just the address of the unknown object.
-  return "@" + VoidPtrToString(V.getPtr());
+  std::ostringstream OS;
+  OS << "@0x" << std::hex << P.getAddr();
+  return OS.str();
 }
 
-std::string Interpreter::ValueTypeToString(const Value &V) const {
-  ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
-  QualType QT = V.getType();
+std::string ValueToString::ArrayToString(const Value &A) {
+  if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(A.getType())) {
+    QualType ElemTy = CAT->getElementType();
+    // Treat null terminated char arrays as strings basically.
+    if (ElemTy->isCharType()) {
+      const Value &LastV =
+          A.getArrayInitializedElt(A.getArrayInitializedElts() - 1);
+      if (LastV.hasValue() && !LastV.isAbsent() && LastV.isBuiltin()) {
+        char last = LastV.getChar_S();
+        if (last != '\0')
+          goto not_a_string;
+      }
+      std::string Res;
+      Res += "\"";
+      for (size_t I = 0, N = A.getArraySize(); I < N; ++I) {
+        const Value &EleVal = A.getArrayInitializedElt(I);
+        if (EleVal.hasValue() && EleVal.isBuiltin()) {
+          char c = EleVal.getChar_S();
+          if (c != '\0')
+            Res += c;
+        }
+      }
+      Res += "\"";
+      return Res;
+    }
+  }
+not_a_string:
+  std::ostringstream OS;
 
-  std::string QTStr = QualTypeToString(Ctx, QT);
+  OS << "{ ";
+  for (size_t I = 0, N = A.getArraySize(); I < N; ++I) {
+    const Value &EleVal = A.getArrayInitializedElt(I);
+    if (EleVal.hasValue())
+      OS << this->toString(&EleVal);
+
+    if (I + 1 < N)
+      OS << ", ";
+  }
+
+  OS << " }";
+  return OS.str();
+}
+
+std::string ValueToString::toString(QualType QT) {
+  ASTContext &AstCtx = const_cast<ASTContext &>(Ctx);
+
+  std::string QTStr = QualTypeToString(AstCtx, QT);
 
   if (QT->isReferenceType())
     QTStr += " &";
 
   return QTStr;
+}
+
+void ValueResultManager::resetAndDump() {
+  if (!LastVal.hasValue() || LastVal.isAbsent())
+    return;
+
+  QualType Ty = LastVal.getType();
+
+  Value V = std::move(LastVal);
+
+  // Don't even try to print a void or an invalid type, it doesn't make sense.
+  if (Ty->isVoidType())
+    return;
+
+  // We need to get all the results together then print it, since `printType` is
+  // much faster than `printData`.
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+  ValueToString ValToStr(Ctx);
+  SS << "(";
+  SS << ValToStr.toString(Ty);
+  SS << ") ";
+  SS << ValToStr.toString(&V);
+  SS << "\n";
+  llvm::outs() << Str;
+  V.clear();
 }
 
 llvm::Expected<llvm::orc::ExecutorAddr>
@@ -371,99 +417,236 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
   return AddrOrErr;
 }
 
-enum InterfaceKind { NoAlloc, WithAlloc, CopyArray, NewTag };
-
-class InterfaceKindVisitor
-    : public TypeVisitor<InterfaceKindVisitor, InterfaceKind> {
-
+class ExprConverter {
   Sema &S;
-  Expr *E;
-  llvm::SmallVectorImpl<Expr *> &Args;
+  ASTContext &Ctx;
 
 public:
-  InterfaceKindVisitor(Sema &S, Expr *E, llvm::SmallVectorImpl<Expr *> &Args)
-      : S(S), E(E), Args(Args) {}
-
-  InterfaceKind computeInterfaceKind(QualType Ty) {
-    return Visit(Ty.getTypePtr());
-  }
-
-  InterfaceKind VisitRecordType(const RecordType *Ty) {
-    return InterfaceKind::WithAlloc;
-  }
-
-  InterfaceKind VisitMemberPointerType(const MemberPointerType *Ty) {
-    return InterfaceKind::WithAlloc;
-  }
-
-  InterfaceKind VisitConstantArrayType(const ConstantArrayType *Ty) {
-    return InterfaceKind::CopyArray;
-  }
-
-  InterfaceKind VisitFunctionType(const FunctionType *Ty) {
-    HandlePtrType(Ty);
-    return InterfaceKind::NoAlloc;
-  }
-
-  InterfaceKind VisitPointerType(const PointerType *Ty) {
-    HandlePtrType(Ty);
-    return InterfaceKind::NoAlloc;
-  }
-
-  InterfaceKind VisitReferenceType(const ReferenceType *Ty) {
-    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
-    assert(!AddrOfE.isInvalid() && "Can not create unary expression");
-    Args.push_back(AddrOfE.get());
-    return InterfaceKind::NoAlloc;
-  }
-
-  InterfaceKind VisitBuiltinType(const BuiltinType *Ty) {
-    if (Ty->isNullPtrType())
-      Args.push_back(E);
-    else if (Ty->isFloatingType())
-      Args.push_back(E);
-    else if (Ty->isIntegralOrEnumerationType())
-      HandleIntegralOrEnumType(Ty);
-    else if (Ty->isVoidType()) {
-      // Do we need to still run `E`?
-    }
-
-    return InterfaceKind::NoAlloc;
-  }
-
-  InterfaceKind VisitEnumType(const EnumType *Ty) {
-    HandleIntegralOrEnumType(Ty);
-    return InterfaceKind::NoAlloc;
-  }
+  ExprConverter(Sema &S, ASTContext &Ctx) : S(S), Ctx(Ctx) {}
 
 private:
-  // Force cast these types to the uint that fits the register size. That way we
-  // reduce the number of overloads of `__clang_Interpreter_SetValueNoAlloc`.
-  void HandleIntegralOrEnumType(const Type *Ty) {
-    ASTContext &Ctx = S.getASTContext();
+  bool isAddressOfExpr(Expr *E) {
+    if (!E)
+      return false;
+    if (auto *UO = dyn_cast<UnaryOperator>(E))
+      return UO->getOpcode() == UO_AddrOf;
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+      return isAddressOfExpr(ICE->getSubExpr());
+    return false;
+  }
+
+  /// Build a single &E using Sema.
+  ExprResult buildAddrOfWithSema(Expr *E,
+                                 SourceLocation Loc = SourceLocation()) {
+    // Sema will materialize temporaries as necessary.
+    ExprResult Res = S.CreateBuiltinUnaryOp(Loc, UO_AddrOf, E);
+    if (Res.isInvalid())
+      return ExprError();
+    return Res;
+  }
+
+public:
+  /// Create (&E) as a void* (uses Sema for & creation)
+  ExprResult CreateAddressOfVoidPtrExpr(QualType Ty, Expr *ForCast,
+                                        bool takeAddr = false) {
+    ExprResult AddrOfRes = ForCast;
+
+    if (takeAddr) {
+      // don't create & twice
+      if (!isAddressOfExpr(ForCast)) {
+        AddrOfRes = buildAddrOfWithSema(ForCast);
+        if (AddrOfRes.isInvalid())
+          return ExprError();
+      } else {
+        // already an &-expression; keep it as-is
+        AddrOfRes = ForCast;
+      }
+    }
+
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.VoidPtrTy);
+    ExprResult CastedExpr = S.BuildCStyleCastExpr(
+        SourceLocation(), TSI, SourceLocation(), AddrOfRes.get());
+    if (CastedExpr.isInvalid())
+      return ExprError();
+
+    return CastedExpr;
+  }
+
+  /// Wrap rvalues in a temporary (var) so they become addressable.
+  Expr *CreateMaterializeTemporaryExpr(Expr *E) {
+    return S.CreateMaterializeTemporaryExpr(E->getType(), E,
+                                            /*BoundToLvalueReference=*/true);
+  }
+
+  ExprResult makeScalarAddressable(QualType Ty, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(Ty, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(Ty, CreateMaterializeTemporaryExpr(E),
+                                      /*takeAddr=*/true);
+  }
+
+  ExprResult handleBuiltinTypeExpr(const BuiltinType *, QualType QTy, Expr *E) {
+    return makeScalarAddressable(QTy, E);
+  }
+
+  ExprResult handleEnumTypeExpr(const EnumType *, QualType QTy, Expr *E) {
     uint64_t PtrBits = Ctx.getTypeSize(Ctx.VoidPtrTy);
     QualType UIntTy = Ctx.getBitIntType(/*Unsigned=*/true, PtrBits);
     TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(UIntTy);
     ExprResult CastedExpr =
         S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
     assert(!CastedExpr.isInvalid() && "Cannot create cstyle cast expr");
-    Args.push_back(CastedExpr.get());
+    return makeScalarAddressable(QTy, CastedExpr.get());
   }
 
-  void HandlePtrType(const Type *Ty) {
-    ASTContext &Ctx = S.getASTContext();
-    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.VoidPtrTy);
-    ExprResult CastedExpr =
-        S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
-    assert(!CastedExpr.isInvalid() && "Can not create cstyle cast expression");
-    Args.push_back(CastedExpr.get());
+  ExprResult handlePointerTypeExpr(const PointerType *, QualType QTy, Expr *E) {
+    // Pointer expressions always evaluate to a pointer value.
+    // No need to take address or materialize.
+    return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
+  }
+
+  ExprResult handleArrayTypeExpr(const ConstantArrayType *, QualType QTy,
+                                 Expr *E) {
+    if (isa<StringLiteral>(E)) {
+      if (Ctx.getLangOpts().CPlusPlus)
+        return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
+    }
+
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(QTy, E,
+                                      /*takeAddr=*/false);
+  }
+
+  ExprResult handleFunctionTypeExpr(const FunctionType *, QualType QTy,
+                                    Expr *E) {
+    return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
+  }
+
+  ExprResult handleMemberPointerTypeExpr(const Type *, QualType QTy, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    return CreateAddressOfVoidPtrExpr(QTy, CreateMaterializeTemporaryExpr(E),
+                                      /*takeAddr=*/true);
+  }
+
+  ExprResult handleRecordTypeExpr(const Type *, QualType QTy, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(QTy, SourceLocation());
+    ExprResult CXXNewCall =
+        S.BuildCXXNew(E->getSourceRange(),
+                      /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(),
+                      MultiExprArg(),
+                      /*PlacementRParen=*/SourceLocation(),
+                      /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI,
+                      std::nullopt, E->getSourceRange(), E);
+
+    if (CXXNewCall.isInvalid())
+      return ExprError();
+
+    auto CallRes = S.ActOnFinishFullExpr(CXXNewCall.get(),
+                                         /*DiscardedValue=*/false);
+    if (CallRes.isInvalid())
+      return ExprError();
+    return CreateAddressOfVoidPtrExpr(QTy, CallRes.get(), /*takeAddr=*/false);
+  }
+
+  ExprResult handleAnyObjectExpr(const Type *, QualType QTy, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    auto Res = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    assert(!Res.isInvalid());
+    return CreateAddressOfVoidPtrExpr(QTy, Res.get(),
+                                      /*takeAddr=*/false);
   }
 };
 
-static constexpr llvm::StringRef VPName[] = {
-    "__clang_Interpreter_SetValueNoAlloc",
-    "__clang_Interpreter_SetValueWithAlloc",
-    "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
+class InterfaceKindVisitor : public TypeVisitor<InterfaceKindVisitor, bool> {
+  Sema &S;
+  Expr *E;
+  llvm::SmallVectorImpl<Expr *> &Args;
+  ExprConverter Converter;
+
+public:
+  InterfaceKindVisitor(Sema &S, Expr *E, llvm::SmallVectorImpl<Expr *> &Args)
+      : S(S), E(E), Args(Args), Converter(S, S.getASTContext()) {}
+
+  bool transformExpr(QualType Ty) { return Visit(Ty.getTypePtr()); }
+
+  bool VisitType(const Type *T) {
+    Args.push_back(Converter.handleAnyObjectExpr(T, QualType(T, 0), E).get());
+    return true;
+  }
+
+  bool VisitBuiltinType(const BuiltinType *Ty) {
+    if (Ty->isNullPtrType()) {
+      Args.push_back(E);
+    } else if (Ty->isFloatingType() || Ty->isIntegralOrEnumerationType()) {
+      Args.push_back(
+          Converter.handleBuiltinTypeExpr(Ty, QualType(Ty, 0), E).get());
+    } else if (Ty->isVoidType()) {
+      return false;
+    }
+    return true;
+  }
+
+  bool VisitPointerType(const PointerType *Ty) {
+    Args.push_back(
+        Converter.handlePointerTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
+  bool VisitMemberPointerType(const MemberPointerType *Ty) {
+    Args.push_back(
+        Converter.handleMemberPointerTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
+  bool VisitRecordType(const RecordType *Ty) {
+    Args.push_back(
+        Converter.handleRecordTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
+  bool VisitConstantArrayType(const ConstantArrayType *Ty) {
+    Args.push_back(Converter.handleArrayTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
+  bool VisitReferenceType(const ReferenceType *Ty) {
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    assert(!AddrOfE.isInvalid() && "Cannot create unary expression");
+    Args.push_back(AddrOfE.get());
+    return true;
+  }
+
+  bool VisitFunctionType(const FunctionType *Ty) {
+    Args.push_back(
+        Converter.handleFunctionTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
+  bool VisitEnumType(const EnumType *Ty) {
+    Args.push_back(Converter.handleEnumTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+};
+
+enum RunTimeFnTag {
+  OrcSendResult,
+  ClangSendResult,
+  ClangDestroyObj,
+  OrcRunDtorWrapper,
+  ClangRunDtorWrapper
+};
+
+static constexpr llvm::StringRef RunTimeFnTagName[] = {
+    "__orc_rt_SendResultValue", "__clang_Interpreter_SendResultValue",
+    "__clang_Interpreter_destroyObj", "__orc_rt_runDtor",
+    "__clang_Interpreter_runDtor"};
 
 // This synthesizes a call expression to a speciall
 // function that is responsible for generating the Value.
@@ -478,7 +661,7 @@ static constexpr llvm::StringRef VPName[] = {
 //   // 3. If x is a struct, but a rvalue.
 //   new (__clang_Interpreter_SetValueWithAlloc(ThisInterp, OpaqueValue,
 //   xQualType)) (x);
-llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
+llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E, bool isOOP) {
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
@@ -500,34 +683,22 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
       Interface = S.BuildDeclarationNameExpr(CSS, R, /*ADL=*/false).get();
       return llvm::Error::success();
     };
-    if (llvm::Error Err =
-            LookupInterface(ValuePrintingInfo[NoAlloc], VPName[NoAlloc]))
+
+    if (llvm::Error Err = LookupInterface(ValuePrintingInfo[OrcSendResult],
+                                          RunTimeFnTagName[OrcSendResult]))
       return std::move(Err);
 
-    if (llvm::Error Err =
-            LookupInterface(ValuePrintingInfo[CopyArray], VPName[CopyArray]))
+    if (llvm::Error Err = LookupInterface(ValuePrintingInfo[ClangSendResult],
+                                          RunTimeFnTagName[ClangSendResult]))
       return std::move(Err);
-
-    if (llvm::Error Err =
-            LookupInterface(ValuePrintingInfo[WithAlloc], VPName[WithAlloc]))
-      return std::move(Err);
-
-    if (Ctx.getLangOpts().CPlusPlus) {
-      if (llvm::Error Err =
-              LookupInterface(ValuePrintingInfo[NewTag], VPName[NewTag]))
-        return std::move(Err);
-    }
   }
 
   llvm::SmallVector<Expr *, 4> AdjustedArgs;
-  // Create parameter `ThisInterp`.
-  AdjustedArgs.push_back(CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)this));
 
-  // Create parameter `OutVal`.
-  AdjustedArgs.push_back(
-      CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)&LastValue));
-
-  // Build `__clang_Interpreter_SetValue*` call.
+  if (!isOOP)
+    // Create parameter `ValMgr`.
+    AdjustedArgs.push_back(
+        CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)ValMgr.get()));
 
   // Get rid of ExprWithCleanups.
   if (auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E))
@@ -542,87 +713,64 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
     Ty = Ctx.getLValueReferenceType(Ty);
   }
 
-  Expr *TypeArg =
-      CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)Ty.getAsOpaquePtr());
-  // The QualType parameter `OpaqueType`, represented as `void*`.
-  AdjustedArgs.push_back(TypeArg);
+  std::optional<ValueCleanup> CleanUp = std::nullopt;
+  if (DesugaredTy->isRecordType() && E->isPRValue())
+    if (auto *CXXRD = DesugaredTy->getAsCXXRecordDecl()) {
+      auto *Dtor = S.LookupDestructor(CXXRD);
+      Dtor->addAttr(UsedAttr::CreateImplicit(Ctx));
+      getCompilerInstance()->getASTConsumer().HandleTopLevelDecl(
+          DeclGroupRef(Dtor));
+
+      auto ObjDtor =
+          [this](QualType Ty) -> llvm::Expected<llvm::orc::ExecutorAddr> {
+        if (auto *CXXRD = Ty->getAsCXXRecordDecl())
+          return this->CompileDtorCall(CXXRD);
+        return llvm::make_error<llvm::StringError>(
+            "destructor not found!", llvm::inconvertibleErrorCode());
+      };
+
+      std::string DestroyObjFnName = RunTimeFnTagName[ClangDestroyObj].str();
+      std::string RunDtorWrapperFnName =
+          RunTimeFnTagName[isOOP ? OrcRunDtorWrapper : ClangRunDtorWrapper]
+              .str();
+
+      // #if defined(__APPLE__)
+      //       // On macOS, runtime symbols may require a leading underscore
+      //       DestroyObjFnName.insert(0, "_");
+      //       RunDtorWrapperFnName.insert(0, "_");
+      // #endif
+
+      auto RunDtorWrapperAddr = getSymbolAddress(RunDtorWrapperFnName);
+      if (!RunDtorWrapperAddr)
+        return RunDtorWrapperAddr.takeError();
+
+      auto DestroyObjAddr = getSymbolAddress(DestroyObjFnName);
+      if (!DestroyObjAddr)
+        return DestroyObjAddr.takeError();
+
+      if (auto E = getExecutionEngine()) {
+        CleanUp = std::make_optional<ValueCleanup>(
+            &E->getExecutionSession(), *RunDtorWrapperAddr, *DestroyObjAddr,
+            std::move(ObjDtor));
+      }
+    }
+
+  auto ID = ValMgr->registerPendingResult(Ty, std::move(CleanUp));
+
+  AdjustedArgs.push_back(IntegerLiteralExpr(Ctx, ID));
 
   // We push the last parameter based on the type of the Expr. Note we need
   // special care for rvalue struct.
   InterfaceKindVisitor V(S, E, AdjustedArgs);
-  Scope *Scope = nullptr;
   ExprResult SetValueE;
-  InterfaceKind Kind = V.computeInterfaceKind(DesugaredTy);
-  switch (Kind) {
-  case InterfaceKind::WithAlloc:
-    LLVM_FALLTHROUGH;
-  case InterfaceKind::CopyArray: {
-    // __clang_Interpreter_SetValueWithAlloc.
-    ExprResult AllocCall =
-        S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::WithAlloc],
-                        E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
-    if (AllocCall.isInvalid())
-      return llvm::make_error<llvm::StringError>(
-          "Cannot call to " + VPName[WithAlloc],
-          llvm::inconvertibleErrorCode());
+  Scope *Scope = nullptr;
+  if (!V.transformExpr(DesugaredTy))
+    return E;
 
-    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
-
-    // Force CodeGen to emit destructor.
-    if (auto *RD = Ty->getAsCXXRecordDecl()) {
-      auto *Dtor = S.LookupDestructor(RD);
-      Dtor->addAttr(UsedAttr::CreateImplicit(Ctx));
-      getCompilerInstance()->getASTConsumer().HandleTopLevelDecl(
-          DeclGroupRef(Dtor));
-    }
-
-    // __clang_Interpreter_SetValueCopyArr.
-    if (Kind == InterfaceKind::CopyArray) {
-      const auto *CATy = cast<ConstantArrayType>(DesugaredTy.getTypePtr());
-      size_t ArrSize = Ctx.getConstantArrayElementCount(CATy);
-
-      if (!Ctx.getLangOpts().CPlusPlus)
-        ArrSize *= Ctx.getTypeSizeInChars(CATy->getBaseElementTypeUnsafe())
-                       .getQuantity();
-
-      Expr *ArrSizeExpr = IntegerLiteralExpr(Ctx, ArrSize);
-      Expr *Args[] = {E, AllocCall.get(), ArrSizeExpr};
-      SetValueE =
-          S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::CopyArray],
-                          SourceLocation(), Args, SourceLocation());
-      if (SetValueE.isInvalid())
-        return llvm::make_error<llvm::StringError>(
-            "Cannot call to " + VPName[CopyArray],
-            llvm::inconvertibleErrorCode());
-      break;
-    }
-    Expr *Args[] = {AllocCall.get(), ValuePrintingInfo[InterfaceKind::NewTag]};
-    ExprResult CXXNewCall = S.BuildCXXNew(
-        E->getSourceRange(),
-        /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(), Args,
-        /*PlacementRParen=*/SourceLocation(),
-        /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
-        E->getSourceRange(), E);
-
-    if (CXXNewCall.isInvalid())
-      return llvm::make_error<llvm::StringError>(
-          "Cannot build a call to placement new",
-          llvm::inconvertibleErrorCode());
-
-    SetValueE = S.ActOnFinishFullExpr(CXXNewCall.get(),
-                                      /*DiscardedValue=*/false);
-    break;
-  }
-  // __clang_Interpreter_SetValueNoAlloc.
-  case InterfaceKind::NoAlloc: {
-    SetValueE =
-        S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::NoAlloc],
-                        E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
-    break;
-  }
-  default:
-    llvm_unreachable("Unhandled InterfaceKind");
-  }
+  RunTimeFnTag Tag =
+      isOOP ? RunTimeFnTag::OrcSendResult : RunTimeFnTag::ClangSendResult;
+  SetValueE = S.ActOnCallExpr(Scope, ValuePrintingInfo[Tag], E->getBeginLoc(),
+                              AdjustedArgs, E->getEndLoc());
 
   // It could fail, like printing an array type in C. (not supported)
   if (SetValueE.isInvalid())
@@ -630,97 +778,31 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
 
   return SetValueE.get();
 }
-
 } // namespace clang
 
 using namespace clang;
 
 // Temporary rvalue struct that need special care.
 extern "C" {
-REPL_EXTERNAL_VISIBILITY void *
-__clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
-                                      void *OpaqueType) {
-  Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-  return VRef.getPtr();
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SendResultValue(void *Ctx, uint64_t Id, void *Addr) {
+  static_cast<ValueResultManager *>(Ctx)->deliverResult(
+      [](llvm::Error Err) { llvm::cantFail(std::move(Err)); }, Id,
+      llvm::orc::ExecutorAddr::fromPtr(Addr));
 }
 
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    ...) {
-  Value &VRef = *(Value *)OutVal;
-  Interpreter *I = static_cast<Interpreter *>(This);
-  VRef = Value(I, OpaqueType);
-  if (VRef.isVoid())
-    return;
-
-  va_list args;
-  va_start(args, /*last named param*/ OpaqueType);
-
-  QualType QT = VRef.getType();
-  if (VRef.getKind() == Value::K_PtrOrObj) {
-    VRef.setPtr(va_arg(args, void *));
-  } else {
-    if (const auto *ED = QT->getAsEnumDecl())
-      QT = ED->getIntegerType();
-    switch (QT->castAs<BuiltinType>()->getKind()) {
-    default:
-      llvm_unreachable("unknown type kind!");
-      break;
-      // Types shorter than int are resolved as int, else va_arg has UB.
-    case BuiltinType::Bool:
-      VRef.setBool(va_arg(args, int));
-      break;
-    case BuiltinType::Char_S:
-      VRef.setChar_S(va_arg(args, int));
-      break;
-    case BuiltinType::SChar:
-      VRef.setSChar(va_arg(args, int));
-      break;
-    case BuiltinType::Char_U:
-      VRef.setChar_U(va_arg(args, unsigned));
-      break;
-    case BuiltinType::UChar:
-      VRef.setUChar(va_arg(args, unsigned));
-      break;
-    case BuiltinType::Short:
-      VRef.setShort(va_arg(args, int));
-      break;
-    case BuiltinType::UShort:
-      VRef.setUShort(va_arg(args, unsigned));
-      break;
-    case BuiltinType::Int:
-      VRef.setInt(va_arg(args, int));
-      break;
-    case BuiltinType::UInt:
-      VRef.setUInt(va_arg(args, unsigned));
-      break;
-    case BuiltinType::Long:
-      VRef.setLong(va_arg(args, long));
-      break;
-    case BuiltinType::ULong:
-      VRef.setULong(va_arg(args, unsigned long));
-      break;
-    case BuiltinType::LongLong:
-      VRef.setLongLong(va_arg(args, long long));
-      break;
-    case BuiltinType::ULongLong:
-      VRef.setULongLong(va_arg(args, unsigned long long));
-      break;
-      // Types shorter than double are resolved as double, else va_arg has UB.
-    case BuiltinType::Float:
-      VRef.setFloat(va_arg(args, double));
-      break;
-    case BuiltinType::Double:
-      VRef.setDouble(va_arg(args, double));
-      break;
-    case BuiltinType::LongDouble:
-      VRef.setLongDouble(va_arg(args, long double));
-      break;
-      // See REPL_BUILTIN_TYPES.
-    }
-  }
-  va_end(args);
+REPL_EXTERNAL_VISIBILITY llvm::orc::shared::CWrapperFunctionResult
+__clang_Interpreter_runDtor(char *ArgData, size_t ArgSize) {
+  return llvm::orc::shared::WrapperFunction<llvm::orc::shared::SPSError(
+      llvm::orc::shared::SPSExecutorAddr, llvm::orc::shared::SPSExecutorAddr)>::
+      handle(ArgData, ArgSize,
+             [](llvm::orc::ExecutorAddr DtorFn,
+                llvm::orc::ExecutorAddr This) -> llvm::Error {
+               DtorFn.toPtr<void (*)(unsigned char *)>()(
+                   This.toPtr<unsigned char *>());
+               return llvm::Error::success();
+             })
+          .release();
 }
 }
 

@@ -8,6 +8,7 @@ set(ORC_COMMON_SOURCES
   log_error_to_stderr.cpp
   run_program_wrapper.cpp
   resolve.cpp
+  send_value.cpp
   )
 
 # Common implementation headers will go here.

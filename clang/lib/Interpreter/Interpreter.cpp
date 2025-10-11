@@ -327,6 +327,7 @@ Interpreter::~Interpreter() {
 // code them.
 const char *const Runtimes = R"(
     #define __CLANG_REPL__ 1
+
 #ifdef __cplusplus
     #define EXTERN_C extern "C"
     struct __clang_Interpreter_NewTag{} __ci_newtag;
@@ -340,6 +341,9 @@ const char *const Runtimes = R"(
     void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size) {
       __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
     }
+    EXTERN_C void __clang_Interpreter_destroyObj(unsigned char *ptr) {
+      delete[] ptr;
+    }
 #else
     #define EXTERN_C extern
     EXTERN_C void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ n);
@@ -347,6 +351,8 @@ const char *const Runtimes = R"(
       memcpy(Placement, Src, Size);
     }
 #endif // __cplusplus
+  EXTERN_C void __clang_Interpreter_SendResultValue(void *Ctx, unsigned long long, void*);
+  EXTERN_C void __orc_rt_SendResultValue(unsigned long long, void*);
   EXTERN_C void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
@@ -671,9 +677,11 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
   Executor =
       std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Config, Err);
 #endif
-  if (!Err)
+  if (!Err) {
     IncrExecutor = std::move(Executor);
-
+    ValMgr = ValueResultManager::Create(IncrExecutor->GetExecutionEngine(),
+                                        getASTContext());
+  }
   return Err;
 }
 
@@ -712,12 +720,11 @@ llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
     if (llvm::Error Err = Execute(*PTU))
       return Err;
 
-  if (LastValue.isValid()) {
-    if (!V) {
-      LastValue.dump();
-      LastValue.clear();
+  if (ValMgr) {
+    if (V) {
+      *V = ValMgr->release();
     } else
-      *V = std::move(LastValue);
+      ValMgr->resetAndDump();
   }
   return llvm::Error::success();
 }
